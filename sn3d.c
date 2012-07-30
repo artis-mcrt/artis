@@ -13,6 +13,7 @@
 
 #include "threadprivate.h"
 #include "sn3d.h"
+#include "version.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
 /* Main - top level routine. */
@@ -245,7 +246,8 @@ int main(int argc, char** argv)
   }
   setvbuf(estimators_file, NULL, _IOLBF, 1);
 
-  printout("Begining.\n");
+  printout("Start ARTIS revision %s\n",GIT_HASH);
+  printout("This binary was compiled on %s\n",COMPILETIME);
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
   
   /// Get input stuff
@@ -1253,16 +1255,18 @@ int main(int argc, char** argv)
   }
 
 
-  /// Communicate gamma and positron deposition and write to file
-  for (i=0; i < ntstep; i++)
-  {
-    MPI_Reduce(&time_step[i].gamma_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0) time_step[i].gamma_dep = depvalue/nprocs;
-    MPI_Reduce(&time_step[i].positron_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0) time_step[i].positron_dep = depvalue/nprocs;
-    MPI_Reduce(&time_step[i].dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0) time_step[i].dep = depvalue/nprocs;
-  }
+  #ifdef MPI_ON
+    /// Communicate gamma and positron deposition and write to file
+    for (i=0; i < ntstep; i++)
+    {
+      MPI_Reduce(&time_step[i].gamma_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].gamma_dep = depvalue/nprocs;
+      MPI_Reduce(&time_step[i].positron_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].positron_dep = depvalue/nprocs;
+      MPI_Reduce(&time_step[i].dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].dep = depvalue/nprocs;
+    }
+  #endif
   if (my_rank == 0)
   {
     if ((dep_file = fopen("deposition.out", "w")) == NULL)
