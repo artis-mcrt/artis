@@ -2,12 +2,19 @@ ARTIS README FILE
 -----------------
 
 As of 2012-07-30 the code base of ARTIS will be maintained using the
-GIT (http://git-scm.com/) distributed version control system. The
-code's root directory will thereof be /afs/mpa/project/artis/code.
-For changes to the code you should checkout a copy of the latest
-branch from there and push back changes from your local working copy
-once you are satisfied that they work. For an introduction to GIT
-see http://git-scm.com/book
+GIT (http://git-scm.com/) distributed version control system. To
+access the code checkout the latest snaphsot of the code in a local
+working directory by typing
+
+git clone USERNAME@slogin.mpa-garching.mpg.de:/afs/mpa/project/artis/code.git
+
+(This requires ssh access to the MPA machines. There are ways around
+this to give e.g. Sharon direct access to the code repository in the
+future). Then commit your changes to your local copy of the repo and
+push them back to the server once you are satisfied that they
+work. 
+
+For an introduction to GIT see http://git-scm.com/book
 
 Modifications of the code should be documented in the commit log
 rather than this README file from now on.
