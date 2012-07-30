@@ -1,0 +1,6 @@
+lib
+old
+version.h
+*h
+*o
+*exe

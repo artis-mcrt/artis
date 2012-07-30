@@ -1,0 +1,291 @@
+ARTIS README FILE
+-----------------
+
+As of 2012-07-30 the code base of ARTIS will be maintained using the
+GIT (http://git-scm.com/) distributed version control system. The
+code's root directory will thereof be /afs/mpa/project/artis/code.
+For changes to the code you should checkout a copy of the latest
+branch from there and push back changes from your local working copy
+once you are satisfied that they work. For an introduction to GIT
+see http://git-scm.com/book
+
+Modifications of the code should be documented in the commit log
+rather than this README file from now on.
+
+
+
+This was the old README file which kept track of modifications to the
+code until 2012-07-30:
+---------------------------------------------------------------------
+
+2011-05-13, v115_omp
+ - [NEW] Take into account the deposition of kinetic energy of 56Co 
+   positrons. This has been neglected so far but influences the late
+   time (bolometric) light curves starting at ~50 days after the 
+   explosion. 
+ - [NEW] Reintroduced the recording of line statistics, i.e. the total
+   number of emissions and absorptions per line. So far this is only 
+   well defined for MPI only runs. For hybrid runs the information is 
+   taken from thread 0 only. Should be straightforward to generalise,
+   but I'm not sure if this is worth the additional computational costs.
+   To activate this feature the macro RECORD_LINESTAT needs to be defined
+   in sn3d.h
+ - [NEW, 2011-06-14] Calculation of bf-opacity can be reduced to levels 
+   for which the "relative population" is larger than 1e-6.
+ - [NEW, 2012-06-20] Reintroduced a simple grey treatment for the optical
+   photons. It interprets the original opacity_case variable from the 
+   input.txt file and behaves in the same way. Internally, however, it 
+   uses the structure of the initial grey opacity treatment and the concept
+   of grey cells rather than the original opacity_case branches.
+ - [NEW, 2012-07-30] Communicate information on how much radioactive
+   energy was released at a given time and how much of this was
+   deposited by gamma-rays and positrons. Write this to new output
+   file deposition.out
+ - [FIXED, 2011-08-05] Minor change to update_parameterfile ensures 
+   that the automatic updating of the input file works on vip too.
+ - [FIXED, 2011-08-07] Continuation jobs got stuck if optically thick 
+   cells were present at restart. To fix this, gridsave.dat now records
+   if a modelgrid cell is optically thick. This ensures that the cell
+   is treated in LTE as it should.
+ - [FIXED, 2012-01-10] Declaration of get_abundance was missing in 
+   calculate_populations. Unclear to which extent this should influence
+   the simulations.
+ - [FIXED, 2012-01-12] corrphotoionrenorm coefficients were not properly
+   derived in update_grid. This will lead to spurious zeros in the 
+   renormalisation coefficients during the calculation of the photoionisation
+   rate and thus likely tend to supress the ionisation. For a test run with
+   W7 the influence was not significant (generally below 0.1 mag, only in 
+   I and J band there is an offset of ~0.1 mag at first maximum. However,
+   the uncertainties due to our limited standard atomic data set are larger
+   in these bands). FOR FUTURE SIMULATIONS IT IS HIGLY RECOMMENDED TO
+   USE THIS FIX.
+ - [FIXED, 2012-01-19] BlueGene OpenMP bug solved. Only change is that the 
+   phixslist initialisation is no longer done in a parallel section but by
+   the master thread only which then loops over all thread indices. Maybe
+   the compiler optimized the parallel section and thereby screwed up the
+   threads somehow? ADDENDUM 2012-01-23: strangely, using a more aggressive
+   optimization (specifically O5, instead of the thus far used O3) also
+   shows no problem with OpenMP runs, even if the phixslist initialisation
+   is done the old way. 
+ - [MODIFIED, 2011-09-13] search_groundphixslist: the code does no longer
+   abort when a non-groundlevel continuum is at the frequency of the blue
+   most groundlevel continuum. This turned out to happen for Mg IV, which
+   has a duplicate ground state (levels 0 and 1 have energy zero) in
+   the atomic data file. Instead the code now gives a lengthy fatal
+   warning statement and prints the level energies of the corresponding
+   ion.
+ 
+2011-03-24, v114_omp (MERGE OF v112_omp_rs_pol and v113_omp)
+ - [NEW] Polarization treatment: this adds additional information
+   to the packets files. Be aware that old versions of exspec and
+   analysis scripts will therefore no longer work
+ - [MODIFIED] Restart mechanism: it is now possible to divide the
+   full simulation to individual job steps by selecting a wall clock
+   time. For the moment this is hard coded to 3 hours. To use this
+   mode the code must be compiled with the TIMED_RESTARTS flag.
+
+2011-02-16, v113_omp
+ - [FIXED] For 3D models with empty cells (e.g. in the edges of the 
+   simulation volume) the effective value of npts_model is less
+   than ngrid. If this is not accounted for (as it was up to now), 
+   a substantial number of tasks (up to 50%) will be idle while doing 
+   update_grid! This is now fixed. Note however, that this does not
+   have any effect on memory consumption since the related arrays
+   are allocated statically with size MMODELGRID+1 at compile time.
+ - [MODIFIED] Initial grey approximation. Up to now r-packets have been
+   treated grey for a full time step if they started their propagation
+   in an optically thick cell. On the other hand packets starting in
+   optically thin cells, were even treated non-grey in optically thick
+   cells. This was changed now such that a packet's treatment depends
+   only on the properties of the cell thorugh which it actually propagates.
+   This change was required to make it possible to omitt updating a cell's
+   level populations when a packet changes to an optically thick cell.
+   During the grey-phase of a simulation this should give a significant
+   speed-up of the calculation. At least it was the case for the I0040
+   deflagration model in inital tests (2011-02-04).
+ - [MODIFIED] sn3d.c now writes a complete snapshot of the current
+   grid properties to gridsave.dat (therefore additional MPI 
+   communications had to be implemented). This simplifies the restart
+   of subsequent job steps largely. At the same time it is taken care
+   that input.txt knows about the current job step so that it doesn't
+   need to be modified either for restarting (2011-02-04). 
+   FOR THAT TO WORK THE FORMAT OF THE INPUT.TXT FILE HAS BEEN CHANGED. 
+   INITAL AND FINAL TIME STEPS NOW NEED TO BE GIVEN AS THREE DIGITS: 
+   e.g. 000 111
+
+2010-06-09, v112_omp
+ - [MODIFIED] Within macroatom.c we now allow for jumps to the
+   lowest energy level of a given species, if this is not the
+   species' absolute ground level (i.e. the ground state of the
+   neutral ion). Technically this means we changed from checking
+   for (level == 0) and (ion == 0) to (level == 0) and 
+   (get_ionstage(element,ion) == 0). This allows us to use model
+   atoms which have an ionized species as the lower boundary.
+ - [FIXED] rpkt_emiss and compton_emiss were not properly 
+   renormalised in non-MPI runs
+
+2010-04-01, v111_omp
+ - [NEW] Makepoint exgamma produces now a binary which extracts
+   both the angle-averaged gamma light curve and gamma spectras
+   from the escaping packets. No estimators are used (2010-04-01).
+
+2010-03-31, v110_omp
+ - [NEW] kpkt interactions take some physical time during which
+   they follow the expansion of the ejecta. This was introduced to
+   reduce the work imbalance problem (2010-02-19). 
+    * A first attempt used an approximative timescale for rad. 
+      recombination. This reduced the work imbalance noticeably
+      but still there are imbalances on the order of 1h.
+      For 40bfcont w7 runs this has no consequence on the
+      light curves.
+    * Introducing an additional diffusion time for macro-atoms
+      changes the light curves drastically.
+    * Since tests with w7 have shown, that using a kpkt-diffusion
+      time on the order of 0.001 ... 0.01 of the lenght of a time 
+      step drastically reduces the work imbalance but has only
+      minor implications on the lightcurves this approach has
+      been incorporated to the code. It can be controlled by a
+      *ADDITIONAL LINE* in input.c which gives the kpkt-diffusion
+      time as a fraction of a timestep's length as the first
+      parameter (a float) and the number of timesteps for which
+      this approxiamtion should be used as the 2nd parameter (an int).
+ - [NEW] OpenMP version now also writes grey optical depths
+   and ionization fractions to the estimators files. This
+   requires one additional float variable on the model grid
+   for the grey depth. Cooling and heating rates are still
+   not available in estimators.out for OpenMP runs.
+ - [FIXED] corrphotoionrenorm and gammaestimators were treated
+   as floats instead of doubles while reading in restart files. 
+   This caused problems with the 2D deflagration model due to 
+   LARGE corrphotoionrenorm values (2010-03-31).
+ - [FIXED] Interaction counters now really collect the numbers
+   for all OpenMP threads (the limitation of recording them
+   only for thread zero has been removed)
+ - [FIXED] modelgrid[n].initial_radial_pos was not initialised
+   properly for 3D models with empty cells, where modelgrid
+   and simulation grid differ. MAKE SURE THAT OTHER MODELGRID
+   QUANTITIES ARE NOT AFFECTED BY THE SAME THING. MOST LIKELY
+   NOT A PROBLEM BECAUSE OF 3D DEFLAG RUN *THINK*  
+
+2009-10-23, v109_omp
+ - mean number of interactions per packet now also counts the 
+   number of internal MA-jumps
+ - record direction of packets before absorption in bound-bound 
+   interactions. *NOTE*: this change causes a modification in the 
+   packets files!
+ - Keep now two copies of temporary packets files to avoid 
+   problems with restarts when the job aborts during update_grid
+   For the restart of an odd/even time step the even/odd packets
+   files must be copied to the job directory of the continuation  
+   run.
+
+2009-10-09, v108_omp
+ - OpenMP works now after changing almost all threadprivate
+   variables to arrays of sizes MTHREADS (default 4). For more
+   OpenMP threads this must be adjusted in types.h.
+ - packets are now sorted according to the cell density 
+   before update_packets to force packets in denser cells to be
+   treated first. Hopefully this reduces the work imbalance
+   together with the dynamical OpenMP scheduling.
+ - gamma estimator and bf-heating estimator now sample the corrected
+   photoionization and bf heating coefficients which take into
+   account stimulated recombination
+ - grey optical depth to the surface is used now for initial
+   grey approximation. the local grey and thomson depths are
+   logged in the output files but not in the estimator files.
+   Using a different grey approximation requires changes in 
+   update_grid.c
+ - exspec extracts only angle-averaged spectra and light curves 
+   for 1D models
+
+2009-07-15, v108
+ - Modified initial grey approximation now calculates
+   an optical depth to the surface of the simulation
+   volume using kappa_grey.
+ - As of now (2009-07-15) the local thomson and grey
+   optical depth in a cell and the depth to the
+   surface are save in the estimator files. This requires
+   a special treatment for restart files and should be
+   removed, after a "final" decision on the grey approximation
+   was made.
+
+2009-05-14, v107
+ - OpenMP parallelisation re-introduced (still not working properly
+   as of 2009-06-16).
+ - calculate_kpkt_rates (which depend only on grid properties)
+   now moved to update grid and communicated via MPI.
+ - exspec routines rewritten to save memory. Now informations 
+   on last emissions and absorptions are extracted from the packets
+   files. 
+ - Proper initialisation of absorption counters added (2009-05-30).
+ - Changes to the initial grey approximation, reintroducing
+   the concept of kappa_grey.
+ - Array boundaries which have to be changed for each run moved to 
+   types.h
+
+2009-05-06, v106
+ - Additionally to the 56Ni decay chain the code is now 
+   capable of handling the 52Fe and 48Cr chain. Therefore 
+   two additional values must be provided in the model files 
+   which five the inital abundances of 52Fe and 48Cr and 
+   parameter files for the gamma lines are needed. So far only 
+   gammas coming the 48Cr chain are propagated, thus cr48_lines.txt
+   and v48_lines.txt are sufficient. 52Fe gammas are deposited
+   instantaneously.
+   So far there is no concept of initial abundances for the radioactive
+   daughter nuclei in this chains (i.e. 52Mn and 48V are initially 0).
+ - Formulae for the abundance of the radioactive isotopes have
+   been checked.
+ - Bug in interpolation of ratecoefficients fixed. So far 
+   interpolations at the upper temperature boundary tried to
+   access an unallocated array position. Results for this
+   case were therefore not defined properly.
+   This also caused the 64bit problem on vip!
+ - Several minor bugs concerning exspec fixed
+ - Proper initialisation of absorption counters added (2009-05-30).
+
+2009-04-19, v105
+ - exspec reads packets files only once to speed up extraction
+ - exspec extracts los dependent emission information, if 
+   selected in input.txt. This needs huge amounts of memory.
+   Need to adjust MNUBINS
+ - escaping packets carry time of last emission
+
+2009-02-02, v104, several subversions
+ - avoid use of my_malloc. malloc is faster and allows the same
+   mode of operation on all machines. this became possible on vip
+   in 32bit. there is still a problem in 64bit.
+ - spectrum extraction problem solved, but removed into a separate
+   make target exspec to reduce memory consumption of MC run
+
+2009-01-14, v103
+ - bf-cooling adjusted to match the change in the ionisation formula
+ - initial grey approximation now paramterisable via input.txt
+ - number of initial LTE steps for a NLTE run now in input.txt
+ - number of bf-continua to take into account for propagation now
+   in input.txt. For thermal balance and ionisation balance
+   all continua are taken into account. 
+ - write out of all grid related data to one estimator file per MPI task 
+ - still a problem: spectra extraction at the end of the
+   simulation
+
+
+2008-12-16, changes
+ - initial grey approximation for cells which are Compton optical thick
+ - store again all rate coefficients, even if we use only TAKE_N_BFCONTINUA
+   continua for propagation. This allows us to solve the ionisation
+   balance "correctly"
+ - change to the ionisation equation from 
+     n_0,j,k*Gamma_j,k = nne*n_0,j+1,k*Alpha_j,k
+   to
+     n_0,j,k*Gamma_j,k = nne*N_j+1,k*Alpha_j,k
+
+
+v102 same as 
+
+ multielements_v101_p_modelgrid_ionisinglevels_iterate_ion
+
+capable to read in 2D and 3D models again (not tested)
+
+
+
