@@ -152,7 +152,7 @@ endif
 
 
 
-### Settings for the Juelich BlueGene
+### Settings for the Juelich BlueGene/P
 ifeq ($(findstring jugene,$(HOSTNAME)), jugene)
   #this requires a
   #  module load gsl
@@ -162,6 +162,19 @@ ifeq ($(findstring jugene,$(HOSTNAME)), jugene)
   CFLAGS = -O5 -I$(GSL_INCLUDE) -qarch=450d -qtune=450 -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
   LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm -qthreaded
 endif
+
+
+### Settings for the Juelich BlueGene/Q
+ifeq ($(findstring juqueen,$(HOSTNAME)), juqueen)
+  #this requires a
+  #  module load gsl
+  #check available module with module avail
+  CC     = mpixlc_r
+  !CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON
+  CFLAGS = -O5 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
+  LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm -qthreaded
+endif
+
 
 
 
