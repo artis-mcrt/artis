@@ -170,8 +170,9 @@ ifeq ($(findstring juqueen,$(HOSTNAME)), juqueen)
   #  module load gsl
   #check available module with module avail
   CC     = mpixlc_r
-  !CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON
-  CFLAGS = -O5 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
+  #CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON
+  #CFLAGS = -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qinline -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
+  CFLAGS =  -O4 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qnoipa -qinline -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
   LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm -qthreaded
 endif
 
