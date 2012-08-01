@@ -811,6 +811,14 @@ int main(int argc, char** argv)
             others*/
                   
             /// the following blocks gather all the estimators to the zeroth (Master) thread
+            MPI_Reduce(&energy_deposition, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            if (my_rank == 0)
+            {
+              for (i = 0; i < MMODELGRID; i++)
+              {
+                energy_deposition[i] = redhelper[i];
+              }
+            }
             MPI_Reduce(&J, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
             if (my_rank == 0)
             {

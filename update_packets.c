@@ -148,6 +148,10 @@ int update_packets(int nts)
                     #pragma omp atomic
                   #endif
                   time_step[nts].positron_dep += pkt_ptr->e_cmf;
+                  #ifdef _OPENMP 
+                    #pragma omp atomic
+                  #endif
+	          energy_deposition[cell[pkt_ptr->where].modelgridindex] += pkt_ptr->e_cmf;
 		}
                 else
 		{
@@ -155,6 +159,10 @@ int update_packets(int nts)
                     #pragma omp atomic
                   #endif
                   time_step[nts].gamma_dep += pkt_ptr->e_cmf;
+                  #ifdef _OPENMP 
+                    #pragma omp atomic
+                  #endif
+	          energy_deposition[cell[pkt_ptr->where].modelgridindex] += pkt_ptr->e_cmf;
 		}
 
 		pkt_ptr->type = TYPE_KPKT;

@@ -404,6 +404,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               /// For all other timesteps temperature corrections have to be applied
               else
               {
+                /// Energy deposition calculation is independent of LTE/NLTE so do it here
+                energy_deposition[n] *= 1./(deltaV*deltat)/nprocs/assoc_cells;
+		
                 /// we have to calculate the electron density 
                 /// and all the level populations
                 /// Normalise estimators and make sure that they are finite.
@@ -798,7 +801,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 }
                 fprintf(estimators_file,"%g %g %g %g %g %g %g %g ",heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
               #endif
-              fprintf(estimators_file,"\n");
+	      fprintf(estimators_file,"%g\n",energy_deposition[n]);
             #endif
           }
           else 
@@ -856,7 +859,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 }
                 fprintf(estimators_file,"%g %g %g %g %g %g %g %g ",0.,0.,0.,0.,0.,0.,0.,0.);
               #endif
-              fprintf(estimators_file,"\n");
+	      fprintf(estimators_file,"%g\n",0.);
             #endif
           }
           
@@ -924,7 +927,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           //fprintf(estimators_file,"%g %g %g %g %g %g %g %g ",heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
           fprintf(estimators_file,"%g %g %g %g %g %g %g %g ",0.,0.,0., 0.,0.,0.,0.,0.);
         #endif
-        fprintf(estimators_file,"\n");
+	fprintf(estimators_file,"%g \n",energy_deposition[n]);
       }
       else
       {
@@ -960,7 +963,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           }
           fprintf(estimators_file,"%g %g %g %g %g %g %g %g ",0.,0.,0.,0.,0.,0.,0.,0.);
         #endif
-        fprintf(estimators_file,"\n");
+	fprintf(estimators_file,"%g \n",0.);
       }
     }
   #endif

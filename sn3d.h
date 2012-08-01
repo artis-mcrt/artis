@@ -376,9 +376,11 @@ float modelgrid_partfunct[MMODELGRID*MELEMENTS*MIONS];        /// Pointer to an 
 float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity                     ///ATOMIC
 double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpkt emissivity                        ///ATOMIC
 double J[MMODELGRID+1];
+double energy_deposition[MMODELGRID+1];
 #ifdef DO_TITER
   double J_reduced_save[MMODELGRID+1];
 #endif
+
 
 #ifdef FORCE_LTE
   double redhelper[MMODELGRID+1];
@@ -391,6 +393,7 @@ double J[MMODELGRID+1];
   double bfheatingestimator[(MMODELGRID+1)*MELEMENTS*MIONS];
   double corrphotoionrenorm[(MMODELGRID+1)*MELEMENTS*MIONS];
   double redhelper[(MMODELGRID+1)*MELEMENTS*MIONS];
+
   
   #ifdef DO_TITER
     double nuJ_reduced_save[MMODELGRID];
