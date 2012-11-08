@@ -1,0 +1,34 @@
+CC = gcc
+CFLAGS= -O0 -DPOTHP 
+LDFLAGS= $(shell gsl-config --libs) 
+CFLAGS= $(shell gsl-config --cflags) -DPHOTO
+
+
+sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o
+
+sn3d: version $(sn3d_objects) 
+	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d.exe
+
+
+sn3dsyn_objects = sn3dsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o
+
+sn3dsyn: version $(sn3dsyn_objects) 
+	$(CC) $(CFLAGS) $(sn3dsyn_objects) $(LDFLAGS) -o sn3dsyn.exe
+
+sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o
+
+sn3dlcsyn: version $(sn3dlcsyn_objects) 
+	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn.exe
+
+version:
+	@echo "#define GIT_HASH \"`cat .git/refs/heads/master`\"" > version.h
+	@echo "#define COMPILETIME \"`date`\"" >> version.h
+
+
+
+
+clean:
+	rm -f *o
+
+veryclean:
+	rm -f *o *exe *~ 

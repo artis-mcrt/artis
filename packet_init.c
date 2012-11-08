@@ -84,25 +84,30 @@ int packet_init(int middle_iteration, int my_rank)
 int setup_packets (int pktnumberoffset)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
+  //Temporary variables. Only for debugging 
+  double const LUMINOSITY =1000;
+  double const rPhotosphere=1000;
+  double const tPhotosphere=3600;
+  double const t_current = tmin; // valid in steady stat.
   int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset); // I think we dont need this.
 
   double rand_nu(double _tphotosphere);
   double doppler_shift(const size_t n, double *directionVec, double *velocityVec);
-  int get_cell_velocity_3(double *positionVecPrt, double *velocityVecPrt, double time);
+  double get_cell_velocity_3(double *positionVecPrt, double *velocityVecPrt, double time);
 
   double etot;
   double e0;
-  int n,m;
-  double zrand,runtot;
-  CELL *grid_ptr;
-  double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
-  double vol_init(CELL *grid_ptr);
-  float norm;
-  int mabove, mbelow;
-  int packet_reset;
+  int n;
+  double zrand;
+  //CELL *grid_ptr;
+  //double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
+  //double vol_init(CELL *grid_ptr);
+  //float norm;
+  //int mabove, mbelow;
+  //int packet_reset;
 
-  double thetaEmittDirection;
-  double phiEmittDirection;
+  double thetaEmittDirectionLF;
+  double phiEmittDirectionLF;
   double xnEmittDirection,ynEmittDirection,znEmittDirection;
 
   double thetaEmittPosition;
@@ -134,12 +139,9 @@ int setup_packets (int pktnumberoffset)
 
   //add here the photosphere code and
 
-  for V(n = 0; n < npkts; n++)
+  for (n = 0; n < npkts; n++)
   {
     /// Get random number.
-    runtot=0.0;
-    mabove=ngrid;
-    mbelow = 0;
     zrand = gsl_rng_uniform(rng);
 
     //Position of the photon on the surface of the Photosphere 
@@ -152,7 +154,8 @@ int setup_packets (int pktnumberoffset)
 
 
     //try to get the cell index
-    //######WE HAVE TO DEFINE THE VARIABLE rPhotosphere and tPhotosphere
+    //######WE HAVE TO DEFINE THE VARIABLE rPhotosphere and tPhotosphere. 
+    //The current definition in this function is only temporary and should be moved to the input file.
     
     xCellIndex = (int) ((rPhotosphere * xnEmittPosition) / wid_init - 0.5 * nxgrid);
     yCellIndex = (int) ((rPhotosphere * ynEmittPosition) / wid_init - 0.5 * nygrid);
@@ -185,16 +188,6 @@ int setup_packets (int pktnumberoffset)
     
 
     //Transformation the photon direction from the local frame(LF) to the global frame(GF)
-    
-
-
-    grid_ptr = &cell[m];
-    if (m >= ngrid)
-    {
-      printout("I'm sorry, but I think I to failed  placing the  packet. Abort.\n");
-      exit(EXIT_FAILURE);
-    }
-
 
 
     //Store the properties of the packet in the corresponding structure 
@@ -748,7 +741,7 @@ rand_nu(double _tphotosphere)
   //This function draws a random nu corresponding to the temperature.
   const double c1 = 2 * GSL_CONST_CGS_PLANCKS_CONSTANT_H/(gsl_pow_2(GSL_CONST_CGS_SPEED_OF_LIGHT));
   const double c2 = GSL_CONST_CGS_PLANCKS_CONSTANT_H/ GSL_CONST_CGS_BOLTZMANN;
-  const double nuPeak = 5.8789254e10 * _tphotosphere;
+  const double nuPeak = 5.8789254e10 * _tphotosphere;// The constant here is taken from Wien's displacement law.
   const double bPeak = RAND_NU_PLANCK(nuPeak,_tphotosphere);
 
 
@@ -776,17 +769,19 @@ doppler_shift(const size_t n, double *directionVec, double *velocityVec)
 {
 //This function computes the Doppler shift for a given velocity(wiki).
 
-  dot_product(double *a, double *b, const size_t n)
+  double dot_product(double *a, double *b, const size_t n);
+  double gammaCoef;
 
   gammaCoef = 1./(sqrt(1- (dot_product(velocityVec,velocityVec,n)/GSL_CONST_CGS_SPEED_OF_LIGHT)));
 
-  return gammaCoef * (1 - (dot_product(directionVec, velocityVec,n)/gsl_pwo_2(GSL_CONST_CGS_SPEED_OF_LIGHT)));
+  return gammaCoef * (1 - (dot_product(directionVec, velocityVec,n)/gsl_pow_2(GSL_CONST_CGS_SPEED_OF_LIGHT)));
 }
 
 double
 dot_product(double *a, double *b, const size_t n)
 {
-//This function computes the dot product of the two given vectors.
+//This function computes the dot product of the two given vectors. a
+//The function can be improved by using c99 feature instead of ANSI C.
         double sum = 0;
         size_t i;
  
