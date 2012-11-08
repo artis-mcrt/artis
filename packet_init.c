@@ -1,5 +1,16 @@
+#ifndef PACKET_INIT_C
+#define PACKET_INIT_C
+
+#include <stdio.h>
+#include <math.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_sf.h>
+#include <gsl/gsl_const_cgs.h>
+
 #include "sn3d.h"
 
+#endif
 
 int packet_init(int middle_iteration, int my_rank)
 {
@@ -8,12 +19,12 @@ int packet_init(int middle_iteration, int my_rank)
   FILE *packets_file;
   int pktnumberoffset;
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
-  
+
   if (!continue_simulation)
   {
     pktnumberoffset = middle_iteration*npkts;
     setup_packets(pktnumberoffset);
-    sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank); 
+    sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank);
     if ((packets_file = fopen(filename, "wb")) == NULL)
     {
       printf("[fatal]: packet_init: Cannot open packets file\n");
@@ -22,13 +33,13 @@ int packet_init(int middle_iteration, int my_rank)
     fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
     //write_packets(packets_file);
     fclose(packets_file);
-        
+
     /* Consistency check to debug read/write
     PKT testpkt[MPKTS];
     int n;
     if (i > 0)
     {
-    sprintf(filename,"packets%d_%d.tmp",i-1,my_rank); 
+    sprintf(filename,"packets%d_%d.tmp",i-1,my_rank);
     if ((packets_file = fopen(filename, "rb")) == NULL)
     {
     printf("Cannot open packets file\n");
@@ -36,7 +47,7 @@ int packet_init(int middle_iteration, int my_rank)
   }
     fread(&testpkt, sizeof(PKT), npkts, packets_file);
     fclose(packets_file);
-          
+
     for (n=0; n<npkts; n++)
     {
     if (testpkt[n].number-pkt[n].number != 0) printout("fatal 1!!! %d, %d\n",testpkt[n].number,pkt[n].number);
@@ -57,18 +68,177 @@ int packet_init(int middle_iteration, int my_rank)
     if (testpkt[n].escape_type-pkt[n].escape_type != 0) printout("fatal 16!!!\n"); /// Flag to tell us in which form it escaped from the grid.
     if (testpkt[n].escape_time-pkt[n].escape_time != 0) printout("fatal 17!!!\n");
     if (testpkt[n].scat_count-pkt[n].scat_count != 0) printout("fatal 18!!!\n");  /// WHAT'S THAT???
-    if (testpkt[n].next_trans-pkt[n].next_trans != 0) printout("fatal 19!!!\n");  
+    if (testpkt[n].next_trans-pkt[n].next_trans != 0) printout("fatal 19!!!\n");
     if (testpkt[n].interactions-pkt[n].interactions != 0) printout("fatal 20!!!\n");/// debug: number of interactions the packet undergone
     if (testpkt[n].last_event-pkt[n].last_event != 0) printout("fatal 21!!!\n");  /// debug: stores information about the packets history
   }
   }
     */
   }
-  
+
   return 0;
 }
 
+#ifdef PHOTO
 
+int setup_packets (int pktnumberoffset)
+/// Subroutine that initialises the packets if we start a new simulation.
+{
+  int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset); // I think we dont need this.
+
+  double rand_nu(double _tphotosphere);
+  double doppler_shift(const size_t n, double *directionVec, double *velocityVec);
+  int get_cell_velocity_3(double *positionVecPrt, double *velocityVecPrt, double time);
+
+  double etot;
+  double e0;
+  int n,m;
+  double zrand,runtot;
+  CELL *grid_ptr;
+  double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
+  double vol_init(CELL *grid_ptr);
+  float norm;
+  int mabove, mbelow;
+  int packet_reset;
+
+  double thetaEmittDirection;
+  double phiEmittDirection;
+  double xnEmittDirection,ynEmittDirection,znEmittDirection;
+
+  double thetaEmittPosition;
+  double phiEmittPosition;
+  double xnEmittPosition,ynEmittPosition,znEmittPosition;
+  int xCellIndex,yCellIndex,zCellIndex;
+  int cellId;
+
+  double currentVelocity[3];
+
+  /// The total number of pellets that we want to start with is just
+  /// npkts. The total energy of the pellets is given by Luminosity L.
+
+  /// So energy per pellet is
+  e0 = LUMINOSITY / npkts / n_out_it / n_middle_it;
+  printout("e0 %g\n", e0);
+
+  /* Now we place the pellets in the ejecta. */
+
+  /* Need to get a normalisation factor. */
+  cont[ngrid] = 0.0; //I dont know if this is really necessary.
+
+  if (npkts > MPKTS)
+  {
+    printout("Too many packets. Abort.\n");
+    exit(EXIT_FAILURE);
+  }
+
+
+  //add here the photosphere code and
+
+  for V(n = 0; n < npkts; n++)
+  {
+    /// Get random number.
+    runtot=0.0;
+    mabove=ngrid;
+    mbelow = 0;
+    zrand = gsl_rng_uniform(rng);
+
+    //Position of the photon on the surface of the Photosphere 
+    thetaEmittPosition = acos(1-2*gsl_rng_uniform(rng));
+    phiEmittPosition = M_PI * 2. * gsl_rng_uniform(rng);
+    
+    xnEmittPosition = sin(thetaEmittPosition) * cos(phiEmittPosition);
+    ynEmittPosition = sin(thetaEmittPosition) * cos(thetaEmittPosition);
+    znEmittPosition = cos(thetaEmittPosition);
+
+
+    //try to get the cell index
+    //######WE HAVE TO DEFINE THE VARIABLE rPhotosphere and tPhotosphere
+    
+    xCellIndex = (int) ((rPhotosphere * xnEmittPosition) / wid_init - 0.5 * nxgrid);
+    yCellIndex = (int) ((rPhotosphere * ynEmittPosition) / wid_init - 0.5 * nygrid);
+    zCellIndex = (int) ((rPhotosphere * znEmittPosition) / wid_init - 0.5 * nzgrid);
+
+    //try to get the cell id
+
+    cellId = zCellIndex * nygrid * nxgrid + yCellIndex * nxgrid + xCellIndex;
+
+
+    
+
+
+    //direction of the photon in the local frame(LF) i.e. the surface of the photosphere is assumed to be locally plain 
+    thetaEmittDirectionLF = acos(1-2*gsl_rng_uniform(rng));
+    phiEmittDirectionLF = M_PI * gsl_rng_uniform(rng);
+
+    //computing the direction of the photon in the  global frame
+    xnEmittDirection =   xnEmittPosition * cos(phiEmittDirectionLF) 
+                       + znEmittPosition * cos(phiEmittDirectionLF);
+
+    ynEmittDirection = - xnEmittPosition * cos(thetaEmittDirectionLF) * sin(phiEmittDirectionLF) 
+                       + ynEmittPosition * cos(thetaEmittDirectionLF) 
+                       - znEmittPosition * sin(thetaEmittPosition)    * sin(phiEmittPosition);
+
+    znEmittDirection = - xnEmittPosition * cos(thetaEmittPosition)    * sin(phiEmittPosition) 
+                       + ynEmittPosition * sin(thetaEmittDirectionLF) 
+                       + znEmittPosition * cos(thetaEmittDirectionLF) * sin(phiEmittDirectionLF);
+
+    
+
+    //Transformation the photon direction from the local frame(LF) to the global frame(GF)
+    
+
+
+    grid_ptr = &cell[m];
+    if (m >= ngrid)
+    {
+      printout("I'm sorry, but I think I to failed  placing the  packet. Abort.\n");
+      exit(EXIT_FAILURE);
+    }
+
+
+
+    //Store the properties of the packet in the corresponding structure 
+
+    pkt[n].where = cellId;
+    pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
+
+
+    /// Some fraction of the packets we reasigned because they were not going
+    /// to activate in the time of interest so need to renormalise energies
+    /// to account for this.
+
+
+    //Position of the packet.
+    pkt[n].pos[0] = xnEmittPosition * rPhotosphere;
+    pkt[n].pos[1] = ynEmittPosition * rPhotosphere;
+    pkt[n].pos[2] = znEmittPosition * rPhotosphere;
+
+    //compute the current velocity.
+    //I hope that t_current is a global variable which contains the current time.
+    get_cell_velocity_3(pkt[n].pos, currentVelocity, t_current);
+    
+
+    //Direction of the packet.
+    pkt[n].dir[0] = xnEmittDirection;
+    pkt[n].dir[1] = ynEmittDirection;
+    pkt[n].dir[2] = znEmittDirection;
+
+    /// Now assign the energy and the temperature  to the pellet.
+    pkt[n].e_cmf = e0; //the energy of the packet in the comoving frame 
+    pkt[n].nu_cmf = rand_nu(tPhotosphere); //draw a random nu and assign it to the packet. 
+    pkt[n].nu_rf = pkt[n].nu_cmf /doppler_shift(3,pkt[n].dir, currentVelocity); //compute the rest frame frequency via the doppler shift 
+    pkt[n].e_rf = pkt[n].e_cmf * pkt[n].nu_cmf / pkt[n].nu_rf;  //computing the rest frame energy by using the ration between rf_nu and cmf_nu.
+
+    pkt[n].interactions = 0;
+
+    //Now we set the packet type to rpacket
+    pkt[n].type = TYPE_RPKT;
+  }
+
+  return 0;
+}
+
+#else
 int setup_packets (int pktnumberoffset)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
@@ -101,7 +271,7 @@ int setup_packets (int pktnumberoffset)
 
   /* Now place the pellets in the ejecta and decide at what time
   they will decay. */
- 
+
   /* Need to get a normalisation factor. */
   norm = 0.0;
   for (m=0; m<ngrid; m++)
@@ -134,7 +304,7 @@ int setup_packets (int pktnumberoffset)
     mabove=ngrid;
     mbelow = 0;
     zrand = gsl_rng_uniform(rng);
-      
+
     while (mabove != (mbelow+1))
     {
       if (mabove == (mbelow + 2))
@@ -154,7 +324,7 @@ int setup_packets (int pktnumberoffset)
         mbelow = m;
       }
     }
-    
+
     if (cont[mbelow] > (zrand*norm))
     {
       printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand*norm);
@@ -165,7 +335,7 @@ int setup_packets (int pktnumberoffset)
       printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand*norm);
       exit(0);
     }
-    
+
     m = mbelow;
     //printout("chosen cell %d (%d, %g, %g)\n", m, ngrid, zrand, norm);
     //exit(0);
@@ -179,7 +349,7 @@ int setup_packets (int pktnumberoffset)
     }
     m = m - 1;
     */
-    
+
     grid_ptr = &cell[m];
     if (m >= ngrid)
     {
@@ -200,10 +370,10 @@ int setup_packets (int pktnumberoffset)
       packet_reset++;
     }
   }
-  
-  
-  /// Some fraction of the packets we reasigned because they were not going 
-  /// to activate in the time of interest so need to renormalise energies 
+
+
+  /// Some fraction of the packets we reasigned because they were not going
+  /// to activate in the time of interest so need to renormalise energies
   /// to account for this.
   for (n = 0; n < npkts; n++)
   {
@@ -215,7 +385,7 @@ int setup_packets (int pktnumberoffset)
   return 0;
 }
 
-
+#endif
 
 ///***************************************************************************/
 double fni(CELL *grid_ptr)
@@ -234,7 +404,6 @@ double fni(CELL *grid_ptr)
     dcen[0]=grid_ptr->pos_init[0] + (0.5*wid_init);
     dcen[1]=grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2]=grid_ptr->pos_init[2] + (0.5*wid_init);
-      
 
     m_r = vec_len(dcen) / rmax;
     m_r = pow(m_r,3) * mtot / MSUN;
@@ -258,7 +427,7 @@ double fni(CELL *grid_ptr)
     dcen[0] = grid_ptr->pos_init[0] + (0.5*wid_init);
     dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
-      
+
     /*radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
@@ -276,7 +445,7 @@ double fni(CELL *grid_ptr)
       fraction = 0.0;
     }*/
     fraction = get_fni(grid_ptr->modelgridindex);
-   
+
     return(fraction);
   }
   else if (model_type == RHO_3D_READ)
@@ -397,7 +566,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
   zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]);
   if (zrand3 <= prob_chain[0])
     {
-      
+
       /// Now choose whether it's going to be a nickel or cobalt pellet and
       /// mark it as such.
       zrand = gsl_rng_uniform(rng);
@@ -408,7 +577,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
       else
 	{
 	  zrand = gsl_rng_uniform(rng);
-	  
+
 	  if (zrand < ECOBALT_GAMMA/ECOBALT)
 	    {
 	      pkt[n].type = TYPE_COBALT_PELLET;
@@ -418,7 +587,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	      pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
 	    }
 	}
-      
+
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_NICKEL_PELLET)
 	{
@@ -445,7 +614,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	{
 	  pkt[n].type = TYPE_52MN_PELLET;
 	}
-      
+
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_52FE_PELLET)
 	{
@@ -460,7 +629,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	}
     }
   else
-    {  
+    {
       /// Now choose whether it's going to be a 48Cr or 48V pellet and
       /// mark it as such.
       zrand = gsl_rng_uniform(rng);
@@ -472,7 +641,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	{
 	  pkt[n].type = TYPE_48V_PELLET;
 	}
-      
+
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_48CR_PELLET)
 	{
@@ -500,7 +669,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 void write_packets(FILE *packets_file)
 {
   int i;
-  
+
   for (i = 0; i < npkts; i++)
   {
    fprintf(packets_file,"%d ",pkt[i].number);
@@ -538,7 +707,7 @@ void write_packets(FILE *packets_file)
 void read_packets(FILE *packets_file)
 {
   int i;
-  
+
   for (i = 0; i < npkts; i++)
   {
    fscanf(packets_file,"%d ",&pkt[i].number);
@@ -569,4 +738,72 @@ void read_packets(FILE *packets_file)
    fscanf(packets_file,"%lg %lg %lg ",&pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2]);
    fscanf(packets_file,"\n");
   }
+
+}
+
+double
+rand_nu(double _tphotosphere)
+{
+#define RAND_NU_PLANCK(v,T) ((c1 * gsl_pow_3((v)))/(gsl_sf_exp(c2*((v)/(T))) - 1 ))
+  //This function draws a random nu corresponding to the temperature.
+  const double c1 = 2 * GSL_CONST_CGS_PLANCKS_CONSTANT_H/(gsl_pow_2(GSL_CONST_CGS_SPEED_OF_LIGHT));
+  const double c2 = GSL_CONST_CGS_PLANCKS_CONSTANT_H/ GSL_CONST_CGS_BOLTZMANN;
+  const double nuPeak = 5.8789254e10 * _tphotosphere;
+  const double bPeak = RAND_NU_PLANCK(nuPeak,_tphotosphere);
+
+
+  double bRand, nuRand, bFromNu;
+  double nuInterval = nu_max_r - nu_min_r;
+  //check if nu range is valid 5.88e10 is derived from wien.
+  if (((nuPeak) > nu_max_r)&&((nuPeak)< nu_min_r)) {
+    printf("The Planck function peaks(%g < %g < %g) outside the configured frequency range. Abort.\n",nu_min_r,nuPeak,nu_max_r);
+    exit(EXIT_FAILURE);
+  }
+
+  while (1)
+  {
+    nuRand = gsl_rng_uniform(rng) * nuInterval + nu_min_r;
+    bRand = bPeak * gsl_rng_uniform(rng);
+    bFromNu = RAND_NU_PLANCK(nuRand,_tphotosphere);
+    if (bRand < bFromNu) break;
+  }
+  return nuRand;
+#undef RAND_NU_PLANCK
+}
+
+double
+doppler_shift(const size_t n, double *directionVec, double *velocityVec)
+{
+//This function computes the Doppler shift for a given velocity(wiki).
+
+  dot_product(double *a, double *b, const size_t n)
+
+  gammaCoef = 1./(sqrt(1- (dot_product(velocityVec,velocityVec,n)/GSL_CONST_CGS_SPEED_OF_LIGHT)));
+
+  return gammaCoef * (1 - (dot_product(directionVec, velocityVec,n)/gsl_pwo_2(GSL_CONST_CGS_SPEED_OF_LIGHT)));
+}
+
+double
+dot_product(double *a, double *b, const size_t n)
+{
+//This function computes the dot product of the two given vectors.
+        double sum = 0;
+        size_t i;
+ 
+        for (i = 0; i < n; i++) {
+                sum += a[i] * b[i];
+        }
+        return sum;
+}
+
+double
+get_cell_velocity_3(double *positionVecPrt, double *velocityVecPrt, double time)
+{
+  //This function computes the velocity of a particle/object at a given position assuming homologies expansion(roepke2005).
+
+  velocityVecPrt[0] = positionVecPrt[0] / time;
+  velocityVecPrt[1] = positionVecPrt[1] / time;
+  velocityVecPrt[2] = positionVecPrt[2] / time;
+
+  return 0;
 }
