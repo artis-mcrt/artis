@@ -209,7 +209,7 @@ int update_packets(int nts)
           packet_prop(pkt_ptr, ts, ts+tw, nts);
     
         }
-        else if (pkt_ptr->type != TYPE_ESCAPE)
+        else if (pkt_ptr->type != TYPE_ESCAPE || pkt_ptr->type != TYPE_INACTIVE)
         {
           printout("Unknown packet type %d %d. Abort.\n", pkt_ptr->type, n);
           exit(0);
