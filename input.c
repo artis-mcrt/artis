@@ -5,6 +5,8 @@
 #ifdef DO_EXSPEC
   #include "exspec.h"
 #endif
+#include "input_parser.h" //header for the new input parser.
+#include "input_parser.c"
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
 
@@ -1632,6 +1634,390 @@ void read_atomicdata()
 
 ///****************************************************************************
 /// Subroutine to read in input parameters from input.txt.
+
+#ifdef NEW_INPUT
+
+static int
+handler (void *conf, const char *section, const char *name,
+	 const char *value) 
+{
+  configuration * pconfig = (configuration *) conf;
+   
+#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
+    if (MATCH ("artis", "Random_Seed"))
+    {
+      pconfig->pre_zseed = atoi (value);
+    }
+  else if (MATCH ("artis", "Number_of_timesteps"))
+    {
+      pconfig->nTStep = atoi (value);
+    }
+  else if (MATCH ("artis", "First_time_step"))
+    {
+      pconfig->iTStep =  atoi (value);
+    }
+  else if (MATCH ("artis", "Last_time_step"))
+    {
+      pconfig->fTStep =  atoi (value);
+    }
+  else if (MATCH ("artis", "Start_Time"))
+    {
+      pconfig->tmin =  atof (value);
+    }
+  else if (MATCH ("artis", "End_Time"))
+    {
+      pconfig->tmax =  atof (value);
+    }
+  else if (MATCH ("artis", "Lowest_frequency_to_synthesise"))
+    {
+      pconfig->nuSynMin =  atof (value);
+    }
+  else if (MATCH ("artis", "Highest_frequency_to_synthesise"))
+    {
+      pconfig->nuSynMax =  atof (value);
+    }
+  else if (MATCH ("artis", "Synthesise_Time_steps"))
+    {
+      pconfig->nSynTime =  atoi (value);
+    }
+  else if (MATCH ("artis", "Start_Time_Synthesis"))
+    {
+      pconfig->startTimeSynthesis =  atof (value);
+    }
+  else if (MATCH ("artis", "End_Time_Synthesis"))
+    {
+      pconfig->endTimeSynthesis =  atof (value);
+    }
+  else if (MATCH ("artis", "Model_Dimension"))
+    {
+      pconfig->modelDim =  atoi (value);
+    }
+  else if (MATCH ("artis", "Model_type"))
+    {
+      pconfig->modleType =  atoi (value);
+    }
+  else if (MATCH ("artis", "Compute_R-light_curve"))
+    {
+      pconfig->computeRlightCurve =  atoi (value);
+    }
+  else if (MATCH ("artis", "Number_of_iterations"))
+    {
+      pconfig->nOutIt =  atoi (value);
+    }
+  else if (MATCH ("artis", "Speed_of_light"))
+    {
+      pconfig->cLightProp =  atof (value);
+    }
+  else if (MATCH ("artis", "Grey_gamma_opacity"))
+    {
+      pconfig->gammaGray =  atof (value);
+    }
+  else if (MATCH ("artis", "Opacity_choice"))
+    {
+      pconfig->opacityCase =  atof (value);
+    }
+  else if (MATCH ("artis", "Rho_crit_parameter"))
+    {
+      pconfig->rhoCritPara =  atof (value);
+    }
+  else if (MATCH ("artis", "Debug_Packet_number"))
+    {
+      pconfig->debug =  atoi (value);
+    }
+  else if (MATCH ("artis", "Continue_Simulation"))
+    {
+      pconfig->continueSim =  atoi (value);
+    }
+  else if (MATCH ("artis", "RF_cutoff_wavelength"))
+    {
+      pconfig->labdaRFCut =  atof (value);
+    }
+  else if (MATCH ("artis", "Number_of_LTE_time_steps"))
+    {
+      pconfig->nLTETimesteps =  atoi (value);
+    }
+  else if (MATCH ("artis", "Bf_continua_limit"))
+    {
+      pconfig->maxBfContinua =  atoi (value);
+    }
+  else if (MATCH ("SynDir", "X"))
+    {
+      pconfig->synDirX =  atof (value);
+    }
+  else if (MATCH ("SynDir", "Y"))
+    {
+      pconfig->synDirY =  atof (value);
+    }
+  else if (MATCH ("SynDir", "Z"))
+    {
+      pconfig->synDirZ =  atof (value);
+    }
+  else if (MATCH ("Grey_approximation", "Thomson_optical_depth"))
+    {
+      pconfig->cellIsOpticallyThick =  atof (value);
+    }
+  else if (MATCH ("Grey_approximation", "Number_of_time_steps"))
+    {
+      pconfig->nGreyTimesteps =  atoi (value);
+    }
+  else if (MATCH ("kpktsApproximation", "Kpkts_time_to_live"))
+    {
+      pconfig->kpktdiffusion_timescale =  atof (value);
+    }
+  else if (MATCH ("kpktsApproximation", "Number_of_time_steps"))
+    {
+      pconfig->n_kpktdiffusion_timesteps =  atoi (value);
+    }
+  else if (MATCH ("Exspec", "Number_of_MPI_tasks"))
+    {
+      pconfig->nprocsExspec =  atoi (value);
+    }
+  else if (MATCH ("Exspec", "Extract_line-of-sight_informations"))
+    {
+      pconfig->doEmissionRes =  atoi (value);
+    }
+  else if (MATCH ("Photosphere", "rPhotosphere"))
+    {
+      pconfig->rPhotosphere =  atof (value);
+    }
+  else if (MATCH ("Photosphere", "tPhotosphere"))
+    {
+      pconfig->tPhotosphere =  atof (value);
+    }
+  else if (MATCH ("Photosphere", "Luminosity"))
+    {
+      pconfig->luminosity =  atof (value);
+    }
+  else
+    {
+      return 0;		/* unknown section/name, error */
+    }
+  return 1;
+}
+
+
+void read_parameterfile(rank)
+     int rank;
+{
+
+
+  configuration config;
+
+   if (ini_parse ("input.ini", handler, &config) < 0)
+    {
+      printout ("Can not load 'input.ini'\n");
+      exit(EXIT_FAILURE);
+    }
+
+  FILE *input_file;
+  double rr, z1, z2, x;
+  float dum2, dum3, dum4;
+  int dum1, dum5, n, i;
+  unsigned long int zseed; /* rnum generator seed */
+  unsigned long int xseed,pre_zseed;
+  
+
+  pre_zseed = config.pre_zseed > 0 ? config.pre_zseed : time(NULL);
+  printout("[debug] random number seed was %d\n",pre_zseed);
+
+  #ifdef _OPENMP
+    #pragma omp parallel private(x,zseed,n)
+    {
+/*      tid = omp_get_thread_num();
+      nthreads = omp_get_num_threads();
+      if (nthreads > MTHREADS) 
+      {
+        printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n",MTHREADS,nthreads);
+        exit(0);
+      }
+      if (tid == 0) printout("OpenMP parallelisation active with %d threads\n",nthreads);
+  #else
+      tid = 0;
+      nthreads = 1;*/
+  #endif
+      /// For MPI parallelisation, the random seed is changed based on the rank of the process
+      /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
+      /// to the thread-ID tid.
+      zseed = pre_zseed + (13 * rank) + (17*tid);
+      printout("rank %d: thread %d has zseed %d\n",rank,tid,zseed);
+      /// start by setting up the randon number generator
+      rng = gsl_rng_alloc (gsl_rng_ran3);
+      gsl_rng_set ( rng, zseed);
+      /// call it a few times to get it in motion.
+      for (n = 0; n< 100; n++)
+      {
+        x = gsl_rng_uniform(rng);
+        //printout("zrand %g\n", x);
+      }
+  #ifdef _OPENMP
+    }
+  #endif
+
+  //number of time steps
+  ntstep = config.nTStep;
+  //number of start and end time step
+  itstep = config.iTStep;
+  ftstep = config.fTStep;
+  //start and end times
+  tmin = config.tmin * DAY;
+  tmax = config.tmax * DAY;
+  //tlimit = dum4 * DAY;
+
+  nusyn_min = config.nuSynMin * MEV / H; ///lowest frequency to synthesise
+  nusyn_max = config.nuSynMax * MEV / H; ///highest frequecnt to synthesise
+  dlognusyn = (log(nusyn_max) - log(nusyn_min))/NSYN;
+
+  //number of times for synthesis
+  nsyn_time = config.nSynTime;
+  for (i = 0; i < nsyn_time; i++)
+  {
+    time_syn[i] = exp(log(config.startTimeSynthesis) + (config.endTimeSynthesis*i)) * DAY;
+  }
+
+//Dimension of the model
+  switch (config.modelDim)
+  {
+    case 1 : model_type = RHO_1D_READ;
+             break;
+    case 2 : model_type = RHO_2D_READ;
+             break;
+    case 3 : model_type = RHO_3D_READ;
+             break;
+    default: printout("No model dimension specified. Proceed with default");
+  }
+
+
+//We can use this if the ==0 case is 
+  switch (config.computeRlightCurve)
+{
+case 1 : do_r_lc = 1;
+         do_rlc_est = 0;//lc no estimators
+         break;
+case 2 : do_r_lc = 1;
+         do_rlc_est = 0;// lc case with thin cells
+         break;
+case 3 : do_r_lc = 1;
+         do_rlc_est = 2;// lc case with thick cells
+         break;
+case 4 : do_r_lc = 1;
+         do_rlc_est = 3;// gamma-ray heating case
+         break;
+case 0 : break; // This is a artefact from the old input reader. Maybe we can delete this case. 
+default :printout("Unknown rlc mode. Abort.\n");
+         exit(EXIT_FAILURE);
+}
+  
+
+  n_out_it = config.nOutIt;//number of iterations
+  CLIGHT_PROP = config.cLightProp * CLIGHT; //change speed of light?
+  gamma_grey = config.gammaGray;//use grey opacity for gammas?
+
+  //components of syn_dir
+  if ((rr =(config.synDirX*config.synDirX) + (config.synDirY*config.synDirY) + (config.synDirZ*config.synDirZ)) > 1.e-6)
+  {
+    syn_dir[0] = config.synDirX / sqrt( rr );
+    syn_dir[1] = config.synDirY / sqrt( rr ); 
+    syn_dir[2] = config.synDirZ / sqrt( rr );
+  }
+  else
+  {
+    z1 = 1. - (2.*gsl_rng_uniform(rng));
+    z2 = gsl_rng_uniform(rng) * 2.0 * PI;
+    syn_dir[2] = z1;
+    syn_dir[0] = sqrt( (1. - (z1*z1))) * cos(z2);
+    syn_dir[1] = sqrt( (1. - (z1*z1))) * sin(z2);
+  }
+  
+  /// ensure that this vector is normalised.
+  opacity_case = config.opacityCase;
+
+  ///MK: begin
+  rho_crit_para = config.rhoCritPara;
+  printout("input: rho_crit_para %g\n",rho_crit_para);
+  ///the calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
+  
+// activate debug output for packet
+  debug_packet = config.debug;            /// select a negative value to deactivate
+  ///MK: end
+  
+  /// Do we start a new simulation or, continue another one?
+  continue_simulation = 0;          /// Preselection is to start a new simulation
+  if (config.continueSim == 1)                    
+  {
+    continue_simulation = 1;        /// Continue simulation if dum1 = 1
+    printout("input: continue simulation\n");
+  }
+
+  /// Wavelength (in Angstroems) at which the parameterisation of the radiation field
+  /// switches from the nebular approximation to LTE.
+  nu_rfcut = CLIGHT/(config.labdaRFCut*1e-8);//free parameter for calculation of rho_crit
+  printout("input: nu_rfcut %g\n",nu_rfcut);
+
+  
+  /// Sets the number of initial LTE timesteps for NLTE runs
+  n_lte_timesteps = config.nLTETimesteps;
+  #ifdef FORCE_LTE
+    printout("input: this is a pure LTE run\n");
+  #else
+    printout("input: this is a NLTE run\n");
+    printout("input: do the first %d timesteps in LTE\n",n_lte_timesteps);
+  #endif
+  
+  /// Set up initial grey approximation?
+  cell_is_optically_thick = config.cellIsOpticallyThick;
+  n_grey_timesteps = config.nGreyTimesteps;
+  printout("input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",cell_is_optically_thick,n_grey_timesteps);
+  
+  /// Limit the number of bf-continua
+  max_bf_continua = (float) config.maxBfContinua;
+  if (max_bf_continua == -1)
+  {
+    printout("input: use all bf-continua\n");
+    max_bf_continua = 1e6;
+  }
+  else
+  {
+    printout("input: use only %d bf-continua per ion\n",max_bf_continua);
+  }
+  
+  /// The following parameters affect the DO_EXSPEC mode only /////////////////
+  /// Read number of MPI tasks for exspec
+  #ifdef DO_EXSPEC
+    nprocs_exspec = config.nprocsExspec;
+    printout("input: DO_EXSPEC ... extract spectra for %d MPI tasks\n",nprocs_exspec);
+    printout("input: DO_EXSPEC ... and %d packets per task\n",npkts);
+  #endif
+
+  /// Extract line-of-sight dependent information of last emission for spectrum_res
+  ///   if 1, yes
+  ///   if 0, no
+  /// Only affects runs with DO_EXSPEC. But then it needs huge amounts of memory!!!
+  /// Thus be aware to reduce MNUBINS for this mode of operation!
+  #ifdef DO_EXSPEC
+    do_emission_res = config.doEmissionRes;
+    if (do_emission_res == 1) printout("input: DO_EXSPEC ... extract los dependent emission information\n");
+  #endif
+
+  /// To reduce the work imbalance between different MPI tasks I introduced a diffusion
+  /// for kpkts, since it turned out that this work imbalance was largely dominated 
+  /// by continuous collisional interactions. By introducing a diffusion time for kpkts
+  /// this loop is broken. The following two parameters control this approximation.
+  /// Parameter one (a float) gives the relative fraction of a time step which individual
+  /// kpkts live. Parameter two (an int) gives the number of time steps for which we
+  /// want to use this approximation
+  kpktdiffusion_timescale = (float) config.kpktdiffusion_timescale;
+  n_kpktdiffusion_timesteps = config.n_kpktdiffusion_timesteps;
+  printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n",kpktdiffusion_timescale, n_kpktdiffusion_timesteps);
+
+  //This part of the read in function set the parameters for the photosphere part of the code.
+  rPhotosphere = config.rPhotosphere;
+  tPhotosphere = config.tPhotosphere;
+  luminosity = config.luminosity;
+}
+
+#else
+
+
 void read_parameterfile(rank)
      int rank;
 {
@@ -1878,6 +2264,8 @@ void read_parameterfile(rank)
   fclose(input_file);
 }
 
+
+#endif
 
 ///****************************************************************************
 /// Subroutine to read in a 1-D model.

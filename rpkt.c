@@ -145,7 +145,8 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         kappa = get_kappagrey(mgi)*get_rho(mgi);
         get_velocity(pkt_ptr->pos, vel_vec, t_current);
         kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
-        edist = (tau_next - tau_current) / kappa;
+        //edist = (tau_next - tau_current) / kappa;
+        edist = 1e99;//only For DEBUG
         find_nextline = 1;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
@@ -154,7 +155,8 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
       else
       {
         /// get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(pkt_ptr, &rpkt_eventtype, t_current, tau_next, min(tdist,sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        //edist = get_event(pkt_ptr, &rpkt_eventtype, t_current, tau_next, min(tdist,sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = 1e99; //only For DEBUG
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu);
         #endif

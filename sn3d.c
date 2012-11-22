@@ -33,7 +33,7 @@ int main(int argc, char** argv)
   int get_ionstage(int element, int ion);
   int time_init();
   int grid_init();
-  int packet_init(int middle_iteration, int my_rank);
+
   int input();
   int nts;
   int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
@@ -88,6 +88,13 @@ int main(int argc, char** argv)
   int assoc_cells;
   int real_time_start, do_this_full_loop;
   
+//in case of a photosphere run use packet_init_photosphere
+#ifdef PHOTO
+  int packet_init_photosphere(int middle_iteration, int my_rank);
+#else
+  int packet_init(int middle_iteration, int my_rank);
+#endif
+
 //  int HUGEE;
   
   #ifdef MPI_ON
@@ -322,7 +329,12 @@ int main(int argc, char** argv)
     {
       /// Create a bunch of npkts packets
       /// and write them to a binary file for later readin.
+      //In case of a photosphere run we use packet_init_photosphere.
+#ifdef PHOTO
+      packet_init_photosphere(middle_iteration,my_rank);
+#else
       packet_init(middle_iteration,my_rank);
+#endif
     }
     
     /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.

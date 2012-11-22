@@ -74,6 +74,8 @@ ifeq ($(DOMAIN),MPA-Garching.MPG.DE)
   exspec_dd: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 
+	
+  photo: override CFLAGS =  -g -O3 -I$(INCLUDE) -DPHOTO
   ### desktop MPI
   #CC    =  /opt/mpich2-1.0.3/bin/mpicc #/usr/common/pdsoft/appl/mpich-1.2.6/bin/mpicc #/usr/common/pdsoft/bin/mpicc
   #INCLUDE=/afs/mpa/common/pdsoft/include/

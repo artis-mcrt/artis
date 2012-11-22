@@ -79,7 +79,7 @@ setup_packets_photosphere (int pktnumberoffset)
   /// npkts. The total energy of the pellets is given by Luminosity L.
 
   /// So energy per pellet is
-  e0 = LUMINOSITY / npkts / n_out_it / n_middle_it;
+  e0 = luminosity / npkts / n_out_it / n_middle_it;
   printout ("e0 %g\n", e0);
 
   /* Now we place the pellets in the ejecta. */
@@ -113,17 +113,23 @@ setup_packets_photosphere (int pktnumberoffset)
       //The current definition in this function is only temporary and should be moved to the input file.
 
       xCellIndex =
-	(int) ((rPhotosphere * xnEmittPosition) / wid_init - 0.5 * nxgrid);
+	(int) ((rPhotosphere * xnEmittPosition  + 0.5 * nxgrid * wid_init) / wid_init);
       yCellIndex =
-	(int) ((rPhotosphere * ynEmittPosition) / wid_init - 0.5 * nygrid);
+	(int) ((rPhotosphere * ynEmittPosition  + 0.5 * nxgrid * wid_init) / wid_init);
       zCellIndex =
-	(int) ((rPhotosphere * znEmittPosition) / wid_init - 0.5 * nzgrid);
+	(int) ((rPhotosphere * znEmittPosition  + 0.5 * nxgrid * wid_init) / wid_init);
+    
 
+      //
       //try to get the cell id
 
       cellId =
 	zCellIndex * nygrid * nxgrid + yCellIndex * nxgrid + xCellIndex;
 
+      //DEBUG
+      //
+      printout("xEmittP: %g ; yEmittP %g ; zEmitt %g \n",rPhotosphere * xnEmittPosition, rPhotosphere * ynEmittPosition,rPhotosphere * znEmittPosition);
+      printout("xCellIndex: %d ; yCellIndex: %d ; zCellIndex %d ; cellId: %d \n", xCellIndex,yCellIndex,zCellIndex,cellId);
       while (1)
 	{
 	  //This loop checks if the direction is valid.
@@ -209,6 +215,9 @@ setup_packets_photosphere (int pktnumberoffset)
 
       //Now we set the packet type to rpacket
       pkt[n].type = TYPE_RPKT;
+
+      //Set the last cross value
+      pkt[n].last_cross=NONE;
     }
 
   return 0;

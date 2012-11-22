@@ -610,6 +610,8 @@ extern short use_cellhist;
 //This variabels are for photosphere part
 #ifdef PHOTO
 double rPhotosphere;
+double luminosity;
+double tPhotosphere;
 #endif
 
 //structure to store the config from the input.txt 
@@ -620,33 +622,36 @@ double rPhotosphere;
   int nTStep;			//number of time steps
   int iTStep;			//start time step
   int fTStep;			//end time step
-  float tmin;			//start time
-  float tmax;			//end time
-  float nuSynMin;		//lowest frequency to synthesise
-  float nuSynMax;		// highest frequency to synthesise
+  double tmin;			//start time
+  double tmax;			//end time
+  double nuSynMin;		//lowest frequency to synthesise
+  double nuSynMax;		// highest frequency to synthesise
   int nSynTime;			// number of times for synthesise
-  float startTimeSynthesis;	//start time for synthesise
-  float endTimeSynthesis;	//end time for synthesise
+  double startTimeSynthesis;	//start time for synthesise
+  double endTimeSynthesis;	//end time for synthesise
   int modelDim; //Dimension of the model
   int modleType;		//model Type
   int computeRlightCurve;	// compute the r-light curve. There are 4 possible cases:1=lc no estimators; 2=lc case with thin cells;3=lc case with thick cells;4=gamm-ray heating case. Everything else leads to a abort.
   int nOutIt;			//number of iterations 
-  int cLightProp;		// number of iterations. This will run the code n times.
+  double cLightProp;		// number of iterations. This will run the code n times.
   int gammaGray;		//use grey opacity for gamma.
-  float synDirX;		//X component of syn dir. This vector has to be normalized.
-  float synDirY;		//y component of syn dir. This vector has to be normalized.
-  float synDirZ;		//z component of syn dir. This vector has to be normalized.
-  float opacityCase;		//opacity choice. 
-  float rhoCritPara;		//free parameter for calculation of rho_crit
+  double synDirX;		//X component of syn dir. This vector has to be normalized.
+  double synDirY;		//y component of syn dir. This vector has to be normalized.
+  double synDirZ;		//z component of syn dir. This vector has to be normalized.
+  double opacityCase;		//opacity choice. 
+  double rhoCritPara;		//free parameter for calculation of rho_crit
   int debug;			// enable debug for the packet with the corresponding number. To deactivate the packed debugging set a negative number.
   int continueSim;          //If 0 is set the code run a new simulation 
-  float labdaRFCut;         // Wavelength (in Angstroems) at which the parameterisation of the radiation field
+  double labdaRFCut;         // Wavelength (in Angstroems) at which the parameterisation of the radiation field
   int nLTETimesteps;        // Sets the number of initial LTE timesteps for NLTE runs. This maks only sens in a not pure LTE run
-  float cellIsOpticallyThick;//This flag defins a upper limit for the Thomson optical depth. If a cell exceed this limit it will be treated in grey approximation.
+  double cellIsOpticallyThick;//This flag defins a upper limit for the Thomson optical depth. If a cell exceed this limit it will be treated in grey approximation.
   int nGreyTimesteps;//Defines the number of time time steps  where the grey approximation is applied. Note that the gray approximation will only be applied if  "cellIsOpticallyThick" and "nGreyTimesteps" are fulfilled.
   int maxBfContinua; //Limit the number of bf-continua.
   int nprocsExspec; //Read the number of MPI tasks for exspec
   int doEmissionRes; //Extract line-of-sight dependent information of last emission for spectrum_res. 
-  float kpktdiffusion_timescale;// Relative fraction of a time step which individual kpkts live.
+  double kpktdiffusion_timescale;// Relative fraction of a time step which individual kpkts live.
   int n_kpktdiffusion_timesteps; // number of time steps for which we want to use the diffusion time approximation for kpkt.
+  double rPhotosphere; //Radius of the Photosphere
+  double tPhotosphere; //Temprature of the Photosphere 
+  double luminosity;   //Luminosity of the Photosphere 
  } configuration;
