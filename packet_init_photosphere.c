@@ -70,11 +70,12 @@ setup_packets_photosphere (int pktnumberoffset)
   double thetaEmittPosition;
   double phiEmittPosition;
   double xnEmittPosition, ynEmittPosition, znEmittPosition;
-  int xCellIndex, yCellIndex, zCellIndex;
+  //int xCellIndex, yCellIndex, zCellIndex;
   int cellId;
 
   double currentVelocity[3];
-
+  double posi[3];
+  int gridtm[3];
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by Luminosity L.
 
@@ -112,24 +113,35 @@ setup_packets_photosphere (int pktnumberoffset)
       //######WE HAVE TO DEFINE THE VARIABLE rPhotosphere and tPhotosphere. 
       //The current definition in this function is only temporary and should be moved to the input file.
 
-      xCellIndex =
-	(int) ((rPhotosphere * xnEmittPosition  + 0.5 * nxgrid * wid_init) / wid_init);
-      yCellIndex =
-	(int) ((rPhotosphere * ynEmittPosition  + 0.5 * nxgrid * wid_init) / wid_init);
-      zCellIndex =
-	(int) ((rPhotosphere * znEmittPosition  + 0.5 * nxgrid * wid_init) / wid_init);
+      //xCellIndex =
+	//(int) ((rPhotosphere * xnEmittPosition  + 0.5 * nxgrid * wid_init) / wid_init);
+      //yCellIndex =
+	//(int) ((rPhotosphere * ynEmittPosition  + 0.5 * nygrid * wid_init) / wid_init);
+      //zCellIndex =
+	//(int) ((rPhotosphere * znEmittPosition  + 0.5 * nzgrid * wid_init) / wid_init);
     
 
       //
       //try to get the cell id
 
-      cellId =
-	zCellIndex * nygrid * nxgrid + yCellIndex * nxgrid + xCellIndex;
 
+
+      posi[0] = rPhotosphere * xnEmittPosition;
+      posi[1] = rPhotosphere * ynEmittPosition;
+      posi[2] = rPhotosphere * znEmittPosition;
+     
+      gridtm[0] = nxgrid;
+      gridtm[1] = nygrid;
+      gridtm[2] = nzgrid;
+
+      cellId = get_cell_id(posi,wid_init,gridtm);
       //DEBUG
       //
       printout("xEmittP: %g ; yEmittP %g ; zEmitt %g \n",rPhotosphere * xnEmittPosition, rPhotosphere * ynEmittPosition,rPhotosphere * znEmittPosition);
-      printout("xCellIndex: %d ; yCellIndex: %d ; zCellIndex %d ; cellId: %d \n", xCellIndex,yCellIndex,zCellIndex,cellId);
+      //printout("xCellIndex: %d ; yCellIndex: %d ; zCellIndex %d ; cellId: %d \n", xCellIndex,yCellIndex,zCellIndex,cellId);
+      //printout("NEW xCellIndex: %d ; yCellIndex: %d ; zCellIndex %d ; cellId: %d \n", xCellIndex,yCellIndex,zCellIndex,get_cell_id(posi,wid_init,gridtm));
+
+
       while (1)
 	{
 	  //This loop checks if the direction is valid.
@@ -211,6 +223,8 @@ setup_packets_photosphere (int pktnumberoffset)
       pkt[n].nu_rf = pkt[n].nu_cmf / doppler_shift (3, pkt[n].dir, currentVelocity);	//compute the rest frame frequency via the doppler shift 
       pkt[n].e_rf = pkt[n].e_cmf * pkt[n].nu_cmf / pkt[n].nu_rf;	//computing the rest frame energy by using the ration between rf_nu and cmf_nu.
 
+      printout("[TMP DEBUG]: e_cmf = %f , nu_cmf = %f , nu_rf = %f , e_rf = %f \n",pkt[n].e_cmf, pkt[n].nu_cmf ,pkt[n].nu_rf ,pkt[n].e_rf );
+
       pkt[n].interactions = 0;
 
       //Now we set the packet type to rpacket
@@ -267,12 +281,14 @@ doppler_shift (const size_t n, double *directionVec, double *velocityVec)
   double dot_product (double *a, double *b, const size_t n);
   double gammaCoef;
 
-  gammaCoef =
-    1. /
-    (sqrt
-     (1 -
-      (dot_product (velocityVec, velocityVec, n) /
-       GSL_CONST_CGS_SPEED_OF_LIGHT)));
+  ////gammaCoef =
+    //1. /
+    //(sqrt
+     //(1 -
+      //(dot_product (velocityVec, velocityVec, n) /
+       //GSL_CONST_CGS_SPEED_OF_LIGHT)));
+
+  gammaCoef = 1.;
 
   return gammaCoef * (1 -
 		      (dot_product (directionVec, velocityVec, n) /
