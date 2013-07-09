@@ -1153,6 +1153,9 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 {
   //double osc_strength(int element, int ion, int upper, int lower);
   double osc_strength(int lineindex);
+  double coll_str(int lineindex);
+  double statw_up(int lineindex);
+  double statw_down(int lineindex);
   double fac1;
   double nne,T_e;
   double C;
@@ -1175,32 +1178,53 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   fac1 = epsilon_trans/KB/T_e;
   nne = get_nne(modelgridindex);
   
-  ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
-  ///Rutten script eq. 3.32. p.50
-  //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
-  
-  ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-  g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-  //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-  /// crude approximation to the already crude Van-Regemorter formula
-  test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-  if (g_bar >= test) Gamma = g_bar;
-  else Gamma = test;
-  //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
-  C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
-  
-  #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
-    if (debuglevel == 2) printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-    if (debuglevel == 777) printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-    if (!finite(C)) 
+  if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
     {
-      printout("fatal a5: abort\n"); 
-      printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
-      printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-      printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
-      abort();
+      ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
+      ///Rutten script eq. 3.32. p.50
+      //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
+      
+      ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+      //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+      /// crude approximation to the already crude Van-Regemorter formula
+      test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      if (g_bar >= test) Gamma = g_bar;
+      else Gamma = test;
+      //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+      C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
     }
+  else if (coll_str(lineindex) > 0.0)
+    { //case of reading in an effective collision strength 
+      //from Osterbrock and Ferland, p51
+    
+      C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) * exp(-fac1) / statw_down(lineindex);
+      //test test
+      //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
+      
+    }
+  else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
+    {
+      C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
+    }
+  else
+    {
+      C = 0.0;
+    }
+
+#ifdef DEBUG_ON
+      if (debuglevel == 2) printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
+      if (debuglevel == 2) printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
+      if (debuglevel == 777) printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
+      if (!finite(C)) 
+	{
+	  printout("fatal a5: abort\n"); 
+	  printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
+	  printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
+	  printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));	  
+	  printout("[debug] col_exc: coll_str(lineindex) %g statw_up(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_up(lineindex),mastate[tid].statweight);
+	  abort();
+	}
   #endif
   return C;
 }
@@ -1258,6 +1282,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
 {
   //double osc_strength(int element, int ion, int upper, int lower);
   double osc_strength(int lineindex);
+  double coll_str(int lineindex);
   double epsilon(int element, int ion, int level);
   double fac1;
   double nne,T_e;
@@ -1280,22 +1305,45 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
   T_e = get_Te(modelgridindex);
   fac1 = epsilon_trans/KB/T_e;
   nne = get_nne(modelgridindex);
+
+  if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
+    {
   
-  ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
-  ///Rutten script eq. 3.33. p.50
-  //f = osc_strength(element,ion,upper,lower);
-  //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-  
-  ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-  g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-  //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-  /// crude approximation to the already crude Van-Regemorter formula
-  test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-  if (g_bar >= test) Gamma = g_bar;
-  else Gamma = test;
-  g_ratio = statweight_target/mastate[tid].statweight;
-  //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-  C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+      ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
+      ///Rutten script eq. 3.33. p.50
+      //f = osc_strength(element,ion,upper,lower);
+      //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
+      
+      ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+      //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+      /// crude approximation to the already crude Van-Regemorter formula
+      test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      if (g_bar >= test) Gamma = g_bar;
+      else Gamma = test;
+      g_ratio = statweight_target/mastate[tid].statweight;
+      //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+      C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+    }
+  else if (coll_str(lineindex) > 0.0)
+    { //case of reading in an effective collision strength
+      //from Osterbrock and Ferland, p51
+      //mastate[tid].statweight is UPPER LEVEL stat weight
+      //statweight_target is LOWER LEVEL stat weight
+      C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) / mastate[tid].statweight;
+      // test test
+      //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+      
+
+    }
+  else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
+    {
+      C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+    }
+  else
+    {
+      C = 0.0;
+    }
   
   #ifdef DEBUG_ON
     if (debuglevel == 2) printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);

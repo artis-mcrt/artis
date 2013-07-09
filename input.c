@@ -19,6 +19,7 @@ int input(rank)
   int read_3d_model();
   int get_gam_ll();
   int get_nul();
+  int read_binding_energies();
   
   FILE *co_lines;
   FILE *ni_lines;
@@ -42,9 +43,9 @@ int input(rank)
   
   maxion = MIONS;
   /// Set grid size
-  nxgrid = 25; //pow(MGRID,1./3.); //10;
-  nygrid = 25; //pow(MGRID,1./3.); //10;
-  nzgrid = 25; //pow(MGRID,1./3.); //10;
+  nxgrid = 4; //pow(MGRID,1./3.); //10;
+  nygrid = 4; //pow(MGRID,1./3.); //10;
+  nzgrid = 4; //pow(MGRID,1./3.); //10;
   printout("nxgrid %d\n",nxgrid);
   /*nxgrid = 4;
   nygrid = 4;
@@ -259,7 +260,10 @@ int input(rank)
     exit(0);
   }
   
-  
+  #ifdef NT_ON
+  read_binding_energies();
+  #endif
+    
   #ifdef DO_EXSPEC
     /// Check if enough  memory for spectra has been assigned
     /// and allocate memory for the emission statistics
@@ -326,7 +330,9 @@ void read_atomicdata()
   //double einstein_spontaneous_emission(int element, int ion, int upper, int lower);
   int get_nions(int element);
   int get_nlevels(int element, int ion);
+  int get_nlevels_nlte(int element, int ion);
   int get_bfcontinua(int element, int ion);
+  short is_nlte(int element, int ion, int level);
 
   FILE *compositiondata;
   FILE *adata;
@@ -376,6 +382,10 @@ void read_atomicdata()
   
   int *nuparr,*ndownarr;
   int targetlevel;
+  double coll_str;
+  int linelistindex,line_in;
+  int check_version;
+  int count;
   
   //printout("start input.c\n");
   if ((modelatom = fopen("modelatom.dat", "r")) == NULL)
@@ -502,7 +512,7 @@ void read_atomicdata()
         while (Zcheck != Z || ionstagecheck != ionstage)
         {
           for (i = 0; i < tottransitions; i++)
-            fscanf(transitiondata,"%d %d %d %lg",&transitionindex,&lower,&upper,&A);
+            fscanf(transitiondata,"%d %d %d %lg %lg",&transitionindex,&lower,&upper,&A,&coll_str);
           fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
           printout("proceed through transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
         }
@@ -530,7 +540,7 @@ void read_atomicdata()
           {
             for (i = 0; i < tottransitions_all; i++)
             {
-              fscanf(transitiondata,"%d %d %d %lg",&transitionindex,&lower,&upper,&A);
+              fscanf(transitiondata,"%d %d %d %lg %lg",&transitionindex,&lower,&upper,&A,&coll_str);
               //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
             }
           }
@@ -538,10 +548,11 @@ void read_atomicdata()
           {
             for (i = 0; i < tottransitions; i++)
             {
-              fscanf(transitiondata,"%d %d %d %lg",&transitionindex,&lower,&upper,&A);
+              fscanf(transitiondata,"%d %d %d %lg %lg",&transitionindex,&lower,&upper,&A,&coll_str);
               transitiontable[i].lower = lower-1;
               transitiontable[i].upper = upper-1;
               transitiontable[i].A = A;
+	      transitiontable[i].coll_str = coll_str;
               //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
             }
           }
@@ -646,7 +657,7 @@ void read_atomicdata()
               /// store the possible downward transitions from the current level in following order to memory
               ///     A_level,level-1; A_level,level-2; ... A_level,1
               /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-              if ((transitions[level].to = calloc(level, sizeof(short))) == NULL)
+              if ((transitions[level].to = calloc(level, sizeof(int))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize transitionlist ... abort\n");
                 exit(0);
@@ -688,8 +699,9 @@ void read_atomicdata()
               /// first occurrence
               if (transitioncheck(level,targetlevel) == -99)
               {
-                transitions[level].to[level-targetlevel-1] = 1;
+                transitions[level].to[level-targetlevel-1] = lineindex;
                 A_ul = transitiontable[ii].A;
+		coll_str = transitiontable[ii].coll_str;
                 //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
                 
                 nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
@@ -706,6 +718,7 @@ void read_atomicdata()
                 linelist[lineindex].nu = nu_trans;
                 linelist[lineindex].einstein_A = A_ul;
                 linelist[lineindex].osc_strength = f_ul;
+                linelist[lineindex].coll_str = coll_str;
                 lineindex += 1;
                 if (lineindex % MLINES == 0)
                 {
@@ -746,6 +759,36 @@ void read_atomicdata()
                 elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element,ion,level);
                 nuparr[targetlevel] += 1;
               }
+	      else
+              {
+                /** This is a new brach to deal with lines that have different types of transition. It should trip after a transition is already known. */
+                linelistindex = transitions[level].to[level-targetlevel-1];
+                A_ul = transitiontable[ii].A;
+                coll_str = transitiontable[ii].coll_str;
+                //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
+                
+                nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
+                g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
+                f_ul = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+                //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
+                //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+                
+                if ((linelist[linelistindex].elementindex != element) || (linelist[linelistindex].ionindex != ion) || (linelist[linelistindex].upperlevelindex != level) || (linelist[linelistindex].lowerlevelindex != targetlevel))
+                {
+                  printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
+                  printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
+                  printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n", transitions[level].to[level-targetlevel-1]);
+                  printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
+                  printout("[input.c]   linelist[linelistindex].elementindex %d, linelist[linelistindex].ionindex %d, linelist[linelistindex].upperlevelindex %d, linelist[linelistindex].lowerlevelindex %d\n", linelist[linelistindex].elementindex, linelist[linelistindex].ionindex, linelist[linelistindex].upperlevelindex,linelist[linelistindex].lowerlevelindex);
+                  abort();
+                }
+                linelist[linelistindex].einstein_A += A_ul;
+                linelist[linelistindex].osc_strength += f_ul;
+                if (coll_str > linelist[linelistindex].coll_str)
+                {
+                  linelist[linelistindex].coll_str = coll_str;
+                }
+	      }
             }
           }
           //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
@@ -841,7 +884,7 @@ void read_atomicdata()
       fprintf(linelist_file,"%d\n",nlines);
       for (i = 0; i < nlines; i++)
       {
-        fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg\n",i,linelist[i].elementindex, linelist[i].ionindex, linelist[i].upperlevelindex, linelist[i].lowerlevelindex, linelist[i].nu, linelist[i].einstein_A, linelist[i].osc_strength);
+        fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",i,linelist[i].elementindex, linelist[i].ionindex, linelist[i].upperlevelindex, linelist[i].lowerlevelindex, linelist[i].nu, linelist[i].einstein_A, linelist[i].osc_strength, linelist[i].coll_str);
       }
       fclose(linelist_file);
       //exit(0);
@@ -1297,7 +1340,7 @@ void read_atomicdata()
     }
     for (i = 0; i < nlines; i++)
     {
-      fscanf(linelist_file,"%d %d %d %d %d %lg %lg %lg\n",&dum,&element,&ion,&upperlevel,&lowerlevel,&nu,&A_ul,&f_ul);
+      fscanf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",&dum,&element,&ion,&upperlevel,&lowerlevel,&nu,&A_ul,&f_ul,&coll_str);
       linelist[i].elementindex = element;
       linelist[i].ionindex = ion;
       linelist[i].upperlevelindex = upperlevel;
@@ -1305,6 +1348,7 @@ void read_atomicdata()
       linelist[i].nu = nu;
       linelist[i].einstein_A = A_ul;
       linelist[i].osc_strength = f_ul;
+      linelist[i].coll_str = coll_str;
     }
     fclose(linelist_file);
   }
@@ -1626,6 +1670,54 @@ void read_atomicdata()
   //#ifdef _OPENMP
   //  }
   //#endif
+
+  ///set-up/gather information for nlte stuff
+
+    total_nlte_levels = 0;
+    n_super_levels= 0;
+
+#ifdef NLTE_POPS_ON
+    for (element = 0; element < nelements; element++)
+      {
+	nions = get_nions(element);
+	//includedions += nions;
+	for (ion=0; ion < nions; ion++)
+	  {
+	    elements[element].ions[ion].first_nlte= total_nlte_levels;
+	    nlevels = get_nlevels(element,ion);
+	    count = 0;
+	    if (nlevels > 1)
+	      {
+		for (level=1; level < nlevels; level++)
+		  {
+		    if (is_nlte(element,ion,level) == 1)
+		      {
+			count++;
+			total_nlte_levels++;
+		      }
+		  }
+	      }
+
+	    if (count < (nlevels - 1))
+	      {
+		/* If there are more levels that the ground state + the number of NLTE levels then we need an extra slot to store data for the "superlevel", which is a representation of all the other levels that are not treated in detail. */
+		total_nlte_levels++;
+		n_super_levels++;
+	      }
+
+
+	    elements[element].ions[ion].nlevels_nlte=count;
+	    
+	    
+	    printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element), get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
+	  }
+      }
+
+#endif
+
+    printout("[input.c]....total nlte levels: %d of which %d are superlevels\n", total_nlte_levels, n_super_levels);
+
+ 
 }
 
 
@@ -1827,6 +1919,16 @@ void read_parameterfile(rank)
   #else
     printout("input: this is a NLTE run\n");
     printout("input: do the first %d timesteps in LTE\n",n_lte_timesteps);
+  #endif
+
+  #ifdef NT_ON
+    printout("input: Non-thermal ionisation is switched on for this run.\n");
+    #ifdef FORCE_LTE
+      printout("input: Non-thermal ionisation requires the code to run in non-LTE mode. Remove macro FORCE_LTE and recompile!\n");
+      exit(0);
+    #endif
+  #else
+    printout("input: No non-thermal ionisation is used in this run.\n");
   #endif
   
   /// Set up initial grey approximation?

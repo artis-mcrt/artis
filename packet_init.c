@@ -191,6 +191,16 @@ int setup_packets (int pktnumberoffset)
     //  printout("Pellet in cell %d\n",m);
     place_pellet(grid_ptr, e0, m, n, pktnumberoffset);
 
+    #ifdef NO_INITIAL_PACKETS
+    if (pkt[n].tdecay < tmax && pkt[n].tdecay > tmin)
+    {
+      n++;
+    }
+    else
+    {
+      packet_reset++;
+    }
+    #else
     if (pkt[n].tdecay < tmax)
     {
       n++;
@@ -199,6 +209,7 @@ int setup_packets (int pktnumberoffset)
     {
       packet_reset++;
     }
+    #endif
   }
   
   

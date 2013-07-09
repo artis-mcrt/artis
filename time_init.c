@@ -37,9 +37,7 @@ int time_init()
     //      printout("start %g, width %g, mid %g\n",time_step[n].start,time_step[n].width,time_step[n].mid);
 
     time_step[n].pellet_decays = 0;
-    time_step[n].dep = 0.0;
     time_step[n].gamma_dep = 0.0;
-    time_step[n].positron_dep = 0.0;
     time_step[n].cmf_lum =0.0;
   }
   

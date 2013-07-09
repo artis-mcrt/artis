@@ -1,7 +1,3 @@
-SHELL = /bin/sh
-
-
-
 ### Settings for the miner
 ifeq ($(OSTYPE),linux)
   CC = cc
@@ -9,6 +5,8 @@ ifeq ($(OSTYPE),linux)
   LIB = /home/ssim/gsl/lib
   CFLAGS = -O3 -g -I$(INCLUDE)
   LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 endif
 
 
@@ -25,15 +23,27 @@ ifeq ($(OSTYPE),linux)
 #-fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
   LDFLAGS= -L$(LIB) -L$(LIB2) -R$(LIB2) -lgsl -lgslcblas -lm -pthread -L/usr/local/openmpi/lib -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
 #  LDFLAGS= -L$(LIB) -L$(LIB2) -L$(LIB3) -lgsl -lgslcblas -lm -pthread
+  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 endif
+
+  CC = cc
+  INCLUDE = /home/ssim/gsl/include
+  LIB = /home/ssim/gsl/lib
+  CFLAGS = -O3 -g -I$(INCLUDE)
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 
 
 ### Settings for mime
 ifeq ($(HOST),mime)
   CC = mpicc
-  CFLAGS = -O3 -m64 -DMPI_ON -DTIMED_RESTARTS
+  CFLAGS = -O3 -m64 -DMPI_ON 
   LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -m64  
 #-pthread -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
+  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 endif
 
 
@@ -50,6 +60,8 @@ ifeq ($(USER),sas120)
 
   CFLAGS = -O3 -DMPI_ON -DTIMED_RESTARTS
   LDFLAGS= -lgsl -lgslcblas -lm 
+  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 endif
 
 
@@ -71,7 +83,6 @@ ifeq ($(DOMAIN),MPA-Garching.MPG.DE)
   #CFLAGS = -openmp -O3 -g -I$(INCLUDE)
   LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-  exspec_dd: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 
   ### desktop MPI
@@ -100,14 +111,13 @@ ifeq ($(OSTYPE),aix)
   LIB=/u/mkromer/lib/test_64_r/lib
   #CFLAGS = -O4 -I$(INCLUDE) -qsmp -q64   -qcpluscmt -DMPI_ON
   CFLAGS = -O3 -g -I$(INCLUDE) -q64 -qstrict -qcpluscmt -DMPI_ON #-DPOWER6
-  CFLAGS = -O3 -g -I$(INCLUDE) -q64 -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON #-DPOWER6
+  CFLAGS = -O3 -g -I$(INCLUDE) -qsmp -q64 -qstrict -qcpluscmt -DMPI_ON #-DPOWER6
 #  CFLAGS = -O3 -g -I$(INCLUDE) -qstrict -qcpluscmt -bmaxdata:0x80000000 -DMPI_ON #-DPOWER6
   #CFLAGS = -O3 -g -I$(INCLUDE) -qsmp -q64 -qstrict -qcpluscmt 
   #CFLAGS = -O3 -g -I$(INCLUDE) -q64 -qstrict -qcpluscmt -bmaxdata:0x160000000 -bmaxstack:0x160000000
-  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -qthreaded
-  exspec: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt  -DDO_EXSPEC
-  exspec_dd: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt  -DDO_EXSPEC
-  exgamma: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt  -DDO_EXSPEC
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+  exspec: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt -DMPI_ON -DDO_EXSPEC
+  exgamma: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt -DMPI_ON -DDO_EXSPEC
 endif
 
 
@@ -133,7 +143,6 @@ ifeq ($(DOMAIN),opt.rzg.mpg.de)
   #LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
   LDFLAGS= $(GSL_LDFLAGS) -lgsl -lgslcblas -lm
   exspec: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
-  exspec_dd: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
   exgamma: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
 endif
 
@@ -144,52 +153,38 @@ ifeq ($(HOSTNAME),genius1.rzg.mpg.de)
   CC     = mpixlc_r
   INCLUDE= /u/mkromer/lib/BG/include
   LIB    = /u/mkromer/lib/BG/lib
-  #CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=450 -qtune=450 -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON
-  CFLAGS = -O5 -I$(GSL_INCLUDE) -qarch=450d -qtune=450 -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
+  CFLAGS = -g -O3 -I$(INCLUDE) -qstrict -qcpluscmt -DMPI_ON
+  CFLAGS = -g -O3 -I$(INCLUDE) -qsmp -qstrict -qcpluscmt -DMPI_ON
   ##try qsmp=omp the higher optimisation levels up to O5 and no -qstrict, arch
-  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -qthreaded
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
 endif
 
 
 
-### Settings for the Juelich BlueGene/P
+### Settings for the Juelich BlueGene
 ifeq ($(findstring jugene,$(HOSTNAME)), jugene)
   #this requires a
   #  module load gsl
   #check available module with module avail
   CC     = mpixlc_r
-  #CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=450 -qtune=450 -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON
-  CFLAGS = -O5 -I$(GSL_INCLUDE) -qarch=450d -qtune=450 -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
-  LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm -qthreaded
+  CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=450 -qtune=450 -qsmp -qstrict -qcpluscmt -DMPI_ON
+  ##try qsmp=omp the higher optimisation levels up to O5 and no -qstrict, arch
+  LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm
 endif
-
-
-### Settings for the Juelich BlueGene/Q
-ifeq ($(findstring juqueen,$(HOSTNAME)), juqueen)
-  #this requires a
-  #  module load gsl
-  #check available module with module avail
-  CC     = mpixlc_r
-  #CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON
-  #CFLAGS = -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qinline -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
-  CFLAGS =  -O4 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qnoipa -qinline -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
-  LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm -qthreaded
-endif
-
 
 
 
 ### Settings for JUROPA
-ifeq ($(WORK),/lustre/jwork/hmu14/hmu146)
+ifeq ($(WORK),/lustre/jwork1)
   #this requires a
   #  module load gsl
   #check available module with module avail
   CC     = mpicc
-  CFLAGS = -O3 -I$(GSL_ROOT)/include -openmp -DMPI_ON
-  LDFLAGS= -L$(GSL_ROOT)/lib -lgsl -lgslcblas -lm
-  exspec: override CFLAGS = -O3 -I$(GSL_ROOT)/include -DDO_EXSPEC
-  exspec_dd: override CFLAGS = -O3 -I$(GSL_ROOT)/include -DDO_EXSPEC
-  exgamma: override CFLAGS = -O3 -I$(GSL_ROOT)/include -DDO_EXSPEC
+  CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -openmp -DMPI_ON
+  CFLAGS = -O3 -I$(GSL_ROOT) -openmp -DMPI_ON
+  LDFLAGS= -L$(GSL_ROOT) -lgsl -lgslcblas -lm
+  exspec: override CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -DDO_EXSPEC
+  exgamma: override CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -DDO_EXSPEC
 endif
 
 
@@ -199,54 +194,33 @@ endif
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
 
 
-# Get the compiletime and the git hash of the current version
-# and write it to version.h to so that the code knows which
-# revision was used for a particular run
+sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o nltepop.o
 
+sn3d: $(sn3d_objects) 
+	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
+exspec_objects = exspec.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o
 
-sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o
+exspec: $(exspec_objects) 
+	$(CC) $(CFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 
-sn3d: version $(sn3d_objects) 
-	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d.exe
+exgamma_objects = exgamma.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o
 
-exspec_objects = exspec.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o
+exgamma: $(exgamma_objects) 
+	$(CC) $(CFLAGS) $(exgamma_objects) $(LDFLAGS) -o exgamma
 
-exspec: version $(exspec_objects) 
-	$(CC) $(CFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec.exe
+sn3dsyn_objects = sn3dsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o
 
-exspec_dd_objects = exspec_dd.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o
+sn3dsyn: $(sn3dsyn_objects) 
+	$(CC) $(CFLAGS) $(sn3dsyn_objects) $(LDFLAGS) -o sn3dsyn
 
-exspec_dd: version $(exspec_dd_objects) 
-	$(CC) $(CFLAGS) $(exspec_dd_objects) $(LDFLAGS) -o exspec_dd.exe
+sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o
 
-exgamma_objects = exgamma.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o
-
-exgamma: version $(exgamma_objects) 
-	$(CC) $(CFLAGS) $(exgamma_objects) $(LDFLAGS) -o exgamma.exe
-
-sn3dsyn_objects = sn3dsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o
-
-sn3dsyn: version $(sn3dsyn_objects) 
-	$(CC) $(CFLAGS) $(sn3dsyn_objects) $(LDFLAGS) -o sn3dsyn.exe
-
-sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o
-
-sn3dlcsyn: version $(sn3dlcsyn_objects) 
-	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn.exe
-
-version:
-	@echo "#define GIT_HASH \"`cat .git/refs/heads/master`\"" > version.h
-	@echo "#define COMPILETIME \"`date`\"" >> version.h
-
-
-
+sn3dlcsyn: $(sn3dlcsyn_objects) 
+	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
 
 clean:
-	rm -f *o
-
-veryclean:
-	rm -f *o *exe *~ 
+	rm *o sn3d exspec exgamma
 
 
 

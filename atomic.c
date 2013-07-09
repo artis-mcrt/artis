@@ -57,6 +57,14 @@ int get_nlevels(int element, int ion)
   return elements[element].ions[ion].nlevels; 
 }
 
+///****************************************************************************
+int get_nlevels_nlte(int element, int ion)
+/// Returns the number of levels associated with with a specific ion given 
+/// ist elementindex and ionindex.
+{
+  return elements[element].ions[ion].nlevels_nlte; 
+}
+
 
 ///****************************************************************************
 int get_ionisinglevels(int element, int ion)
@@ -97,6 +105,23 @@ double stat_weight(int element, int ion, int level)
 {
   return elements[element].ions[ion].levels[level].stat_weight;
 }
+
+///***************************************************************************/
+short is_nlte(int element, int ion, int level)
+/// Returns 1 if (element,ion,level) is to be treated in nlte.
+{
+  if (level < 201)
+    {
+      elements[element].ions[ion].levels[level].is_nlte = 1;
+    }
+  else
+    {
+      elements[element].ions[ion].levels[level].is_nlte = 0;
+    }
+  return elements[element].ions[ion].levels[level].is_nlte;
+}
+
+
 
 ///***************************************************************************/
 int get_continuumindex(int element, int ion, int level)
@@ -146,6 +171,23 @@ double osc_strength(int lineindex)
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
 {
   return linelist[lineindex].osc_strength;
+}
+
+///***************************************************************************/
+double coll_str(int lineindex)
+{
+  return linelist[lineindex].coll_str;
+}
+
+///***************************************************************************/
+double statw_up(int lineindex)
+{
+  return elements[linelist[lineindex].elementindex].ions[linelist[lineindex].ionindex].levels[linelist[lineindex].upperlevelindex].stat_weight;
+}
+///***************************************************************************/
+double statw_down(int lineindex)
+{
+  return elements[linelist[lineindex].elementindex].ions[linelist[lineindex].ionindex].levels[linelist[lineindex].lowerlevelindex].stat_weight;
 }
 
 

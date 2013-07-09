@@ -84,7 +84,7 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
   //for (i = ion; i < nions-1; i++)
   for (i = ion; i < uppermost_ion; i++)
   {
-    //printout("debug phi(element %d, ion %d)=%g\n",element,i,phi(element,i,T));
+    //printout("debug phi(element %d, ion %d)=%g\n",element,i,phi(element,i,modelgridindex));
     phistorage[i-ion] = phi(element,i,modelgridindex);
     numerator *= nne * phistorage[i-ion];
   }
@@ -102,7 +102,7 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
     }
     denominator += factor;
   }
-  //printout("debug denominator %g\n",denominator);
+  //printout("debug denominator %g with nne %g and T_e %g\n",denominator, nne, get_Te(modelgridindex));
   
   if (!finite(numerator/denominator))
   {
@@ -130,14 +130,33 @@ double phi(int element, int ion, int modelgridindex)
   double partfunct_ratio,gamma_lte,Gamma,Alpha_st,Alpha_sp,alpha_sp; //zeta; 
   double stat_weight(int element, int ion, int level);
   double phi;
+  float get_rho(int modelgridindex);
   
-  
+  //double Y_nt, ionpot_in;
+  //int element_in, ion_in, nions_in;
+  double ionstagepop(int modelgridindex, int element, int ion);
+  double rate_use;
+
+  double col_recombination(int modelgridindex, int lower, double epsilon_trans);
+  int get_bfcontinua(int element, int ion);
+  double Col_rec;
+  double epsilon_trans;
+  int ionisinglevels;
+  int level, nlevels;
+  double nt_ionization_rate(int modelgridindex, int element, int ion);
+  int get_nlevels(int element, int ion);
+  double Y_nt, run_tot;
+  double get_groundlevelpop(int modelgridindex, int element, int ion);
+  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
+
+
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
   float T_e = get_Te(modelgridindex);
   float T_R = get_TR(modelgridindex);
-  //float W = cell[cellnumber].W;
   
+  //float W = cell[cellnumber].W;
+
   /// Old ionisation formula
   //partfunct_ratio = cell[cellnumber].composition[element].partfunct[ion]/cell[cellnumber].composition[element].partfunct[ion+1];
   //phi = 1./W * sqrt(T_R/T_e) * partfunct_ratio * SAHACONST * pow(T_R,-1.5) * exp(ionpot/KB/T_R);
@@ -157,22 +176,121 @@ double phi(int element, int ion, int modelgridindex)
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
       Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion];
-      if (Gamma == 0.) 
-      {
-        printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
-        exit(0);
-      } 
+      #ifdef NT_ON
+        if (Gamma == 0. && rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.) 
+      #else
+        if (Gamma == 0.)
+      #endif
+        {
+          printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
+          exit(0);
+        } 
       //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
       Alpha_st = 0.; ///approximative treatment neglects stimulated recombination
       Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
+      Col_rec=0.0;
+
+      //     if (ion > 0)
+      //	{ 
+	  ionisinglevels = get_bfcontinua(element,ion);
+	  mastate[tid].element = element;
+	  mastate[tid].ion = ion+1;
+	  mastate[tid].nnlevel = 1.0;
+	  mastate[tid].level = 0;
+	  mastate[tid].statweight = stat_weight(element,ion+1,0);
+	      
+	  for (level = 0; level < ionisinglevels; level++)
+	    {
+	      epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
+	      Col_rec += col_recombination(modelgridindex,level,epsilon_trans);
+	    }
+	  //	}
+
+      Alpha_sp += Col_rec/get_nne(modelgridindex);
+      
+
+      /** NT TEST LINES*/
+      Y_nt = 0.0;
+  
+      #ifdef NT_ON
+      Y_nt = nt_ionization_rate(modelgridindex, element, ion);
+
+      /*
+      nlevels=get_nlevels(element,ion);
+      run_tot=0.0;
+      for (level = 0; level < nlevels; level++)
+	{
+	  run_tot += calculate_exclevelpop(modelgridindex,element,ion,level);
+	}
+      Y_nt = Y_nt * run_tot/get_groundlevelpop(modelgridindex, element, ion);
+      */
+
+      /*
+        if (elements[element].anumber > 20)
+          {
+            for (element_in = 0; element_in < nelements; element_in++)
+              {
+                if (elements[element_in].anumber > 20)
+                  {
+                    nions_in = get_nions(element_in);
+                    for (ion_in = 0; ion_in < nions_in -1 ; ion_in++)
+                      {
+                        ionpot_in = epsilon(element_in,ion_in+1,0) - epsilon(element_in,ion_in,0);
+                        {
+                          // This is to compute the population-weighted ionization potential 
+                          K_nt += ionstagepop(modelgridindex,element_in,ion_in) * ionpot_in;
+                        }
+                      }
+                  }
+              }
+            if (K_nt < 0.0)
+              {
+                printout("negative K_nt?\n");
+                exit(0);
+              }
+  
+            if (K_nt > 0.0)
+              {
+                rate_use = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;
+                // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however. 
+                rate_use += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
+                rate_use += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
+  
+                // This is the rate-coefficient calculation - K_nt should finally have dimensions like Gamma.
+                K_nt = f_nt * rate_use / K_nt ;
+  
+                if (K_nt > 0.0)
+                  {
+		    //                    printout("[NT-print] element %d ion %d K_nt %g Gamma %g Alpha_sp %g Alpha_st %g ne %g cell %d gamma_rate %g total_rate %g \n", element, ion, K_nt, Gamma, Alpha_sp, Alpha_st, get_nne(modelgridindex), modelgridindex, rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI, rate_use);
+                  }
+              }
+          }
+      */
+
+      #endif
+      /** END OF NT LINES */
+
       // || !finite(Gamma))
       //return phi_lte(element,ion,cellnumber);
       //gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) + interpolate_photoioncoeff_above(element,ion,0,T_e);
       //zeta = interpolate_zeta(element,ion,T_e);
       //alpha_sp = interpolate_spontrecombcoeff(element,ion,0,T_e);
-      //phi = gamma_lte*(Alpha_sp+Alpha_st)/(Gamma*alpha_sp) * partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
-      phi = (Alpha_sp+Alpha_st)/(Gamma) * modelgrid[modelgridindex].composition[element].partfunct[ion]/stat_weight(element,ion,0);
+      //phi = gamma_lte*(Alpha_sp+Apha_st)/(Gamma*alpha_sp) * partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
+
+      //printout("testing: Y_nt/Gamma: %g (%d %d)\n", Y_nt/Gamma/stat_weight(element,ion,0)*modelgrid[modelgridindex].composition[element].partfunct[ion], element, ion); 
+      // OLD
+      //phi = (Alpha_sp+Alpha_st)/(Gamma + Y_nt) * modelgrid[modelgridindex].composition[element].partfunct[ion]/stat_weight(element,ion,0);
+      //
+
+      phi = (Alpha_sp+Alpha_st)/((Gamma*stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
+            
+      //phi = (Alpha_sp+Alpha_st)/(Y_nt);
       
+      if (element == 21)
+	{
+	  printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ration %g Gamma %g T_e %g\n", phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion], Gamma, T_e);
+	}
+
       if (!finite(phi)) 
       {
         printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g, T_R %g ... remove higher or lower ionisation stages\n",phi,element,ion,T_e,T_R);
@@ -242,7 +360,7 @@ double calculate_ltepartfunct(int element, int ion, double T)
 
 
 ///***************************************************************************/
-double calculate_partfunct(int element, int ion, int modelgridindex)
+double calculate_partfunct_old(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
@@ -254,6 +372,8 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
   
+  //  T_exc = MINTEMP;
+
 /*  if (T_exc <= MINTEMP)
   {
     T_exc = get_TR(modelgridindex);
@@ -305,6 +425,130 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   return U;
 }
 
+///***************************************************************************/
+
+double calculate_partfunct(int element, int ion, int modelgridindex)
+/// Calculates the partition function for ion=ion of element=element in
+/// cell modelgridindex
+{
+  double stat_weight(int element, int ion, int level);
+  //double epsilon(int element, int ion, int level);
+  int level,nlevels;
+  double U;
+  double get_groundlevelpop(int modelgridindex, int element, int ion);
+  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
+
+  double nn;
+  int initial;
+  double pop_store;
+  //double E_level, E_ground, test;
+
+  //double T_exc = get_TJ(modelgridindex);
+  //double W = 1.;
+  
+  //  T_exc = MINTEMP;
+
+/*  if (T_exc <= MINTEMP)
+  {
+    T_exc = get_TR(modelgridindex);
+    W = get_W(modelgridindex);
+  }*/
+  //double T_R = modelgrid[modelgridindex].T_R;
+  //double W = modelgrid[modelgridindex].W;
+  //double T_J = pow(W,1./4.)*T_R;
+  //double oneoverkbtexc = 1/KB/T_exc;
+  //double epsilon_groundlevel = epsilon(element,ion,0);
+  
+  initial = 0;
+  if (get_groundlevelpop(modelgridindex,element,ion) < MINPOP)
+    {
+      //either there reall is none of this ion or this is a first pass through
+      //in either case, we won't have any real nlte_populations so the actual value of 
+      //of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
+      pop_store = get_groundlevelpop(modelgridindex,element,ion);
+      initial = 1;
+      modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.0;
+    }
+
+  //printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
+
+
+  U = 1.0;//stat_weight(element,ion,0);
+  nlevels = get_nlevels(element,ion);
+/*  if (T_exc <= MINTEMP)
+  {
+    for (level = 1; level < nlevels; level++)
+    {
+      if (elements[element].ions[ion].levels[level].metastable == 1)
+      {
+        T_exc = get_TJ(modelgridindex);
+        W = 1.;
+      }
+      else
+      {
+        T_exc = get_TR(modelgridindex);
+        W = get_W(modelgridindex);
+      }
+      U += W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
+    }
+  }
+  else
+  {*/
+    for (level = 1; level < nlevels; level++)
+    {
+      nn = calculate_exclevelpop(modelgridindex, element, ion, level) / get_groundlevelpop(modelgridindex,element,ion);//*stat_weight(element,ion,0);
+
+
+      //#ifdef NLTE_POPS_ON
+      //if ((is_nlte(element,ion,level) != 1) || (test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
+      //{
+	  /* Case for when no NLTE level information is available yet */
+      //  E_level = epsilon(element,ion,level);
+      //  E_ground = epsilon(element,ion,0);
+      //  nn = W * stat_weight(element,ion,level) * exp(-(E_level-E_ground)/KB/T_exc);
+      //	}
+      //else
+      //	{
+	  //printout("Using an nlte population!\n");
+      //	  nn = test * modelgrid[modelgridindex].rho / get_groundlevelpop(modelgridindex,element,ion)*stat_weight(element,ion,0);
+      //	  if (!finite(nn)) 
+      //	    {
+      //      
+      //      printout("[fatal] NLTE population failure.\n");
+      //	      printout("element %d ion %d level %d\n", element, ion, level);
+      //	      printout("nn %g test %g rho %g\n", nn, test, modelgrid[modelgridindex].rho);
+      //	      printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
+      //	      exit(0);
+      //	    }
+	  
+      //	}
+      //#endif
+	U += nn;//W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
+    }
+//   }
+  
+    U = U * stat_weight(element,ion,0);
+
+
+  if (!finite(U)) 
+  {
+    printout("element %d ion %d\n",element,ion);
+    printout("modelgridindex %d\n",modelgridindex);
+    printout("level %d, nlevels %d\n",level,nlevels);
+    printout("sw %g\n",stat_weight(element,ion,0));
+    //printout("T_exc %g \n",T_exc);
+    abort();
+  }
+
+  if (initial == 1)
+    {
+      //put back the zero, just in case it matters for something
+      modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = pop_store;
+    }
+
+  return U;
+}
+
 
 
 
@@ -353,7 +597,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 
 
 ///***************************************************************************/
-double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
+double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation number of level relative to the ions ground level population
 /// using a modified version of the Boltzmann formula, which fulfills the diluted BB 
 /// approximation (or nebular approximation).
@@ -368,6 +612,9 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
   
+  //  T_exc = MINTEMP;
+
+
 /*  if (T_exc <= MINTEMP)
   {
     if (elements[element].ions[ion].levels[level].metastable == 1)
@@ -382,6 +629,123 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }*/
   
   if (level == 0) nn = get_groundlevelpop(modelgridindex,element,ion);
+  else
+  {
+    E_level = epsilon(element,ion,level);
+    E_ground = epsilon(element,ion,0);
+    nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level)/stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
+  }
+  
+  if (nn < MINPOP) 
+  {
+    if (get_abundance(modelgridindex,element) > 0)
+      nn = MINPOP;
+    else
+      nn= 0.;
+  }
+  
+  #ifdef DEBUG_ON
+    double ionstagepop(int modelgridindex, int element, int ion);
+    if (!finite(nn)) 
+    {
+      printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
+      printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n",get_groundlevelpop(modelgridindex,element,ion));
+      printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n",ionstagepop(modelgridindex,element,ion));
+      printout("[fatal] calculate_exclevelpop: associated partition function %g\n",modelgrid[modelgridindex].composition[element].partfunct[ion]);
+    }
+  #endif
+  return nn;
+}
+///***************************************************************************/
+double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
+/// Calculates occupation number of level relative to the ions ground level population
+/// using a modified version of the Boltzmann formula, which fulfills the diluted BB 
+/// approximation (or nebular approximation).
+{
+  double get_abundance(int modelgridindex, int element);
+  double get_groundlevelpop(int modelgridindex, int element, int ion);
+  double stat_weight(int element, int ion, int level);
+  double epsilon(int element, int ion, int level);
+  double E_level,E_ground;
+  double nn, test;
+  double superlevel_boltzmann(int modelgridindex, int element, int ion, int level);
+  int get_nlevels_nlte(int element, int ion);
+  int nlte_levels;
+
+  double T_exc = get_TJ(modelgridindex);
+  double W = 1.;
+  
+  //  T_exc = MINTEMP;
+
+
+/*  if (T_exc <= MINTEMP)
+  {
+    if (elements[element].ions[ion].levels[level].metastable == 1)
+    {
+      T_exc = get_TJ(modelgridindex);
+    }
+    else
+    {
+      T_exc = get_TR(modelgridindex);
+      W = get_W(modelgridindex);
+    }
+  }*/
+  
+  if (level == 0) nn = get_groundlevelpop(modelgridindex,element,ion);
+#ifdef NLTE_POPS_ON
+  else if (is_nlte(element,ion,level) == 1)
+    {
+      //printout("Using an nlte population!\n");
+      if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
+	{
+	  /* Case for when no NLTE level information is available yet */
+	  E_level = epsilon(element,ion,level);
+	  E_ground = epsilon(element,ion,0);
+	  nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level)/stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
+	}
+      else
+	{
+	  //printout("Using an nlte population!\n");
+	  nn = test * modelgrid[modelgridindex].rho;
+	  if (!finite(nn)) 
+	    {
+	      
+	      printout("[fatal] NLTE population failure.\n");
+	      printout("element %d ion %d level %d\n", element, ion, level);
+	      printout("nn %g test %g rho %g\n", nn, test, modelgrid[modelgridindex].rho);
+	      printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
+	      exit(0);
+	    }
+	  return nn;
+	}
+    }
+  else if ((nlte_levels = get_nlevels_nlte(element,ion)) > 0)
+    {
+      //Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
+      if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels]) < -0.9)
+	{
+	  /* Case for when no NLTE level information is available yet */
+	  E_level = epsilon(element,ion,level);
+	  E_ground = epsilon(element,ion,0);
+	  nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level)/stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
+	}
+      else
+	{	
+	  //printout("Using a superlevel population!\n");
+	  nn = test * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level);
+	  if (!finite(nn)) 
+	    {
+	      
+	      printout("[fatal] NLTE population failure.\n");
+	      printout("element %d ion %d level %d\n", element, ion, level);
+	      printout("nn %g test %g rho %g\n", nn, test, modelgrid[modelgridindex].rho);
+	      printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
+	      exit(0);
+	    }
+	  return nn;
+	}
+    }
+#endif
   else
   {
     E_level = epsilon(element,ion,level);

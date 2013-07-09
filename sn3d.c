@@ -13,7 +13,6 @@
 
 #include "threadprivate.h"
 #include "sn3d.h"
-#include "version.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
 /* Main - top level routine. */
@@ -59,8 +58,6 @@ int main(int argc, char** argv)
   FILE *linestat_file;
   FILE *packets_file;
   FILE *temperature_file;
-  FILE *dep_file;
-  double depvalue;
   int middle_iteration;
   int my_rank;
   int p;
@@ -78,8 +75,8 @@ int main(int argc, char** argv)
   double T_e_max,T_e_min,T_e_step;
   double rho_max,rho_min,rho_step;
   char filename[100];
-  int HUGEE2;
-  char *buffer2;
+  //int HUGEE2;
+  //char *buffer2;
   double nntot;
   int titer;
   int last_loop;
@@ -246,8 +243,15 @@ int main(int argc, char** argv)
   }
   setvbuf(estimators_file, NULL, _IOLBF, 1);
 
-  printout("Start ARTIS revision %s\n",GIT_HASH);
-  printout("This binary was compiled on %s\n",COMPILETIME);
+  sprintf(filename,"nlte_%.4d.out",my_rank);
+  if ((nlte_file = fopen(filename, "w")) == NULL)
+  {
+    printout("Cannot open %s.\n",filename);
+    exit(0);
+  }
+  setvbuf(nlte_file, NULL, _IOLBF, 1);
+
+  printout("Begining.\n");
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
   
   /// Get input stuff
@@ -383,6 +387,16 @@ int main(int argc, char** argv)
         printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
         exit(0);
       }
+      int HUGEE2 = 8*((nblock+1)*total_nlte_levels) + 4*(nblock + 2);
+      printout("reserve HUGEE2 %d space for MPI communication buffer2 for NLTE\n", HUGEE2);
+      char *buffer2;
+      if ((buffer2 = (char *) malloc(HUGEE2*sizeof(char))) == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
+        exit(0);
+      }
+      
+
     #else
       nstart = 0;
       //ndo = ngrid;
@@ -408,6 +422,7 @@ int main(int argc, char** argv)
     nts = itstep;
     while (nts < last_loop)
     {
+      nts_global = nts;
       #ifdef MPI_ON  
         MPI_Barrier(MPI_COMM_WORLD);
       #endif
@@ -633,7 +648,43 @@ int main(int argc, char** argv)
               }
             }
           }
-          
+
+    #ifdef NLTE_POPS_ON
+          for (n = 0; n < p; n++)
+	    {
+	      if (my_rank == n)
+		{
+		  position = 0;
+		  MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+		  for (mgi = nstart; mgi < (nstart+ndo); mgi++)
+		    //for (nncl = 0; nncl < ndo; nncl++)
+		    {
+		      //nn = nonemptycells[my_rank+nncl*nprocs];
+		      MPI_Pack(&mgi, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+		      //if (cell[nn].rho > MINDENSITY)
+		      if (modelgrid[mgi].associated_cells > 0)
+			{
+			  MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+			}
+		    }
+		}
+	      MPI_Barrier(MPI_COMM_WORLD);
+	      MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
+               	      
+	      position = 0;
+	      MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
+	      for (nn = 0; nn < nlp; nn++)
+		{
+		  MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+		  //if (cell[ncl].rho > MINDENSITY)
+		  if (modelgrid[mgi].associated_cells > 0)
+		    {
+		      MPI_Unpack(buffer2, HUGEE2, &position,modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
+		    }
+		}
+	    }
+#endif
+      
           #ifndef FORCE_LTE
             if (continue_simulation && nts-itstep == 0 && titer == 0)
             {
@@ -654,6 +705,7 @@ int main(int argc, char** argv)
               
               /// Reduce the gammaestimator array. Only needed to write restart data.
               printout("nts %d, titer %d: bcast gammaestimator\n",nts,titer);
+	      MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -811,14 +863,6 @@ int main(int argc, char** argv)
             others*/
                   
             /// the following blocks gather all the estimators to the zeroth (Master) thread
-            MPI_Reduce(&energy_deposition, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-            if (my_rank == 0)
-            {
-              for (i = 0; i < MMODELGRID; i++)
-              {
-                energy_deposition[i] = redhelper[i];
-              }
-            }
             MPI_Reduce(&J, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
             if (my_rank == 0)
             {
@@ -852,6 +896,7 @@ int main(int argc, char** argv)
                   colheatingestimator[i] = redhelper[i];
                 }
               }
+	      MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -860,6 +905,7 @@ int main(int argc, char** argv)
                   gammaestimator[i] = redhelper[i];
                 }
               }
+	      MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&bfheatingestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -1261,38 +1307,10 @@ int main(int argc, char** argv)
   {
     printout("No need for restart\n");
   }
-
-
-  #ifdef MPI_ON
-    /// Communicate gamma and positron deposition and write to file
-    for (i=0; i < ntstep; i++)
-    {
-      MPI_Reduce(&time_step[i].gamma_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].gamma_dep = depvalue/nprocs;
-      MPI_Reduce(&time_step[i].positron_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].positron_dep = depvalue/nprocs;
-      MPI_Reduce(&time_step[i].dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].dep = depvalue/nprocs;
-    }
-  #endif
-  if (my_rank == 0)
-  {
-    if ((dep_file = fopen("deposition.out", "w")) == NULL)
-    {
-      printf("Cannot open deposition.out\n");
-      abort();
-    }
-    for (i=0; i < ntstep; i++)
-    {
-      fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid/DAY, time_step[i].gamma_dep/time_step[i].width/LSUN, time_step[i].positron_dep/time_step[i].width/LSUN, time_step[i].dep/time_step[i].width/LSUN);
-    }
-    fclose(dep_file);
-  }
-
-
   printout("simulation finished at %d\n",time(NULL));
   //fclose(tb_file);
   fclose(estimators_file);
+  fclose(nlte_file);
   
   #ifdef _OPENMP
     #pragma omp parallel

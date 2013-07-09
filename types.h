@@ -6,6 +6,9 @@
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_expint.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_linalg.h>
 
 #ifdef _OPENMP 
   #include "omp.h"
@@ -15,7 +18,7 @@
 #define TYPES
 #define MGRID  1000000 //125000 //1000000 //1000000//262144 //2100000 //125000 //1000000  /* Max number of grid cells.*/
 #define MMODELGRID 12800 //125000 //12800 //12800 //125 //3200 //200 //200 //200 //8192 //125 //125000 //200 //125000 //8200 //200 //8200 //200 //125000
-#define MPKTS 31250//25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625 /* Maximum number of energy packets in calculation. */
+#define MPKTS 2000000//25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625 /* Maximum number of energy packets in calculation. */
 #define MELEMENTS 26 //26 //27 //9
 #define MIONS 5 //9
 #define MTHREADS 4    /// Max number of OpenMP threads
@@ -270,7 +273,13 @@ typedef struct
                                          /// so there is no need to communicate it via MPI so far!
   
   compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundance of all included elements
-                                         /// and all the groundlevel populations and partition functions for their ions
+                                         /// and all the groundlevel
+                                         /// populations and partition
+                                         /// functions for their ions
+  double *nlte_pops;                      /// Pointer to an array that
+					 /// contains the nlte-level
+					 /// populations for this cell
+
   double totalcooling;
   mgicooling_t *cooling;
 } modelgrid_t;
@@ -355,7 +364,10 @@ typedef struct
   short stat_weight;                         /// Statistical weight of this level.
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   short metastable;                          /// 1 if the level is metastable, else 0
-  
+  short is_nlte;                             /// 1 if the level is to
+					     /// be treated in nlte
+
+
   //double photoion_xs_nu_edge;             /// Number of grid points in the photoion_xs lookup-table.
   float *photoion_xs;         /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   
@@ -397,7 +409,12 @@ typedef struct
 typedef struct
 {
   short ionstage;                            /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels;                             /// Number of levels for this ionisation stage
+  int nlevels;                             /// Number of levels for
+					   /// this ionisation stage
+  int nlevels_nlte;                        /// number of nlte levels
+					   /// for this ion
+  int first_nlte;                          ///reference index for
+					   ///counting of nlte levels
   int ionisinglevels;                             /// Number of levels which have a bf-continuum
   int coolingoffset;
   int ncoolingterms;
@@ -428,6 +445,7 @@ typedef struct
   double nu;                                 /// Frequency of the line transition
   float einstein_A;
   float osc_strength;
+  float coll_str;
   short elementindex;                        /// It's a transition of element (not its atomic number,
                                              /// but the (x-1)th element included in the simulation.
   short ionindex;                            /// The same for the elements ion
@@ -450,6 +468,7 @@ typedef struct
   short lower;
   short upper;
   double A;
+  double coll_str;
 } transitiontable_entry;  ///only used temporary during input
 
 
@@ -563,6 +582,6 @@ typedef struct
 
 typedef struct
 {
-  short *to;
+  int *to;
 } transitions_t;
 

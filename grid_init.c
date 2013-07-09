@@ -1415,13 +1415,28 @@ int density_3d_read ()
 void allocate_compositiondata(int modelgridindex)
 {
   int element;
-  
+  int ion_index;
+
   if ((modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements*sizeof(compositionlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
     exit(0);
   }
   
+  if ((modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels*sizeof(double))) == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
+    exit(0);
+  }
+  
+  for (element = 0; element < total_nlte_levels; element++)
+    {
+      modelgrid[modelgridindex].nlte_pops[element] = -1.0; ///flag to indicate that there is 
+                                                           /// currently no information on the nlte populations
+    }
+
+  printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
+
   for (element = 0; element < nelements; element++)
   {
     /// Set initial abundances to zero
@@ -1433,6 +1448,11 @@ void allocate_compositiondata(int modelgridindex)
       printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
       exit(0);
     }
+    for (ion_index=0; ion_index<get_nions(element); ion_index++)
+      {
+	modelgrid[modelgridindex].composition[element].groundlevelpop[ion_index]=0.0;
+      }
+
     if ((modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element)*sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
@@ -1680,7 +1700,7 @@ void assign_temperature()
   FILE *gridsave_file;
   double factor,T_initial,tstart,factor52fe, factor48cr;
   //float T_R,T_e,W,T_J,T_D,W_D,Gamma,dummy,thick;
-  float T_R,T_e,W,T_J;
+  float T_R,T_e,W,T_J;//,thick;
   double Gamma;
   int element,ion,nions,cellnumber;//,idummy;
   int n,mgi,thick;
@@ -1756,7 +1776,7 @@ void assign_temperature()
     {
       //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
       //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g %g %d\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy,&dummy,&idummy);
-      fscanf(gridsave_file,"%d %g %g %g %g %d ",&mgi,&T_R,&T_e,&W,&T_J,&thick);
+      fscanf(gridsave_file,"%d %g %g %g %g %d",&mgi,&T_R,&T_e,&W,&T_J,&thick);
       if (n == mgi)
       {
         set_TR(mgi, T_R);
@@ -1764,7 +1784,7 @@ void assign_temperature()
         set_W(mgi, W);
         set_TJ(mgi, T_J);
 	modelgrid[mgi].thick = thick;
-        
+
         #ifndef FORCE_LTE
           for (element = 0; element < nelements; element++)
           {

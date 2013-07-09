@@ -132,38 +132,11 @@ int update_packets(int nts)
           else if (pkt_ptr->tdecay > ts)
           {
             /**These are the packets decaying in this timestep.*/
-            #ifdef _OPENMP 
-              #pragma omp atomic
-            #endif
-            time_step[nts].dep += pkt_ptr->e_cmf;
 	    if ((pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET))
 	      {  
 		pkt_ptr->pos[0] = pkt_ptr->pos[0] * pkt_ptr->tdecay / ts;
 		pkt_ptr->pos[1] = pkt_ptr->pos[1] * pkt_ptr->tdecay / ts;
 		pkt_ptr->pos[2] = pkt_ptr->pos[2] * pkt_ptr->tdecay / ts;
-
-		if (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET)
-		{
-                  #ifdef _OPENMP 
-                    #pragma omp atomic
-                  #endif
-                  time_step[nts].positron_dep += pkt_ptr->e_cmf;
-                  #ifdef _OPENMP 
-                    #pragma omp atomic
-                  #endif
-	          energy_deposition[cell[pkt_ptr->where].modelgridindex] += pkt_ptr->e_cmf;
-		}
-                else
-		{
-                  #ifdef _OPENMP 
-                    #pragma omp atomic
-                  #endif
-                  time_step[nts].gamma_dep += pkt_ptr->e_cmf;
-                  #ifdef _OPENMP 
-                    #pragma omp atomic
-                  #endif
-	          energy_deposition[cell[pkt_ptr->where].modelgridindex] += pkt_ptr->e_cmf;
-		}
 
 		pkt_ptr->type = TYPE_KPKT;
                 pkt_ptr->absorptiontype = -6;
@@ -342,8 +315,6 @@ void update_cell(int cellnumber)
   double population;
   int nions,nlevels;
   
-  if (modelgrid[cellnumber].thick != 1) 
-{
   updatecellcounter += 1;
   
   /// Make known that cellhistory[tid] contains information about the
@@ -396,7 +367,6 @@ void update_cell(int cellnumber)
       }
     }
   }
- }
   //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
 }

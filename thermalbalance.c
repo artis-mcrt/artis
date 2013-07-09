@@ -67,7 +67,16 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   /// Check whether the thermal balance equation has a root in [T_min,T_max]
   thermalmin = find_T_e(T_min,find_T_e_f.params);
   thermalmax = find_T_e(T_max,find_T_e_f.params);
-  //printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
+  if (!finite(thermalmin) || !finite(thermalmax))
+    {
+      printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
+      printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+      thermalmax = thermalmin = -1;
+      
+
+    }
+
+  printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
   //double thermalmax = find_T_e(T_max,find_T_e_f.params);
   if (thermalmin*thermalmax < 0)
   {
@@ -97,7 +106,7 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
       T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
       T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
       status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
-      //printout("[debug] find T_e:   iter %d, intervall [%g, %g], guess %g, status %d\n",iter2,T_e_min,T_e_max,T_e,status);
+      printout("[debug] find T_e:   iter %d, intervall [%g, %g], guess %g, status %d\n",iter2,T_e_min,T_e_max,T_e,status);
     }
     while (status == GSL_CONTINUE && iter2 < maxit);
     if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
@@ -234,6 +243,12 @@ double find_T_e(double T_e, void *paras)
     heatingrates[tid].gamma = rpkt_emiss[modelgridindex] * 1.e20; ///1.e20 since the emissivities are all scaled by this
     heatingrates[tid].gamma *= 4*PI; /// This was missing here! rpkt_emiss is normalised to give a real emissivity
                                 /// for the formal integral calculation!!!
+
+    // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however. 
+    heatingrates[tid].gamma += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
+    heatingrates[tid].gamma += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
+
+
   }
   else
   {
@@ -274,6 +289,7 @@ void calculate_heating_rates(int modelgridindex)
   double interpolate_bfheatingcoeff_above(int element, int ion, int level, double T_R);
   double bfheating_integrand_gsl(double nu, void *paras);
   double ffheating_integrand_gsl(double nu, void *paras);
+  double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, double statweight_target, int lineindex);
 //  double col_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex);
 //  double col_recombination(PKT *pkt_ptr, int lower, double epsilon_trans);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
@@ -323,32 +339,37 @@ void calculate_heating_rates(int modelgridindex)
     nions = get_nions(element);
     for (ion = 0; ion < nions; ion++)
     {
-//      mastate[tid].ion = ion;
-//      nlevels_currention = get_nlevels(element,ion);
+#ifdef DIRECT_COL_HEAT
+      {
+      mastate[tid].ion = ion;
+      nlevels_currention = get_nlevels(element,ion);
 //      if (ion > 0) nlevels_lowerion = get_nlevels(element,ion-1);
 //      
-//       for (level = 0; level < nlevels_currention; level++)
-//       {
-//         epsilon_current = epsilon(element,ion,level);
-//         mastate[tid].level = level;
-//         nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
-//         mastate[tid].nnlevel = nnlevel;
-//         mastate[tid].statweight = stat_weight(element,ion,level);
+       for (level = 0; level < nlevels_currention; level++)
+       {
+         epsilon_current = epsilon(element,ion,level);
+         mastate[tid].level = level;
+         nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+         mastate[tid].nnlevel = nnlevel;
+         mastate[tid].statweight = stat_weight(element,ion,level);
 //         
 //         
 //         /// Collisional heating: deexcitation to same ionization stage
 //         /// ----------------------------------------------------------
-//         ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-//         for (ii = 1; ii <= ndowntrans; ii++)
-//         {
-//           lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
-//           epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
-//           statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
-//           lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
-//           epsilon_trans = epsilon_current - epsilon_target;
-//           C = col_deexcitation(pkt_ptr,lower,epsilon_trans,statweight_target,lineindex)*epsilon_trans;
-//           C_deexc += C;
-//         }
+         ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+         for (ii = 1; ii <= ndowntrans; ii++)
+         {
+           lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
+           epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
+           statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
+           lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
+           epsilon_trans = epsilon_current - epsilon_target;
+           C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex)*epsilon_trans;
+           C_deexc += C;
+         }
+       }
+      }
+#endif
 //         
 //         /// Collisional heating: recombination to lower ionization stage
 //         /// ------------------------------------------------------------
@@ -464,6 +485,10 @@ void calculate_heating_rates(int modelgridindex)
   /// Collisional heating (from estimators)
   /// -------------------------------------
   heatingrates[tid].collisional = colheatingestimator[modelgridindex];//C_deexc + C_recomb;
+#ifdef DIRECT_COL_HEAT
+  heatingrates[tid].collisional = C_deexc;
+#endif
+
 //  heatingrates[tid].collbb = C_deexc;
 //  heatingrates[tid].collbf = C_recomb;
   heatingrates[tid].bf = bfheating;

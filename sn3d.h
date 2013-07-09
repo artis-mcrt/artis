@@ -13,6 +13,11 @@
 #define SILENT 1
 //#define DO_TITER
 //#define FORCE_LTE
+#define NT_ON        /// Switch on non-thermal ionisation
+#define NLTE_POPS_ON
+#define NLTEITER 30
+#define DIRECT_COL_HEAT
+#define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
 
@@ -140,6 +145,13 @@ double E48V;
 #define CR48_GAM_LINE_ID 4
 #define V48_GAM_LINE_ID  5
 
+#define M_NT_SHELLS 10
+//specifies max number of shells for which data is known for computing mean binding energies
+#define MAX_Z_BINDING 30
+//maximum number of elements for which binding energy tables are to be used
+
+double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
+
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40
 
@@ -168,6 +180,7 @@ double tmin;      /// Start time of current simulation.
 int ntstep;       /// Number of timesteps
 int itstep;       /// Inital timestep's number
 int ftstep;       /// Final timestep's number
+int nts_global;   /// Current time step
 
 int ntbins, nnubins; //number of bins for spectrum
 double nu_min_r, nu_max_r; //limits on frequency range for r-pkt spectrum
@@ -256,6 +269,9 @@ PKT pkt[MPKTS];
 //PKT *exchangepkt_ptr;            ///global variable to transfer a local pkt to another function
 
 
+int total_nlte_levels;            ///total number of nlte levels
+int n_super_levels; 
+
 
 mastate_t *mastate;
 
@@ -304,8 +320,6 @@ struct time
   double mid; /*Mid time in step - computed logarithmically.*/
   int pellet_decays; /*Number of pellets that decay in this time step. */ ///ATOMIC
   double gamma_dep; /* cmf gamma ray energy deposition rate */            ///ATOMIC
-  double positron_dep; /* cmf positron energy deposition rate */            ///ATOMIC
-  double dep; /* instantaenous energy deposition rate in all decays*/     ///ATOMIC
   double cmf_lum; /* cmf luminosity light curve */                        ///ATOMIC
 } time_step[MTSTEP];
 
@@ -376,11 +390,9 @@ float modelgrid_partfunct[MMODELGRID*MELEMENTS*MIONS];        /// Pointer to an 
 float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity                     ///ATOMIC
 double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpkt emissivity                        ///ATOMIC
 double J[MMODELGRID+1];
-double energy_deposition[MMODELGRID+1];
 #ifdef DO_TITER
   double J_reduced_save[MMODELGRID+1];
 #endif
-
 
 #ifdef FORCE_LTE
   double redhelper[MMODELGRID+1];
@@ -393,7 +405,6 @@ double energy_deposition[MMODELGRID+1];
   double bfheatingestimator[(MMODELGRID+1)*MELEMENTS*MIONS];
   double corrphotoionrenorm[(MMODELGRID+1)*MELEMENTS*MIONS];
   double redhelper[(MMODELGRID+1)*MELEMENTS*MIONS];
-
   
   #ifdef DO_TITER
     double nuJ_reduced_save[MMODELGRID];
@@ -556,7 +567,7 @@ int debuglevel;
 /// Rate coefficients
 ///============================================================================
 #define TABLESIZE 100 //200 //100
-#define MINTEMP 3500.
+#define MINTEMP 3000.
 #define MAXTEMP 140000. //1000000.
 double T_step;
 double T_step_log;
@@ -591,6 +602,7 @@ FILE *tau_file;
 FILE *tb_file;
 FILE *heating_file;
 FILE *estimators_file;
+FILE *nlte_file;
 
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
 extern short neutral_flag;

@@ -52,10 +52,6 @@ int packet_prop(pkt_ptr, t1, t2, nts)
           #pragma omp atomic
         #endif
         time_step[nts].gamma_dep += pkt_ptr->e_cmf; ///***??
-        #ifdef _OPENMP 
-          #pragma omp atomic
-        #endif
-	energy_deposition[cell[pkt_ptr->where].modelgridindex] += pkt_ptr->e_cmf;
         t_current = t_change_type;
       }
     }

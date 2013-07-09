@@ -963,6 +963,16 @@ double get_corrphotoioncoeff(int element, int ion, int level, int modelgridindex
   }
   
   //if (gammacorr == 0) printout("histindex %d, element %d, ion %d, level %d, interpol %g, W %g, renorm %g, gammacorr %g\n",histindex,element,ion,level,interpolate_corrphotoioncoeff(element,ion,level,T_R),W,corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor],gammacorr);
+
+
+  ////TEST TEST TEST
+  /*
+    if (nts_global < 30)
+    {
+      gammacorr = 0.0;
+    }
+  */
+
   return gammacorr;
   //double get_corrphotoioncoeff_ana(int element, int ion, int level, int cellnumber);
   //return get_corrphotoioncoeff_ana(element, ion, level, cellnumber);

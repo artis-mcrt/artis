@@ -342,7 +342,6 @@ int zero_estimators()
   for (n=0; n < npts_model; n++)
     {
       J[n] = 0.;
-      energy_deposition[n] = 0.;
       #ifndef FORCE_LTE
         nuJ[n] = 0.;
         ffheatingestimator[n] = 0.;

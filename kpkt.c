@@ -473,16 +473,7 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
   
 
   
-  if (opacity_case == 4) 
-  {
-    /// Non grey opacity treatment, sample Planck in optically thick cells
-    pkt_ptr->nu_cmf = sample_planck(T_e);
-  }
-  else
-  {
-    /// Grey opacity treatment, set a dummy value for nu_cmf
-    pkt_ptr->nu_cmf = 1;
-  }
+  pkt_ptr->nu_cmf = sample_planck(T_e);
   if (!finite(pkt_ptr->nu_cmf))
   {
     printout("[fatal] do_kpkt_bb: selected frequency not finite ... abort\n");
