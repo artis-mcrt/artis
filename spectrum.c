@@ -16,10 +16,7 @@ int make_spectrum()
 
 /*******************************************************/
 int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
-{
-    
-    /* Helloooooo */
-    
+{  
   int i,m,p;
   //FILE *spec_file,*emission_file;
   
