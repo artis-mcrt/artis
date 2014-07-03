@@ -282,13 +282,14 @@ double phi(int element, int ion, int modelgridindex)
       //phi = (Alpha_sp+Alpha_st)/(Gamma + Y_nt) * modelgrid[modelgridindex].composition[element].partfunct[ion]/stat_weight(element,ion,0);
       //
 
-      phi = (Alpha_sp+Alpha_st)/((Gamma*stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
+      //changed July14 to include partition function to stat. weight ratio for upper ion
+      phi = (Alpha_sp+Alpha_st)*(stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1]) / ((Gamma*stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
             
       //phi = (Alpha_sp+Alpha_st)/(Y_nt);
       
-      if (element == 21)
+      if (element == 0)
 	{
-	  printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ration %g Gamma %g T_e %g\n", phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion], Gamma, T_e);
+	  printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ratio_u %g ratio_l %g Gamma %g T_e %g\n", phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion+1,0)/modelgrid[modelgridindex].composition[element].partfunct[ion+1], stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion],Gamma, T_e);
 	}
 
       if (!finite(phi)) 
@@ -877,6 +878,7 @@ double calculate_sahafact(int element, int ion, int level, double T, double E_th
   double sf;
 
   sf = stat_weight(element,ion,level)/stat_weight(element,ion+1,0) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
+  //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0)
   {
     printout("[fatal] sahafact: negative saha factor");

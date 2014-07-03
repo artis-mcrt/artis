@@ -57,12 +57,26 @@ ifeq ($(USER),sas120)
 #module load gsl/1.12
 
   CC = mpicc
-
   CFLAGS = -O3 -DMPI_ON -DTIMED_RESTARTS
   LDFLAGS= -lgsl -lgslcblas -lm 
   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 endif
+
+### Settings for SS MACBOOK
+ifeq ($(USER),stuartsim)
+
+  CC = mpicc
+
+  CFLAGS = -O3 -DMPI_ON 
+  LDFLAGS= -lgsl -lgslcblas -lm 
+
+  exspec: override CFLAGS =  -O3  -DDO_EXSPEC
+  exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
+  exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
+
+endif
+
 
 
 

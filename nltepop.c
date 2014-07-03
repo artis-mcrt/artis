@@ -301,7 +301,8 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 		  mastate[tid].statweight = stat_weight(element,ion+1,0);
 		  mastate[tid].nnlevel = 1.0;
 		  R = rad_recombination(modelgridindex,level,epsilon_trans);
-		  printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
+		  //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
+		  printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
 		  C = col_recombination(modelgridindex,level,epsilon_trans);
 		  //C=C*1.e-10;
 		  

@@ -187,6 +187,7 @@ void tabulate_ratecoefficients_gsl()
             gsl_integration_qag(&F_alpha_sp, nu_threshold, 10*nu_threshold, 0, intaccuracy, 1000, 6, w, &alpha_sp, &error);
             //gsl_integration_qng(&F_alpha_sp, nu_threshold, 10*nu_threshold, 0, intaccuracy, &alpha_sp, &error, &neval);
             alpha_sp *= FOURPI * sf;
+	    //printout("For element %d ion %d level %d at temperature %g, I think the alpha_sp is %g (int %g, sf %g)\n", element, ion, level, T_e, alpha_sp, alpha_sp/(FOURPI * sf),sf );
             gsl_integration_qag(&F_bfcooling, nu_threshold, 10*nu_threshold, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
             bfcooling_coeff *= FOURPI * sf; 
 
