@@ -17,11 +17,11 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
   void update_estimators(PKT *pkt_ptr, double distance);
   int locate();
   int change_cell();
-  int rlc_emiss_rpkt();  
+  int rlc_emiss_rpkt();
   double doppler();
   double vel_vec[3];
   int get_velocity();
-  
+
   
   double t_current;
   int end_packet;
@@ -31,6 +31,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
   int find_nextline;
   int rpkt_eventtype;
   int mgi;
+  int bin;
   
   double kappa, kappa_cont, sigma, kappa_ff, kappa_bf;
   double *kappacont_ptr, *sigma_ptr, *kappaff_ptr, *kappabf_ptr;
@@ -265,6 +266,10 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
           /** It's not an r-packet any more - return.*/
           return(t_current);
         }
+        
+
+          
+          
       }
       else
       {
@@ -526,7 +531,9 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   //void emitt_rpkt(PKT *pkt_ptr, double t_current);
   void escat_rpkt(PKT *pkt_ptr, double t_current);
-
+  int call_estimators(PKT *pkt_ptr, double t_current, int realtype);
+  void update_cell(int cellnumber);
+  
   double zrand;
   //double nnionlevel,nnlevel,nne;
   double nne;
@@ -552,6 +559,8 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
   
   int element,ion,upper,level;
   int i;
+    
+  int vflag = 0, mgi;
   
   if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
   {
@@ -605,9 +614,32 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
         pkt_ptr->last_event = 12;
         escounter += 1;
       #endif
-      
+    
+        
+      /* call the estimator routine - generate a virtual packet */
+      #ifdef ESTIMATORS_ON
+        
+        realtype = 1 ;
+        
+        pkt_ptr->last_cross = NONE;
+        
+        vflag = call_estimators(pkt_ptr, t_current, realtype);
+        
+        if (vflag == 1) {       /* if you have generated virtual packets, you need to update some real packets properties */
+            
+            //printout("About to reset rpkt cell\n");
+            calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+            //printout("Completed rpkt cell\n");
+            
+        }
+        
+      #endif
+        
+        
       //pkt_ptr->nu_cmf = 3.7474058e+14;
+        
       escat_rpkt(pkt_ptr,t_current);
+      
       /// Electron scattering does not modify the last emission flag
       //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
       /// but it updates the last emission position
@@ -616,6 +648,9 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
       pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
       pkt_ptr->em_time = t_current;
       
+    
+
+        
       /// Set some flags
       //pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
                                    ///don't touch the value of next_trans to save transition history
@@ -803,7 +838,7 @@ double closest_transition(PKT *pkt_ptr)
     }
     match = middle;
   }
-  
+    
   /// read transition data out of the linelist and store it as the
   /// next transition for this packet. To save memory it is stored
   /// to the macro atoms state variables. This has no influence until
@@ -813,18 +848,20 @@ double closest_transition(PKT *pkt_ptr)
   mastate[tid].ion     = linelist[match].ionindex;
   mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
   mastate[tid].activatedfromlevel = linelist[match].lowerlevelindex;
+  mastate[tid].einstein = linelist[match].einstein_A;
   mastate[tid].activatingline = match;
-  pkt_ptr->next_trans   = match+1;  ///helper variable to overcome numerical problems after line scattering
-                                     ///further scattering events should be located at lower frequencies to prevent 
-                                     ///multiple scattering events of one pp in a single line
+  pkt_ptr->next_trans = match+1;  ///helper variable to overcome numerical problems after line scattering
+                                  ///further scattering events should be located at lower frequencies to prevent
+                                  ///multiple scattering events of one pp in a single line
   //printout("[debug] closest_transition: next_trans %d\n",pkt_ptr->next_trans);
   //printout("[debug] closest_transition: linelistindex %d corresponds to transition from level %d to level %d of ion %d of element %d\n",match,mastate[tid].level,pkt_ptr->nextrans_lower,mastate[tid].ion,mastate[tid].element);
   //printout("[debug] closest_transition:   frequency of this transiton %g\n",nu_trans);
-  
+    
+  //printf("%.d %.3e \n",match,nu_trans);
+    
   /// return the transitions frequency
   return nu_trans;
 }
-
 
 
 ///****************************************************************************
@@ -888,7 +925,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
 
   /// Check unit vector.
   #ifdef DEBUG_ON
-    if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
+    if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-6)
     {
       printout("[fatal] do_ma: Not a unit vector. Abort.\n");
       abort();
@@ -910,7 +947,8 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
   pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf; 
 
   /**Rest polarization information */
-  pkt_ptr->stokes_qu[0]=pkt_ptr->stokes_qu[1]=0.0;
+  pkt_ptr->stokes[0]=1.0;
+  pkt_ptr->stokes[1]=pkt_ptr->stokes[2]=0.0;
   dummy_dir[0]=dummy_dir[1]=0.0;
   dummy_dir[2]=1.0;
   cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
@@ -923,7 +961,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
     }
   
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
-  //printout("initialise pol state of packet %g, %g, %g, %g, %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
+  //printout("initialise pol state of packet %g, %g, %g, %g, %g\n",pkt_ptr->stokes[1],pkt_ptr->stokes[2],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   //printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
@@ -1047,6 +1085,8 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   double corrfactor;
   double ionpops_local[MELEMENTS][MIONS];
   float get_nnetot(int modelgridindex);
+    
+    double bef;
  
   kappa_ff = 0.;
   kappa_bf = 0.;
@@ -1115,6 +1155,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
         element = phixslist[tid].allcont[i].element;
 	ion = phixslist[tid].allcont[i].ion;
 	level = phixslist[tid].allcont[i].level;
+          
         /// The bf process happens only if the current cell contains 
         /// the involved atomic species
 	if ((ionpops_local[element][ion] > 1.e-6) || (level == 0))        
@@ -1142,17 +1183,22 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
             mastate[tid].level = level;
             sigma_bf = photoionization_crosssection(nu_edge,nu);
             
+            bef=cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact;
+              
             sf = get_sahafact(element,ion,level,T_e,nu_edge*H);
             helper = nnlevel * sigma_bf;
             departure_ratio = nnionlevel/nnlevel * nne*sf; ///put that to phixslist
             if (nnlevel == 0.) check = 0.;
             else check = helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
+            
+            //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g) before %g after %g \n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf,bef,cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact);
+              
             if (check <= 0)
             {
               #ifdef DEBUG_ON
                 //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution T_e %g, T_R %g, W %g, E_threshold %g, check %g\n", T_e,cell[pkt_ptr->where].T_R,cell[pkt_ptr->where].W,nu_edge*H,nnlevel*sigma_bf);
                 //printout("[warning] calculate_kappa_rpkt_cont: set this contribution to zero\n");
-                if (fabs(check) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g)\n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf);
+                if (fabs(check) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g) before %g after %g \n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf,bef,cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact);
               #endif
               check = 0.;
               //phixslist[tid].allcont[i].kappa_bf_contr = check;
@@ -1305,6 +1351,309 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   
   return;
 }
+
+
+
+///****************************************************************************
+void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
+{
+    double get_abundance(int modelgridindex, int element);
+    
+    double get_groundlevelpop(int cellnumber, int element, int ion);
+    double ionstagepop(int cellnumber, int element, int ion);
+    double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
+    double epsilon(int element, int ion, int level);
+    double stat_weight(int element, int ion, int level);
+    int get_element(int element);
+    int get_ionstage(int element, int ion);
+    double photoionization_crosssection(double nu_edge, double nu);
+    double calculate_sahafact(int element, int ion, int level, double T, double E_threshold);
+    int get_velocity();
+    double doppler();
+    
+    double vel_vec[3];
+    double sigma,kappa_bf,kappa_ff,kappa_ffheating;//,kappa_bfheating;
+    double nne,T_e,T_R,nu;
+    double g_ff,g_bf;
+    double nnion,nnionlevel,nnlevel,departure_ratio;
+    double sigma_bf;
+    int element,ion,level;//,samplecell;
+    int Z;
+    double nu_edge;
+    int i,ii,nions;
+    double sf,check;
+    double helper;
+    int gphixsindex;
+    double corrfactor;
+    double ionpops_local[MELEMENTS][MIONS];
+    float get_nnetot(int modelgridindex);
+    
+    double bef;
+    
+    kappa_ff = 0.;
+    kappa_bf = 0.;
+    
+    int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+    
+    if (do_r_lc == 1)
+    {
+        
+        
+        if (opacity_case == 4)
+        {
+            nne = get_nne(modelgridindex);
+            T_e = get_Te(modelgridindex);
+            T_R = get_TR(modelgridindex);
+            nu = pkt_ptr->nu_cmf;
+            g_ff = 1;
+            g_bf = 1;
+            
+            /// First contribution: Thomson scattering on free electrons
+            sigma = SIGMA_T * nne;
+            //reduced e/s for debugging
+            //sigma = 1e-30*sigma;
+            //switched off e/s for debugging
+            //sigma_cmf = 0. * nne;
+            //sigma *= 0.1;
+            
+            /// Second contribution: free-free absorption
+            kappa_ff = 0.;
+            /// Estimator for bound-free heating
+            kappa_ffheating = 0.;
+            //kappa_bfheating = 0.;
+            for (element=0; element < nelements; element++)
+            {
+                nions = get_nions(element);
+                for (ion=0; ion < nions; ion++)
+                {
+                    ///calculate population of ionstage ...
+                    nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
+                    ionpops_local[element][ion] = nnion/get_nnetot(modelgridindex);
+                    //Z = get_element(element);  ///atomic number
+                    //if (get_ionstage(element,ion) > 1)
+                    /// Z is ionic charge in the following formula
+                    Z = get_ionstage(element,ion)-1;
+                    if (Z > 0)
+                    {
+                        //kappa_ff += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
+                        kappa_ff += pow(Z,2) * g_ff * nnion;
+                        //kappa_ffheating += pow(Z,2) * g_ff * nnion;
+                        /// heating with level dependence
+                        //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
+                        /// heating without level dependence
+                        //kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
+                    }
+                }
+            }
+            kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
+            //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
+            kappa_ffheating = kappa_ff;
+            //kappa_ff *= 1e5;
+            
+            /// Third contribution: bound-free absorption
+            kappa_bf = 0.;
+            for (i = 0; i < nbfcontinua; i++)
+            {
+                element = phixslist[tid].allcont[i].element;
+                ion = phixslist[tid].allcont[i].ion;
+                level = phixslist[tid].allcont[i].level;
+                
+                /// The bf process happens only if the current cell contains
+                /// the involved atomic species
+                if ((ionpops_local[element][ion] > 1.e-6) || (level == 0))
+                    ///if (get_abundance(modelgridindex,element) > 0)
+                {
+                    nu_edge = phixslist[tid].allcont[i].nu_edge;
+                    //printout("i %d, nu_edge %g\n",i,nu_edge);
+                    if (nu >= nu_edge)
+                    {
+                        //ion = phixslist[tid].allcont[i].ion;
+                        //level = phixslist[tid].allcont[i].level;
+                        //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
+                        //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
+                        
+                        nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+                        //if (fabs(nnlevel - phixslist[tid].allcont[i].nnlevel) > 0)
+                        //{
+                        //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);
+                        //  printout("pkt_ptr->number %d\n",pkt_ptr->number);
+                        //}
+                        nnionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
+                        
+                        mastate[tid].element = element;
+                        mastate[tid].ion = ion;
+                        mastate[tid].level = level;
+                        sigma_bf = photoionization_crosssection(nu_edge,nu);
+                        
+                        bef=cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact;
+                        
+                        sf = calculate_sahafact(element,ion,level,T_e,nu_edge*H);
+                        helper = nnlevel * sigma_bf;
+                        departure_ratio = nnionlevel/nnlevel * nne*sf; ///put that to phixslist
+                        if (nnlevel == 0.) check = 0.;
+                        else check = helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
+                        
+                        //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g) before %g after %g \n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf,bef,cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact);
+                        
+                        if (check <= 0)
+                        {
+                            #ifdef DEBUG_ON
+                            //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution T_e %g, T_R %g, W %g, E_threshold %g, check %g\n", T_e,cell[pkt_ptr->where].T_R,cell[pkt_ptr->where].W,nu_edge*H,nnlevel*sigma_bf);
+                            //printout("[warning] calculate_kappa_rpkt_cont: set this contribution to zero\n");
+                            if (fabs(check) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g) before %g after %g \n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf,bef,cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact);
+                            #endif
+                            check = 0.;
+                            //phixslist[tid].allcont[i].kappa_bf_contr = check;
+                            //phixslist[tid].allcont[i].photoion_contr = 0.;
+                            //phixslist[tid].allcont[i].stimrecomb_contr = 0.;
+                        }
+                        /*            else
+                         {
+                         phixslist[tid].allcont[i].kappa_bf_contr = check;
+                         phixslist[tid].allcont[i].photoion_contr = nnlevel * sigma_bf;
+                         phixslist[tid].allcont[i].stimrecomb_contr = sf * sigma_bf;
+                         }*/
+                        //check *= 2;
+                        phixslist[tid].allcont[i].kappa_bf_contr = check;
+                        kappa_bf += check;
+                        if (level == 0)
+                        {
+                            gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+                            //groundphixslist[gphixsindex].photoion_contr = helper;
+                            corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
+                            if (corrfactor < 0) corrfactor = 1;
+                            phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * corrfactor;
+                            //phixslist[tid].groundcont[gphixsindex].stimrecomb_contr = sf * sigma_bf;
+                            //phixslist[tid].groundcont[gphixsindex].bfheating_contr = helper * nu_edge;
+                        }
+                        #ifdef DEBUG_ON
+                        if (!finite(check))
+                        {
+                            printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",check);
+                            printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
+                            printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
+                            printout("[fatal] nne %g, nnlevel %g, nnionlevel %g, departure_ratio %g\n",nne,nnlevel,nnionlevel,departure_ratio);
+                            printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,T_e,nu,nu_edge);
+                            abort();
+                        }
+                        #endif
+                    }
+                    /// The important part of phixslist is sorted by nu_edge in ascending order
+                    /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
+                    /// is possible, therefore leave the loop.
+                    else break;
+                    //  {
+                    //  /// Set photoion_contr to zero for continua with nu < nu_edge
+                    //  /// to get the correct estimators for the photoionisation rate coefficients
+                    //  for (ii = i; ii < importantbfcontinua; ii++) phixslist[tid].allcont[ii].photoion_contr = 0;
+                    //  break;
+                    //}
+                }
+                else
+                {
+                    phixslist[tid].allcont[i].kappa_bf_contr = 0.;
+                    if (phixslist[tid].allcont[i].level == 0)
+                    {
+                        gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+                        //phixslist[tid].groundcont[gphixsindex].photoion_contr = 0.;
+                        phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
+                        //phixslist[tid].groundcont[gphixsindex].stimrecomb_contr = 0.;
+                        //phixslist[tid].groundcont[gphixsindex].bfheating_contr = 0.;
+                    }
+                }
+            }
+            kappa_rpkt_cont[tid].bf_inrest = kappa_bf;
+        }
+        else
+        {
+            nne = get_nne(modelgridindex);
+            T_e = get_Te(modelgridindex);
+            T_R = get_TR(modelgridindex);
+            g_ff = 1;
+            nu = pkt_ptr->nu_cmf;
+            /// in the other cases kappa_grey is an mass absorption coefficient
+            /// therefore use the mass density
+            //sigma = cell[pkt_ptr->where].kappa_grey * cell[pkt_ptr->where].rho;
+            sigma = SIGMA_T*nne;
+            
+            sigma = 0.;
+            /*
+             kappa_ff = 0.9*sigma;
+             sigma *= 0.1;
+             kappa_bf = 0.;
+             */
+            
+            /// Second contribution: free-free absorption
+            kappa_ff = 0.;
+            for (element=0; element < nelements; element++)
+            {
+                nions = get_nions(element);
+                for (ion=0; ion < nions; ion++)
+                {
+                    ///calculate population of ionstage ...
+                    nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
+                    /// Z is ionic charge in the following formula
+                    Z = get_ionstage(element,ion)-1;
+                    if (Z > 0)
+                    {
+                        kappa_ff += pow(Z,2) * g_ff * nnion;
+                    }
+                }
+            }
+            kappa_ff *= 1e5*3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
+            kappa_bf = 0.;
+        }
+        
+        /// Now need to convert between frames.
+        get_velocity(pkt_ptr->pos, vel_vec, t_current);
+        sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
+        kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
+        kappa_bf = kappa_bf * doppler(pkt_ptr->dir, vel_vec);
+    }
+    else
+    {
+        sigma = 0.0;
+        kappa_ff = 0.;
+        kappa_bf = 0.;
+        //kappa_ffheating = 0.;
+        //kappa_bfheating = 0.;
+    }
+    
+    kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_ff;
+    #ifdef DEBUG_ON
+    if (debuglevel == 2) printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
+    #endif
+    kappa_rpkt_cont[tid].es = sigma;
+    kappa_rpkt_cont[tid].ff = kappa_ff;
+    kappa_rpkt_cont[tid].bf = kappa_bf;
+    kappa_rpkt_cont[tid].ffheating = kappa_ffheating;
+    //kappa_rpkt_cont[tid].bfheating = kappa_bfheating;
+    
+    
+    #ifdef DEBUG_ON
+    if (!finite(kappa_rpkt_cont[tid].total))
+    {
+        printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
+        printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont[tid].es,kappa_rpkt_cont[tid].ff,kappa_rpkt_cont[tid].bf);
+        printout("[fatal] nbfcontinua %d\n",nbfcontinua);
+        printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
+        printout("[fatal] pkt_ptr->nu_cmf %g, T_e %g, nne %g\n",pkt_ptr->nu_cmf,T_e,nne);
+        if (finite(kappa_rpkt_cont[tid].es))
+        {
+            kappa_rpkt_cont[tid].ff = 0.;
+            kappa_rpkt_cont[tid].bf = 0.;
+            kappa_rpkt_cont[tid].total = kappa_rpkt_cont[tid].es;
+        }
+        else
+        {
+            abort();
+        }
+    }
+    #endif
+    
+    return;
+}
+
 
 
 
@@ -1615,3 +1964,72 @@ void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
   pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
   pkt_ptr->em_time = t_current;
 }
+
+
+
+int call_estimators(PKT *pkt_ptr, double t_current, int realtype)
+{
+    double t_arrive,obs[3];
+    int bin;
+    double dot();
+    double closest_transition(PKT *pkt_ptr);
+    int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
+    int rlc_emiss_vpkt2(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
+    void update_cell(int cellnumber);
+    int vflag ;
+    double nutrans;
+    int mgi;
+    double vel_vec[3];
+    double doppler();
+    int get_velocity();
+    int i;
+    
+    
+    vflag = 0;
+    
+    get_velocity(pkt_ptr->pos, vel_vec, t_current);
+    
+    // Cut on vpkts
+    mgi=cell[pkt_ptr->where].modelgridindex;
+    if (modelgrid[mgi].thick != 0) return 0;
+
+    /* this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer) */
+    if (pkt_ptr->next_trans == 0) nutrans = closest_transition(pkt_ptr);
+    
+    for (bin = 0 ; bin < Nobs ; bin++ ) {                   /* loop over different observers */
+      
+        obs[0] = sqrt(1-nz_obs_vpkt[bin]*nz_obs_vpkt[bin]) * cos(phiobs[bin]) ;
+        obs[1] = sqrt(1-nz_obs_vpkt[bin]*nz_obs_vpkt[bin]) * sin(phiobs[bin]) ;
+        obs[2] = nz_obs_vpkt[bin] ;
+        
+        t_arrive = t_current - (dot(pkt_ptr->pos,obs)/CLIGHT_PROP) ;
+        
+        if (t_arrive >= tmin_vspec  && t_arrive <= tmax_vspec) {       /* time selection */
+            
+            for (i=0;i<Nrange;i++){   /* Loop over frequency ranges */
+                
+                if (pkt_ptr->nu_cmf / doppler(obs, vel_vec) > numin_vspec[i] && pkt_ptr->nu_cmf / doppler(obs, vel_vec) < numax_vspec[i] ) {  /* frequency selection */
+                    
+                    rlc_emiss_vpkt(pkt_ptr, t_current, bin, obs, realtype);
+                    
+                    vflag = 1;
+                    
+                    // Need to update the starting cell for next observer
+                    // If previous vpkt reached tau_lim, change_cell (and then update_cell) hasn't been called
+                    mgi=cell[pkt_ptr->where].modelgridindex;
+                    update_cell(mgi);
+                    
+                }
+                
+            }
+            
+        }
+    
+    }
+    
+    
+    return vflag;
+    
+}
+
+

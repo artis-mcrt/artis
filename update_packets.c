@@ -101,7 +101,9 @@ int update_packets(int nts)
           /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
           if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1) 
           {
+            //printout("About update_pa\n");
             calculate_kappa_rpkt_cont(pkt_ptr,ts);
+            //printout("Completed update_p\n");
           }
         }
       
@@ -342,7 +344,7 @@ void update_cell(int cellnumber)
   double population;
   int nions,nlevels;
   
-  if (modelgrid[cellnumber].thick != 1) 
+  if (modelgrid[cellnumber].thick != 1)
 {
   updatecellcounter += 1;
   
@@ -400,6 +402,9 @@ void update_cell(int cellnumber)
   //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
 }
+
+
+
 
 ///***************************************************************************/
 /*void copy_populations_to_phixslist()

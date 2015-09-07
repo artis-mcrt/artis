@@ -42,7 +42,6 @@ double boundary_cross (pkt_ptr, tstart, snext)
   vz = pkt_ptr->dir[2] * CLIGHT_PROP;
   //printout("boundary.c: vx %g, vy %g, vz %g\n",vx,vy,vz);
   
-  
   cellxmin = cell[pkt_ptr->where].pos_init[0];
   cellymin = cell[pkt_ptr->where].pos_init[1];
   cellzmin = cell[pkt_ptr->where].pos_init[2];
@@ -53,7 +52,7 @@ double boundary_cross (pkt_ptr, tstart, snext)
   cellymax = cell[pkt_ptr->where].pos_init[1] + wid_init;
   cellzmax = cell[pkt_ptr->where].pos_init[2] + wid_init;
   //printout("boundary.c: cellxmax %g, cellymax %g, cellzmax %g\n",cellxmax,cellymax,cellzmax);
-
+    
   not_allowed = pkt_ptr->last_cross;
   if ((((x0 * tmin) - (tstart * cellxmax)) > (-10.*tmin)) && (not_allowed != NEG_X))
   {
@@ -479,7 +478,9 @@ int change_cell(pkt_ptr, snext, end_packet, t_current)
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
+          //printout("About change_cell real\n");
           calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+          //printout("comple change_cell real\n");
         }
       }
     }
@@ -550,8 +551,62 @@ int change_cell(pkt_ptr, snext, end_packet, t_current)
 
 
 ///****************************************************************************
+/// Routine to take a VIRTUAL packet across a boundary.
+int change_cell_vpkt(pkt_ptr, snext, end_packet, t_current)
+PKT *pkt_ptr;
+double t_current;
+int snext;
+int *end_packet;
+{
+  //void copy_populations_to_phixslist();
+  int search_cellhistory(int cellnumber);
+  int find_farthestcell(int cellnumber);
+  void update_cell(int cellnumber);
+  void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
+  void determine_kpkt_cuts(int cellnumber);
+  //void calculate_kpkt_rates(int cellnumber);
+  void calculate_levelpops(int cellnumber);
+  //int element, ion, level;
+  int oldpos,mgi,old_mgi;
+    
+  #ifdef DEBUG_ON
+    if (debuglevel == 2)
+    {
+        printout("[debug] cellnumber %d nne %g\n",pkt_ptr->where,get_nne(pkt_ptr->where));
+        printout("[debug] snext %d\n",snext);
+    }
+  #endif
+    
+  if (snext == -99)
+  {
+      /* Then the packet is exiting the grid. We need to record
+       where and at what time it leaves the grid. */
+      pkt_ptr->escape_type = pkt_ptr->type;
+      pkt_ptr->escape_time = t_current;
+      pkt_ptr->type = TYPE_ESCAPE;
+      *end_packet = 1;
+      return(0);
+  }
+  else
+  {
+      /** Just need to update "where".*/
+      oldpos = pkt_ptr->where;
+      old_mgi = cell[pkt_ptr->where].modelgridindex;
+      pkt_ptr->where = snext;
+      mgi = cell[pkt_ptr->where].modelgridindex;
+      
+      cellcrossings += 1;
+      
+      return(0);
+  }
+}
+
+
+
+
+///****************************************************************************
 /// Routine to return which grid cell the packet is in.
-int locate(pkt_ptr, t_current)     
+int locate(pkt_ptr, t_current)
     PKT *pkt_ptr;
      double t_current;
 {

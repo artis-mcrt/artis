@@ -1,3 +1,4 @@
+
 /* 2007-10-30 -- MK
    Non-grey treatment of UVOIR opacity as opacity_case 4 added. 
    Still not fully commented.
@@ -43,10 +44,12 @@ int main(int argc, char** argv)
   int gather_light_curve();
   int gather_light_curve_res(int current_abin);
   int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file);
+  int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file);
   int write_light_curve(FILE *lc_file, int current_abin);
   double dot();
   
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
+  FILE *emissionpol_file,*specpol_file,*absorptionpol_file;
   int j,t_arrive;
   PKT *pkt_ptr;
 
@@ -111,7 +114,6 @@ int main(int argc, char** argv)
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
   if (my_rank == 0)
   {
-    
     
     tid = 0;
     nthreads = 1;
@@ -226,6 +228,13 @@ int main(int argc, char** argv)
             epkts[j].emissiontype = pkt_ptr->emissiontype;
             epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
             epkts[j].absorptiontype = pkt_ptr->absorptiontype;
+              
+            #ifdef POL_ON
+            epkts[j].stokes[0] = pkt_ptr->stokes[0];
+            epkts[j].stokes[1] = pkt_ptr->stokes[1];
+            epkts[j].stokes[2] = pkt_ptr->stokes[2];
+            #endif
+              
             j += 1;
           }
         }
@@ -233,41 +242,79 @@ int main(int argc, char** argv)
       nepkts = j;
       
       
-      /// Extract angle-averaged spectra and light curves
+      /// Extract angle-averaged spectra, light curves and specpol
       if ((lc_file = fopen("light_curve.out", "w")) == NULL)
       {
         printout("Cannot open light_curve.out\n");
         exit(0);
       }
+
+      gather_light_curve();
+      write_light_curve(lc_file,-1);
+      make_gamma_light_curve();
+      
+      fclose(lc_file);
+      
+      
+      #ifdef POL_ON
+        
+      if ((specpol_file = fopen("specpol.out", "w")) == NULL)
+      {
+          printout("Cannot open specpol.out\n");
+          exit(0);
+      }
+      if ((emissionpol_file = fopen("emissionpol.out", "w")) == NULL)
+      {
+          printf("Cannot open emissionpol.out\n");
+          exit(0);
+      }
+      if ((absorptionpol_file = fopen("absorptionpol.out", "w")) == NULL)
+      {
+          printf("Cannot open absorptionpol.out\n");
+          exit(0);
+      }
+
+      gather_specpol(-1);
+      write_specpol(specpol_file,emissionpol_file,absorptionpol_file);
+
+      fclose(specpol_file);
+      fclose(emissionpol_file);
+      fclose(absorptionpol_file);
+      
+      #else
+      
       if ((spec_file = fopen("spec.out", "w")) == NULL)
       {
-        printout("Cannot open spec.out\n");
-        exit(0);
+          printout("Cannot open spec.out\n");
+          exit(0);
       }
       if ((emission_file = fopen("emission.out", "w")) == NULL)
       {
-        printf("Cannot open emission.out\n");
-        exit(0);
+          printf("Cannot open emission.out\n");
+          exit(0);
       }
       if ((absorption_file = fopen("absorption.out", "w")) == NULL)
       {
-        printf("Cannot open absorption.out\n");
-        exit(0);
+          printf("Cannot open absorption.out\n");
+          exit(0);
       }
-
+        
       gather_spectrum(-1);
-      gather_light_curve();
       write_spectrum(spec_file,emission_file,absorption_file);
-      write_light_curve(lc_file,-1);
-      //make_gamma_light_curve();
       
-      fclose(lc_file);
       fclose(spec_file);
       fclose(emission_file);
       fclose(absorption_file);
+
+        
+      #endif
+        
       
+    
+        
       printout("finished angle-averaged stuff\n");
       
+        
       /// Extract LOS dependent spectra and light curves
       if (model_type != RHO_1D_READ)
       {
@@ -276,46 +323,108 @@ int main(int argc, char** argv)
           printout("Cannot open light_curve_res.out\n");
           exit(0);
         }
-        if ((spec_file = fopen("spec_res.out", "w")) == NULL)
-        {
-          printout("Cannot open spec_res.out\n");
-          exit(0);
-        }
+        
         for (i = 0; i < MABINS; i++)
         {
-          if (do_emission_res == 1)
-          {
-            sprintf(filename,"emission_res_%.2d.out",i);
-            printout("%s \n",filename);
-            if ((emission_file = fopen(filename, "w")) == NULL)
+            gather_light_curve_res(i);
+            write_light_curve(lc_file,i);
+        }
+          
+        fclose(lc_file);
+          
+          
+        #ifdef POL_ON
+        
+        if ((specpol_file = fopen("specpol_res.out", "w")) == NULL)
+        {
+            printout("Cannot open specpol_res.out\n");
+            exit(0);
+        }
+          
+        for (i = 0; i < MABINS; i++)
+        {
+            if (do_emission_res == 1)
             {
-              printf("Cannot open emission_res.out\n");
-              exit(0);
+                sprintf(filename,"emissionpol_res_%.2d.out",i);
+                printout("%s \n",filename);
+                if ((emissionpol_file = fopen(filename, "w")) == NULL)
+                {
+                    printf("Cannot open emissionpol_res.out\n");
+                    exit(0);
+                }
+                  
+                sprintf(filename,"absorptionpol_res_%.2d.out",i);
+                printout("%s \n",filename);
+                if ((absorptionpol_file = fopen(filename, "w")) == NULL)
+                {
+                    printf("Cannot open absorptionpol_res.out\n");
+                    exit(0);
+                }
+                  
             }
             
-            sprintf(filename,"absorption_res_%.2d.out",i);
-            printout("%s \n",filename);
-            if ((absorption_file = fopen(filename, "w")) == NULL)
+            gather_specpol_res(i);
+            write_specpol(specpol_file,emissionpol_file,absorptionpol_file);
+        
+            if (do_emission_res == 1)
             {
-              printf("Cannot open absorption_res.out\n");
-              exit(0);
+                fclose(emissionpol_file);
+                fclose(absorptionpol_file);
             }
-          }
-          gather_spectrum_res(i);
-          gather_light_curve_res(i);
-          
-          write_spectrum(spec_file,emission_file,absorption_file);
-          write_light_curve(lc_file,i);
-          
-          if (do_emission_res == 1) 
-          { 
-            fclose(emission_file);
-            fclose(absorption_file);
-          }
-          printout("Did %d of %d angle bins.\n",i+1,MABINS);
+            printout("Did %d of %d angle bins.\n",i+1,MABINS);
         }
-        fclose(lc_file);
+        fclose(specpol_file);
+          
+          
+        #else
+        
+          
+        if ((spec_file = fopen("spec_res.out", "w")) == NULL)
+        {
+            printout("Cannot open spec_res.out\n");
+            exit(0);
+        }
+          
+        for (i = 0; i < MABINS; i++)
+        {
+            if (do_emission_res == 1)
+            {
+                sprintf(filename,"emission_res_%.2d.out",i);
+                printout("%s \n",filename);
+                if ((emission_file = fopen(filename, "w")) == NULL)
+                {
+                    printf("Cannot open emission_res.out\n");
+                    exit(0);
+                }
+                
+                sprintf(filename,"absorption_res_%.2d.out",i);
+                printout("%s \n",filename);
+                if ((absorption_file = fopen(filename, "w")) == NULL)
+                {
+                    printf("Cannot open absorption_res.out\n");
+                    exit(0);
+                }
+                
+            }
+            
+            gather_spectrum_res(i);
+            write_spectrum(spec_file,emission_file,absorption_file);
+            
+            if (do_emission_res == 1)
+            {
+                fclose(emission_file);
+                fclose(absorption_file);
+            }
+            printout("Did %d of %d angle bins.\n",i+1,MABINS);
+        }
+        
         fclose(spec_file);
+          
+          
+        #endif
+          
+          
+        
       }
     }
   

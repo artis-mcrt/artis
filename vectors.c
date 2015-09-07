@@ -87,6 +87,7 @@ angle_ab (dir1,vel,dir2)
 {
   double gamma_rel;
   double dot();
+  void vec_norm();
   double ndotv, fact2, fact1;
   double vsqr;
 
@@ -101,8 +102,40 @@ angle_ab (dir1,vel,dir2)
   dir2[1] = (dir1[1] - (vel[1] * fact2))/fact1;
   dir2[2] = (dir1[2] - (vel[2] * fact2))/fact1;
   
+  //dir2[0]=dir1[0];
+  //dir2[1]=dir1[1];
+  //dir2[2]=dir1[2];
+    
+  vec_norm(dir2,dir2);
+    
   return(0);
 }
+
+
+int
+angle_ab2 (dir1,vel,dir2)
+double *dir1,*vel,*dir2;
+{
+    double gamma_rel;
+    double dot();
+    double ndotv, fact2, fact1;
+    double vsqr;
+    
+    vsqr = dot(vel,vel)/CLIGHT2;
+    gamma_rel = 1./(sqrt(1 - vsqr));
+    
+    ndotv = dot(dir1,vel);
+    fact1 = gamma_rel * (1 - (ndotv/CLIGHT));
+    fact2 = (gamma_rel - (gamma_rel*gamma_rel*ndotv/(gamma_rel + 1)/CLIGHT))/CLIGHT;
+  
+    dir2[0]=dir1[0];
+    dir2[1]=dir1[1];
+    dir2[2]=dir1[2];
+    
+    return(0);
+}
+
+
 /************************************************************/
 
 /*Routine for Doppler shift in SR. Takes one direction and velocity

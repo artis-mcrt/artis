@@ -35,7 +35,9 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
   int get_continuumindex(int element, int ion, int level);
   int get_bfcontinua(int element, int ion);
-
+  int call_estimators(PKT *pkt_ptr, double t_current, int realtype);
+  void update_cell(int cellnumber);
+    
   double rad_deexc,rad_recomb,col_deexc,col_recomb;
   double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
   double individ_rad_deexc,individ_col_deexc,individ_internal_down_same,individ_internal_up_same;
@@ -56,6 +58,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   int element,ion,level,upper,lower;
   int ndowntrans,nuptrans;
   int nlevels,ionisinglevels;
+    
+  int vflag = 0, res_flag = 0, mgi;
         
   end_packet = 0; ///means "keep working"
   t_current = t1; ///this will keep track of time in the calculation
@@ -408,11 +412,15 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       
       /// Emitt the rpkt in a random direction
       emitt_rpkt(pkt_ptr,t_current);
+        
+        
       if (linelistindex == mastate[tid].activatingline) 
       {
         resonancescatterings += 1;
+        res_flag = 1 ;
       }
-      else calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      else res_flag = 0 ;
+        
       /// NB: the r-pkt can only interact with lines redder than the current one
       pkt_ptr->next_trans = linelistindex + 1;
       pkt_ptr->emissiontype = linelistindex;
@@ -426,6 +434,43 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       #ifndef FORCE_LTE
         //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+        
+        
+        
+      /* call the estimator routine - generate a virtual packet */
+      #ifdef ESTIMATORS_ON
+        
+        realtype = 3 ;
+        
+        vflag = call_estimators(pkt_ptr, t_current, realtype);
+        
+        if (vflag == 1) {       /* if you have generated virtual packets, you need to update some real packets properties */
+            
+            //printout("About to reset macroatom\n");
+            calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+
+            //printout("Completed reset macroatom\n");
+        
+        }
+        
+        else if (res_flag == 0) {
+          
+            //printout("About reson\n");
+            calculate_kappa_rpkt_cont(pkt_ptr,t_current);   /* if you don't, you just have to calculate the continuum kappa for non resonance events */
+            //printout("Compl reson\n");
+        
+        }
+      
+       
+      #else
+        
+        if (res_flag == 0) calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+  
+      #endif
+        
+        
+        
+        
     }
     else if (zrand*total_transitions < rad_deexc + col_deexc)
     {
@@ -654,7 +699,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         
       /// Finally emitt the packet into a randomly chosen direction, update the continuum opacity and set some flags
       emitt_rpkt(pkt_ptr,t_current);
-      calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        
+        
       pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
       pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
       pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
@@ -663,6 +709,28 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
       end_packet = 1;
+        
+        
+        
+      /* call the estimator routine - generate a virtual packet */
+      #ifdef ESTIMATORS_ON
+        realtype = 3 ;
+
+        vflag = call_estimators(pkt_ptr, t_current, realtype);
+        
+        //printout("About to reset rpkt cell macroatom\n");
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        //printout("Completed reset rpkt cell macroatom\n");
+        
+        
+      #else
+        
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      
+      #endif
+        
+        
+        
     }
     else if (zrand*total_transitions < rad_deexc + col_deexc + internal_down_same + rad_recomb + col_recomb)
     {

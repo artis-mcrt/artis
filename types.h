@@ -13,11 +13,11 @@
 
 
 #define TYPES
-#define MGRID  1000000 //125000 //1000000 //1000000//262144 //2100000 //125000 //1000000  /* Max number of grid cells.*/
-#define MMODELGRID 12800 //125000 //12800 //12800 //125 //3200 //200 //200 //200 //8192 //125 //125000 //200 //125000 //8200 //200 //8200 //200 //125000
-#define MPKTS 31250//25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625 /* Maximum number of energy packets in calculation. */
+#define MGRID  125000 //125000 //1000000 //1000000//262144 //2100000 //125000 //1000000  /* Max number of grid cells.*/
+#define MMODELGRID 125000 //125000 //12800 //12800 //125 //3200 //200 //200 //200 //8192 //125 //125000 //200 //125000 //8200 //200 //8200 //200 //125000
+#define MPKTS 50000 //62500 //31250 //25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625 /* Maximum number of energy packets in calculation. */
 #define MELEMENTS 26 //26 //27 //9
-#define MIONS 5 //9
+#define MIONS 7 //9
 #define MTHREADS 4    /// Max number of OpenMP threads
 
 
@@ -163,8 +163,9 @@ struct packet
   int em_time;
   double absorptiondir[3]; /// Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a unit vector.
   //short timestep;
-  double stokes_qu[2]; //Q and U Stokes parameters
+  double stokes[3]; //I, Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
+    
 };
 typedef struct packet PKT;
 
@@ -179,6 +180,7 @@ typedef struct
                             /// It holds information about the lower level of the bb-transition.
   int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
   int lastaction;           /// Holds information on last action performed by do_ma
+  double einstein;
 } mastate_t;
 //mastate_t mastate;
 
@@ -433,6 +435,7 @@ typedef struct
   short ionindex;                            /// The same for the elements ion
   short upperlevelindex;                     /// And the participating upper
   short lowerlevelindex;                     /// and lower levels
+    
 } linelist_entry;
 /// Global pointer to beginning of linelist
 

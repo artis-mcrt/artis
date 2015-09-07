@@ -1,6 +1,8 @@
 #include "sn3d.h"
 #include <string.h>
 
+//Inconsistency in calculate_kappa_rpkt_cont. 26 March 2014
+
 ///In this file the call to kappa_rpkt does not fit kappa_rpkts definition any loger!!!
 ///This MUST BE CHANGED. But it's not only the the call of kappa_rpkt. The dummy packet
 ///pointer needs more information (e.g. frequency) to calculate kappa_rpkt for the non
@@ -64,7 +66,7 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
       if (do_rlc_est == 2)
 	{
 	  mumu = dot(pkt_ptr->dir, syn_dir);
-	  tautau = dist * calculate_kappa_rpkt_cont(&dummy, t_current) * mumu;
+      tautau = dist * calculate_kappa_rpkt_cont(&dummy, t_current) * mumu;
 	  while (end_packet == 0 && tau_tot < 15.)
 	    {
 	      sdist = boundary_cross(&dummy, t_future, &snext);
@@ -173,6 +175,7 @@ rlc_emiss_rpkt(pkt_ptr, dist, t_current)
       if (do_rlc_est == 2)
 	{	  
 	  mumu = dot(pkt_ptr->dir, syn_dir);
+
 	  tautau = dist * calculate_kappa_rpkt_cont(&dummy, t_current) * mumu;
 	  while (end_packet == 0 && tau_tot < 15.)
 	    {
@@ -185,6 +188,7 @@ rlc_emiss_rpkt(pkt_ptr, dist, t_current)
 	      change_cell(&dummy, snext, &end_packet, t_future);
 	    }
           nesc -= 1;
+  
 	}
       
       if (tau_tot < 15.)
@@ -431,7 +435,7 @@ grey_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
 
   if (do_rlc_est == 1)
     {
-
+     
       kap_tot = calculate_kappa_rpkt_cont(&dummy, single_t);
       tau_cont = kap_tot * ldist;
       ray_ptr->e_rf[nray] = ray_ptr->e_rf[nray] * exp(-1. * tau_cont);

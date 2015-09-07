@@ -16,7 +16,7 @@ int make_spectrum()
 
 /*******************************************************/
 int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
-{
+{  
   int i,m,p;
   //FILE *spec_file,*emission_file;
   
@@ -120,7 +120,7 @@ void init_spectrum(void)
   /** start by setting up the time and frequency bins. */ 
   /** it is all done interms of a logarithmic spacing in both t and nu - get the
   step sizes first. */
-  ///Should be moved to input.c or exspec.c
+  ///Should be moved to input.c or exspec.cspectra[
   dlogt = (log(tmax) - log(tmin))/ntbins;
   dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
 
@@ -215,7 +215,7 @@ int add_to_spec(EPKT *pkt_ptr)
       nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
       deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
       spectra[nt].flux[nnu] += deltaE;
-
+        
       et = pkt_ptr->emissiontype;
       if (et >= 0)
       {
@@ -334,7 +334,7 @@ int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
     phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MABINS));
   }
   na = (thetabin*sqrt(MABINS)) + phibin;
-  
+      
   /// Add only packets which escape to the current angle bin
   if (na == current_abin)
   {

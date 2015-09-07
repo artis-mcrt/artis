@@ -14,6 +14,7 @@ int input(rank)
 {
   void read_atomicdata();
   void read_parameterfile();
+  void read_parameterfile_vpkt();
   int read_1d_model();
   int read_2d_model();
   int read_3d_model();
@@ -42,9 +43,9 @@ int input(rank)
   
   maxion = MIONS;
   /// Set grid size
-  nxgrid = 25; //pow(MGRID,1./3.); //10;
-  nygrid = 25; //pow(MGRID,1./3.); //10;
-  nzgrid = 25; //pow(MGRID,1./3.); //10;
+  nxgrid = 50; //pow(MGRID,1./3.); //10;
+  nygrid = 50; //pow(MGRID,1./3.); //10;
+  nzgrid = 50; //pow(MGRID,1./3.); //10;
   printout("nxgrid %d\n",nxgrid);
   /*nxgrid = 4;
   nygrid = 4;
@@ -95,11 +96,12 @@ int input(rank)
   #ifdef DO_EXSPEC
     /// Spectra settings
     nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
+    vnnubins = VMNUBINS; //10000; /// frequency bins for virtual packet spectrum (estimators)
     /// lower and upper frequency boundaries for make_spectrum_res: gamma spectra?
     nu_min = 0.05 * MEV / H;
     nu_max = 4 * MEV / H;
   #endif
-  
+    
   /// Lightcurve setting
   do_r_lc = 0;    /// default to no lc = gamma-ray spectrum
   do_rlc_est = 0; /// ^^
@@ -116,6 +118,11 @@ int input(rank)
   ntbins = ntstep;   ///time bins for spectrum equal #(timesteps)
   ntlcbins = ntstep; ///time bins for light curve #(timesteps)
   
+  /// Read in parameters from vpkt.txt
+  #ifdef ESTIMATORS_ON
+    read_parameterfile_vpkt();
+  #endif
+    
   /// Read in atomic data
   ///======================================================
   read_atomicdata();
@@ -287,6 +294,46 @@ int input(rank)
           printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
           exit(0);
         }
+          
+          
+        #ifdef POL_ON
+          
+        if ((stokes_i[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
+        {
+            printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
+            exit(0);
+        }
+        if ((stokes_i[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) ==NULL)
+        {
+            printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
+            exit(0);
+        }
+          
+        if ((stokes_q[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
+        {
+            printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
+            exit(0);
+        }
+        if ((stokes_q[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) ==NULL)
+        {
+            printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
+            exit(0);
+        }
+        
+        if ((stokes_u[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
+        {
+            printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
+            exit(0);
+        }
+        if ((stokes_u[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
+        {
+            printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
+            exit(0);
+        }
+          
+        #endif
+        
+        
         /*
         if (do_emission_res == 1)
         {
@@ -826,11 +873,11 @@ void read_atomicdata()
     fclose(linelist_file);
     //exit(0);
     */
-    
+
     ///then sort the linelist by decreasing frequency
     qsort(linelist,nlines,sizeof(linelist_entry),compare_linelistentry);
-    
-    
+
+      
     /// Save sorted linelist into a file
     if (rank_global == 0)
     {
@@ -1295,18 +1342,22 @@ void read_atomicdata()
       printout("[fatal] input: not enough memory to initialize linelist ... abort\n");
       exit(0);
     }
+    
     for (i = 0; i < nlines; i++)
     {
-      fscanf(linelist_file,"%d %d %d %d %d %lg %lg %lg\n",&dum,&element,&ion,&upperlevel,&lowerlevel,&nu,&A_ul,&f_ul);
-      linelist[i].elementindex = element;
-      linelist[i].ionindex = ion;
-      linelist[i].upperlevelindex = upperlevel;
-      linelist[i].lowerlevelindex = lowerlevel;
-      linelist[i].nu = nu;
-      linelist[i].einstein_A = A_ul;
-      linelist[i].osc_strength = f_ul;
+          
+        fscanf(linelist_file,"%d %d %d %d %d %lg %lg %lg\n",&dum,&element,&ion,&upperlevel,&lowerlevel,&nu,&A_ul,&f_ul);
+        linelist[i].elementindex = element;
+        linelist[i].ionindex = ion;
+        linelist[i].upperlevelindex = upperlevel;
+        linelist[i].lowerlevelindex = lowerlevel;
+        linelist[i].nu = nu;
+        linelist[i].einstein_A = A_ul;
+        linelist[i].osc_strength = f_ul;
     }
+
     fclose(linelist_file);
+
   }
     
 
@@ -1833,6 +1884,7 @@ void read_parameterfile(rank)
   fscanf(input_file, "%lg %d", &cell_is_optically_thick, &n_grey_timesteps);
   printout("input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",cell_is_optically_thick,n_grey_timesteps);
   
+    
   /// Limit the number of bf-continua
   fscanf(input_file, "%d", &max_bf_continua);
   if (max_bf_continua == -1)
@@ -2146,7 +2198,6 @@ int read_3d_model()
       cell[n].modelgridindex = MMODELGRID;
     }
     
-
     fscanf(model_input, "%g %g %g %g %g", &dum2, &dum3,  &dum4, &dum5, &dum6);
     //printout("ffe %g, fni %g, fco %g, ffe52 %g, fcr48 %g\n",dum2,dum3,dum4,dum5,dum6);
     if (rho_model > 0)
@@ -2468,5 +2519,176 @@ void update_parameterfile(int nts)
   fclose(input_file);
 }
 
+
+
+
+
+
+///****************************************************************************
+/// Subroutine to read in input parameters from vpkt.txt.
+#ifdef ESTIMATORS_ON
+
+void read_parameterfile_vpkt()
+{
+    FILE *input_file;
+    int dum1,dum8;
+    float dum2,dum3,dum4,dum5,dum6,dum7,dum9,dum10,dum11;
+    int i;
+    
+    if ((input_file = fopen("vpkt.txt", "r")) == NULL)
+    {
+        printout("Cannot open vpkt.txt.\n");
+        exit(0);
+    }
+    
+    // Nobs
+    fscanf(input_file, "%d", &dum1);
+    Nobs = dum1 ;
+    
+    if ( Nobs > MOBS ) {
+        
+        printout("Too many observers! Nobs > MOBS \n");
+        exit(0);
+    }
+    
+    
+    // nz_obs_vpkt
+    for (i=0;i<Nobs;i++) {
+        
+        fscanf(input_file, "%g", &dum2);
+        nz_obs_vpkt[i] = dum2;
+        
+        if ( fabs(nz_obs_vpkt[i])>1 ) {
+        
+            printout("Wrong observer direction \n");
+            exit(0);
+        }
+    
+        else if ( nz_obs_vpkt[i]==1 ) nz_obs_vpkt[i]=0.9999 ;
+        else if ( nz_obs_vpkt[i]==-1 ) nz_obs_vpkt[i]=-0.9999 ;
+        
+    }
+    
+    
+    // phiobs
+    for (i=0;i<Nobs;i++) {
+        
+        fscanf(input_file, "%g \n", &dum3);
+        phiobs[i] = dum3 * PI / 180 ;
+    
+    }
+    
+    // time window
+    fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
+    
+    if (dum4==1) {
+
+        tmin_vspec = dum5 * DAY;
+        tmax_vspec = dum6 * DAY;
+    }
+    
+    else {
+        
+        tmin_vspec = tmin;
+        tmax_vspec = tmax;
+        
+    }
+    
+    if (tmin_vspec < tmin ) {
+    
+        printout("tmin_vpkt was smaller than tmin -> tmin_vpkt = tmin \n");
+        tmin_vspec = tmin ;
+        
+    }
+    
+    if (tmax_vspec > tmax ) {
+        
+        printout("tmax_vpkt was bigger than tmax -> tmax_vpkt = tmax \n");
+        tmax_vspec = tmax ;
+        
+    }
+    
+    // frequency window
+    fscanf(input_file, "%g ", &dum4);
+    
+    if (dum4==1) {
+    
+        fscanf(input_file, "%g ", &dum5);
+        
+        Nrange = dum5;
+        if ( Nrange > MRANGE ) {
+            
+            printout("Too many ranges! Nrange > MRANGE \n");
+            exit(0);
+        }
+
+        for (i=0;i<Nrange;i++) {
+            
+            fscanf(input_file, "%g %g", &dum6, &dum7);
+            
+            lmin_vspec[i] = dum6;
+            lmax_vspec[i] = dum7;
+
+            numin_vspec[i] = CLIGHT / (lmax_vspec[i]*1e-8) ;
+            numax_vspec[i] = CLIGHT / (lmin_vspec[i]*1e-8) ;
+
+        }
+
+    }
+    
+    else {
+        
+        Nrange = 1;
+        
+        numin_vspec[0] = 0 ;
+        numax_vspec[0] = 1e16 ;
+
+    }
+    
+    // Cut for virtual packets??
+    fscanf(input_file, "%g %lg \n", &dum7, &cell_is_optically_thick_vpkt);
+    
+    if (dum7!=1) cell_is_optically_thick_vpkt = cell_is_optically_thick ;
+    
+    // Maximum optical depth in vpkt.c
+    fscanf(input_file, "%g \n", &dum7);
+    tau_max_vpkt = dum7 ;
+    
+    
+    // Grid map
+    fscanf(input_file, "%d \n", &dum8);
+    vgrid_flag = dum8 ;
+   
+    if (dum8==1) {
+        
+        fscanf(input_file, "%g %g \n", &dum9,&dum10);
+        tmin_grid = dum9 * DAY;
+        tmax_grid = dum10 * DAY;
+    
+        fscanf(input_file, "%g ", &dum9);
+        Nrange_grid = dum9 ;
+    
+        if ( Nrange_grid > MRANGE_GRID ) {
+            
+            printout("Too many ranges! Nrange_grid > MRANGE_GRID \n");
+            exit(0);
+        }
+        
+        for (i=0;i<Nrange_grid;i++) {
+            
+            fscanf(input_file, "%g %g", &dum10, &dum11);
+            
+            nu_grid_max[i] = CLIGHT / (dum10*1e-8) ;
+            nu_grid_min[i] = CLIGHT / (dum11*1e-8) ;
+        
+        }
+    
+    }
+    
+    fclose(input_file);
+    
+}
+
+#endif
 
 
