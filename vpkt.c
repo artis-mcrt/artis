@@ -532,9 +532,9 @@ int add_to_vspecpol(PKT *pkt_ptr, int bin, double t_arrive)
         {
             nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
             
-            deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / vstokes_i[nt][bin].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
-            deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / vstokes_i[nt][bin].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
-            deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / vstokes_i[nt][bin].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
+            deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
+            deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
+            deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
             
             vstokes_i[nt][bin].flux[nnu] += deltai;
             vstokes_q[nt][bin].flux[nnu] += deltaq;
@@ -573,8 +573,8 @@ void init_vspecpol(void)
             
             for (m=0; m < VMNUBINS; m++)
             {
-                vstokes_i[n][bin].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
-                vstokes_i[n][bin].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - vstokes_i[n][bin].lower_freq[m];
+                lower_freq_vspec[m] = exp( log(nu_min_r) + (m * (dlognu)));
+                delta_freq_vspec[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - lower_freq_vspec[m];
                 
                 vstokes_i[n][bin].flux[m] = 0.0;
                 vstokes_q[n][bin].flux[m] = 0.0;
@@ -612,7 +612,7 @@ int write_vspecpol(FILE *specpol_file)
         for (m=0; m < VMNUBINS; m++)
         {
             
-            fprintf(specpol_file, "%g ", ((vstokes_i[0][bin].lower_freq[m]+(vstokes_i[0][bin].delta_freq[m]/2))));
+            fprintf(specpol_file, "%g ", (lower_freq_vspec[m]+(delta_freq_vspec[m]/2)));
             
             // Stokes I
             for (p = 0; p < VMTBINS; p++) fprintf(specpol_file, "%g ", vstokes_i[p][bin].flux[m]);
@@ -661,8 +661,8 @@ int read_vspecpol(FILE *specpol_file)
             
             for (m=0; m < VMNUBINS; m++)
             {
-                vstokes_i[n][bin].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
-                vstokes_i[n][bin].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - vstokes_i[n][bin].lower_freq[m];
+                lower_freq_vspec[m] = exp( log(nu_min_r) + (m * (dlognu)));
+                delta_freq_vspec[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - lower_freq_vspec[m];
                 
             }
         }

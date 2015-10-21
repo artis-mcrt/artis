@@ -46,12 +46,14 @@ double tau_max_vpkt;
 
 struct vspecpol
 {
-    float lower_freq[VMNUBINS];
-    float delta_freq[VMNUBINS];
     double flux[VMNUBINS];
     float lower_time;
     float delta_t;
 } vstokes_i[VMTBINS][MOBS], vstokes_q[VMTBINS][MOBS], vstokes_u[VMTBINS][MOBS];
+
+float lower_freq_vspec[VMNUBINS];
+float delta_freq_vspec[VMNUBINS];
+
 
 int realtype ;
 /* number of virtual packets in a given timestep */
