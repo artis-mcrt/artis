@@ -871,13 +871,13 @@ double get_levelpop(int element, int ion, int level)
 
 
 ///***************************************************************************/
-double calculate_sahafact(int element, int ion, int level, double T, double E_threshold)
+double calculate_sahafact(int element, int ion, int level, int upperlevel, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
   double stat_weight(int element, int ion, int level);
   double sf;
 
-  sf = stat_weight(element,ion,level)/stat_weight(element,ion+1,0) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
+  sf = stat_weight(element,ion,level)/stat_weight(element,ion+1,upperlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
   //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0)
   {
@@ -892,7 +892,7 @@ double calculate_sahafact(int element, int ion, int level, double T, double E_th
 double get_sahafact(int element, int ion, int level, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
-  double calculate_sahafact(int element, int ion, int level, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int upperlevel, double T, double E_threshold);
   double sf;
   
   if (use_cellhist >= 0)
@@ -900,11 +900,11 @@ double get_sahafact(int element, int ion, int level, double T, double E_threshol
     sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact;
     if (sf < 0)
     {
-      sf = calculate_sahafact(element,ion,level,T,E_threshold);
+      sf = calculate_sahafact(element,ion,level,0,T,E_threshold);
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact = sf;
     }
   }
-  else sf = calculate_sahafact(element,ion,level,T,E_threshold);
+  else sf = calculate_sahafact(element,ion,level,0,T,E_threshold);
   
   //printout("get_sahafact: sf= %g\n",sf);
   return sf;

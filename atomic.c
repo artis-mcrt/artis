@@ -130,7 +130,59 @@ int get_continuumindex(int element, int ion, int level)
   return elements[element].ions[ion].levels[level].cont_index;
 }
 
+///***************************************************************************/
+int get_nphixstargets(int element, int ion, int level)
+/// Returns the number of target states for photoionization of (element,ion,level).
+{
+  int nions, nionisinglevels;
+  
+  nions = get_nions(element);
+  nionisinglevels = get_ionisinglevels(element,ion);
+  if ((ion < nions-1) && (level < nionisinglevels))
+  {
+    return elements[element].ions[ion].levels[level].nphixstargets;
+  }
+  else
+  {
+    return 0;
+  }
+}
 
+///***************************************************************************/
+int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
+/// Returns the level index of a target state for photoionization of (element,ion,level).
+{
+  int nphixstargets;
+  
+  nphixstargets = get_nphixstargets(element,ion,level);
+  if (phixstargetindex < nphixstargets)
+  {
+    return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
+  }
+  else
+  {
+    //should throw an error? or just silenty return the top phixstarget levelindex
+    return elements[element].ions[ion].levels[level].phixstargets[nphixstargets-1].levelindex;
+  }
+}
+
+///***************************************************************************/
+float get_phixsprobability(int element, int ion, int level, int phixstargetindex)
+/// Returns the probability of a target state for photoionization of (element,ion,level).
+{
+  int nphixstargets;
+  
+  nphixstargets = get_nphixstargets(element,ion,level);
+  if (phixstargetindex < nphixstargets)
+  {
+    return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
+  }
+  else
+  {
+    //should throw an error? or just silenty return the top phixstarget probability
+    return elements[element].ions[ion].levels[level].phixstargets[nphixstargets-1].probability;
+  }
+}
 
 ///***************************************************************************/
 int transitioncheck(int upper, int lower)
@@ -349,7 +401,7 @@ double photoionization_crosssection(double nu_edge, double nu)
   {
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
   }
-  else if (nu <= nu_edge*(1+0.1*NPHIXSPOINTS))
+  else if (nu < nu_edge*(1+0.1*NPHIXSPOINTS))
   {
     i = floor(nu/(0.1*nu_edge)) - 10;
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
@@ -363,7 +415,7 @@ double photoionization_crosssection(double nu_edge, double nu)
   }
   
   if (check == 1) printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
-  if (sigma_bf <= 0) 
+  if (sigma_bf < 0)
   {
     printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
     printout("[warning]   nu=%g,  nu_edge=%g, xs@edge=%g, xs@maxfreq\n",nu,nu_edge,elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
@@ -377,7 +429,7 @@ double photoionization_crosssection(double nu_edge, double nu)
 
 
 ///***************************************************************************/
-double interpolate_photoionization_crosssection(double nu_edge, double nu)
+/*double interpolate_photoionization_crosssection(double nu_edge, double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
@@ -394,7 +446,7 @@ double interpolate_photoionization_crosssection(double nu_edge, double nu)
   {
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
   }
-  else if (nu <= nu_edge*(1+0.1*NPHIXSPOINTS))
+  else if (nu < nu_edge*(1+0.1*NPHIXSPOINTS))
   {
     double nu_step = 0.1*nu_edge;
     int lowerindex = floor((nu-nu_edge)/nu_step);
@@ -415,3 +467,4 @@ double interpolate_photoionization_crosssection(double nu_edge, double nu)
   
   return sigma_bf;
 }
+*/

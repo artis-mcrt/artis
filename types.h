@@ -357,6 +357,15 @@ typedef struct
   int linelistindex;
 } transitionlist_entry;
 
+typedef struct
+{
+  short levelindex;         // index of upper ion level after photoionisation
+  float probability;        // fraction of phixs cross section leading to this final level
+  double *spontrecombcoeff;
+  double *corrphotoioncoeff;
+  double *bfheating_coeff;
+  double *bfcooling_coeff;
+} phixstarget_entry;
 
 typedef struct
 {
@@ -365,21 +374,18 @@ typedef struct
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   short metastable;                          /// 1 if the level is metastable, else 0
   short is_nlte;                             /// 1 if the level is to
-					     /// be treated in nlte
+                                             /// be treated in nlte
 
-
-  //double photoion_xs_nu_edge;             /// Number of grid points in the photoion_xs lookup-table.
-  float *photoion_xs;         /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+//  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.
+  float *photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int nphixstargets;                       /// length of phixstargets array:
+  phixstarget_entry *phixstargets;         /// pointer to table of target states and probabilities
   
-  double *spontrecombcoeff;
 //   double *spontrecombcoeff_E;
 //   double *photoioncoeff_below;
 //   double *photoioncoeff_above;
-  double *corrphotoioncoeff;
 //  double *corrphotoioncoeff_above;
-  double *bfheating_coeff;
 //  double *bfheating_coeff_above;
-  double *bfcooling_coeff;
   //double *stimulated_bfcooling_coeff;
   //double *stimulated_recomb_coeff;
   
