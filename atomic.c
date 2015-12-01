@@ -401,9 +401,9 @@ double photoionization_crosssection(double nu_edge, double nu)
   {
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
   }
-  else if (nu < nu_edge*(1+0.1*NPHIXSPOINTS))
+  else if (nu < nu_edge*(1+NPHIXSNUINCREMENT*NPHIXSPOINTS))
   {
-    i = floor(nu/(0.1*nu_edge)) - 10;
+    i = floor((nu/nu_edge - 1)/NPHIXSNUINCREMENT);
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
   }
   else
@@ -411,7 +411,7 @@ double photoionization_crosssection(double nu_edge, double nu)
     /// use a parameterization of sigma_bf by the Kramers formula 
     /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     /// so far the highest grid point, otherwise the cross-section is not continuous
-    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_edge*(1+0.1*NPHIXSPOINTS)/nu,3);
+    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_edge*(1+NPHIXSNUINCREMENT*NPHIXSPOINTS)/nu,3);
   }
   
   if (check == 1) printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
@@ -446,9 +446,9 @@ double photoionization_crosssection(double nu_edge, double nu)
   {
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
   }
-  else if (nu < nu_edge*(1+0.1*NPHIXSPOINTS))
+  else if (nu < nu_edge*(1+NPHIXSNUINCREMENT*NPHIXSPOINTS))
   {
-    double nu_step = 0.1*nu_edge;
+    double nu_step = NPHIXSNUINCREMENT*nu_edge;
     int lowerindex = floor((nu-nu_edge)/nu_step);
     int upperindex = lowerindex + 1;
     double f_upper = elements[element].ions[ion].levels[level].photoion_xs[upperindex];
@@ -462,7 +462,7 @@ double photoionization_crosssection(double nu_edge, double nu)
     /// use a parameterization of sigma_bf by the Kramers formula 
     /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     /// so far the highest grid point, otherwise the cross-section is not continuous
-    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_edge*(1+0.1*NPHIXSPOINTS)/nu,3);
+    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_edge*(1+NPHIXSNUINCREMENT*NPHIXSPOINTS)/nu,3);
   }
   
   return sigma_bf;

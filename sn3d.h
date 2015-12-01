@@ -575,6 +575,7 @@ double T_step_log;
 int homogeneous_abundances;
  
 #define NPHIXSPOINTS 100
+#define NPHIXSNUINCREMENT 0.1  //sets the frequency/energy spacing of the phixs array in units of nu_edge
 
 ///Constants for van-Regmorter approximation. Defined in input.c
 double C_0;

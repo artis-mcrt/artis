@@ -1120,7 +1120,7 @@ void read_atomicdata()
             nu = nu_edge;
             for (i = 1; i < NPHIXSPOINTS; i++)
             {
-              nu += 0.1*nu_edge;
+              nu += NPHIXSNUINCREMENT*nu_edge;
               if (nu > nu_max)
               {
                 phixs = phixstable[npoints-1] * pow(nu_max/nu,3);
