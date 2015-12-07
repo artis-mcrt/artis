@@ -206,19 +206,19 @@ void tabulate_ratecoefficients_gsl()
                 F_bfheating.params = &intparas;
                 
                 /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-                gsl_integration_qag(&F_alpha_sp, nu_threshold, 10*nu_threshold, 0, intaccuracy, 1000, 6, w, &alpha_sp, &error);
+                gsl_integration_qag(&F_alpha_sp, nu_threshold, NPHIXSPOINTS*NPHIXSNUINCREMENT*nu_threshold, 0, intaccuracy, 1000, 6, w, &alpha_sp, &error);
                 //gsl_integration_qng(&F_alpha_sp, nu_threshold, 10*nu_threshold, 0, intaccuracy, &alpha_sp, &error, &neval);
             //    if (iter == 0)
              //       printout("phixs integral: elem %d ion %d level %d T_e %g nu_lower %g nu_upper %g sf %g integral: %g \n",element,ion,level,T_e,nu_threshold,10*nu_threshold,sf,alpha_sp);
                 alpha_sp *= FOURPI * sf * phixstargetprobability;
             //printout("For element %d ion %d level %d at temperature %g, I think the alpha_sp is %g (int %g, sf %g)\n", element, ion, level, T_e, alpha_sp, alpha_sp/(FOURPI * sf),sf );
-                gsl_integration_qag(&F_bfcooling, nu_threshold, 10*nu_threshold, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
+                gsl_integration_qag(&F_bfcooling, nu_threshold, NPHIXSPOINTS*NPHIXSNUINCREMENT*nu_threshold, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
                 bfcooling_coeff *= FOURPI * sf * phixstargetprobability;
                 
-                gsl_integration_qag(&F_gammacorr, nu_threshold, 10*nu_threshold, 0, intaccuracy, 1000, 6, w, &gammacorr, &error);
+                gsl_integration_qag(&F_gammacorr, nu_threshold, NPHIXSPOINTS*NPHIXSNUINCREMENT*nu_threshold, 0, intaccuracy, 1000, 6, w, &gammacorr, &error);
                 gammacorr *= FOURPI * phixstargetprobability;
                 
-                gsl_integration_qag(&F_bfheating, nu_threshold, 10*nu_threshold, 0, intaccuracy, 1000, 6, w, &bfheating_coeff, &error);
+                gsl_integration_qag(&F_bfheating, nu_threshold, NPHIXSPOINTS*NPHIXSNUINCREMENT*nu_threshold, 0, intaccuracy, 1000, 6, w, &bfheating_coeff, &error);
                 bfheating_coeff *= FOURPI * phixstargetprobability;
                 
                 /// Save the previously calculated coefficients to memory

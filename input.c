@@ -709,7 +709,7 @@ void read_atomicdata()
               {
                 transitions[level].to[level-targetlevel-1] = lineindex;
                 A_ul = transitiontable[ii].A;
-		coll_str = transitiontable[ii].coll_str;
+                coll_str = transitiontable[ii].coll_str;
                 //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
                 
                 nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
