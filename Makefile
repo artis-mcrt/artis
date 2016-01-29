@@ -1,3 +1,13 @@
+
+  CC = cc
+  INCLUDE = /usr/local/opt/gsl/include
+  LIB = /usr/local/opt/gsl/lib
+  CFLAGS = -Wextra -O3 -g -I$(INCLUDE)
+#might also want -Wall and -g for debugging
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+
 ### Settings for the miner
 ifeq ($(OSTYPE),linux)
   CC = cc
@@ -27,14 +37,6 @@ ifeq ($(OSTYPE),linux)
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 endif
 
-  CC = cc
-  INCLUDE = /home/ssim/gsl/include
-  LIB = /home/ssim/gsl/lib
-  CFLAGS = -O3 -g -I$(INCLUDE)
-  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-
 
 ### Settings for mime
 ifeq ($(HOST),mime)
@@ -63,15 +65,16 @@ ifeq ($(USER),sas120)
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 endif
 
-### Settings for SS MACBOOK
-ifeq ($(USER),stuartsim)
+### Settings for Luke’s MACBOOK
+ifeq ($(USER),lukesignorethis)
 
-  CC = mpicc
+  CC = cc
 
-  CFLAGS = -O3 -DMPI_ON 
-  LDFLAGS= -lgsl -lgslcblas -lm 
+  CFLAGS = -O0 -I/usr/local/opt/gsl/include/ -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error -ftrap-function=abort -g
+#-DMPI_ON 
+  LDFLAGS= -lgsl -lgslcblas -lm -L/usr/local/opt/gsl/lib/
 
-  exspec: override CFLAGS =  -O3  -DDO_EXSPEC
+  exspec: override CFLAGS =  -O3  -DDO_EXSPEC 
   exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
   exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
 

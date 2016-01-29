@@ -54,7 +54,15 @@ void update_estimators(PKT *pkt_ptr, double distance)
               #pragma omp atomic
             #endif
             gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper2;
-            #ifdef _OPENMP 
+            // TODO: Find out why gamma estimator becomes NaN
+            #ifdef DEBUG_ON
+            if (!isfinite(gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]))
+            {
+              printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, helper2 %g\n",i,phixslist[tid].groundcont[i].gamma_contr,helper2);
+              abort();
+            }
+            #endif
+            #ifdef _OPENMP
               #pragma omp atomic
             #endif
             bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper * (1. - nu_edge/nu);
@@ -65,7 +73,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
       }
       
       #ifdef DEBUG_ON
-        if (!finite(nuJ[modelgridindex])) 
+        if (!isfinite(nuJ[modelgridindex]))
         {
           printout("[fatal] update_estimators: estimator becomes non finite: helper %g, nu_cmf %g ... abort\n",helper,pkt_ptr->nu_cmf);
           abort();
@@ -80,7 +88,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
     
     
     #ifdef DEBUG_ON
-      if (!finite(J[modelgridindex])) 
+      if (!isfinite(J[modelgridindex]))
       {
         printout("[fatal] update_estimators: estimator becomes non finite: helper %g, nu_cmf %g ... abort\n",helper,pkt_ptr->nu_cmf);
         abort();

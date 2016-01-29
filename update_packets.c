@@ -311,7 +311,8 @@ void update_cell(int cellnumber)
   int get_coolinglistoffset(int element, int ion);
   double get_groundlevelpop(int cellnumber, int element, int ion);
   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-  int element,ion,level;
+  int get_nphixstargets(int element, int ion, int level);
+  int element,ion,level,phixstargetindex;
   double population;
   int nions,nlevels;
   
@@ -337,9 +338,12 @@ void update_cell(int cellnumber)
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
         
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].spontaneousrecombrate = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfcooling = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].corrphotoioncoeff = -99.;
+        for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+        {
+            cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = -99.;
+            cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = -99.;
+            cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
+        }
         
         /// This is the only flag needed for all of the following MA stuff!
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc = -99.;

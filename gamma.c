@@ -142,7 +142,7 @@ choose_gamma_ray(pkt_ptr)
       pkt_ptr->nu_cmf = nickel_spec.energy[n] / H;
     }
   }
-  else if ((pkt_ptr->type == TYPE_COBALT_PELLET))
+  else if (pkt_ptr->type == TYPE_COBALT_PELLET)
   {
     n=0;
     runtot=0.0;
@@ -163,7 +163,7 @@ choose_gamma_ray(pkt_ptr)
       pkt_ptr->nu_cmf = cobalt_spec.energy[n] / H;
     }
   }
-  else if ((pkt_ptr->type == TYPE_48CR_PELLET))
+  else if (pkt_ptr->type == TYPE_48CR_PELLET)
   {
     n=0;
     runtot=0.0;
@@ -184,7 +184,7 @@ choose_gamma_ray(pkt_ptr)
       pkt_ptr->nu_cmf = cr48_spec.energy[n] / H;
     }
   }
-  else if ((pkt_ptr->type == TYPE_48V_PELLET))
+  else if (pkt_ptr->type == TYPE_48V_PELLET)
   {
     n=0;
     runtot=0.0;

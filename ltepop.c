@@ -41,11 +41,11 @@ double nne_solution_f(double x, void *paras)
       {
         //printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfract(element,ion,T,x));
         innersum += (get_ionstage(element,ion)-1) * ionfract(element,ion,n,x);
-        if (!finite(innersum)) abort();
+        if (!isfinite(innersum)) abort();
       }
       //printout("abundance %g, mass %g\n",cell[n].composition[element].abundance,elements[element].mass);
       outersum += abundance/elements[element].mass * innersum;
-      if (!finite(outersum)) abort();
+      if (!isfinite(outersum)) abort();
     }
   }
   
@@ -104,7 +104,7 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
   }
   //printout("debug denominator %g with nne %g and T_e %g\n",denominator, nne, get_Te(modelgridindex));
   
-  if (!finite(numerator/denominator))
+  if (!isfinite(numerator/denominator))
   {
     if (modelgridindex != MGRID) printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",get_ionstage(element,ion),get_element(element),modelgridindex,get_Te(modelgridindex),get_TR(modelgridindex));
     //abort();
@@ -270,7 +270,7 @@ double phi(int element, int ion, int modelgridindex)
       #endif
       /** END OF NT LINES */
 
-      // || !finite(Gamma))
+      // || !isfinite(Gamma))
       //return phi_lte(element,ion,cellnumber);
       //gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) + interpolate_photoioncoeff_above(element,ion,0,T_e);
       //zeta = interpolate_zeta(element,ion,T_e);
@@ -292,7 +292,7 @@ double phi(int element, int ion, int modelgridindex)
 	  printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ratio_u %g ratio_l %g Gamma %g T_e %g\n", phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion+1,0)/modelgrid[modelgridindex].composition[element].partfunct[ion+1], stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion],Gamma, T_e);
 	}
 
-      if (!finite(phi)) 
+      if (!isfinite(phi)) 
       {
         printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g, T_R %g ... remove higher or lower ionisation stages\n",phi,element,ion,T_e,T_R);
         printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n",Alpha_sp,Alpha_st,Gamma,modelgrid[modelgridindex].composition[element].partfunct[ion],stat_weight(element,ion,0));
@@ -320,7 +320,7 @@ double phi(int element, int ion, int modelgridindex)
   partfunct_ratio = cell[cellnumber].composition[element].partfunct[ion]/cell[cellnumber].composition[element].partfunct[ion+1];
   phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
 
-  if (!finite(phi)) 
+  if (!isfinite(phi)) 
   {
     printout("phi_lte: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g, ... remove higher or lower ionisation stages\n",phi,element,ion,T_e);
     abort();
@@ -353,7 +353,7 @@ double calculate_ltepartfunct(int element, int ion, double T)
     U += stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbt);
   }
   
-  if (!finite(U)) abort();
+  if (!isfinite(U)) abort();
   return U;
 }
 */
@@ -413,7 +413,7 @@ double calculate_partfunct_old(int element, int ion, int modelgridindex)
     }
 //   }
   
-  if (!finite(U)) 
+  if (!isfinite(U)) 
   {
     printout("element %d ion %d\n",element,ion);
     printout("modelgridindex %d\n",modelgridindex);
@@ -512,7 +512,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
       //	{
 	  //printout("Using an nlte population!\n");
       //	  nn = test * modelgrid[modelgridindex].rho / get_groundlevelpop(modelgridindex,element,ion)*stat_weight(element,ion,0);
-      //	  if (!finite(nn)) 
+      //	  if (!isfinite(nn)) 
       //	    {
       //      
       //      printout("[fatal] NLTE population failure.\n");
@@ -531,7 +531,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
     U = U * stat_weight(element,ion,0);
 
 
-  if (!finite(U)) 
+  if (!isfinite(U)) 
   {
     printout("element %d ion %d\n",element,ion);
     printout("modelgridindex %d\n",modelgridindex);
@@ -647,7 +647,7 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
   
   #ifdef DEBUG_ON
     double ionstagepop(int modelgridindex, int element, int ion);
-    if (!finite(nn)) 
+    if (!isfinite(nn)) 
     {
       printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
       printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n",get_groundlevelpop(modelgridindex,element,ion));
@@ -708,7 +708,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 	{
 	  //printout("Using an nlte population!\n");
 	  nn = test * modelgrid[modelgridindex].rho;
-	  if (!finite(nn)) 
+	  if (!isfinite(nn)) 
 	    {
 	      
 	      printout("[fatal] NLTE population failure.\n");
@@ -734,7 +734,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 	{	
 	  //printout("Using a superlevel population!\n");
 	  nn = test * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level);
-	  if (!finite(nn)) 
+	  if (!isfinite(nn)) 
 	    {
 	      
 	      printout("[fatal] NLTE population failure.\n");
@@ -764,7 +764,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   
   #ifdef DEBUG_ON
     double ionstagepop(int modelgridindex, int element, int ion);
-    if (!finite(nn)) 
+    if (!isfinite(nn)) 
     {
       printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
       printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n",get_groundlevelpop(modelgridindex,element,ion));
@@ -871,13 +871,13 @@ double get_levelpop(int element, int ion, int level)
 
 
 ///***************************************************************************/
-double calculate_sahafact(int element, int ion, int level, int upperlevel, double T, double E_threshold)
+double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
   double stat_weight(int element, int ion, int level);
   double sf;
 
-  sf = stat_weight(element,ion,level)/stat_weight(element,ion+1,upperlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
+  sf = stat_weight(element,ion,level)/stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
   //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0)
   {
@@ -889,10 +889,10 @@ double calculate_sahafact(int element, int ion, int level, int upperlevel, doubl
 
 
 ///***************************************************************************/
-double get_sahafact(int element, int ion, int level, double T, double E_threshold)
+double get_sahafact(int element, int ion, int level, double T, double E_threshold) //TODO: should there be a phixstargetindex argument?
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
-  double calculate_sahafact(int element, int ion, int level, int upperlevel, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
   double sf;
   
   if (use_cellhist >= 0)
@@ -918,7 +918,7 @@ void initialise_photoionestimators()
   //double interpolate_photoioncoeff_below(int element, int ion, int level, double T);
   //double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
   //double interpolate_zeta(int element, int ion, double T);
-  double get_corrphotoioncoeff_ana(int element, int ion, int level, int modelgridindex);
+  double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
   double stat_weight(int element, int ion, int level);
   double epsilon(int element, int ion, int level);

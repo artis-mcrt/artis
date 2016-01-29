@@ -361,6 +361,7 @@ typedef struct
 {
   short levelindex;         // index of upper ion level after photoionisation
   float probability;        // fraction of phixs cross section leading to this final level
+
   double *spontrecombcoeff;
   double *corrphotoioncoeff;
   double *bfheating_coeff;
@@ -540,6 +541,14 @@ typedef struct
 
 typedef struct
 {
+  double spontaneousrecombrate;
+  double bfcooling;
+  double corrphotoioncoeff;
+} chphixstargets_struct;
+
+
+typedef struct
+{
   //float population;                      /// The levels population
   double population;                      /// The levels population
   double sahafact;                        /// 
@@ -557,9 +566,7 @@ typedef struct
   double *individ_internal_down_same;
   double *individ_internal_up_same;
   
-  double spontaneousrecombrate;
-  double bfcooling;
-  double corrphotoioncoeff;
+  chphixstargets_struct *chphixstargets;
 } chlevels_struct;
 
 typedef struct

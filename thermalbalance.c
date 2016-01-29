@@ -67,7 +67,7 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   /// Check whether the thermal balance equation has a root in [T_min,T_max]
   thermalmin = find_T_e(T_min,find_T_e_f.params);
   thermalmax = find_T_e(T_max,find_T_e_f.params);
-  if (!finite(thermalmin) || !finite(thermalmax))
+  if (!isfinite(thermalmin) || !isfinite(thermalmax))
     {
       printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
       printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
@@ -284,7 +284,7 @@ void calculate_heating_rates(int modelgridindex)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
-  double get_bfheatingcoeff(int element, int ion, int level, int modelgridindex);
+  double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double interpolate_bfheatingcoeff_below(int element, int ion, int level, double T_R);
   double interpolate_bfheatingcoeff_above(int element, int ion, int level, double T_R);
   double bfheating_integrand_gsl(double nu, void *paras);
@@ -295,13 +295,14 @@ void calculate_heating_rates(int modelgridindex)
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
   double stat_weight(int element, int ion, int level);
   double epsilon(int element, int ion, int level);
+  int get_nphixstargets(int element, int ion, int level);
 
   double epsilon_current,epsilon_target,epsilon_trans,nnlevel;
   double C; 
   double statweight_target;
   double T_e,T_R,T_D,W,W_D;
   
-  int nions,nlevels_currention,nlevels_lowerion,ndowntrans;
+  int nions,nlevels_currention,nlevels_lowerion,ndowntrans,phixstargetindex;
   int element,ion,level,lower;
   int ii,lineindex;
   
@@ -446,7 +447,10 @@ void calculate_heating_rates(int modelgridindex)
         for (level = 0; level < nlevels_currention; level++)
         {
           nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-          bfheating += nnlevel*get_bfheatingcoeff(element,ion,level,modelgridindex);
+          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          {
+            bfheating += nnlevel*get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex); //TODO: is this valid?
+          }
         }
       }
     }
@@ -505,7 +509,7 @@ void calculate_cooling_rates(int modelgridindex)
 /// Calculate the cooling rates for a given cell. Results are returned
 /// via the elements of the global coolingrates data structure.
 {
-  double get_bfcooling(int element, int ion, int level, int modelgridindex);
+  double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
   double col_ionization(int modelgridindex, int upper, double epsilon_trans);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
@@ -514,11 +518,12 @@ void calculate_cooling_rates(int modelgridindex)
   int get_ionstage(int element, int ion);
   double ionstagepop(int modelgridindex, int element, int ion);
   double get_groundlevelpop(int modelgridindex, int element, int ion);
+  int get_nphixstargets(int element, int ion, int level);
 
   double C,C_ff,C_fb,C_exc,C_ion; 
   double nncurrention,nnnextionlevel;
   double epsilon_current,epsilon_upper,epsilon_trans;
-  int element,ion,level,upper;
+  int element,ion,level,upper,phixstargetindex;
   int nlevels_currention,ionisinglevels;
   int ii,lineindex;
   int ioncharge;
@@ -584,7 +589,6 @@ void calculate_cooling_rates(int modelgridindex)
         }
         
         if (ion < nions-1 && level < ionisinglevels) ///check whether further ionisation stage available
-        //if (ion < get_nions(element)-1) ///check whether further ionisation stage available
         {
           //printout("    ionisation possible\n");
           /// ionization to higher ionization stage
@@ -613,7 +617,11 @@ void calculate_cooling_rates(int modelgridindex)
           //E_threshold = epsilon_upper - epsilon_current; 
           //E_threshold = epsilon_trans;
           //printout("get_bfcooling(%d,%d,%d,%d) for histindex %d\n",element,ion,level,cellnumber,histindex);
-          C = get_bfcooling(element,ion,level,modelgridindex);
+          C = 0.0;
+          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          {
+            C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex); //TODO: is this valid?
+          }
           C_fb += C;
         }
       }

@@ -350,7 +350,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 	      for (level_use = 0; level_use < nlte_size; level_use++)
 		{
 		  //printout("%g ", rate_matrix[level*nlte_size + level_use]);
-		  if (!finite(rate_matrix[level*nlte_size + level_use]))
+		  if (!isfinite(rate_matrix[level*nlte_size + level_use]))
 		    {
 		      printout("[fatal]: NLTE matrix with non-finite element: %d %d %g\n", level, level_use, rate_matrix[level*nlte_size + level_use]);
 		      printout("[fatal]: found when handling element %d and ion %d\n", element, ion);
@@ -365,7 +365,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 	  for (level = 0; level < nlte_size; level++)
 	    {
 	      //	  printout("%g ",balance_vector[level] );
-	      if (!finite(balance_vector[level]))
+	      if (!isfinite(balance_vector[level]))
 		{
 		  printout("[fatal]: NLTE balance with non-finite element: %d %g\n", level, balance_vector[level]);
 		  printout("[fatal]: found when handling element %d and ion %d\n", element, ion);

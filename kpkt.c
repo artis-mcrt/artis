@@ -9,7 +9,8 @@ void calculate_kpkt_rates(int modelgridindex)
 /// cooling list by the strength of the individual process contribution.
 {
   double get_abundance(int modelgridindex, int element);
-  double get_bfcooling(int element, int ion, int level, int modelgridindex);
+  double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+  int get_nphixstargets(int element, int ion, int level);
   double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
   double col_ionization(int modelgridindex, int upper, double epsilon_trans);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
@@ -25,7 +26,7 @@ void calculate_kpkt_rates(int modelgridindex)
   //double alpha_sp,modified_alpha_sp;
   double nncurrention,nnnextionlevel;
   double epsilon_current,epsilon_upper,epsilon_trans;
-  int element,ion,level,upper;
+  int element,ion,level,upper,phixstargetindex;
   int nlevels_currention,ionisinglevels;
   int i,ii,lineindex;
   int ioncharge;
@@ -172,7 +173,11 @@ void calculate_kpkt_rates(int modelgridindex)
   //printout("get_bfcooling(%d,%d,%d,%d) for histindex %d\n",element,ion,level,modelgridindex,histindex);
             //epsilon_upper = epsilon(element,ion+1,0);
             //E_threshold = epsilon_upper - epsilon_current;
-            C = get_bfcooling(element,ion,level,modelgridindex);
+            C = 0.0;
+            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            {
+                C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
+            }
             //printout("element %d, ion %d, level %d, T_e %g, alpha_E - alpha %g, bfcoolingcoeff %g\n",element,ion,level,T_e,C/E_threshold,C);
             //double interpolate_stimulated_recomb(int element, int ion, int level, double T);
             //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * W * interpolate_stimulated_bfcoolingcoeff(element,ion,level,T_R));
@@ -256,7 +261,8 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  double get_bfcooling(int element, int ion, int level, int modelgridindex);
+  double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+  int get_nphixstargets(int element, int ion, int level);
   double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
   double col_ionization(int modelgridindex, int upper, double epsilon_trans);
   //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
@@ -272,7 +278,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
   //double alpha_sp,modified_alpha_sp;
   double nncurrention,nnnextionlevel;
   double epsilon_current,epsilon_upper,epsilon_trans;
-  int level,upper;
+  int level,upper,phixstargetindex;
   int nlevels_currention,ionisinglevels;
   int i,ii,lineindex;
   int ioncharge;
@@ -409,7 +415,11 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
       //printout("get_bfcooling(%d,%d,%d,%d) for histindex %d\n",element,ion,level,modelgridindex,histindex);
       //epsilon_upper = epsilon(element,ion+1,0);
       //E_threshold = epsilon_upper - epsilon_current;
-      C = get_bfcooling(element,ion,level,modelgridindex);
+      C = 0.0;
+      for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+      {
+        C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
+      }
       //printout("element %d, ion %d, level %d, T_e %g, alpha_E - alpha %g, bfcoolingcoeff %g\n",element,ion,level,T_e,C/E_threshold,C);
       //double interpolate_stimulated_recomb(int element, int ion, int level, double T);
       //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * W * interpolate_stimulated_bfcoolingcoeff(element,ion,level,T_R));
@@ -474,7 +484,7 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
 
   
   pkt_ptr->nu_cmf = sample_planck(T_e);
-  if (!finite(pkt_ptr->nu_cmf))
+  if (!isfinite(pkt_ptr->nu_cmf))
   {
     printout("[fatal] do_kpkt_bb: selected frequency not finite ... abort\n");
     abort();
@@ -609,7 +619,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_lower,deltanu,sf,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
-  double calculate_sahafact(int element, int ion, int level, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
   int ii;
   int ilow,low,high;
   double rndcool;
@@ -784,7 +794,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->nu_cmf = -KB*T_e/H * log(zrand);
       //pkt_ptr->nu_cmf = 3.7474058e+14;
       
-      if (!finite(pkt_ptr->nu_cmf))
+      if (!isfinite(pkt_ptr->nu_cmf))
       {
         printout("[fatal] ff cooling: selected frequency not finite ... abort\n");
         abort();
@@ -842,7 +852,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
         mastate[tid].element = element;
         mastate[tid].ion = ion;
         mastate[tid].level = level;
-        sf = calculate_sahafact(element,ion,level,T_e,nu_threshold*H);
+        sf = calculate_sahafact(element,ion,level,0,T_e,nu_threshold*H);
         intparas.T = T_e;
         intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
         F_bfcooling.params = &intparas;
@@ -904,7 +914,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       // /// Sample the packets comoving frame frequency according to paperII 4.2.2
       if (debuglevel == 2) printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
       //pkt_ptr->nu_cmf = 3.7474058e+14;
-      if (!finite(pkt_ptr->nu_cmf))
+      if (!isfinite(pkt_ptr->nu_cmf))
       {
         printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
         abort();
@@ -1026,7 +1036,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 /// or update_grid. Therefore we need to decide whether a cell history is
 /// known or not.
 {
-  double calculate_sahafact(int element, int ion, int level, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
   double get_groundlevelpop(int cellnumber, int element, int ion);
   double epsilon(int element, int ion, int level);
   double bfcooling;

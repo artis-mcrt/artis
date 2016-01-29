@@ -10,13 +10,13 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   void calculate_kpkt_rates(int modelgridindex);
   int get_coolinglistoffset(int element, int ion);
   double vel;
-  double get_bfheatingcoeff_ana(int element, int ion, int level, int modelgridindex);
+  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double hhelper;
   int jj;
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
   double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level);
-  double get_corrphotoioncoeff(int element, int ion, int level, int modelgridindex);
-  double get_corrphotoioncoeff_ana(int element, int ion, int level, int modelgridindex);
+  double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+  double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double renormcoeff;
   double get_Gamma_phys(int modelgridindex, int element, int ion);
   double get_Gamma(int modelgridindex, int element, int ion);
@@ -27,12 +27,14 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   int nlte;
   int get_nlevels(int element, int ion);
   int get_nlevels_nlte(int element, int ion);
+  int get_nphixstargets(int element, int ion, int level);
   int dummy_element, dummy_ion, dummy_level;
   double col_ionization(int modelgridindex, int upper, double epsilon_trans);
   double col_recombination(int modelgridindex, int lower, double epsilon_trans);
   double epsilon(int element, int ion, int level);
   double epsilon_trans;
   int get_bfcontinua(int element, int ion);
+  int get_nphixstargets(int element, int ion, int level);
   int ionisinglevels;
 
   double Col_ion;
@@ -45,9 +47,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double get_adcool(int modelgridindex, int nts);
   double get_ffcooling(int element, int ion, int modelgridindex);
   //double get_twiddleabs(int element, int ion, int level, int modelgridindex);
-  double get_bfheating(int element, int ion, int level, int modelgridindex);
-  double get_photoabs(int element, int ion, int modelgridindex);
-  double get_bfcooling(int element, int ion, int level, int modelgridindex);
+  double get_bfheating(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+  double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 //  double interpolate_photoioncoeff_below(int element, int ion, int level, double T);
 //  double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
   //double interpolate_zeta(int element, int ion, double T);
@@ -86,7 +87,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double trat, tratmid;
   double cell_len_scale;
   double check1, check2; //MK
-  int element,ion,level;
+  int element,ion,level,phixstargetindex;
   double t_current,t_previous;
   double rho,T_R,T_e,T_J,W;//,W_D;
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
@@ -304,10 +305,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = -99.;
             
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact = -99.;
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].spontaneousrecombrate = -99.;
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfcooling = -99.;
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].corrphotoioncoeff = -99.;
-            
+            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            {
+                cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = -99.;
+                cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = -99.;
+                cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
+            }
             /// This is the only flag needed for all of the following MA stuff!
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc = -99.;
           }
@@ -435,7 +438,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     
                 #ifdef FORCE_LTE
                   /// LTE version of the code
-                  if (!finite(J[n]))
+                  if (!isfinite(J[n]))
                   {
                     printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
                     abort();
@@ -451,7 +454,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   #endif
                   
                   T_R = pow(PI/STEBO*(J[n]),1./4.);
-                  if (finite(T_R))
+                  if (isfinite(T_R))
                   {
                     /// Make sure that T is in the allowed temperature range.
                     if (T_R > MAXTEMP) T_R = MAXTEMP;
@@ -496,7 +499,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   if (initial_iteration == 1 || modelgrid[n].thick == 1)
                   {
                     /// LTE version of the code
-                    if (!finite(J[n]))
+                    if (!isfinite(J[n]))
                     {
                       printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
                       abort();
@@ -512,7 +515,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     #endif
                     
                     T_R = pow(PI/STEBO*(J[n]),1./4.);
-                    if (finite(T_R))
+                    if (isfinite(T_R))
                     {
                       /// Make sure that T is in the allowed temperature range.
                       if (T_R > MAXTEMP) T_R = MAXTEMP;
@@ -564,7 +567,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   else
                   {
                     /// Calculate estimators
-                    if (!finite(nuJ[n]) || !finite(J[n]))
+                    if (!isfinite(nuJ[n]) || !isfinite(J[n]))
                     {
                       printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
                       abort();
@@ -613,8 +616,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                           }
                           gammaestimator_save[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion];
                         #endif
-                        corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion]/get_corrphotoioncoeff_ana(element,ion,0,n);
                         
+                        corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion]/get_corrphotoioncoeff_ana(element,ion,0,0,n); //TODO: replace zero phixstargetindex?
+                        
+                        if (!isfinite(corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]))
+                        {
+                            printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,gammaestimator[n*nelements*maxion+element*maxion+ion],get_corrphotoioncoeff_ana(element,ion,0,0,n));
+                            abort();
+                        }
+
                       /// 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm values
                       /// so that the values are known when required by the call to get_corrphotoioncoeff in the following
                       /// loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest corrphotoionrenorm 
@@ -635,50 +645,60 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         //nlevels = get_ionisinglevels(element,ion);
                         nlevels = get_bfcontinua(element,ion);
                         Gamma = 0.;
-			Col_ion = 0.;
-			if (ion < nions-1)
-			  {
-			    
-			    ionisinglevels = get_bfcontinua(element,ion);
-			    mastate[tid].element = element;
-			    mastate[tid].ion = ion;
-			    mastate[tid].nnlevel = 1.0;
-			    
-			    
-			    for (level = 0; level < nlevels; level++)
-			      {
-				Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,n);
-				//printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,level,n));
-				
-				if (level < ionisinglevels)
-				  {			    
-				    mastate[tid].level = level;
+                        Col_ion = 0.;
+                        if (ion < nions-1)
+                        {
+                            
+                            ionisinglevels = get_bfcontinua(element,ion);
+                            mastate[tid].element = element;
+                            mastate[tid].ion = ion;
+                            mastate[tid].nnlevel = 1.0;
+                            
+                            for (level = 0; level < nlevels; level++)
+                            {
+                              for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+                              {
+                                Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,phixstargetindex,n); //TODO: is this valid?
+                              }
+                            //printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,level,n));
+                          
+                              if (level < ionisinglevels)
+                              {			    
+                                mastate[tid].level = level;
 
-				    epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
-				    //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);				    
-				    Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,0,epsilon_trans);
-				  }
-				
-			      }
-			    //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
-			    Gamma += Col_ion;
-			    Gamma /= get_groundlevelpop(n, element, ion);
-			  }
-                        gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
-                        //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
-                        
-                        bfheatingestimator[n*nelements*maxion+element*maxion+ion] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
-                        #ifdef DO_TITER
-                          if (bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
-                          {
-                            bfheatingestimator[n*nelements*maxion+element*maxion+ion] = (bfheatingestimator[n*nelements*maxion+element*maxion+ion]+bfheatingestimator_save[n*nelements*maxion+element*maxion+ion])/2.;
+                                epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
+                                //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);				    
+                                Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,0,epsilon_trans);
+                              }
+                          
+                            }
+                            //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
+                            Gamma += Col_ion;
+                            Gamma /= get_groundlevelpop(n, element, ion);
                           }
-                          bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]; 
-                        #endif
-                        /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
-                        /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
-                        bfheatingestimator[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]/get_bfheatingcoeff_ana(element,ion,0,n);
-                        //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[n*nelements*maxion+element*maxion+ion]);
+                          gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
+                          //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
+                          
+                          bfheatingestimator[n*nelements*maxion+element*maxion+ion] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
+                          #ifdef DO_TITER
+                            if (bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
+                            {
+                              bfheatingestimator[n*nelements*maxion+element*maxion+ion] = (bfheatingestimator[n*nelements*maxion+element*maxion+ion]+bfheatingestimator_save[n*nelements*maxion+element*maxion+ion])/2.;
+                            }
+                            bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]; 
+                          #endif
+                          /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
+                          /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
+                        
+                          bfheatingestimator[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]/get_bfheatingcoeff_ana(element,ion,0,0,n); //TODO: replace hard coded zero phixstargetindex?
+
+                          if (!isfinite(bfheatingestimator[n*nelements*maxion+element*maxion+ion])) //TODO: replace the zero here?
+                          {
+                            printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[n*nelements*maxion+element*maxion+ion],get_bfheatingcoeff_ana(element,ion,0,0,n));
+                            abort();
+                          }
+
+                          //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[n*nelements*maxion+element*maxion+ion]);
                       }
                     }
                     
@@ -717,7 +737,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 					  for (level = 0; level < nlevels; level++)
 					    {
 					    
-					      Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,n);
+					      Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,0,n); //TODO: replace zero
 					      if (level < ionisinglevels)
 						{
 						  mastate[tid].level = level;
@@ -917,6 +937,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 	      
 
 
+              fprintf(estimators_file, "populations ");
               for (element = 0; element < nelements; element++)
               {
                 nions = get_nions(element);
@@ -927,6 +948,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               }
               
               #ifndef FORCE_LTE
+                fprintf(estimators_file, "corrphotoionrenorm ");
                 for (element = 0; element < nelements; element++)
                 {
                   nions = get_nions(element);
@@ -935,6 +957,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     fprintf(estimators_file,"%g ",corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]);
                   }
                 }
+                fprintf(estimators_file, "gammaestimator ");
                 for (element = 0; element < nelements; element++)
                 {
                   nions = get_nions(element);
@@ -943,6 +966,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     fprintf(estimators_file,"%g ",gammaestimator[n*nelements*maxion+element*maxion+ion]);
                   }
                 }
+                fprintf(estimators_file, "heating/cooling ");
                 fprintf(estimators_file,"%g %g %g %g %g %g %g %g ",heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
               #endif
               fprintf(estimators_file,"\n");
@@ -977,7 +1001,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               //fprintf(estimators_file,"%d %g %g %g %g %g %g %g ",n,0.,0.,0.,0.,0.,0.,0.);
 
 	      #ifdef NLTE_POPS_ON
-	      fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.,0.);
+	      fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.);
 	      for (nlte = 0; nlte < total_nlte_levels; nlte++)
 		{
 		  fprintf(nlte_file,"%g ", 0.);
@@ -1542,7 +1566,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       {
         factor *= nne_hi * phi(element,i,modelgridindex);
         //printout("element %d, ion %d, factor %g\n",element,i,factor);
-        if (!finite(factor)) 
+        if (!isfinite(factor)) 
         {
           printout("[info] calculate_populations: uppermost_ion limited by phi factors for element %d, ion %d in cell %d\n",element,i,modelgridindex);
           break;
@@ -1594,7 +1618,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
         nntot += nnion;
         nne += nnion * (get_ionstage(element,ion)-1);
         modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
-        if (!finite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
+        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
@@ -1690,7 +1714,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 	  }
 	*/
 
-        if (!finite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
+        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
@@ -1738,7 +1762,7 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
   double T,nubar;
   
   nubar = nuJ/J;
-  if (!finite(nubar) || nubar == 0.)
+  if (!isfinite(nubar) || nubar == 0.)
   {
     /// Return old T_R
     printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",modelgridindex);
@@ -1785,7 +1809,7 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
 
 
 /*
-///****************************************************************************
+// ****************************************************************************
 double nuB_nu_integrand(double nu, void *paras)
 {
   double T = ((gslintegration_paras *) paras)->T;
@@ -1793,7 +1817,7 @@ double nuB_nu_integrand(double nu, void *paras)
   return nu * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
 }
 
-///****************************************************************************
+/// ****************************************************************************
 double B_nu_integrand(double nu, void *paras)
 {
   double T = ((gslintegration_paras *) paras)->T;
@@ -1806,7 +1830,7 @@ double B_nu_integrand(double nu, void *paras)
 #ifndef FORCE_LTE
 
 /*
-///****************************************************************************
+// ****************************************************************************
 double get_ffcooling(int element, int ion, int cellnumber)
 {
   double ionstagepop(int cellnumber, int element, int ion);

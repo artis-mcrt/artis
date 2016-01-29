@@ -103,6 +103,11 @@ double epsilon(int element, int ion, int level)
 double stat_weight(int element, int ion, int level)
 /// Returns the statistical weight of (element,ion,level).
 {
+  if (level > elements[element].ions[ion].nlevels)
+  {
+    printout("[fatal] stat_weight: level %d greater than nlevels=%d ... abort\n",level,elements[element].ions[ion].nlevels);
+    exit(0);
+  }
   return elements[element].ions[ion].levels[level].stat_weight;
 }
 
@@ -155,14 +160,15 @@ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
   int nphixstargets;
   
   nphixstargets = get_nphixstargets(element,ion,level);
-  if (phixstargetindex < nphixstargets)
+  if (0 < phixstargetindex < nphixstargets)
   {
     return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
   }
   else
   {
-    //should throw an error? or just silenty return the top phixstarget levelindex
-    return elements[element].ions[ion].levels[level].phixstargets[nphixstargets-1].levelindex;
+    printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex");
+    printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,nphixstargets);
+    abort();
   }
 }
 
@@ -179,8 +185,9 @@ float get_phixsprobability(int element, int ion, int level, int phixstargetindex
   }
   else
   {
-    //should throw an error? or just silenty return the top phixstarget probability
-    return elements[element].ions[ion].levels[level].phixstargets[nphixstargets-1].probability;
+    printout("[fatal]   get_phixsprobability called with invalid phixstargetindex");
+    printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,nphixstargets);
+    abort();
   }
 }
 
@@ -401,17 +408,20 @@ double photoionization_crosssection(double nu_edge, double nu)
   {
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
   }
-  else if (nu < nu_edge*(1+NPHIXSNUINCREMENT*NPHIXSPOINTS))
-  {
-    i = floor((nu/nu_edge - 1)/NPHIXSNUINCREMENT);
-    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
-  }
   else
   {
-    /// use a parameterization of sigma_bf by the Kramers formula 
-    /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
-    /// so far the highest grid point, otherwise the cross-section is not continuous
-    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_edge*(1+NPHIXSNUINCREMENT*NPHIXSPOINTS)/nu,3);
+    i = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
+    if (i < NPHIXSPOINTS)
+    {
+      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
+    }
+    else
+    {
+      /// use a parameterization of sigma_bf by the Kramers formula
+      /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
+      /// so far the highest grid point, otherwise the cross-section is not continuous
+      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_edge*(1.0+NPHIXSNUINCREMENT*(NPHIXSPOINTS-1))/nu,3);
+    }
   }
   
   if (check == 1) printout("[warning]   photoionization_crosssection %g\n",sigma_bf);

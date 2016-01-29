@@ -1113,12 +1113,12 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
       for (i = 0; i < nbfcontinua; i++)
       {
         element = phixslist[tid].allcont[i].element;
-	ion = phixslist[tid].allcont[i].ion;
-	level = phixslist[tid].allcont[i].level;
+        ion = phixslist[tid].allcont[i].ion;
+        level = phixslist[tid].allcont[i].level;
         /// The bf process happens only if the current cell contains 
         /// the involved atomic species
-	if ((ionpops_local[element][ion] > 1.e-6) || (level == 0))        
-	  ///if (get_abundance(modelgridindex,element) > 0)
+        if ((ionpops_local[element][ion] > 1.e-6) || (level == 0))
+	   ///if (get_abundance(modelgridindex,element) > 0)
         {
           nu_edge = phixslist[tid].allcont[i].nu_edge;
           //printout("i %d, nu_edge %g\n",i,nu_edge);
@@ -1175,11 +1175,23 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
               corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
               if (corrfactor < 0) corrfactor = 1;
               phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * corrfactor;
+              //TODO: is corrfactor a NaN? why?
+              #ifdef DEBUG_ON
+                if (!isfinite(phixslist[tid].groundcont[gphixsindex].gamma_contr))
+                {
+                  printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to gamma_contr ... abort\n");
+                  printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
+                  printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
+                  printout("[fatal] nne %g, nnlevel %g, nnionlevel %g, departure_ratio %g\n",nne,nnlevel,nnionlevel,departure_ratio);
+                  printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g corrfactor %g\n",sigma_bf,T_e,nu,nu_edge,corrfactor);
+                  abort();
+                }
+              #endif
               //phixslist[tid].groundcont[gphixsindex].stimrecomb_contr = sf * sigma_bf;
               //phixslist[tid].groundcont[gphixsindex].bfheating_contr = helper * nu_edge;
             }
             #ifdef DEBUG_ON
-              if (!finite(check))
+              if (!isfinite(check))
               {
                 printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",check);
                 printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
@@ -1283,14 +1295,14 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   
   
   #ifdef DEBUG_ON
-    if (!finite(kappa_rpkt_cont[tid].total))
+    if (!isfinite(kappa_rpkt_cont[tid].total))
     {
       printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
       printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont[tid].es,kappa_rpkt_cont[tid].ff,kappa_rpkt_cont[tid].bf);
       printout("[fatal] nbfcontinua %d\n",nbfcontinua);
       printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
       printout("[fatal] pkt_ptr->nu_cmf %g, T_e %g, nne %g\n",pkt_ptr->nu_cmf,T_e,nne);
-      if (finite(kappa_rpkt_cont[tid].es))
+      if (isfinite(kappa_rpkt_cont[tid].es))
       {
         kappa_rpkt_cont[tid].ff = 0.;
         kappa_rpkt_cont[tid].bf = 0.;

@@ -35,6 +35,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
   int get_continuumindex(int element, int ion, int level);
   int get_bfcontinua(int element, int ion);
+  int get_nphixstargets(int element, int ion, int level);
 
   double rad_deexc,rad_recomb,col_deexc,col_recomb;
   double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
@@ -72,8 +73,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_lower,deltanu,sf,alpha_sp,total_alpha_sp,alpha_sp_old,nuoffset;
-  double calculate_sahafact(int element, int ion, int level, double T, double E_threshold);
-  double get_spontrecombcoeff(int element, int ion, int level, int modelgridindex);
+  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+  double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   wsp = gsl_integration_workspace_alloc(1000);
 
   int do_internalupsame,do_internaluphigher,do_internaldownlower;
@@ -265,7 +266,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("checking uptrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,upper,R,C,epsilon_trans);
-          if (!finite(internal_up_same)) {printout("fatal: internal_up_same has nan contribution\n");}
+          if (!isfinite(internal_up_same)) {printout("fatal: internal_up_same has nan contribution\n");}
         #endif
       }
       }
@@ -329,15 +330,15 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         
         double T_R = get_TR(modelgridindex);
         double W = get_W(modelgridindex);
-        double interpolate_corrphotoioncoeff(int element, int ion, int level, double T);
+        double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
         printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,T_e,W,get_TJ(modelgridindex));
-        double gammacorr = W*interpolate_corrphotoioncoeff(element,ion,level,T_R);
+        double gammacorr = W*interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
         int index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
         double renorm  = corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
         printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
 
         
-        abort();
+        //abort();
       }
     #endif
     if (zrand*total_transitions < rad_deexc)
@@ -387,7 +388,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       //}
       
       #ifdef DEBUG_ON
-        if (!finite(pkt_ptr->nu_cmf))
+        if (!isfinite(pkt_ptr->nu_cmf))
         {
           printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
           abort();
@@ -545,7 +546,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       mastate[tid].element = element;
       mastate[tid].ion = ion-1;
       mastate[tid].level = lower;
-      sf = calculate_sahafact(element,ion-1,lower,T_e,epsilon_trans);
+      sf = calculate_sahafact(element,ion-1,lower,0,T_e,epsilon_trans);
       intparas.T = T_e;
       intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
       F_alpha_sp.params = &intparas;
@@ -639,7 +640,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
-        if (!finite(pkt_ptr->nu_cmf))
+        if (!isfinite(pkt_ptr->nu_cmf))
         {
           printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
           abort();
@@ -890,7 +891,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           printout("[debug]    ionisation to ion %d, level %d, epsilon_trans %g, R %g, C %g\n",ion+1,upper,epsilon_trans,R,C);
         }
         
-        abort();
+        //abort();
       }
     #endif
   
@@ -986,7 +987,7 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
     //printout("[debug] rad_rates_down: nne %g \n",cell[pkt_ptr->where].nne);
     if (debuglevel == 2) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
     if (debuglevel == 777) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
-    if (!finite(R)) {printout("fatal a1: abort\n"); abort();}
+    if (!isfinite(R)) {printout("fatal a1: abort\n"); abort();}
   #endif
   
   return R;
@@ -1065,7 +1066,7 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
     if (debuglevel == 2) printout("[debug] rad_rates_up: element, ion, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",element,ion,upper,lower,A_ul,n_l);
     if (debuglevel == 2) printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",A_ul,tau_sobolev,n_u,n_l,radfield(nu_trans,modelgridindex));
     if (debuglevel == 777) printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",A_ul,tau_sobolev,n_u,n_l,radfield(nu_trans,modelgridindex));
-    if (!finite(R)) 
+    if (!isfinite(R)) 
     {
       printout("[fatal] rad_excitation: abort\n"); 
       printout("[fatal] rad_excitation: R %g, mastate[tid].nnlevel %g, B_lu %g, B_ul %g, n_u %g, n_l %g, beta %g, radfield %g,tau_sobolev %g, t_current %g\n",R,mastate[tid].nnlevel,B_lu,B_ul,n_u,n_l,beta,radfield(nu_trans,modelgridindex),tau_sobolev,t_current); 
@@ -1084,26 +1085,31 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
 double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
 ///radiative recombination rate: paperII 3.5.2
 {
-  double get_spontrecombcoeff(int element, int ion, int level, int modelgridindex);
+  double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+  int get_nphixstargets(int element, int ion, int level);
+  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
   double R;
   
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int upper = mastate[tid].level;
+  int phixstargetindex;
   double nne = get_nne(modelgridindex);
   
-  ///for now only ionisation to the ground level is considered, therefore
-  ///recombination is allowed only from the ground level
-  if (upper == 0)
+  R = 0.0;
+  for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
   {
-    R = mastate[tid].nnlevel*nne * (get_spontrecombcoeff(element, ion-1, lower, modelgridindex));// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
+    if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
+    {
+        // TODO: need a Boltzmnan factor here?
+        R += mastate[tid].nnlevel*nne * (get_spontrecombcoeff(element,ion-1,lower,phixstargetindex,modelgridindex));// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
     //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
+    }
   }
-  else R = 0;
   
   #ifdef DEBUG_ON
     //printout("[debug]    rad_recombiantion: R %g\n",R);
-    if (!finite(R)) {printout("fatal a2: abort\n"); abort();}
+    if (!isfinite(R)) {printout("fatal a2: abort\n"); abort();}
   #endif
   
   return R;
@@ -1117,25 +1123,30 @@ double photoionization(int modelgridindex, int upper, double epsilon_trans)
 ///photoionization rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  double get_corrphotoioncoeff(int element, int ion, int level, int modelgridindex);
+  double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+  int get_nphixstargets(int element, int ion, int level);
+  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
   double R;
   
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int lower = mastate[tid].level;
-  
-  ///for now only ionisation to the ground level is considered
-  if (upper == 0)
+  int phixstargetindex;
+
+  R = 0.0;
+  for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,lower); phixstargetindex++)
   {
-    R = mastate[tid].nnlevel * get_corrphotoioncoeff(element,ion,lower,modelgridindex);
-    //R = get_corrphotoionrate(element,ion,lower,pkt_ptr->where);
+    if (get_phixsupperlevel(element,ion,lower,phixstargetindex) == upper)
+    {
+        // TODO: need a Boltzmnan factor here?
+        R += mastate[tid].nnlevel * get_corrphotoioncoeff(element,ion,lower,phixstargetindex,modelgridindex);
+        //R = get_corrphotoionrate(element,ion,lower,pkt_ptr->where);
+    }
   }
-  ///otherwise set R to zero
-  else R = 0;
   
   #ifdef DEBUG_ON
     //printout("[photoionization] R %g\n",R);
-    if (!finite(R)) {printout("fatal a4: abort\n"); abort();}
+    if (!isfinite(R)) {printout("fatal a4: abort\n"); abort();}
   #endif
   
   return R;
@@ -1177,9 +1188,10 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   T_e = get_Te(modelgridindex);
   fac1 = epsilon_trans/KB/T_e;
   nne = get_nne(modelgridindex);
-  
+
   if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
     {
+      ///permitted E1 electric dipole transitions
       ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
       ///Rutten script eq. 3.32. p.50
       //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
@@ -1193,6 +1205,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       else Gamma = test;
       //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
       C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+      //C = 0.0; //TESTING ONLY DELETE THIS
     }
   else if (coll_str(lineindex) > 0.0)
     { //case of reading in an effective collision strength 
@@ -1205,6 +1218,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
     }
   else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
     {
+      //forbidden transitions: magnetic dipole, electric quadropole...
       C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
     }
   else
@@ -1216,7 +1230,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       if (debuglevel == 2) printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       if (debuglevel == 2) printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
       if (debuglevel == 777) printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-      if (!finite(C)) 
+      if (!isfinite(C)) 
 	{
 	  printout("fatal a5: abort\n"); 
 	  printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
@@ -1265,7 +1279,7 @@ double col_ionization(int modelgridindex, int upper, double epsilon_trans)
   
     #ifdef DEBUG_ON
       if (debuglevel == 777) printout("[debug] col_ion: n_l %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_l, nne,T_e,g,epsilon_trans,photoionization_crosssection(nu_lower, nu_lower));
-      if (!finite(C)) {printout("fatal a6: abort\n"); abort();}
+      if (!isfinite(C)) {printout("fatal a6: abort\n"); abort();}
     #endif
   }
   else
@@ -1309,6 +1323,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
   if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
     {
   
+      ///permitted E1 electric dipole transitions
       ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
       ///Rutten script eq. 3.33. p.50
       //f = osc_strength(element,ion,upper,lower);
@@ -1324,6 +1339,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
       g_ratio = statweight_target/mastate[tid].statweight;
       //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
       C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+      //C = 0.0; //TESTING ONLY DELETE THIS
     }
   else if (coll_str(lineindex) > 0.0)
     { //case of reading in an effective collision strength
@@ -1333,11 +1349,10 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
       C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) / mastate[tid].statweight;
       // test test
       //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-      
-
     }
   else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
     {
+      //forbidden transitions: magnetic dipole, electric quadropole...
       C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
     }
   else
@@ -1350,7 +1365,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
     if (debuglevel == 2) printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     if (debuglevel == 777) printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
-    if (!finite(C)) {printout("fatal a7: abort\n"); abort();}
+    if (!isfinite(C)) {printout("fatal a7: abort\n"); abort();}
   #endif
     
   return C;
@@ -1408,7 +1423,7 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
       if (debuglevel == 777) printout("get_sahafact %g, fac1 %g, C %g\n",get_sahafact(element,ion-1,lower,T_e,epsilon_trans),fac1,C);
       ///means n_u*nne * detailed_balancing of c_ikappa
       if (debuglevel == 777) printout("[debug] col_recomb: n_u %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_u, nne,T_e,g,epsilon_trans,sigma_bf);
-      if (!finite(C)) {printout("fatal a8: abort\n"); abort();}
+      if (!isfinite(C)) {printout("fatal a8: abort\n"); abort();}
     #endif
   }
   else
