@@ -279,7 +279,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 //     setvbuf(bfcount_file, NULL, _IOLBF, 1);
 //   #endif
 
-  
   #ifdef _OPENMP
     #pragma omp parallel private(element,nions,ion,nlevels,level) 
     //copyin(nuJ,J,rhosum,T_Rsum,T_esum,Wsum,associatedcells)
@@ -357,7 +356,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             /// This is done outside update grid now
             //modelgrid[n].totalcooling = COOLING_UNDEFINED;
             
-            
+
             if (opacity_case == 4)
             {
               /// Initialise shortcuts to previous values.
@@ -390,20 +389,21 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   }
                 #endif
                 
-		/// W == 1 indicates that this modelgrid cell was treated grey in the
-		/// last timestep. Therefore it has no valid Gamma estimators and must
-		/// be treated in LTE at restart. 
-		if (modelgrid[n].thick == 0 && get_W(n) == 1) 
-		{
-		  modelgrid[n].thick = 1;
-		  printout("force modelgrid cell to be grey at restart\n");
-		}
+                /// W == 1 indicates that this modelgrid cell was treated grey in the
+                /// last timestep. Therefore it has no valid Gamma estimators and must
+                /// be treated in LTE at restart. 
+                if (modelgrid[n].thick == 0 && get_W(n) == 1) 
+                {
+                  modelgrid[n].thick = 1;
+                  printout("force modelgrid cell to be grey at restart\n");
+                }
                 printout("initial iteration %d\n",initial_iteration);
                 printout("modelgrid.thick: %d\n",modelgrid[n].thick);
                 precalculate_partfuncts(n);
                 //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
                 nntot = calculate_populations(n,0);
-#ifdef NT_ON 
+
+#ifdef NT_ON
 		//		for (jjj=0; jjj < 10; jjj++)
 		//  {
 		//    nntot = calculate_populations(n,0);
@@ -426,7 +426,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 }
                 else modelgrid[n].thick = 0;
               }
-              
               /// For all other timesteps temperature corrections have to be applied
               else
               {
@@ -563,7 +562,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     }
                     else modelgrid[n].thick = 0;
                   }
-                  
                   else
                   {
                     /// Calculate estimators
@@ -621,8 +619,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         
                         if (!isfinite(corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]))
                         {
-                            printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,gammaestimator[n*nelements*maxion+element*maxion+ion],get_corrphotoioncoeff_ana(element,ion,0,0,n));
-                            abort();
+                          printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,gammaestimator[n*nelements*maxion+element*maxion+ion],get_corrphotoioncoeff_ana(element,ion,0,0,n));
+                          abort();
                         }
 
                       /// 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm values
@@ -648,57 +646,55 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         Col_ion = 0.;
                         if (ion < nions-1)
                         {
-                            
-                            ionisinglevels = get_bfcontinua(element,ion);
-                            mastate[tid].element = element;
-                            mastate[tid].ion = ion;
-                            mastate[tid].nnlevel = 1.0;
-                            
-                            for (level = 0; level < nlevels; level++)
-                            {
-                              for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
-                              {
-                                Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,phixstargetindex,n); //TODO: is this valid?
-                              }
-                            //printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,level,n));
+                          ionisinglevels = get_bfcontinua(element,ion);
+                          mastate[tid].element = element;
+                          mastate[tid].ion = ion;
+                          mastate[tid].nnlevel = 1.0;
                           
-                              if (level < ionisinglevels)
-                              {			    
-                                mastate[tid].level = level;
-
-                                epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
-                                //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);				    
-                                Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,0,epsilon_trans);
-                              }
-                          
-                            }
-                            //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
-                            Gamma += Col_ion;
-                            Gamma /= get_groundlevelpop(n, element, ion);
-                          }
-                          gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
-                          //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
-                          
-                          bfheatingestimator[n*nelements*maxion+element*maxion+ion] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
-                          #ifdef DO_TITER
-                            if (bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
-                            {
-                              bfheatingestimator[n*nelements*maxion+element*maxion+ion] = (bfheatingestimator[n*nelements*maxion+element*maxion+ion]+bfheatingestimator_save[n*nelements*maxion+element*maxion+ion])/2.;
-                            }
-                            bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]; 
-                          #endif
-                          /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
-                          /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
-                        
-                          bfheatingestimator[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]/get_bfheatingcoeff_ana(element,ion,0,0,n); //TODO: replace hard coded zero phixstargetindex?
-
-                          if (!isfinite(bfheatingestimator[n*nelements*maxion+element*maxion+ion])) //TODO: replace the zero here?
+                          for (level = 0; level < nlevels; level++)
                           {
-                            printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[n*nelements*maxion+element*maxion+ion],get_bfheatingcoeff_ana(element,ion,0,0,n));
-                            abort();
-                          }
+                            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+                            {
+                              Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,phixstargetindex,n); //TODO: is this valid?
+                            }
+                            //printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,level,n));
+                        
+                            if (level < ionisinglevels)
+                            {			    
+                              mastate[tid].level = level;
 
-                          //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[n*nelements*maxion+element*maxion+ion]);
+                              epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
+                              //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);				    
+                              Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,0,epsilon_trans);
+                            }
+                          }
+                          //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
+                          Gamma += Col_ion;
+                          Gamma /= get_groundlevelpop(n, element, ion);
+                        }
+                        gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
+                        //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
+                        
+                        bfheatingestimator[n*nelements*maxion+element*maxion+ion] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
+                        #ifdef DO_TITER
+                          if (bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
+                          {
+                            bfheatingestimator[n*nelements*maxion+element*maxion+ion] = (bfheatingestimator[n*nelements*maxion+element*maxion+ion]+bfheatingestimator_save[n*nelements*maxion+element*maxion+ion])/2.;
+                          }
+                          bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]; 
+                        #endif
+                        /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
+                        /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
+                      
+                        bfheatingestimator[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]/get_bfheatingcoeff_ana(element,ion,0,0,n); //TODO: replace hard coded zero phixstargetindex?
+
+                        if (!isfinite(bfheatingestimator[n*nelements*maxion+element*maxion+ion])) //TODO: replace the zero here?
+                        {
+                          printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[n*nelements*maxion+element*maxion+ion],get_bfheatingcoeff_ana(element,ion,0,0,n));
+                          abort();
+                        }
+
+                        //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[n*nelements*maxion+element*maxion+ion]);
                       }
                     }
                     
@@ -708,121 +704,117 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     modelgrid[n].TR = T_R;
                     modelgrid[n].W = W;
 
-#ifdef NLTE_POPS_ON
-		    //		      for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)
+                    #ifdef NLTE_POPS_ON
+                      //		      for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)
 
-		    nlte_iter = 0;
-		    nlte_test = 2.;
-		    while (nlte_test > 1.05)
-			{
-			  //recalculte the Gamma's using the current population estimates
-			  if (nlte_iter != 0)
-			    {    
-			      for (element = 0; element < nelements; element++)
-				{
-				  nions = get_nions(element);
-				  for (ion = 0; ion < nions-1; ion++)
-				    {
-				      nlevels = get_bfcontinua(element,ion);
-				      Gamma = 0.;
-				      Col_ion = 0.;
-				      
-				      if (ion < nions-1)
-					{
-
-					  ionisinglevels = get_bfcontinua(element,ion);
-					  mastate[tid].element = element;
-					  mastate[tid].ion = ion;
-					  mastate[tid].nnlevel = 1.0;
-					  for (level = 0; level < nlevels; level++)
-					    {
-					    
-					      Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,0,n); //TODO: replace zero
-					      if (level < ionisinglevels)
-						{
-						  mastate[tid].level = level;
-
-						  epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
-						  //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-						  Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,0,epsilon_trans);
-						}
-					      
-					    }
-					  //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
-					  Gamma += Col_ion;
-					  Gamma /= get_groundlevelpop(n, element, ion);
-					}
-				      gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
-				    }
-				}
-			    }
-#endif
-                  
-                    /// These don't depend on T_e, therefore take them out of the T_e iteration
-                    precalculate_partfuncts(n);
-                  
-                    /// Find T_e as solution for thermal balance
-                    T_e_old = get_Te(n);
-                    if (titer == 0)
-                      T_e = call_T_e_finder(n,time_step[m-1].mid,tb_info,MINTEMP,MAXTEMP);
-                    else
-                      T_e = call_T_e_finder(n,time_step[m].mid,tb_info,MINTEMP,MAXTEMP);
-                    if (T_e > 2.*T_e_old) 
-                    {
-                      T_e = 2.*T_e_old;
-                      printout("use T_e damping in cell %d\n",n);
-                      if (T_e > MAXTEMP) T_e = MAXTEMP;
-                    }
-                    else if (T_e < 0.5*T_e_old) 
-                    {
-                      T_e = 0.5*T_e_old;
-                      printout("use T_e damping in cell %d\n",n);
-                      if (T_e < MINTEMP) T_e = MINTEMP;
-                    }
-                    //T_e = T_J;
-                    set_Te(n,T_e);
-      
-                    /// Store population values to the grid
-                    nntot = calculate_populations(n,0);
-                    //calculate_cooling_rates(n);
-                    //calculate_heating_rates(n);
-                    nne = get_nne(n);
-
-#ifdef NLTE_POPS_ON
-		    ///NEW NLTE CALL HERE FOR NOW
-		    nlte_test=0.0;
-                    for (element = 0; element < nelements; element++)
-                    {
-                      nions = get_nions(element);
-                      for (ion = 0; ion < nions-1; ion++)
+                      nlte_iter = 0;
+                      nlte_test = 2.;
+                      while (nlte_test > 1.05)
                       {
-			    trial = nlte_pops(element, ion, n, m);
-			    if ((trial < 1.0) && (trial > 0.0))
-			      {
-				trial = 1./trial;
-			      }
-			    if (trial > nlte_test)
-			      {
-				nlte_test=trial;
-			      }
-			    //			    printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+                        //recalculate the Gammas using the current population estimates
+                        if (nlte_iter != 0)
+                        {    
+                          for (element = 0; element < nelements; element++)
+                          {
+                            nions = get_nions(element);
+                            for (ion = 0; ion < nions-1; ion++)
+                            {
+                              nlevels = get_bfcontinua(element,ion);
+                              Gamma = 0.;
+                              Col_ion = 0.;
+                              
+                              if (ion < nions-1)
+                              {
 
-		      }
-		    }
-		    printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, m, nlte_test, nlte_test);
-		    if (nlte_iter > NLTEITER)
-		      {
-			printout("NLTE solver failed to converge after %d iterations. Test %g.\n", NLTEITER, nlte_test);
-			nlte_test = 0.0;
-		      }
-		    nlte_iter++;
-			}
-		    if (nlte_test  > 0.0)
-		      {
-			printout("NLTE solver converged to tolerace %g after %d iterations.\n", nlte_test, nlte_iter);
-		      }
-#endif
+                                ionisinglevels = get_bfcontinua(element,ion);
+                                mastate[tid].element = element;
+                                mastate[tid].ion = ion;
+                                mastate[tid].nnlevel = 1.0;
+                                for (level = 0; level < nlevels; level++)
+                                {
+                                    Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,0,n); //TODO: replace zero
+                                    if (level < ionisinglevels)
+                                    {
+                                      mastate[tid].level = level;
 
+                                      epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
+                                      //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
+                                      Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,0,epsilon_trans);
+                                  }
+                                }
+                                //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
+                                Gamma += Col_ion;
+                                Gamma /= get_groundlevelpop(n, element, ion);
+                              }
+                              gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
+                            }
+                          }
+                        }
+                      #endif
+
+                      /// These don't depend on T_e, therefore take them out of the T_e iteration
+                      precalculate_partfuncts(n);
+                    
+                      /// Find T_e as solution for thermal balance
+                      T_e_old = get_Te(n);
+                      if (titer == 0)
+                        T_e = call_T_e_finder(n,time_step[m-1].mid,tb_info,MINTEMP,MAXTEMP);
+                      else
+                        T_e = call_T_e_finder(n,time_step[m].mid,tb_info,MINTEMP,MAXTEMP);
+                      if (T_e > 2.*T_e_old) 
+                      {
+                        T_e = 2.*T_e_old;
+                        printout("use T_e damping in cell %d\n",n);
+                        if (T_e > MAXTEMP) T_e = MAXTEMP;
+                      }
+                      else if (T_e < 0.5*T_e_old) 
+                      {
+                        T_e = 0.5*T_e_old;
+                        printout("use T_e damping in cell %d\n",n);
+                        if (T_e < MINTEMP) T_e = MINTEMP;
+                      }
+                      //T_e = T_J;
+                      set_Te(n,T_e);
+
+                      /// Store population values to the grid
+                      nntot = calculate_populations(n,0);
+                      //calculate_cooling_rates(n);
+                      //calculate_heating_rates(n);
+                      nne = get_nne(n);
+
+                      #ifdef NLTE_POPS_ON
+                          ///NEW NLTE CALL HERE FOR NOW
+                          nlte_test=0.0;
+                          for (element = 0; element < nelements; element++)
+                          {
+                            nions = get_nions(element);
+                            for (ion = 0; ion < nions-1; ion++)
+                            {
+                              trial = nlte_pops(element, ion, n, m);
+                              if ((trial < 1.0) && (trial > 0.0))
+                              {
+                                trial = 1./trial;
+                            }
+                            if (trial > nlte_test)
+                            {
+                              nlte_test=trial;
+                            }
+                            //			    printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+                            }
+                          }
+                          printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, m, nlte_test, nlte_test);
+                          if (nlte_iter > NLTEITER)
+                          {
+                            printout("NLTE solver failed to converge after %d iterations. Test %g.\n", NLTEITER, nlte_test);
+                            nlte_test = 0.0;
+                          }
+                          nlte_iter++;
+                        }
+                        if (nlte_test  > 0.0)
+                        {
+                          printout("NLTE solver converged to tolerace %g after %d iterations.\n", nlte_test, nlte_iter);
+                        }
+                      #endif
 
                     compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                     grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
@@ -831,7 +823,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                     modelgrid[n].grey_depth = grey_optical_depth;
                     
-  //                   grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
+    //                   grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                     if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
                     {
                       printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
@@ -840,13 +832,10 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     else modelgrid[n].thick = 0;
                   }
                 #endif
-                  
-                
+
               }
-              
-              
-    
-              
+
+
               /// Temperatures are are now written to file outside the parallel block!
               
               /// Reset the volume estimators to zero for the current timestep
@@ -898,7 +887,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               }
             }
 
-	    //	    printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+            //	    printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
             
             ///Non-OpenMP output of estimator files
             #ifndef _OPENMP
@@ -908,34 +897,32 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
               //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
-	      #ifdef NLTE_POPS_ON
-              fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-	      for (nlte = 0; nlte < total_nlte_levels; nlte++)
-		{
-		  fprintf(nlte_file,"%g ", modelgrid[n].nlte_pops[nlte]*modelgrid[n].rho);
-		}
-	      fprintf(nlte_file,"\n");	
-	      //	      printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+              #ifdef NLTE_POPS_ON
+                fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+                for (nlte = 0; nlte < total_nlte_levels; nlte++)
+                  {
+                    fprintf(nlte_file,"%g ", modelgrid[n].nlte_pops[nlte]*modelgrid[n].rho);
+                  }
+                fprintf(nlte_file,"\n");
+                //	      printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
 
-              //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-	      for (dummy_element = 0; dummy_element < nelements; dummy_element++)
-		{
-		  nions = get_nions(dummy_element);
-		  for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
-		    {
-		      if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
-			{
-			  for (dummy_level = 1; dummy_level <(nlte+1); dummy_level++)
-			{
-			    //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
-			}
-			}
-		    }
-		}
-	      //fprintf(nlte_file,"\n");
-	      #endif
-	      
-
+                      //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+                for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+                {
+                  nions = get_nions(dummy_element);
+                  for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
+                  {
+                    if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
+                    {
+                      for (dummy_level = 1; dummy_level <(nlte+1); dummy_level++)
+                      {
+                        //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
+                      }
+                    }
+                  }
+                }
+                //fprintf(nlte_file,"\n");
+              #endif
 
               fprintf(estimators_file, "populations ");
               for (element = 0; element < nelements; element++)
@@ -946,7 +933,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   fprintf(estimators_file,"%g ",ionstagepop(n,element,ion));
                 }
               }
-              
+
               #ifndef FORCE_LTE
                 fprintf(estimators_file, "corrphotoionrenorm ");
                 for (element = 0; element < nelements; element++)
@@ -1000,31 +987,30 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               fprintf(estimators_file,"%d %g %g %g %g %g ",n,0.,0.,0.,0.,0.);
               //fprintf(estimators_file,"%d %g %g %g %g %g %g %g ",n,0.,0.,0.,0.,0.,0.,0.);
 
-	      #ifdef NLTE_POPS_ON
-	      fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.);
-	      for (nlte = 0; nlte < total_nlte_levels; nlte++)
-		{
-		  fprintf(nlte_file,"%g ", 0.);
-		}
-	      fprintf(nlte_file,"\n");
-              //fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.,0.);
-	      for (dummy_element = 0; dummy_element < nelements; dummy_element++)
-		{
-		  nions = get_nions(dummy_element);
-		  for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
-		    {
-		      if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
-			{
-			  for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
-			    {
-			    //fprintf(nlte_file,"%g ", 0.0);
-			    }
-			}
-		    }
-		}
-	      //fprintf(nlte_file,"\n");
-	      #endif
-	    
+              #ifdef NLTE_POPS_ON
+                fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.);
+                for (nlte = 0; nlte < total_nlte_levels; nlte++)
+                {
+                  fprintf(nlte_file,"%g ", 0.);
+                }
+                fprintf(nlte_file,"\n");
+                //fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.,0.);
+                for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+                {
+                  nions = get_nions(dummy_element);
+                  for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
+                  {
+                    if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
+                    {
+                      for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+                      {
+                        //fprintf(nlte_file,"%g ", 0.0);
+                      }
+                    }
+                  }
+                }
+                //fprintf(nlte_file,"\n");
+              #endif
 
               for (element = 0; element < nelements; element++)
               {
@@ -1057,8 +1043,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               fprintf(estimators_file,"\n");
             #endif
           }
-          
-        } 
+        }
         else
         {
           /// else, only reset gammaestimator to zero. This allows us to do a global MPI
@@ -1067,7 +1052,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           for (element = 0; element < nelements; element++)
           {
             nions = get_nions(element);
-            for (ion = 0; ion < nions-1; ion++)
+            for (ion = 0; ion < nions - 1; ion++)
             {
               gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
             }
@@ -1080,8 +1065,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     #ifdef _OPENMP
     } /// end OpenMP parallel section
   #endif
-  
-  
+
   ///Write estimators for OpenMP version
   ///compton_optical_depth and heating/cooling rates which don't live on the grid
   ///are not available so far
@@ -1094,31 +1078,28 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
         fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].grey_depth);
         //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
 
-	#ifdef NLTE_POPS_ON
-	fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-	for (nlte = 0; nlte < total_nlte_levels; nlte++)
-	  {
-	    fprintf(nlte_file,"%g ", modelgrid[n].nlte_pops[nlte]*modelgrid[n].rho);
-	  }
-	fprintf(nlte_file,"\n");
-	//fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-	      for (dummy_element = 0; dummy_element < nelements; dummy_element++)
-		{
-		  nions = get_nions(dummy_element);
-		  for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
-		    {
-		      if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
-			{
-			  for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
-			    
-			    //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
-			}
-		    }
-		}
-	      //fprintf(nlte_file,"\n");
-	 #endif
-	    
-
+    #ifdef NLTE_POPS_ON
+      fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+      for (nlte = 0; nlte < total_nlte_levels; nlte++)
+      {
+        fprintf(nlte_file,"%g ", modelgrid[n].nlte_pops[nlte]*modelgrid[n].rho);
+      }
+      fprintf(nlte_file,"\n");
+      //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+      for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+      {
+        nions = get_nions(dummy_element);
+        for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
+        {
+          if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
+          {
+            for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+              //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
+          }
+        }
+      }
+      //fprintf(nlte_file,"\n");
+    #endif
 
         for (element = 0; element < nelements; element++)
         {
@@ -1158,30 +1139,28 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
         fprintf(estimators_file,"%d %g %g %g %g %g ",n,0.,0.,0.,0.,0.);
         //fprintf(estimators_file,"%d %g %g %g %g %g %g %g ",n,0.,0.,0.,0.,0.,0.,0.);
 
-	#ifdef NLTE_POPS_ON
-	fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.,0.);
-	for (nlte = 0; nlte < total_nlte_levels; nlte++)
-	  {
-	    fprintf(nlte_file,"%g ", 0.);
-	  }
-	fprintf(nlte_file,"\n");
-	//fprintf(nlte_file,"%d %g %g %g %g ",n,0.0,0.0,0.0,0.0,0.0);
-	      for (dummy_element = 0; dummy_element < nelements; dummy_element++)
-		{
-		  nions = get_nions(dummy_element);
-		  for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
-		    {
-		      if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
-			{
-			  for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
-			    
-			    //fprintf(nlte_file,"%g ", 0.0);
-			}
-		    }
-		}
-	      //fprintf(nlte_file,"\n");
-#endif
-	    
+        #ifdef NLTE_POPS_ON
+          fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.,0.);
+          for (nlte = 0; nlte < total_nlte_levels; nlte++)
+          {
+            fprintf(nlte_file,"%g ", 0.);
+          }
+          fprintf(nlte_file,"\n");
+          //fprintf(nlte_file,"%d %g %g %g %g ",n,0.0,0.0,0.0,0.0,0.0);
+          for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+          {
+            nions = get_nions(dummy_element);
+            for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
+            {
+              if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
+              {
+                for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+                  //fprintf(nlte_file,"%g ", 0.0);
+              }
+            }
+          }
+          //fprintf(nlte_file,"\n");
+        #endif
 
         for (element = 0; element < nelements; element++)
         {
@@ -1799,12 +1778,6 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
     *W = PI*J/STEBO/pow(*T_R,4);
   }
 }
-
-
-
-
-
-
 
 
 

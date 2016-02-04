@@ -62,7 +62,6 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   t_current = t1; ///this will keep track of time in the calculation
   t_mid = time_step[timestep].mid;
   
-  
   gsl_integration_workspace *wsp;
   gslintegration_paras intparas;
   double alpha_sp_integrand_gsl(double nu, void *paras);
@@ -100,7 +99,6 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   epsilon_trans = -100.;
   upper = -100;
   lower = -100;
-  
   
   //debuglevel = 2;
   #ifdef DEBUG_ON
@@ -143,8 +141,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       //if (element == 1 && ion == 1 && level == 61) debuglevel = 2;
       if (get_ionstage(element,ion) == 0 && level == 0) 
       {
-	printout("element %d, ion %d, level %d, ionstage %d\n",element,ion,level,get_ionstage(element,ion));
-	debuglevel = 2;
+        printout("element %d, ion %d, level %d, ionstage %d\n",element,ion,level,get_ionstage(element,ion));
+        debuglevel = 2;
       }
       if (ion >= get_nions(element))
       {
@@ -653,7 +651,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         if (debuglevel == 2)printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA recombination\n");
       #endif
         
-      /// Finally emitt the packet into a randomly chosen direction, update the continuum opacity and set some flags
+      /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
       emitt_rpkt(pkt_ptr,t_current);
       calculate_kappa_rpkt_cont(pkt_ptr,t_current);
       pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
@@ -1080,7 +1078,6 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
 
 
 
-
 ///****************************************************************************
 double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
 ///radiative recombination rate: paperII 3.5.2
@@ -1103,18 +1100,20 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
     {
         // TODO: need a Boltzmnan factor here?
         R += mastate[tid].nnlevel*nne * (get_spontrecombcoeff(element,ion-1,lower,phixstargetindex,modelgridindex));// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
-    //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
+        //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
     }
   }
   
   #ifdef DEBUG_ON
     //printout("[debug]    rad_recombiantion: R %g\n",R);
-    if (!isfinite(R)) {printout("fatal a2: abort\n"); abort();}
+    if (!isfinite(R)) {
+      printout("fatal a2: abort\n");
+      abort();
+    }
   #endif
   
   return R;
 }
-
 
 
 
@@ -1138,7 +1137,6 @@ double photoionization(int modelgridindex, int upper, double epsilon_trans)
   {
     if (get_phixsupperlevel(element,ion,lower,phixstargetindex) == upper)
     {
-        // TODO: need a Boltzmnan factor here?
         R += mastate[tid].nnlevel * get_corrphotoioncoeff(element,ion,lower,phixstargetindex,modelgridindex);
         //R = get_corrphotoionrate(element,ion,lower,pkt_ptr->where);
     }
@@ -1146,14 +1144,14 @@ double photoionization(int modelgridindex, int upper, double epsilon_trans)
   
   #ifdef DEBUG_ON
     //printout("[photoionization] R %g\n",R);
-    if (!isfinite(R)) {printout("fatal a4: abort\n"); abort();}
+    if (!isfinite(R)) {
+      printout("fatal a4: abort\n");
+      abort();
+    }
   #endif
   
   return R;
 }
-
-
-
 
 
 
@@ -1189,42 +1187,42 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   fac1 = epsilon_trans/KB/T_e;
   nne = get_nne(modelgridindex);
 
-  if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
-    {
-      ///permitted E1 electric dipole transitions
-      ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
-      ///Rutten script eq. 3.32. p.50
-      //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
-      
-      ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-      //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-      /// crude approximation to the already crude Van-Regemorter formula
-      test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-      if (g_bar >= test) Gamma = g_bar;
-      else Gamma = test;
-      //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
-      C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
-      //C = 0.0; //TESTING ONLY DELETE THIS
-    }
-  else if (coll_str(lineindex) > 0.0)
-    { //case of reading in an effective collision strength 
-      //from Osterbrock and Ferland, p51
+  if (coll_str(lineindex) > 0.0) //positive values are treated as effective collision strengths
+  {
+    //from Osterbrock and Ferland, p51
+
+    C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) * exp(-fac1) / statw_down(lineindex);
+    //test test
+    //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
     
-      C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) * exp(-fac1) / statw_down(lineindex);
-      //test test
-      //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
-      
-    }
+  }
+  else if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
+  {
+    ///permitted E1 electric dipole transitions
+    ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
+    ///Rutten script eq. 3.32. p.50
+    //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
+    
+    ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+    g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+    //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+    /// crude approximation to the already crude Van-Regemorter formula
+    test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+    if (g_bar >= test) Gamma = g_bar;
+    else Gamma = test;
+    //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+    C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+    //C = 0.0; //TESTING ONLY DELETE THIS
+  }
   else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
-    {
-      //forbidden transitions: magnetic dipole, electric quadropole...
-      C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
-    }
+  {
+    //forbidden transitions: magnetic dipole, electric quadropole...
+    C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
+  }
   else
-    {
-      C = 0.0;
-    }
+  {
+    C = 0.0;
+  }
 
 #ifdef DEBUG_ON
       if (debuglevel == 2) printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
@@ -1283,8 +1281,10 @@ double col_ionization(int modelgridindex, int upper, double epsilon_trans)
     #endif
   }
   else
+  {
     C = 0;
-    
+  }
+
   return C;
 }
 
@@ -1320,45 +1320,44 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
   fac1 = epsilon_trans/KB/T_e;
   nne = get_nne(modelgridindex);
 
-  if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
-    {
-  
-      ///permitted E1 electric dipole transitions
-      ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
-      ///Rutten script eq. 3.33. p.50
-      //f = osc_strength(element,ion,upper,lower);
-      //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-      
-      ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-      //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-      /// crude approximation to the already crude Van-Regemorter formula
-      test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-      if (g_bar >= test) Gamma = g_bar;
-      else Gamma = test;
-      g_ratio = statweight_target/mastate[tid].statweight;
-      //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-      C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-      //C = 0.0; //TESTING ONLY DELETE THIS
-    }
-  else if (coll_str(lineindex) > 0.0)
-    { //case of reading in an effective collision strength
-      //from Osterbrock and Ferland, p51
-      //mastate[tid].statweight is UPPER LEVEL stat weight
-      //statweight_target is LOWER LEVEL stat weight
-      C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) / mastate[tid].statweight;
-      // test test
-      //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-    }
+  if (coll_str(lineindex) > 0.0) //positive values are treated as effective collision strengths
+  {
+    //from Osterbrock and Ferland, p51
+    //mastate[tid].statweight is UPPER LEVEL stat weight
+    //statweight_target is LOWER LEVEL stat weight
+    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) / mastate[tid].statweight;
+    // test test
+    //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+  }
+  else if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
+  {
+    ///permitted E1 electric dipole transitions
+    ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
+    ///Rutten script eq. 3.33. p.50
+    //f = osc_strength(element,ion,upper,lower);
+    //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
+    
+    ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+    g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+    //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+    /// crude approximation to the already crude Van-Regemorter formula
+    test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+    if (g_bar >= test) Gamma = g_bar;
+    else Gamma = test;
+    g_ratio = statweight_target/mastate[tid].statweight;
+    //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+    C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+    //C = 0.0; //TESTING ONLY DELETE THIS
+  }
   else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
-    {
-      //forbidden transitions: magnetic dipole, electric quadropole...
-      C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-    }
+  {
+    //forbidden transitions: magnetic dipole, electric quadropole...
+    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+  }
   else
-    {
-      C = 0.0;
-    }
+  {
+    C = 0.0;
+  }
   
   #ifdef DEBUG_ON
     if (debuglevel == 2) printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
@@ -1427,8 +1426,10 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
     #endif
   }
   else
+  {
     C = 0;
-  
+  }
+
   return C;
 }
 
@@ -1440,8 +1441,7 @@ double radfield(double nu, int modelgridindex)
 {
   double B;
   double T_R,W;
-  
-  
+
   T_R = get_TR(modelgridindex);
   W   = get_W(modelgridindex);
   
@@ -1459,12 +1459,6 @@ double radfield2(double nu, double T, double W)
   B = W  *  TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T) - 1);
   return B;
 }
-
-
-
-
-
-
 
 
 

@@ -1027,6 +1027,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   int get_element(int element);
   int get_ionstage(int element, int ion);
   double photoionization_crosssection(double nu_edge, double nu);
+  float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
   double get_sahafact(int element, int ion, int level, double T, double E_threshold);
   int get_velocity();
   double doppler();
@@ -1140,7 +1141,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
             mastate[tid].element = element;
             mastate[tid].ion = ion;
             mastate[tid].level = level;
-            sigma_bf = photoionization_crosssection(nu_edge,nu);
+            sigma_bf = photoionization_crosssection(nu_edge,nu) * get_phixsprobability(element,ion,level,0);
             
             sf = get_sahafact(element,ion,level,T_e,nu_edge*H);
             helper = nnlevel * sigma_bf;
@@ -1175,7 +1176,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
               corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
               if (corrfactor < 0) corrfactor = 1;
               phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * corrfactor;
-              //TODO: is corrfactor a NaN? why?
+
               #ifdef DEBUG_ON
                 if (!isfinite(phixslist[tid].groundcont[gphixsindex].gamma_contr))
                 {

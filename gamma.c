@@ -331,21 +331,21 @@ double
 
       /* Move it into the new cell. */
       if (kap_tot > 0)
-	{
-	  if (do_comp_est == 1)
-	    {
-	      sdist = sdist * 2.;
-	      compton_emiss_cont(pkt_ptr, sdist, t_current);
-	      pp_emiss_cont(pkt_ptr, sdist, t_current);
-	      sdist = sdist / 2.;
-	    }
-	  if (do_rlc_est != 0)
-	    {
-	      sdist = sdist * 2.;
-	      rlc_emiss_gamma(pkt_ptr, sdist, t_current);
-	      sdist = sdist / 2.;
-	    }
-	}
+      {
+        if (do_comp_est == 1)
+        {
+          sdist = sdist * 2.;
+          compton_emiss_cont(pkt_ptr, sdist, t_current);
+          pp_emiss_cont(pkt_ptr, sdist, t_current);
+          sdist = sdist / 2.;
+        }
+        if (do_rlc_est != 0)
+        {
+          sdist = sdist * 2.;
+          rlc_emiss_gamma(pkt_ptr, sdist, t_current);
+          sdist = sdist / 2.;
+        }
+      }
 
       t_current += sdist / CLIGHT_PROP;
       move_pkt(pkt_ptr,sdist,t_current);
@@ -363,21 +363,21 @@ double
       move_pkt(pkt_ptr,tdist,t_current);
 	  
       if (kap_tot > 0)
-	{
-	  if (do_comp_est == 1)
-	    {
-	      tdist = tdist * 2.;
-	      compton_emiss_cont(pkt_ptr, tdist, t_current);
-	      pp_emiss_cont(pkt_ptr, tdist, t_current);
-	      tdist = tdist / 2.;
-	    }
-	  if (do_rlc_est != 0)
-	    {
-	      tdist = tdist * 2.;
-	      rlc_emiss_gamma(pkt_ptr, tdist, t_current);
-	      tdist = tdist / 2.;
-	    }
-	}
+      {
+        if (do_comp_est == 1)
+        {
+          tdist = tdist * 2.;
+          compton_emiss_cont(pkt_ptr, tdist, t_current);
+          pp_emiss_cont(pkt_ptr, tdist, t_current);
+          tdist = tdist / 2.;
+        }
+        if (do_rlc_est != 0)
+        {
+          tdist = tdist * 2.;
+          rlc_emiss_gamma(pkt_ptr, tdist, t_current);
+          tdist = tdist / 2.;
+        }
+      }
       t_current = t2;
       move_pkt(pkt_ptr,tdist,t_current);
       tdist = tdist * 2.;
@@ -389,25 +389,24 @@ double
       t_current += edist / CLIGHT_PROP;
       move_pkt(pkt_ptr,edist,t_current);
       if (kap_tot > 0)
-	{
-	  if (do_comp_est == 1)
-	    {
-	      edist = edist * 2.;
-	      compton_emiss_cont(pkt_ptr, edist, t_current);  
-	      pp_emiss_cont(pkt_ptr, edist, t_current);
-	      edist = edist / 2.;
-	    }
-	  if (do_rlc_est != 0)
-	    {
-	      edist = edist * 2.;
-	      rlc_emiss_gamma(pkt_ptr, edist, t_current);
-	      edist = edist / 2.;
-	    }
-	}
+      {
+        if (do_comp_est == 1)
+        {
+          edist = edist * 2.;
+          compton_emiss_cont(pkt_ptr, edist, t_current);
+          pp_emiss_cont(pkt_ptr, edist, t_current);
+          edist = edist / 2.;
+        }
+        if (do_rlc_est != 0)
+        {
+          edist = edist * 2.;
+          rlc_emiss_gamma(pkt_ptr, edist, t_current);
+          edist = edist / 2.;
+        }
+      }
       t_current += edist / CLIGHT_PROP;
       move_pkt(pkt_ptr,edist,t_current);
       edist = edist * 2.;
-
 
       /* event occurs. Choose which event and call the appropriate subroutine.*/
       zrand = gsl_rng_uniform(rng);
@@ -436,20 +435,19 @@ double
         return(t_current);
       }
       else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand*kap_tot))
-	{
-	  /*It's a pair production */
-	  pair_prod(pkt_ptr,t_current);
-	  if (pkt_ptr->type != TYPE_GAMMA)
-	    {
-	      /* It's not a gamma ray any more - return.*/
-	      return(t_current);
-	    }
-	}
-      else 
-	{
+      {
+        /*It's a pair production */
+        pair_prod(pkt_ptr,t_current);
+        if (pkt_ptr->type != TYPE_GAMMA)
+        {
+          /* It's not a gamma ray any more - return.*/
+          return(t_current);
+        }
+      }
+      else
+      {
         printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n", kap_compton, kap_photo_electric, kap_tot, zrand);
         printout(" /*cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(cell[pkt_ptr->where].modelgridindex), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
-
 
         exit(0);
       }

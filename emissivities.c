@@ -21,42 +21,40 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
   tfact = pow((tmin/single_t), 3);
 
   if (gam_line_list.type[lindex] == NI_GAM_LINE_ID)
-    {
-      
-      emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI 
+  {
+    emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
 	* exp(-single_t/TNICKEL) / TNICKEL * 
 	nickel_spec.probability[gam_line_list.index[lindex]]
         * nickel_spec.energy[gam_line_list.index[lindex]]
 	*fni(grid_ptr)*tfact;
-
-    }
+  }
   else if (gam_line_list.type[lindex] == CO_GAM_LINE_ID)
-    {
+  {
       
-      emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
-	* (exp(-single_t/TNICKEL) - exp(-single_t/TCOBALT))
-	/ (TNICKEL - TCOBALT)
-        *cobalt_spec.probability[gam_line_list.index[lindex]]
-        *cobalt_spec.energy[gam_line_list.index[lindex]]
-	*fni(grid_ptr)*tfact;
+    emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
+      * (exp(-single_t/TNICKEL) - exp(-single_t/TCOBALT))
+      / (TNICKEL - TCOBALT)
+          *cobalt_spec.probability[gam_line_list.index[lindex]]
+          *cobalt_spec.energy[gam_line_list.index[lindex]]
+      *fni(grid_ptr)*tfact;
 
-      if (gam_line_list.index[lindex] == 0)
-	{
-	  emitt_energy += (compton_emiss[grid_ptr->modelgridindex][emiss_max - 1] * 1.e20 / 4. / PI);
-	}
+    if (gam_line_list.index[lindex] == 0)
+    {
+      emitt_energy += (compton_emiss[grid_ptr->modelgridindex][emiss_max - 1] * 1.e20 / 4. / PI);
     }
+  }
   else if (gam_line_list.type[lindex] == CR48_GAM_LINE_ID)
-    {
-      
-      emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI 
-	* exp(-single_t/T48CR) / T48CR * 
-	cr48_spec.probability[gam_line_list.index[lindex]]
-        * cr48_spec.energy[gam_line_list.index[lindex]]
-	*f48cr(grid_ptr)*tfact;
+  {
+    
+    emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
+    * exp(-single_t/T48CR) / T48CR * 
+    cr48_spec.probability[gam_line_list.index[lindex]]
+    * cr48_spec.energy[gam_line_list.index[lindex]]
+    *f48cr(grid_ptr)*tfact;
 
-    } 
+  }
   else if (gam_line_list.type[lindex] == V48_GAM_LINE_ID)
-    {
+  {
       
       emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
 	* (exp(-single_t/T48CR) - exp(-single_t/T48V))
@@ -64,19 +62,17 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
         *v48_spec.probability[gam_line_list.index[lindex]]
         *v48_spec.energy[gam_line_list.index[lindex]]
 	*f48cr(grid_ptr)*tfact;
-    }
+  }
   else if (gam_line_list.type[lindex] == FAKE_GAM_LINE_ID)
-    {
-      emitt_energy = 0.0;
-    }
+  {
+    emitt_energy = 0.0;
+  }
   else
-    {
-      printout("unknown line??\n");
-      exit(0);
-    }
+  {
+    printout("unknown line??\n");
+    exit(0);
+  }
   
-
-
 
   /* I'm changing the next bit here (Jan 06) because I think what was
      here before (below) was wrong in the Doppler terms. 
@@ -89,17 +85,15 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
  
   */ 
   if (emitt_energy != 0)
-    {
-      get_velocity(single_pos, vel_vec, single_t);
+  {
+    get_velocity(single_pos, vel_vec, single_t);
       
-      ray_ptr->e_rf[nray]+= emitt_energy / fabs(dnuds) 
+    ray_ptr->e_rf[nray]+= emitt_energy / fabs(dnuds)
 	/doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) ;
-    }
+  }
 
   
   return(0);
-  
- 
 }
 
 /*******************************************************/
@@ -146,27 +140,26 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   /* Now adding the emissivity term. */
  
   if (lindex != RED_OF_LIST)
-    { 
-      get_velocity(single_pos, vel_vec, single_t);
-      dop_fac = 1./doppler(syn_dir, vel_vec);
+  {
+    get_velocity(single_pos, vel_vec, single_t);
+    dop_fac = 1./doppler(syn_dir, vel_vec);
       
-      if (tau_cont > 1.e-6)
-	{
-	  ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] * 
+    if (tau_cont > 1.e-6)
+    {
+      ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] *
 				  (1. - exp(-1. * tau_cont)) / kap_tot);
-	}
-      else
-	{
-	  ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] * 
-	  			  ldist);
-	}	  
     }
+    else
+    {
+      ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] *
+	  			  ldist);
+    }
+  }
   
   /* This MUST be followed by a call to move_one_ray() in source
      since e_cmf is NOT reset here. */
 
   return(0);
-
 }
 
 /*******************************************************/
@@ -211,10 +204,10 @@ motion and the local velocity vectors to the cmf.*/
   mu_cmf = dot(cmf_dir,cmf_syn_dir);
 
   if (mu_cmf > 1 || mu_cmf < -1)
-    {
-      printout("problem with Compton emissivity. Abort.\n");
-      exit(0);
-    }
+  {
+    printout("problem with Compton emissivity. Abort.\n");
+    exit(0);
+  }
 
   /* Now get the factor by which the frequency will change, f, for going 
      in this direction. f = old energy / new eneregy - always should be > 1*/
@@ -241,56 +234,54 @@ motion and the local velocity vectors to the cmf.*/
   // printout("frequency %g\n", freq_out*H/MEV);
   // printout("lindex %d, emiss_max %d, emiss_offset %d\n", lindex, emiss_max, emiss_offset);
 
-   if ((lindex > emiss_offset - 1) && (lindex < emiss_offset + emiss_max - 1))
+  if ((lindex > emiss_offset - 1) && (lindex < emiss_offset + emiss_max - 1))
+  {
+    
+    /* Then get partial crossection dsigma_domega in cmf */
+    /* Coeff is 3 / 16 / PI */
+      
+    dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f *
+      (f + (1./f) + (mu_cmf*mu_cmf) - 1.);
+    
+    //speed = vec_len(vel_vec);
+    //solid_angle_factor =  doppler(pkt_ptr->dir, vel_vec) * doppler(pkt_ptr->dir, vel_vec); 
+    
+    /* 
+      pow((1 + (dot(vel_vec, syn_dir)/CLIGHT)),2)
+      / (1.0 - (speed* speed / CLIGHT / CLIGHT));
+    */
+    
+    //dsigma_domega_rf = dsigma_domega_cmf //* doppler(pkt_ptr->dir, vel_vec)
+    //* solid_angle_factor;
+    
+    /* so now determine the contribution to the emissivity and which 
+ frequency bin it should be in */
+	
+    dop_fac = doppler(pkt_ptr->dir, vel_vec);
+	
+    emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
+	
+    /* For normalisation this needs to be
+       1) divided by volume
+       2) divided by frequency bin size
+       3) multiplied by the cell electron number density
+       4) divided by the length of the time step
+       This will all be done later
+    */
+    
+    if (lindex < emiss_offset)
     {
-      
-      
-      /* Then get partial crossection dsigma_domega in cmf */
-      /* Coeff is 3 / 16 / PI */
-      
-      dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f * 
-	(f + (1./f) + (mu_cmf*mu_cmf) - 1.);
-      
-      //speed = vec_len(vel_vec);
-      //solid_angle_factor =  doppler(pkt_ptr->dir, vel_vec) * doppler(pkt_ptr->dir, vel_vec); 
-      
-      /* 
-	 pow((1 + (dot(vel_vec, syn_dir)/CLIGHT)),2) 
-	 / (1.0 - (speed* speed / CLIGHT / CLIGHT));
-      */
-      
-      //dsigma_domega_rf = dsigma_domega_cmf //* doppler(pkt_ptr->dir, vel_vec)
-      //* solid_angle_factor;
-      
-      /* so now determine the contribution to the emissivity and which 
-	 frequency bin it should be in */
-	
-	dop_fac = doppler(pkt_ptr->dir, vel_vec);
-	
-	emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
-	
-	/* For normalisation this needs to be
-	   1) divided by volume
-	   2) divided by frequency bin size
-	   3) multiplied by the cell electron number density
-	   4) divided by the length of the time step
-	   This will all be done later
-	*/
-	
-	if (lindex < emiss_offset)
-	  {
-	    printout("scarily bad error here! %d %d\n", lindex, emiss_offset);
-	  }
-	else
-	  {
-            #ifdef _OPENMP 
-              #pragma omp atomic
-            #endif
-	    compton_emiss[cell[pkt_ptr->where].modelgridindex][lindex - emiss_offset] += emiss_cont;
-	  }
-	
+      printout("scarily bad error here! %d %d\n", lindex, emiss_offset);
     }
-
+    else
+    {
+      #ifdef _OPENMP
+        #pragma omp atomic
+      #endif
+      compton_emiss[cell[pkt_ptr->where].modelgridindex][lindex - emiss_offset] += emiss_cont;
+    }
+	
+  }
 
   return(0);
 }
@@ -340,49 +331,49 @@ int zero_estimators()
 
   //for (n=0; n < ngrid; n++)
   for (n=0; n < npts_model; n++)
-    {
-      J[n] = 0.;
-      #ifndef FORCE_LTE
-        nuJ[n] = 0.;
-        ffheatingestimator[n] = 0.;
-        colheatingestimator[n] = 0.;
-        /*
-        mabfcount[n] = 0.;
-        mabfcount_thermal[n] = 0.;
-        matotem[n] = 0.;
-        maabs[n] = 0.;
-        kbfcount[n] = 0.;
-        kbfcount_ion[n] = 0.;
-        kffcount[n] = 0.;
-        kffabs[n] = 0.;
-        kbfabs[n] = 0.;
-        kgammadep[n] = 0.;
-        */
-        for (element = 0; element < nelements; element++)
+  {
+    J[n] = 0.;
+    #ifndef FORCE_LTE
+      nuJ[n] = 0.;
+      ffheatingestimator[n] = 0.;
+      colheatingestimator[n] = 0.;
+      /*
+      mabfcount[n] = 0.;
+      mabfcount_thermal[n] = 0.;
+      matotem[n] = 0.;
+      maabs[n] = 0.;
+      kbfcount[n] = 0.;
+      kbfcount_ion[n] = 0.;
+      kffcount[n] = 0.;
+      kffabs[n] = 0.;
+      kbfabs[n] = 0.;
+      kgammadep[n] = 0.;
+      */
+      for (element = 0; element < nelements; element++)
+      {
+        for (ion = 0; ion < maxion; ion++)
         {
-          for (ion = 0; ion < maxion; ion++)
-          {
-            gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-            bfheatingestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-            /*
-            photoionestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-            stimrecombestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-            ionfluxestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-            //twiddle[n*nelements*maxion+element*maxion+ion] = 0.;
-            */
-          }
+          gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          bfheatingestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          /*
+          photoionestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          stimrecombestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          ionfluxestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          //twiddle[n*nelements*maxion+element*maxion+ion] = 0.;
+          */
         }
-      #endif
-      // cell[n].heating_ff = 0.;
-      // cell[n].heating_bf = 0.;
-      for (m=0; m < emiss_max; m++)
-	{
-	  compton_emiss[n][m] = 0.0;
-	}
-      
-      rpkt_emiss[n] = 0.0;
-
+      }
+    #endif
+    // cell[n].heating_ff = 0.;
+    // cell[n].heating_bf = 0.;
+    for (m=0; m < emiss_max; m++)
+    {
+      compton_emiss[n][m] = 0.0;
     }
+    
+    rpkt_emiss[n] = 0.0;
+  }
+  
   return(0);
 }
 
@@ -443,22 +434,24 @@ int write_estimators(nts)
   int i;
   float dum;
 
-  if ((dummy = fopen("dummy", "w+")) == NULL){
+  if ((dummy = fopen("dummy", "w+")) == NULL)
+  {
     printout("Cannot open dummy.\n");
     exit(0);
   }
   fprintf(dummy, "%d", nts);
   fclose(dummy);
-  if ((dummy = fopen("dummy", "r")) == NULL){
+  if ((dummy = fopen("dummy", "r")) == NULL)
+  {
     printout("Cannot open dummy.\n");
     exit(0);
   }
   i=0;
   while ((chch=fgetc(dummy)) != EOF)
-    {
-      junk[i] = chch;
-      i= i+1;
-    }
+  {
+    junk[i] = chch;
+    i= i+1;
+  }
   junk[i] = '\0';
   fclose(dummy);
 
@@ -466,29 +459,29 @@ int write_estimators(nts)
   strcat(filename, ".out");
   
   if (file_set == 1)
+  {
+    if ((est_file = fopen(filename, "rb")) == NULL)
     {
-      if ((est_file = fopen(filename, "rb")) == NULL){
-	printout("Cannot open est_file.txt.\n");
-	exit(0);
-      }
-
+      printout("Cannot open est_file.txt.\n");
+      exit(0);
+    }
 
       //for (n=0; n < ngrid; n++)
-      for (n=0; n < npts_model; n++)
-	{
-	  for (m=0; m < emiss_max; m++)
+    for (n=0; n < npts_model; n++)
+    {
+      for (m=0; m < emiss_max; m++)
 	    {
 	      fread(&dum, sizeof(float), 1, est_file);
 	      //fscanf(est_file, "%g", &dum);
 	      compton_emiss[n][m] += dum;
 	    }
-	}
-      fclose(est_file);
     }
+    fclose(est_file);
+  }
 
 
-
-  if ((est_file = fopen(filename, "wb+")) == NULL){
+  if ((est_file = fopen(filename, "wb+")) == NULL)
+  {
     printout("Cannot open est_file.txt.\n");
     exit(0);
   }
@@ -496,12 +489,12 @@ int write_estimators(nts)
 
   //for (n=0; n < ngrid; n++)
   for (n=0; n < npts_model; n++)
+  {
+    for (m=0; m < emiss_max; m++)
     {
-      for (m=0; m < emiss_max; m++)
-	{
-	  fwrite(&compton_emiss[n][m], sizeof(float), 1, est_file);
-	}
+      fwrite(&compton_emiss[n][m], sizeof(float), 1, est_file);
     }
+  }
   fclose(est_file);
   return(0);
 }
@@ -523,14 +516,14 @@ int estim_switch(nts)
   te_want = time_syn[nsyn_time-1] * (1. + rmax/tmin/CLIGHT_PROP);  
 
   if (tstart > te_want)
-    {
-      on_or_off = 0;
-    }
+  {
+    on_or_off = 0;
+  }
 
   if (tend < ts_want)
-    {
-      on_or_off = 0;
-    }
+  {
+    on_or_off = 0;
+  }
 
   return(on_or_off);
 }
@@ -548,29 +541,32 @@ int emiss_load(nts)
   int i;
   float dum;
 
-  if ((dummy = fopen("dummy", "w+")) == NULL){
+  if ((dummy = fopen("dummy", "w+")) == NULL)
+  {
     printout("Cannot open dummy.\n");
     exit(0);
   }
   fprintf(dummy, "%d", nts);
   fclose(dummy);
-  if ((dummy = fopen("dummy", "r")) == NULL){
+  if ((dummy = fopen("dummy", "r")) == NULL)
+  {
     printout("Cannot open dummy.\n");
     exit(0);
   }
   i=0;
   while ((chch=fgetc(dummy)) != EOF)
-    {
-      junk[i] = chch;
-      i= i+1;
-    }
+  {
+    junk[i] = chch;
+    i= i+1;
+  }
   junk[i] = '\0';
   fclose(dummy);
 
   strcat(filename, junk);
   strcat(filename, ".out");
   
-  if ((est_file = fopen(filename, "r")) == NULL){
+  if ((est_file = fopen(filename, "r")) == NULL)
+  {
     printout("Cannot open est_file.txt.\n");
     exit(0);
   }
@@ -578,13 +574,13 @@ int emiss_load(nts)
 
   //for (n=0; n < ngrid; n++)
   for (n=0; n < npts_model; n++)
+  {
+    for (m=0; m < emiss_max; m++)
     {
-      for (m=0; m < emiss_max; m++)
-	{
-	  fscanf(est_file, "%g", &dum);
-	  compton_emiss[n][m] = dum;
-	}
+      fscanf(est_file, "%g", &dum);
+      compton_emiss[n][m] = dum;
     }
+  }
   fclose(est_file);
   return(0);
 }

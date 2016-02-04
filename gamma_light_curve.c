@@ -28,10 +28,10 @@ gather_gamma_light_curve(my_rank)
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
   
   if (ntlcbins > MTLCBINS)
-    {
-      printout("Too many time bins in light curve - reducing.\n");
-      ntlcbins = MTLCBINS;
-    }
+  {
+    printout("Too many time bins in light curve - reducing.\n");
+    ntlcbins = MTLCBINS;
+  }
 
   /* start by setting up the time bins. */ 
   /* it is all done interms of a logarithmic spacing in t - get the
@@ -39,14 +39,14 @@ gather_gamma_light_curve(my_rank)
   dlogtlc_angle = (log(tmax) - log(tmin))/ntlcbins;
 
   for (n = 0; n < ntlcbins; n++)
+  {
+    for (nn = 0; nn < MANGLCBINS; nn++)
     {
-      for (nn = 0; nn < MANGLCBINS; nn++)
-	{
-	  light_curve_angle[n][nn].lower_time = exp( log(tmin) + (n * (dlogtlc_angle)));
-	  light_curve_angle[n][nn].delta_t = exp( log(tmin) + ((n+1) * (dlogtlc_angle))) - light_curve_angle[n][nn].lower_time;
-	  light_curve_angle[n][nn].lum = 0.0;
-	}
+      light_curve_angle[n][nn].lower_time = exp( log(tmin) + (n * (dlogtlc_angle)));
+      light_curve_angle[n][nn].delta_t = exp( log(tmin) + ((n+1) * (dlogtlc_angle))) - light_curve_angle[n][nn].lower_time;
+      light_curve_angle[n][nn].lum = 0.0;
     }
+  }
 
   /// The grid is now set up. Now we loop over all the packets, check if they made it out or not,
   /// and if they did we add their rest frame energy to the appropriate cell.
@@ -101,48 +101,50 @@ write_gamma_light_curve()
   /* If needed, start by reading in existing file and storing old numbers. */
 
   if (file_set == 1)
+  {
+    if ((lc_gamma_file = fopen("gamma_light_curve.out", "r")) == NULL)
     {
-      if ((lc_gamma_file = fopen("gamma_light_curve.out", "r")) == NULL){
-	printout("Cannot open lc_gamma_file.txt.\n");
-	exit(0);
-      }
-      for (m=0; m < ntlcbins; m++)
-	{
-	  fscanf(lc_gamma_file, "%g", &dum1);
-	  for (nn=0; nn < MANGLCBINS; nn++)
+      printout("Cannot open lc_gamma_file.txt.\n");
+      exit(0);
+    }
+    for (m=0; m < ntlcbins; m++)
+    {
+      fscanf(lc_gamma_file, "%g", &dum1);
+      for (nn=0; nn < MANGLCBINS; nn++)
 	    {
 	      fscanf(lc_gamma_file, " %g ",&dum2);
 	      save[m][nn]=dum2;
 	    }
-	}
-      fclose(lc_gamma_file);
     }
+    fclose(lc_gamma_file);
+  }
   else
+  {
+    for (m=0; m < ntlcbins; m++)
     {
-      for (m=0; m < ntlcbins; m++)
-	{
-	  for (nn=0; nn < MANGLCBINS; nn++)
-	    {
+      for (nn=0; nn < MANGLCBINS; nn++)
+      {
 	      save[m][nn]=0.0;
 	    }
-      	}
     }
+  }
 
 
-  if ((lc_gamma_file = fopen("gamma_light_curve.out", "w+")) == NULL){
+  if ((lc_gamma_file = fopen("gamma_light_curve.out", "w+")) == NULL)
+  {
     printout("Cannot open lc_gamma_file.txt.\n");
     exit(0);
   }
 
   for (m=0; m < ntlcbins; m++)
+  {
+    fprintf(lc_gamma_file, "%g ", sqrt(light_curve_angle[m][0].lower_time*(light_curve_angle[m][0].lower_time + light_curve_angle[m][0].delta_t))/DAY);
+    for (nn=0; nn < MANGLCBINS; nn++)
     {
-      fprintf(lc_gamma_file, "%g ", sqrt(light_curve_angle[m][0].lower_time*(light_curve_angle[m][0].lower_time + light_curve_angle[m][0].delta_t))/DAY);
-      for (nn=0; nn < MANGLCBINS; nn++)
-	{
-	  fprintf(lc_gamma_file, " %g ",(light_curve_angle[m][nn].lum/LSUN) + save[m][nn]);
-	}
-      fprintf(lc_gamma_file, "\n");
+      fprintf(lc_gamma_file, " %g ",(light_curve_angle[m][nn].lum/LSUN) + save[m][nn]);
     }
+    fprintf(lc_gamma_file, "\n");
+  }
   
 
   fclose(lc_gamma_file);
@@ -173,43 +175,39 @@ add_to_lc_angle(pkt_ptr)
 
   /* Formula from Leon's paper. */
 
-
   t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
 
   /* Put this into the time grid. */
   
   if (t_arrive > tmin && t_arrive < tmax)
+  {
+    nt = (log(t_arrive) - log(tmin)) / dlogtlc_angle;
+    /* Difference from light_curve is here - need to assign an angle bin. Compute the angle between
+ the viewing direcation and the packet's trajectory. */
+
+    costheta = dot(pkt_ptr->dir, syn_dir);
+    thetabin = ((costheta + 1.0) * sqrt(MANGLCBINS) / 2.0);
+    cross_prod(pkt_ptr->dir, syn_dir, vec1);
+    cross_prod(xhat, syn_dir, vec2);
+    cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
+
+    cross_prod(vec2, syn_dir, vec3);      
+    testphi = dot(vec1,vec3);
+
+    if (testphi > 0)
     {
-      nt = (log(t_arrive) - log(tmin)) / dlogtlc_angle;
-      /* Difference from light_curve is here - need to assign an angle bin. Compute the angle between
-	 the viewing direcation and the packet's trajectory. */
-
-      costheta = dot(pkt_ptr->dir, syn_dir);
-      thetabin = ((costheta + 1.0) * sqrt(MANGLCBINS) / 2.0);
-      cross_prod(pkt_ptr->dir, syn_dir, vec1);
-      cross_prod(xhat, syn_dir, vec2);
-      cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
-
-      cross_prod(vec2, syn_dir, vec3);      
-      testphi = dot(vec1,vec3);
-
-      if (testphi > 0)
-	{
-	  phibin = (acos(cosphi) /2. / PI * sqrt(MANGLCBINS));
-	}
-      else
-	{
-	  phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MANGLCBINS));
-	}
-
-      na = (thetabin*sqrt(MANGLCBINS)) + phibin;
-
-
-
-
-      light_curve_angle[nt][na].lum += pkt_ptr->e_rf / light_curve_angle[nt][na].delta_t * MANGLCBINS / nprocs;
+      phibin = (acos(cosphi) /2. / PI * sqrt(MANGLCBINS));
+    }
+    else
+    {
+      phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MANGLCBINS));
     }
 
-  return(0);
+    na = (thetabin*sqrt(MANGLCBINS)) + phibin;
 
+
+    light_curve_angle[nt][na].lum += pkt_ptr->e_rf / light_curve_angle[nt][na].delta_t * MANGLCBINS / nprocs;
+  }
+
+  return(0);
 }

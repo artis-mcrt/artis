@@ -116,13 +116,13 @@ short is_nlte(int element, int ion, int level)
 /// Returns 1 if (element,ion,level) is to be treated in nlte.
 {
   if (level < 201)
-    {
-      elements[element].ions[ion].levels[level].is_nlte = 1;
-    }
+  {
+    elements[element].ions[ion].levels[level].is_nlte = 1;
+  }
   else
-    {
-      elements[element].ions[ion].levels[level].is_nlte = 0;
-    }
+  {
+    elements[element].ions[ion].levels[level].is_nlte = 0;
+  }
   return elements[element].ions[ion].levels[level].is_nlte;
 }
 
@@ -157,17 +157,16 @@ int get_nphixstargets(int element, int ion, int level)
 int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
-  int nphixstargets;
-  
-  nphixstargets = get_nphixstargets(element,ion,level);
-  if (0 < phixstargetindex < nphixstargets)
+  int get_nphixstargets(int element, int ion, int level);
+
+  if (0 < phixstargetindex < get_nphixstargets(element,ion,level))
   {
     return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
   }
   else
   {
     printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex");
-    printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,nphixstargets);
+    printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
     abort();
   }
 }
@@ -176,17 +175,16 @@ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
 float get_phixsprobability(int element, int ion, int level, int phixstargetindex)
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
-  int nphixstargets;
-  
-  nphixstargets = get_nphixstargets(element,ion,level);
-  if (phixstargetindex < nphixstargets)
+  int get_nphixstargets(int element, int ion, int level);
+
+  if (0 < phixstargetindex < get_nphixstargets(element,ion,level))
   {
     return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
   }
   else
   {
     printout("[fatal]   get_phixsprobability called with invalid phixstargetindex");
-    printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,nphixstargets);
+    printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
     abort();
   }
 }

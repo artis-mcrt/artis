@@ -281,12 +281,12 @@ int input(rank)
     {
       for (m=0; m < nnubins; m++)
       {
-        if ((spectra[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
+        if ((spectra[n].stat[m].absorption = malloc((nelements*maxion)*sizeof(double))) == NULL)
         {
           printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
           exit(0);
         }
-        if ((spectra[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
+        if ((spectra[n].stat[m].emission = malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
         {
           printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
           exit(0);
@@ -296,7 +296,7 @@ int input(rank)
         {
           for (nn = 0; nn < MABINS; nn++)
           {
-            if ((spectra_res[n][nn].emission[m].count = (int *) malloc((2*nelements*maxion+1)*sizeof(int))) == NULL)
+            if ((spectra_res[n][nn].emission[m].count = malloc((2*nelements*maxion+1)*sizeof(int))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialise spectra_res structure ... abort\n");
               exit(0);
@@ -352,8 +352,8 @@ void read_atomicdata()
   int Zcheck,Zcheck2,ionstagecheck; //,nionscheck,checknelements;
   int lineindex, tottransitions,tottransitions_all;
   int ndowntrans,nuptrans,nbfcont;
-  int skip_line;
   transitiontable_entry *transitiontable;
+  int skip_this_table;
   int add; /// Helper variable to count coolingterms per ion
   
   phixstarget_entry *phixstargets;
@@ -414,7 +414,7 @@ void read_atomicdata()
     
     /// initialize atomic data structure to number of elements
     fscanf(compositiondata,"%d",&nelements);
-    if ((elements = (elementlist_entry *) calloc(nelements, sizeof(elementlist_entry))) == NULL)
+    if ((elements = calloc(nelements, sizeof(elementlist_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
       exit(0);
@@ -460,7 +460,7 @@ void read_atomicdata()
       includedions += nions;
   
       /// Initialize the elements ionlist
-      if ((elements[element].ions = (ionlist_entry *) calloc(nions, sizeof(ionlist_entry))) == NULL)
+      if ((elements[element].ions = calloc(nions, sizeof(ionlist_entry))) == NULL)
       {
           printout("[fatal] input: not enough memory to initialize ionlist ... abort\n");
           exit(0);
@@ -533,7 +533,7 @@ void read_atomicdata()
         if (Zcheck == Z && ionstagecheck == ionstage)
         {
           /// load transition table for the CURRENT ion to temporary memory
-          if ((transitiontable = (transitiontable_entry *) calloc(tottransitions, sizeof(transitiontable_entry))) == NULL)
+          if ((transitiontable = calloc(tottransitions, sizeof(transitiontable_entry))) == NULL)
           {
             if (tottransitions > 0)
               {
@@ -578,7 +578,7 @@ void read_atomicdata()
             printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
             exit(0);
           }
-          if ((elements[element].ions[ion].levels = (levellist_entry *) calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
+          if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
           {
             printout("[fatal] input: not enough memory to initialize levelist of element %d, ion %d ... abort\n",element,ion);
             exit(0);
@@ -766,7 +766,7 @@ void read_atomicdata()
                 elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element,ion,level);
                 nuparr[targetlevel] += 1;
               }
-	      else
+              else
               {
                 /** This is a new brach to deal with lines that have different types of transition. It should trip after a transition is already known. */
                 linelistindex = transitions[level].to[level-targetlevel-1];
@@ -884,7 +884,8 @@ void read_atomicdata()
     /// Save sorted linelist into a file
     if (rank_global == 0)
     {
-      if ((linelist_file = fopen("linelist.dat", "w")) == NULL){
+      if ((linelist_file = fopen("linelist.dat", "w")) == NULL)
+      {
         printout("Cannot open linelist.out.\n");
         exit(0);
       }
@@ -958,57 +959,56 @@ void read_atomicdata()
         /// for limited model atoms we further have to make sure that the lowerlevel is inside the limited model atom
         if (lowerion >= 0 && lowerlevel < get_nlevels(element,lowerion) && upperion < get_nions(element))
         {
-          
-            if (upperlevel < 0)
+            if (upperlevel >= 0) // file gives photoionisation to a single target state only
             {
-                // read in a table of target states and probabilities
-                if (upperion < get_nions(element)-1)// also "&& upperion < get_nions(element)-1" if nlevelsmax = 1 for the top ion
-                {
-                    fscanf(phixsdata,"%d",&nphixstargets);
-                    if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) malloc(nphixstargets*sizeof(phixstarget_entry))) == NULL)
-                    {
-                      printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
-                      exit(0);
-                    }
-                    for (i = 0; i < nphixstargets; i++)
-                    {
-                      fscanf(phixsdata,"%d %g",&upperlevel,&phixstargetprobability);
-                      upperlevel -= 1; //subtract one to get the index
-                      elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = upperlevel;
-                      elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].probability = phixstargetprobability;
-                    }
-                    upperlevel = elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex;
-                }
-                else // file has table of target states and probabilities but phixs is to the top ion which we limit to one level
-                {
-                    fscanf(phixsdata,"%d",&nphixstargets);
-                    if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1,sizeof(phixstarget_entry))) == NULL)
-                    {
-                      printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
-                      exit(0);
-                    }
-                    for (i = 0; i < nphixstargets; i++)
-                    {
-                      fscanf(phixsdata,"%d %g",&upperlevel,&phixstargetprobability);
-                      upperlevel -= 1; //subtract one to get the index. not used anyway
-                    }
-                    nphixstargets = 1;
-                    elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
-                    elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
-                }
+              nphixstargets = 1;
+              if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1,sizeof(phixstarget_entry))) == NULL)
+              {
+                printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
+                exit(0);
+              }
+              if (upperion == get_nions(element)-1) // top ion has only one level, so send it to that level
+                upperlevel = 0;
+              elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
+              elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
             }
-            else // file gives photoionisation to a single target state only (usually the ground state)
+            else //upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
             {
-                nphixstargets = 1;
-                if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1,sizeof(phixstarget_entry))) == NULL)
+              // read in a table of target states and probabilities and store them
+              if (upperion < get_nions(element)-1)// if nlevelsmax = 1 for the top ion
+              {
+                fscanf(phixsdata,"%d\n",&nphixstargets);
+                if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = malloc(nphixstargets*sizeof(phixstarget_entry))) == NULL)
                 {
-                    printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
-                    exit(0);
+                  printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
+                  exit(0);
                 }
-                if (upperion == get_nions(element)-1) // top ion has only one level, so send it to that level
-                    upperlevel = 0;
-                elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
+                for (i = 0; i < nphixstargets; i++)
+                {
+                  fscanf(phixsdata,"%d %g\n",&upperlevel,&phixstargetprobability);
+                  upperlevel -= 1; //subtract one to get the index
+                  elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = upperlevel;
+                  elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].probability = phixstargetprobability;
+                }
+                upperlevel = elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex;
+              }
+              else // file has table of target states and probabilities but phixs results in the top ion, which we haved limited to one level
+              {
+                fscanf(phixsdata,"%d\n",&nphixstargets);
+                if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1,sizeof(phixstarget_entry))) == NULL)
+                {
+                  printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
+                  exit(0);
+                }
+                for (i = 0; i < nphixstargets; i++)
+                {
+                  fscanf(phixsdata,"%d %g\n",&upperlevel,&phixstargetprobability);
+                  upperlevel -= 1; //subtract one to get the index. not used anyway
+                }
+                nphixstargets = 1;
+                elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
                 elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
+              }
             }
             elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = nphixstargets;
           
@@ -1043,27 +1043,10 @@ void read_atomicdata()
                 }
               }
             }
-            
-          /// so far only photoionisations to upperions groundlevel are considered
-          //sprintf(filename1,"database_%d_%d_%d",element,lowerion,lowerlevel);
-          //sprintf(filename2,"interpol_%d_%d_%d",element,lowerion,lowerlevel);
-          //if ((database_file = fopen(filename1, "w")) == NULL)
-          //{
-          // printf("Cannot open %s.\n",filename);
-          // exit(0);
-          //}
-          //if ((interpol_file = fopen(filename2, "w")) == NULL)
-          //{
-          // printf("Cannot open %s.\n",filename);
-          // exit(0);
-          //}
-          
-          //if (upperlevel == 0)
-          //{
+
             nu_edge = (epsilon(element,upperion,upperlevel) - epsilon(element,lowerion,lowerlevel))/H;
             //elements[element].ions[lowerion].levels[lowerlevel].photoion_xs_nu_edge = nu_edge;
-            //printout("interp: epsilon(%d,%d,%d)=%g, epsilon(%d,%d,%d)=%g, e1-e2=%g\n",element,upperion,upperlevel,epsilon(element,upperion,upperlevel),element,lowerion,lowerlevel,epsilon(element,lowerion,lowerlevel),nu_edge);
-            
+
             if ((elements[element].ions[lowerion].levels[lowerlevel].photoion_xs = calloc(NPHIXSPOINTS,sizeof(float))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize photoion_xslist... abort\n");
@@ -1071,7 +1054,7 @@ void read_atomicdata()
             }
             for (i = 0; i < NPHIXSPOINTS; i++)
             {
-              fscanf(phixsdata,"%g",&phixs);
+              fscanf(phixsdata,"%g\n",&phixs);
               ///the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
               ///to convert to cgs units multiply by 1e-18
               elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs*1e-18;
@@ -1080,45 +1063,29 @@ void read_atomicdata()
             
             //nbfcontinua += 1;
             //printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
-          //}
-          /// for excited levels of upperion just jump over the next npoints lines
-          //else
-          //{
-          //  for (i = 0; i < npoints; i++)
-          //    fscanf(phixsdata,"%lg %lg",&energy,&phixs);
-          //}
-          //fclose(database_file);
-          //fclose(interpol_file);
+            skip_this_table = 0;
         }
         else
         {
-            // for ions which are not part of the current model atom proceed through the list
-            if (upperlevel < 0) // read in a table of target states and probabilities
-            {
-                fscanf(phixsdata,"%d",&nphixstargets);
-                for (i = 0; i < nphixstargets; i++)
-                {
-                  fscanf(phixsdata,"%d %g",&upperlevel,&phixstargetprobability);
-                }
-            }
-            for (i = 0; i < NPHIXSPOINTS; i++)
-                fscanf(phixsdata,"%g",&phixs);
+          skip_this_table = 1;
         }
-  
       }
       else
       {
-        // for elements which are not part of the current model atom proceed through the list
-        if (upperlevel < 0) // read in a table of target states and probabilities
+        skip_this_table = 1;
+      }
+      if (skip_this_table == 1) // for ions or elements that are not part of the current model atom, proceed through the lines and throw away the data
+      {
+        if (upperlevel < 0) // a table of target states and probabilities exists, so read through those lines
         {
-            fscanf(phixsdata,"%d",&nphixstargets);
-            for (i = 0; i < nphixstargets; i++)
-            {
-              fscanf(phixsdata,"%d %g",&upperlevel,&phixstargetprobability);
-            }
+          fscanf(phixsdata,"%d\n",&nphixstargets);
+          for (i = 0; i < nphixstargets; i++)
+          {
+            fscanf(phixsdata,"%d %g\n",&upperlevel,&phixstargetprobability);
+          }
         }
-        for (i = 0; i < NPHIXSPOINTS; i++)
-          fscanf(phixsdata,"%g",&phixs);
+        for (i = 0; i < NPHIXSPOINTS; i++) //skip through cross section list
+          fscanf(phixsdata,"%g\n",&phixs);
       }
     }
     fclose(phixsdata);
@@ -1238,7 +1205,7 @@ void read_atomicdata()
     
     printout("nelements %d\n",nelements);
     
-    if ((elements = (elementlist_entry *) malloc(nelements*sizeof(elementlist_entry))) == NULL)
+    if ((elements = malloc(nelements*sizeof(elementlist_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
       exit(0);
@@ -1256,7 +1223,7 @@ void read_atomicdata()
       
       //printout("element %d, anumber %d, nions %d, abundance %g, mass %g\n",element,anumber,nions,abundance,mass);
       
-      if ((elements[element].ions = (ionlist_entry *) malloc(nions*sizeof(ionlist_entry))) == NULL)
+      if ((elements[element].ions = malloc(nions*sizeof(ionlist_entry))) == NULL)
       {
           printout("[fatal] input: not enough memory to initialize ionlist ... abort\n");
           exit(0);
@@ -1272,7 +1239,7 @@ void read_atomicdata()
         printout("read in element %d ion %d nlevels %d nionisinglevels %d ionstage %d ionpot %g \n",element,ion,nlevels,ionisinglevels,ionstage,ionpot);
         
         nbfcont = get_bfcontinua(element,ion);
-        if ((elements[element].ions[ion].levels = (levellist_entry *) malloc(nlevels*sizeof(levellist_entry))) == NULL)
+        if ((elements[element].ions[ion].levels = malloc(nlevels*sizeof(levellist_entry))) == NULL)
         {
           printout("[fatal] input: not enough memory to initialize levelist of element %d, ion %d ... abort\n",element,ion);
           exit(0);
@@ -1307,7 +1274,7 @@ void read_atomicdata()
           fscanf(modelatom,"%d\n",&ndowntrans);
           //printout("ndowntrans %d\n",ndowntrans);
           totaldowntrans += ndowntrans;
-          if ((elements[element].ions[ion].levels[level].downtrans = (permittedtransitionlist_entry *) malloc((ndowntrans+1)*sizeof(permittedtransitionlist_entry))) == NULL)
+          if ((elements[element].ions[ion].levels[level].downtrans = malloc((ndowntrans+1)*sizeof(permittedtransitionlist_entry))) == NULL)
           {
             printout("[fatal] input: not enough memory to initialize downtrans list ... abort\n");
             exit(0);
@@ -1325,7 +1292,7 @@ void read_atomicdata()
           fscanf(modelatom,"%d\n",&nuptrans);
           //printout("nuptrans %d\n",nuptrans);
           totaluptrans += nuptrans;
-          if ((elements[element].ions[ion].levels[level].uptrans = (permittedtransitionlist_entry *) malloc((nuptrans+1)*sizeof(permittedtransitionlist_entry))) == NULL)
+          if ((elements[element].ions[ion].levels[level].uptrans = malloc((nuptrans+1)*sizeof(permittedtransitionlist_entry))) == NULL)
           {
             printout("[fatal] input: not enough memory to initialize uptrans list ... abort\n");
             exit(0);
@@ -1411,12 +1378,12 @@ void read_atomicdata()
         }
         
         /// For those we just need to allocate memory
-//         if ((elements[element].ions[ion].zeta = (float *) malloc(TABLESIZE*sizeof(float))) == NULL)
-//         {
-//           printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
-//           exit(0);
-//         }
-        if ((elements[element].ions[ion].Alpha_sp = (float *) malloc(TABLESIZE*sizeof(float))) == NULL)
+        //         if ((elements[element].ions[ion].zeta = malloc(TABLESIZE*sizeof(float))) == NULL)
+        //         {
+        //           printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
+        //           exit(0);
+        //         }
+        if ((elements[element].ions[ion].Alpha_sp = malloc(TABLESIZE*sizeof(float))) == NULL)
         {
           printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
           exit(0);
@@ -1441,7 +1408,7 @@ void read_atomicdata()
       exit(0);
     }
     fscanf(linelist_file,"%d\n",&nlines);
-    if ((linelist = (linelist_entry *) malloc(nlines*sizeof(linelist_entry))) == NULL)
+    if ((linelist = malloc(nlines*sizeof(linelist_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize linelist ... abort\n");
       exit(0);
@@ -1457,8 +1424,9 @@ void read_atomicdata()
       linelist[i].einstein_A = A_ul;
       linelist[i].osc_strength = f_ul;
       linelist[i].coll_str = coll_str;
-      linelist[i].coll_str = -1; //TESTING ONLY, TREAT ALL AS PERMITTED
-//      linelist[i].coll_str = -2; //TESTING ONLY, TREAT ALL AS FORBIDDEN
+      //if (coll_str < 0.0)
+        //linelist[i].coll_str = -1; //TESTING ONLY, TREAT ALL AS PERMITTED
+        //linelist[i].coll_str = -2; //TESTING ONLY, TREAT ALL AS FORBIDDEN
     }
     fclose(linelist_file);
   }
@@ -1550,7 +1518,7 @@ void read_atomicdata()
   ///======================================================
   /// Stack which holds information about population and other cell specific data 
   /// ===> move to update_packets
-  if ((cellhistory = (cellhistory_struct *) malloc(nthreads*sizeof(cellhistory_struct))) == NULL)
+  if ((cellhistory = malloc(nthreads*sizeof(cellhistory_struct))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n",nthreads);
     exit(0);
@@ -1563,14 +1531,14 @@ void read_atomicdata()
       
       cellhistory[tid].cellnumber = -99;
       
-      cellhistory[tid].coolinglist = (cellhistorycoolinglist_t *) malloc(ncoolingterms*sizeof(cellhistorycoolinglist_t));
+      cellhistory[tid].coolinglist = malloc(ncoolingterms*sizeof(cellhistorycoolinglist_t));
       if (cellhistory[tid].coolinglist == NULL)
       {
         printout("[fatal] input: not enough memory to initialize cellhistory's coolinglist ... abort\n");
         exit(0);
       }
         
-      if ((cellhistory[tid].chelements = (chelements_struct *) malloc(nelements*sizeof(chelements_struct))) == NULL)
+      if ((cellhistory[tid].chelements = malloc(nelements*sizeof(chelements_struct))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
         exit(0);
@@ -1578,7 +1546,7 @@ void read_atomicdata()
       for (element = 0; element < nelements; element++)
       {
         nions = get_nions(element);
-        if ((cellhistory[tid].chelements[element].chions = (chions_struct *) malloc(nions*sizeof(chions_struct))) == NULL)
+        if ((cellhistory[tid].chelements[element].chions = malloc(nions*sizeof(chions_struct))) == NULL)
         {
           printout("[fatal] input: not enough memory to initialize cellhistory's ionlist ... abort\n");
           exit(0);
@@ -1586,7 +1554,7 @@ void read_atomicdata()
         for (ion = 0; ion < nions; ion++)
         {
           nlevels = get_nlevels(element,ion);
-          if ((cellhistory[tid].chelements[element].chions[ion].chlevels = (chlevels_struct *) malloc(nlevels*sizeof(chlevels_struct))) == NULL)
+          if ((cellhistory[tid].chelements[element].chions[ion].chlevels = malloc(nlevels*sizeof(chlevels_struct))) == NULL)
           {
             printout("[fatal] input: not enough memory to initialize cellhistory's levellist ... abort\n");
             exit(0);
@@ -1594,7 +1562,7 @@ void read_atomicdata()
           for (level = 0; level < nlevels; level++)
           {
             nphixstargets = get_nphixstargets(element,ion,level);
-            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = (chphixstargets_struct *) malloc(nphixstargets*sizeof(chphixstargets_struct))) == NULL)
+            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = malloc(nphixstargets*sizeof(chphixstargets_struct))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
               exit(0);
@@ -1603,21 +1571,21 @@ void read_atomicdata()
             ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
             nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
             
-            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = (double *) malloc((ndowntrans+1)*sizeof(double))) == NULL)
+            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = malloc((ndowntrans+1)*sizeof(double))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's individ_rad_deexc ... abort\n");
               exit(0);
             }
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[0] = ndowntrans;
             
-            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same = (double *) malloc((ndowntrans+1)*sizeof(double))) == NULL)
+            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same = malloc((ndowntrans+1)*sizeof(double))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_down_same ... abort\n");
               exit(0);
             }
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[0] = ndowntrans;
             
-            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = (double *) malloc((nuptrans+1)*sizeof(double))) == NULL)
+            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = malloc((nuptrans+1)*sizeof(double))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_up_same ... abort\n");
               exit(0);
@@ -1655,7 +1623,7 @@ void read_atomicdata()
   
   
   FILE *bflist_file;
-  if ((bflist = (bflist_t *) malloc(includedionisinglevels*sizeof(bflist_t))) == NULL)
+  if ((bflist = malloc(includedionisinglevels*sizeof(bflist_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize bflist ... abort\n");
     exit(0);
@@ -1696,7 +1664,7 @@ void read_atomicdata()
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n",nbfcontinua_ground);
   
   int itid;
-  phixslist = (phixslist_t *) malloc(nthreads*sizeof(phixslist_t));
+  phixslist = malloc(nthreads*sizeof(phixslist_t));
   if (phixslist == NULL)
   {
     printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
@@ -1718,7 +1686,7 @@ void read_atomicdata()
       /// of included elements, because the uppermost ionisation stages can't ionise.
       //printout("groundphixslist nbfcontinua_ground %d\n",nbfcontinua_ground);
       printout("initialising groundphixslist for itid %d\n",itid);
-      phixslist[itid].groundcont = (groundphixslist_t *) malloc(nbfcontinua_ground*sizeof(groundphixslist_t));
+      phixslist[itid].groundcont = malloc(nbfcontinua_ground*sizeof(groundphixslist_t));
       if (phixslist[itid].groundcont == NULL)
       {
         printout("[fatal] read_atomicdata: not enough memory to initialize phixslist[%d].groundcont... abort\n",itid);
@@ -1748,7 +1716,7 @@ void read_atomicdata()
       
       //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
       //else 
-      phixslist[itid].allcont = (fullphixslist_t *) malloc(nbfcontinua*sizeof(fullphixslist_t));
+      phixslist[itid].allcont = malloc(nbfcontinua*sizeof(fullphixslist_t));
       if (phixslist[itid].allcont == NULL)
       {
         printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");

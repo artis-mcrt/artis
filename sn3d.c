@@ -141,28 +141,26 @@ int main(int argc, char** argv)
   #endif
 
     
-  if ((mastate = (mastate_t *) malloc(nthreads*sizeof(mastate_t))) == NULL)
+  if ((mastate = malloc(nthreads*sizeof(mastate_t))) == NULL)
   {
     printout("[fatal] input: error initializing macro atom state variables ... abort\n");
     exit(0);
   }
-  if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) malloc(nthreads*sizeof(rpkt_cont_opacity_struct))) == NULL)
+  if ((kappa_rpkt_cont = malloc(nthreads*sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     exit(0);
   }
-  if ((coolingrates = (coolingrates_t *) malloc(nthreads*sizeof(coolingrates_t))) == NULL)
+  if ((coolingrates = malloc(nthreads*sizeof(coolingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing coolingrates communication variables ... abort\n");
     exit(0);
   }
-  if ((heatingrates = (heatingrates_t *) malloc(nthreads*sizeof(heatingrates_t))) == NULL)
+  if ((heatingrates = malloc(nthreads*sizeof(heatingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing heatingrates communication variables ... abort\n");
     exit(0);
   }
-  
-    
 
 
   /*
@@ -382,7 +380,7 @@ int main(int argc, char** argv)
       printout("reserve HUGEE %d space for MPI communication buffer\n",HUGEE);
       //char buffer[HUGEE];
       char *buffer;
-      if ((buffer = (char *) malloc(HUGEE*sizeof(char))) == NULL)
+      if ((buffer = malloc(HUGEE*sizeof(char))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
         exit(0);
@@ -390,7 +388,7 @@ int main(int argc, char** argv)
       int HUGEE2 = 8*((nblock+1)*total_nlte_levels) + 4*(nblock + 2);
       printout("reserve HUGEE2 %d space for MPI communication buffer2 for NLTE\n", HUGEE2);
       char *buffer2;
-      if ((buffer2 = (char *) malloc(HUGEE2*sizeof(char))) == NULL)
+      if ((buffer2 = malloc(HUGEE2*sizeof(char))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
         exit(0);
