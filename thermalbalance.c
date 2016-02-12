@@ -616,7 +616,7 @@ void calculate_cooling_rates(int modelgridindex)
           C = 0.0;
           for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex); //TODO: is this valid?
+            C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
           }
           C_fb += C;
         }

@@ -88,7 +88,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double trat, tratmid;
   double cell_len_scale;
   double check1, check2; //MK
-  int element,ion,level,phixstargetindex;
+  int element,ion,level,phixstargetindex,upperlevel;
   double t_current,t_previous;
   double rho,T_R,T_e,T_J,W;//,W_D;
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
@@ -736,13 +736,13 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                                 {
                                   for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
                                   {
-                                    upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+                                    upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
                                     Gamma += calculate_exclevelpop(n,element,ion,level) * get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
                                     if (level < ionisinglevels)
                                     {
                                       mastate[tid].level = level;
 
-                                      epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
+                                      epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
                                       //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
                                       Col_ion += calculate_exclevelpop(n,element,ion,level) * col_ionization(n,phixstargetindex,epsilon_trans);
                                     }

@@ -149,7 +149,7 @@ double phi(int element, int ion, int modelgridindex)
   double Col_rec;
   double epsilon_trans;
   int ionisinglevels;
-  int level, nlevels;
+  int level, nlevels, upperlevel, nlevelsupperion;
   double nt_ionization_rate(int modelgridindex, int element, int ion);
   int get_nlevels(int element, int ion);
   double Y_nt, run_tot;
@@ -196,7 +196,7 @@ double phi(int element, int ion, int modelgridindex)
       //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
       Alpha_st = 0.; ///approximative treatment neglects stimulated recombination
       Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
-      Col_rec=0.0;
+      Col_rec = 0.0;
 
       //     if (ion > 0)
       //	{
@@ -204,14 +204,17 @@ double phi(int element, int ion, int modelgridindex)
       mastate[tid].element = element;
       mastate[tid].ion = ion+1;
       mastate[tid].nnlevel = 1.0;
-      // TODO: upper level is ground state is assumed here
-      mastate[tid].level = 0;
-      mastate[tid].statweight = stat_weight(element,ion+1,0);
 
-      for (level = 0; level < ionisinglevels; level++)
+      nlevelsupperion = get_nlevels(element,ion+1);
+      for (upper = 0; upper < nlevelsupperion; upper++)
       {
-        epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
-        Col_rec += col_recombination(modelgridindex,level,epsilon_trans);
+        mastate[tid].level = upper;
+        mastate[tid].statweight = stat_weight(element,ion+1,upper);
+        for (level = 0; level < ionisinglevels; level++)
+        {
+          epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
+          Col_rec += col_recombination(modelgridindex,level,epsilon_trans);
+        }
       }
 	  //	}
 
@@ -680,6 +683,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   double nn, test;
   double superlevel_boltzmann(int modelgridindex, int element, int ion, int level);
   int get_nlevels_nlte(int element, int ion);
+  short is_nlte(int element, int ion, int level);
   int nlte_levels;
 
   double T_exc = get_TJ(modelgridindex);
