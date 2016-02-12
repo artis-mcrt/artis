@@ -20,35 +20,32 @@
 #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
-
 //#define HUGEE 2000018
 //#define HUGEE 50000
 //double buffer[HUGEE];
 //float *buffer;
 
-
-
-///fundamental constants-1
-#define CLIGHT 2.99792458e10 /*Speed of light. */
-#define CLIGHT2 8.9875518e20 /*Speed of light squared. */
-#define H 6.6260755e-27 /* Planck constant */
-#define MSUN 1.989e33 /* Solar mass */
-#define LSUN 3.826e33 /* Solar luminosity */
-#define MH 1.67352e-24 /* Mass of hydrogen atom. */
-#define ME 9.1093897e-28 /* Mass of free electron. */
-#define QE 4.80325E-10 /* //MK: Elementary charge in cgs units*/
-#define MNI56 (56*MH) /*Mass of ni56*/
-#define MFE52 (52*MH) /*Mass of fe52*/
-#define MCR48 (48*MH) /*Mass of cr48*/
-#define PI   3.141592654 /* PI - obviously. */
-#define MEV  1.6021772e-6 /* MeV to ergs */
-#define DAY  86400.0 /* day to seconds */
-#define SIGMA_T 6.6524e-25 /* Thomson cross-section */
-#define THOMSON_LIMIT 1e-2 /* Limit below which e-scattering is Thomson.*/
-#define PARSEC 3.086e18 /* 1 pc */
-#define EV  1.6021772e-12 /// eV to ergs
-#define KB 1.38065e-16 /// Boltzmann constant
-#define STEBO 5.670400e-5 /// Stefan-Boltzmann constant (data taken from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
+///fundamental constants
+#define CLIGHT 2.99792458e10    /// Speed of light
+#define CLIGHT2 8.9875518e20    /// Speed of light squared
+#define H 6.6260755e-27         /// Planck constant
+#define MSUN 1.989e33           /// Solar mass
+#define LSUN 3.826e33           /// Solar luminosity
+#define MH 1.67352e-24          /// Mass of hydrogen atom
+#define ME 9.1093897e-28        /// Mass of free electron
+#define QE 4.80325E-10          /// elementary charge in cgs units
+#define MNI56 (56*MH)           /// Mass of ni56
+#define MFE52 (52*MH)           /// Mass of fe52
+#define MCR48 (48*MH)           /// Mass of cr48
+#define PI   3.141592654
+#define MEV  1.6021772e-6       /// MeV to ergs
+#define DAY  86400.0            /// day to seconds
+#define SIGMA_T 6.6524e-25      /// Thomson cross-section
+#define THOMSON_LIMIT 1e-2      /// Limit below which e-scattering is Thomson
+#define PARSEC 3.086e18         /// 1 pc
+#define EV  1.6021772e-12       /// eV to ergs
+#define KB 1.38065e-16          /// Boltzmann constant
+#define STEBO 5.670400e-5       /// Stefan-Boltzmann constant (data taken from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 #define SAHACONST 2.0706659e-16 /// Saha constant
 
 ///numerical constants
@@ -63,7 +60,7 @@
 #define OSCSTRENGTHCONVERSION 1.3473837e+21
 
 #define isothermal_homogeneous_grid 0
-//#define MPTS_MODEL 10000  
+//#define MPTS_MODEL 10000
 
 
 #define MXGRID 100     /* Max number of grid cells in x-direction.*/
@@ -114,11 +111,11 @@ double E48V;
 
 #define COOLING_UNDEFINED       -99
 #define COOLINGTYPE_FF          880
-#define COOLINGTYPE_FB          881 
+#define COOLINGTYPE_FB          881
 #define COOLINGTYPE_COLLEXC     882
 #define COOLINGTYPE_COLLION     883
 #define HEATINGTYPE_FF          884
-#define HEATINGTYPE_BF          885 
+#define HEATINGTYPE_BF          885
 #define HEATINGTYPE_COLLDEEXC   886
 #define HEATINGTYPE_COLLRECOMB  887
 #define COOLINGCUT              0.99 //1.01
@@ -155,30 +152,30 @@ double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40
 
-extern gsl_rng *rng; /* pointer for random number generator */
+extern gsl_rng *rng; /// pointer for random number generator
 
-int nxgrid, nygrid, nzgrid; /* actual grid dimensions to use */
+int nxgrid, nygrid, nzgrid; /// actual grid dimensions to use
 int ngrid;
 int grid_type, model_type;
 
 int nprocs;      /// Global variable which holds the number of MPI processes
 int rank_global; /// Global variable which holds the rank of the active MPI process
 //int nprocs_exspec;
-int npkts;   
-int nesc; //number of packets that escape during current timestep  ///ATMOIC
+int npkts;
+int nesc; //number of packets that escape during current timestep  ///ATOMIC
 
 double xmax, ymax, zmax;
-double mtot, vmax, rmax; /* Total mass and outer velocity/radius. */
-double fe_sum, rho_sum; //MK: could now be declared locally
-double mni56; /*Total mass of Ni56 in the ejecta. */
-double mfe52; /*Total mass of Fe52 in the ejecta. */
-double mcr48; /*Total mass of Cr48 in the ejecta. */
-double mfeg; /*Total mass of Fe group elements in ejecta. */
-double tmax;      /// End time of current simulation.
-double tmin;      /// Start time of current simulation.
+double mtot, vmax, rmax;  /// Total mass and outer velocity/radius
+double fe_sum, rho_sum;   /// MK: could now be declared locally
+double mni56;             /// Total mass of Ni56 in the ejecta
+double mfe52;             /// Total mass of Fe52 in the ejecta
+double mcr48;             /// Total mass of Cr48 in the ejecta
+double mfeg;              /// Total mass of Fe group elements in ejecta
+double tmax;              /// End time of current simulation
+double tmin;              /// Start time of current simulation
 
 int ntstep;       /// Number of timesteps
-int itstep;       /// Inital timestep's number
+int itstep;       /// Initial timestep's number
 int ftstep;       /// Final timestep's number
 int nts_global;   /// Current time step
 
@@ -270,7 +267,7 @@ PKT pkt[MPKTS];
 
 
 int total_nlte_levels;            ///total number of nlte levels
-int n_super_levels; 
+int n_super_levels;
 
 
 mastate_t *mastate;
@@ -354,7 +351,7 @@ double time_syn[MSYN_TIME];
 
 double DeltaA; /* area used for syn */ ///possible to do this as local variable?
 
-#define EMISS_MAX 2 /* Maxmimum number of frequency points in 
+#define EMISS_MAX 2 /* Maxmimum number of frequency points in
 			     grid used to store emissivity estimators. */
 int emiss_offset; /*the index in the line list of the 1st line for which
 		    an emissivity estimator is recorded*/
@@ -383,7 +380,7 @@ float modelgrid_composition[MMODELGRID];
 float modelgrid_abundance[MMODELGRID*MELEMENTS];         /// Abundance of the element (by mass!).
 float modelgrid_groundlevelpop[MMODELGRID*MELEMENTS*MIONS];   /// Pointer to an array of floats which contains the groundlevel populations
                           /// of all included ionisation stages for the element.
-float modelgrid_partfunct[MMODELGRID*MELEMENTS*MIONS];        /// Pointer to an array of floats which contains the partition functions 
+float modelgrid_partfunct[MMODELGRID*MELEMENTS*MIONS];        /// Pointer to an array of floats which contains the partition functions
 */
 
 /// THESE ARE THE GRID BASED ESTIMATORS
@@ -405,7 +402,7 @@ double J[MMODELGRID+1];
   double bfheatingestimator[(MMODELGRID+1)*MELEMENTS*MIONS];
   double corrphotoionrenorm[(MMODELGRID+1)*MELEMENTS*MIONS];
   double redhelper[(MMODELGRID+1)*MELEMENTS*MIONS];
-  
+
   #ifdef DO_TITER
     double nuJ_reduced_save[MMODELGRID];
     double ffheatingestimator_save[MMODELGRID];
@@ -413,7 +410,7 @@ double J[MMODELGRID+1];
     double gammaestimator_save[MMODELGRID*MELEMENTS*MIONS];
     double bfheatingestimator_save[MMODELGRID*MELEMENTS*MIONS];
   #endif
-  
+
   //double mabfcount[MGRID],mabfcount_thermal[MGRID], kbfcount[MGRID],kbfcount_ion[MGRID],kffcount[MGRID], kffabs[MGRID],kbfabs[MGRID],kgammadep[MGRID];
   //double matotem[MGRID],maabs[MGRID];
 #endif
@@ -425,10 +422,10 @@ double J[MMODELGRID+1];
 
 int do_comp_est; /* 1 = compute compton emissivity estimators. 0 = don't */
 int do_r_lc;     /* If not set to 1 then the opacity for r-packets is 0. */
-int do_rlc_est;  /* 1= compute estimators for the r-pkt light curve. 
-                    2 = compute estimators with opacity weights 
+int do_rlc_est;  /* 1= compute estimators for the r-pkt light curve.
+                    2 = compute estimators with opacity weights
                     3 = compute estimators, but use only for gamma-heating rate */
- 
+
 
 int n_out_it; /* # of sets of 1,000,000 photons to run. */
 
@@ -610,13 +607,12 @@ FILE *nlte_file;
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
 extern short neutral_flag;
 
-short elements_uppermost_ion[MTHREADS][MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element 
-                                                   /// in a given cell. Be aware that this must not be used outside of the update_grid 
-                                                   /// routine and their doughters. 
+short elements_uppermost_ion[MTHREADS][MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element
+                                                   /// in a given cell. Be aware that this must not be used outside of the update_grid
+                                                   /// routine and their doughters.
 
 extern short use_cellhist;
 
 #ifdef _OPENMP
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
-

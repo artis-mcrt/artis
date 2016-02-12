@@ -156,7 +156,6 @@ double phi(int element, int ion, int modelgridindex)
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 
-
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
   float T_e = get_Te(modelgridindex);

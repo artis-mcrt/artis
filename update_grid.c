@@ -28,6 +28,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   int get_nlevels(int element, int ion);
   int get_nlevels_nlte(int element, int ion);
   int get_nphixstargets(int element, int ion, int level);
+  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
   int dummy_element, dummy_ion, dummy_level;
   double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   double col_recombination(int modelgridindex, int lower, double epsilon_trans);
@@ -491,7 +492,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
                     modelgrid[n].thick = 1;
                   }
-                  else modelgrid[n].thick = 0;
+                  else
+                    modelgrid[n].thick = 0;
 
                 #else
                   /// non-LTE version of the code
@@ -560,7 +562,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
                       modelgrid[n].thick = 1;
                     }
-                    else modelgrid[n].thick = 0;
+                    else
+                      modelgrid[n].thick = 0;
                   }
                   else
                   {
@@ -655,7 +658,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                           {
                             for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
                             {
-                              Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,phixstargetindex,n); //TODO: is this valid?
+                              Gamma += calculate_exclevelpop(n,element,ion,level) * get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
                              //printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,phixstargetindex,level,n));
 
                               if (level < ionisinglevels)
@@ -664,7 +667,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                                 epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
                                 //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-                                Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,phixstargetindex,epsilon_trans);
+                                Col_ion += calculate_exclevelpop(n,element,ion,level) * col_ionization(n,phixstargetindex,epsilon_trans);
                               }
                             }
                           }
@@ -725,7 +728,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                               if (ion < nions-1)
                               {
-
                                 ionisinglevels = get_bfcontinua(element,ion);
                                 mastate[tid].element = element;
                                 mastate[tid].ion = ion;
@@ -735,14 +737,14 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                                   for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
                                   {
                                     upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-                                    Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
+                                    Gamma += calculate_exclevelpop(n,element,ion,level) * get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
                                     if (level < ionisinglevels)
                                     {
                                       mastate[tid].level = level;
 
                                       epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
                                       //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-                                      Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,phixstargetindex,epsilon_trans);
+                                      Col_ion += calculate_exclevelpop(n,element,ion,level) * col_ionization(n,phixstargetindex,epsilon_trans);
                                     }
                                   }
                                 }
@@ -788,7 +790,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                       #ifdef NLTE_POPS_ON
                           ///NEW NLTE CALL HERE FOR NOW
-                          nlte_test=0.0;
+                          nlte_test = 0.0;
                           for (element = 0; element < nelements; element++)
                           {
                             nions = get_nions(element);
@@ -801,7 +803,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                             }
                             if (trial > nlte_test)
                             {
-                              nlte_test=trial;
+                              nlte_test = trial;
                             }
                             //			    printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
                             }
@@ -816,7 +818,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         }
                         if (nlte_test  > 0.0)
                         {
-                          printout("NLTE solver converged to tolerace %g after %d iterations.\n", nlte_test, nlte_iter);
+                          printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test, nlte_iter);
                         }
                       #endif
 
@@ -1303,7 +1305,6 @@ int get_cell(x, y, z, t)
   return(n);
 
 
-
   /* OLD
   trat = t / tmin;
 
@@ -1321,8 +1322,6 @@ int get_cell(x, y, z, t)
 }
 }
   END OLD */
-
-
 
   printout("Failed to find cell (get_cell). \n");
   printout("x %g, y %g, z %g, t %g\n", x, y, z, t);
@@ -1447,9 +1446,6 @@ void update_abundances(int modelgridindex, double t_current)
         tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
         modelgrid[modelgridindex].composition[element].abundance = tifrac;
       }
-
-
-
     }
     //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g, abund %g, %g, %g, stable %g,%g\n",modelgridindex,ni_in,co_in,fe_in,nifrac,cofrac,fefrac,modelgrid[modelgridindex].fnistable,modelgrid[modelgridindex].fcostable);
   }
@@ -1534,7 +1530,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
             //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
             //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
             #ifdef NT_ON
-	    if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.)) break;
+	            if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.)) break;
             #else
               if (gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
             #endif
@@ -1587,16 +1583,19 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
-      nne_tot += nnelement*get_element(element);
+      nne_tot += nnelement * get_element(element);
 
       /// Assign the species population to the neutral ion and set higher ions to MINPOP
       for (ion = 0; ion < nions; ion++)
       {
-        if (ion == 0) nnion = nnelement;
+        if (ion == 0)
+          nnion = nnelement;
         else
         {
-          if (abundance > 0.) nnion = MINPOP;
-          else nnion = 0.;
+          if (abundance > 0.)
+            nnion = MINPOP;
+          else
+            nnion = 0.;
         }
         nntot += nnion;
         nne += nnion * (get_ionstage(element,ion)-1);
@@ -1668,7 +1667,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
-      nne_tot += nnelement*get_element(element);
+      nne_tot += nnelement * get_element(element);
 
       /// Use ionisationfractions to calculate the groundlevel populations
       for (ion = 0; ion < nions; ion++)
@@ -1732,9 +1731,6 @@ void precalculate_partfuncts(int modelgridindex)
     }
   }
 }
-
-
-
 
 
 
@@ -1884,11 +1880,7 @@ double get_thermalratio(int element, int ion, int level, int cellnumber)
 
 
 
-
-
 /*
-
-
 
 double get_Gamma(int cellnumber, int element, int ion)
 ///photoionization rate: paperII 3.5.2

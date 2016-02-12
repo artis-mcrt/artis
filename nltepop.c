@@ -1,7 +1,7 @@
 #include "sn3d.h"
 
 double nlte_pops(int element, int ion, int modelgridindex, int timestep)
-//solves for nlte correction factors to level populastions for levels
+//solves for nlte correction factors to level populations for levels
 
 {
   int nlte_levels;
@@ -61,7 +61,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
   if (get_nlevels(element,ion) > 1)
   {
 
-    nne=get_nne(modelgridindex);
+    nne = get_nne(modelgridindex);
     T_e = get_Te(modelgridindex);
 
     printout("Solving for NLTE populations in cell %d. Doing element %d, ion %d. I think it's timestep %d\n", modelgridindex, element, ion, timestep);

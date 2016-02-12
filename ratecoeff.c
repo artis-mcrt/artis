@@ -772,9 +772,9 @@ double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixst
     double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[upperindex];
     double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[lowerindex];
 
-    result=f_lower + (f_upper-f_lower)/(T_upper-T_lower) * (T-T_lower);
+    result = f_lower + (f_upper-f_lower)/(T_upper-T_lower) * (T-T_lower);
   }
-  else result=elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[TABLESIZE-1];
+  else result = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[TABLESIZE-1];
 
   return result;
 }

@@ -382,7 +382,6 @@ double photoionization_crosssection(double nu_edge, double nu)
 {
   double epsilon(int element, int ion, int level);
   double sigma_bf;
-  double nu_max_phixs;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -393,8 +392,17 @@ double photoionization_crosssection(double nu_edge, double nu)
 
   i = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
 
-  if (i < 0):
+  if (i < 0)
+  {
     sigma_bf = 0.0;
+    #ifdef DEBUG_ON
+      printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
+      printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
+      printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
+      printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
+      //abort();
+    #endif
+  }
   else if (i < NPHIXSPOINTS)
   {
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
@@ -404,19 +412,11 @@ double photoionization_crosssection(double nu_edge, double nu)
     /// use a parameterization of sigma_bf by the Kramers formula
     /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     /// so far the highest grid point, otherwise the cross-section is not continuous
-    nu_max_phixs = nu_edge * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+    double nu_max_phixs = nu_edge * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs/nu, 3);
   }
 
   #ifdef DEBUG_ON
-    if (nu < nu_edge)
-    {
-      printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
-      printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
-      printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
-      printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
-      //abort();
-    }
     if (sigma_bf < 0)
     {
       printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
@@ -444,27 +444,35 @@ double photoionization_crosssection(double nu_edge, double nu)
   int ion = mastate[tid].ion;
   int level = mastate[tid].level;
 
-  if (nu == nu_edge)
+  lowerindex = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
+  if (lowerindex < 0):
   {
-    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
+    sigma_bf = 0.0;
+    #ifdef DEBUG_ON
+      printout("[warning] interpolate_photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
+      printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
+      printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
+      printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
+      //abort();
+    #endif
   }
-  else
+  else if (lowerindex < NPHIXSPOINTS)
   {
-    lowerindex = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
     if (lowerindex+1 < NPHIXSPOINTS)
     {
       double f_upper = elements[element].ions[ion].levels[level].photoion_xs[lowerindex+1];
       double f_lower = elements[element].ions[ion].levels[level].photoion_xs[lowerindex];
       double nu_upper = nu_edge * (1.0 + NPHIXSNUINCREMENT*(lowerindex+1));
       double nu_lower = nu_edge * (1.0 + NPHIXSNUINCREMENT*(lowerindex));
-      sigma_bf = f_lower + (f_upper-f_lower)/(nu_upper-nu_lower) * (nu-nu_lower);
+      sigma_bf = f_lower + (f_upper-f_lower) / (nu_upper-nu_lower) * (nu-nu_lower);
     }
     else
     {
       /// use a parameterization of sigma_bf by the Kramers formula
       /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       /// so far the highest grid point, otherwise the cross-section is not continuous
-      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_edge*(1.0+NPHIXSNUINCREMENT*(NPHIXSPOINTS-1))/nu,3);
+      double nu_max_phixs = nu_edge * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs/nu, 3);
     }
   }
 
