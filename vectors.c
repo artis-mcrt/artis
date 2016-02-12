@@ -1,11 +1,9 @@
 #include "sn3d.h"
+
 /***********************************************************/
-
 /*Routine for getting the magnitude of a vector.*/
-
-double
-vec_len (x)
-     double x[3];
+double vec_len (x)
+double x[3];
 {
   double y;
 
@@ -14,19 +12,17 @@ vec_len (x)
   y = sqrt(y);
 
   if (y < 0)
-    {
-      printout("Error: vec_len. Abort.\n");
-      exit(0);
-    }
+  {
+    printout("Error: vec_len. Abort.\n");
+    exit(0);
+  }
 
   return(y);
 }
 
 /************************************************************/
 /*Routine for normalizing a vector.*/
-
-void
-vec_norm (double x[3], double z[3])
+void vec_norm (double x[3], double z[3])
 {
   double y;
 
@@ -35,10 +31,10 @@ vec_norm (double x[3], double z[3])
   y = sqrt(y);
 
   if (y < 0)
-    {
-      printout("Error: vec_len. Abort.\n");
-      exit(0);
-    }
+  {
+    printout("Error: vec_len. Abort.\n");
+    exit(0);
+  }
 
   z[0]=x[0]/y;
   z[1]=x[1]/y;
@@ -48,8 +44,7 @@ vec_norm (double x[3], double z[3])
 /************************************************************/
 /*Routine for taking dot product.*/
 
-double
-dot (x,y)
+double dot (x,y)
      double *x;
      double *y;
 {
@@ -63,8 +58,7 @@ dot (x,y)
 /************************************************************/
 /*Routine for getting velocity vector of the flow at a position.*/
 
-int
-get_velocity (x,y,t)
+int get_velocity (x,y,t)
      double *x, *y;
      double t;
 {
@@ -81,8 +75,7 @@ get_velocity (x,y,t)
 /*Routine for aberation of angles in SR. Takes one direction and velocity
  as input and gives back another direction.*/
 
-int
-angle_ab (dir1,vel,dir2)
+int angle_ab (dir1,vel,dir2)
      double *dir1,*vel,*dir2;
 {
   double gamma_rel;
@@ -92,7 +85,7 @@ angle_ab (dir1,vel,dir2)
 
   vsqr = dot(vel,vel)/CLIGHT2;
   gamma_rel = 1./(sqrt(1 - vsqr));
-  
+
   ndotv = dot(dir1,vel);
   fact1 = gamma_rel * (1 - (ndotv/CLIGHT));
   fact2 = (gamma_rel - (gamma_rel*gamma_rel*ndotv/(gamma_rel + 1)/CLIGHT))/CLIGHT;
@@ -100,16 +93,14 @@ angle_ab (dir1,vel,dir2)
   dir2[0] = (dir1[0] - (vel[0] * fact2))/fact1;
   dir2[1] = (dir1[1] - (vel[1] * fact2))/fact1;
   dir2[2] = (dir1[2] - (vel[2] * fact2))/fact1;
-  
+
   return(0);
 }
-/************************************************************/
 
+/************************************************************/
 /*Routine for Doppler shift in SR. Takes one direction and velocity
  as input and gives back double.*/
-
-double
-doppler (dir1,vel)
+double doppler (dir1,vel)
      double *dir1,*vel;
 {
   double gamma_rel;
@@ -122,7 +113,7 @@ doppler (dir1,vel)
   gamma_rel = 1.;
 
   ndotv = dot(dir1,vel);
- 
+
   fact1 = gamma_rel * (1. - (ndotv/CLIGHT));
 
   if (fabs(fact1-1) > 0.5)
@@ -137,8 +128,7 @@ doppler (dir1,vel)
 
 /*Routine for scattering a direction through angle theta.*/
 
-int
-scatter_dir(dir_in, cos_theta, dir_out)
+int scatter_dir(dir_in, cos_theta, dir_out)
      double *dir_in,*dir_out;
      double cos_theta;
 {
@@ -147,8 +137,8 @@ scatter_dir(dir_in, cos_theta, dir_out)
   double norm1, norm2;
   double r11,r12,r13,r21,r22,r23,r31,r32,r33;
   double sin_theta;
-  
-  /*begin with setting the direction in coordinates where original direction 
+
+  /*begin with setting the direction in coordinates where original direction
     is parallel to z-hat.*/
 
   zrand = gsl_rng_uniform(rng);
@@ -175,13 +165,12 @@ scatter_dir(dir_in, cos_theta, dir_out)
   r31 = dir_in[0] * norm2;
   r32 = dir_in[1] * norm2;
   r33 = dir_in[2] * norm2;
-  
+
   dir_out[0] = (r11 * xprime) + (r21 * yprime) + (r31 * zprime);
   dir_out[1] = (r12 * xprime) + (r22 * yprime) + (r32 * zprime);
   dir_out[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
-  
-  return(0);
 
+  return(0);
 
 }
 
@@ -196,4 +185,3 @@ int cross_prod (v1, v2, v3)
 
   return(0);
 }
-

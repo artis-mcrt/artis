@@ -23,7 +23,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double bfheating_est,ffheating_est,ffcooling_ana,bfheating_ana,bfcooling_ana,photoabs_est,photoabs_twiddle_est,radrecomb_ana,thermalratio;
   int counter;
   double old,new;
-  
+
   int nlte;
   int get_nlevels(int element, int ion);
   int get_nlevels_nlte(int element, int ion);
@@ -53,7 +53,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 //  double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
   //double interpolate_zeta(int element, int ion, double T);
   //double gamma_lte,zeta;
-  
+
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
   double ionstagepop(int modelgridindex, int element, int ion);
@@ -78,7 +78,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   /// only needed if all level populations should be printed to the output-file
   //double pop, excitedlevelpops;
-  
+
   int n,ncl;
   //int samplecell;
   double deltarho_old,deltaT_R_old,deltaT_e_old;
@@ -92,19 +92,19 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double rho,T_R,T_e,T_J,W;//,W_D;
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
                          /// assigned to max_path_step after the parallel update_grid finished.
-  
+
   double nne,nntot;
   double pop;
   double compton_optical_depth;
   double grey_optical_depth,grey_optical_deptha;
-  
+
   double dt_elapsed,dt_forward;
   double Gamma,Gamma_old;
-  
+
   int first_nonempty_cell = -1000;
   int assoc_cells;
   //int lastelement = nelements-1;
-  
+
   //temprange_paras paras2;
   //int status;
   //int iter;
@@ -121,16 +121,16 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
   int jjj;
   int nlte_iter;
-  
+
   double nlte_test;
   double trial;
 
   /*if (&modelgrid[96].composition[0] == NULL)
   {
    printout("fatal error in ts %d abort\n",m);
-   abort(); 
+   abort();
   }*/
-  
+
   int tb_info = 0;
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
   check1=check2=0.0; /// MK
@@ -141,7 +141,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   {
     mps[i] = 1.e35;
   }
-  
+
   /// For debug temperature output
   /*
   sprintf(tempfilename,"d%d_thermal_%.4d.out",m,my_rank);
@@ -153,7 +153,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   }
   setvbuf(thermal_file, NULL, _IOLBF, 1);
   */
-  
+
   //printout("[debug] update_grid: time before initialisation of heating file %d\n",time(NULL));
   //#ifndef FORCE_LTE
   //  sprintf(filename,"h%d-%d_heating_%.4d.out",m,titer,my_rank);
@@ -165,7 +165,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //  setvbuf(heating_file, NULL, _IOLBF, 1);
   //#endif
   //printout("[debug] update_grid: heating file initialised %d\n",time(NULL));
-  
+
   ///Calculate the critical opacity at which opacity_case 3 switches from a
   ///regime proportional to the density to a regime independent of the density
   ///This is done by solving for tau_sobolev == 1
@@ -173,15 +173,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * time_step[m].mid);
   printout("update_grid: rho_crit = %g\n", rho_crit);
   //printf("time %ld\n",time(NULL));
-  
+
   /// Needed to update abundances of radioactive isotopes.
   t_current = time_step[m].start;
-  if (m == 0) 
+  if (m == 0)
   {
     t_previous = 0.;
     deltaV = pow(wid_init*trat,3);  /// volume of grid cell: current or previous cell size???????????????????
   }
-  else 
+  else
   {
     t_previous = time_step[m-1].start;
     deltaV = pow(wid_init * time_step[m-1].mid/tmin,3);  /// volume of grid cell: current or previous cell size???????????????????
@@ -196,34 +196,34 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
       dt_forward = (log(time_step[m].mid) - log(time_step[m-1].mid));
     }
   }
-  
+
   /// and for the volume estimators
   deltat = t_current-t_previous;  /// length of previous timestep
-  
+
   if (titer == 0)
   {
     if (m == 0)
     {
       /// Set these values, but they will not be used
-      deltat = time_step[m].width; 
+      deltat = time_step[m].width;
       deltaV = pow(wid_init*tratmid,3);
     }
     else
     {
-      deltat = time_step[m-1].width; 
+      deltat = time_step[m-1].width;
       deltaV = pow(wid_init * time_step[m-1].mid/tmin,3);
     }
   }
   else
   {
-    deltat = time_step[m].width; 
+    deltat = time_step[m].width;
     deltaV = pow(wid_init*tratmid,3);
   }
-  
+
   printout("timestep %d, titer %d\n",m,titer);
   printout("deltaV %g, deltat %g\n",deltaV,deltat);
-  
-  
+
+
   /*
   FILE *photoion_file;
   FILE *bf_file;
@@ -263,11 +263,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   }
   */
 
-  
+
   /// Compare values of rate coefficients obtained by the tabulated values to
   /// directly integrated values.
   //check_interpolation(T_min,T_max);
-  
+
 //   #ifndef FORCE_LTE
 //     //sprintf(Alphaspfilename,"bfcount%.2d-%.2d_%.4d.out",m,titer,my_rank);
 //     sprintf(Alphaspfilename,"bfcount%d-%d_%.4d.out",m,titer,my_rank);
@@ -280,14 +280,14 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 //   #endif
 
   #ifdef _OPENMP
-    #pragma omp parallel private(element,nions,ion,nlevels,level) 
+    #pragma omp parallel private(element,nions,ion,nlevels,level)
     //copyin(nuJ,J,rhosum,T_Rsum,T_esum,Wsum,associatedcells)
     {
   #endif
       /// Do not use values which are saved in the cellhistory within update_grid
       /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
       use_cellhist = -1;
-      
+
       /// All entries of the cellhistory stack must be flagged as empty at the
       /// onset of the new timestep.
       cellhistory[tid].cellnumber = -99;
@@ -302,7 +302,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           for (level = 0; level < nlevels; level++)
           {
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = -99.;
-            
+
             for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = -99.;
@@ -315,12 +315,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           }
         }
       }
-      
+
       /// Reset histindex to unknown
       //printout("thread%d _ update_grid histindex %d\n",tid,histindex);
       //histindex = -99;
       //printout("thread%d _ update_grid histindex %d\n",tid,histindex);
-      
+
       /// Updating cell information
       #ifdef _OPENMP
         #pragma omp for private(n,assoc_cells,radial_pos,tb_info,rho,element,nions,ion,nntot,nne,compton_optical_depth,grey_optical_deptha,grey_optical_depth,T_R,T_J,T_e,W,nlevels,Gamma,level,T_e_old,cell_len_scale) reduction(+:check1,check2) schedule(dynamic)
@@ -355,7 +355,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             //rho = cell[n].rho;
             /// This is done outside update grid now
             //modelgrid[n].totalcooling = COOLING_UNDEFINED;
-            
+
 
             if (opacity_case == 4)
             {
@@ -365,11 +365,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               T_e_old = T_e;
               W = cell[n].W;
               nne = cell[n].nne;*/
-              
+
               /// Update abundances of radioactive isotopes
               //printout("call update abundances for timestep %d in model cell %d\n",m,n);
               update_abundances(n, time_step[m].mid);
-        
+
               /// For timestep 0 we calculate the level populations straight forward wihout
               /// applying any temperature correction
               if (m-itstep == 0 && titer == 0)
@@ -388,11 +388,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     }
                   }
                 #endif
-                
+
                 /// W == 1 indicates that this modelgrid cell was treated grey in the
                 /// last timestep. Therefore it has no valid Gamma estimators and must
-                /// be treated in LTE at restart. 
-                if (modelgrid[n].thick == 0 && get_W(n) == 1) 
+                /// be treated in LTE at restart.
+                if (modelgrid[n].thick == 0 && get_W(n) == 1)
                 {
                   modelgrid[n].thick = 1;
                   printout("force modelgrid cell to be grey at restart\n");
@@ -411,13 +411,13 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 #endif
                 nne = get_nne(n);
                 compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                        
+
                 grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
                 printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
                 grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                 printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                 modelgrid[n].grey_depth = grey_optical_depth;
-                    
+
   //               grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                 if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
                 {
@@ -429,12 +429,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               /// For all other timesteps temperature corrections have to be applied
               else
               {
-                /// we have to calculate the electron density 
+                /// we have to calculate the electron density
                 /// and all the level populations
                 /// Normalise estimators and make sure that they are finite.
                 /// Then update T_R and W using the estimators.
                 /// (This could in principle also be done for empty cells)
-    
+
                 #ifdef FORCE_LTE
                   /// LTE version of the code
                   if (!isfinite(J[n]))
@@ -443,7 +443,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     abort();
                   }
                   J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
-                  
+
                   #ifdef DO_TITER
                     if (J_reduced_save[n] >= 0)
                     {
@@ -451,7 +451,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     }
                     J_reduced_save[n] = J[n];
                   #endif
-                  
+
                   T_R = pow(PI/STEBO*(J[n]),1./4.);
                   if (isfinite(T_R))
                   {
@@ -468,12 +468,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   T_J = T_R;
                   T_e = T_R;
                   W = 1.;
-                  
+
                   modelgrid[n].TR = T_R;
                   modelgrid[n].Te = T_e;
                   modelgrid[n].TJ = T_J;
                   modelgrid[n].W = W;
-                
+
                   /// These don't depend on T_e, therefore take them out of the T_e iteration
                   precalculate_partfuncts(n);
                   nntot = calculate_populations(n,0);
@@ -484,7 +484,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                   printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                   modelgrid[n].grey_depth = grey_optical_depth;
-  
+
   //                 grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                   if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
                   {
@@ -492,8 +492,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     modelgrid[n].thick = 1;
                   }
                   else modelgrid[n].thick = 0;
-                
-                #else 
+
+                #else
                   /// non-LTE version of the code
                   if (initial_iteration == 1 || modelgrid[n].thick == 1)
                   {
@@ -504,7 +504,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       abort();
                     }
                     J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
-                    
+
                     #ifdef DO_TITER
                       if (J_reduced_save[n] >= 0)
                       {
@@ -512,7 +512,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       }
                       J_reduced_save[n] = J[n];
                     #endif
-                    
+
                     T_R = pow(PI/STEBO*(J[n]),1./4.);
                     if (isfinite(T_R))
                     {
@@ -529,12 +529,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     T_J = T_R;
                     T_e = T_R;
                     W = 1.;
-                    
+
                     modelgrid[n].TR = T_R;
                     modelgrid[n].Te = T_e;
                     modelgrid[n].TJ = T_J;
                     modelgrid[n].W = W;
-                  
+
                     /// These don't depend on T_e, therefore take them out of the T_e iteration
                     for (element = 0; element < nelements; element++)
                     {
@@ -553,7 +553,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                     printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                     modelgrid[n].grey_depth = grey_optical_depth;
-  
+
   //                   grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                     if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
                     {
@@ -570,12 +570,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
                       abort();
                     }
-                    
+
                     J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
                     nuJ[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
                     ffheatingestimator[n] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
                     colheatingestimator[n] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
-                    
+
                     #ifdef DO_TITER
                       if (J_reduced_save[n] >= 0)
                       {
@@ -598,7 +598,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       }
                       colheatingestimator_save[n] = colheatingestimator[n];
                     #endif
-                   
+
                     for (element = 0; element < nelements; element++)
                     {
                       nions = get_nions(element);
@@ -614,9 +614,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                           }
                           gammaestimator_save[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion];
                         #endif
-                        
+
                         corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion]/get_corrphotoioncoeff_ana(element,ion,0,0,n);
-                        
+
                         if (!isfinite(corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]))
                         {
                           printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,gammaestimator[n*nelements*maxion+element*maxion+ion],get_corrphotoioncoeff_ana(element,ion,0,0,n));
@@ -625,11 +625,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                       /// 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm values
                       /// so that the values are known when required by the call to get_corrphotoioncoeff in the following
-                      /// loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest corrphotoionrenorm 
+                      /// loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest corrphotoionrenorm
                       /// in frequency space which can lead to zero contributions to the total photoionsation rate!
                       }
                     }
-                    
+
                     /// Then reopen the same loops again.
                     for (element = 0; element < nelements; element++)
                     {
@@ -650,20 +650,20 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                           mastate[tid].element = element;
                           mastate[tid].ion = ion;
                           mastate[tid].nnlevel = 1.0;
-                          
+
                           for (level = 0; level < nlevels; level++)
                           {
                             for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
                             {
                               Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,phixstargetindex,n); //TODO: is this valid?
                              //printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,phixstargetindex,level,n));
-                        
+
                               if (level < ionisinglevels)
-                              {			    
+                              {
                                 mastate[tid].level = level;
 
                                 epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
-                                //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);				    
+                                //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
                                 Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,phixstargetindex,epsilon_trans);
                               }
                             }
@@ -674,18 +674,18 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         }
                         gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
                         //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
-                        
+
                         bfheatingestimator[n*nelements*maxion+element*maxion+ion] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
                         #ifdef DO_TITER
                           if (bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
                           {
                             bfheatingestimator[n*nelements*maxion+element*maxion+ion] = (bfheatingestimator[n*nelements*maxion+element*maxion+ion]+bfheatingestimator_save[n*nelements*maxion+element*maxion+ion])/2.;
                           }
-                          bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]; 
+                          bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion];
                         #endif
                         /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
                         /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
-                      
+
                         bfheatingestimator[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]/get_bfheatingcoeff_ana(element,ion,0,0,n);
 
                         if (!isfinite(bfheatingestimator[n*nelements*maxion+element*maxion+ion]))
@@ -697,7 +697,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[n*nelements*maxion+element*maxion+ion]);
                       }
                     }
-                    
+
                     /// Get radiation field parameters out of the estimators
                     get_radfield_params(J[n],nuJ[n],n,&T_J,&T_R,&W);
                     modelgrid[n].TJ = T_J;
@@ -713,7 +713,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       {
                         //recalculate the Gammas using the current population estimates
                         if (nlte_iter != 0)
-                        {    
+                        {
                           for (element = 0; element < nelements; element++)
                           {
                             nions = get_nions(element);
@@ -722,7 +722,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                               nlevels = get_bfcontinua(element,ion);
                               Gamma = 0.;
                               Col_ion = 0.;
-                              
+
                               if (ion < nions-1)
                               {
 
@@ -758,20 +758,20 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                       /// These don't depend on T_e, therefore take them out of the T_e iteration
                       precalculate_partfuncts(n);
-                    
+
                       /// Find T_e as solution for thermal balance
                       T_e_old = get_Te(n);
                       if (titer == 0)
                         T_e = call_T_e_finder(n,time_step[m-1].mid,tb_info,MINTEMP,MAXTEMP);
                       else
                         T_e = call_T_e_finder(n,time_step[m].mid,tb_info,MINTEMP,MAXTEMP);
-                      if (T_e > 2.*T_e_old) 
+                      if (T_e > 2.*T_e_old)
                       {
                         T_e = 2.*T_e_old;
                         printout("use T_e damping in cell %d\n",n);
                         if (T_e > MAXTEMP) T_e = MAXTEMP;
                       }
-                      else if (T_e < 0.5*T_e_old) 
+                      else if (T_e < 0.5*T_e_old)
                       {
                         T_e = 0.5*T_e_old;
                         printout("use T_e damping in cell %d\n",n);
@@ -826,7 +826,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                     printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                     modelgrid[n].grey_depth = grey_optical_depth;
-                    
+
     //                   grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                     if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
                     {
@@ -841,7 +841,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
 
               /// Temperatures are are now written to file outside the parallel block!
-              
+
               /// Reset the volume estimators to zero for the current timestep
               /// Moved next lines to zero_estimators routine (SS)
               /*
@@ -850,15 +850,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               cell[n].heating_ff = 0.;
               cell[n].heating_bf = 0.;
               */
-              
-              
+
+
               //set_kappagrey(n,SIGMA_T);
-              
+
               /// Cooling rates depend only on cell properties, precalculate total cooling
               /// and ion contributions inside update grid and communicate between MPI tasks
               calculate_kpkt_rates(n);
             }
-        
+
             /// MK Begin
             if (opacity_case == 3)
             {
@@ -873,7 +873,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               }
             }
             /// MK End
-        
+
             if (do_rlc_est == 2)
             {
               if (get_nne(n) > 0)
@@ -892,7 +892,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             }
 
             //	    printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
-            
+
             ///Non-OpenMP output of estimator files
             #ifndef _OPENMP
               //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
@@ -963,15 +963,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               fprintf(estimators_file,"\n");
             #endif
           }
-          else 
-          { 
+          else
+          {
             ///Treat modelgrid cells which are not represented in the simulation grid
             ///Set grid properties to zero
             set_TR(n,0.);
             set_TJ(n,0.);
             set_Te(n,0.);
             set_W(n,0.);
-            
+
             #ifndef FORCE_LTE
               for (element = 0; element < nelements; element++)
               {
@@ -983,7 +983,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 }
               }
             #endif
-  
+
             ///Non-OpenMP output of estimator files
             ///Indicates that this cell is not represented in the simulation grid by printing 0
             #ifndef _OPENMP
@@ -1024,7 +1024,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   fprintf(estimators_file,"%g ",0.);
                 }
               }
-              
+
               #ifndef FORCE_LTE
                 for (element = 0; element < nelements; element++)
                 {
@@ -1113,7 +1113,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             fprintf(estimators_file,"%g ",ionstagepop(n,element,ion));
           }
         }
-        
+
         #ifndef FORCE_LTE
           for (element = 0; element < nelements; element++)
           {
@@ -1174,7 +1174,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             fprintf(estimators_file,"%g ",0.);
           }
         }
-        
+
         #ifndef FORCE_LTE
           for (element = 0; element < nelements; element++)
           {
@@ -1198,14 +1198,14 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
       }
     }
   #endif
-    
-    
+
+
   /// Move that check to outside the update grid routine. These numbers
   /// must be the same as they were during grid_init, but on the
   /// grid as a whole. Therefore densities and kappa must be propagated.
   /*
   //fclose(thermal_file);
-  check1=check2=0.;  
+  check1=check2=0.;
   int mgi;
   for (n=0; n < ngrid; n++)
   {
@@ -1216,7 +1216,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   printout("Grey normalisation check: %g\n", check1/check2);
   */
 
-  
+
   /// Assign the minimum of thread private mps to the global variable max_path_step
   max_path_step = mps[0];
   for (i=1; i < nthreads; i++)
@@ -1227,7 +1227,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     }
   }
 
-  
+
   if (do_rlc_est == 2)
   {
     if (max_path_step < (wid_init * trat / 10.))
@@ -1236,11 +1236,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     }
   }
   //printout("max_path_step %g\n", max_path_step);
-  
+
   //#ifndef FORCE_LTE
   //  fclose(heating_file);
   //#endif
-  
+
   //printout("[debug] update_grid: update for timestep %d finished\n",m);
   //printf("time %ld\n",time(NULL));
   printout("[debug] update_grid: process %d finished update_grid at %d\n",my_rank,time(NULL));
@@ -1330,7 +1330,7 @@ int get_cell(x, y, z, t)
   printout("xend %g yend %g zend %g\n", cell[0].pos_init[0] * trat, cell[0].pos_init[1] * trat,cell[0].pos_init[2] * trat);
   printout("xend %g yend %g zend %g\n", (cell[0].pos_init[0]+wid_init) * trat, (cell[0].pos_init[1]+wid_init) * trat,(cell[0].pos_init[2]+wid_init) * trat);
   printout("xwid %g ywid %g zwid %g\n", (wid_init) * trat, (wid_init) * trat,(wid_init) * trat);
-    
+
   exit(0);
 }
 
@@ -1368,7 +1368,7 @@ void update_abundances(int modelgridindex, double t_current)
   double lambdafe,lambdamn;
   double deltat;
   int element;
-  
+
   t_current -= t_model;
   lambdani = 1./TNICKEL;
   lambdaco = 1./TCOBALT;
@@ -1376,7 +1376,7 @@ void update_abundances(int modelgridindex, double t_current)
   lambdamn = 1./T52MN;
   lambdacr = 1./T48CR;
   lambdav = 1./T48V;
-  
+
   if (homogeneous_abundances == 1)
   {
     ni_in = elements[get_elementindex(28)].abundance;
@@ -1395,7 +1395,7 @@ void update_abundances(int modelgridindex, double t_current)
         cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
-      if (get_element(element) == 26) 
+      if (get_element(element) == 26)
       {
         fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
@@ -1422,32 +1422,32 @@ void update_abundances(int modelgridindex, double t_current)
         cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
-      if (get_element(element) == 26) 
+      if (get_element(element) == 26)
       {
         fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + modelgrid[modelgridindex].ffestable + (fe52_in* exp(-lambdafe*t_current));
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
-      if (get_element(element) == 25) 
+      if (get_element(element) == 25)
       {
         mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + modelgrid[modelgridindex].fmnstable;
         modelgrid[modelgridindex].composition[element].abundance = mnfrac;
       }
-      if (get_element(element) == 24) 
+      if (get_element(element) == 24)
       {
         crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
 	modelgrid[modelgridindex].composition[element].abundance = crfrac;
       }
-      if (get_element(element) == 23) 
+      if (get_element(element) == 23)
       {
         vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + modelgrid[modelgridindex].fvstable;
         modelgrid[modelgridindex].composition[element].abundance = vfrac;
       }
-      if (get_element(element) == 22) 
+      if (get_element(element) == 22)
       {
         tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
         modelgrid[modelgridindex].composition[element].abundance = tifrac;
       }
- 
+
 
 
     }
@@ -1461,7 +1461,7 @@ void update_abundances(int modelgridindex, double t_current)
 
 ///****************************************************************************
 double calculate_populations(int modelgridindex, int first_nonempty_cell)
-/// Determines the electron number density for a given cell using one of 
+/// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
   double ionfract(int element, int ion, int modelgridindex, double nne);
@@ -1471,14 +1471,14 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   int get_ionstage(int element, int ion);
   int get_element(int element);
   double get_abundance(int modelgridindex, int element);
-  
+
   double nne,nne_lo,nne_hi,nne_check,nne_tot;
   double nnelement,nnion;
   int element,ion;
   int nions;
   int iter;
   double nntot;
-  
+
   /// Initialise the gsl solver
   const gsl_root_fsolver_type *solvertype;
   solvertype = gsl_root_fsolver_brent;
@@ -1489,26 +1489,26 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   int status;
   int uppermost_ion,only_neutral_ions,i,nelements_in_cell;
   double factor,abundance;
-  
+
   /// and the solution function
   gsl_function f;
   nne_solution_paras paras;
   paras.cellnumber = modelgridindex;
   f.function = &nne_solution_f;
   f.params = &paras;
-  
+
   neutral_flag = 0;
-  
+
   /// Get temperatures
   double T_R = get_TR(modelgridindex);
   double T_e = get_Te(modelgridindex);
   double W = get_W(modelgridindex);
-  
+
   //int mgi = cell[cellnumber].modelgridindex;
-  
+
   nne_lo = 0.;  //MINPOP;
   nne_hi = get_rho(modelgridindex)/MH;
-  
+
   /// The following selection of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
   only_neutral_ions = 0;
   nelements_in_cell = 0;
@@ -1543,13 +1543,13 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
         }
       #endif
       //printout("cell %d, element %d, uppermost_ion by Gamma is %d\n",cellnumber,element,uppermost_ion);
-      
+
       factor = 1.;
       for (i = 0; i < uppermost_ion; i++)
       {
         factor *= nne_hi * phi(element,i,modelgridindex);
         //printout("element %d, ion %d, factor %g\n",element,i,factor);
-        if (!isfinite(factor)) 
+        if (!isfinite(factor))
         {
           printout("[info] calculate_populations: uppermost_ion limited by phi factors for element %d, ion %d in cell %d\n",element,i,modelgridindex);
           break;
@@ -1563,10 +1563,10 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       nelements_in_cell += 1;
     }
   }
-  
-  
+
+
   nne_check = 0.;
-  nne_tot = 0.;   /// total number of electrons in grid cell which are possible 
+  nne_tot = 0.;   /// total number of electrons in grid cell which are possible
                   /// targets for compton scattering of gamma rays
   nntot = 0.;
   if (only_neutral_ions == nelements_in_cell)
@@ -1580,20 +1580,20 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     //printout("[warning] calculate_poulations: only neutral ions in cell %d modelgridindex\n",modelgridindex);
     //exit(0);
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
-    
+
     for (element = 0; element < nelements; element++)
     {
       abundance = get_abundance(modelgridindex,element);
       nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
-      nne_tot += nnelement*get_element(element); 
-      
+      nne_tot += nnelement*get_element(element);
+
       /// Assign the species population to the neutral ion and set higher ions to MINPOP
       for (ion = 0; ion < nions; ion++)
       {
         if (ion == 0) nnion = nnelement;
-        else 
+        else
         {
           if (abundance > 0.) nnion = MINPOP;
           else nnion = 0.;
@@ -1601,7 +1601,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
         nntot += nnion;
         nne += nnion * (get_ionstage(element,ion)-1);
         modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
-        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
+        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
@@ -1655,12 +1655,12 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     if (status == GSL_CONTINUE) printout("[warning] calculate_populations: nne did not converge within %d iterations\n",maxit);
     //printout("[debug] update_grid:   status = %s\n",gsl_strerror(status));
     //printout("[debug] update_grid:   converged nne %g\n",cell[modelgridindex].nne);
-    
+
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
     nne_check = 0.;
-    nne_tot = 0.;   /// total number of electrons in grid cell which are possible 
+    nne_tot = 0.;   /// total number of electrons in grid cell which are possible
                     /// targets for compton scattering of gamma rays
-    
+
     nntot = nne;
     for (element = 0; element < nelements; element++)
     {
@@ -1668,15 +1668,15 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
-      nne_tot += nnelement*get_element(element); 
-      
+      nne_tot += nnelement*get_element(element);
+
       /// Use ionisationfractions to calculate the groundlevel populations
       for (ion = 0; ion < nions; ion++)
       {
-        //if (ion <= elements[element].uppermost_ion) 
-        if (ion <= elements_uppermost_ion[tid][element]) 
+        //if (ion <= elements[element].uppermost_ion)
+        if (ion <= elements_uppermost_ion[tid][element])
         {
-          if (abundance > 0) 
+          if (abundance > 0)
           {
             nnion = nnelement * ionfract(element,ion,modelgridindex,nne);
             if (nnion < MINPOP) nnion = MINPOP;
@@ -1697,13 +1697,13 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 	  }
 	*/
 
-        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
+        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
   }
-  
-  
+
+
   set_nnetot(modelgridindex, nne_tot);
   return nntot;
 }
@@ -1712,13 +1712,13 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 ///****************************************************************************
 void precalculate_partfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
-/// change during any iteration on T_e. Therefore their precalculation was 
+/// change during any iteration on T_e. Therefore their precalculation was
 /// taken out of calculate_populations to save runtime.
 {
   double calculate_partfunct(int element, int ion, int modelgridindex);
   //double calculate_ltepartfunct(int element, int ion, double T);
   int element,ion,nions;
-  
+
   /// Precalculate partition functions for each ion in every cell
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
   for (element = 0; element < nelements; element++)
@@ -1743,7 +1743,7 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
 {
   int i;
   double T,nubar;
-  
+
   nubar = nuJ/J;
   if (!isfinite(nubar) || nubar == 0.)
   {
@@ -1766,7 +1766,7 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
       printout("[warning] update_grid: temperature estimator T_J=%g below T_min %g in cell %d. Set T_J = T_min!\n",*T_J,MINTEMP,modelgridindex);
       *T_J = MINTEMP;
     }
-    
+
     *T_R = H*nubar/KB/3.832229494;
     if (*T_R > MAXTEMP)
     {
@@ -1778,7 +1778,7 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
       printout("[warning] update_grid: temperature estimator T_R=%g below T_min %g in cell %d. Set T_R = T_min!\n",*T_R,MINTEMP,modelgridindex);
       *T_R = MINTEMP;
     }
-    
+
     *W = PI*J/STEBO/pow(*T_R,4);
   }
 }
@@ -1790,7 +1790,7 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
 double nuB_nu_integrand(double nu, void *paras)
 {
   double T = ((gslintegration_paras *) paras)->T;
-  
+
   return nu * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
 }
 
@@ -1798,7 +1798,7 @@ double nuB_nu_integrand(double nu, void *paras)
 double B_nu_integrand(double nu, void *paras)
 {
   double T = ((gslintegration_paras *) paras)->T;
-  
+
   return TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
 }
 */
@@ -1814,36 +1814,36 @@ double get_ffcooling(int element, int ion, int cellnumber)
   int get_ionstage(int element, int ion);
   int ioncharge;
   double T_e,nne,nncurrention,C_ff;
-  
+
   ion += 1;
   nncurrention = ionstagepop(cellnumber,element,ion);
   nne = cell[cellnumber].nne;
   T_e = cell[cellnumber].T_e;
-      
+
   C_ff = 0.;
   ioncharge = get_ionstage(element,ion) - 1;
   if (ioncharge > 0)
   {
     C_ff += 1.426e-27 * sqrt(T_e) * pow(ioncharge,2) * nncurrention * nne;
   }
-  
+
   return C_ff;
 }
 
 double get_adcool(int cellnumber, int nts)
 {
-  
+
   double t_current,nntot,T_e;
   double p,dV,V;
-  
+
   t_current = time_step[nts].mid;
   nntot = cell[cellnumber].nn_tot;
   T_e = cell[cellnumber].T_e;
   p = nntot*KB*T_e;
-  dV = 3*pow(wid_init/tmin,3)*pow(t_current,2);  
+  dV = 3*pow(wid_init/tmin,3)*pow(t_current,2);
   V = pow(wid_init*t_current/tmin,3);
-  
-  return p*dV/V; 
+
+  return p*dV/V;
 }
 
 double get_radrecomb(int element, int ion, int level, int cellnumber)
@@ -1852,7 +1852,7 @@ double get_radrecomb(int element, int ion, int level, int cellnumber)
   double get_groundlevelpop(int cellnumber, int element, int ion);
   double epsilon(int element, int ion, int level);
   double T_e,nne,nnion,E_threshold,alpha_sp;
-  
+
   T_e = cell[cellnumber].T_e;
   nne = cell[cellnumber].nne;
   nnion = get_groundlevelpop(cellnumber,element,ion+1);
@@ -1860,7 +1860,7 @@ double get_radrecomb(int element, int ion, int level, int cellnumber)
   alpha_sp = interpolate_spontrecombcoeff(element,ion,level,T_e);
   ///// This is ion-wise Alpha_st is the sum of the level-wise alpha_st, so it should be added only once if mulitple levels are present
   //double Alpha_st = stimrecombestimator_save[cellnumber*nelements*maxion+element*maxion+ion];
-  
+
   //return nnion*nne*(alpha_sp+Alpha_st)*E_threshold;
   return nnion*nne*alpha_sp*E_threshold;
 }
@@ -1873,11 +1873,11 @@ double get_thermalratio(int element, int ion, int level, int cellnumber)
   double interpolate_spontrecombcoeff(int element, int ion, int level, double T);
   double interpolate_spontrecombcoeff_E(int element, int ion, int level, double T);
   double T_e,alpha_sp,alpha_sp_E;
-  
+
   T_e = cell[cellnumber].T_e;
   alpha_sp = interpolate_spontrecombcoeff(element,ion,level,T_e);
   alpha_sp_E = interpolate_spontrecombcoeff_E(element,ion,level,T_e);
-  
+
   return alpha_sp/alpha_sp_E;
 }*/
 
@@ -1896,17 +1896,17 @@ double get_Gamma(int cellnumber, int element, int ion)
 {
   double get_corrphotoioncoeff(int element, int ion, int level, int cellnumber);
   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-  
+
   int i,level;
   int nlevels = get_nlevels(element,ion);
   double Gamma = 0.;
-  
+
   for (i = 0; i < nlevels; i++)
   {
     Gamma += calculate_exclevelpop(cellnumber,element,ion,level)*get_corrphotoioncoeff(element,ion,level,cellnumber);
   }
   Gamma /= calculate_exclevelpop(cellnumber,element,ion,0);
-  
+
   return Gamma;
 }
 
@@ -1918,17 +1918,17 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
   double get_corrphotoioncoeff_ana(int element, int ion, int level, int cellnumber);
   double get_corrphotoioncoeff(int element, int ion, int level, int cellnumber);
   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-  
+
   int i,level;
   int nlevels = get_nlevels(element,ion);
   double Gamma = 0.;
-  
+
   //for (i = 0; i < nlevels; i++)
   for (i = 0; i < TAKE_N_BFCONTINUA; i++)
   {
     Gamma += get_corrphotoioncoeff_ana(element,ion,level,cellnumber);
   }
-  
+
   return Gamma;
 }
 
@@ -1941,7 +1941,7 @@ void write_grid_restart_data(void)
 {
   int n,element,nions,ion;
   FILE *gridsave_file;
-  
+
   if ((gridsave_file = fopen("gridsave.dat", "w")) == NULL)
   {
     printout("Cannot open gridsave.dat.\n");
@@ -1971,14 +1971,14 @@ void write_grid_restart_data(void)
           }
         }
       #endif
-      
+
       fprintf(gridsave_file,"\n");
     }
     else
     {
       ///Write zeros for cells which are non-represented in the simulation grid
       fprintf(gridsave_file,"%d %g %g %g %g %d ",n,0.,0.,0.,0.,0);
-      
+
       #ifndef FORCE_LTE
         for (element = 0; element < nelements; element++)
         {
@@ -1997,10 +1997,10 @@ void write_grid_restart_data(void)
           }
         }
       #endif
-      
+
       fprintf(gridsave_file,"\n");
     }
   }
-  
+
   fclose(gridsave_file);
 }

@@ -10,15 +10,14 @@ update_gamma_rays(nts)
   RAY *ray_ptr;
   double ts, tw;
   int ray_prop();
- 
+
 
   /* At the start, the rays are either still at their starting points or have already been
      processed for one or more timesteps. */
- 
+
   ts = time_step[nts].start;
   tw = time_step[nts].width;
- 
- 
+
   for (n = 0; n < NRAYS_SYN; n++)
     {
       ray_ptr = &rays[n];
@@ -45,6 +44,3 @@ update_gamma_rays(nts)
 
   return(0);
 }
-
-
-

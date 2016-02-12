@@ -14,7 +14,7 @@ int grid_init ()
   void abundances_setup();
   void abundances_3d_read(), abundances_1d_read();
   void assign_temperature();
-  
+
   int i,n;
 
   /// Start by checking that the number of grid cells is okay */
@@ -55,7 +55,7 @@ int grid_init ()
   else if (model_type == RHO_2D_READ)
   {
     abundances_1d_read (); //for 2d can handle abundances exactly as for 1D
-    density_2d_read (); 
+    density_2d_read ();
   }
   else if (model_type == RHO_3D_READ)
   {
@@ -70,7 +70,7 @@ int grid_init ()
 
   /// and assign a temperature to the cells
   assign_temperature();
-  
+
   /// Finally determine which cells are non-empty...
   /*if ((nonemptycells = malloc(ngrid*sizeof(int))) == NULL)
   {
@@ -106,20 +106,20 @@ int uniform_grid_setup ()
   int n; /// loop variable over the grid cells
   int nx, ny, nz;
   int element;
-  
+
   nx=0;
   ny=0;
   nz=0;
   for (n = 0; n < ngrid; n++)
   {
-    cell[n].pos_init[0] = -xmax + (2 * nx * xmax / nxgrid); 
+    cell[n].pos_init[0] = -xmax + (2 * nx * xmax / nxgrid);
     cell[n].pos_init[1] = -ymax + (2 * ny * ymax / nygrid);
     cell[n].pos_init[2] = -zmax + (2 * nz * zmax / nzgrid);
-    
+
     wid_init = 2 * xmax / nxgrid;
     wid_init = 2 * ymax / nygrid;
     wid_init = 2 * zmax / nzgrid;
-    
+
     //cell[n].cen_init[0] = cell[n].pos_init[0] + (0.5 * wid_init);
     //cell[n].cen_init[1] = cell[n].pos_init[1] + (0.5 * wid_init);
     //cell[n].cen_init[2] = cell[n].pos_init[2] + (0.5 * wid_init);
@@ -127,7 +127,7 @@ int uniform_grid_setup ()
     cell[n].xyz[0] = nx;
     cell[n].xyz[1] = ny;
     cell[n].xyz[2] = nz;
-    
+
     nx++;
     if (nx == nxgrid)
     {
@@ -139,13 +139,13 @@ int uniform_grid_setup ()
       ny=0;
       nz++;
     }
-    
+
     ///Do we need this initialisation anywhere else (after modelgridindex was initialised) ???????????????????????????????????
     //cell[n].f_ni_stable = 0.0;
     //cell[n].f_co_stable = 0.0;
     //cell[n].f_fe_init = 0.0;
   }
-  
+
   /*
   /// Finally we must also create the composition dependent data structure for
   /// the samplingcell which is located at MGRID (i.e. the MGRID+1th cell)
@@ -214,7 +214,7 @@ int uniform_grid_setup ()
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
-      
+
 
     if (vec_len(dcen) < rmax)
     {
@@ -223,7 +223,7 @@ int uniform_grid_setup ()
       cell[n].f_co = 0.;
       allocate_compositiondata(n);
     //printout("[debug] uniform_density_setup: cell[%d].rho_init: %g\n",n,cell[n].rho_init);
-    } 
+    }
      //MK: added missing else branch for correct initialization
     else
     {
@@ -235,7 +235,7 @@ int uniform_grid_setup ()
     fe_sum += fni(&cell[n]);  //MK: use for this model fni as values for iron group mass fractions
   }
 
-  
+
   if (opacity_case == 3)
   {
     for (n = 0; n < ngrid; n++)
@@ -263,8 +263,8 @@ int uniform_grid_setup ()
       opcase3_sum += cell[n].kappa_grey*cell[n].rho_init;
     }
   }
-  
-  
+
+
   //MK: second loop to set up opacities which need integrated basic quantities for normalisation
   for (n=0;n < ngrid; n++)
   {
@@ -339,7 +339,7 @@ int density_1d_read ()
   int empty_cells;
   int element, anumber, get_element();
   float abundance;
-  
+
   double helper;
   int mgi;
 
@@ -362,20 +362,20 @@ int density_1d_read ()
   fe_sum = 0.0;
   opcase3_sum = 0.0;
   empty_cells = 0;
-  
+
   /*
     for (n=0;n < ngrid; n++)
   {
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
-      
+
     radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
       mkeep =0;
       cell[n].modelgridindex = 0;
-      
+
       helper = rho_model[0] * pow( (t_model/tmin), 3.);
       set_rhoinit(0,helper);
       set_rho(0,helper);
@@ -395,9 +395,9 @@ int density_1d_read ()
         //  cell[n].composition[element].abundance = 1-cell[n].f_ni;
         //if (anumber == 20)
         //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
-        
+
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
-        
+
         if (anumber == 28)
           set_fnistable(0,abundance - get_fni(n));
         if (anumber == 27)
@@ -405,14 +405,14 @@ int density_1d_read ()
         if (anumber == 26)
           set_ffeinit(0,abundance);
       }
-  
+
       for (m = 0; m < (npts_model-1); m++)
       {
         if (radial_pos > (vout_model[m] * tmin))
         {
           mkeep = m+1;
           cell[n].modelgridindex = m+1;
-          
+
           helper = rho_model[m+1] * pow( (t_model/tmin), 3.);
           set_rhoinit(m+1,helper);
           set_rho(m+1,helper);
@@ -432,7 +432,7 @@ int density_1d_read ()
             //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
             //if (anumber == 20)
             //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
-            
+
             if (anumber == 28)
               set_fnistable(m+1,abundance - get_fni(n));
             if (anumber == 27)
@@ -447,8 +447,8 @@ int density_1d_read ()
     else
     {
       cell[n].modelgridindex = MMODELGRID;
-      /// This initialisation is not needed if the cell MMODELGRID (which is a representation 
-      /// of empty cells) is once initialised to zero values 
+      /// This initialisation is not needed if the cell MMODELGRID (which is a representation
+      /// of empty cells) is once initialised to zero values
       set_rhoinit(MMODELGRID,0.);
       set_rho(MMODELGRID,0.);
       set_nne(MMODELGRID,0.);
@@ -461,7 +461,7 @@ int density_1d_read ()
       allocate_compositiondata(MMODELGRID);
       empty_cells += 1;
     }
-    
+
     mgi = cell[n].modelgridindex;
     if (get_rhoinit(mgi) < 0)
     {
@@ -472,20 +472,20 @@ int density_1d_read ()
     fe_sum += get_ffe(mgi);
   }
   */
-  
+
 
   for (n=0;n < ngrid; n++)
   {
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
-      
+
     radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
       mkeep =0;
       cell[n].modelgridindex = 0;
-      
+
       for (m = 0; m < (npts_model-1); m++)
       {
         if (radial_pos > (vout_model[m] * tmin))
@@ -502,8 +502,8 @@ int density_1d_read ()
       cell[n].modelgridindex = MMODELGRID;
     }
   }
-  
-  
+
+
   /// Determine the number of simualtion cells associated with the model cells
   int i,ii,count;
   for (i = 0; i < npts_model; i++)
@@ -515,8 +515,8 @@ int density_1d_read ()
     }
     modelgrid[i].associated_cells = count;
   }
-  
-  
+
+
 //  for (n=0;n < ngrid; n++)
 //  {
 //    mgi = cell[n].modelgridindex;
@@ -546,9 +546,9 @@ int density_1d_read ()
         //  cell[n].composition[element].abundance = 1-cell[n].f_ni;
         //if (anumber == 20)
         //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
-        
+
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
-        
+
         if (anumber == 28)
         {
           set_fnistable(mgi,abundance - get_fni(mgi));
@@ -573,7 +573,7 @@ int density_1d_read ()
 	  set_ftistable(mgi,abundance);
 
       }
-      
+
       if (get_rhoinit(mgi) < 0)
       {
         printout("Error: negative density. Abort.\n");
@@ -581,8 +581,8 @@ int density_1d_read ()
       }
     }
   }
-  
-  
+
+
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
   set_rhoinit(MMODELGRID,0.);
@@ -597,15 +597,15 @@ int density_1d_read ()
   set_TJ(MMODELGRID,MINTEMP);
   set_TR(MMODELGRID,MINTEMP);
   allocate_compositiondata(MMODELGRID);
-  
-  
+
+
   /// First pass through to get normalisation coefficients
   for (n = 0; n < ngrid; n++)
   {
     mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffe(mgi);
-    
+
     if (opacity_case == 3)
     {
       if (get_rhoinit(mgi) > 0.)
@@ -642,7 +642,7 @@ int density_1d_read ()
       exit(0);
     }
   }
-  
+
   /// Second pass through allows calculation of normalized kappa_grey
   for (n=0; n < ngrid; n++)
   {
@@ -694,7 +694,7 @@ int density_1d_read ()
     check2 = check2 + get_rhoinit(mgi);
   }
   if (rank_global == 0) fclose(grid_file);
-  
+
 
 
 
@@ -704,7 +704,7 @@ int density_1d_read ()
   dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
   dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
   dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
-      
+
   radial_pos = vec_len(dcen);
   if (radial_pos < rmax)
   {
@@ -740,7 +740,7 @@ int density_1d_read ()
 }
   else if (opacity_case == 1)
   {
-  cell[n].kappa_grey = ((0.9 * ffegrp_model[m+1]) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1);	   
+  cell[n].kappa_grey = ((0.9 * ffegrp_model[m+1]) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1);
 }
   else if (opacity_case == 2)
   {
@@ -757,14 +757,14 @@ int density_1d_read ()
   check1 = check1 + (cell[n].kappa_grey  * cell[n].rho_init);
   check2 = check2 + cell[n].rho_init;
   renorm[mkeep] += 1;
-	  
+
 }
   else
   {
   cell[n].rho_init = cell[n].rho = 0.0;
   cell[n].kappa_grey = 0.0;
 }
-      
+
   if (cell[n].rho_init < 0)
   {
   printout("Error: negative density. Abort.\n");
@@ -777,7 +777,7 @@ int density_1d_read ()
   /* The following block of code was for a check in the 1d models - currently commented out */
 
   /* *******************************************************************************************
-   
+
   check1 = 0.0;
   check2 = 0.0;
 
@@ -789,7 +789,7 @@ int density_1d_read ()
   {
   printout("No cells assigned in model shell 0\n");
 }
-  
+
   for (n=1;n<MMODELGRID;n++)
   {
   if (renorm[n] > 0 )
@@ -801,13 +801,13 @@ int density_1d_read ()
   printout("No cells assigned in model shell %d\n",n);
 }
 }
-      
+
   for (n=0;n < ngrid; n++)
   {
   dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
   dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
   dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
-      
+
   radial_pos = vec_len(dcen);
   if (radial_pos < rmax)
   {
@@ -829,7 +829,7 @@ int density_1d_read ()
   cell[n].rho_init = cell[n].rho = den_norm[m+1] * pow( (t_model/tmin), 3.);
   if (opacity_case == 1)
   {
-  cell[n].kappa_grey = ((0.9 *  ffegrp_model[m+1]) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1);	   
+  cell[n].kappa_grey = ((0.9 *  ffegrp_model[m+1]) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1);
 }
   else
   {
@@ -840,14 +840,14 @@ int density_1d_read ()
   check1 = check1 + (cell[n].kappa_grey  * cell[n].rho_init);
   check2 = check2 + cell[n].rho_init;
   renorm[mkeep] += 1;
-	  
+
 }
   else
   {
   cell[n].rho_init = cell[n].rho = 0.0;
   cell[n].kappa_grey = 0.0;
 }
-      
+
   if (cell[n].rho_init < 0)
   {
   printout("Error: negative density. Abort.\n");
@@ -856,11 +856,11 @@ int density_1d_read ()
 
 }
 
-    	    
+
   ******************************************************************************************************** */
-  
+
   printout("Grey normalisation check: %g\n", check1/check2);
-  printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN); 
+  printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN);
 
   return(0);
 }
@@ -902,16 +902,16 @@ int density_2d_read ()
   fe_sum = 0.0;
   opcase3_sum = 0.0;
   empty_cells = 0;
-  
-   
+
+
   for (n=0;n < ngrid; n++)
   {
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
-    
+
     radial_pos = vec_len(dcen);
-    
+
     if (radial_pos < rmax)
     {
       mkeep1 = mkeep2 = 0;
@@ -919,7 +919,7 @@ int density_2d_read ()
       zcylindrical = dcen[2];
       dcen[2]=0.0;
       rcylindrical = vec_len(dcen);
-      
+
       /*Grid is uniform so only need to search in 1d to get r and z positions */
 
       for (m = 0; m < ncoord1_model; m++)
@@ -940,7 +940,7 @@ int density_2d_read ()
       }
       cell[n].modelgridindex = (mkeep2 * ncoord1_model) + mkeep1;
       modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
-	
+
       //renorm[mkeep] += 1;
     }
     else
@@ -948,8 +948,8 @@ int density_2d_read ()
       cell[n].modelgridindex = MMODELGRID;
     }
   }
-  
-  
+
+
   /// Determine the number of simualtion cells associated with the model cells
   int i,ii,count;
   for (i = 0; i < npts_model; i++)
@@ -961,8 +961,8 @@ int density_2d_read ()
     }
     modelgrid[i].associated_cells = count;
   }
-  
-  
+
+
 //  for (n=0;n < ngrid; n++)
 //  {
 //    mgi = cell[n].modelgridindex;
@@ -992,15 +992,15 @@ int density_2d_read ()
         //  cell[n].composition[element].abundance = 1-cell[n].f_ni;
         //if (anumber == 20)
         //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
-        
+
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
-        
+
         if (anumber == 28)
           set_fnistable(mgi,abundance - get_fni(mgi));
-        
+
         if (anumber == 27)
           set_fcostable(mgi,abundance - get_fco(mgi));
-	
+
         if (anumber == 26)
 	  set_ffestable(mgi,abundance - get_f52fe(mgi));
 
@@ -1016,7 +1016,7 @@ int density_2d_read ()
 	if (anumber == 22)
 	  set_ftistable(mgi,abundance);
       }
-      
+
       if (get_rhoinit(mgi) < 0)
       {
         printout("Error: negative density. Abort.\n");
@@ -1024,8 +1024,8 @@ int density_2d_read ()
       }
     }
   }
-  
-  
+
+
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
   set_rhoinit(MMODELGRID,0.);
@@ -1040,15 +1040,15 @@ int density_2d_read ()
   set_TJ(MMODELGRID,MINTEMP);
   set_TR(MMODELGRID,MINTEMP);
   allocate_compositiondata(MMODELGRID);
-  
-  
+
+
   /// First pass through to get normalisation coefficients
   for (n = 0; n < ngrid; n++)
   {
     mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffe(mgi);
-    
+
     if (opacity_case == 3)
     {
       if (get_rhoinit(mgi) > 0.)
@@ -1085,7 +1085,7 @@ int density_2d_read ()
       exit(0);
     }
   }
-  
+
   /// Second pass through allows calculation of normalized kappa_grey
   for (n=0; n < ngrid; n++)
   {
@@ -1137,11 +1137,11 @@ int density_2d_read ()
     check2 = check2 + get_rhoinit(mgi);
   }
   if (rank_global == 0) fclose(grid_file);
-  
 
-  
+
+
   printout("Grey normalisation check: %g\n", check1/check2);
-  printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN); 
+  printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN);
 
   return(0);
 }
@@ -1183,7 +1183,7 @@ int density_3d_read ()
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
     //printout("grid_init2: n = %d\n", n);
-      
+
     radial_pos = vec_len(dcen);
     modelgrid[cell[n].modelgridindex].initial_radial_pos = radial_pos;
 //     printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d, r %g, sum %g\n", n,grid_type,cell[n].modelgridindex,ngrid,radial_pos,modelgrid[cell[n].modelgridindex].initial_radial_pos);
@@ -1220,7 +1220,7 @@ int density_3d_read ()
     mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffe(mgi);
-    
+
     if (opacity_case == 3)
     {
       if (get_rhoinit(mgi) > 0.)
@@ -1257,7 +1257,7 @@ int density_3d_read ()
       exit(0);
     }
   }
-  
+
   /// Second pass through allows calculation of normalized kappa_grey
   for (n=0; n < ngrid; n++)
   {
@@ -1309,7 +1309,7 @@ int density_3d_read ()
     check2 = check2 + get_rhoinit(mgi);
   }
   if (rank_global == 0) fclose(grid_file);
-  
+
 
 
 
@@ -1403,9 +1403,9 @@ int density_3d_read ()
 
   printout("Initial densities taken from readin.\n");
   printout("Grey normalisation check: %g\n", check1/check2);
-  
-  
-  
+
+
+
   return(0);
 }
 
@@ -1422,16 +1422,16 @@ void allocate_compositiondata(int modelgridindex)
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
     exit(0);
   }
-  
+
   if ((modelgrid[modelgridindex].nlte_pops = malloc(total_nlte_levels*sizeof(double))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
     exit(0);
   }
-  
+
   for (element = 0; element < total_nlte_levels; element++)
     {
-      modelgrid[modelgridindex].nlte_pops[element] = -1.0; ///flag to indicate that there is 
+      modelgrid[modelgridindex].nlte_pops[element] = -1.0; ///flag to indicate that there is
                                                            /// currently no information on the nlte populations
     }
 
@@ -1441,7 +1441,7 @@ void allocate_compositiondata(int modelgridindex)
   {
     /// Set initial abundances to zero
     modelgrid[modelgridindex].composition[element].abundance = 0.;
-    
+
     /// and allocate memory to store the ground level populations for each ionisation stage
     if ((modelgrid[modelgridindex].composition[element].groundlevelpop = malloc(get_nions(element)*sizeof(float))) == NULL)
     {
@@ -1474,13 +1474,13 @@ void allocate_compositiondata(int modelgridindex)
 void allocate_cooling(int modelgridindex)
 {
   int element;
-  
+
   if ((modelgrid[modelgridindex].cooling = malloc(nelements*sizeof(mgicooling_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
     exit(0);
   }
-  
+
   for (element = 0; element < nelements; element++)
   {
     /// and allocate memory to store the ground level populations for each ionisation stage
@@ -1501,7 +1501,7 @@ void allocate_cooling(int modelgridindex)
   int get_element(int element);
   double dcen[3],m_r;
   int element,n;
-  
+
   if (homogeneous_abundances == 1)
   {
     for (n = 0; n < ngrid; n++)
@@ -1513,7 +1513,7 @@ void allocate_cooling(int modelgridindex)
           /// Now set the abundances (by mass) of included elements, i.e.
           /// read out the abundances specified in the atomic data file
           cell[n].composition[element].abundance = elements[element].abundance;
-          
+
           /// No stable Ni and Co isotopes in that case. Their abundances must fit
           /// the given total Ni and Co abundances and we have no separate readin
           /// for this case!
@@ -1536,10 +1536,10 @@ void allocate_cooling(int modelgridindex)
         dcen[0]=cell[n].pos_init[0] + (0.5*wid_init);
         dcen[1]=cell[n].pos_init[1] + (0.5*wid_init);
         dcen[2]=cell[n].pos_init[2] + (0.5*wid_init);
-        
+
         m_r = vec_len(dcen) / rmax;
         m_r = pow(m_r,3) * mtot / MSUN;
-        
+
         if (m_r < 0.5)
         {
           /// Inner part consists of pure Nickel
@@ -1583,7 +1583,7 @@ void abundances_3d_read()
   float abundance,dum[30];
   int cellnumber,n;
   int anumber,element, mgi;
-  
+
   /// Open the abundances file
   if ((abundance_file = fopen("abundances.txt", "r")) == NULL)
   {
@@ -1601,14 +1601,14 @@ void abundances_3d_read()
     mgi = cell[n].modelgridindex;
 
     fscanf(abundance_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
-    
+
     if (n != cellnumber-1)
     {
       printout("[fatal] abundances_3d_read: grid cell mismatch ... abort\n");
       printout("[fatal] n %d, cellnumber %d\n",n,cellnumber);
       abort();
     }
-    
+
     for (element = 0; element < nelements; element++)
       {
         ///now set the abundances (by mass) of included elements, i.e.
@@ -1616,7 +1616,7 @@ void abundances_3d_read()
         anumber = get_element(element);
         abundance = dum[anumber-1];
 	modelgrid[mgi].composition[element].abundance = abundance;
-        
+
 	if (anumber == 28)
         {
           set_fnistable(mgi,abundance - get_fni(mgi));
@@ -1624,7 +1624,7 @@ void abundances_3d_read()
         }
         if (anumber == 27)
           set_fcostable(mgi,abundance - get_fco(mgi));
-	
+
         if (anumber == 26)
 	  set_ffestable(mgi,abundance - get_f52fe(mgi));
 
@@ -1641,7 +1641,7 @@ void abundances_3d_read()
 	  set_ftistable(mgi,abundance);
       }
     }
-  
+
 
   fclose(abundance_file);
 }
@@ -1654,7 +1654,7 @@ void abundances_1d_read()
   FILE *abundance_file;
   float norm,dum[30];
   int n, nn, cellnumber;
-  
+
   /// Open the abundances file
   if ((abundance_file = fopen("abundances.txt", "r")) == NULL)
   {
@@ -1670,14 +1670,14 @@ void abundances_1d_read()
   for (n = 0; n < npts_model; n++)
   {
     fscanf(abundance_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
-  
+
     norm = 0.;
     for (nn = 0; nn < 30; nn++)
     {
       abund_model[n][nn] = dum[nn];
       norm += dum[nn];
     }
-    
+
     if (norm > 0)
       {
 	for (nn = 0; nn < 30; nn++)
@@ -1686,7 +1686,7 @@ void abundances_1d_read()
 	  }
       }
   }
-  
+
   fclose(abundance_file);
 }
 
@@ -1704,16 +1704,16 @@ void assign_temperature()
   double Gamma;
   int element,ion,nions,cellnumber;//,idummy;
   int n,mgi,thick;
-  
+
   /// For a simulation started from scratch we estimate the initial temperatures
   if (!continue_simulation)
   {
     /// We assume that for early times the material is so optically thick, that
     /// all the radiation is trapped in the cell it originates from. This
-    /// means furthermore LTE, so that both temperatures can be evaluated 
-    /// according to the local energy density resulting from the 56Ni decay. 
+    /// means furthermore LTE, so that both temperatures can be evaluated
+    /// according to the local energy density resulting from the 56Ni decay.
     /// The dilution factor is W=1 in LTE.
-    
+
     tstart = time_step[0].mid;
     factor = CLIGHT/4/STEBO * 1./56/MH * pow(tmin/tstart,3);
     factor *= -1./(tstart*(-TCOBALT+TNICKEL));
@@ -1771,7 +1771,7 @@ void assign_temperature()
       printf("[fatal] assign_temperature: Cannot open gridsave.dat.\n");
       exit(0);
     }
-    
+
     for (n = 0; n < npts_model; n++)
     {
       //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
@@ -1795,7 +1795,7 @@ void assign_temperature()
               corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = Gamma;
             }
           }
-          
+
           for (element = 0; element < nelements; element++)
           {
             nions = get_nions(element);
@@ -1813,10 +1813,10 @@ void assign_temperature()
         printout("[fatal] assign_temperature: read cellnumber %d, expected cellnumber %d\n",mgi,n);
         abort();
       }
-      
+
 
     }
-    
+
     fclose(gridsave_file);
   }
 }
@@ -1851,7 +1851,7 @@ float get_rho(int modelgridindex)
 {
   return modelgrid[modelgridindex].rho;
 }
-    
+
 float get_nne(int modelgridindex)
 {
   return modelgrid[modelgridindex].nne;
@@ -1958,7 +1958,7 @@ void set_rho(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].rho = x;
 }
-    
+
 void set_nne(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].nne = x;
@@ -2109,15 +2109,3 @@ void set_W(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].W = x;
 }
-
-
-
-
-
-
-
-
-
-
-
-

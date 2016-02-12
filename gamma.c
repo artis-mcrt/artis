@@ -25,24 +25,24 @@ pellet_decay(nts,pkt_ptr)
   /*nts defines the time step we are in. pkt_ptr is a pointer to the packet
   that is decaying. */
   /* Record decay. */
-  #ifdef _OPENMP 
+  #ifdef _OPENMP
     #pragma omp atomic
   #endif
   time_step[nts].pellet_decays += 1;
 
   /*Start by getting the position of the pellet at the point of decay. Pellet
   is moving with the matter.*/
- 
+
   pkt_ptr->pos[0] = pkt_ptr->pos[0] * pkt_ptr->tdecay / time_step[nts].start;
   pkt_ptr->pos[1] = pkt_ptr->pos[1] * pkt_ptr->tdecay / time_step[nts].start;
   pkt_ptr->pos[2] = pkt_ptr->pos[2] * pkt_ptr->tdecay / time_step[nts].start;
-  
+
   /*Now let's give the gamma ray a direction. */
 
   zrand = gsl_rng_uniform(rng);
   zrand2 = gsl_rng_uniform(rng);
 
-  /*Assuming isotropic emission in cmf, use these two random numbers to set 
+  /*Assuming isotropic emission in cmf, use these two random numbers to set
   up a cmf direction in cos(theta) and phi. */
 
   mu = -1 + (2.*zrand);
@@ -52,14 +52,14 @@ pellet_decay(nts,pkt_ptr)
   pkt_ptr->dir[0] = sintheta * cos(phi);
   pkt_ptr->dir[1] = sintheta * sin(phi);
   pkt_ptr->dir[2] = mu;
-  
-  /* This direction is in the cmf - we want to convert it to the rest 
+
+  /* This direction is in the cmf - we want to convert it to the rest
   frame - use aberation of angles. We want to convert from cmf to
   rest so need -ve velocity. */
 
   get_velocity(pkt_ptr->pos, vel_vec, (-1*(pkt_ptr->tdecay)));
   //negative time since we want the backwards transformation here
- 
+
   angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
 
   pkt_ptr->dir[0] = dummy_dir[0];
@@ -85,7 +85,7 @@ pellet_decay(nts,pkt_ptr)
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
 
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
-  pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf; 
+  pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
 
   pkt_ptr->type = TYPE_GAMMA;
   pkt_ptr->last_cross = NONE;
@@ -102,7 +102,7 @@ pellet_decay(nts,pkt_ptr)
       cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
 
     }
-  
+
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
   //printout("initialise pol state of packet %g, %g, %g, %g, %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   //printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
@@ -120,7 +120,7 @@ choose_gamma_ray(pkt_ptr)
   double zrand, runtot;
   int n;
   /* Routine to choose which gamma ray line it'll be. */
-  
+
   if (pkt_ptr->type == TYPE_NICKEL_PELLET)
   {
     n=0;
@@ -205,7 +205,7 @@ choose_gamma_ray(pkt_ptr)
       pkt_ptr->nu_cmf = v48_spec.energy[n] / H;
     }
   }
-   else 
+   else
   {
     printout("Unrecognised pellet. Abort.\n");
     exit(0);
@@ -213,8 +213,8 @@ choose_gamma_ray(pkt_ptr)
 
   return(0);
 }
-	  
-      
+
+
 /********************************************************/
 
 /* Now routine for moving a gamma packet. Idea is that we have as input
@@ -257,9 +257,9 @@ double
       /* Start by finding the distance to the crossing of the grid cell
     boundaries. sdist is the boundary distance and snext is the
     grid cell into which we pass.*/
-      
+
     sdist = boundary_cross(pkt_ptr, t_current, &snext);
- 
+
     if (sdist > (rmax * t_current/tmin))
     {
       printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
@@ -282,7 +282,7 @@ double
       sdist = max_path_step;
       snext = pkt_ptr->where;
     }
-      
+
     /* Now consider the scattering/destruction processes. */
     /* Compton scattering - need to determine the scattering co-efficient.*/
     /* Routine returns the value in the rest frame. */
@@ -294,7 +294,7 @@ double
     else
     {
       kap_compton = 0.0;
-    }      
+    }
     kap_photo_electric = sig_photo_electric(pkt_ptr, t_current);
     kap_pair_prod = sig_pair_prod(pkt_ptr, t_current);
     kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
@@ -311,9 +311,9 @@ double
 
 
     /* Find how far it can travel during the time inverval. */
-      
+
     tdist = (t2 - t_current) * CLIGHT_PROP;
-      
+
     if (tdist < 0)
     {
       printout("Negative distance (tdist). Abort. \n");
@@ -321,7 +321,7 @@ double
     }
 
       //printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
-      
+
 
     if ((sdist < tdist) && (sdist < edist))
     {
@@ -361,7 +361,7 @@ double
       tdist = tdist / 2.;
       t_current += tdist  / CLIGHT_PROP;
       move_pkt(pkt_ptr,tdist,t_current);
-	  
+
       if (kap_tot > 0)
       {
         if (do_comp_est == 1)
@@ -451,7 +451,7 @@ double
 
         exit(0);
       }
-    }      
+    }
     else
     {
       printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);

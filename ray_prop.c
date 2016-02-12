@@ -9,7 +9,7 @@ int ray_prop(ray_ptr, t1, t2, nts)
      double t1, t2;
      int nts; //the time step we are doing
 {
-  double t_current; 
+  double t_current;
   double do_gamma_ray();
   int end_packet;
   double t_change_type;
@@ -40,7 +40,7 @@ int ray_prop(ray_ptr, t1, t2, nts)
 	      exit(0);
 	    }
 	}
-      else 
+      else
 	{
 	  printout("Trying to process an inactive ray??\n");
 	  exit(0);
@@ -85,7 +85,7 @@ do_gamma_ray(ray_ptr, t1, t2)
   for (nray = 0; nray < NSYN; nray++)
     {
       /* need to start by identifying next spectral line in list. */
-      
+
       lindex = get_nul(ray_ptr->nu_cmf[nray]);
       ray_ptr->lindex[nray] = lindex;
     }
@@ -94,9 +94,9 @@ do_gamma_ray(ray_ptr, t1, t2)
     {      /* Start by finding the distance to the crossing of the grid cell
 	 boundaries. sdist is the boundary distance and snext is the
 	 grid cell into which we pass.*/
-      
+
       sdist = boundary_cross_ray(ray_ptr, t_current, &snext);
- 
+
       if (sdist > (rmax * t_current/tmin))
 	{
 	  printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
@@ -116,11 +116,11 @@ do_gamma_ray(ray_ptr, t1, t2)
 	  exit(0);
 	}
 
- 
+
       /* Find how far it can travel during the time inverval. */
-      
+
       tdist = (t2 - t_current) * CLIGHT_PROP;
-      
+
       if (tdist < 0)
 	{
 	  printout("Negative distance (tdist). Abort. \n");
@@ -145,12 +145,12 @@ do_gamma_ray(ray_ptr, t1, t2)
 	 line. */
 
       /* At this point we need to branch to loop over all the frequencies in the ray
-	 bundle. They all need to travel the same sdist and all have the same time to 
+	 bundle. They all need to travel the same sdist and all have the same time to
 	 travel. But some will reach lines/continuum events before others. */
 
       /* First get an array of DNUDS for all the rays in the bundle. Copy ray and move copy to next
 	 boundary. */
- 
+
       copy_ray(ray_ptr, &dum_ray);
       move_ray(&dum_ray, stop_dist, t_current + stop_time);
       for (nray = 0; nray < NSYN; nray++)
@@ -159,7 +159,7 @@ do_gamma_ray(ray_ptr, t1, t2)
 	  if (dnuds[nray] >= 0)
 	    {
 	      printout("dnuds not negative? %g %d\n", dnuds[nray], nray);
-	      printout("dum_ray.nu_cmf[nray] %g, ray_ptr->nu_cmf[nray] %g, stop_dist %g\n", dum_ray.nu_cmf[nray] , ray_ptr->nu_cmf[nray], stop_dist); 
+	      printout("dum_ray.nu_cmf[nray] %g, ray_ptr->nu_cmf[nray] %g, stop_dist %g\n", dum_ray.nu_cmf[nray] , ray_ptr->nu_cmf[nray], stop_dist);
 	      exit(0);
 	    }
 
@@ -174,13 +174,13 @@ do_gamma_ray(ray_ptr, t1, t2)
 	  single_pos[1] = ray_ptr->pos[1];
 	  single_pos[2] = ray_ptr->pos[2];
 	  single_t = t_current;
-	  
+
 	  trav_dist = 0.0;
 
 	  while (trav_dist < stop_dist)
 	    {
 	      ldist = (get_gam_freq(&gam_line_list, lindex) - ray_ptr->nu_cmf[nray]) / dnuds[nray];
-	      
+
 	      if (ldist < 0)
 		{
 		  printout("negative ldist - abort\n");
@@ -188,7 +188,7 @@ do_gamma_ray(ray_ptr, t1, t2)
 		}
 
 	      /* then find distance to line - do we reach it before stop_dist. */
-	      
+
 	      if ((ldist + trav_dist) < stop_dist)
 		{
 		  /*It'll reach the line */
@@ -219,13 +219,13 @@ do_gamma_ray(ray_ptr, t1, t2)
 		    {
 		      lindex = RED_OF_LIST;
 		    }
-		  
+
 		}
 	      else
 		{
 		  /* Won't reach the line - just need to move it to the boundary and then do next ray
 		     in bundle. */
-		  single_t = single_t + ((stop_dist - trav_dist) / CLIGHT_PROP);	  
+		  single_t = single_t + ((stop_dist - trav_dist) / CLIGHT_PROP);
 		  if (do_rlc_est != 0)
 		    {
 		      grey_rt(ray_ptr, nray, stop_dist - trav_dist, single_pos, single_t, lindex);
@@ -236,7 +236,7 @@ do_gamma_ray(ray_ptr, t1, t2)
 		    }
 		  move_one_ray(ray_ptr, nray, stop_dist - trav_dist, single_pos, single_t);
 		  trav_dist += stop_dist; //just to force break in while loop
-		  ray_ptr->lindex[nray] = lindex;  
+		  ray_ptr->lindex[nray] = lindex;
 		  if (sdist < tdist)
 		    {
 		      if (fabs(1. - ray_ptr->nu_cmf[nray]/dum_ray.nu_cmf[nray]) > 1.e-8)
@@ -253,7 +253,7 @@ do_gamma_ray(ray_ptr, t1, t2)
 
       /* At this point all rays in the bundle have reached the stop_dist. */
       /* Update the position of the ray and, if necessary, the "where" element.  */
-      
+
       ray_ptr->pos[0] = dum_ray.pos[0];
       ray_ptr->pos[1] = dum_ray.pos[1];
       ray_ptr->pos[2] = dum_ray.pos[2];
@@ -271,7 +271,7 @@ do_gamma_ray(ray_ptr, t1, t2)
 
   return(PACKET_SAME);
 }
- 
+
 
 /****************************************************/
 double
@@ -304,7 +304,7 @@ boundary_cross_ray(ray_ptr, tstart, snext)
 
   return(dist);
 }
-  
+
 /****************************************************/
 int
 change_cell_ray(ray_ptr, snext, end_packet, t_current)
@@ -337,12 +337,12 @@ change_cell_ray(ray_ptr, snext, end_packet, t_current)
     {
       ray_ptr->status = FINISHED;
     }
-      
+
   return(0);
 }
-  
+
 /**************************************************/
-int 
+int
 copy_ray (ray1, ray2)
      RAY *ray1, *ray2;
 {
@@ -359,7 +359,7 @@ copy_ray (ray1, ray2)
   ray2->pos[1] = ray1->pos[1];
   ray2->pos[2] = ray1->pos[2];
   for (n = 0; n < NSYN; n++)
-    { 
+    {
       ray2->nu_rf[n] = ray1->nu_rf[n];
       ray2->nu_cmf[n] = ray1->nu_cmf[n];
       ray2->e_rf[n] = ray1->e_rf[n];
@@ -369,19 +369,19 @@ copy_ray (ray1, ray2)
 }
 
 /**********************************************/
-int 
+int
 move_ray(ray_ptr, dist, time)
      RAY *ray_ptr;
      double dist;
      double time;
 {
   /* just make a dummy packet and use move. */
-  
+
   PKT dummy;
   int move_pkt(PKT *pkt_ptr, double distance, double time);
   double doppler_fac;
   int n;
-  
+
   dummy.pos[0] = ray_ptr->pos[0];
   dummy.pos[1] = ray_ptr->pos[1];
   dummy.pos[2] = ray_ptr->pos[2];
@@ -393,7 +393,7 @@ move_ray(ray_ptr, dist, time)
   dummy.nu_rf = ray_ptr->nu_rf[0];
   dummy.e_cmf = ray_ptr->e_cmf[0];
   dummy.e_rf = ray_ptr->e_rf[0];
-  
+
   move_pkt(&dummy, dist, time);
 
   ray_ptr->pos[0] = dummy.pos[0];
@@ -401,7 +401,7 @@ move_ray(ray_ptr, dist, time)
   ray_ptr->pos[2] = dummy.pos[2];
 
   doppler_fac = dummy.nu_cmf / dummy.nu_rf;
-  
+
   for (n = 0; n < NSYN; n++)
     {
       ray_ptr->nu_cmf[n] = ray_ptr->nu_rf[n] * doppler_fac;
@@ -422,7 +422,7 @@ move_one_ray(ray_ptr, nray, dist, single_pos, single_t)
   int get_velocity();
   double doppler();
   double vel_vec[3];
-    
+
   if (dist < 0)
     {
       printout("Trying to move -v distance. Abort.\n");
@@ -432,9 +432,9 @@ move_one_ray(ray_ptr, nray, dist, single_pos, single_t)
   single_pos[0] += syn_dir[0] * dist;
   single_pos[1] += syn_dir[1] * dist;
   single_pos[2] += syn_dir[2] * dist;
-  
+
   get_velocity(single_pos, vel_vec, single_t);
-  
+
   ray_ptr->nu_cmf[nray] = ray_ptr->nu_rf[nray] * doppler(syn_dir, vel_vec);
   // again, rmoving next line since e_cmf seems redundant.
   //ray_ptr->e_cmf[nray] = ray_ptr->e_rf[nray] * ray_ptr->nu_cmf[nray] / ray_ptr->nu_rf[nray];
@@ -472,7 +472,7 @@ get_nul(freq)
 
       while (too_high != too_low + 1)
 	{
-	  
+
 	  try = (too_high + too_low)/2;
 	  freq_try = get_gam_freq(&gam_line_list, try);
 	  if (freq_try >= freq)
@@ -488,7 +488,7 @@ get_nul(freq)
       return(too_low);
     }
 }
-	
+
 /**************************************************************/
 double
 get_gam_freq(line_list, n)

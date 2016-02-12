@@ -8,7 +8,7 @@ make_light_curve_res()
 {
   int gather_light_curve_res();
   int write_light_curve_res();
-  
+
   gather_light_curve_res(0);
   write_light_curve_res();
   return(0);
@@ -17,14 +17,14 @@ make_light_curve_res()
 void init_light_curve_res()
 {
   int n,nn;
-  
+
   if (ntlcbins > MTLCBINS)
   {
     printout("Too many time bins in light curve - reducing.\n");
     ntlcbins = MTLCBINS;
   }
 
-  /* start by setting up the time bins. */ 
+  /* start by setting up the time bins. */
   /* it is all done interms of a logarithmic spacing in t - get the
      step sizes first. */
   ///Should be moved to input.c or exspec.c
@@ -51,7 +51,7 @@ gather_light_curve_res(my_rank)
   PKT *pkt_ptr;
   int add_to_lc_res();
   int i,n,p,nn;
- 
+
 
 
   /// The grid is now set up. Now we loop over all the packets, check if they made it out or not,
@@ -79,7 +79,7 @@ int write_light_curve_res()
   float dum1, dum2;
 
 
-  
+
   /// Light curve is done - write it out.
   /// If needed, start by reading in existing file and storing old numbers.
   if (file_set == 1)
@@ -157,21 +157,21 @@ add_to_lc_res(pkt_ptr)
   t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
 
   /* Put this into the time grid. */
-  
+
   if (t_arrive > tmin && t_arrive < tmax)
     {
       nt = (log(t_arrive) - log(tmin)) / dlogtlc;
 
       /* for angle resolved case, need to work out the correct angle bin too. */
 
-      
+
       costheta = dot(pkt_ptr->dir, syn_dir);
       thetabin = ((costheta + 1.0) * sqrt(MALCBINS) / 2.0);
       cross_prod(pkt_ptr->dir, syn_dir, vec1);
       cross_prod(xhat, syn_dir, vec2);
       cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
 
-      cross_prod(vec2, syn_dir, vec3);      
+      cross_prod(vec2, syn_dir, vec3);
       testphi = dot(vec1,vec3);
 
       if (testphi > 0)
@@ -194,7 +194,7 @@ add_to_lc_res(pkt_ptr)
 
 /**********************************************************************/
 
-int 
+int
 cross_prod (v1, v2, v3)
      double v1[3], v2[3], v3[3];
 {

@@ -24,7 +24,7 @@ void init_light_curve(void)
     ntlcbins = MTLCBINS;
   }
 
-  /* start by setting up the time bins. */ 
+  /* start by setting up the time bins. */
   /* it is all done interms of a logarithmic spacing in t - get the
      step sizes first. */
   ///Should be moved to input.c or exspec.c
@@ -38,9 +38,9 @@ void init_light_curve(void)
     light_curve_cmf[n].lum = 0.0;
   }
 }
-    
-    
-    
+
+
+
 /**********************************************************************/
 int write_light_curve(FILE *lc_file, int current_abin)
 {
@@ -50,7 +50,7 @@ int write_light_curve(FILE *lc_file, int current_abin)
   double save2[MTSTEP][2];
   double save[MTLCBINS][2];
   float dum1, dum2, dum3;
-    
+
   /// Light curve is done - write it out.
   /// If needed, start by reading in existing file and storing old numbers.
   if (file_set == 1)
@@ -65,7 +65,7 @@ int write_light_curve(FILE *lc_file, int current_abin)
 	  save[m][0]=dum2;
 	  save[m][1]=dum3;
 	}
-      
+
       for (m=0; m < ntstep; m++)
 	{
 	  fscanf(lc_file, "%g %g %g\n", &dum1, &dum2, &dum3);
@@ -81,14 +81,14 @@ int write_light_curve(FILE *lc_file, int current_abin)
 	  save[m][0]=0.0;
 	  save[m][1]=0.0;
 	}
-      
+
       for (m=0; m < ntstep; m++)
 	{
 	  save2[m][0]=0.0;
 	  save2[m][1]=0.0;
 	}
     }
-  
+
 
 
 
@@ -112,9 +112,9 @@ int write_light_curve(FILE *lc_file, int current_abin)
 
   fclose(lc_file);
   */
-  
-  
-  
+
+
+
   /// Print out the UVOIR bolometric light curve.
   for (m=0; m < ntlcbins; m++)
   {
@@ -143,7 +143,7 @@ int gather_light_curve(void)
   EPKT *pkt_ptr;
   int p;
   //int i,n,p;
-  
+
 
   /// Set up the light curve grid and initialise the bins to zero.
   init_light_curve();
@@ -206,7 +206,7 @@ int gather_light_curve_res(int current_abin)
   void init_light_curve(void);
   EPKT *pkt_ptr;
   int p;
-  
+
   /// Set up the light curve grid and initialise the bins to zero.
   init_light_curve();
 
@@ -247,7 +247,7 @@ int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
   cross_prod(xhat, syn_dir, vec2);
   cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
 
-  cross_prod(vec2, syn_dir, vec3);      
+  cross_prod(vec2, syn_dir, vec3);
   testphi = dot(vec1,vec3);
 
   if (testphi > 0)
@@ -259,7 +259,7 @@ int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
     phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MALCBINS));
   }
   na = (thetabin*sqrt(MALCBINS)) + phibin;
-  
+
   /// Add only packets which escape to the current angle bin
   if (na == current_abin)
   {
@@ -274,5 +274,3 @@ int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
 
   return(0);
 }
-
-

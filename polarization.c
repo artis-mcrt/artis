@@ -6,7 +6,7 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
 {
   double vec_len(), doppler(), dot();
   int get_velocity(), angle_ab();
-  
+
   double zrand,zrand2;
   double mu,phi,sintheta;
   double dummy_dir[3], vel_vec[3];
@@ -21,21 +21,21 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
-  
+
   /// First get the incoming direction in the cmf and store it
-  
-  /// We have incoming dir in rf - we want to convert it to the cmf 
-  /// - use aberation of angles. 
+
+  /// We have incoming dir in rf - we want to convert it to the cmf
+  /// - use aberation of angles.
 
 
   ///get_velocity(pkt_ptr->pos, vel_vec, t_current);
   ///angle_ab(pkt_ptr->dir, vel_vec, old_dir_cmf);
-  
+
   ///trying for now to work in rf only
   old_dir_rf[0]=pkt_ptr->dir[0];
   old_dir_rf[1]=pkt_ptr->dir[1];
   old_dir_rf[2]=pkt_ptr->dir[2];
-  
+
 
   /// Need to assign a new direction. Assume isotropic emission in the cmf
   zrand = gsl_rng_uniform(rng);
@@ -50,8 +50,8 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   new_dir_cmf[2] = mu;
 
   //printout("[debug] pkt_ptr->dir in CMF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-  
- /// This direction is in the cmf - we want to convert it to the rest 
+
+ /// This direction is in the cmf - we want to convert it to the rest
   /// frame - use aberation of angles. We want to convert from cmf to
   /// rest so need -ve velocity.
   get_velocity(pkt_ptr->pos, vel_vec, (-1*(t_current)));
@@ -71,7 +71,7 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
       abort();
     }
   #endif
-      
+
   /// Finally we want to put in the rest frame energy and frequency. And record
   /// that it's now a r-pkt.
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
@@ -84,13 +84,13 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
       abort();
     }
   #endif
-  pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf; 
+  pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
 
 
   ///for polarization want to get a direction which is perpendiculat to scattering plane
   //printout("rf pkt direction before scattering %g, %g, %g\n",old_dir_rf[0],old_dir_rf[1],old_dir_rf[2]);
   //printout("rf pkt direction after scattering %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-  
+
   cross_prod(old_dir_rf,pkt_ptr->dir,dir_perp);
   //printout("old pol reference dir %g, %g, %g\n",pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   //printout("new pol reference dir %g, %g, %g\n",dir_perp[0],dir_perp[1],dir_perp[2]);
@@ -102,7 +102,7 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   cross_prod(dir_perp,pkt_ptr->pol_dir,dummy_dir);
   sin_gamma=dot(dummy_dir,old_dir_rf);
   //printout("cos_gamma %g, sin_gamma %g\n",cos_gamma,sin_gamma);
-  
+
   if ((fabs(((cos_gamma*cos_gamma) + (sin_gamma*sin_gamma))-1.0)) > 1.e-6)
     {
       printout("Polarization rotation angle misbehaving. %g %g %g\n", cos_gamma, sin_gamma, ((cos_gamma*cos_gamma) + (sin_gamma*sin_gamma)));
@@ -111,7 +111,7 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   ///transform Q and U by rotation
   sin_2gamma = 2* sin_gamma*cos_gamma;
   cos_2gamma = 2*(cos_gamma*cos_gamma) - 1.0;
-  
+
   //printout("stokes qu old, %g %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1]);
   Qold= (pkt_ptr->stokes_qu[0] * cos_2gamma) + (pkt_ptr->stokes_qu[1] * sin_2gamma);
   Uold= (pkt_ptr->stokes_qu[1] * cos_2gamma) - (pkt_ptr->stokes_qu[0] * sin_2gamma);
@@ -126,8 +126,8 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   Inew = 0.75 * ((1. + mu2) + ((mu2 - 1.0)*Qold));
   Qnew = 0.75 * ((mu2 - 1.0) + ((mu2 + 1.0)*Qold));
   Unew = 1.5 * mu * Uold;
-  
-  
+
+
   pkt_ptr->stokes_qu[0]=Qnew/Inew;
   pkt_ptr->stokes_qu[1]=Unew/Inew;
   //printout("mu, mu2 %g %g\n",mu,mu2);
@@ -136,7 +136,6 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   pkt_ptr->pol_dir[0]=dir_perp[0];
   pkt_ptr->pol_dir[1]=dir_perp[1];
   pkt_ptr->pol_dir[2]=dir_perp[2];
-  
+
 
  }
-

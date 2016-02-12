@@ -18,7 +18,7 @@ make_spectrum_res()
 void init_spectrum_res()
 {
   int n,nn,m,i;
-    
+
   if (nnubins > MNUBINS)
   {
     printout("Too many frequency bins in spectrum - reducing.\n");
@@ -29,8 +29,8 @@ void init_spectrum_res()
     printout("Too many time bins in spectrum - reducing.\n");
     ntbins = MTBINS;
   }
-      
-  /* start by setting up the time and frequency bins. */ 
+
+  /* start by setting up the time and frequency bins. */
   /* it is all done interms of a logarithmic spacing in both t and nu - get the
      step sizes first. */
   ///Should be moved to input.c or exspec.c
@@ -48,7 +48,7 @@ void init_spectrum_res()
         spectra_res[n][nn].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
         spectra_res[n][nn].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - spectra_res[n][nn].lower_freq[m];
         spectra_res[n][nn].flux[m] = 0.0;
-        
+
         if (do_emission_res == 1)
         {
           for (i = 0; i < 2*nelements*maxion+1; i++)
@@ -69,7 +69,7 @@ gather_spectrum_res(my_rank)
   int add_to_spec_res();
 
 
-    
+
   /// The grids are now set up. Now we loop over all the packets, check if they made it out or not,
   /// and if they did we add their rest frame energy to the appropriate cell.
 
@@ -96,9 +96,9 @@ write_spectrum_res()
   FILE *spec_file;
   FILE *emission_file;
   float dum1, dum2;
-  
-  
-  
+
+
+
   /// The spectra are now done - just need to print them out.
   if (file_set == 1)
     {
@@ -107,21 +107,21 @@ write_spectrum_res()
 	exit(0);
       }
       fscanf(spec_file, "%g ", &dum1);
-      
+
       for (p = 0; p < ntbins; p++)
 	{
 	  fscanf(spec_file, "%g ", &dum1);
 	}
-      
+
       for (nn=0; nn < MABINS; nn++)
 	{
 	  for (m=0; m < nnubins; m++)
 	    {
 	      fscanf(spec_file, "%g ", &dum1);
-	      
+
 	      for (p = 0; p < ntbins; p++)
 		{
-		  fscanf(spec_file, "%g ", 
+		  fscanf(spec_file, "%g ",
 			 &dum2);
 		  spectra_res[p][nn].flux[m] += dum2;
 		}
@@ -129,8 +129,8 @@ write_spectrum_res()
 	}
       fclose(spec_file);
     }
-  
-  
+
+
   if ((spec_file = fopen("spec_res.out", "w+")) == NULL){
     printout("Cannot open spec_file.txt.\n");
     exit(0);
@@ -143,28 +143,28 @@ write_spectrum_res()
       exit(0);
     }
   }
-  
-  
+
+
   fprintf(spec_file, "%g ", 0.0);
-  
+
   for (p = 0; p < ntbins; p++)
     {
       fprintf(spec_file, "%g ", (spectra_res[p][0].lower_time + (spectra_res[0][p].delta_t/2))/DAY);
     }
-  
+
   fprintf(spec_file, "\n");
-  
+
   for (nn=0; nn < MABINS; nn++)
     {
       for (m=0; m < nnubins; m++)
 	{
 	  fprintf(spec_file, "%g ", ((spectra_res[0][0].lower_freq[m]+(spectra_res[0][0].delta_freq[m]/2))));
-	  
+
 	  for (p = 0; p < ntbins; p++)
 	    {
-	      fprintf(spec_file, "%g ", 
+	      fprintf(spec_file, "%g ",
 		      spectra_res[p][nn].flux[m]);
-              
+
               if (do_emission_res == 1)
               {
                 for (i = 0; i < 2*nelements*maxion+1; i++)
@@ -174,13 +174,13 @@ write_spectrum_res()
 	    }
 	  fprintf(spec_file, "\n");
 	}
-      
+
     }
-  
+
   fclose(spec_file);
   if (do_emission_res == 1) fclose(emission_file);
-  
-  
+
+
   return(0);
 }
 
@@ -195,7 +195,7 @@ add_to_spec_res(pkt_ptr)
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
   /* Time bin - we know that it escaped at "escape_time". However, we have to allow
-     for travel time. Use the formula in Leon's paper. 
+     for travel time. Use the formula in Leon's paper.
      The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
   */
 
@@ -217,7 +217,7 @@ add_to_spec_res(pkt_ptr)
   t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
 
   /* Put this into the time grid. */
-  
+
   if (t_arrive > tmin && t_arrive < tmax)
   {
     nt = (log(t_arrive) - log(tmin)) / dlogt;
@@ -249,7 +249,7 @@ add_to_spec_res(pkt_ptr)
     {
       nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
       spectra_res[nt][na].flux[nnu] += pkt_ptr->e_rf / spectra_res[nt][na].delta_t / spectra_res[nt][na].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
-      
+
       if (do_emission_res == 1)
       {
         et = pkt_ptr->emissiontype;
@@ -273,7 +273,7 @@ add_to_spec_res(pkt_ptr)
           ion = bflist[et].ionindex;
           nproc = nelements*maxion + element*maxion+ion;
         }
-        
+
         spectra_res[nt][na].emission[nnu].count[nproc] += 1;
       }
     }
@@ -282,5 +282,3 @@ add_to_spec_res(pkt_ptr)
   return(0);
 
 }
-	    
- 

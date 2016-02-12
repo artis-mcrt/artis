@@ -9,7 +9,7 @@ int packet_prop(pkt_ptr, t1, t2, nts)
      double t1, t2;
      int nts; //the time step we are doing
 {
-  double t_current; 
+  double t_current;
   double do_gamma();
   double do_rpkt();
   double do_rpkt_thickcell();
@@ -48,7 +48,7 @@ int packet_prop(pkt_ptr, t1, t2, nts)
       }
       else
       {
-        #ifdef _OPENMP 
+        #ifdef _OPENMP
           #pragma omp atomic
         #endif
         time_step[nts].gamma_dep += pkt_ptr->e_cmf; ///***??
@@ -67,12 +67,12 @@ int packet_prop(pkt_ptr, t1, t2, nts)
 
       if (pkt_ptr->type == TYPE_ESCAPE)
       {
-        #ifdef _OPENMP 
+        #ifdef _OPENMP
           #pragma omp atomic
         #endif
         time_step[nts].cmf_lum += pkt_ptr->e_cmf;
       }
-	  
+
       if (t_change_type < 0)
       {
         end_packet = 1;
@@ -99,9 +99,9 @@ int packet_prop(pkt_ptr, t1, t2, nts)
     {
       /*It's a k-packet - convert to r-packet (low freq).*/
       //printout("k-packet propagation\n");
-	  
+
       //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
-      
+
       if (pkt_ptr->type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
         t_change_type = do_kpkt_bb(pkt_ptr, t_current, t2);
       else if (pkt_ptr->type == TYPE_KPKT)
@@ -111,7 +111,7 @@ int packet_prop(pkt_ptr, t1, t2, nts)
         printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
         //t_change_type = do_kpkt_ffonly(pkt_ptr, t_current, t2);
       }
-      
+
       if (t_change_type < 0)
       {
         end_packet = 1;
@@ -125,7 +125,7 @@ int packet_prop(pkt_ptr, t1, t2, nts)
     {
       /*It's an active macroatom - apply transition probabilities*/
       //printout("MA-packet handling\n");
-        
+
       t_change_type = do_ma(pkt_ptr, t_current, t2, nts);
 
       if (t_change_type < 0)
@@ -135,7 +135,7 @@ int packet_prop(pkt_ptr, t1, t2, nts)
       }
       else
       {
-        /// should be the same as original t_current, as MA processes 
+        /// should be the same as original t_current, as MA processes
         /// happen instantaneously so far
         t_current = t_change_type;
       }

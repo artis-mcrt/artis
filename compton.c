@@ -28,11 +28,11 @@ double sig_comp(pkt_ptr,t_current)
     fmax = (1 + (2*xx));
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
-  
+
   /* Now need to multiply by the electron number density. */
-  
+
   sigma_cmf *= get_nnetot(cell[pkt_ptr->where].modelgridindex);
-    
+
   /* Now need to convert between frames. */
 
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
@@ -68,16 +68,16 @@ int com_sca(pkt_ptr,t_current)
   xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
   /* It is known that a Compton scattering event is going to take place.
-     We need to do two things - (1) decide whether to convert energy 
+     We need to do two things - (1) decide whether to convert energy
      to electron or leave as gamma (2) decide properties of new packet.*/
 
-  /* The probability of giving energy to electron is related to the 
+  /* The probability of giving energy to electron is related to the
      energy change of the gamma ray. This is equivalent to the choice of
      scattering angle. Probability of scattering into particular angle
      (i.e. final energy) is related to the partial cross-section.*/
 
   /* Choose a random number to get the eneregy. Want to find the
-   factor by which the energy changes "f" such that 
+   factor by which the energy changes "f" such that
    sigma_partial/sigma_tot = zrand */
 
   zrand = gsl_rng_uniform(rng);
@@ -90,19 +90,19 @@ int com_sca(pkt_ptr,t_current)
   else
   {
     f=choose_f(xx,zrand);
-      
+
     /* Check that f lies between 1.0 and (2xx  + 1) */
-      
+
     if ((f < 1) || (f > (2*xx + 1)))
     {
       printout("Compton f out of bounds. Abort.\n");
       exit(0);
     }
-      
+
     /* Prob of keeping gamma ray is...*/
-      
+
     prob_gamma = 1./ f;
-      
+
   }
 
   zrand = gsl_rng_uniform(rng);
@@ -112,7 +112,7 @@ int com_sca(pkt_ptr,t_current)
 	 co-moving frame then transfer back to rest frame.*/
 
     pkt_ptr->nu_cmf = pkt_ptr->nu_cmf / f; //reduce frequency
-      
+
 
     /* The packet has stored the direction in the rest frame.
 	 Use aberation of angles to get this into the co-moving frame.*/
@@ -150,7 +150,7 @@ int com_sca(pkt_ptr,t_current)
       printout("Problem with angle - Compton. Abort.\n");
       exit(0);
     }
-      
+
     /* Now convert back again.*/
 
     get_velocity(pkt_ptr->pos, vel_vec, (-1.*t_current));
@@ -162,7 +162,7 @@ int com_sca(pkt_ptr,t_current)
 
     /*It now has a rest frame direction and a co-moving frequency.
 	Just need to set the rest frame energy.*/
-     
+
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
@@ -180,7 +180,7 @@ int com_sca(pkt_ptr,t_current)
 
   return(0);
 }
-  
+
 
 /**************************************************************/
 
@@ -225,7 +225,7 @@ double choose_f(xx,zrand)
 
   count = 0;
   err = 1e20;
-  
+
   //printout("new\n");
 
   while ((err > 1.e-4) && (count < 1000))

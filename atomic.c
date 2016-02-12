@@ -382,6 +382,7 @@ double photoionization_crosssection(double nu_edge, double nu)
 {
   double epsilon(int element, int ion, int level);
   double sigma_bf;
+  double nu_max_phixs;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -390,24 +391,21 @@ double photoionization_crosssection(double nu_edge, double nu)
 
   int check = 0;
 
-  if (nu == nu_edge)
+  i = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
+
+  if (i < 0):
+    sigma_bf = 0.0;
+  else if (i < NPHIXSPOINTS)
   {
-    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
+    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
   }
   else
   {
-    i = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
-    if (i < NPHIXSPOINTS)
-    {
-      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
-    }
-    else
-    {
-      /// use a parameterization of sigma_bf by the Kramers formula
-      /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
-      /// so far the highest grid point, otherwise the cross-section is not continuous
-      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_edge*(1.0+NPHIXSNUINCREMENT*(NPHIXSPOINTS-1))/nu,3);
-    }
+    /// use a parameterization of sigma_bf by the Kramers formula
+    /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
+    /// so far the highest grid point, otherwise the cross-section is not continuous
+    nu_max_phixs = nu_edge * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs/nu, 3);
   }
 
   #ifdef DEBUG_ON
@@ -431,7 +429,7 @@ double photoionization_crosssection(double nu_edge, double nu)
 }
 
 
-
+/// this function is not used anywhere
 ///***************************************************************************/
 /*double interpolate_photoionization_crosssection(double nu_edge, double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.

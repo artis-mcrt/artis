@@ -8,7 +8,7 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
      double *single_pos;
      double dnuds;
 {
-  
+
   double vel_vec[3];
   int get_velocity();
   double doppler();
@@ -23,14 +23,14 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
   if (gam_line_list.type[lindex] == NI_GAM_LINE_ID)
   {
     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
-	* exp(-single_t/TNICKEL) / TNICKEL * 
+	* exp(-single_t/TNICKEL) / TNICKEL *
 	nickel_spec.probability[gam_line_list.index[lindex]]
         * nickel_spec.energy[gam_line_list.index[lindex]]
 	*fni(grid_ptr)*tfact;
   }
   else if (gam_line_list.type[lindex] == CO_GAM_LINE_ID)
   {
-      
+
     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
       * (exp(-single_t/TNICKEL) - exp(-single_t/TCOBALT))
       / (TNICKEL - TCOBALT)
@@ -45,9 +45,9 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
   }
   else if (gam_line_list.type[lindex] == CR48_GAM_LINE_ID)
   {
-    
+
     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
-    * exp(-single_t/T48CR) / T48CR * 
+    * exp(-single_t/T48CR) / T48CR *
     cr48_spec.probability[gam_line_list.index[lindex]]
     * cr48_spec.energy[gam_line_list.index[lindex]]
     *f48cr(grid_ptr)*tfact;
@@ -55,7 +55,7 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
   }
   else if (gam_line_list.type[lindex] == V48_GAM_LINE_ID)
   {
-      
+
       emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
 	* (exp(-single_t/T48CR) - exp(-single_t/T48V))
 	/ (T48CR - T48V)
@@ -72,27 +72,27 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
     printout("unknown line??\n");
     exit(0);
   }
-  
+
 
   /* I'm changing the next bit here (Jan 06) because I think what was
-     here before (below) was wrong in the Doppler terms. 
+     here before (below) was wrong in the Doppler terms.
 
      ray_ptr->e_cmf[nray]+= emitt_energy / fabs(dnuds);
-     
+
      get_velocity(single_pos, vel_vec, single_t);
-     
+
      ray_ptr->e_rf[nray] = ray_ptr->e_cmf[nray] / doppler(syn_dir, vel_vec);
- 
-  */ 
+
+  */
   if (emitt_energy != 0)
   {
     get_velocity(single_pos, vel_vec, single_t);
-      
+
     ray_ptr->e_rf[nray]+= emitt_energy / fabs(dnuds)
 	/doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) ;
   }
 
-  
+
   return(0);
 }
 
@@ -109,7 +109,7 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   PKT dummy;
   double kap_compton, kap_photo_electric, kap_tot, tau_cont, kap_pair_prod;
   double sig_comp(), sig_photo_electric();
-  double sig_pair_prod(), doppler(); 
+  double sig_pair_prod(), doppler();
   int get_velocity();
   double vel_vec[3], dop_fac;
 
@@ -122,7 +122,7 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   dummy.dir[0] = syn_dir[0];
   dummy.dir[1] = syn_dir[1];
   dummy.dir[2] = syn_dir[2];
-  
+
   dummy.where = ray_ptr->where;
   dummy.nu_cmf = ray_ptr->nu_cmf[nray];
 
@@ -130,7 +130,7 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   kap_photo_electric = sig_photo_electric(&dummy, single_t);
   kap_pair_prod = sig_pair_prod(&dummy, single_t);
   kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
-   
+
   /* For now no emissivity - only destruction. So very simple. */
 
   tau_cont = kap_tot * ldist;
@@ -138,12 +138,12 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   ray_ptr->e_rf[nray] = ray_ptr->e_rf[nray] * exp(-1. * tau_cont);
 
   /* Now adding the emissivity term. */
- 
+
   if (lindex != RED_OF_LIST)
   {
     get_velocity(single_pos, vel_vec, single_t);
     dop_fac = 1./doppler(syn_dir, vel_vec);
-      
+
     if (tau_cont > 1.e-6)
     {
       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] *
@@ -155,7 +155,7 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
 	  			  ldist);
     }
   }
-  
+
   /* This MUST be followed by a call to move_one_ray() in source
      since e_cmf is NOT reset here. */
 
@@ -168,7 +168,7 @@ int compton_emiss_cont(pkt_ptr, dist, t_current)
      double dist, t_current;
 {
   /* Subroutine to add contriubtion to the MC estimator for the
-compton emissivity. Called with a packet that is about to travel a 
+compton emissivity. Called with a packet that is about to travel a
 distance dist in the lab frame. Time at start of distance is t_current.*/
 
   double mu_cmf;
@@ -180,9 +180,9 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
   double f, dsigma_domega_cmf;
   double freq_out, emiss_cont, dop_fac;
   int lindex, get_nul();
- 
+
   /* First we need to know the scattering angle needed from the
-packet's direction of motion to the desired observer. Call this angle 
+packet's direction of motion to the desired observer. Call this angle
 mu_cmf (it's a cosine). To get it convert both the direction of
 motion and the local velocity vectors to the cmf.*/
 
@@ -197,7 +197,7 @@ motion and the local velocity vectors to the cmf.*/
   //  printout("cmf_dir %g %g %g\n", cmf_dir[0], cmf_dir[1], cmf_dir[2]);
   //  printout("syn_dir %g %g %g\n", syn_dir[0], syn_dir[1], syn_dir[2]);
   //  printout("cmf_syn_dir %g %g %g\n", cmf_syn_dir[0], cmf_syn_dir[1], cmf_syn_dir[2]);
-  
+
 
 
 
@@ -209,7 +209,7 @@ motion and the local velocity vectors to the cmf.*/
     exit(0);
   }
 
-  /* Now get the factor by which the frequency will change, f, for going 
+  /* Now get the factor by which the frequency will change, f, for going
      in this direction. f = old energy / new eneregy - always should be > 1*/
 
   f = 1 + (H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT * (1. - mu_cmf));
@@ -220,10 +220,10 @@ motion and the local velocity vectors to the cmf.*/
      light will have frequency (nu_cmf / f) in the cmf frame. And it
      travels in direction syn_dir in the rf. */
 
-  freq_out = pkt_ptr->nu_cmf /f; /// doppler(syn_dir, vel_vec); 
+  freq_out = pkt_ptr->nu_cmf /f; /// doppler(syn_dir, vel_vec);
   // do we want ?/ doppler(syn_dir, vel_vec)
 
-  lindex = get_nul(freq_out); // This is the index of the next line to 
+  lindex = get_nul(freq_out); // This is the index of the next line to
                               // the red. The emissivity will go in this
                               // bin. However, since there's an offset
                               // in the emissivities, we shift the
@@ -236,31 +236,31 @@ motion and the local velocity vectors to the cmf.*/
 
   if ((lindex > emiss_offset - 1) && (lindex < emiss_offset + emiss_max - 1))
   {
-    
+
     /* Then get partial crossection dsigma_domega in cmf */
     /* Coeff is 3 / 16 / PI */
-      
+
     dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f *
       (f + (1./f) + (mu_cmf*mu_cmf) - 1.);
-    
+
     //speed = vec_len(vel_vec);
-    //solid_angle_factor =  doppler(pkt_ptr->dir, vel_vec) * doppler(pkt_ptr->dir, vel_vec); 
-    
-    /* 
+    //solid_angle_factor =  doppler(pkt_ptr->dir, vel_vec) * doppler(pkt_ptr->dir, vel_vec);
+
+    /*
       pow((1 + (dot(vel_vec, syn_dir)/CLIGHT)),2)
       / (1.0 - (speed* speed / CLIGHT / CLIGHT));
     */
-    
+
     //dsigma_domega_rf = dsigma_domega_cmf //* doppler(pkt_ptr->dir, vel_vec)
     //* solid_angle_factor;
-    
-    /* so now determine the contribution to the emissivity and which 
+
+    /* so now determine the contribution to the emissivity and which
  frequency bin it should be in */
-	
+
     dop_fac = doppler(pkt_ptr->dir, vel_vec);
-	
+
     emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
-	
+
     /* For normalisation this needs to be
        1) divided by volume
        2) divided by frequency bin size
@@ -268,7 +268,7 @@ motion and the local velocity vectors to the cmf.*/
        4) divided by the length of the time step
        This will all be done later
     */
-    
+
     if (lindex < emiss_offset)
     {
       printout("scarily bad error here! %d %d\n", lindex, emiss_offset);
@@ -280,7 +280,7 @@ motion and the local velocity vectors to the cmf.*/
       #endif
       compton_emiss[cell[pkt_ptr->where].modelgridindex][lindex - emiss_offset] += emiss_cont;
     }
-	
+
   }
 
   return(0);
@@ -291,30 +291,30 @@ int pp_emiss_cont(pkt_ptr, dist, t_current)
      PKT *pkt_ptr;
      double dist, t_current;
 {
-  /* New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The 
-     emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something 
-     which, when normalised by the volume and time step, will give the energy going into the .511 MeV 
+  /* New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
+     emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something
+     which, when normalised by the volume and time step, will give the energy going into the .511 MeV
      gamma rays from pair production per unit volume per unit time in the cmf. */
-  /* Called with a packet that is about to travel a 
+  /* Called with a packet that is about to travel a
      distance dist in the lab frame. Time at start of distance is t_current.*/
 
 
   double emiss_cont;
   double sig_pair_prod();
-  
+
   emiss_cont = sig_pair_prod(pkt_ptr, t_current) * (2.46636e+20 / pkt_ptr->nu_cmf) * pkt_ptr->e_rf * dist;
-    
+
   /* For normalisation this needs to be
      1) divided by volume
      2) divided by the length of the time step
      This will all be done later
   */
-      
-  #ifdef _OPENMP 
+
+  #ifdef _OPENMP
     #pragma omp atomic
   #endif
   compton_emiss[cell[pkt_ptr->where].modelgridindex][emiss_max - 1] += 1.e-20 * emiss_cont;
-  
+
   //  printf("emiss_cont %g\n", emiss_cont);
 
   /* Note (SS May 07) - the Doppler factors are not all sorted out yet - the expression used above needs to be
@@ -370,10 +370,10 @@ int zero_estimators()
     {
       compton_emiss[n][m] = 0.0;
     }
-    
+
     rpkt_emiss[n] = 0.0;
   }
-  
+
   return(0);
 }
 
@@ -387,21 +387,21 @@ int normalise_estimators(int nts)
   double dfreq[EMISS_MAX], get_gam_freq();
   double time_factor;
   double volume;
-  
+
   time_factor = 1. / pow(time_step[nts].mid / tmin, 3.0) / time_step[nts].width;
 
   for (m=0; m < emiss_max; m++)
   {
-    dfreq[m] = get_gam_freq(&gam_line_list, m + emiss_offset+1) - 
+    dfreq[m] = get_gam_freq(&gam_line_list, m + emiss_offset+1) -
       get_gam_freq(&gam_line_list, m + emiss_offset);
     if (dfreq[m] < 0)
     {
       printout("Problem with normalisation of estimators. Abort.\n");
       exit(0);
     }
-    dfreq[m] = 1./dfreq[m]; 
+    dfreq[m] = 1./dfreq[m];
   }
-  
+
   //for (n=0; n < ngrid; n++)
   for (n=0; n < npts_model; n++)
   {
@@ -410,7 +410,7 @@ int normalise_estimators(int nts)
     for (m=0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = compton_emiss[n][m] * time_factor * volume / nprocs / assoc_cells;
-      
+
       if (m < emiss_max - 1)
       /** (emiss_max - 1) contains the pair production case so it doesn't need the nne nor the dfreq */
       {
@@ -457,7 +457,7 @@ int write_estimators(nts)
 
   strcat(filename, junk);
   strcat(filename, ".out");
-  
+
   if (file_set == 1)
   {
     if ((est_file = fopen(filename, "rb")) == NULL)
@@ -513,7 +513,7 @@ int estim_switch(nts)
   tend = time_step[nts].start + time_step[nts].width;
 
   ts_want = time_syn[0] * ((1. - rmax/tmin/CLIGHT_PROP));
-  te_want = time_syn[nsyn_time-1] * (1. + rmax/tmin/CLIGHT_PROP);  
+  te_want = time_syn[nsyn_time-1] * (1. + rmax/tmin/CLIGHT_PROP);
 
   if (tstart > te_want)
   {
@@ -527,7 +527,7 @@ int estim_switch(nts)
 
   return(on_or_off);
 }
-    
+
 /*************************************************/
 int emiss_load(nts)
      int nts;
@@ -564,7 +564,7 @@ int emiss_load(nts)
 
   strcat(filename, junk);
   strcat(filename, ".out");
-  
+
   if ((est_file = fopen(filename, "r")) == NULL)
   {
     printout("Cannot open est_file.txt.\n");

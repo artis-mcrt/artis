@@ -10,7 +10,7 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_linalg.h>
 
-#ifdef _OPENMP 
+#ifdef _OPENMP
   #include "omp.h"
 #endif
 
@@ -85,7 +85,7 @@ typedef struct
 //   double tau_at_edge;
 //   short level;          ///limited to 32767 levels
 // } ionsphixslist_t;
-// 
+//
 // typedef struct
 // {
 //   double nu_edge;
@@ -128,7 +128,7 @@ typedef struct
 
 
 
-struct packet
+typedef struct
 {
   int number;     /// A unique number to identify which packet caused potential troubles.
   int where;      /// The grid cell that the packet is in.
@@ -145,15 +145,15 @@ struct packet
   int escape_type; /// Flag to tell us in which form it escaped from the grid.
   int escape_time; /// Time at which is passes out of the grid.
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
-  
+
   int scat_count;  /// WHAT'S THAT???
-  
+
   int next_trans;  /// This keeps track of the next possible line interaction of a rpkt by storing
                    /// its linelist index (to overcome numerical problems in propagating the rpkts).
-  
+
   int interactions;/// debug: number of interactions the packet undergone
   int last_event;  /// debug: stores information about the packets history
-  
+
   int emissiontype;   /// records how the packet was emitted if it is a r-pkt
   double em_pos[3]; /// Position of the packet (x,y,z).
   int absorptiontype;     /// records linelistindex of the last absorption
@@ -168,10 +168,9 @@ struct packet
   //short timestep;
   double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
-};
-typedef struct packet PKT;
+} PKT;
 
-typedef struct 
+typedef struct
 {
   int element;              /// macro atom of type element (this is an element index)
   int ion;                  /// in ionstage ion (this is an ion index)
@@ -188,14 +187,14 @@ typedef struct
 
 /// GRID
 ///============================================================================
-typedef struct 
+typedef struct
 {
   float abundance;         /// Abundance of the element (by mass!).
   float *groundlevelpop;   /// Pointer to an array of floats which contains the groundlevel populations
                            /// of all included ionisation stages for the element.
-  float *partfunct;        /// Pointer to an array of floats which contains the partition functions 
+  float *partfunct;        /// Pointer to an array of floats which contains the partition functions
                            /// of all included ionisation stages for the element.
-  //float *ltepartfunct;     /// Pointer to an array of floats which contains the LTE partition functions 
+  //float *ltepartfunct;     /// Pointer to an array of floats which contains the LTE partition functions
   //                         /// of all included ionisation stages for the element.
 } compositionlist_entry;
 
@@ -242,7 +241,7 @@ typedef struct
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
                                          /// so there is no need to communicate it via MPI so far!
-  
+
   compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundance of all included elements
                                          /// and all the groundlevel
                                          /// populations and partition
@@ -256,10 +255,6 @@ typedef struct
 } modelgrid_t;
 
 
-    
-    
-    
-    
 /// Type definition for the sampling grid
 /*
 #define SAMPLEGRIDSIZE 3
@@ -303,8 +298,7 @@ struct syn_ray
   double e_rf[NSYN]; /*rest frame energy of rays */
   double e_cmf[NSYN]; /* cmf energies of rays */
 };
-typedef struct syn_ray RAY; 
-
+typedef struct syn_ray RAY;
 
 
 
@@ -352,7 +346,7 @@ typedef struct
   float *photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets;                       /// length of phixstargets array:
   phixstarget_entry *phixstargets;         /// pointer to table of target states and probabilities
-  
+
 //   double *spontrecombcoeff_E;
 //   double *photoioncoeff_below;
 //   double *photoioncoeff_above;
@@ -360,11 +354,11 @@ typedef struct
 //  double *bfheating_coeff_above;
   //double *stimulated_bfcooling_coeff;
   //double *stimulated_recomb_coeff;
-  
+
   //float *modified_spontrecombcoeff;
   //float *stimrecombcoeff;
   //float *modified_stimrecombcoeff;
-  
+
   ///float population;
   ///float sahafact;
   ///float spontaneousrecomb_ratecoeff;
@@ -372,12 +366,12 @@ typedef struct
   ///float corrphotoion_ratecoeff;
   ///float modifiedcorrphotoion_ratecoeff;
   ///marates_struct marates;
-  
+
   /// time dependent macroatom event rates
   //double rad_deexc;                          /// Radiative deexcitation rate from this level.
   //double internal_down_same;                 /// Rate for internal downward transitions within the same ionisation stage.
   //double internal_up_same;                   /// Rate for internal upward transitions within the same ionisation stage.
-  
+
   //transitionlist_entry *transitions;
   permittedtransitionlist_entry *uptrans;    /// Allowed upward transitions from this level
   permittedtransitionlist_entry *downtrans;  /// Allowed downward transitions from this level
@@ -401,19 +395,19 @@ typedef struct
   levellist_entry *levels;                   /// Carries information for each level: 0,1,...,nlevels-1
 } ionlist_entry;
 
-typedef struct 
+typedef struct
 {
   short anumber;                             /// Atomic number
   short nions;                               /// Number of ions for the current element
 //  short uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given cell
 //                                             /// Be aware that this must not be used outside of the update_grid routine
 //                                             /// and their daughters. Neither it will work with OpenMP threads.
-  float abundance;                           /// 
+  float abundance;                           ///
   float mass;                                /// Atomic mass number in multiple of MH
   ionlist_entry *ions;                       /// Carries information for each ion: 0,1,...,nions-1
 } elementlist_entry;
 
-typedef struct 
+typedef struct
 {
   double nu;                                 /// Frequency of the line transition
   float einstein_A;
@@ -426,14 +420,14 @@ typedef struct
   short lowerlevelindex;                     /// and lower levels
 } linelist_entry;
 
-typedef struct 
+typedef struct
 {
   short elementindex;
   short ionindex;
   short levelindex;
 } bflist_t;
 
-typedef struct 
+typedef struct
 {
   short lower;
   short upper;
@@ -474,7 +468,7 @@ typedef struct
 
 
 
-typedef struct 
+typedef struct
 {
   double total;
   double es;
@@ -515,11 +509,11 @@ typedef struct
   double internal_up_same;                /// Rate for internal upward transitions to same ionisation stage.
   double internal_down_lower;             /// Rate for internal downward transitions to lower ionisation stage.
   double internal_up_higher;              /// Rate for internal upward transitions to higher ionisation stage.
-  
+
   double *individ_rad_deexc;
   double *individ_internal_down_same;
   double *individ_internal_up_same;
-  
+
   chphixstargets_struct *chphixstargets;
 } chlevels_struct;
 
@@ -549,4 +543,3 @@ typedef struct
 {
   int *to;
 } transitions_t;
-

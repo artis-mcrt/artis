@@ -20,27 +20,27 @@ int input(rank)
   int get_gam_ll();
   int get_nul();
   int read_binding_energies();
-  
+
   FILE *co_lines;
   FILE *ni_lines;
   FILE *v48_lines;
   FILE *cr48_lines;
-  
+
   int dum1, n, m, nn;
   float dum2, dum3;
   int lindex_min, lindex_max;
-  
+
   homogeneous_abundances = 0;
   t_model = 0.0;
-  
+
   /// Constants for van-Regemorter approximation
   C_0 = 5.465e-11;
   H_ionpot = 13.5979996*EV;
-  
+
   /// Select grid type
   grid_type = GRID_UNIFORM;
   model_type = RHO_UNIFORM;
-  
+
   maxion = MIONS;
   /// Set grid size
   nxgrid = 4; //pow(MGRID,1./3.); //10;
@@ -57,8 +57,8 @@ int input(rank)
     exit(0);
   }
 
-  
-  /// Set number of packets, outer and middle iterations 
+
+  /// Set number of packets, outer and middle iterations
   npkts = MPKTS;
   n_out_it = 10;
   n_middle_it = 1;
@@ -69,7 +69,7 @@ int input(rank)
   #endif*/
   n_titer = 1;
   initial_iteration = 0;
-  
+
   printout("[info] input: do n_titer %d iterations per timestep\n",n_titer);
   if (n_titer > 1)
   {
@@ -89,8 +89,8 @@ int input(rank)
     printout("[fatal] input: no valid value for n_titer selected\n");
     exit(0);
   }
-  
-  
+
+
   nu_min_r = 1e14;   /// lower frequency boundary for UVOIR spectra and BB sampling
   nu_max_r = 5e15;   /// upper frequency boundary for UVOIR spectra and BB sampling
   #ifdef DO_EXSPEC
@@ -100,27 +100,27 @@ int input(rank)
     nu_min = 0.05 * MEV / H;
     nu_max = 4 * MEV / H;
   #endif
-  
+
   /// Lightcurve setting
   do_r_lc = 0;    /// default to no lc = gamma-ray spectrum
   do_rlc_est = 0; /// ^^
-  
-  
+
+
   nfake_gam = 1; ///# of fake gamma ray lines for syn
-  
-  
-  
-  
+
+
+
+
   /// Read in parameters from input.txt
   ///======================================================
   read_parameterfile(rank);
   ntbins = ntstep;   ///time bins for spectrum equal #(timesteps)
   ntlcbins = ntstep; ///time bins for light curve #(timesteps)
-  
+
   /// Read in atomic data
   ///======================================================
   read_atomicdata();
-  
+
   //#ifndef DO_EXSPEC
     /// Read in input model
     ///======================================================
@@ -154,8 +154,8 @@ int input(rank)
       exit(0);
     }
   //#endif
-  
-  
+
+
   /// Read in data for gamma ray lines.
   ///======================================================
   dum1=0;
@@ -179,7 +179,7 @@ int input(rank)
   ECOBALT_GAMMA = ECOBALT;
   /// For total deposited energy we need to add the kinetic energy per emitted positron
   ECOBALT += 0.63*MEV * 0.19;
-  //ECOBALT = ECOBALT/5; /// DEBUGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG         
+  //ECOBALT = ECOBALT/5; /// DEBUGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 
   fclose(co_lines);
 
@@ -243,9 +243,9 @@ int input(rank)
 
   /// With the lines all ready in, now make a list of them in energy order.
   get_gam_ll();
-  
-  /// Now that the list exists use it to find values for spectral synthesis 
-  /// stuff. 
+
+  /// Now that the list exists use it to find values for spectral synthesis
+  /// stuff.
   lindex_max = get_nul(nusyn_max);
   lindex_min = get_nul(nusyn_min);
   printout("lindex_max %d, lindex_min %d\n", lindex_max, lindex_min);
@@ -259,11 +259,11 @@ int input(rank)
     printout("Too many points needed for emissivities. Use smaller frequency range or increase EMISS_MAX. Abort.\n");
     exit(0);
   }
-  
+
   #ifdef NT_ON
   read_binding_energies();
   #endif
-    
+
   #ifdef DO_EXSPEC
     /// Check if enough  memory for spectra has been assigned
     /// and allocate memory for the emission statistics
@@ -307,7 +307,7 @@ int input(rank)
       }
     }
   #endif
-  
+
   return(0);
 }
 
@@ -355,20 +355,20 @@ void read_atomicdata()
   transitiontable_entry *transitiontable;
   int skip_this_table;
   int add; /// Helper variable to count coolingterms per ion
-  
+
   phixstarget_entry *phixstargets;
-  
+
   double levelenergy,statweight,A;//,f;
   double energyoffset,ionpot;
   int upper,lower,levelindex,transitionindex,ntransitions;
   double currentlevelenergy,g;
   double A_ul,f_ul,nu_trans;
   double nu,nu_max;
-  
+
   double epsilon_upper,E_threshold;
   int compare_phixslistentry_bynuedge(const void *p1, const void *p2);
   int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2);
-  
+
   int upperion,upperlevel,lowerion,lowerlevel;
   double energy;
   float phixs;
@@ -376,28 +376,28 @@ void read_atomicdata()
   float phixstargetprobability;
   //FILE *database_file,*interpol_file;
   //char filename1[100],filename2[100];
-  
+
   int T_preset;
-  
+
   int totaluptrans = 0;
-  int totaldowntrans = 0; 
+  int totaldowntrans = 0;
   nbfcontinua = 0;
   includedions = 0;
   int cont_index = -1;
-  
+
   int *nuparr,*ndownarr;
   int targetlevel;
   double coll_str;
   int linelistindex,line_in;
   int check_version;
   int count;
-  
+
   //printout("start input.c\n");
   if ((modelatom = fopen("modelatom.dat", "r")) == NULL)
   {
     /// No preprocessed model atom available ==> do that now
-  
-    
+
+
     ///open atomic data file
     if ((compositiondata = fopen("compositiondata.txt", "r")) == NULL)
     {
@@ -410,8 +410,8 @@ void read_atomicdata()
       exit(0);
     }
     //printout("adata open\n");
-  
-    
+
+
     /// initialize atomic data structure to number of elements
     fscanf(compositiondata,"%d",&nelements);
     if ((elements = calloc(nelements, sizeof(elementlist_entry))) == NULL)
@@ -420,28 +420,28 @@ void read_atomicdata()
       exit(0);
     }
     //printout("elements initialized\n");
-    
+
     /// Initialize the linelist
     if ((linelist = calloc(MLINES, sizeof(linelist_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize linelist ... abort\n");
       exit(0);
     }
-    
+
     /// temperature to determine relevant ionstages
     fscanf(compositiondata,"%d",&T_preset);
     fscanf(compositiondata,"%d",&homogeneous_abundances);
     if (homogeneous_abundances == 1) printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
-  
-    /// open transition data file 
+
+    /// open transition data file
     if ((transitiondata = fopen("transitiondata.txt", "r")) == NULL)
     {
       printout("Cannot open transitiondata.txt.\n");
       exit(0);
-    }  
+    }
     lineindex = 0;  ///counter to determine the total number of lines, initialisation
-  
-    /// readin 
+
+    /// readin
     int nbfcheck = 0;
     int heatingcheck = 0;
     int coolingcheck = 0;
@@ -450,24 +450,24 @@ void read_atomicdata()
       /// read information about the next element which should be stored to memory
       fscanf(compositiondata,"%d %d %d %d %d %lg %lg",&Z,&nions,&lowermost_ionstage,&uppermost_ionstage,&nlevelsmax_readin,&abundance,&mass);
       printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
-    
+
       /// write this elements data to memory
-      
+
       elements[element].anumber = Z;
       elements[element].nions = nions;
       elements[element].abundance = abundance;       /// abundances are expected to be given by mass
       elements[element].mass = mass*MH;
       includedions += nions;
-  
+
       /// Initialize the elements ionlist
       if ((elements[element].ions = calloc(nions, sizeof(ionlist_entry))) == NULL)
       {
           printout("[fatal] input: not enough memory to initialize ionlist ... abort\n");
           exit(0);
       }
-      
-      /// now read in data for all ions of the current element. before doing so initialize 
-      /// energy scale for the current element (all level energies are stored relative to 
+
+      /// now read in data for all ions of the current element. before doing so initialize
+      /// energy scale for the current element (all level energies are stored relative to
       /// the ground level of the neutral ion)
       energyoffset = 0.;
       ionpot = 0.;
@@ -477,7 +477,7 @@ void read_atomicdata()
         printout("ion %d\n",ion);
         /// calculate the current levels ground level energy
         energyoffset += ionpot;
-        
+
         /// read information for the elements next ionstage
         fscanf(adata,"%d %d %d %lg",&Zcheck2,&ionstage,&nlevels,&ionpot);
         printout("readin level information for adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
@@ -509,8 +509,8 @@ void read_atomicdata()
           nlevelsmax = nlevels;
           //printout("[fatal] read_atomicdata: nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduce nlevelsmax or extend atomic data \n",nlevelsmax,nlevels,ion,element);
         }
-        
-        
+
+
         /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
         fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
         printout("readin transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
@@ -521,14 +521,14 @@ void read_atomicdata()
           fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
           printout("proceed through transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
         }
-        
+
         tottransitions_all = tottransitions;
-        if (ion == nions-1) 
+        if (ion == nions-1)
         {
           nlevelsmax = 1;
           tottransitions = 0;
         }
-        
+
         /// then read in its level and transition data
         if (Zcheck == Z && ionstagecheck == ionstage)
         {
@@ -561,7 +561,7 @@ void read_atomicdata()
               //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
             }
           }
-          
+
 
           /// store the ions data to memory and set up the ions zeta and levellist
           elements[element].ions[ion].ionstage = ionstage;
@@ -583,8 +583,8 @@ void read_atomicdata()
             printout("[fatal] input: not enough memory to initialize levelist of element %d, ion %d ... abort\n",element,ion);
             exit(0);
           }
-          
-          
+
+
           /// now we need to readout the data for all those levels, write them to memory
           /// and set up the list of possible transitions for each level
           if ((nuparr = calloc(nlevelsmax, sizeof(int))) == NULL)
@@ -616,7 +616,7 @@ void read_atomicdata()
               //printout("energy for level %d of ionstage %d of element %d is %g\n",level,ionstage,element,currentlevelenergy/EV);
               elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
               //printout("epsilon(%d,%d,%d)=%g",element,ion,level,elements[element].ions[ion].levels[level].epsilon);
-              
+
               //if (level == 0 && ion == 0) energyoffset = levelenergy;
               elements[element].ions[ion].levels[level].stat_weight = statweight;
               ///Moved to the section with ionising levels below
@@ -625,7 +625,7 @@ void read_atomicdata()
               /// Initialise the metastable flag to true. Set it to false (0) if downward transition exists.
               elements[element].ions[ion].levels[level].metastable = 1;
               //elements[element].ions[ion].levels[level].main_qn = mainqn;
-              
+
               /// The level contributes to the ionisinglevels if its energy
               /// is below the ionisiation potential and the level doesn't
               /// belong to the topmost ion included.
@@ -633,34 +633,12 @@ void read_atomicdata()
               if (levelenergy < ionpot && ion < nions-1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
               {
                 elements[element].ions[ion].ionisinglevels += 1;
-                
+
                 elements[element].ions[ion].levels[level].cont_index = cont_index;
                 cont_index -= 1;
-                
-                // moved further down since nphixstargets is not known yet
-              /*  if ((elements[element].ions[ion].levels[level].spontrecombcoeff = calloc(TABLESIZE, sizeof(double))) == NULL)
-                {
-                  printout("[fatal] input: not enough memory to initialize spontrecombcoeff table for element %d, ion %d, level %d\n",element,ion,level);
-                  exit(0);
-                }
-                if ((elements[element].ions[ion].levels[level].corrphotoioncoeff = calloc(TABLESIZE, sizeof(double))) == NULL)
-                {
-                  printout("[fatal] input: not enough memory to initialize photoioncoeff table for element %d, ion %d, level %d\n",element,ion,level);
-                  exit(0);
-                }
-                if ((elements[element].ions[ion].levels[level].bfheating_coeff = calloc(TABLESIZE, sizeof(double))) == NULL)
-                {
-                  printout("[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level %d\n",element,ion,level);
-                  exit(0);
-                }
-                if ((elements[element].ions[ion].levels[level].bfcooling_coeff = calloc(TABLESIZE, sizeof(double))) == NULL)
-                {
-                  printout("[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level %d\n",element,ion,level);
-                  exit(0);
-                }*/
               }
-              
-              
+
+
               /// store the possible downward transitions from the current level in following order to memory
               ///     A_level,level-1; A_level,level-2; ... A_level,1
               /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
@@ -689,15 +667,15 @@ void read_atomicdata()
               elements[element].ions[ion].levels[level].uptrans[0].targetlevel = 0;
             }
           }
-                
+
           for (ii = 0; ii < tottransitions; ii++)
           {
             level = transitiontable[ii].upper;
             targetlevel = transitiontable[ii].lower;
-            
+
             if (level < nlevelsmax)
             {
-              
+
               //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
               //{
               //printout("ii %d\n",ii);
@@ -710,13 +688,13 @@ void read_atomicdata()
                 A_ul = transitiontable[ii].A;
                 coll_str = transitiontable[ii].coll_str;
                 //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
-                
+
                 nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
                 g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
                 f_ul = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
                 //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
                 //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
-                
+
                 //printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu %g\n",lineindex,element,ion,level-i-1,level,nu_trans);
                 linelist[lineindex].elementindex = element;
                 linelist[lineindex].ionindex = ion;
@@ -736,12 +714,12 @@ void read_atomicdata()
                     exit(0);
                   }
                 }
-                  
+
                 /// This is not a metastable level.
                 elements[element].ions[ion].levels[level].metastable = 0;
-                
+
                 elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
-                if ((elements[element].ions[ion].levels[level].downtrans 
+                if ((elements[element].ions[ion].levels[level].downtrans
                     = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level]+1)*sizeof(permittedtransitionlist_entry))) == NULL)
                 {
                   printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
@@ -753,9 +731,9 @@ void read_atomicdata()
                 //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
                 //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
                 ndownarr[level] += 1;
-                
+
                 elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
-                if ((elements[element].ions[ion].levels[targetlevel].uptrans 
+                if ((elements[element].ions[ion].levels[targetlevel].uptrans
                     = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel]+1)*sizeof(permittedtransitionlist_entry))) == NULL)
                 {
                   printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
@@ -773,13 +751,13 @@ void read_atomicdata()
                 A_ul = transitiontable[ii].A;
                 coll_str = transitiontable[ii].coll_str;
                 //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
-                
+
                 nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
                 g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
                 f_ul = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
                 //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
                 //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
-                
+
                 if ((linelist[linelistindex].elementindex != element) || (linelist[linelistindex].ionindex != ion) || (linelist[linelistindex].upperlevelindex != level) || (linelist[linelistindex].lowerlevelindex != targetlevel))
                 {
                   printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
@@ -800,11 +778,11 @@ void read_atomicdata()
           }
           //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
           //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-            
-          
+
+
           free(nuparr);
           free(ndownarr);
-          
+
           for (level = 0; level < nlevelsmax; level++)
           {
             totaldowntrans += elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
@@ -813,8 +791,8 @@ void read_atomicdata()
           }
           free(transitiontable);
           free(transitions);
-          
-          
+
+
           /// Also the phixslist
           if (ion < nions-1)
           {
@@ -840,9 +818,9 @@ void read_atomicdata()
     fclose(compositiondata);
     printout("nbfcheck %d\n",nbfcheck);
     printout("heatingcheck %d\n",heatingcheck);
-    
+
     /// Save the linecounters value to the global variable containing the number of lines
-    nlines = lineindex;  
+    nlines = lineindex;
     printout("nlines %d\n",nlines);
     if (nlines > 0)
     {
@@ -853,17 +831,17 @@ void read_atomicdata()
         exit(0);
       }
     }
-    
+
     if (T_preset > 0) exit(0);
-    
-    
+
+
     /// Set up the list of allowed upward transitions for each level
     printout("total uptrans %d\n",totaluptrans);
     printout("total downtrans %d\n",totaldowntrans);
     printout("coolingcheck %d\n",coolingcheck);
-    
-    
-    
+
+
+
     ///debug output
     /*
     FILE *linelist_file;
@@ -876,11 +854,11 @@ void read_atomicdata()
     fclose(linelist_file);
     //exit(0);
     */
-    
+
     ///then sort the linelist by decreasing frequency
     qsort(linelist,nlines,sizeof(linelist_entry),compare_linelistentry);
-    
-    
+
+
     /// Save sorted linelist into a file
     if (rank_global == 0)
     {
@@ -897,9 +875,9 @@ void read_atomicdata()
       fclose(linelist_file);
       //exit(0);
     }
-    
-    
-    
+
+
+
     ///Establish connection between transitions and sorted linelist
     //printout("[debug] init line counter list\n");
     printout("establish connection between transitions and sorted linelist\n");
@@ -924,9 +902,9 @@ void read_atomicdata()
         }
       }
     }
-  
-    
-    
+
+
+
     /// Photoionisation cross-sections
     ///======================================================
     ///finally read in photoionisation cross sections and store them to the atomic data structure
@@ -938,13 +916,13 @@ void read_atomicdata()
     }
     fscanf(phixsdata,"%d",&NPHIXSPOINTS);
     fscanf(phixsdata,"%lg",&NPHIXSNUINCREMENT);
-    
+
     while (fscanf(phixsdata,"%d %d %d %d %d ",&Z,&upperion,&upperlevel,&lowerion,&lowerlevel) != EOF)
     {
       //printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel, %d npoints %d\n",Z,upperion,upperlevel,lowerion,lowerlevel,npoints);
       /// translate readin anumber to element index
       element = get_elementindex(Z);
-      
+
       /// store only photoionization crosssections for elements which are part of the current model atom
       if (element >= 0)
       {
@@ -1011,7 +989,7 @@ void read_atomicdata()
               }
             }
             elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = nphixstargets;
-          
+
             /// The level contributes to the ionisinglevels if its energy
             /// is below the ionisiation potential and the level doesn't
             /// belong to the topmost ion included.
@@ -1060,7 +1038,7 @@ void read_atomicdata()
               elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs*1e-18;
               //fprintf(database_file,"%g %g\n", nutable[i], phixstable[i]);
             }
-            
+
             //nbfcontinua += 1;
             //printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
             skip_this_table = 0;
@@ -1089,9 +1067,9 @@ void read_atomicdata()
       }
     }
     fclose(phixsdata);
-    
 
-    
+
+
     printout("cont_index %d\n",cont_index);
     /// Now write the model atom to file for reuse
     if (rank_global == 0)
@@ -1103,7 +1081,7 @@ void read_atomicdata()
       }
       int metastable,linelistindex,targetlevel;
       float einstein_A,oscillator_strength;
-      
+
 
       fprintf(modelatom,"%d\n",NPHIXSPOINTS);
       fprintf(modelatom,"%lg\n",NPHIXSNUINCREMENT);
@@ -1129,7 +1107,7 @@ void read_atomicdata()
             metastable = elements[element].ions[ion].levels[level].metastable;
 
             fprintf(modelatom,"%.16e %lg %d %d\n",levelenergy,statweight,cont_index,metastable);
-            
+
 /*            for (i=0; i < level; i++)
             {
               einstein_A = elements[element].ions[ion].levels[level].transitions[i].einstein_A;
@@ -1137,7 +1115,7 @@ void read_atomicdata()
               linelistindex = elements[element].ions[ion].levels[level].transitions[i].linelistindex;
               fprintf(modelatom,"%g %g %d\n",einstein_A,oscillator_strength,linelistindex);
             }*/
-            
+
             ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
             fprintf(modelatom,"%d\n",ndowntrans);
             for (i=1; i <= ndowntrans; i++)
@@ -1148,7 +1126,7 @@ void read_atomicdata()
               lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
               fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
             }
-            
+
             nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
             fprintf(modelatom,"%d\n",nuptrans);
             for (i=1; i <= nuptrans; i++)
@@ -1159,7 +1137,7 @@ void read_atomicdata()
               lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
               fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
             }
-            
+
             nphixstargets = get_nphixstargets(element,ion,level);
             fprintf(modelatom,"%d\n",nphixstargets);
             if (ion < nions)
@@ -1186,10 +1164,10 @@ void read_atomicdata()
       }
       fclose(modelatom);
     }
-  
-  
+
+
   }
-  
+
   /// Preproccessed model atom available read that in
   else
   {
@@ -1197,14 +1175,14 @@ void read_atomicdata()
     printout("[read_atomicdata] Be aware that no consistency checks are done!!!\n");
     int metastable,linelistindex,targetlevel,dum,anumber;
     float einstein_A,oscillator_strength,abundance,mass;
-    
+
     fscanf(modelatom,"%d",&NPHIXSPOINTS);
     fscanf(modelatom,"%lg",&NPHIXSNUINCREMENT);
     fscanf(modelatom,"%d",&nelements);
     fscanf(modelatom,"%d",&homogeneous_abundances);
-    
+
     printout("nelements %d\n",nelements);
-    
+
     if ((elements = malloc(nelements*sizeof(elementlist_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
@@ -1220,9 +1198,9 @@ void read_atomicdata()
       elements[element].abundance = abundance;
       elements[element].mass = mass;
       includedions += nions;
-      
+
       //printout("element %d, anumber %d, nions %d, abundance %g, mass %g\n",element,anumber,nions,abundance,mass);
-      
+
       if ((elements[element].ions = malloc(nions*sizeof(ionlist_entry))) == NULL)
       {
           printout("[fatal] input: not enough memory to initialize ionlist ... abort\n");
@@ -1231,13 +1209,13 @@ void read_atomicdata()
       for (ion = 0; ion < nions; ion++)
       {
         fscanf(modelatom,"%d %d %d %lg\n",&nlevels,&ionisinglevels,&ionstage,&ionpot);
-        elements[element].ions[ion].nlevels =  nlevels; 
-        elements[element].ions[ion].ionisinglevels =  ionisinglevels; 
+        elements[element].ions[ion].nlevels =  nlevels;
+        elements[element].ions[ion].ionisinglevels =  ionisinglevels;
         elements[element].ions[ion].ionstage = ionstage;
         elements[element].ions[ion].ionpot = ionpot;
 //        elements[element].ions[ion].nbfcontinua = nbfcont;
         printout("read in element %d ion %d nlevels %d nionisinglevels %d ionstage %d ionpot %g \n",element,ion,nlevels,ionisinglevels,ionstage,ionpot);
-        
+
         nbfcont = get_bfcontinua(element,ion);
         if ((elements[element].ions[ion].levels = malloc(nlevels*sizeof(levellist_entry))) == NULL)
         {
@@ -1252,9 +1230,9 @@ void read_atomicdata()
           elements[element].ions[ion].levels[level].stat_weight = statweight;
           elements[element].ions[ion].levels[level].cont_index = cont_index;
           elements[element].ions[ion].levels[level].metastable = metastable;
-          
+
          // printout("level %d, epsilon %g, stat_weight %g, metastable %d\n",level,levelenergy,statweight,metastable);
-          
+
 /*          if (level > 0)
           {
             if ((elements[element].ions[ion].levels[level].transitions = malloc(level*sizeof(transitionlist_entry))) == NULL)
@@ -1270,7 +1248,7 @@ void read_atomicdata()
               elements[element].ions[ion].levels[level].transitions[i].linelistindex = linelistindex;
             }
           }*/
-          
+
           fscanf(modelatom,"%d\n",&ndowntrans);
           //printout("ndowntrans %d\n",ndowntrans);
           totaldowntrans += ndowntrans;
@@ -1288,7 +1266,7 @@ void read_atomicdata()
             elements[element].ions[ion].levels[level].downtrans[i].stat_weight = statweight;
             elements[element].ions[ion].levels[level].downtrans[i].lineindex = lineindex;
           }
-          
+
           fscanf(modelatom,"%d\n",&nuptrans);
           //printout("nuptrans %d\n",nuptrans);
           totaluptrans += nuptrans;
@@ -1306,7 +1284,7 @@ void read_atomicdata()
             elements[element].ions[ion].levels[level].uptrans[i].stat_weight = statweight;
             elements[element].ions[ion].levels[level].uptrans[i].lineindex = lineindex;
           }
-        
+
           fscanf(modelatom,"%d\n",&nphixstargets);
           elements[element].ions[ion].levels[level].nphixstargets = nphixstargets;
           if ((elements[element].ions[ion].levels[level].phixstargets = malloc(nphixstargets*sizeof(phixstarget_entry))) == NULL)
@@ -1314,7 +1292,7 @@ void read_atomicdata()
             printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
             exit(0);
           }
-          
+
           for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             fscanf(modelatom,"%d %g\n",&upperlevel,&phixstargetprobability);
@@ -1344,7 +1322,7 @@ void read_atomicdata()
                 if (level < nbfcont) elements[element].ions[ion].levels[level].photoion_xs[i] = phixs;
               }
             }
-            
+
             if (level < nbfcont)
             {
               for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
@@ -1376,7 +1354,7 @@ void read_atomicdata()
           }
 
         }
-        
+
         /// For those we just need to allocate memory
         //         if ((elements[element].ions[ion].zeta = malloc(TABLESIZE*sizeof(float))) == NULL)
         //         {
@@ -1402,7 +1380,7 @@ void read_atomicdata()
       }
     }
     fclose(modelatom);
-    
+
     if ((linelist_file = fopen("linelist.dat", "r")) == NULL){
       printout("Cannot open linelist.out.\n");
       exit(0);
@@ -1430,13 +1408,13 @@ void read_atomicdata()
     }
     fclose(linelist_file);
   }
-    
 
-  
+
+
   printout("included ions %d\n",includedions);
-  
-  
-  
+
+
+
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   ///======================================================
   #ifdef RECORD_LINESTAT
@@ -1456,7 +1434,7 @@ void read_atomicdata()
       exit(0);
     }
   #endif
-  
+
   /// SET UP THE COOLING LIST
   ///======================================================
   /// Determine number of processes which allow kpkts to convert to something else.
@@ -1475,8 +1453,8 @@ void read_atomicdata()
     }
   }
   printout("[info] read_atomicdata: number of coolingterms %d\n",ncoolingterms);*/
-  
-  
+
+
   ncoolingterms = 0;
   for (element = 0; element < nelements; element++)
   {
@@ -1486,10 +1464,10 @@ void read_atomicdata()
       add = 0;
       elements[element].ions[ion].coolingoffset = ncoolingterms;
       /// Ionised ions add one ff-cooling term
-      if (get_ionstage(element,ion) > 1) add += 1; 
+      if (get_ionstage(element,ion) > 1) add += 1;
       /// Ionisinglevels below the closure ion add to bf and col ionisation
-      //if (ion < nions - 1) add += 2 * get_ionisinglevels(element,ion); 
-      if (ion < nions - 1) add += 2 * get_bfcontinua(element,ion); 
+      //if (ion < nions - 1) add += 2 * get_ionisinglevels(element,ion);
+      if (ion < nions - 1) add += 2 * get_bfcontinua(element,ion);
       /// All the levels add number of col excitations
       nlevels = get_nlevels(element,ion);
       for (level = 0; level < nlevels; level++)
@@ -1512,32 +1490,32 @@ void read_atomicdata()
   }
   */
 
-  
-  
+
+
   /// SET UP THE CELL HISTORY
   ///======================================================
-  /// Stack which holds information about population and other cell specific data 
+  /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
   if ((cellhistory = malloc(nthreads*sizeof(cellhistory_struct))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n",nthreads);
     exit(0);
-  }  
+  }
   #ifdef _OPENMP
     #pragma omp parallel private(element,ion,level,nions,nlevels,ndowntrans,nuptrans)
     {
   #endif
       printout("[info] input: initializing cellhistory for thread %d ...\n",tid);
-      
+
       cellhistory[tid].cellnumber = -99;
-      
+
       cellhistory[tid].coolinglist = malloc(ncoolingterms*sizeof(cellhistorycoolinglist_t));
       if (cellhistory[tid].coolinglist == NULL)
       {
         printout("[fatal] input: not enough memory to initialize cellhistory's coolinglist ... abort\n");
         exit(0);
       }
-        
+
       if ((cellhistory[tid].chelements = malloc(nelements*sizeof(chelements_struct))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
@@ -1567,24 +1545,24 @@ void read_atomicdata()
               printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
               exit(0);
             }
-            
+
             ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
             nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-            
+
             if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = malloc((ndowntrans+1)*sizeof(double))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's individ_rad_deexc ... abort\n");
               exit(0);
             }
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[0] = ndowntrans;
-            
+
             if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same = malloc((ndowntrans+1)*sizeof(double))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_down_same ... abort\n");
               exit(0);
             }
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[0] = ndowntrans;
-            
+
             if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = malloc((nuptrans+1)*sizeof(double))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_up_same ... abort\n");
@@ -1597,9 +1575,9 @@ void read_atomicdata()
   #ifdef _OPENMP
     }
   #endif
-  
-  
-  
+
+
+
   /// Printout some information about the read-in model atom
   ///======================================================
   //includedions = 0;
@@ -1620,8 +1598,8 @@ void read_atomicdata()
     }
   }
   printout("[input.c]   in total %d ions, %d levels (%d ionising) and %d lines\n",includedions,includedlevels,includedionisinglevels,nlines);
-  
-  
+
+
   FILE *bflist_file;
   if ((bflist = malloc(includedionisinglevels*sizeof(bflist_t))) == NULL)
   {
@@ -1645,24 +1623,24 @@ void read_atomicdata()
       nlevels = get_ionisinglevels(element,ion);
       for (level = 0; level < nlevels; level++)
       {
-        bflist[i].elementindex = element; 
-        bflist[i].ionindex = ion; 
-        bflist[i].levelindex = level; 
+        bflist[i].elementindex = element;
+        bflist[i].ionindex = ion;
+        bflist[i].levelindex = level;
         if (rank_global == 0) fprintf(bflist_file,"%d %d %d %d\n",i,element,ion,level);
         i++;
       }
     }
   }
   if (rank_global == 0) fclose(bflist_file);
-  
-  
-  
+
+
+
   /// SET UP THE PHIXSLIST
   ///======================================================
   printout("[info] read_atomicdata: number of bfcontinua %d\n",nbfcontinua);
   nbfcontinua_ground = includedions-nelements;
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n",nbfcontinua_ground);
-  
+
   int itid;
   phixslist = malloc(nthreads*sizeof(phixslist_t));
   if (phixslist == NULL)
@@ -1670,7 +1648,7 @@ void read_atomicdata()
     printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
     exit(0);
   }
-  
+
   /// MK: 2012-01-19
   /// To fix the OpenMP problem on BlueGene machines this parallel section was removed and replaced by
   /// a serial loop which intializes the phixslist data structure for all threads in a loop. I'm still
@@ -1692,7 +1670,7 @@ void read_atomicdata()
         printout("[fatal] read_atomicdata: not enough memory to initialize phixslist[%d].groundcont... abort\n",itid);
         exit(0);
       }
-      
+
       i = 0;
       for (element = 0; element < nelements; element++)
       {
@@ -1712,17 +1690,17 @@ void read_atomicdata()
         }
       }
       qsort(phixslist[itid].groundcont,nbfcontinua_ground,sizeof(groundphixslist_t),compare_groundphixslistentry_bynuedge);
-      
-      
+
+
       //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
-      //else 
+      //else
       phixslist[itid].allcont = malloc(nbfcontinua*sizeof(fullphixslist_t));
       if (phixslist[itid].allcont == NULL)
       {
         printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
         exit(0);
       }
-      
+
       i = 0;
       for (element = 0; element < nelements; element++)
       {
@@ -1792,8 +1770,8 @@ void read_atomicdata()
 
 
 	    elements[element].ions[ion].nlevels_nlte=count;
-	    
-	    
+
+
 	    printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element), get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
 	  }
       }
@@ -1802,7 +1780,7 @@ void read_atomicdata()
 
     printout("[input.c]....total nlte levels: %d of which %d are superlevels\n", total_nlte_levels, n_super_levels);
 
- 
+
 }
 
 
@@ -1818,7 +1796,7 @@ void read_parameterfile(rank)
   int dum1, dum5, n, i;
   unsigned long int zseed; /* rnum generator seed */
   unsigned long int xseed,pre_zseed;
-  
+
   if ((input_file = fopen("input.txt", "r")) == NULL)
   {
     printout("Cannot open input.txt.\n");
@@ -1842,7 +1820,7 @@ void read_parameterfile(rank)
     {
 /*      tid = omp_get_thread_num();
       nthreads = omp_get_num_threads();
-      if (nthreads > MTHREADS) 
+      if (nthreads > MTHREADS)
       {
         printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n",MTHREADS,nthreads);
         exit(0);
@@ -1881,7 +1859,7 @@ void read_parameterfile(rank)
   tmax = dum3 * DAY;
   //tlimit = dum4 * DAY;
 
- 
+
   fscanf(input_file, "%g %g", &dum2, &dum3);
   nusyn_min = dum2 * MEV / H; ///lowest frequency to synthesise
   nusyn_max = dum3 * MEV / H; ///highest frequecnt to synthesise
@@ -1922,7 +1900,7 @@ void read_parameterfile(rank)
     do_rlc_est = 1;
   }
   else if (dum1 == 3)/// lc case with thick cells
-  {  
+  {
     do_r_lc = 1;
     do_rlc_est = 2;
   }
@@ -1936,25 +1914,25 @@ void read_parameterfile(rank)
     printout("Unknown rlc mode. Abort.\n");
     exit(0);
   }
-  
+
 
   fscanf(input_file, "%d", &dum1); ///number of iterations
   n_out_it = dum1;
 
 
   fscanf(input_file, "%g", &dum2); ///change speed of light?
-  CLIGHT_PROP = dum2 * CLIGHT; 
+  CLIGHT_PROP = dum2 * CLIGHT;
 
   fscanf(input_file, "%g", &dum2); ///use grey opacity for gammas?
   gamma_grey = dum2;
 
-  
+
   fscanf(input_file, "%g %g %g", &dum2, &dum3, &dum4); ///components of syn_dir
 
   if ((rr =(dum2*dum2) + (dum3*dum3) + (dum4*dum4)) > 1.e-6)
   {
     syn_dir[0] = dum2 / sqrt( rr );
-    syn_dir[1] = dum3 / sqrt( rr ); 
+    syn_dir[1] = dum3 / sqrt( rr );
     syn_dir[2] = dum4 / sqrt( rr );
   }
   else
@@ -1965,9 +1943,9 @@ void read_parameterfile(rank)
     syn_dir[0] = sqrt( (1. - (z1*z1))) * cos(z2);
     syn_dir[1] = sqrt( (1. - (z1*z1))) * sin(z2);
   }
-  
+
   /// ensure that this vector is normalised.
-  
+
   fscanf(input_file, "%d", &dum1); ///opacity choice
   opacity_case = dum1;
 
@@ -1976,15 +1954,15 @@ void read_parameterfile(rank)
   rho_crit_para = dum2;
   printout("input: rho_crit_para %g\n",rho_crit_para);
   ///the calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
-  
+
   fscanf(input_file, "%d", &dum1); /// activate debug output for packet
   debug_packet =  dum1;            /// select a negative value to deactivate
   ///MK: end
-  
+
   /// Do we start a new simulation or, continue another one?
   continue_simulation = 0;          /// Preselection is to start a new simulation
   fscanf(input_file, "%d", &dum1);
-  if (dum1 == 1)                    
+  if (dum1 == 1)
   {
     continue_simulation = 1;        /// Continue simulation if dum1 = 1
     printout("input: continue simulation\n");
@@ -1996,7 +1974,7 @@ void read_parameterfile(rank)
   nu_rfcut = CLIGHT/(dum2*1e-8);
   printout("input: nu_rfcut %g\n",nu_rfcut);
 
-  
+
   /// Sets the number of initial LTE timesteps for NLTE runs
   fscanf(input_file, "%d", &n_lte_timesteps);
   #ifdef FORCE_LTE
@@ -2015,11 +1993,11 @@ void read_parameterfile(rank)
   #else
     printout("input: No non-thermal ionisation is used in this run.\n");
   #endif
-  
+
   /// Set up initial grey approximation?
   fscanf(input_file, "%lg %d", &cell_is_optically_thick, &n_grey_timesteps);
   printout("input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",cell_is_optically_thick,n_grey_timesteps);
-  
+
   /// Limit the number of bf-continua
   fscanf(input_file, "%d", &max_bf_continua);
   if (max_bf_continua == -1)
@@ -2031,7 +2009,7 @@ void read_parameterfile(rank)
   {
     printout("input: use only %d bf-continua per ion\n",max_bf_continua);
   }
-  
+
   /// The following parameters affect the DO_EXSPEC mode only /////////////////
   /// Read number of MPI tasks for exspec
   fscanf(input_file, "%d", &dum1);
@@ -2053,7 +2031,7 @@ void read_parameterfile(rank)
   #endif
 
   /// To reduce the work imbalance between different MPI tasks I introduced a diffusion
-  /// for kpkts, since it turned out that this work imbalance was largely dominated 
+  /// for kpkts, since it turned out that this work imbalance was largely dominated
   /// by continuous collisional interactions. By introducing a diffusion time for kpkts
   /// this loop is broken. The following two parameters control this approximation.
   /// Parameter one (a float) gives the relative fraction of a time step which individual
@@ -2079,7 +2057,7 @@ int read_1d_model()
     printout("Cannot open model.txt.\n");
     exit(0);
   }
-  
+
   /* 1st read the number of data points in the table of input model. */
   fscanf(model_input, "%d", &dum1);
   npts_model = dum1;
@@ -2091,7 +2069,7 @@ int read_1d_model()
   /* Now read the time (in days) at which the model is specified. */
   fscanf(model_input, "%g", &dum2);
   t_model = dum2 * DAY;
- 
+
   /* Now read in the lines of the model. Each line has 5 entries: the
      cell number (integer) the velocity at outer boundary of cell (float),
      the mass density in the cell (float), the abundance of Ni56 by mass
@@ -2129,8 +2107,8 @@ int read_1d_model()
   mfe52 += mass_in_shell * f52fe_model[0];
   mcr48 += mass_in_shell * f48cr_model[0];
   mfeg += mass_in_shell * ffegrp_model[0];
-  
-      
+
+
 
   /* Now do the rest. */
   for (n = 1; n < npts_model; n++)
@@ -2140,7 +2118,7 @@ int read_1d_model()
     mni56 += mass_in_shell * fni_model[n];
     mfe52 += mass_in_shell * f52fe_model[n];
     mcr48 += mass_in_shell * f48cr_model[n];
-    mfeg += mass_in_shell * ffegrp_model[n]; 
+    mfeg += mass_in_shell * ffegrp_model[n];
   }
 
   printout("Total mass: %g. Ni mass: %g.  52Fe mass: %g.  48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
@@ -2149,7 +2127,7 @@ int read_1d_model()
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
   printout("rmax %g\n", rmax);
-   
+
 
   return(0);
 }
@@ -2169,7 +2147,7 @@ int read_2d_model()
     printout("Cannot open model.txt.\n");
     exit(0);
   }
-  
+
   /* 1st read the number of data points in the table of input model. */
   fscanf(model_input, "%d %d", &dum1, &dum12);
   ncoord1_model = dum1; //r (cylindrical polar)
@@ -2184,15 +2162,15 @@ int read_2d_model()
   /* Now read the time (in days) at which the model is specified. */
   fscanf(model_input, "%g", &dum2);
   t_model = dum2 * DAY;
- 
+
   /* Now read in vmax (in cm/s) */
   fscanf(model_input, "%g", &dum2);
   vmax = dum2;
   dcoord1 = dum2 * t_model / ncoord1_model; //dr for input model
   dcoord2 = 2. * dum2 * t_model / ncoord2_model;//dz for input model
-  
 
-  /* Now read in the model. Each point in the model has two lines of input. 
+
+  /* Now read in the model. Each point in the model has two lines of input.
      First is an index for the cell then its r-mid point then its z-mid point
      then its total mass density.
      Second is the total FeG mass, initial 56Ni mass, initial 56Co mass */
@@ -2241,7 +2219,7 @@ int read_2d_model()
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
   printout("rmax %g\n", rmax);
-   
+
 
   return(0);
 }
@@ -2263,7 +2241,7 @@ int read_3d_model()
     printout("Cannot open model.txt.\n");
     exit(0);
   }
-  
+
   /// 1st read the number of data points in the table of input model.
   /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
   fscanf(model_input, "%d", &dum1);
@@ -2282,14 +2260,14 @@ int read_3d_model()
   /// Now read the time (in days) at which the model is specified.
   fscanf(model_input, "%g", &dum2);
   t_model = dum2 * DAY;
- 
+
   /// Now read in vmax for the model (in cm s^-1).
   fscanf(model_input, "%g", &dum2);
   vmax = dum2;
- 
 
 
-  /// Now read in the lines of the model. 
+
+  /// Now read in the lines of the model.
   min_den=1.e99;
 
 
@@ -2321,8 +2299,8 @@ int read_3d_model()
       set_rhoinit(mgi,helper);
       //printout("mgi %d, rho_init %g\n",mgi,get_rhoinit(mgi));
       set_rho(mgi,helper);
-      
-      
+
+
       if (min_den > rho_model)
       {
         min_den = rho_model;
@@ -2332,12 +2310,12 @@ int read_3d_model()
     {
       cell[n].modelgridindex = MMODELGRID;
     }
-    
+
 
     fscanf(model_input, "%g %g %g %g %g", &dum2, &dum3,  &dum4, &dum5, &dum6);
     //printout("ffe %g, fni %g, fco %g, ffe52 %g, fcr48 %g\n",dum2,dum3,dum4,dum5,dum6);
     if (rho_model > 0)
-      { 
+      {
 	set_ffe(mgi,dum2);
 	set_fni(mgi,dum3);
 	set_fco(mgi,dum4);
@@ -2352,10 +2330,10 @@ int read_3d_model()
 
   printout("min_den %g\n", min_den);
   printout("Effectively used model grid cells %d\n", mgi);
-  
+
   /// Now, reduce the actual size of the modelgrid to the number of non-empty cells.
   /// Actually this doesn't reduce the memory consumption since all the related
-  /// arrays are allocated statically at compile time with size MMODELGRID+1. 
+  /// arrays are allocated statically at compile time with size MMODELGRID+1.
   /// However, it ensures that update_grid causes no idle tasks due to empty cells!
   npts_model = mgi;
 
@@ -2409,8 +2387,8 @@ int read_3d_model()
   xmax = ymax = zmax = rmax;
   printout("rmax %g\n", rmax);
 
-   
-  ///Opacity treatment moved to grid_init & update_grid  
+
+  ///Opacity treatment moved to grid_init & update_grid
 //    if (opacity_case == 0)
 //      {
 //        for (n = 0; n < npts_model; n++)
@@ -2515,15 +2493,15 @@ int compare_linelistentry(const void *p1, const void *p2)
 
 ///****************************************************************************
 int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
-/// Return the closest ground level continuum index to the given edge 
-/// frequency. If the given edge frequency is redder than the reddest 
+/// Return the closest ground level continuum index to the given edge
+/// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
 /// NB: groundphixslist must be in ascending order.
 {
   double epsilon(int element, int ion, int level);
   int i,index,element,ion,level,looplevels;
   double left,right;
-  
+
   if (nu_edge < phixslist[tid].groundcont[0].nu_edge)
   {
     index = -1;
@@ -2535,14 +2513,14 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
     {
       if (nu_edge < phixslist[tid].groundcont[i].nu_edge) break;
     }
-/*    if (i == nbfcontinua_ground) 
+/*    if (i == nbfcontinua_ground)
     {
       printout("[fatal] search_groundphixslist: i %d, nu_edge %g, phixslist[tid].groundcont[i-1].nu_egde %g ... abort\n",i,nu_edge,phixslist[tid].groundcont[i-1].nu_edge);
       printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",el,in,ll);
       //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",phixslist[tid].groundcont[i-1].element,phixslist[tid].groundcont[i-1].ion,groundphixslist[i-1].level);
       abort();
     }*/
-    if (i == nbfcontinua_ground) 
+    if (i == nbfcontinua_ground)
     {
       element = phixslist[tid].groundcont[i-1].element;
       ion = phixslist[tid].groundcont[i-1].ion;
@@ -2570,13 +2548,13 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
     {
       left = nu_edge - phixslist[tid].groundcont[i-1].nu_edge;
       right = phixslist[tid].groundcont[i].nu_edge - nu_edge;
-      if (left <= right) 
+      if (left <= right)
       {
         element = phixslist[tid].groundcont[i-1].element;
         ion = phixslist[tid].groundcont[i-1].ion;
         index = i-1;
       }
-      else 
+      else
       {
         element = phixslist[tid].groundcont[i].element;
         ion = phixslist[tid].groundcont[i].ion;
@@ -2585,7 +2563,7 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
     }
     *index_in_groundlevelcontestimator = element*maxion+ion;
   }
-  
+
   return index;
 }
 
@@ -2615,7 +2593,7 @@ void update_parameterfile(int nts)
   int dum1, dum5, n, i;
 
 
-  
+
   if ((input_file = fopen("input.txt", "r+")) == NULL)
   {
     printout("Cannot open input.txt.\n");
@@ -2630,7 +2608,7 @@ void update_parameterfile(int nts)
   fseek(input_file,0,SEEK_CUR);
   fprintf(input_file, "%3.3d %3.3d\n", nts, ftstep);
   fseek(input_file,0,SEEK_CUR);
-   
+
   fscanf(input_file, "%g %g\n", &dum2, &dum3); ///start and end times
   fscanf(input_file, "%g %g\n", &dum2, &dum3); ///lowest and highest frequency to synthesise in MeV
   fscanf(input_file, "%d\n", &dum1); ///number of times for synthesis
@@ -2645,7 +2623,7 @@ void update_parameterfile(int nts)
   fscanf(input_file, "%g\n", &dum2); ///free parameter for calculation of rho_crit
   fscanf(input_file, "%d\n", &dum1); /// activate debug output for packet
 
-  /// Flag continuation parameter as active  
+  /// Flag continuation parameter as active
   fseek(input_file,0,SEEK_CUR);
   fprintf(input_file, "%d\n", 1); /// Force continuation
   //  fseek(input_file,0,SEEK_CUR);
@@ -2654,6 +2632,3 @@ void update_parameterfile(int nts)
 
   fclose(input_file);
 }
-
-
-

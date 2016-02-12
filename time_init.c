@@ -17,7 +17,7 @@ int time_init()
     printout("Error: too many timesteps. (%d) Abort.\n", ntstep);
     exit(0);
   }
-  
+
   /// For logarithmic steps, the logarithmic inverval will be
   dlogt = (log(tmax) - log(tmin))/ntstep;
   //dlogt = 0.17917595;
@@ -40,12 +40,12 @@ int time_init()
     time_step[n].gamma_dep = 0.0;
     time_step[n].cmf_lum =0.0;
   }
-  
+
   /// and add a dummy timestep which contains the endtime
   /// of the calculation
   time_step[ntstep].start = tmax;
   time_step[ntstep].mid = tmax;
 
-  
+
   return 0;
 }

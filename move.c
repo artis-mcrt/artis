@@ -10,31 +10,31 @@ void update_estimators(PKT *pkt_ptr, double distance)
   double get_abundance(int modelgridindex, int element);
   int element,ion,level,i;
   double nu_edge;
-  
+
   int modelgridindex = cell[pkt_ptr->where].modelgridindex;
-  
+
   /// Update only non-empty cells
   if (modelgridindex != MMODELGRID)
   {
     double helper = distance * pkt_ptr->e_cmf;
     double nu = pkt_ptr->nu_cmf;
-        
-    #ifdef _OPENMP 
+
+    #ifdef _OPENMP
       #pragma omp atomic
     #endif
     J[modelgridindex] += helper;
-    
+
     #ifndef FORCE_LTE
       double helper2 = helper/nu;
       //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
-      #ifdef _OPENMP 
+      #ifdef _OPENMP
         #pragma omp atomic
       #endif
       nuJ[modelgridindex] += helper * nu;
-      
+
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
       ///quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
-      #ifdef _OPENMP 
+      #ifdef _OPENMP
         #pragma omp atomic
       #endif
       ffheatingestimator[modelgridindex] += helper * kappa_rpkt_cont[tid].ffheating;
@@ -45,12 +45,12 @@ void update_estimators(PKT *pkt_ptr, double distance)
         {
           element = phixslist[tid].groundcont[i].element;
           ion = phixslist[tid].groundcont[i].ion;
-          /// Cells with zero abundance for a specific element have zero contribution 
+          /// Cells with zero abundance for a specific element have zero contribution
           /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
           /// the estimators
           if (get_abundance(modelgridindex,element) > 0)
           {
-            #ifdef _OPENMP 
+            #ifdef _OPENMP
               #pragma omp atomic
             #endif
             gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper2;
@@ -71,7 +71,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
         }
         else break;
       }
-      
+
       #ifdef DEBUG_ON
         if (!isfinite(nuJ[modelgridindex]))
         {
@@ -80,13 +80,13 @@ void update_estimators(PKT *pkt_ptr, double distance)
         }
       #endif
     #endif
-    
+
     ///Heating estimators. These are only applicable for pure H. Other elements
     ///need advanced treatment in thermalbalance calculation.
     //cell[pkt_ptr->where].heating_ff += helper * kappa_rpkt_cont[tid].ffheating;
     //cell[pkt_ptr->where].heating_bf += helper * kappa_rpkt_cont[tid].bfheating;
-    
-    
+
+
     #ifdef DEBUG_ON
       if (!isfinite(J[modelgridindex]))
       {
@@ -95,7 +95,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
       }
     #endif
   }
-  
+
 }
 
 
@@ -107,33 +107,33 @@ int move_pkt(PKT *pkt_ptr, double distance, double time)
 {
   double doppler();
   int get_velocity();
-  
+
   double vel_vec[3];
-  
+
   /// First update pos.
   if (distance < 0)
   {
     printout("Trying to move -v distance. Abort.\n");
     abort();
   }
-  
+
   //printout("Move distance %g\n", distance);
   pkt_ptr->pos[0] = pkt_ptr->pos[0] + (pkt_ptr->dir[0] * distance);
   pkt_ptr->pos[1] = pkt_ptr->pos[1] + (pkt_ptr->dir[1] * distance);
   pkt_ptr->pos[2] = pkt_ptr->pos[2] + (pkt_ptr->dir[2] * distance);
-  
+
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
   get_velocity(pkt_ptr->pos, vel_vec, time);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * doppler(pkt_ptr->dir, vel_vec);
   pkt_ptr->e_cmf = pkt_ptr->e_rf * pkt_ptr->nu_cmf / pkt_ptr->nu_rf;
-  
+
   /*
   if (pkt_ptr->e_rf * pkt_ptr->nu_cmf /pkt_ptr->nu_rf > 1e46)
     {
       printout("here2 %g %g \n", pkt_ptr->e_rf, pkt_ptr->nu_cmf /pkt_ptr->nu_rf);
     }
   */
-  
+
   return 0;
 }

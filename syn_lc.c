@@ -4,7 +4,7 @@
 
 double
 syn_lc()
- 
+
      /* Note the direction (vector pointing from origin to observer is
 	externally set: syn_dir[3]. */
 {
@@ -20,8 +20,8 @@ syn_lc()
   int time_loop;
   int emiss_rlc_load();
   double lower_test, upper_test;
-  
- 
+
+
   if ((syn_file = fopen("syn_lc.out", "w+")) == NULL){
     printout("Cannot open syn.out.\n");
     exit(0);
@@ -36,14 +36,14 @@ syn_lc()
       syn_lc_init(time_syn[time_loop]);
 
       /* Now start off the calculation as in sn3d: (re)initialise the grid. */
-      
+
       grid_init();
-      
+
       time_init();
-      
+
       for (nts = 0; nts < ntstep; nts++)
 	{
-	
+
 	  if (do_rlc_est != 0)
 	    {
 	      lower_test = time_syn[time_loop] / (1. + (sqrt(3.0)*vmax/CLIGHT));
@@ -61,12 +61,12 @@ syn_lc()
 	  update_gamma_rays(nts);  //because of choice of frequency, we can
 	                           //use the same ray tracing routines that were made for gamma rays
 	}
-      
+
       /* Now make the rays into a spectrum and print it out. */
-      
+
       lc_syn=0;
 
-      
+
       for (m = 0; m < NRAYS_SYN; m++)
 	{
 	  lc_syn += rays[m].e_rf[0] * DeltaA / 1.e12 / PARSEC/ PARSEC;
@@ -76,13 +76,13 @@ syn_lc()
 	      exit(0);
 	    }
 	}
-      fprintf(syn_file, "%g %g\n", time_syn[time_loop]/DAY, lc_syn*4.*PI*PARSEC*PARSEC*1.e12/LSUN); 
-      
-      
+      fprintf(syn_file, "%g %g\n", time_syn[time_loop]/DAY, lc_syn*4.*PI*PARSEC*PARSEC*1.e12/LSUN);
+
+
     }
 
   fclose(syn_file);
-  
+
 
 
 
@@ -90,7 +90,7 @@ syn_lc()
 }
 
 /* ************************************************************** */
-int 
+int
 syn_lc_init(time)
      double time;
 {
@@ -121,16 +121,16 @@ syn_lc_init(time)
   //for (n = 0; n < NRAYS_SYN; n++)
   while (n < NRAYS_SYN)
     {
-      /* To correctly sample the rays, they should be uniformly spread over 
+      /* To correctly sample the rays, they should be uniformly spread over
 	 the observer's plane (i.e the plane perpendocular to syn_dir.
       */
-      /* For a cuboidal grid, the maximum length from the centre in 
+      /* For a cuboidal grid, the maximum length from the centre in
 	 projection must be */
 
       max_proj = sqrt( (xmax*xmax) + (ymax*ymax) + (zmax*zmax)) * (time/tmin);
       max_proj = max_proj / sqrt( 1. - (vmax*vmax/CLIGHT_PROP/CLIGHT_PROP));
 
-      /* so sample a circle (in plane of origin) with radius max_proj for 
+      /* so sample a circle (in plane of origin) with radius max_proj for
 	 uniform area. */
 
       /* The line followed by the ray is going to be
@@ -142,7 +142,7 @@ syn_lc_init(time)
       zrand = gsl_rng_uniform(rng);
       phi_proj = 4 * asin(1.0) * zrand;
 
-      /* Get cartestian coordinates in a frame with zprime parallel to 
+      /* Get cartestian coordinates in a frame with zprime parallel to
 	 syn_dir. */
 
       zprime = 0.0;
@@ -163,14 +163,14 @@ syn_lc_init(time)
 	  /* no need to rotate */
 	  r0[0] = xprime;
 	  r0[1] = yprime;
-	  r0[2] = 0;	  
+	  r0[2] = 0;
 	}
       else
 	{
-	  
+
 	  norm1=1./(sqrt( (syn_dir[0]*syn_dir[0]) + (syn_dir[1]*syn_dir[1])));
 	  norm2=1./(sqrt( (syn_dir[0]*syn_dir[0]) + (syn_dir[1]*syn_dir[1]) + (syn_dir[2]*syn_dir[2])));
-	  
+
 	  r11 = syn_dir[1] * norm1;
 	  r12 = -1 * syn_dir[0] * norm1;
 	  r13 = 0.0;
@@ -180,7 +180,7 @@ syn_lc_init(time)
 	  r31 = syn_dir[0] * norm2;
 	  r32 = syn_dir[1] * norm2;
 	  r33 = syn_dir[2] * norm2;
-	  
+
 	  r0[0] = (r11 * xprime) + (r21 * yprime) + (r31 * zprime);
 	  r0[1] = (r12 * xprime) + (r22 * yprime) + (r32 * zprime);
 	  r0[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
@@ -192,16 +192,16 @@ syn_lc_init(time)
       //      printout("dot %g\n", dot(r0, syn_dir)/vec_len(r0));
 
 
-      /*Now, we want the observer to detect this ray at t = time so we need 
-	lambda = -CLIGHT * time to give us where the ray was at t = 0 
+      /*Now, we want the observer to detect this ray at t = time so we need
+	lambda = -CLIGHT * time to give us where the ray was at t = 0
 	lambda = -CLIGHT * (time - tmin) to give us where it was at t= tmin */
 
-      /* Need to answer question: does this ray ever enter the grid - if so, where 
+      /* Need to answer question: does this ray ever enter the grid - if so, where
 	 and when. */
 
       tin_x = ((CLIGHT_PROP * time * syn_dir[0]) - r0[0]) / ((CLIGHT_PROP * syn_dir[0]) + (xmax/tmin));
       tou_x = ((CLIGHT_PROP * time * syn_dir[0]) - r0[0]) / ((CLIGHT_PROP * syn_dir[0]) - (xmax/tmin));
-   
+
       if (syn_dir[0] < 0) //swap around if ray travelling to -ve x
 	{
 	  dummy = tou_x;
@@ -230,7 +230,7 @@ syn_lc_init(time)
 
 
       //      printout("tin_x %g tou_x %g\n", tin_x , tou_x);
-      
+
       tin_y = ((CLIGHT_PROP * time * syn_dir[1]) - r0[1]) / ((CLIGHT_PROP * syn_dir[1]) + (ymax/tmin));
       tou_y = ((CLIGHT_PROP * time * syn_dir[1]) - r0[1]) / ((CLIGHT_PROP * syn_dir[1]) - (ymax/tmin));
       if (syn_dir[1] < 0)
@@ -287,7 +287,7 @@ syn_lc_init(time)
 	  tou_z = 1.e99;
 	}
       //printout("tin_z %g tou_z %g\n", tin_z , tou_z);
-      
+
       /* Find latest tin */
       if (tin_x > tin_y)
 	{
@@ -300,7 +300,7 @@ syn_lc_init(time)
 	      tin = tin_z;
 	    }
 	}
-      else 
+      else
 	{
 	  if (tin_y > tin_z)
 	    {
@@ -324,7 +324,7 @@ syn_lc_init(time)
 	      tou = tou_z;
 	    }
 	}
-      else 
+      else
 	{
 	  if (tou_y < tou_z)
 	    {
@@ -338,7 +338,7 @@ syn_lc_init(time)
 
       /* did it get into the grid then? */
 
-      
+
       num_in += 1;
 
       if (tin < 0)
@@ -399,6 +399,3 @@ syn_lc_init(time)
   return(0);
 
 }
-
-
-
