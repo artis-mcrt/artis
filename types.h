@@ -201,40 +201,11 @@ typedef struct
 
 struct grid
 {
-  double pos_init[3]; /// Initial co-ordinates of inner most cell.
-  int xyz[3];        /// Integer position of cell in grid.
+  double pos_init[3]; /// Initial co-ordinates of inner most corner of cell.
+  int xyz[3];         /// Integer position of cell in grid.
   int modelgridindex;
-
-  //float cen_init[3]; /* Initial co-ordinates of centre of cell. */
-  //double wid_init[3];/*Initial width of cell in x, y and z directions.*/
-  //  double pos[3]; /* Co-ordinates of inner most corner (x,y,z). */
-  //  double cen[3]; /* Centre of cell (x,y,z). */
-  //  double wid[3];  /*Width of cell in x, y and z directions.*/
-  
-/*  float rho_init;    /// Mass density.
-  float rho;         /// Mass density.
-  float nne;         /// Number density of free electrons.
-  float nne_tot;     /// Number density of all electrons (bound and free ones).
-  
-  float f_ni;        /// Initial abundance (by mass) of Ni56 in cell
-  float f_co;        /// Initial abundance (by mass) of Co56 in cell
-  float f_fe;        /// Abundance (by mass) of Fe-group elements in cell
-  float f_ni_stable; /// Initial abundance (by mass) of stable Ni in cell
-  float f_co_stable; /// Initial abundance (by mass) of stable Co in cell
-  float f_fe_init;   /// Initial abundance (by mass) of Fe56 in cell
-  
-  float kappa_grey;  /// Grey opacity for this cell
-  
-
-  float T_e;         /// Electron temperature
-  float T_R;         /// Radiation temperature
-  float W;           /// Dilution factor
-  float nn_tot;*/
-  //compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundance of all included elements
-                                         /// and all the groundlevel populations and partition functions for their ions
 };
 typedef struct grid CELL;
-
 
 typedef struct
 {
@@ -337,8 +308,6 @@ typedef struct syn_ray RAY;
 
 
 
-
-
 /// ATOMIC DATA
 ///============================================================================
 
@@ -348,14 +317,16 @@ typedef struct
   double epsilon;
   short stat_weight;
   int lineindex;
-} permittedtransitionlist_entry;
+} permittedtransitionlist_entry; // this now includes forbidden transitions, so consider renaming?
 
+/*
 typedef struct
 {
   float einstein_A;
   float oscillator_strength;
   int linelistindex;
 } transitionlist_entry;
+*/
 
 typedef struct
 {
@@ -416,13 +387,10 @@ typedef struct
 typedef struct
 {
   short ionstage;                            /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
-  int nlevels;                             /// Number of levels for
-					   /// this ionisation stage
-  int nlevels_nlte;                        /// number of nlte levels
-					   /// for this ion
-  int first_nlte;                          ///reference index for
-					   ///counting of nlte levels
-  int ionisinglevels;                             /// Number of levels which have a bf-continuum
+  int nlevels;                               /// Number of levels for this ionisation stage
+  int nlevels_nlte;                          /// number of nlte levels for this ion
+  int first_nlte;                            /// reference index for counting of nlte levels
+  int ionisinglevels;                        /// Number of levels which have a bf-continuum
   int coolingoffset;
   int ncoolingterms;
   double ionpot;                             /// Ionisation threshold to the next ionstage
@@ -439,13 +407,11 @@ typedef struct
   short nions;                               /// Number of ions for the current element
 //  short uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given cell
 //                                             /// Be aware that this must not be used outside of the update_grid routine
-//                                             /// and their doughters. Neither it will work with OpenMP threads.
+//                                             /// and their daughters. Neither it will work with OpenMP threads.
   float abundance;                           /// 
   float mass;                                /// Atomic mass number in multiple of MH
   ionlist_entry *ions;                       /// Carries information for each ion: 0,1,...,nions-1
 } elementlist_entry;
-
-
 
 typedef struct 
 {
@@ -459,8 +425,6 @@ typedef struct
   short upperlevelindex;                     /// And the participating upper
   short lowerlevelindex;                     /// and lower levels
 } linelist_entry;
-/// Global pointer to beginning of linelist
-
 
 typedef struct 
 {
@@ -469,15 +433,13 @@ typedef struct
   short levelindex;
 } bflist_t;
 
-
 typedef struct 
 {
   short lower;
   short upper;
   double A;
   double coll_str;
-} transitiontable_entry;  ///only used temporary during input
-
+} transitiontable_entry;  /// only used temporarily during input
 
 typedef struct
 {
@@ -512,8 +474,6 @@ typedef struct
 
 
 
-
-
 typedef struct 
 {
   double total;
@@ -524,11 +484,6 @@ typedef struct
   double ffheating;
   //double bfheating;
 } rpkt_cont_opacity_struct;
-
-
-
-
-
 
 
 
@@ -544,15 +499,14 @@ typedef struct
   double spontaneousrecombrate;
   double bfcooling;
   double corrphotoioncoeff;
+  double sahafact;
 } chphixstargets_struct;
 
 
 typedef struct
 {
-  //float population;                      /// The levels population
-  double population;                      /// The levels population
-  double sahafact;                        /// 
-  
+  double population;                      /// The level's population
+
   double rad_deexc;                       /// Radiative deexcitation rate from this level.
   double col_deexc;                       /// Collisional deexcitation rate from this level.
   double rad_recomb;                      /// Radiative recombination from this level.
@@ -579,18 +533,16 @@ typedef struct
   chions_struct *chions;                  /// Pointer to the elements ionlist.
 } chelements_struct;
 
-
 typedef struct
 {
-  int cellnumber;                         /// Identifies the cell the data is valid for.
-  //double totalcooling;                    /// Total cooling rate in this cell.
-  //double bfcooling;                    /// Total cooling rate in this cell.
+  int cellnumber;                           /// Identifies the cell the data is valid for.
+//  double totalcooling;                    /// Total cooling rate in this cell.
+//  double bfcooling;                       /// Total cooling rate in this cell.
 //  coolinglist_contributions *coolinglist; /// Cooling contributions by the different processes.
-  cellhistorycoolinglist_t *coolinglist; /// Cooling contributions by the different processes.
-  chelements_struct *chelements;          /// Pointer to a nested list which helds compositional
-                                          /// information for all the elements=0,1,...,nelements-1
+  cellhistorycoolinglist_t *coolinglist;    /// Cooling contributions by the different processes.
+  chelements_struct *chelements;            /// Pointer to a nested list which helds compositional
+                                            /// information for all the elements=0,1,...,nelements-1
 } cellhistory_struct;
-
 
 
 typedef struct

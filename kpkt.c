@@ -10,9 +10,8 @@ void calculate_kpkt_rates(int modelgridindex)
 {
   double get_abundance(int modelgridindex, int element);
   double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  int get_nphixstargets(int element, int ion, int level);
   double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int upper, double epsilon_trans);
+  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
   double epsilon(int element, int ion, int level);
   int get_ionstage(int element, int ion);
@@ -20,6 +19,8 @@ void calculate_kpkt_rates(int modelgridindex)
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   //double get_levelpop(int element, int ion, int level);
   int get_bfcontinua(int element, int ion);
+  int get_nphixstargets(int element, int ion, int level);
+  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   double C,C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
   double E_threshold;//,nu_threshold;
@@ -137,18 +138,16 @@ void calculate_kpkt_rates(int modelgridindex)
             //printout("    ionisation possible\n");
             /// ionization to higher ionization stage
             /// -------------------------------------
-            /// for the moment we deal only with ionisations to the next ions groundlevel
-            /// to allow an easy generalisation this was only made sure by col_ionization
-            /// for speed issues (reduced number of calls to epsilon) it is now done also 
-            /// here explicitly
-            //nlevels_upperion = get_nlevels(element,ion+1);
-            //for (upper = 0; upper < nlevels_upperion; upper++)
-            //{
-            upper = 0;
-            epsilon_upper = epsilon(element,ion+1,upper);
-            epsilon_trans = epsilon_upper - epsilon_current;
-            //printout("cooling list: col_ionization\n");
-            C = col_ionization(modelgridindex,upper,epsilon_trans) * epsilon_trans;
+
+            C = 0.0;
+            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            {
+              upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+              epsilon_upper = epsilon(element,ion+1,upper);
+              epsilon_trans = epsilon_upper - epsilon_current;
+              //printout("cooling list: col_ionization\n");
+              C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans) * epsilon_trans;
+            }
             C_ion += C;
             //C = 0.;
             //cellhistory[tid].coolinglist[i].contribution = C;
@@ -264,7 +263,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
   double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   int get_nphixstargets(int element, int ion, int level);
   double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int upper, double epsilon_trans);
+  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
   double epsilon(int element, int ion, int level);
   int get_ionstage(int element, int ion);
@@ -272,6 +271,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   double get_levelpop(int element, int ion, int level);
   int get_bfcontinua(int element, int ion);
+  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   double C,C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
   double E_threshold;//,nu_threshold;
@@ -382,14 +382,15 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
       /// to allow an easy generalisation this was only made sure by col_ionization
       /// for speed issues (reduced number of calls to epsilon) it is now done also 
       /// here explicitly
-      //nlevels_upperion = get_nlevels(element,ion+1);
-      //for (upper = 0; upper < nlevels_upperion; upper++)
-      //{
-      upper = 0;
-      epsilon_upper = epsilon(element,ion+1,upper);
-      epsilon_trans = epsilon_upper - epsilon_current;
-      //printout("cooling list: col_ionization\n");
-      C = col_ionization(modelgridindex,upper,epsilon_trans) * epsilon_trans;
+      C = 0.0;
+      for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+      {
+        upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+        epsilon_upper = epsilon(element,ion+1,upper);
+        epsilon_trans = epsilon_upper - epsilon_current;
+        //printout("cooling list: col_ionization\n");
+        C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans) * epsilon_trans;
+      }
       //C_ion += C;
       //C = 0.;
       //cellhistory[tid].coolinglist[i].contribution = C;
@@ -473,16 +474,11 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
 
   int element,ion,upper;
   int i;
-  
-  
 
   //double nne = cell[pkt_ptr->where].nne ;
   double T_e = get_Te(cell[pkt_ptr->where].modelgridindex);
   t_current = t1;
-  
-  
 
-  
   pkt_ptr->nu_cmf = sample_planck(T_e);
   if (!isfinite(pkt_ptr->nu_cmf))
   {
@@ -491,7 +487,8 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
   }
   /// and then emitt the packet randomly in the comoving frame
   emitt_rpkt(pkt_ptr,t_current);
-  if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
+  if (debuglevel == 2)
+    printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick != 1)
     calculate_kappa_rpkt_cont(pkt_ptr,t_current);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
@@ -571,14 +568,6 @@ double planck(double nu, double T)
 
 
 
-
-
-
-
-
-
-
-
 ///****************************************************************************
 double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
@@ -604,7 +593,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 
   double coolingsum;
   int element,ion,level,upper;
-  double nu_threshold;
+  double nu_threshold,nu_max_phixs;
   int i;
   int nions;
   
@@ -619,7 +608,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_lower,deltanu,sf,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
-  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   int ii;
   int ilow,low,high;
   double rndcool;
@@ -686,7 +675,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       //printout("do_kpkt: loop i %d, coolingsum %g, contr %g\n",i,coolingsum,cellhistory[tid].coolinglist[i].contribution);
       if (zrand*cellhistory[tid].totalcooling < coolingsum) break;
     }*/
-    
+
     
     rndcool = zrand*modelgrid[modelgridindex].totalcooling;
     //printout("rndcool %g\n",rndcool);
@@ -698,12 +687,11 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
         oldcoolingsum = coolingsum;
         coolingsum += modelgrid[modelgridindex].cooling[element].contrib[ion];
         //printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
-        if (coolingsum > rndcool) goto ENDSUM;
+        if (coolingsum > rndcool) break;
       }
+      if (coolingsum > rndcool) break;
     }
-    
-    ENDSUM: ;
-    
+
   //  #ifdef DEBUG_ON
       if (element >= nelements || ion >= get_nions(element))
       {
@@ -852,31 +840,32 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
         mastate[tid].element = element;
         mastate[tid].ion = ion;
         mastate[tid].level = level;
-        sf = calculate_sahafact(element,ion,level,0,T_e,nu_threshold*H);
         intparas.T = T_e;
         intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
         F_bfcooling.params = &intparas;
-        deltanu = 9*nu_threshold/100;
-        gsl_integration_qag(&F_bfcooling, nu_threshold, 10*nu_threshold, 0, intaccuracy, 1000, 6, wsp, &total_bfcooling_coeff, &error);
+        deltanu = nu_threshold * NPHIXSNUINCREMENT / 2.0;
+        nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+        gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &total_bfcooling_coeff, &error);
         bfcooling_coeff = total_bfcooling_coeff;
-        for (ii= 0; ii < 100; ii++)
+        for (ii = 0; ii < NPHIXSPOINTS; ii++)
+        // LJS: As in macro atom, this sampling process could be optimized
         {
           bfcooling_coeff_old = bfcooling_coeff;
           if (ii > 0)
           {
             nu_lower = nu_threshold + ii*deltanu;
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-            gsl_integration_qag(&F_bfcooling, nu_lower, 10*nu_threshold, 0, intaccuracy, 1000, 6, wsp, &bfcooling_coeff, &error);
+            gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &bfcooling_coeff, &error);
             //bfcooling_coeff *= FOURPI * sf; 
             //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
           }
-          //printout("zrand %g, bfcooling_coeff %g, total_bfcooling_coeff %g, nu_lower %g\n",zrand,bfcooling_coeff,total_bfcooling_coeff,nu_lower);
+          //printout("kpkt: zrand %g, step %d, bfcooling_coeff %g, total_bfcooling_coeff %g, bfcooling_coeff/total_bfcooling_coeff %g, nu_lower %g\n",zrand,ii,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff/total_bfcooling_coeff,nu_lower);
           if (zrand >= bfcooling_coeff/total_bfcooling_coeff) break;
         }
-        if (ii==100)
+        if (ii == NPHIXSPOINTS)
         {
           printout("kpkt emitts bf-photon at upper limit\n");
-          nu_lower = 10*nu_threshold; // + ii*deltanu;
+          nu_lower = nu_max_phixs;
         }
         else if (ii > 0)
         {
@@ -1036,7 +1025,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 /// or update_grid. Therefore we need to decide whether a cell history is
 /// known or not.
 {
-  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double get_groundlevelpop(int cellnumber, int element, int ion);
   double epsilon(int element, int ion, int level);
   double bfcooling;
@@ -1048,6 +1037,8 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   F_bfcooling.function = &bfcooling_integrand_gsl;
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
+  double nu_max_phixs;
+  nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
   wsp = gsl_integration_workspace_alloc(1000);
   
   double T_e = cell[cellnumber].T_e;
@@ -1062,8 +1053,8 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   intparas.T = T_e;
   intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
   F_bfcooling.params = &intparas;
-  gsl_integration_qag(&F_bfcooling, nu_threshold, 10*nu_threshold, 0, intaccuracy, 1000, 6, wsp, &bfcooling, &error);
-  bfcooling *= nnionlevel*nne*4*PI*calculate_sahafact(element,ion,level,T_e,nu_threshold*H);
+  gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &bfcooling, &error);
+  bfcooling *= nnionlevel*nne*4*PI*calculate_sahafact(element,ion,level,phixstargetindex,T_e,nu_threshold*H);
   
   gsl_integration_workspace_free(wsp);
   return bfcooling;

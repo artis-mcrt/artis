@@ -106,7 +106,7 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
       T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
       T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
       status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
-      printout("[debug] find T_e:   iter %d, intervall [%g, %g], guess %g, status %d\n",iter2,T_e_min,T_e_max,T_e,status);
+      printout("[debug] find T_e:   iter %d, interval [%g, %g], guess %g, status %d\n",iter2,T_e_min,T_e_max,T_e,status);
     }
     while (status == GSL_CONTINUE && iter2 < maxit);
     if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
@@ -511,7 +511,7 @@ void calculate_cooling_rates(int modelgridindex)
 {
   double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int upper, double epsilon_trans);
+  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
   double epsilon(int element, int ion, int level);
   int get_element(int element);
@@ -519,6 +519,7 @@ void calculate_cooling_rates(int modelgridindex)
   double ionstagepop(int modelgridindex, int element, int ion);
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   int get_nphixstargets(int element, int ion, int level);
+  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   double C,C_ff,C_fb,C_exc,C_ion; 
   double nncurrention,nnnextionlevel;
@@ -593,21 +594,16 @@ void calculate_cooling_rates(int modelgridindex)
           //printout("    ionisation possible\n");
           /// ionization to higher ionization stage
           /// -------------------------------------
-          /// for the moment we deal only with ionisations to the next ions groundlevel
-          /// to allow an easy generalisation this was only made sure by col_ionization
-          /// for speed issues (reduced number of calls to epsilon) it is now done also 
-          /// here explicitly
-          //nlevels_upperion = get_nlevels(element,ion+1);
-          //for (upper = 0; upper < nlevels_upperion; upper++)
-          //{
-          upper = 0;
-          epsilon_upper = epsilon(element,ion+1,upper);
-          epsilon_trans = epsilon_upper - epsilon_current;
-          //printout("cooling list: col_ionization\n");
-          C = col_ionization(modelgridindex,upper,epsilon_trans) * epsilon_trans;
+          C = 0.0;
+          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          {
+            upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            epsilon_upper = epsilon(element,ion+1,upper);
+            epsilon_trans = epsilon_upper - epsilon_current;
+            //printout("cooling list: col_ionization\n");
+            C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans) * epsilon_trans;
+          }
           C_ion += C;
-          //}
-          
           
           /// fb creation of r-pkt
           /// free bound rates are calculated from the lower ion, but associated to the higher ion

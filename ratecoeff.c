@@ -11,7 +11,7 @@ void tabulate_ratecoefficients_gsl()
 /// W is easily factored out. For stimulated recombination we must assume
 /// T_e = T_R for this precalculation.
 {
-  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
   double epsilon(int element, int ion, int level);
   int get_ionstage(int element, int ion);
@@ -45,7 +45,7 @@ void tabulate_ratecoefficients_gsl()
   gslintegration_paras intparas;
   FILE *ratecoeff_file;
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-  double E_threshold,nu_threshold,nu_max,nu_threshold_firsttarget;
+  double E_threshold,nu_threshold,nu_max_phixs,nu_threshold_firsttarget;
   double sfac,bfac,pfunc,T_e;//,T_R;
   double alpha_sp,gammacorr,bfheating_coeff,bfcooling_coeff;
   double alpha_sp_E,gamma_below,gamma_above,gammacorr_above;
@@ -186,7 +186,7 @@ void tabulate_ratecoefficients_gsl()
             mastate[tid].level = level;                   // Global variable which passes the current level to all subfunctions of macroatom.c
             E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
             nu_threshold = E_threshold / H;
-            nu_max = nu_threshold * (1 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+            nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
             intparas.nu_edge = nu_threshold;              // Global variable which passes the threshold to the integrator
                                                           // the threshold of the first target gives nu of the first phixstable point
             // Loop over the temperature grid
@@ -198,7 +198,7 @@ void tabulate_ratecoefficients_gsl()
               bfcooling_coeff = 0.0;
               T_e = MINTEMP * exp(iter*T_step_log);
               //T_e = MINTEMP + iter*T_step;
-              sfac = calculate_sahafact(element,ion,level,upperlevel,T_e,E_threshold);
+              sfac = calculate_sahafact(element,ion,level,phixstargetindex,T_e,E_threshold);
               //printout("%d %g\n",iter,T_e);
               
               intparas.T = T_e;
@@ -216,19 +216,19 @@ void tabulate_ratecoefficients_gsl()
               //although the integrator is probably pretty fast in these cases anyway
 
               /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-              gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max, 0, intaccuracy, 1000, 6, w, &alpha_sp, &error);
+              gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &alpha_sp, &error);
               alpha_sp *= FOURPI * sfac * phixstargetprobability;
 
               //if (iter == 0)
               //  printout("alpha_sp: element %d ion %d level %d upper level %d at temperature %g, alpha_sp is %g (integral %g, sahafac %g)\n", element, ion, level, upperlevel, T_e, alpha_sp, alpha_sp/(FOURPI * sfac * phixstargetprobability),sfac);
 
-              gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
+              gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
               bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
               
-              gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max, 0, intaccuracy, 1000, 6, w, &gammacorr, &error);
+              gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &gammacorr, &error);
               gammacorr *= FOURPI * phixstargetprobability;
               
-              gsl_integration_qag(&F_bfheating, nu_threshold, nu_max, 0, intaccuracy, 1000, 6, w, &bfheating_coeff, &error);
+              gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfheating_coeff, &error);
               bfheating_coeff *= FOURPI * phixstargetprobability;
 
               /// Save the calculated coefficients to memory
@@ -461,7 +461,7 @@ double approx_bfheating_integrand_gsl(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-//  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+//  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double photoionization_crosssection(double nu_edge, double nu);
   double radfield2(double nu, double T, double W);
   double x;
@@ -486,8 +486,8 @@ double approx_bfheating_integrand_gsl(double nu, void *paras)
   int ion  = mastate[tid].ion;
   int level = mastate[tid].level;
   double E_threshold = nu_edge*H;
-  double sf_Te = calculate_sahafact(element,ion,level,T_e,E_threshold);
-  double sf_TR = calculate_sahafact(element,ion,level,T_R,E_threshold);
+  double sf_Te = calculate_sahafact(element,ion,level,phixstargetindex,T_e,E_threshold);
+  double sf_TR = calculate_sahafact(element,ion,level,phixstargetindex,T_R,E_threshold);
   x = sigma_bf*(1-nu_edge/nu)*radfield2(nu,T_R,1) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-H*nu/KB/T_e));*/
   
   return x;
@@ -497,7 +497,7 @@ double approx_bfheating_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the modified rate coefficient for photoionization 
 /// using gsl integrators.
 {
-  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double get_groundlevelpop(int cellnumber, int element, int ion);
   double photoionization_crosssection(double nu_edge, double nu);
   double radfield2(double nu, double T, double W);
@@ -520,7 +520,7 @@ double approx_bfheating_integrand_gsl(double nu, void *paras)
   double nnlevel = mastate[tid].nnlevel;
   double sigma_bf = photoionization_crosssection(nu_edge,nu);
   double E_threshold = nu_edge*H;
-  double sfac = calculate_sahafact(element,ion,level,T_e,E_threshold);
+  double sfac = calculate_sahafact(element,ion,level,phixstargetindex,T_e,E_threshold);
   double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
   
   x = sigma_bf*(1-nu_edge/nu)*radfield2(nu,T_R,W) * (1-nnionlevel*nne/nnlevel*sf*exp(-H*nu/KB/T_e));
@@ -1209,7 +1209,7 @@ void check_interpolation(double T_min, double T_max)
 /// to alpha_sp_file, alpha_st_file and gamma_file to judge the quality
 /// of the interpolation. Both integrator types are used.
 {
-  double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double epsilon(int element, int ion, int level);
 
   double interpolate_alpha_sp(int element, int ion, int level, double T_e);
@@ -1290,7 +1290,7 @@ void check_interpolation(double T_min, double T_max)
     for (iter = 0; iter < 100; iter++)
     {
       T_e = T_min + iter*tstep;
-      sfac = calculate_sahafact(0,0,level,T_e,E_threshold);
+      sfac = calculate_sahafact(0,0,level,phixstargetindex,T_e,E_threshold);
       
       /// calculate from tabulated values
       alpha_sp = interpolate_alpha_sp(0,0,level,T_e);
@@ -1301,6 +1301,7 @@ void check_interpolation(double T_min, double T_max)
       modified_gamma = interpolate_modified_gamma(0,0,level,T_e);
       
       /// calculate with gsl integrators
+      nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
       intparas.T = T_e;
       F1.params = &intparas;
       F2.params = &intparas;
@@ -1308,12 +1309,12 @@ void check_interpolation(double T_min, double T_max)
       F4.params = &intparas;
       F5.params = &intparas;
       F6.params = &intparas;
-      gsl_integration_qng(&F1, nu_threshold, 10*nu_threshold, 0, 1e-2, &alpha_sp_gsl, &error, &neval);
-      gsl_integration_qng(&F2, nu_threshold, 10*nu_threshold, 0, 1e-2, &modified_alpha_sp_gsl, &error, &neval);
-      gsl_integration_qng(&F3, nu_threshold, 10*nu_threshold, 0, 1e-2, &alpha_st_gsl, &error, &neval);
-      gsl_integration_qng(&F4, nu_threshold, 10*nu_threshold, 0, 1e-2, &modified_alpha_st_gsl, &error, &neval);
-      gsl_integration_qng(&F5, nu_threshold, 10*nu_threshold, 0, 1e-2, &gamma_gsl, &error, &neval);
-      gsl_integration_qng(&F6, nu_threshold, 10*nu_threshold, 0, 1e-2, &modified_gamma_gsl, &error, &neval);
+      gsl_integration_qng(&F1, nu_threshold, nu_max_phixs, 0, 1e-2, &alpha_sp_gsl, &error, &neval);
+      gsl_integration_qng(&F2, nu_threshold, nu_max_phixs, 0, 1e-2, &modified_alpha_sp_gsl, &error, &neval);
+      gsl_integration_qng(&F3, nu_threshold, nu_max_phixs, 0, 1e-2, &alpha_st_gsl, &error, &neval);
+      gsl_integration_qng(&F4, nu_threshold, nu_max_phixs, 0, 1e-2, &modified_alpha_st_gsl, &error, &neval);
+      gsl_integration_qng(&F5, nu_threshold, nu_max_phixs, 0, 1e-2, &gamma_gsl, &error, &neval);
+      gsl_integration_qng(&F6, nu_threshold, nu_max_phixs, 0, 1e-2, &modified_gamma_gsl, &error, &neval);
       alpha_sp_gsl *= FOURPI * sf;
       modified_alpha_sp_gsl *= FOURPI * sf;
       alpha_st_gsl *= FOURPI * sf;
@@ -1323,12 +1324,12 @@ void check_interpolation(double T_min, double T_max)
       
       /// calculate with qromb integrator of NR
       alpha_sp_integrand_parameters.T = T_e;
-      alpha_sp_nr = qromb(alpha_sp_integrand,nu_threshold,10*nu_threshold);
-      modified_alpha_sp_nr = qromb(modified_alpha_sp_integrand,nu_threshold,10*nu_threshold);
-      alpha_st_nr = qromb(alpha_st_integrand,nu_threshold,10*nu_threshold);
-      modified_alpha_st_nr = qromb(modified_alpha_st_integrand,nu_threshold,10*nu_threshold);
-      gamma_nr = qromb(gamma_integrand,nu_threshold,10*nu_threshold);
-      modified_gamma_nr = qromb(modified_gamma_integrand,nu_threshold,10*nu_threshold);
+      alpha_sp_nr = qromb(alpha_sp_integrand,nu_threshold,nu_max_phixs);
+      modified_alpha_sp_nr = qromb(modified_alpha_sp_integrand,nu_threshold,nu_max_phixs);
+      alpha_st_nr = qromb(alpha_st_integrand,nu_threshold,nu_max_phixs);
+      modified_alpha_st_nr = qromb(modified_alpha_st_integrand,nu_threshold,nu_max_phixs);
+      gamma_nr = qromb(gamma_integrand,nu_threshold,nu_max_phixs);
+      modified_gamma_nr = qromb(modified_gamma_integrand,nu_threshold,nu_max_phixs);
       alpha_sp_nr *= FOURPI * sf;
       modified_alpha_sp_nr *= FOURPI * sf;
       alpha_st_nr *= FOURPI * sf;

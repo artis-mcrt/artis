@@ -21,8 +21,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
   double doppler();
   double vel_vec[3];
   int get_velocity();
-  
-  
+
   double t_current;
   int end_packet;
   double zrand, tau_next, tau_current, tdist;
@@ -66,7 +65,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
       
     //printout("[debug] r-pkt propagation iteration %d\n",it);
     //it += 1;
-    /** Assign optical depth to next physical event. And start couter of
+    /** Assign optical depth to next physical event. And start counter of
     optical depth for this path.*/
     zrand = gsl_rng_uniform(rng);
     tau_next = -1. * log(zrand);
@@ -522,7 +521,7 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
   double get_groundlevelpop(int cellnumber, int element, int ion);
   double epsilon(int element, int ion, int level);
   double photoionization_crosssection(double nu_edge, double nu);
-  double get_sahafact(int element, int ion, int level, double T, double E_threshold);
+  double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   //void emitt_rpkt(PKT *pkt_ptr, double t_current);
   void escat_rpkt(PKT *pkt_ptr, double t_current);
@@ -1027,8 +1026,9 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   int get_element(int element);
   int get_ionstage(int element, int ion);
   double photoionization_crosssection(double nu_edge, double nu);
+  int get_nphixstargets(int element, int ion, int level);
   float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-  double get_sahafact(int element, int ion, int level, double T, double E_threshold);
+  double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   int get_velocity();
   double doppler();
   
@@ -1038,7 +1038,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   double g_ff,g_bf;
   double nnion,nnionlevel,nnlevel,departure_ratio;
   double sigma_bf;
-  int element,ion,level;//,samplecell;
+  int element,ion,level,phixstargetindex;//,samplecell;
   int Z;
   double nu_edge;
   int i,ii,nions;
@@ -1056,8 +1056,6 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   
   if (do_r_lc == 1)
   {
-    
-    
     if (opacity_case == 4)
     {
       nne = get_nne(modelgridindex);
@@ -1080,15 +1078,15 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
       /// Estimator for bound-free heating
       kappa_ffheating = 0.;
       //kappa_bfheating = 0.;
-      for (element=0; element < nelements; element++)
+      for (element = 0; element < nelements; element++)
       {
         nions = get_nions(element);
-        for (ion=0; ion < nions; ion++)
+        for (ion = 0; ion < nions; ion++)
         {
           ///calculate population of ionstage ...
           nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
-	  ionpops_local[element][ion] = nnion/get_nnetot(modelgridindex);          
-	  //Z = get_element(element);  ///atomic number
+          ionpops_local[element][ion] = nnion/get_nnetot(modelgridindex);
+          //Z = get_element(element);  ///atomic number
           //if (get_ionstage(element,ion) > 1)
           /// Z is ionic charge in the following formula
           Z = get_ionstage(element,ion)-1;
@@ -1119,7 +1117,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
         /// The bf process happens only if the current cell contains 
         /// the involved atomic species
         if ((ionpops_local[element][ion] > 1.e-6) || (level == 0))
-	   ///if (get_abundance(modelgridindex,element) > 0)
+	    ///if (get_abundance(modelgridindex,element) > 0)
         {
           nu_edge = phixslist[tid].allcont[i].nu_edge;
           //printout("i %d, nu_edge %g\n",i,nu_edge);
@@ -1141,13 +1139,19 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
             mastate[tid].element = element;
             mastate[tid].ion = ion;
             mastate[tid].level = level;
-            sigma_bf = photoionization_crosssection(nu_edge,nu) * get_phixsprobability(element,ion,level,0);
-            
-            sf = get_sahafact(element,ion,level,T_e,nu_edge*H);
+            sigma_bf = photoionization_crosssection(nu_edge,nu);
+            sf = 0.0;
+            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            {
+              sf += get_sahafact(element,ion,level,phixstargetindex,T_e,nu_edge*H) * get_phixsprobability(element,ion,level,phixstargetindex);
+            }
             helper = nnlevel * sigma_bf;
-            departure_ratio = nnionlevel/nnlevel * nne*sf; ///put that to phixslist
-            if (nnlevel == 0.) check = 0.;
-            else check = helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
+            departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+            if (nnlevel == 0.)
+              check = 0.;
+            else
+              check = helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
+
             if (check <= 0)
             {
               #ifdef DEBUG_ON
@@ -1160,7 +1164,8 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
               //phixslist[tid].allcont[i].photoion_contr = 0.;
               //phixslist[tid].allcont[i].stimrecomb_contr = 0.;
             }
-/*            else
+/*
+            else
             {
               phixslist[tid].allcont[i].kappa_bf_contr = check;
               phixslist[tid].allcont[i].photoion_contr = nnlevel * sigma_bf;
@@ -1206,7 +1211,8 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
           /// The important part of phixslist is sorted by nu_edge in ascending order
           /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
           /// is possible, therefore leave the loop.
-          else break;
+          else
+            break;
           //  {
           //  /// Set photoion_contr to zero for continua with nu < nu_edge 
           //  /// to get the correct estimators for the photoionisation rate coefficients 

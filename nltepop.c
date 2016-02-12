@@ -5,7 +5,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
 {
   int nlte_levels;
-  int level, upper, lower, level_use, lower_use, upper_use;
+  int level, upper, lower, level_use, lower_use, upper_use, phixstargetindex;
   
   double* rate_matrix;
   double* balance_vector;
@@ -25,9 +25,9 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
   double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex, double t_current);
   double rad_recombination(int modelgridindex, int lower, double epsilon_trans);
   double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double statweight_target, int lineindex, double t_current);//, double T_R, double W);
-  double photoionization(int modelgridindex, int upper, double epsilon_trans);
+  double photoionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int upper, double epsilon_trans);
+  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, double statweight_target, int lineindex);
   double col_recombination(int modelgridindex, int lower, double epsilon_trans);
   double get_levelpop(int element, int ion, int level);
@@ -37,6 +37,8 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
   int get_ionstage(int element, int ion);
   int get_nlevels(int element, int ion);
   int get_nlevels_nlte(int element, int ion);
+  int get_nphixstargets(int element, int ion, int level);
+  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   int get_bfcontinua(int element, int ion);
@@ -70,7 +72,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
     
     dummy.where = modelgridindex;
 
-    if (nlte_levels == (get_nlevels(element, ion) -1))
+    if (nlte_levels == (get_nlevels(element, ion)-1))
     {
       nlte_size = nlte_levels+2;
       super_level = 0;
@@ -179,7 +181,8 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           //printout("First using %d of %d\n", level_use*(nlte_size) + level_use, nlte_size*nlte_size);
           //printout("Second using %d of %d\n", lower_use*(nlte_size) + level_use, nlte_size*nlte_size);
         }
-	      for (i = 1; i <= nuptrans; i++)
+
+        for (i = 1; i <= nuptrans; i++)
         {
           upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
           epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
@@ -246,10 +249,10 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           }
         #endif
 
-	      
-	      //now put in the photoionization/recombination processes   
-	      ionisinglevels = get_bfcontinua(element,ion);
-	      if (ion < get_nions(element)-1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
+
+        //now put in the photoionization/recombination processes   
+        ionisinglevels = get_bfcontinua(element,ion);
+        if (ion < get_nions(element)-1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
         {
           mastate[tid].element = element;
           mastate[tid].ion = ion;
@@ -258,8 +261,18 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].nnlevel = 1.0;
           upper = 0;
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-          R = photoionization(modelgridindex,upper,epsilon_trans);
-          C = col_ionization(modelgridindex,upper,epsilon_trans);
+
+          R = 0.0;
+          C = 0.0;
+          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          {
+            if (get_phixsupperlevel(element,ion,level,phixstargetindex) == upper)
+            {
+              R = photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+              C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
+              break;
+            }
+          }
 
           s_renorm=1.0;
           
@@ -299,10 +312,10 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           rate_matrix[level_use*(nlte_size) + upper_use] += (R + C)*s_renorm;
           
           //balance_vector[level_use] += -1. * get_groundlevelpop(modelgridindex,element,ion+1) * (R + C);
-          
+
         }
 	      
-	    }
+      }
 
 	  
       //printout("I've filled out a rate matrix. Probably you should check it at some point!\n");
@@ -441,23 +454,23 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 	  
       /* Write the NLTE level populations to the array*/
       for (level=1; level < nlte_levels+1; level++)
-	    {
-	      modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = gsl_vector_get(x,level)/modelgrid[modelgridindex].rho;
-	      //printout("I have interfered with index %d.\n", nlte_start+level-1);
-	      //modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = ((lag*modelgrid[modelgridindex].nlte_pops[nlte_start+level-1]) + gsl_vector_get(x,level))/(lag + 1.0)/modelgrid[modelgridindex].rho;
-	    }
+      {
+        modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = gsl_vector_get(x,level)/modelgrid[modelgridindex].rho;
+        //printout("I have interfered with index %d.\n", nlte_start+level-1);
+        //modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = ((lag*modelgrid[modelgridindex].nlte_pops[nlte_start+level-1]) + gsl_vector_get(x,level))/(lag + 1.0)/modelgrid[modelgridindex].rho;
+      }
       /* If there is a superlevel then write that too*/
 
       if (super_level == 1)
-	    {   
-	      //printout("I thought the super level was: %g\n", modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels]);
+      {
+        //printout("I thought the super level was: %g\n", modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels]);
 
-	      modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels] = gsl_vector_get(x,nlte_levels+1)/modelgrid[modelgridindex].rho/superlevel_partition;
-	      //	      modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels] = ((lag*modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels]) + gsl_vector_get(x,nlte_levels+1))/(lag + 1.0)/modelgrid[modelgridindex].rho/superlevel_partition;
+        modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels] = gsl_vector_get(x,nlte_levels+1)/modelgrid[modelgridindex].rho/superlevel_partition;
+        //	      modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels] = ((lag*modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels]) + gsl_vector_get(x,nlte_levels+1))/(lag + 1.0)/modelgrid[modelgridindex].rho/superlevel_partition;
 
-	      //printout("Now I think it is: %g\n", modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels]);
-	      //printout("I also interfered with index %d.\n", nlte_start+nlte_levels);
-	    }
+        //printout("Now I think it is: %g\n", modelgrid[modelgridindex].nlte_pops[nlte_start+nlte_levels]);
+        //printout("I also interfered with index %d.\n", nlte_start+nlte_levels);
+      }
 	  
       //printout("I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n", modelgrid[modelgridindex].composition[element].groundlevelpop[ion], modelgrid[modelgridindex].composition[element].partfunct[ion], modelgrid[modelgridindex].composition[element].partfunct[ion]*modelgrid[modelgridindex].composition[element].groundlevelpop[ion]/stat_weight(element,ion,0));
       
@@ -487,7 +500,6 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
       //printout("I freed up rate_matrix\n");
       free(balance_vector);
       //printout("I freed up balance_vector\n");
-	  
     }
     else
     {

@@ -29,7 +29,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   int get_nlevels_nlte(int element, int ion);
   int get_nphixstargets(int element, int ion, int level);
   int dummy_element, dummy_ion, dummy_level;
-  double col_ionization(int modelgridindex, int upper, double epsilon_trans);
+  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   double col_recombination(int modelgridindex, int lower, double epsilon_trans);
   double epsilon(int element, int ion, int level);
   double epsilon_trans;
@@ -303,9 +303,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           {
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = -99.;
             
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].sahafact = -99.;
             for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
+                cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = -99.;
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = -99.;
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = -99.;
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
@@ -615,7 +615,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                           gammaestimator_save[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion];
                         #endif
                         
-                        corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion]/get_corrphotoioncoeff_ana(element,ion,0,0,n); //TODO: replace zero phixstargetindex?
+                        corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion]/get_corrphotoioncoeff_ana(element,ion,0,0,n);
                         
                         if (!isfinite(corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]))
                         {
@@ -656,16 +656,16 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                             for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
                             {
                               Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,phixstargetindex,n); //TODO: is this valid?
-                            }
-                            //printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,level,n));
+                             //printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,phixstargetindex,level,n));
                         
-                            if (level < ionisinglevels)
-                            {			    
-                              mastate[tid].level = level;
+                              if (level < ionisinglevels)
+                              {			    
+                                mastate[tid].level = level;
 
-                              epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
-                              //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);				    
-                              Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,0,epsilon_trans);
+                                epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
+                                //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);				    
+                                Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,phixstargetindex,epsilon_trans);
+                              }
                             }
                           }
                           //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
@@ -686,9 +686,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
                         /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
                       
-                        bfheatingestimator[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]/get_bfheatingcoeff_ana(element,ion,0,0,n); //TODO: replace hard coded zero phixstargetindex?
+                        bfheatingestimator[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]/get_bfheatingcoeff_ana(element,ion,0,0,n);
 
-                        if (!isfinite(bfheatingestimator[n*nelements*maxion+element*maxion+ion])) //TODO: replace the zero here?
+                        if (!isfinite(bfheatingestimator[n*nelements*maxion+element*maxion+ion]))
                         {
                           printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[n*nelements*maxion+element*maxion+ion],get_bfheatingcoeff_ana(element,ion,0,0,n));
                           abort();
@@ -732,14 +732,18 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                                 mastate[tid].nnlevel = 1.0;
                                 for (level = 0; level < nlevels; level++)
                                 {
-                                    Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,0,n); //TODO: replace zero
+                                  for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+                                  {
+                                    upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+                                    Gamma += calculate_exclevelpop(n,element,ion,level)*get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
                                     if (level < ionisinglevels)
                                     {
                                       mastate[tid].level = level;
 
-                                      epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
+                                      epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
                                       //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-                                      Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,0,epsilon_trans);
+                                      Col_ion += calculate_exclevelpop(n,element,ion,level)*col_ionization(n,phixstargetindex,epsilon_trans);
+                                    }
                                   }
                                 }
                                 //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
