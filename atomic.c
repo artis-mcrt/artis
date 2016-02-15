@@ -382,13 +382,12 @@ double photoionization_crosssection(double nu_edge, double nu)
 {
   double epsilon(int element, int ion, int level);
   double sigma_bf;
+  double nu_max_phixs;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int level = mastate[tid].level;
   int i;
-
-  int check = 0;
 
   i = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
 
@@ -412,7 +411,7 @@ double photoionization_crosssection(double nu_edge, double nu)
     /// use a parameterization of sigma_bf by the Kramers formula
     /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     /// so far the highest grid point, otherwise the cross-section is not continuous
-    double nu_max_phixs = nu_edge * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+    nu_max_phixs = nu_edge * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs/nu, 3);
   }
 

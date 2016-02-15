@@ -128,7 +128,7 @@ typedef struct
 
 
 
-typedef struct
+struct packet
 {
   int number;     /// A unique number to identify which packet caused potential troubles.
   int where;      /// The grid cell that the packet is in.
@@ -168,7 +168,8 @@ typedef struct
   //short timestep;
   double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
-} PKT;
+};
+typedef struct packet PKT;
 
 typedef struct
 {

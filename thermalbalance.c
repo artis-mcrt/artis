@@ -449,7 +449,7 @@ void calculate_heating_rates(int modelgridindex)
           nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
           for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            bfheating += nnlevel*get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex); //TODO: is this valid?
+            bfheating += nnlevel * get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
           }
         }
       }

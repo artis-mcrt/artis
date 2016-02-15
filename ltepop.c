@@ -149,7 +149,7 @@ double phi(int element, int ion, int modelgridindex)
   double Col_rec;
   double epsilon_trans;
   int ionisinglevels;
-  int level, nlevels, upperlevel, nlevelsupperion;
+  int level, nlevels, upper, nlevelsupperion;
   double nt_ionization_rate(int modelgridindex, int element, int ion);
   int get_nlevels(int element, int ion);
   double Y_nt, run_tot;
