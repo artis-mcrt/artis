@@ -540,7 +540,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           //alpha_sp *= FOURPI * sf;
           //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
         }
-        //printout("macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
+        //printout("[debug] macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
         if (zrand >= alpha_sp/total_alpha_sp) break;
       }
       if (i == NPHIXSPOINTS)

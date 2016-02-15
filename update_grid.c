@@ -728,7 +728,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                               if (ion < nions-1)
                               {
-                                ionisinglevels = get_bfcontinua(element,ion);
                                 mastate[tid].element = element;
                                 mastate[tid].ion = ion;
                                 mastate[tid].nnlevel = 1.0;

@@ -92,7 +92,6 @@ double E48V;
 #define T52FE   (0.497429*DAY)
 #define T52MN   (0.0211395*DAY)
 
-
 #define TYPE_ESCAPE        32
 #define TYPE_NICKEL_PELLET 100
 #define TYPE_COBALT_PELLET 101
@@ -249,9 +248,6 @@ void set_W(int modelgridindex, float x);
 
 
 
-
-
-
 /// New variables for the non-grey case
 //FILE *ldist_file;
 int debug_packet;                /// activate debug output for this packet if non negative
@@ -283,11 +279,7 @@ mastate_t *mastate;
 #define MA_ACTION_INTERNALUPHIGHER 8
 
 
-
 double wid_init;
-
-
-
 
 
 CELL cell[MGRID+1];
@@ -338,7 +330,6 @@ double syn_dir[3]; /* vector pointing from origin to observer */
 
 
 RAY rays[NRAYS_SYN];
-
 
 
 #define ACTIVE 1
@@ -440,7 +431,6 @@ double dcoord1, dcoord2; /*spacings of a 2d model grid - must be uniform grid */
 
 //#define MPTS_MODEL_3D 8000000
 
-
 double CLIGHT_PROP; /* Speed of light for ray travel. Physically = CLIGHT but
 		can be changed for testing. */
 
@@ -463,13 +453,9 @@ int opacity_case; /* 0 normally, 1 for Fe-grp dependence. */
 double dlogt;
 
 
-
-
 /// ATOMIC DATA
 ///============================================================================
 int nelements,nlines,includedions;
-
-
 /// Global pointer to beginning of atomic data. This is used as the starting point to fill up
 /// the atomic data in input.c after it was read in from the database.
 elementlist_entry *elements;
@@ -480,34 +466,22 @@ bflist_t *bflist;
 
 
 
-
-
-
-
 rpkt_cont_opacity_struct *kappa_rpkt_cont;
-
-
-
 
 
 
 /// Coolinglist
 ///============================================================================
-
-
-
 //coolinglist_entry *globalcoolinglist;
 //coolinglist_entry *globalheatinglist;
 //double totalcooling;
 int ncoolingterms;
 int importantcoolingterms;                /// Number of important cooling terms
 
-
 coolingrates_t *coolingrates;
-
-
 heatingrates_t *heatingrates;
 //double heating_col;
+
 
 /// PHIXSLIST
 ///============================================================================
@@ -607,7 +581,7 @@ FILE *nlte_file;
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
 extern short neutral_flag;
 
-short elements_uppermost_ion[MTHREADS][MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element
+short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid
                                                    /// routine and their doughters.
 

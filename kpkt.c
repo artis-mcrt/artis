@@ -859,7 +859,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
             //bfcooling_coeff *= FOURPI * sf;
             //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
           }
-          //printout("kpkt: zrand %g, step %d, bfcooling_coeff %g, total_bfcooling_coeff %g, bfcooling_coeff/total_bfcooling_coeff %g, nu_lower %g\n",zrand,ii,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff/total_bfcooling_coeff,nu_lower);
+          //printout("[debug] kpkt: zrand %g, step %d, bfcooling_coeff %g, total_bfcooling_coeff %g, bfcooling_coeff/total_bfcooling_coeff %g, nu_lower %g\n",zrand,ii,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff/total_bfcooling_coeff,nu_lower);
           if (zrand >= bfcooling_coeff/total_bfcooling_coeff) break;
         }
         if (ii == NPHIXSPOINTS)
