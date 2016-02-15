@@ -8,3 +8,4 @@ sn3d
 Makefile
 exspec
 *.o-*
+tags

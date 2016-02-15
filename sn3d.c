@@ -431,7 +431,7 @@ int main(int argc, char** argv)
           do_this_full_loop = 0; //This flag will make it do a write out then quit, hopefully
           printout("Going to terminate since remaining time is too short. %d\n", time(NULL) - real_time_start);
         }
-	else
+  else
         {
           printout("Going to continue. Total time spent so far: %d.\n", time(NULL) - real_time_start);
         }
@@ -475,8 +475,6 @@ int main(int argc, char** argv)
 
       for (titer = 0; titer < n_titer; titer++)
       {
-
-
         /// Read the packets file for each iteration on the timestep
         if (nts % 2 == 0) sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
         else sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
@@ -597,10 +595,10 @@ int main(int argc, char** argv)
                   MPI_Pack(&modelgrid[mgi].Te, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   MPI_Pack(&modelgrid[mgi].TR, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-    //                MPI_Pack(&cell[nn].T_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+                  //MPI_Pack(&cell[nn].T_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   MPI_Pack(&modelgrid[mgi].W, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-    //                MPI_Pack(&cell[nn].W_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                    //MPI_Pack(&cell[nn].samplecell, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+                  //MPI_Pack(&cell[nn].W_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+                  //MPI_Pack(&cell[nn].samplecell, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
 
                   for (element = 0; element < nelements; element++)
@@ -647,41 +645,41 @@ int main(int argc, char** argv)
             }
           }
 
-    #ifdef NLTE_POPS_ON
-          for (n = 0; n < p; n++)
-	    {
-	      if (my_rank == n)
-		{
-		  position = 0;
-		  MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
-		  for (mgi = nstart; mgi < (nstart+ndo); mgi++)
-		    //for (nncl = 0; nncl < ndo; nncl++)
-		    {
-		      //nn = nonemptycells[my_rank+nncl*nprocs];
-		      MPI_Pack(&mgi, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
-		      //if (cell[nn].rho > MINDENSITY)
-		      if (modelgrid[mgi].associated_cells > 0)
-			{
-			  MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
-			}
-		    }
-		}
-	      MPI_Barrier(MPI_COMM_WORLD);
-	      MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
+          #ifdef NLTE_POPS_ON
+            for (n = 0; n < p; n++)
+            {
+              if (my_rank == n)
+              {
+                position = 0;
+                MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+                for (mgi = nstart; mgi < (nstart+ndo); mgi++)
+                //for (nncl = 0; nncl < ndo; nncl++)
+                {
+                  //nn = nonemptycells[my_rank+nncl*nprocs];
+                  MPI_Pack(&mgi, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+                  //if (cell[nn].rho > MINDENSITY)
+                  if (modelgrid[mgi].associated_cells > 0)
+                  {
+                    MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+                  }
+                }
+              }
+              MPI_Barrier(MPI_COMM_WORLD);
+              MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
 
-	      position = 0;
-	      MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-	      for (nn = 0; nn < nlp; nn++)
-		{
-		  MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
-		  //if (cell[ncl].rho > MINDENSITY)
-		  if (modelgrid[mgi].associated_cells > 0)
-		    {
-		      MPI_Unpack(buffer2, HUGEE2, &position,modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
-		    }
-		}
-	    }
-#endif
+              position = 0;
+              MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
+              for (nn = 0; nn < nlp; nn++)
+              {
+                MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+                //if (cell[ncl].rho > MINDENSITY)
+                if (modelgrid[mgi].associated_cells > 0)
+                {
+                  MPI_Unpack(buffer2, HUGEE2, &position,modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
+                }
+              }
+            }
+          #endif
 
           #ifndef FORCE_LTE
             if (continue_simulation && nts-itstep == 0 && titer == 0)
@@ -703,7 +701,7 @@ int main(int argc, char** argv)
 
               /// Reduce the gammaestimator array. Only needed to write restart data.
               printout("nts %d, titer %d: bcast gammaestimator\n",nts,titer);
-	      MPI_Barrier(MPI_COMM_WORLD);
+              MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -894,7 +892,7 @@ int main(int argc, char** argv)
                   colheatingestimator[i] = redhelper[i];
                 }
               }
-	      MPI_Barrier(MPI_COMM_WORLD);
+              MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -903,7 +901,7 @@ int main(int argc, char** argv)
                   gammaestimator[i] = redhelper[i];
                 }
               }
-	      MPI_Barrier(MPI_COMM_WORLD);
+              MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&bfheatingestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -1121,14 +1119,16 @@ int main(int argc, char** argv)
               /// Print net absorption/emission in lines to the linestat_file
               /// Currently linestat information is only properly implemented for MPI only runs
               /// For hybrid runs only data from thread 0 is recorded
-              for (i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", ecounter[i]);
+              for (i = 0; i < nlines; i++)
+                fprintf(linestat_file,"%d ", ecounter[i]);
               fprintf(linestat_file,"\n");
-              for (i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", acounter[i]);
+              for (i = 0; i < nlines; i++)
+                fprintf(linestat_file,"%d ", acounter[i]);
               fprintf(linestat_file,"\n");
 
               ///Old style
               //for (i = 0; i < nlines; i++) fprintf(linestat_file,"%g %d %d %d %d %d %d\n", CLIGHT/linelist[i].nu, get_element(linelist[i].elementindex), get_ionstage(linelist[i].elementindex,linelist[i].ionindex), linelist[i].upperlevelindex+1, linelist[i].lowerlevelindex+1,ecounter_reduced[i],acounter_reduced[i]);
-	    }
+            }
           #endif
 
           printout("time before write temporary packets file %d\n",time(NULL));

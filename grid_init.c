@@ -420,7 +420,7 @@ int density_1d_read ()
           set_fni(m+1,fni_model[m+1]);
           set_fco(m+1,fco_model[m+1]);
           //allocate_compositiondata(m+1);
-	  for (element = 0; element < nelements; element++)
+    for (element = 0; element < nelements; element++)
           {
             ///now set the abundances (by mass) of included elements, i.e.
             ///read out the abundances specified in the atomic data file
@@ -557,20 +557,20 @@ int density_1d_read ()
         if (anumber == 27)
           set_fcostable(mgi,abundance - get_fco(mgi));
 
-	if (anumber == 26)
-	  set_ffestable(mgi,abundance - get_f52fe(mgi));
+  if (anumber == 26)
+    set_ffestable(mgi,abundance - get_f52fe(mgi));
 
-	if (anumber == 25)
-	  set_fmnstable(mgi,abundance);
+  if (anumber == 25)
+    set_fmnstable(mgi,abundance);
 
-	if (anumber == 24)
-	  set_fcrstable(mgi,abundance - get_f48cr(mgi));
+  if (anumber == 24)
+    set_fcrstable(mgi,abundance - get_f48cr(mgi));
 
-	if (anumber == 23)
-	  set_fvstable(mgi,abundance);
+  if (anumber == 23)
+    set_fvstable(mgi,abundance);
 
-	if (anumber == 22)
-	  set_ftistable(mgi,abundance);
+  if (anumber == 22)
+    set_ftistable(mgi,abundance);
 
       }
 
@@ -1002,19 +1002,19 @@ int density_2d_read ()
           set_fcostable(mgi,abundance - get_fco(mgi));
 
         if (anumber == 26)
-	  set_ffestable(mgi,abundance - get_f52fe(mgi));
+    set_ffestable(mgi,abundance - get_f52fe(mgi));
 
-	if (anumber == 25)
-	  set_fmnstable(mgi,abundance);
+  if (anumber == 25)
+    set_fmnstable(mgi,abundance);
 
-	if (anumber == 24)
-	  set_fcrstable(mgi,abundance - get_f48cr(mgi));
+  if (anumber == 24)
+    set_fcrstable(mgi,abundance - get_f48cr(mgi));
 
-	if (anumber == 23)
-	  set_fvstable(mgi,abundance);
+  if (anumber == 23)
+    set_fvstable(mgi,abundance);
 
-	if (anumber == 22)
-	  set_ftistable(mgi,abundance);
+  if (anumber == 22)
+    set_ftistable(mgi,abundance);
       }
 
       if (get_rhoinit(mgi) < 0)
@@ -1450,7 +1450,7 @@ void allocate_compositiondata(int modelgridindex)
     }
     for (ion_index=0; ion_index<get_nions(element); ion_index++)
       {
-	modelgrid[modelgridindex].composition[element].groundlevelpop[ion_index]=0.0;
+  modelgrid[modelgridindex].composition[element].groundlevelpop[ion_index]=0.0;
       }
 
     if ((modelgrid[modelgridindex].composition[element].partfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
@@ -1610,38 +1610,37 @@ void abundances_3d_read()
     }
 
     for (element = 0; element < nelements; element++)
+    {
+      ///now set the abundances (by mass) of included elements, i.e.
+      ///read out the abundances specified in the atomic data file
+      anumber = get_element(element);
+      abundance = dum[anumber-1];
+      modelgrid[mgi].composition[element].abundance = abundance;
+
+      if (anumber == 28)
       {
-        ///now set the abundances (by mass) of included elements, i.e.
-        ///read out the abundances specified in the atomic data file
-        anumber = get_element(element);
-        abundance = dum[anumber-1];
-	modelgrid[mgi].composition[element].abundance = abundance;
+        set_fnistable(mgi,abundance - get_fni(mgi));
+        //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_fni(mgi),abundance - get_fni(mgi));
+      }
+      if (anumber == 27)
+        set_fcostable(mgi,abundance - get_fco(mgi));
 
-	if (anumber == 28)
-        {
-          set_fnistable(mgi,abundance - get_fni(mgi));
-          //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_fni(mgi),abundance - get_fni(mgi));
-        }
-        if (anumber == 27)
-          set_fcostable(mgi,abundance - get_fco(mgi));
+      if (anumber == 26)
+        set_ffestable(mgi,abundance - get_f52fe(mgi));
 
-        if (anumber == 26)
-	  set_ffestable(mgi,abundance - get_f52fe(mgi));
+      if (anumber == 25)
+      set_fmnstable(mgi,abundance);
 
-	if (anumber == 25)
-	  set_fmnstable(mgi,abundance);
+      if (anumber == 24)
+        set_fcrstable(mgi,abundance - get_f48cr(mgi));
 
-	if (anumber == 24)
-	  set_fcrstable(mgi,abundance - get_f48cr(mgi));
+      if (anumber == 23)
+        set_fvstable(mgi,abundance);
 
-	if (anumber == 23)
-	  set_fvstable(mgi,abundance);
-
-	if (anumber == 22)
-	  set_ftistable(mgi,abundance);
+      if (anumber == 22)
+        set_ftistable(mgi,abundance);
       }
     }
-
 
   fclose(abundance_file);
 }
@@ -1679,12 +1678,12 @@ void abundances_1d_read()
     }
 
     if (norm > 0)
+    {
+      for (nn = 0; nn < 30; nn++)
       {
-	for (nn = 0; nn < 30; nn++)
-	  {
-	    abund_model[n][nn] *= 1./norm;
-	  }
+        abund_model[n][nn] *= 1./norm;
       }
+    }
   }
 
   fclose(abundance_file);
@@ -1735,8 +1734,8 @@ void assign_temperature()
     {
       //mgi = cell[n].modelgridindex;
       T_initial = pow(((factor * get_fni(n) * get_rhoinit(n))
-		       + (factor52fe * get_f52fe(n) * get_rhoinit(n))
-		       + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1./4.);
+           + (factor52fe * get_f52fe(n) * get_rhoinit(n))
+           + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1./4.);
       //T_initial = pow(factor * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
       //T_initial = pow(factor * cell[n].f_ni * (1.-exp(-tmin/TNICKEL))/pow(tmin,3), 1./4.);
       //T_initial = 30615.5;
@@ -1783,7 +1782,7 @@ void assign_temperature()
         set_Te(mgi, T_e);
         set_W(mgi, W);
         set_TJ(mgi, T_J);
-	modelgrid[mgi].thick = thick;
+        modelgrid[mgi].thick = thick;
 
         #ifndef FORCE_LTE
           for (element = 0; element < nelements; element++)
@@ -1833,10 +1832,6 @@ double vol_init (CELL *grid_ptr)
 
   return(vol);
 }
-
-
-
-
 
 
 
@@ -1997,92 +1992,92 @@ void set_ffe(int modelgridindex, float x)
 void set_fnistable(int modelgridindex, float x)
 {
   if (x >= 0)
-    {
-      modelgrid[modelgridindex].fnistable = x;
-    }
+  {
+    modelgrid[modelgridindex].fnistable = x;
+  }
   else
-    {
-      //printout("Setting fnistable to 0.0 to avoid negative.\n");
-      modelgrid[modelgridindex].fnistable = 0.0;
-    }
+  {
+    //printout("Setting fnistable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].fnistable = 0.0;
+  }
 }
 
 void set_fcostable(int modelgridindex, float x)
 {
   if (x >= 0)
-    {
-      modelgrid[modelgridindex].fcostable = x;
-    }
+  {
+    modelgrid[modelgridindex].fcostable = x;
+  }
   else
-    {
-      //printout("Setting fcostable to 0.0 to avoid negative.\n");
-      modelgrid[modelgridindex].fcostable = 0.0;
-    }
+  {
+    //printout("Setting fcostable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].fcostable = 0.0;
+  }
 }
 
 void set_ffestable(int modelgridindex, float x)
 {
   if (x >= 0)
-    {
-      modelgrid[modelgridindex].ffestable = x;
-    }
+  {
+    modelgrid[modelgridindex].ffestable = x;
+  }
   else
-    {
-      //printout("Setting ffestable to 0.0 to avoid negative.\n");
-      modelgrid[modelgridindex].ffestable = 0.0;
-    }
+  {
+    //printout("Setting ffestable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].ffestable = 0.0;
+  }
 }
 
 void set_fmnstable(int modelgridindex, float x)
 {
   if (x >= 0)
-    {
-      modelgrid[modelgridindex].fmnstable = x;
-    }
+  {
+    modelgrid[modelgridindex].fmnstable = x;
+  }
   else
-    {
-      //printout("Setting ffestable to 0.0 to avoid negative.\n");
-      modelgrid[modelgridindex].fmnstable = 0.0;
-    }
+  {
+    //printout("Setting ffestable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].fmnstable = 0.0;
+  }
 }
 
 void set_fcrstable(int modelgridindex, float x)
 {
   if (x >= 0)
-    {
-      modelgrid[modelgridindex].fcrstable = x;
-    }
+  {
+    modelgrid[modelgridindex].fcrstable = x;
+  }
   else
-    {
-      //printout("Setting fcrstable to 0.0 to avoid negative.\n");
-      modelgrid[modelgridindex].fcrstable = 0.0;
-    }
+  {
+    //printout("Setting fcrstable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].fcrstable = 0.0;
+  }
 }
 
 void set_fvstable(int modelgridindex, float x)
 {
   if (x >= 0)
-    {
-      modelgrid[modelgridindex].fvstable = x;
-    }
+  {
+    modelgrid[modelgridindex].fvstable = x;
+  }
   else
-    {
-      //printout("Setting fcrstable to 0.0 to avoid negative.\n");
-      modelgrid[modelgridindex].fvstable = 0.0;
-    }
+  {
+    //printout("Setting fcrstable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].fvstable = 0.0;
+  }
 }
 
 void set_ftistable(int modelgridindex, float x)
 {
   if (x >= 0)
-    {
-      modelgrid[modelgridindex].ftistable = x;
-    }
+  {
+    modelgrid[modelgridindex].ftistable = x;
+  }
   else
-    {
-      //printout("Setting fcrstable to 0.0 to avoid negative.\n");
-      modelgrid[modelgridindex].ftistable = 0.0;
-    }
+  {
+    //printout("Setting fcrstable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].ftistable = 0.0;
+  }
 }
 
 void set_kappagrey(int modelgridindex, float x)

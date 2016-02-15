@@ -46,7 +46,6 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   find_T_e_f.function = &find_T_e;
   find_T_e_f.params = &paras;
 
-
   deltat = (T_max-T_min)/100;
 
   /// Force tb_info switch to 1 for selected cells in serial calculations
@@ -60,21 +59,15 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   /// Force tb_info for all cells
   //tb_info = 1;
 
-
-
-
-
   /// Check whether the thermal balance equation has a root in [T_min,T_max]
   thermalmin = find_T_e(T_min,find_T_e_f.params);
   thermalmax = find_T_e(T_max,find_T_e_f.params);
   if (!isfinite(thermalmin) || !isfinite(thermalmax))
-    {
-      printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
-      printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
-      thermalmax = thermalmin = -1;
-
-
-    }
+  {
+    printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
+    printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+    thermalmax = thermalmin = -1;
+  }
 
   printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
   //double thermalmax = find_T_e(T_max,find_T_e_f.params);
@@ -109,7 +102,10 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
       printout("[debug] find T_e:   iter %d, interval [%g, %g], guess %g, status %d\n",iter2,T_e_min,T_e_max,T_e,status);
     }
     while (status == GSL_CONTINUE && iter2 < maxit);
-    if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
+
+    if (status == GSL_CONTINUE)
+      printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
+
     gsl_root_fsolver_free(T_e_solver);
   }
   /// Quick solver style: works if we can assume that there is either one or no
@@ -242,20 +238,17 @@ double find_T_e(double T_e, void *paras)
   {
     heatingrates[tid].gamma = rpkt_emiss[modelgridindex] * 1.e20; ///1.e20 since the emissivities are all scaled by this
     heatingrates[tid].gamma *= 4*PI; /// This was missing here! rpkt_emiss is normalised to give a real emissivity
-                                /// for the formal integral calculation!!!
-
+                                     /// for the formal integral calculation!!!
     // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
     heatingrates[tid].gamma += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
     heatingrates[tid].gamma += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
-
-
   }
   else
   {
     heatingrates[tid].gamma = 0.;
   }
 
-//  heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL)));
+  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL)));
   //heatingrates[tid].gamma *= 0.01;
   //double factor = -1./(t_current*(-TCOBALT+TNICKEL));
   //factor *= (-ENICKEL*exp(-t_current/TNICKEL)*t_current*TCOBALT - ENICKEL*exp(-t_current/TNICKEL)*TNICKEL*TCOBALT + ENICKEL*exp(-t_current/TNICKEL)*t_current*TNICKEL + pow(TNICKEL,2)*ENICKEL*exp(-t_current/TNICKEL) - TCOBALT*t_current*ECOBALT*exp(-t_current/TCOBALT) - pow(TCOBALT,2)*ECOBALT*exp(-t_current/TCOBALT) + ECOBALT*t_current*TNICKEL*exp(-t_current/TNICKEL) + pow(TNICKEL,2)*ECOBALT*exp(-t_current/TNICKEL) + ENICKEL*TCOBALT*TNICKEL - ENICKEL*pow(TNICKEL,2) - pow(TNICKEL,2)*ECOBALT + ECOBALT*pow(TCOBALT,2));
@@ -269,13 +262,10 @@ double find_T_e(double T_e, void *paras)
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   coolingrates[tid].adiabatic = p*dV/V;
 
-
   return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collisional + heatingrates[tid].gamma - coolingrates[tid].adiabatic; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
   //return heatingrates[tid].gamma - coolingrates[tid].fb; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
   //return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collbf - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collbf + heatingrates[tid].gamma - coolingrates[tid].adiabatic - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
 }
-
-
 
 
 
@@ -306,7 +296,7 @@ void calculate_heating_rates(int modelgridindex)
   int element,ion,level,lower;
   int ii,lineindex;
 
-  gsl_integration_workspace *wspace = gsl_integration_workspace_alloc (1000);
+  gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1000);
   double intaccuracy = 1e-2;
   double error;
   //size_t neval; ///for qng integrator
@@ -340,12 +330,12 @@ void calculate_heating_rates(int modelgridindex)
     nions = get_nions(element);
     for (ion = 0; ion < nions; ion++)
     {
-#ifdef DIRECT_COL_HEAT
+      #ifdef DIRECT_COL_HEAT
       {
-      mastate[tid].ion = ion;
-      nlevels_currention = get_nlevels(element,ion);
+        mastate[tid].ion = ion;
+        nlevels_currention = get_nlevels(element,ion);
 //      if (ion > 0) nlevels_lowerion = get_nlevels(element,ion-1);
-//
+
        for (level = 0; level < nlevels_currention; level++)
        {
          epsilon_current = epsilon(element,ion,level);
@@ -365,12 +355,12 @@ void calculate_heating_rates(int modelgridindex)
            statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
            lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
            epsilon_trans = epsilon_current - epsilon_target;
-           C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex)*epsilon_trans;
+           C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex) * epsilon_trans;
            C_deexc += C;
          }
        }
       }
-#endif
+      #endif
 //
 //         /// Collisional heating: recombination to lower ionization stage
 //         /// ------------------------------------------------------------
