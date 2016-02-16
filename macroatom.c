@@ -216,7 +216,6 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           C = col_recombination(modelgridindex,lower,epsilon_trans);
           rad_recomb += R * epsilon_trans;
           col_recomb += C * epsilon_trans;
-          //internal_down_lower += C * epsilon_target;
           internal_down_lower += (R + C) * epsilon_target;
         }
       }
