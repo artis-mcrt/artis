@@ -586,7 +586,7 @@ double get_mean_binding_energy(int element, int ion)
   double total, use1, use2, use3;
 
   ioncharge = get_ionstage(element,ion) - 1;
-  nbound = elements[element].anumber - ioncharge;
+  nbound = elements[element].anumber - ioncharge; //number of bound electrons
 
   if (nbound > 0)
   {
@@ -597,47 +597,47 @@ double get_mean_binding_energy(int element, int ion)
 
     for (electron_loop = 0; electron_loop < nbound; electron_loop++)
     {
-      if (q[0] < 2)
+      if (q[0] < 2) //K 1s
       {
         q[0] += 1;
       }
-      else if (q[1] < 2)
+      else if (q[1] < 2) //L1 2s
       {
-        q[1] +=1 ;
+        q[1] += 1;
       }
-      else if (q[2] < 2)
+      else if (q[2] < 2) //L2 2p[1/2]
       {
-        q[2] +=1;
+        q[2] += 1;
       }
-      else if (q[3] < 4)
+      else if (q[3] < 4) //L3 2p[3/2]
       {
-        q[3] +=1;
+        q[3] += 1;
       }
-      else if (q[4] < 2)
+      else if (q[4] < 2) //M1 3s
       {
-        q[4] +=1;
+        q[4] += 1;
       }
-      else if (q[5] < 2)
+      else if (q[5] < 2) //M2 3p[1/2]
       {
-        q[5] +=1;
+        q[5] += 1;
       }
-      else if (q[6] < 4)
+      else if (q[6] < 4) //M3 3p[3/2]
       {
-        q[6] +=1;
+        q[6] += 1;
       }
       else if (ioncharge == 0)
       {
-        if (q[9] < 2)
+        if (q[9] < 2) //N1 4s
         {
-          q[9]+=1;
+          q[9] += 1;
         }
-        else if (q[7] < 4)
+        else if (q[7] < 4) //M4 3d[3/2]
         {
-          q[7]+=1;
+          q[7] += 1;
         }
-        else if (q[8] < 6)
+        else if (q[8] < 6) //M5 3d[5/2]
         {
-          q[8]+=1;
+          q[8] += 1;
         }
         else
         {
@@ -647,17 +647,17 @@ double get_mean_binding_energy(int element, int ion)
       }
       else if (ioncharge == 1)
       {
-        if (q[9] < 1)
+        if (q[9] < 1) // N1 4s
         {
-          q[9]+=1;
+          q[9] += 1;
         }
-        else if (q[7] < 4)
+        else if (q[7] < 4) //M4 3d[3/2]
         {
-          q[7]+=1;
+          q[7] += 1;
         }
-        else if (q[8] < 6)
+        else if (q[8] < 6) //M5 3d[5/2]
         {
-          q[8]+=1;
+          q[8] += 1;
         }
         else
         {
@@ -667,13 +667,13 @@ double get_mean_binding_energy(int element, int ion)
       }
       else if (ioncharge > 1)
       {
-        if (q[7] < 4)
+        if (q[7] < 4) //M4 3d[3/2]
         {
-          q[7]+=1;
+          q[7] += 1;
         }
-        else if (q[8] < 6)
+        else if (q[8] < 6) //M5 3d[5/2]
         {
-          q[8]+=1;
+          q[8] += 1;
         }
         else
         {
@@ -686,12 +686,12 @@ double get_mean_binding_energy(int element, int ion)
     //      printout("For element %d ion %d I got q's of: %d %d %d %d %d %d %d %d %d %d\n", element, ion, q[0], q[1], q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9]);
     //printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[elements[element].anumber-1][0], electron_binding[elements[element].anumber-1][1], electron_binding[elements[element].anumber-1][2],electron_binding[elements[element].anumber-1][3],electron_binding[elements[element].anumber-1][4],electron_binding[elements[element].anumber-1][5],electron_binding[elements[element].anumber-1][6],electron_binding[elements[element].anumber-1][7],electron_binding[elements[element].anumber-1][8],electron_binding[elements[element].anumber-1][9]);
 
-    total=0.0;
+    total = 0.0;
     for (electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
     {
-      if ((use1=q[electron_loop]) > 0)
+      if ((use1 = q[electron_loop]) > 0)
       {
-        if ((use2=electron_binding[elements[element].anumber-1][electron_loop]) > 0)
+        if ((use2 = electron_binding[elements[element].anumber-1][electron_loop]) > 0)
         {
           if (use2 < (use3 = elements[element].ions[ion].ionpot))
           {
@@ -728,9 +728,9 @@ double get_mean_binding_energy(int element, int ion)
 
   }
   else
-    {
-      total=0.0;
-    }
+  {
+    total = 0.0;
+  }
 
   //printout("For element %d ion %d I got mean binding energy of %g (eV)\n", element, ion, 1./total/EV);
 
