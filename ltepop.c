@@ -67,15 +67,12 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
   double phi(int element, int ion, int modelgridindex);
   int get_ionstage(int element, int ion);
   int get_element(int element);
-  int nions,uppermost_ion;
-  int i, ii;
-  double numerator, denominator, factor;
 
   //printout("debug nne %g\n",nne);
-  //nions = get_nions(element);
+  //int nions = get_nions(element);
 
-  //uppermost_ion = elements[element].uppermost_ion;
-  uppermost_ion = elements_uppermost_ion[tid][element];
+  //int uppermost_ion = elements[element].uppermost_ion;
+  int uppermost_ion = elements_uppermost_ion[tid][element];
   /*#ifdef FORCE_LTE
     uppermost_ion = get_nions(element)-1;
   #else
@@ -84,22 +81,22 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
   #endif*/
   //double phistorage[nions-1-ion];
   double phistorage[uppermost_ion-ion];
-  numerator = 1.;
+  double numerator = 1.;
   //for (i = ion; i < nions-1; i++)
-  for (i = ion; i < uppermost_ion; i++)
+  for (int i = ion; i < uppermost_ion; i++)
   {
     //printout("debug phi(element %d, ion %d)=%g\n",element,i,phi(element,i,modelgridindex));
     phistorage[i-ion] = phi(element,i,modelgridindex);
     numerator *= nne * phistorage[i-ion];
   }
   //printout("debug numerator %g\n",numerator);
-  denominator = 0.;
+  double denominator = 0.;
   //for (i = 0; i < nions; i++)
-  for (i = 0; i <= uppermost_ion; i++)
+  for (int i = 0; i <= uppermost_ion; i++)
   {
-    factor = 1.;
+    double factor = 1.;
     //for (ii = i; ii < nions-1; ii++)
-    for (ii = i; ii < uppermost_ion; ii++)
+    for (int ii = i; ii < uppermost_ion; ii++)
     {
       if (ii >= ion)
         factor *= nne * phistorage[ii-ion];
@@ -119,25 +116,27 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
     printout("debug denominator %g\n",denominator);
     return 0.;
   }
-  return numerator/denominator;
+  return numerator / denominator;
 }
 
 
 ///***************************************************************************/
 double phi(int element, int ion, int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
-/// in nebular approximation phi_j,k* = N_j,k*/N_j+1,k* * nne
+/// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
   //double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
   //double interpolate_photoioncoeff_below(int element, int ion, int level, double T);
   //double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
   double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
   //double interpolate_zeta(int element, int ion, double T);
+  int get_nphixstargets(int element, int ion, int level);
+  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
   double epsilon(int element, int ion, int level);
-  double partfunct_ratio,gamma_lte,Gamma,Alpha_st,Alpha_sp,alpha_sp; //zeta;
   double stat_weight(int element, int ion, int level);
-  double phi;
   float get_rho(int modelgridindex);
+  double gamma_lte; //zeta;
+  double phi;
 
   //double Y_nt, ionpot_in;
   //int element_in, ion_in, nions_in;
@@ -146,15 +145,10 @@ double phi(int element, int ion, int modelgridindex)
 
   double col_recombination(int modelgridindex, int lower, double epsilon_trans);
   int get_bfcontinua(int element, int ion);
-  double Col_rec;
-  double epsilon_trans;
-  int ionisinglevels;
-  int level, nlevels, upper, nlevelsupperion;
   double nt_ionization_rate(int modelgridindex, int element, int ion);
   int get_nlevels(int element, int ion);
-  double Y_nt, run_tot;
   double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
+  //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
@@ -172,7 +166,7 @@ double phi(int element, int ion, int modelgridindex)
   //phi = 1./W * 1./(zeta+W*(1-zeta)) * sqrt(T_R/T_e) * partfunct_ratio * SAHACONST * pow(T_R,-1.5) * exp(ionpot/KB/T_R);
 
   /// Newest ionisation formula
-  partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion]/modelgrid[modelgridindex].composition[element].partfunct[ion+1];
+  double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion]/modelgrid[modelgridindex].composition[element].partfunct[ion+1];
   #ifdef FORCE_LTE
     phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
   #else
@@ -183,7 +177,7 @@ double phi(int element, int ion, int modelgridindex)
     else
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
-      Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion];
+      double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion];
       #ifdef NT_ON
         if (Gamma == 0. && rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.)
       #else
@@ -193,43 +187,44 @@ double phi(int element, int ion, int modelgridindex)
           printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
           exit(0);
         }
+
       //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
-      Alpha_st = 0.; ///approximative treatment neglects stimulated recombination
-      Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
-      Col_rec = 0.0;
+      double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
+      double Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
+      double Col_rec = 0.;
 
       //     if (ion > 0)
       //	{
-      ionisinglevels = get_bfcontinua(element,ion);
+      int ionisinglevels = get_bfcontinua(element,ion);
       mastate[tid].element = element;
       mastate[tid].ion = ion+1;
       mastate[tid].nnlevel = 1.0;
 
-      nlevelsupperion = get_nlevels(element,ion+1);
-      for (upper = 0; upper < nlevelsupperion; upper++)
+      //nlevelsupperion = get_nlevels(element,ion+1);
+      for (int level = 0; level < ionisinglevels; level++)
       {
-        mastate[tid].level = upper;
-        mastate[tid].statweight = stat_weight(element,ion+1,upper);
-        for (level = 0; level < ionisinglevels; level++)
+        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
-          epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
+          int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+          mastate[tid].level = upper;
+          double epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
           Col_rec += col_recombination(modelgridindex,level,epsilon_trans);
         }
       }
+
 	  //	}
 
-      Alpha_sp += Col_rec/get_nne(modelgridindex);
-
+      double recomb_total = Alpha_sp + Alpha_st + (Col_rec / get_nne(modelgridindex));
 
       /* NT TEST LINES */
-      Y_nt = 0.0;
+      double Y_nt = 0.0;
 
       #ifdef NT_ON
-      Y_nt = nt_ionization_rate(modelgridindex, element, ion);
+        Y_nt = nt_ionization_rate(modelgridindex, element, ion);
 
       /*
-      nlevels=get_nlevels(element,ion);
-      run_tot=0.0;
+      int nlevels = get_nlevels(element,ion);
+      double run_tot=0.0;
       for (level = 0; level < nlevels; level++)
 	{
 	  run_tot += calculate_exclevelpop(modelgridindex,element,ion,level);
@@ -291,21 +286,25 @@ double phi(int element, int ion, int modelgridindex)
 
       //printout("testing: Y_nt/Gamma: %g (%d %d)\n", Y_nt/Gamma/stat_weight(element,ion,0)*modelgrid[modelgridindex].composition[element].partfunct[ion], element, ion);
       // OLD
-      //phi = (Alpha_sp+Alpha_st)/(Gamma + Y_nt) * modelgrid[modelgridindex].composition[element].partfunct[ion]/stat_weight(element,ion,0);
+      //phi = (Alpha_sp+Alpha_st)/(Gamma + Y_nt) * modelgrid[modelgridindex].composition[element].partfunct[ion]/
+      //stat_weight(element,ion,0);
       //
 
       //changed July14 to include partition function to stat. weight ratio for upper ion
-      // TODO: upper level is ground state is assumed here
-      phi = (Alpha_sp+Alpha_st)*(stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1]) / ((Gamma*stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
+      // recombinations / ionizations
+      phi = recomb_total *
+          (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
+            / ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
 
       //phi = (Alpha_sp+Alpha_st)/(Y_nt);
 
-      if (element == 0)
+      /*if (element == 0)
       {
-        //printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ratio_u %g ratio_l %g Gamma %g T_e %g\n", phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion+1,0)/modelgrid[modelgridindex].composition[element].partfunct[ion+1], stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion],Gamma, T_e);
-      }
+        printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ratio_u %g ratio_l %g Gamma %g T_e %g\n",
+              phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion+1,0)/modelgrid[modelgridindex].composition[element].partfunct[ion+1], stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion],Gamma, T_e);
+      }*/
 
-      if (!isfinite(phi))
+      if (!isfinite(phi) || phi == 0.0)
       {
         printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g, T_R %g ... remove higher or lower ionisation stages\n",phi,element,ion,T_e,T_R);
         printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n",Alpha_sp,Alpha_st,Gamma,modelgrid[modelgridindex].composition[element].partfunct[ion],stat_weight(element,ion,0));
@@ -372,16 +371,13 @@ double calculate_ltepartfunct(int element, int ion, double T)
 */
 
 
-
-///***************************************************************************/
+///***************************************************************************
 double calculate_partfunct_old(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
   double stat_weight(int element, int ion, int level);
   double epsilon(int element, int ion, int level);
-  int level,nlevels;
-  double U;
 
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
@@ -399,11 +395,11 @@ double calculate_partfunct_old(int element, int ion, int modelgridindex)
   double oneoverkbtexc = 1/KB/T_exc;
   double epsilon_groundlevel = epsilon(element,ion,0);
 
-  U = stat_weight(element,ion,0);
-  nlevels = get_nlevels(element,ion);
+  double U = stat_weight(element,ion,0);
+  int nlevels = get_nlevels(element,ion);
 /*  if (T_exc <= MINTEMP)
   {
-    for (level = 1; level < nlevels; level++)
+    for (int level = 1; level < nlevels; level++)
     {
       if (elements[element].ions[ion].levels[level].metastable == 1)
       {
@@ -420,21 +416,20 @@ double calculate_partfunct_old(int element, int ion, int modelgridindex)
   }
   else
   {*/
-    for (level = 1; level < nlevels; level++)
+    for (int level = 1; level < nlevels; level++)
     {
-      U += W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
+      U += W * stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
+      if (!isfinite(U))
+      {
+        printout("element %d ion %d\n",element,ion);
+        printout("modelgridindex %d\n",modelgridindex);
+        printout("level %d, nlevels %d\n",level,nlevels);
+        printout("sw %g\n",stat_weight(element,ion,0));
+        printout("T_exc %g \n",T_exc);
+        abort();
+      }
     }
 //   }
-
-  if (!isfinite(U))
-  {
-    printout("element %d ion %d\n",element,ion);
-    printout("modelgridindex %d\n",modelgridindex);
-    printout("level %d, nlevels %d\n",level,nlevels);
-    printout("sw %g\n",stat_weight(element,ion,0));
-    printout("T_exc %g \n",T_exc);
-    abort();
-  }
 
   return U;
 }
@@ -447,13 +442,9 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 {
   double stat_weight(int element, int ion, int level);
   //double epsilon(int element, int ion, int level);
-  int level,nlevels;
-  double U;
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 
-  double nn;
-  int initial;
   double pop_store;
   //double E_level, E_ground, test;
 
@@ -473,7 +464,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   //double oneoverkbtexc = 1/KB/T_exc;
   //double epsilon_groundlevel = epsilon(element,ion,0);
 
-  initial = 0;
+  int initial = 0;
   if (get_groundlevelpop(modelgridindex,element,ion) < MINPOP)
   {
     //either there reall is none of this ion or this is a first pass through
@@ -486,9 +477,8 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 
   //printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
 
-
-  U = 1.0;//stat_weight(element,ion,0);
-  nlevels = get_nlevels(element,ion);
+  double U = 1.0;//stat_weight(element,ion,0);
+  int nlevels = get_nlevels(element,ion);
 /*  if (T_exc <= MINTEMP)
   {
     for (level = 1; level < nlevels; level++)
@@ -508,10 +498,9 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   }
   else
   {*/
-    for (level = 1; level < nlevels; level++)
+    for (int level = 1; level < nlevels; level++)
     {
-      nn = calculate_exclevelpop(modelgridindex, element, ion, level) / get_groundlevelpop(modelgridindex,element,ion);//*stat_weight(element,ion,0);
-
+      double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / get_groundlevelpop(modelgridindex,element,ion);//*stat_weight(element,ion,0);
 
       //#ifdef NLTE_POPS_ON
       //if ((is_nlte(element,ion,level) != 1) || (test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
@@ -537,17 +526,17 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 
       //	}
       //#endif
-	U += nn;//W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
+	     U += nn;//W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
     }
 //   }
 
-    U = U * stat_weight(element,ion,0);
+  U *= stat_weight(element,ion,0);
 
   if (!isfinite(U))
   {
     printout("element %d ion %d\n",element,ion);
     printout("modelgridindex %d\n",modelgridindex);
-    printout("level %d, nlevels %d\n",level,nlevels);
+    printout("nlevels %d\n",nlevels);
     printout("sw %g\n",stat_weight(element,ion,0));
     //printout("T_exc %g \n",T_exc);
     abort();
@@ -561,8 +550,6 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 
   return U;
 }
-
-
 
 
 ///***************************************************************************/
@@ -618,7 +605,6 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   double stat_weight(int element, int ion, int level);
   double epsilon(int element, int ion, int level);
-  double E_level,E_ground;
   double nn;
 
   double T_exc = get_TJ(modelgridindex);
@@ -644,9 +630,9 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
     nn = get_groundlevelpop(modelgridindex,element,ion);
   else
   {
-    E_level = epsilon(element,ion,level);
-    E_ground = epsilon(element,ion,0);
-    nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level)/stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
+    double E_level = epsilon(element,ion,level);
+    double E_ground = epsilon(element,ion,0);
+    nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level) / stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
   }
 
   if (nn < MINPOP)
@@ -654,7 +640,7 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
     if (get_abundance(modelgridindex,element) > 0)
       nn = MINPOP;
     else
-      nn= 0.;
+      nn = 0.;
   }
 
   #ifdef DEBUG_ON
@@ -669,6 +655,7 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
   #endif
   return nn;
 }
+
 ///***************************************************************************/
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation number of level relative to the ions ground level population
@@ -679,7 +666,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   double stat_weight(int element, int ion, int level);
   double epsilon(int element, int ion, int level);
-  double E_level,E_ground;
   double nn, test;
   double superlevel_boltzmann(int modelgridindex, int element, int ion, int level);
   int get_nlevels_nlte(int element, int ion);
@@ -716,9 +702,11 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
     {
       /* Case for when no NLTE level information is available yet */
-      E_level = epsilon(element,ion,level);
-      E_ground = epsilon(element,ion,0);
-      nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level)/stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
+      double E_level = epsilon(element,ion,level);
+      double E_ground = epsilon(element,ion,0);
+      nn = get_groundlevelpop(modelgridindex,element,ion) * W *
+          stat_weight(element,ion,level)/stat_weight(element,ion,0) *
+          exp(-(E_level-E_ground)/KB/T_exc);
     }
     else
     {
@@ -742,8 +730,8 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels]) < -0.9)
     {
       /* Case for when no NLTE level information is available yet */
-      E_level = epsilon(element,ion,level);
-      E_ground = epsilon(element,ion,0);
+      double E_level = epsilon(element,ion,level);
+      double E_ground = epsilon(element,ion,0);
       nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level)/stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
     }
     else
@@ -764,9 +752,11 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 #endif
   else
   {
-    E_level = epsilon(element,ion,level);
-    E_ground = epsilon(element,ion,0);
-    nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level)/stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
+    double E_level = epsilon(element,ion,level);
+    double E_ground = epsilon(element,ion,0);
+    nn = get_groundlevelpop(modelgridindex,element,ion) * W *
+         stat_weight(element,ion,level)/stat_weight(element,ion,0) *
+         exp(-(E_level-E_ground)/KB/T_exc);
   }
 
   if (nn < MINPOP)
@@ -774,7 +764,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     if (get_abundance(modelgridindex,element) > 0)
       nn = MINPOP;
     else
-      nn= 0.;
+      nn = 0.;
   }
 
   #ifdef DEBUG_ON
@@ -834,7 +824,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 */
 
 
-
 ///***************************************************************************/
 double ionstagepop(int modelgridindex, int element, int ion)
 /// Calculates the given ionstages total population in nebular approximation for modelgridindex
@@ -843,7 +832,7 @@ double ionstagepop(int modelgridindex, int element, int ion)
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   double stat_weight(int element, int ion, int level);
 
-  return get_groundlevelpop(modelgridindex,element,ion) * modelgrid[modelgridindex].composition[element].partfunct[ion]/stat_weight(element,ion,0);
+  return get_groundlevelpop(modelgridindex,element,ion) * modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element,ion,0);
 }
 
 
@@ -854,18 +843,16 @@ void calculate_levelpops(int modelgridindex)
 {
   double get_groundlevelpop(int modelgridindex, int element, int ion);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  int element,ion,level;
-  int nions,nlevels;
 
-  for (element = 0; element < nelements; element++)
+  for (int element = 0; element < nelements; element++)
   {
-    nions = get_nions(element);
-    for (ion = 0; ion < nions; ion++)
+    int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
     {
       cellhistory[tid].chelements[element].chions[ion].chlevels[0].population = get_groundlevelpop(modelgridindex, element, ion);
       //printout("element %d, ion %d, level 0: population %g\n",element,ion,groundlevelpop(cellnumber, element, ion));
-      nlevels = get_nlevels(element,ion);
-      for (level = 1; level < nlevels; level++)
+      int nlevels = get_nlevels(element,ion);
+      for (int level = 1; level < nlevels; level++)
       {
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = calculate_exclevelpop(modelgridindex,element,ion,level);
         //printout("element %d, ion %d, level %d: population %g\n",element,ion,level,exclevelpop(cellnumber,element,ion,level,T));
@@ -890,12 +877,10 @@ double calculate_sahafact(int element, int ion, int level, int phixstargetindex,
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
   double stat_weight(int element, int ion, int level);
-  double sf;
   int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-  int upperionlevel;
 
-  upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-  sf = stat_weight(element,ion,level)/stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
+  int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+  double sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
   //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0)
   {
@@ -907,8 +892,8 @@ double calculate_sahafact(int element, int ion, int level, int phixstargetindex,
 
 
 ///***************************************************************************/
-double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold) //TODO: should there be a phixstargetindex argument?
-/// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
+double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
+/// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
   double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double sf;
@@ -922,7 +907,8 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
     }
   }
-  else sf = calculate_sahafact(element,ion,level,phixstargetindex,T,E_threshold);
+  else
+    sf = calculate_sahafact(element,ion,level,phixstargetindex,T,E_threshold);
 
   //printout("get_sahafact: sf= %g\n",sf);
   return sf;
@@ -936,19 +922,15 @@ void initialise_photoionestimators()
   //double interpolate_photoioncoeff_below(int element, int ion, int level, double T);
   //double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
   //double interpolate_zeta(int element, int ion, double T);
-  double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-
-  int i,n,element,ion,nions;
-  double T_e;//,gamma_lte,zeta;
-  double ionpot,Alpha_sp,sw_ratio,Gamma;
+  //double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+  //double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
+  //double stat_weight(int element, int ion, int level);
+  //double epsilon(int element, int ion, int level);
 
   //for (n = 0; n < ngrid; n++)
-  for (n = 0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
-    T_e = get_Te(n);
+    double T_e = get_Te(n);
     #ifdef DO_TITER
       J_reduced_save[n] = -1.;
     #endif
@@ -958,11 +940,12 @@ void initialise_photoionestimators()
         ffheatingestimator_save[n] = -1.;
         colheatingestimator_save[n] = -1.;
       #endif
-      for (element = 0; element < nelements; element++)
+      for (int element = 0; element < nelements; element++)
       {
-        nions = get_nions(element);
-        for (ion = 0; ion < nions-1; ion++)
+        int nions = get_nions(element);
+        for (int ion = 0; ion < nions-1; ion++)
         {
+          //  double ionpot,Alpha_sp,sw_ratio,Gamma;
           //ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
           //Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
           //sw_ratio = stat_weight(element,ion+1,0)/stat_weight(element,ion,0);

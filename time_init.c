@@ -5,27 +5,24 @@
 
 int time_init()
 {
-  double dlogt;
-  int n;
-
   /// t=tmin is the start of the calcualtion. t=tmax is the end of the calculation.
   /// ntstep is the number of time steps wanted. For now the time steps
   /// are logarithmically spaced, but the code should be written such that
   /// they don't have to be.
-  if (ntstep+1 > MTSTEP)
+  if (ntstep + 1 > MTSTEP)
   {
     printout("Error: too many timesteps. (%d) Abort.\n", ntstep);
     exit(0);
   }
 
   /// For logarithmic steps, the logarithmic inverval will be
-  dlogt = (log(tmax) - log(tmin))/ntstep;
+  double dlogt = (log(tmax) - log(tmin))/ntstep;
   //dlogt = 0.17917595;
   //dlogt = 0.03583518938456109026;
   //dlogt = (tmax - tmin)/ntstep;
 
   /// Now setup the individual time steps
-  for (n=0; n<ntstep; n++)
+  for (int n = 0; n < ntstep; n++)
   {
     time_step[n].start = tmin * exp(n*dlogt);
     time_step[n].width = (tmin * exp((n+1)*dlogt)) - time_step[n].start;
@@ -45,7 +42,6 @@ int time_init()
   /// of the calculation
   time_step[ntstep].start = tmax;
   time_step[ntstep].mid = tmax;
-
 
   return 0;
 }

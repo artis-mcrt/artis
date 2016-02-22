@@ -4,21 +4,16 @@
 
 double syn_lc()
      /* Note the direction (vector pointing from origin to observer is
-	externally set: syn_dir[3]. */
+  externally set: syn_dir[3]. */
 {
 
   int syn_lc_init();
-  int nts, m;
   int grid_init();
   int time_init();
   int update_gamma_rays();
   int update_grid();
   FILE *syn_file;
-  double lc_syn;
-  int time_loop;
   int emiss_rlc_load();
-  double lower_test, upper_test;
-
 
   if ((syn_file = fopen("syn_lc.out", "w+")) == NULL)
   {
@@ -28,7 +23,7 @@ double syn_lc()
 
   /* main loop over the set of times for which we want spectra. */
 
-  for (time_loop = 0; time_loop < nsyn_time; time_loop++)
+  for (int time_loop = 0; time_loop < nsyn_time; time_loop++)
   {
     grid_init();
 
@@ -40,64 +35,55 @@ double syn_lc()
 
     time_init();
 
-    for (nts = 0; nts < ntstep; nts++)
-  	{
+    for (int nts = 0; nts < ntstep; nts++)
+    {
 
-  	  if (do_rlc_est != 0)
+      if (do_rlc_est != 0)
       {
-        lower_test = time_syn[time_loop] / (1. + (sqrt(3.0)*vmax/CLIGHT));
-        upper_test = time_syn[time_loop] / (1. - (sqrt(3.0)*vmax/CLIGHT));
+        double lower_test = time_syn[time_loop] / (1. + (sqrt(3.0)*vmax/CLIGHT));
+        double upper_test = time_syn[time_loop] / (1. - (sqrt(3.0)*vmax/CLIGHT));
         if (time_step[nts].start > lower_test)
-    		{
-    		  if ((time_step[nts].start + time_step[nts].width) < upper_test)
-  		    {
-  		      emiss_rlc_load(nts);
-  		    }
-    		}
+        {
+          if ((time_step[nts].start + time_step[nts].width) < upper_test)
+          {
+            emiss_rlc_load(nts);
+          }
+        }
       }
-  	  printout("syn time step %d\n", nts);
-  	  update_grid(nts);
-  	  update_gamma_rays(nts);  //because of choice of frequency, we can
-  	                           //use the same ray tracing routines that were made for gamma rays
-  	}
+      printout("syn time step %d\n", nts);
+      update_grid(nts);
+      update_gamma_rays(nts);  //because of choice of frequency, we can
+                               //use the same ray tracing routines that were made for gamma rays
+    }
 
     /* Now make the rays into a spectrum and print it out. */
 
-    lc_syn=0;
+    double lc_syn = 0;
 
-
-    for (m = 0; m < NRAYS_SYN; m++)
-  	{
-  	  lc_syn += rays[m].e_rf[0] * DeltaA / 1.e12 / PARSEC/ PARSEC;
-  	  if (fabs(1. - rays[m].nu_rf_init[0]/rays[m].nu_rf[0]) > 1.e-8)
-	    {
+    for (int m = 0; m < NRAYS_SYN; m++)
+    {
+      lc_syn += rays[m].e_rf[0] * DeltaA / 1.e12 / PARSEC/ PARSEC;
+      if (fabs(1. - rays[m].nu_rf_init[0]/rays[m].nu_rf[0]) > 1.e-8)
+      {
         printout("changes in frequencies in rest frame. Abort.\n");
         exit(0);
-	    }
-  	}
+      }
+    }
     fprintf(syn_file, "%g %g\n", time_syn[time_loop]/DAY, lc_syn*4.*PI*PARSEC*PARSEC*1.e12/LSUN);
 
   }
 
   fclose(syn_file);
 
-  return(0);
+  return 0;
 }
 
 /* ************************************************************** */
 int syn_lc_init(time)
      double time;
 {
-  int n, i;
-  double zrand;
-  double max_proj, r_proj, phi_proj;
+  double max_proj;
   double r0[3];
-  double zprime, yprime, xprime;
-  double norm1, norm2;
-  double tin_x, tin_y, tin_z, tou_x, tou_y, tou_z;
-  double r11, r12, r13, r21, r22, r23, r31, r32, r33, dummy;
-  double tin, tou, tin_kick;
-  int num_in;
   int get_velocity();
   double doppler();
   double vel_vec[3];
@@ -105,20 +91,19 @@ int syn_lc_init(time)
   double vec_len(), dot();
   double kick[3];
 
-  num_in = 0;
+  int num_in = 0;
 
   /* Start by finding a bunch of rays that will reach observer with correct
      freq at correct time. */
 
-  n=0;
-
+  int n = 0;
   //for (n = 0; n < NRAYS_SYN; n++)
   while (n < NRAYS_SYN)
   {
     /* To correctly sample the rays, they should be uniformly spread over
-	 the observer's plane (i.e the plane perpendocular to syn_dir. */
+   the observer's plane (i.e the plane perpendocular to syn_dir. */
     /* For a cuboidal grid, the maximum length from the centre in
-	 projection must be */
+   projection must be */
 
     max_proj = sqrt( (xmax*xmax) + (ymax*ymax) + (zmax*zmax)) * (time/tmin);
     max_proj = max_proj / sqrt( 1. - (vmax*vmax/CLIGHT_PROP/CLIGHT_PROP));
@@ -130,17 +115,17 @@ int syn_lc_init(time)
        r = r0 + lambda syn_dir
        where r, and r0 are vectors */
 
+    double zrand = gsl_rng_uniform(rng);
+    double r_proj = (sqrt( zrand)) * max_proj;
     zrand = gsl_rng_uniform(rng);
-    r_proj = (sqrt( zrand)) * max_proj;
-    zrand = gsl_rng_uniform(rng);
-    phi_proj = 4 * asin(1.0) * zrand;
+    double phi_proj = 4 * asin(1.0) * zrand;
 
     /* Get cartestian coordinates in a frame with zprime parallel to
        syn_dir. */
 
-    zprime = 0.0;
-    yprime = r_proj * cos(phi_proj);
-    xprime = r_proj * sin(phi_proj);
+    double zprime = 0.0;
+    double yprime = r_proj * cos(phi_proj);
+    double xprime = r_proj * sin(phi_proj);
 
     /* Now rotate back to real xyz - based on syn_dir - to get r0 */
 
@@ -160,19 +145,18 @@ int syn_lc_init(time)
     }
     else
     {
+      double norm1 = 1./(sqrt( (syn_dir[0]*syn_dir[0]) + (syn_dir[1]*syn_dir[1])));
+      double norm2 = 1./(sqrt( (syn_dir[0]*syn_dir[0]) + (syn_dir[1]*syn_dir[1]) + (syn_dir[2]*syn_dir[2])));
 
-      norm1=1./(sqrt( (syn_dir[0]*syn_dir[0]) + (syn_dir[1]*syn_dir[1])));
-      norm2=1./(sqrt( (syn_dir[0]*syn_dir[0]) + (syn_dir[1]*syn_dir[1]) + (syn_dir[2]*syn_dir[2])));
-
-      r11 = syn_dir[1] * norm1;
-      r12 = -1 * syn_dir[0] * norm1;
-      r13 = 0.0;
-      r21 = syn_dir[0] * syn_dir[2] * norm1 * norm2;
-      r22 = syn_dir[1] * syn_dir[2] * norm1 * norm2;
-      r23 = -1 * norm2 / norm1;
-      r31 = syn_dir[0] * norm2;
-      r32 = syn_dir[1] * norm2;
-      r33 = syn_dir[2] * norm2;
+      double r11 = syn_dir[1] * norm1;
+      double r12 = -1 * syn_dir[0] * norm1;
+      double r13 = 0.0;
+      double r21 = syn_dir[0] * syn_dir[2] * norm1 * norm2;
+      double r22 = syn_dir[1] * syn_dir[2] * norm1 * norm2;
+      double r23 = -1 * norm2 / norm1;
+      double r31 = syn_dir[0] * norm2;
+      double r32 = syn_dir[1] * norm2;
+      double r33 = syn_dir[2] * norm2;
 
       r0[0] = (r11 * xprime) + (r21 * yprime) + (r31 * zprime);
       r0[1] = (r12 * xprime) + (r22 * yprime) + (r32 * zprime);
@@ -191,12 +175,12 @@ int syn_lc_init(time)
 
     /* Need to answer question: does this ray ever enter the grid - if so, where and when. */
 
-    tin_x = ((CLIGHT_PROP * time * syn_dir[0]) - r0[0]) / ((CLIGHT_PROP * syn_dir[0]) + (xmax/tmin));
-    tou_x = ((CLIGHT_PROP * time * syn_dir[0]) - r0[0]) / ((CLIGHT_PROP * syn_dir[0]) - (xmax/tmin));
+    double tin_x = ((CLIGHT_PROP * time * syn_dir[0]) - r0[0]) / ((CLIGHT_PROP * syn_dir[0]) + (xmax/tmin));
+    double tou_x = ((CLIGHT_PROP * time * syn_dir[0]) - r0[0]) / ((CLIGHT_PROP * syn_dir[0]) - (xmax/tmin));
 
     if (syn_dir[0] < 0) //swap around if ray travelling to -ve x
     {
-      dummy = tou_x;
+      double dummy = tou_x;
       tou_x = tin_x;
       tin_x = dummy;
     }
@@ -221,11 +205,11 @@ int syn_lc_init(time)
 
     //      printout("tin_x %g tou_x %g\n", tin_x , tou_x);
 
-    tin_y = ((CLIGHT_PROP * time * syn_dir[1]) - r0[1]) / ((CLIGHT_PROP * syn_dir[1]) + (ymax/tmin));
-    tou_y = ((CLIGHT_PROP * time * syn_dir[1]) - r0[1]) / ((CLIGHT_PROP * syn_dir[1]) - (ymax/tmin));
+    double tin_y = ((CLIGHT_PROP * time * syn_dir[1]) - r0[1]) / ((CLIGHT_PROP * syn_dir[1]) + (ymax/tmin));
+    double tou_y = ((CLIGHT_PROP * time * syn_dir[1]) - r0[1]) / ((CLIGHT_PROP * syn_dir[1]) - (ymax/tmin));
     if (syn_dir[1] < 0)
     {
-      dummy = tou_y;
+      double dummy = tou_y;
       tou_y = tin_y;
       tin_y = dummy;
     }
@@ -249,12 +233,12 @@ int syn_lc_init(time)
       //printout("tin_y %g tou_y %g\n", tin_y , tou_y);
     }
 
-    tin_z = ((CLIGHT_PROP * time * syn_dir[2]) - r0[2]) / ((CLIGHT_PROP * syn_dir[2]) + (zmax/tmin));
-    tou_z = ((CLIGHT_PROP * time * syn_dir[2]) - r0[2]) / ((CLIGHT_PROP * syn_dir[2]) - (zmax/tmin));
+    double tin_z = ((CLIGHT_PROP * time * syn_dir[2]) - r0[2]) / ((CLIGHT_PROP * syn_dir[2]) + (zmax/tmin));
+    double tou_z = ((CLIGHT_PROP * time * syn_dir[2]) - r0[2]) / ((CLIGHT_PROP * syn_dir[2]) - (zmax/tmin));
       //printout("tin_z %g tou_z %g r0[2] %g\n", tin_z , tou_z, r0[2]);
     if (syn_dir[2] < 0)
     {
-      dummy = tou_z;
+      double dummy = tou_z;
       tou_z = tin_z;
       tin_z = dummy;
     }
@@ -279,27 +263,28 @@ int syn_lc_init(time)
     //printout("tin_z %g tou_z %g\n", tin_z , tou_z);
 
     /* Find latest tin */
+    double tin, tou;
     if (tin_x > tin_y)
     {
       if (tin_x > tin_z)
-	    {
-	      tin = tin_x;
-	    }
+      {
+        tin = tin_x;
+      }
       else
-	    {
-	      tin = tin_z;
-	    }
+      {
+        tin = tin_z;
+      }
     }
     else
     {
       if (tin_y > tin_z)
-	    {
-	      tin = tin_y;
-	    }
+      {
+        tin = tin_y;
+      }
       else
-	    {
-	      tin = tin_z;
-	    }
+      {
+        tin = tin_z;
+      }
     }
 
     /* Find 1st tou */
@@ -321,13 +306,12 @@ int syn_lc_init(time)
         tou = tou_y;
       }
       else
-	    {
-	      tou = tou_z;
-	    }
+      {
+        tou = tou_z;
+      }
     }
 
     /* did it get into the grid then? */
-
 
     num_in += 1;
 
@@ -345,7 +329,7 @@ int syn_lc_init(time)
       //    printout("hmmmmmm....\n");
       //    exit(0);
       //  }
-      tin_kick = tin * (1. + 1.e-10);
+      double tin_kick = tin * (1. + 1.e-10);
       rays[n].tstart = tin_kick;
       rays[n].rstart[0] = r0[0] - (CLIGHT_PROP*(time - tin)*syn_dir[0]);
       rays[n].rstart[1] = r0[1] - (CLIGHT_PROP*(time - tin)*syn_dir[1]);
@@ -367,7 +351,7 @@ int syn_lc_init(time)
         exit(0);
       }
 
-      for (i = 0; i < NSYN; i++)
+      for (int i = 0; i < NSYN; i++)
       {
         rays[n].nu_rf[i] = 1.;  //grey rays - just a place holder;
         rays[n].nu_rf_init[i] = rays[n].nu_rf[i];
@@ -376,7 +360,6 @@ int syn_lc_init(time)
         rays[n].e_cmf[i] = 0.0;
       }
       n = n + 1;
-
     }
   }
 
@@ -385,6 +368,5 @@ int syn_lc_init(time)
   DeltaA = PI * max_proj * max_proj / num_in;
   printout("DeltaA %g\n", DeltaA);
 
-
-  return(0);
+  return 0;
 }

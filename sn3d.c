@@ -34,7 +34,6 @@ int main(int argc, char** argv)
   int grid_init();
   int packet_init(int middle_iteration, int my_rank);
   int input();
-  int nts;
   int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
   int update_packets();
   int make_spectrum_res();
@@ -44,7 +43,6 @@ int main(int argc, char** argv)
   int make_gamma_light_curve();
   double syn_gamma();
   int estim_switch();
-  int outer_iteration;
   int zero_estimators(), normalise_estimators(), write_estimators();
   int normalise_grey(), write_grey();
   int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
@@ -58,7 +56,6 @@ int main(int argc, char** argv)
   FILE *linestat_file;
   FILE *packets_file;
   FILE *temperature_file;
-  int middle_iteration;
   int my_rank;
   int p;
   int nnn, nn, n;
@@ -77,13 +74,8 @@ int main(int argc, char** argv)
   char filename[100];
   //int HUGEE2;
   //char *buffer2;
-  double nntot;
-  int titer;
-  int last_loop;
-
-  double deltaV,deltat;
-  int assoc_cells;
-  int real_time_start, do_this_full_loop;
+  double deltat;
+  int do_this_full_loop;
 
 //  int HUGEE;
 
@@ -93,13 +85,11 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &p);
   #else
     my_rank = 0;
-    p=1;
+    p = 1;
   #endif
 
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
-
-
 
 
   #ifdef _OPENMP
@@ -253,7 +243,7 @@ int main(int argc, char** argv)
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
-  real_time_start = time(NULL);
+  int real_time_start = time(NULL);
   printout("time before input %d\n",time(NULL));
   input (my_rank);
 
@@ -297,9 +287,9 @@ int main(int argc, char** argv)
   zero_estimators();
   printout("time after zero estimators %d\n",time(NULL));
 
-
   /// Record the chosen syn_dir
-  if ((syn_file = fopen("syn_dir.txt", "w")) == NULL){
+  if ((syn_file = fopen("syn_dir.txt", "w")) == NULL)
+  {
     printout("Cannot open syn_dir.txt.\n");
     exit(0);
   }
@@ -307,9 +297,9 @@ int main(int argc, char** argv)
   fclose(syn_file);
   printout("time read syn file %d\n",time(NULL));
 
-  file_set=0;
+  file_set = 0;
   debuglevel = 4;  /// Selects detail level of debug output, needs still some work.
-  for (outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
+  for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
   {
     /// Initialise the grid. Call routine that sets up the initial positions
     /// and sizes of the grid cells.
@@ -320,7 +310,7 @@ int main(int argc, char** argv)
     /// Next we want to initialise the packets.
     /// To overcome memory limitations for large numbers of packets, which need to be
     /// propagated on the _same_ grid, this middle_iteration loop was introduced.
-    for(middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
+    for (int middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
     {
       /// Create a bunch of npkts packets
       /// and write them to a binary file for later readin.
@@ -415,9 +405,9 @@ int main(int argc, char** argv)
     //{
 
     /// Now use while loop to allow for timed restarts
-    last_loop = ftstep;
+    int last_loop = ftstep;
     do_this_full_loop = 1;
-    nts = itstep;
+    int nts = itstep;
     while (nts < last_loop)
     {
       nts_global = nts;
@@ -473,7 +463,7 @@ int main(int argc, char** argv)
         }
       #endif
 
-      for (titer = 0; titer < n_titer; titer++)
+      for (int titer = 0; titer < n_titer; titer++)
       {
         /// Read the packets file for each iteration on the timestep
         if (nts % 2 == 0) sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
@@ -1020,7 +1010,7 @@ int main(int argc, char** argv)
               }
             #endif
 
-            deltaV =  pow(wid_init * time_step[nts].mid/tmin, 3.0);
+            double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
             deltat = time_step[nts].width;
             if (do_rlc_est != 0)
             {
@@ -1175,7 +1165,7 @@ int main(int argc, char** argv)
       nts++;
       if (do_this_full_loop == 0)
       {
-        nts += last_loop+1; ///this will break the loop and terminate the code
+        nts += last_loop + 1; ///this will break the loop and terminate the code
       }
     }
 
@@ -1470,7 +1460,6 @@ void printout(char *fmt, ...)
   }
   fclose(tau_file);
 }*/
-
 
 
 

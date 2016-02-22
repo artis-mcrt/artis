@@ -85,29 +85,29 @@ int write_light_curve_res()
   if (file_set == 1)
     {
       if ((lc_file = fopen("light_curve_res.out", "r")) == NULL){
-	printout("Cannot open lc_file.txt.\n");
-	exit(0);
+  printout("Cannot open lc_file.txt.\n");
+  exit(0);
       }
       for (nn=0; nn < MALCBINS; nn++)
-	{
-	  for (m=0; m < ntlcbins; m++)
-	    {
-	      fscanf(lc_file, "%g %g\n", &dum1, &dum2);
-	      save[m][nn]=dum2;
-	    }
-	}
+  {
+    for (m=0; m < ntlcbins; m++)
+      {
+        fscanf(lc_file, "%g %g\n", &dum1, &dum2);
+        save[m][nn]=dum2;
+      }
+  }
 
       fclose(lc_file);
     }
   else
     {
       for (m=0; m < ntlcbins; m++)
-	{
-	  for (nn=0; nn < MALCBINS; nn++)
-	    {
-	      save[m][nn]=0.0;
-	    }
-	}
+  {
+    for (nn=0; nn < MALCBINS; nn++)
+      {
+        save[m][nn]=0.0;
+      }
+  }
     }
 
 
@@ -120,9 +120,9 @@ int write_light_curve_res()
   for (nn=0; nn < MALCBINS; nn++)
     {
       for (m=0; m < ntlcbins; m++)
-	{
-	  fprintf(lc_file, "%g %g\n", sqrt(light_curve_res[m][nn].lower_time*(light_curve_res[m][nn].lower_time + light_curve_res[m][nn].delta_t))/DAY, ((light_curve_res[m][nn].lum/LSUN) + save[m][nn]));
-	}
+  {
+    fprintf(lc_file, "%g %g\n", sqrt(light_curve_res[m][nn].lower_time*(light_curve_res[m][nn].lower_time + light_curve_res[m][nn].delta_t))/DAY, ((light_curve_res[m][nn].lum/LSUN) + save[m][nn]));
+  }
     }
 
   fclose(lc_file);
@@ -141,7 +141,6 @@ add_to_lc_res(pkt_ptr)
 {
   double dot(), vec_len();
   int cross_prod();
-  double t_arrive;
   int nt, na;
   int thetabin, phibin;
   double vec1[3], vec2[3], xhat[3], vec3[3];
@@ -153,43 +152,41 @@ add_to_lc_res(pkt_ptr)
 
   /* Formula from Leon's paper. */
 
-
-  t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
+  double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
 
   /* Put this into the time grid. */
 
   if (t_arrive > tmin && t_arrive < tmax)
+  {
+    nt = (log(t_arrive) - log(tmin)) / dlogtlc;
+
+    /* for angle resolved case, need to work out the correct angle bin too. */
+
+
+    costheta = dot(pkt_ptr->dir, syn_dir);
+    thetabin = ((costheta + 1.0) * sqrt(MALCBINS) / 2.0);
+    cross_prod(pkt_ptr->dir, syn_dir, vec1);
+    cross_prod(xhat, syn_dir, vec2);
+    cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
+
+    cross_prod(vec2, syn_dir, vec3);
+    testphi = dot(vec1,vec3);
+
+    if (testphi > 0)
     {
-      nt = (log(t_arrive) - log(tmin)) / dlogtlc;
-
-      /* for angle resolved case, need to work out the correct angle bin too. */
-
-
-      costheta = dot(pkt_ptr->dir, syn_dir);
-      thetabin = ((costheta + 1.0) * sqrt(MALCBINS) / 2.0);
-      cross_prod(pkt_ptr->dir, syn_dir, vec1);
-      cross_prod(xhat, syn_dir, vec2);
-      cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
-
-      cross_prod(vec2, syn_dir, vec3);
-      testphi = dot(vec1,vec3);
-
-      if (testphi > 0)
-	{
-	  phibin = (acos(cosphi) /2. / PI * sqrt(MALCBINS));
-	}
-      else
-	{
-	  phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MALCBINS));
-	}
-
-      na = (thetabin*sqrt(MALCBINS)) + phibin;
-
-      light_curve_res[nt][na].lum += pkt_ptr->e_rf / light_curve_res[nt][na].delta_t * MALCBINS / nprocs;
+      phibin = (acos(cosphi) /2. / PI * sqrt(MALCBINS));
+    }
+        else
+    {
+      phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MALCBINS));
     }
 
-  return(0);
+    na = (thetabin*sqrt(MALCBINS)) + phibin;
 
+    light_curve_res[nt][na].lum += pkt_ptr->e_rf / light_curve_res[nt][na].delta_t * MALCBINS / nprocs;
+  }
+
+  return(0);
 }
 
 /**********************************************************************/

@@ -73,21 +73,15 @@ int setup_packets (int pktnumberoffset)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
   int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset);
-  double etot;
-  double e0;
-  int n,m;
-  double zrand,runtot;
+  int m;
   CELL *grid_ptr;
   double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
   double vol_init(CELL *grid_ptr);
-  float norm;
   // float cont[MGRID+1];
-  int mabove, mbelow;
-  int packet_reset;
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
-  etot = (ENICKEL + ECOBALT) * mni56 / MNI56;
+  double etot = (ENICKEL + ECOBALT) * mni56 / MNI56;
   etot += (E48V + E48CR) * mcr48 / MCR48;
   etot += (E52FE + E52MN) * mfe52 / MFE52;
   printout("etot %g\n", etot);
@@ -96,15 +90,15 @@ int setup_packets (int pktnumberoffset)
   printout("E52FE, E52MN %g %g\n",E52FE/MEV, E52MN/MEV);
 
   /// So energy per pellet is
-  e0 = etot / npkts / n_out_it / n_middle_it;
+  double e0 = etot / npkts / n_out_it / n_middle_it;
   printout("e0 %g\n", e0);
 
   /* Now place the pellets in the ejecta and decide at what time
   they will decay. */
 
   /* Need to get a normalisation factor. */
-  norm = 0.0;
-  for (m=0; m<ngrid; m++)
+  float norm = 0.0;
+  for (m = 0; m < ngrid; m++)
   {
     grid_ptr = &cell[m];
     cont[m] = norm;
@@ -113,8 +107,6 @@ int setup_packets (int pktnumberoffset)
       ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
        +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
        +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
-
-
   }
   cont[ngrid] = norm;
 
@@ -124,35 +116,27 @@ int setup_packets (int pktnumberoffset)
     exit(0);
   }
 
-  n=0;
-  packet_reset = 0;
+  int n = 0;
+  int packet_reset = 0;
 
   while (n < npkts)
   {
     /// Get random number.
-    runtot=0.0;
-    mabove=ngrid;
-    mbelow = 0;
-    zrand = gsl_rng_uniform(rng);
+    double runtot = 0.0;
+    int mabove = ngrid;
+    int mbelow = 0;
+    double zrand = gsl_rng_uniform(rng);
 
     while (mabove != (mbelow+1))
     {
       if (mabove == (mbelow + 2))
-      {
         m = mbelow + 1;
-      }
       else
-      {
         m = (mabove + mbelow)/2;
-      }
       if (cont[m] > (zrand*norm))
-      {
         mabove = m;
-      }
       else
-      {
         mbelow = m;
-      }
     }
 
     if (cont[mbelow] > (zrand*norm))
@@ -193,25 +177,16 @@ int setup_packets (int pktnumberoffset)
 
     #ifdef NO_INITIAL_PACKETS
     if (pkt[n].tdecay < tmax && pkt[n].tdecay > tmin)
-    {
       n++;
-    }
     else
-    {
       packet_reset++;
-    }
     #else
     if (pkt[n].tdecay < tmax)
-    {
       n++;
-    }
     else
-    {
       packet_reset++;
-    }
     #endif
   }
-
 
   /// Some fraction of the packets we reasigned because they were not going
   /// to activate in the time of interest so need to renormalise energies
@@ -232,13 +207,9 @@ int setup_packets (int pktnumberoffset)
 double fni(CELL *grid_ptr)
 /// Subroutine that gives the Ni56 mass fraction.
 {
-  double m_r; //this it the mass enclosed up to radius r in units of the total eject mass
-  double radial_pos;
   double vec_len();
-  int m;
-  double fraction;
   double dcen[3];
-  fraction = 0.0;
+  double fraction = 0.0;
 
   if (model_type == RHO_UNIFORM)
   {
@@ -246,22 +217,15 @@ double fni(CELL *grid_ptr)
     dcen[1]=grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2]=grid_ptr->pos_init[2] + (0.5*wid_init);
 
-
-    m_r = vec_len(dcen) / rmax;
-    m_r = pow(m_r,3) * mtot / MSUN;
+    double m_r = vec_len(dcen) / rmax;
+    m_r = pow(m_r,3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
 
     if (m_r < 0.5)
-    {
       return(1.0);
-    }
     else if (m_r < 0.75)
-    {
       return(1.0 - ((m_r - 0.5)*4));
-    }
     else
-    {
       return(0.0);
-    }
   }
   else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
   {
@@ -270,7 +234,7 @@ double fni(CELL *grid_ptr)
     dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
 
-    /*radial_pos = vec_len(dcen);
+    /*double radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
       fraction = fni_model[0];
@@ -297,7 +261,6 @@ double fni(CELL *grid_ptr)
     fraction = get_fni(grid_ptr->modelgridindex);
     return(fraction);
   }
-
   else
   {
     printout("Unknown model_type (packet_init). Abort.\n");
@@ -312,8 +275,7 @@ double fni(CELL *grid_ptr)
 double f52fe(CELL *grid_ptr)
 /// Subroutine that gives the Fe52 mass fraction.
 {
-  double fraction;
-  fraction = 0.0;
+  double fraction = 0.0;
 
   if (model_type == RHO_UNIFORM)
   {
@@ -331,7 +293,6 @@ double f52fe(CELL *grid_ptr)
     fraction = get_f52fe(grid_ptr->modelgridindex);
     return(fraction);
   }
-
   else
   {
     printout("Unknown model_type (packet_init). Abort.\n");
@@ -345,9 +306,7 @@ double f52fe(CELL *grid_ptr)
 double f48cr(CELL *grid_ptr)
 /// Subroutine that gives the Cr48 mass fraction.
 {
-
-  double fraction;
-  fraction = 0.0;
+  double fraction = 0.0;
 
   if (model_type == RHO_UNIFORM)
   {
@@ -365,7 +324,6 @@ double f48cr(CELL *grid_ptr)
     fraction = get_f48cr(grid_ptr->modelgridindex);
     return(fraction);
   }
-
   else
   {
     printout("Unknown model_type (packet_init). Abort.\n");
@@ -381,9 +339,6 @@ double f48cr(CELL *grid_ptr)
 int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
-  double zrand;
-  double zrand2;
-  double zrand3;
   double prob_chain[3];
   double fni(CELL *grid_ptr), f48cr(CELL *grid_ptr), f52fe(CELL *grid_ptr);
 
@@ -392,7 +347,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
   pkt[n].where = m;
   pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
 
-  zrand = gsl_rng_uniform_pos(rng);
+  double zrand = gsl_rng_uniform_pos(rng);
   pkt[n].pos[0] = grid_ptr->pos_init[0] + (zrand * wid_init);
   zrand = gsl_rng_uniform_pos(rng);
   pkt[n].pos[1] = grid_ptr->pos_init[1] + (zrand * wid_init);
@@ -401,103 +356,100 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 
 
   /*first choose which of the decay chains to sample*/
-  prob_chain[0]=fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56;
-  prob_chain[1]=f52fe(grid_ptr)*(E52FE + E52MN)/MFE52;
-  prob_chain[2]=f48cr(grid_ptr)*(E48V + E48CR)/MCR48;
+  prob_chain[0] = fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56;
+  prob_chain[1] = f52fe(grid_ptr)*(E52FE + E52MN)/MFE52;
+  prob_chain[2] = f48cr(grid_ptr)*(E48V + E48CR)/MCR48;
 
-  zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]);
+  double zrand3 = gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]);
   if (zrand3 <= prob_chain[0])
+  {
+    /// Now choose whether it's going to be a nickel or cobalt pellet and
+    /// mark it as such.
+    zrand = gsl_rng_uniform(rng);
+    if (zrand < (ENICKEL / (ENICKEL + ECOBALT)))
     {
-
-      /// Now choose whether it's going to be a nickel or cobalt pellet and
-      /// mark it as such.
-      zrand = gsl_rng_uniform(rng);
-      if (zrand < (ENICKEL / (ENICKEL + ECOBALT)))
-	{
-	  pkt[n].type = TYPE_NICKEL_PELLET;
-	}
-      else
-	{
-	  zrand = gsl_rng_uniform(rng);
-
-	  if (zrand < ECOBALT_GAMMA/ECOBALT)
-	    {
-	      pkt[n].type = TYPE_COBALT_PELLET;
-	    }
-	  else
-	    {
-	      pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
-	    }
-	}
-
-      /// Now choose the decay time.
-      if (pkt[n].type == TYPE_NICKEL_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = -TNICKEL * log(zrand);
-	}
-      else if (pkt[n].type == TYPE_COBALT_PELLET || pkt[n].type == TYPE_COBALT_POSITRON_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  zrand2 = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = (-TNICKEL * log(zrand)) + (-TCOBALT * log(zrand2));
-	}
+      pkt[n].type = TYPE_NICKEL_PELLET;
     }
+    else
+    {
+      zrand = gsl_rng_uniform(rng);
+
+      if (zrand < ECOBALT_GAMMA/ECOBALT)
+      {
+        pkt[n].type = TYPE_COBALT_PELLET;
+      }
+      else
+      {
+        pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
+      }
+    }
+
+    /// Now choose the decay time.
+    if (pkt[n].type == TYPE_NICKEL_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -TNICKEL * log(zrand);
+    }
+    else if (pkt[n].type == TYPE_COBALT_PELLET || pkt[n].type == TYPE_COBALT_POSITRON_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      double zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-TNICKEL * log(zrand)) + (-TCOBALT * log(zrand2));
+    }
+  }
   else if (zrand3 <= (prob_chain[0]+prob_chain[1]))
+  {
+    /// Now choose whether it's going to be a 52Fe or 52Mn pellet and
+    /// mark it as such.
+    zrand = gsl_rng_uniform(rng);
+    if (zrand < (E52FE / (E52FE + E52MN)))
     {
-      /// Now choose whether it's going to be a 52Fe or 52Mn pellet and
-      /// mark it as such.
-      zrand = gsl_rng_uniform(rng);
-      if (zrand < (E52FE / (E52FE + E52MN)))
-	{
-	  pkt[n].type = TYPE_52FE_PELLET;
-	}
-      else
-	{
-	  pkt[n].type = TYPE_52MN_PELLET;
-	}
-
-      /// Now choose the decay time.
-      if (pkt[n].type == TYPE_52FE_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = -T52FE * log(zrand);
-	}
-      else if (pkt[n].type == TYPE_52MN_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  zrand2 = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
-	}
+      pkt[n].type = TYPE_52FE_PELLET;
     }
+    else
+    {
+      pkt[n].type = TYPE_52MN_PELLET;
+    }
+
+    /// Now choose the decay time.
+    if (pkt[n].type == TYPE_52FE_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -T52FE * log(zrand);
+    }
+    else if (pkt[n].type == TYPE_52MN_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      double zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
+    }
+  }
   else
+  {
+    /// Now choose whether it's going to be a 48Cr or 48V pellet and
+    /// mark it as such.
+    zrand = gsl_rng_uniform(rng);
+    if (zrand < (E48CR / (E48CR + E48V)))
     {
-      /// Now choose whether it's going to be a 48Cr or 48V pellet and
-      /// mark it as such.
-      zrand = gsl_rng_uniform(rng);
-      if (zrand < (E48CR / (E48CR + E48V)))
-	{
-	  pkt[n].type = TYPE_48CR_PELLET;
-	}
-      else
-	{
-	  pkt[n].type = TYPE_48V_PELLET;
-	}
-
-      /// Now choose the decay time.
-      if (pkt[n].type == TYPE_48CR_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = -T48CR * log(zrand);
-	}
-      else if (pkt[n].type == TYPE_48V_PELLET)
-	{
-	  zrand = gsl_rng_uniform(rng);
-	  zrand2 = gsl_rng_uniform(rng);
-	  pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
-	}
+      pkt[n].type = TYPE_48CR_PELLET;
     }
-
+    else
+    {
+      pkt[n].type = TYPE_48V_PELLET;
+    }
+    /// Now choose the decay time.
+    if (pkt[n].type == TYPE_48CR_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -T48CR * log(zrand);
+    }
+    else if (pkt[n].type == TYPE_48V_PELLET)
+    {
+      zrand = gsl_rng_uniform(rng);
+      double zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
+    }
+  }
 
   /// Now assign the energy to the pellet.
   pkt[n].e_cmf = e0;
@@ -510,9 +462,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 ///***************************************************************************/
 void write_packets(FILE *packets_file)
 {
-  int i;
-
-  for (i = 0; i < npkts; i++)
+  for (int i = 0; i < npkts; i++)
   {
    fprintf(packets_file,"%d ",pkt[i].number);
    fprintf(packets_file,"%d ",pkt[i].where);
@@ -548,9 +498,7 @@ void write_packets(FILE *packets_file)
 ///***************************************************************************/
 void read_packets(FILE *packets_file)
 {
-  int i;
-
-  for (i = 0; i < npkts; i++)
+  for (int i = 0; i < npkts; i++)
   {
    fscanf(packets_file,"%d ",&pkt[i].number);
    fscanf(packets_file,"%d ",&pkt[i].where);

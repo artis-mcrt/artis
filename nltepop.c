@@ -2,7 +2,6 @@
 
 double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
-
 {
   int nlte_levels;
   int level, upper, lower, level_use, lower_use, upper_use, phixstargetindex;
@@ -175,8 +174,8 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
             lower_use = nlte_levels+1;
           }
 
-          rate_matrix[level_use*(nlte_size) + level_use] -= (R + C)*s_renorm;
-          rate_matrix[lower_use*(nlte_size) + level_use] += (R + C)*s_renorm;
+          rate_matrix[level_use*(nlte_size) + level_use] -= (R + C) * s_renorm;
+          rate_matrix[lower_use*(nlte_size) + level_use] += (R + C) * s_renorm;
           //printout("First using %d of %d\n", level_use*(nlte_size) + level_use, nlte_size*nlte_size);
           //printout("Second using %d of %d\n", lower_use*(nlte_size) + level_use, nlte_size*nlte_size);
         }
@@ -256,19 +255,15 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].level = level;
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
-          upper = 0;
-          epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
 
           R = 0.0;
           C = 0.0;
           for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            if (get_phixsupperlevel(element,ion,level,phixstargetindex) == upper)
-            {
-              R = photoionization(modelgridindex,phixstargetindex,epsilon_trans);
-              C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
-              break;
-            }
+            upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
+            R += photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+            C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
           }
 
           s_renorm = 1.0;
@@ -280,7 +275,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           else
           {
             level_use = nlte_levels+1; //the super level
-            s_renorm = superlevel_boltzmann(modelgridindex,element, ion, level) / superlevel_partition;
+            s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level) / superlevel_partition;
           }
 
           upper_use = nlte_size-1; //the continuum
@@ -290,16 +285,23 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
           s_renorm = 1.0;
 
-          R=0.;
-          C=0.;
+          R = 0.0;
+          C = 0.0;
           mastate[tid].element = element;
           mastate[tid].ion = ion+1;
           mastate[tid].nnlevel = 1.0;
-          R = rad_recombination(modelgridindex,level,epsilon_trans);
-          //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
-          printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
-          C = col_recombination(modelgridindex,level,epsilon_trans);
-          //C=C*1.e-10;
+          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          {
+            upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            mastate[tid].level = upper;
+            mastate[tid].statweight = stat_weight(element,ion+1,upper);
+            epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
+            R += rad_recombination(modelgridindex,level,epsilon_trans);
+            //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
+            printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
+            C += col_recombination(modelgridindex,level,epsilon_trans);
+            //C=C*1.e-10;
+          }
 
           rate_matrix[upper_use*(nlte_size) + upper_use] -= (R + C) * s_renorm;
           rate_matrix[level_use*(nlte_size) + upper_use] += (R + C) * s_renorm;
@@ -522,71 +524,63 @@ double get_tot_nion(int modelgridindex)
 {
 
   //double ionstagepop(int modelgridindex, int element, int ion);
-  int element;//, ion;
   //int nions;
   double result;
   float get_rho(int modelgridindex);
 
-  result = 0;
-  for (element = 0; element < nelements; element++)
+  result = 0.;
+  for (int element = 0; element < nelements; element++)
   {
-    result += modelgrid[modelgridindex].composition[element].abundance/elements[element].mass*get_rho(modelgridindex);
+    result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
 
-    //nions = get_nions(element);
+    //int nions = get_nions(element);
     //for (ion = 0; ion < nions; ion++)
-    //  {
-    //	    result += ionstagepop(modelgridindex,element,ion);
-    // }
+    //{
+    //  result += ionstagepop(modelgridindex,element,ion);
+    //}
   }
 
-  return(result);
+  return result;
 }
 
 /*****************************************************************/
 
 double get_oneoverw(int element, int ion, int modelgridindex)
 {
-  /*Routine to compute the work per ion pair for doing the NT ionization calculation. Makes use of EXTREMELY SIMPLE approximations - high energy limits only */
+  /* Routine to compute the work per ion pair for doing the NT ionization calculation. Makes use of EXTREMELY SIMPLE approximations - high energy limits only */
 
   double Zbar;
-  double binding;
-  double Aconst;
-  double oneoverW;
-  int ielement;
-
   double get_mean_binding_energy(int element, int ion);
 
-  /* Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec). We are going to start by taking all the high energy limits and ignoring Lelec, so that the denominator is extremely simplified. Need to get the mean Z value.*/
+  /* Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
+     We are going to start by taking all the high energy limits and ignoring Lelec, so that the
+     denominator is extremely simplified. Need to get the mean Z value. */
 
   Zbar = 0.0;
-  for (ielement = 0; ielement < nelements; ielement++)
+  for (int ielement = 0; ielement < nelements; ielement++)
   {
     Zbar += modelgrid[modelgridindex].composition[ielement].abundance * elements[ielement].anumber;
   }
   //printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
 
-  binding = get_mean_binding_energy(element, ion);
-
-  Aconst = 1.33e-14 * EV * EV;
-
-  oneoverW = Aconst * binding / Zbar / (2*3.14159*pow(QE,4.0));
+  double binding = get_mean_binding_energy(element, ion);
+  double Aconst = 1.33e-14 * EV * EV;
+  double oneoverW = Aconst * binding / Zbar / (2*3.14159*pow(QE,4.0));
   //printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
 
-  return(oneoverW);
+  return oneoverW;
 }
 
 /*****************************************************************/
-
 double get_mean_binding_energy(int element, int ion)
 {
   int get_ionstage(int element, int ion);
-  int ioncharge, nbound;
   int electron_loop;
   int q[M_NT_SHELLS];
   double total, use1, use2, use3;
 
-  ioncharge = get_ionstage(element,ion) - 1;
-  nbound = elements[element].anumber - ioncharge; //number of bound electrons
+  int ioncharge = get_ionstage(element,ion) - 1;
+  int nbound = elements[element].anumber - ioncharge; //number of bound electrons
 
   if (nbound > 0)
   {
@@ -734,16 +728,14 @@ double get_mean_binding_energy(int element, int ion)
 
   //printout("For element %d ion %d I got mean binding energy of %g (eV)\n", element, ion, 1./total/EV);
 
-  return(total);
+  return total;
 }
-
 
 
 /*****************************************************************/
 int read_binding_energies()
 {
   FILE *binding;
-  int index1, index2;
   float dum[10];
   int dum1, dum2;
 
@@ -760,10 +752,10 @@ int read_binding_energies()
     exit(0);
   }
 
-  for (index1 = 0; index1 < dum2; index1++)
+  for (int index1 = 0; index1 < dum2; index1++)
   {
     fscanf(binding, "%g %g %g %g %g %g %g %g %g %g", &dum[0],&dum[1], &dum[2],&dum[3],&dum[4],&dum[5],&dum[6],&dum[7],&dum[8],&dum[9]);
-    for (index2 = 0; index2 < 10; index2++)
+    for (int index2 = 0; index2 < 10; index2++)
     {
       electron_binding[index1][index2] = dum[index2]*EV;
     }
@@ -772,7 +764,6 @@ int read_binding_energies()
   fclose(binding);
   return(0);
 }
-
 
 
 /*****************************************************************/
@@ -791,22 +782,20 @@ double nt_ionization_rate(int modelgridindex, int element, int ion)
   //to get the non-thermal ionization rate we need to divide this by the total ion number density and the "work per ion pair"
   Y_nt = Y_nt / get_tot_nion(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
 
-  return(Y_nt);
+  return Y_nt;
 }
-
 
 
 /***************************************************************/
 double superlevel_boltzmann(int modelgridindex, int element, int ion, int level)
 {
-  double E_level,E_ground,T_exc;
   double stat_weight(int element, int ion, int level);
   double epsilon(int element, int ion, int level);
   int get_nlevels_nlte(int element, int ion);
 
-  T_exc = get_TJ(modelgridindex);
-  E_level = epsilon(element,ion,level);
-  E_ground = epsilon(element,ion,get_nlevels_nlte(element, ion));
+  double T_exc = get_TJ(modelgridindex);
+  double E_level = epsilon(element,ion,level);
+  double E_ground = epsilon(element,ion,get_nlevels_nlte(element, ion));
 
-  return(stat_weight(element,ion,level) * exp(-(E_level-E_ground)/KB/T_exc));
+  return (stat_weight(element,ion,level) * exp(-(E_level-E_ground)/KB/T_exc));
 }

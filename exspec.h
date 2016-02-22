@@ -6,7 +6,7 @@ int nprocs_exspec;
 int do_emission_res;
 int nepkts;
 
-typedef struct 
+typedef struct
 {
   double *absorption;
   double *emission;
@@ -42,7 +42,7 @@ struct lc
 double dlogtlc;
 double dlogtlc_angle;
 
-typedef struct 
+typedef struct
 {
   double dir[3];  /// Direction of propagation. (x,y,z). Always a unit vector.
   double e_rf;    /// The energy the packet carries in the rest frame.
@@ -57,4 +57,3 @@ typedef struct
   int em_time;
 } EPKT;
 EPKT *epkts;
-

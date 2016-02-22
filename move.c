@@ -8,8 +8,6 @@ void update_estimators(PKT *pkt_ptr, double distance)
 /// packets which do not contribute to the radiation field.
 {
   double get_abundance(int modelgridindex, int element);
-  int element,ion,level,i;
-  double nu_edge;
 
   int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
@@ -25,7 +23,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
     J[modelgridindex] += helper;
 
     #ifndef FORCE_LTE
-      double helper2 = helper/nu;
+      double helper2 = helper / nu;
       //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
       #ifdef _OPENMP
         #pragma omp atomic
@@ -38,13 +36,13 @@ void update_estimators(PKT *pkt_ptr, double distance)
         #pragma omp atomic
       #endif
       ffheatingestimator[modelgridindex] += helper * kappa_rpkt_cont[tid].ffheating;
-      for (i = 0; i < nbfcontinua_ground; i++)
+      for (int i = 0; i < nbfcontinua_ground; i++)
       {
-        nu_edge = phixslist[tid].groundcont[i].nu_edge;
+        double nu_edge = phixslist[tid].groundcont[i].nu_edge;
         if (nu > nu_edge)
         {
-          element = phixslist[tid].groundcont[i].element;
-          ion = phixslist[tid].groundcont[i].ion;
+          int element = phixslist[tid].groundcont[i].element;
+          int ion = phixslist[tid].groundcont[i].ion;
           /// Cells with zero abundance for a specific element have zero contribution
           /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
           /// the estimators
@@ -54,7 +52,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
               #pragma omp atomic
             #endif
             gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper2;
-            // TODO: Find out why gamma estimator becomes NaN
+
             #ifdef DEBUG_ON
             if (!isfinite(gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]))
             {

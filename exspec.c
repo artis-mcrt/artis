@@ -415,12 +415,6 @@ void printout(char *fmt, ...)
 
 
 
-
-
-
-
-
-
 /*void *my_malloc(size_t size)
 {
   char *adr;

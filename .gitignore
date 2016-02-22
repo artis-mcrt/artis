@@ -1,7 +1,6 @@
 lib
 old
 version.h
-*.h
 *.o
 *.exe
 sn3d

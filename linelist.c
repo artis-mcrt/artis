@@ -5,19 +5,14 @@
 int get_gam_ll()
 {
   FILE *line_list;
-  int i, j, total_lines;
-  double deltanu;
-  double energy_last, energy_try;
-  int next, next_type;
-  double a, b;
   int identify_gam_line();
 
   /* Start by setting up the grid of fake lines and their energies. */
   fakeg_spec.nlines = nfake_gam;
 
-  deltanu = ( (nusyn_max) - (nusyn_min) ) / (fakeg_spec.nlines-3);
+  double deltanu = ( (nusyn_max) - (nusyn_min) ) / (fakeg_spec.nlines-3);
 
-  for (i = 0; i < fakeg_spec.nlines; i++)
+  for (int i = 0; i < fakeg_spec.nlines; i++)
   {
     fakeg_spec.energy[i] = ((nusyn_min) + deltanu * (i-1)) * H;
     fakeg_spec.probability[i]= 0.0;
@@ -25,18 +20,18 @@ int get_gam_ll()
 
   /* No do the sorting. */
 
-  total_lines = cobalt_spec.nlines + nickel_spec.nlines + fakeg_spec.nlines + cr48_spec.nlines + v48_spec.nlines;
+  int total_lines = cobalt_spec.nlines + nickel_spec.nlines + fakeg_spec.nlines + cr48_spec.nlines + v48_spec.nlines;
   gam_line_list.total = total_lines;
 
-  energy_last = 0.0;
-  next=-99;
-  next_type = -99;
+  double energy_last = 0.0;
+  int next = -99;
+  int next_type = -99;
 
-  for (i = 0; i < total_lines; i++)
+  for (int i = 0; i < total_lines; i++)
   {
-    energy_try = 1.e50;
+    double energy_try = 1.e50;
     /* Ni first. */
-    for (j = 0; j < nickel_spec.nlines; j++)
+    for (int j = 0; j < nickel_spec.nlines; j++)
     {
       if (nickel_spec.energy[j] > energy_last && nickel_spec.energy[j] < energy_try)
       {
@@ -46,7 +41,7 @@ int get_gam_ll()
       }
     }
     /* Now Co. */
-    for (j = 0; j < cobalt_spec.nlines; j++)
+    for (int j = 0; j < cobalt_spec.nlines; j++)
     {
       if (cobalt_spec.energy[j] > energy_last && cobalt_spec.energy[j] < energy_try)
       {
@@ -56,7 +51,7 @@ int get_gam_ll()
       }
     }
     /* Now fake */
-    for (j = 0; j < fakeg_spec.nlines; j++)
+    for (int j = 0; j < fakeg_spec.nlines; j++)
     {
       if (fakeg_spec.energy[j] > energy_last && fakeg_spec.energy[j] < energy_try)
       {
@@ -67,7 +62,7 @@ int get_gam_ll()
     }
 
     /* Now 48Cr */
-    for (j = 0; j < cr48_spec.nlines; j++)
+    for (int j = 0; j < cr48_spec.nlines; j++)
     {
       if (cr48_spec.energy[j] > energy_last && cr48_spec.energy[j] < energy_try)
       {
@@ -78,7 +73,7 @@ int get_gam_ll()
     }
 
     /* Now 48V */
-    for (j = 0; j < v48_spec.nlines; j++)
+    for (int j = 0; j < v48_spec.nlines; j++)
     {
       if (v48_spec.energy[j] > energy_last && v48_spec.energy[j] < energy_try)
       {
@@ -98,22 +93,19 @@ int get_gam_ll()
     exit(0);
   }
 
-  for (i=0; i < total_lines; i++)
+  for (int i = 0; i < total_lines; i++)
   {
+    double a, b;
     identify_gam_line(gam_line_list.type[i], gam_line_list.index[i], &a, &b);
     fprintf(line_list, "%d %d %d %g %g \n", i, gam_line_list.type[i], gam_line_list.index[i], a/MEV, b);
   }
   fclose(line_list);
-
-
-
 
   return(0);
 }
 
 
 /********************************************************************************************/
-
 int identify_gam_line(ele_type, ele_index, eret, pret)
 double *eret, *pret;
 int ele_type, ele_index;

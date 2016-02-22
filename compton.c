@@ -9,13 +9,12 @@ double sig_comp(pkt_ptr,t_current)
   double vel_vec[3];
   double doppler();
   int get_velocity();
-  double xx;
   double fmax;
-  double sigma_cmf,sigma_rf;
+  double sigma_cmf;
   double sigma_compton_partial();
   /* Start by working out the compton x-section in the co-moving frame.*/
 
-  xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+  double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
   /* Use this to decide whether the Thompson limit is acceptable. */
 
@@ -36,21 +35,18 @@ double sig_comp(pkt_ptr,t_current)
   /* Now need to convert between frames. */
 
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
+  double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
 
   return(sigma_rf);
 }
 
 /******************************************************************/
-
 /*Routine to deal with physical Compton scattering event. */
-
 int com_sca(pkt_ptr,t_current)
      PKT *pkt_ptr;
      double t_current;
 {
-  double zrand;
-  double xx, f;
+  double f;
   double choose_f();
   double vel_vec[3];
   double cmf_dir[3], new_dir[3], final_dir[3];
@@ -60,12 +56,11 @@ int com_sca(pkt_ptr,t_current)
   double prob_gamma;
   int get_velocity(), angle_ab();
   double doppler();
-  double test;
   double thomson_angle();
 
   //  printout("Compton scattering.\n");
 
-  xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+  double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
   /* It is known that a Compton scattering event is going to take place.
      We need to do two things - (1) decide whether to convert energy
@@ -80,7 +75,7 @@ int com_sca(pkt_ptr,t_current)
    factor by which the energy changes "f" such that
    sigma_partial/sigma_tot = zrand */
 
-  zrand = gsl_rng_uniform(rng);
+  double zrand = gsl_rng_uniform(rng);
 
   if (xx <  THOMSON_LIMIT)
   {
@@ -89,7 +84,7 @@ int com_sca(pkt_ptr,t_current)
   }
   else
   {
-    f=choose_f(xx,zrand);
+    f = choose_f(xx,zrand);
 
     /* Check that f lies between 1.0 and (2xx  + 1) */
 
@@ -102,7 +97,6 @@ int com_sca(pkt_ptr,t_current)
     /* Prob of keeping gamma ray is...*/
 
     prob_gamma = 1./ f;
-
   }
 
   zrand = gsl_rng_uniform(rng);
@@ -133,7 +127,7 @@ int com_sca(pkt_ptr,t_current)
 
     scatter_dir (cmf_dir,cos_theta,new_dir);
 
-    test = dot(new_dir,new_dir);
+    double test = dot(new_dir,new_dir);
     if (fabs(1. - test) > 1.e-8)
     {
       printout("Not a unit vector - Compton. Abort. %g %g %g\n", f, xx, test);
@@ -161,7 +155,7 @@ int com_sca(pkt_ptr,t_current)
     pkt_ptr->dir[2] = final_dir[2];
 
     /*It now has a rest frame direction and a co-moving frequency.
-	Just need to set the rest frame energy.*/
+	   Just need to set the rest frame energy.*/
 
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
@@ -178,7 +172,7 @@ int com_sca(pkt_ptr,t_current)
     pkt_ptr->absorptiontype = -3;
   }
 
-  return(0);
+  return 0;
 }
 
 
@@ -191,16 +185,13 @@ int com_sca(pkt_ptr,t_current)
 double sigma_compton_partial(x, f)
      double x, f;
 {
-  double term1, term2, term3;
-  double tot;
+  double term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
+  double term2 = ( ((f*f) -1) / (f * f)) / 2;
+  double term3 = ( (f - 1) / x) * ( (1/x) + (2/f) + (1/(x*f)));
 
-  term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
-  term2 = ( ((f*f) -1) / (f * f)) / 2;
-  term3 = ( (f - 1) / x) * ( (1/x) + (2/f) + (1/(x*f)));
+  double tot = 3 * SIGMA_T * (term1 + term2 + term3) / (8 * x);
 
-  tot = 3 * SIGMA_T * (term1 + term2 + term3) / (8 * x);
-
-  return(tot);
+  return tot;
 }
 
 /**************************************************************/
@@ -211,20 +202,15 @@ double sigma_compton_partial(x, f)
 double choose_f(xx,zrand)
      double xx, zrand;
 {
-  double norm;
-  double fmax;
-  double fmin;
   double ftry, try;
-  double err;
-  int count;
 
-  fmax = 1 + (2*xx);
-  fmin = 1;
+  double fmax = 1 + (2 * xx);
+  double fmin = 1;
 
-  norm = zrand * sigma_compton_partial(xx, fmax);
+  double norm = zrand * sigma_compton_partial(xx, fmax);
 
-  count = 0;
-  err = 1e20;
+  int count = 0;
+  double err = 1e20;
 
   //printout("new\n");
 
@@ -252,29 +238,24 @@ double choose_f(xx,zrand)
     printout("Compton hit 1000 tries. %g %g %g %g %g\n", fmax, fmin, ftry, try, norm);
   }
 
-  return(ftry);
+  return ftry;
 }
 
 /******************************************************************/
 double thomson_angle()
 {
-  double mu;
-  double B_coeff;
-  double zrand;
-  double t_coeff;
-
   /*For Thomson scattering we can get the new angle from a random number very easily. */
 
-  zrand = gsl_rng_uniform(rng);
+  double zrand = gsl_rng_uniform(rng);
 
-  B_coeff = (8. * zrand) - 4.;
+  double B_coeff = (8. * zrand) - 4.;
 
-  t_coeff = sqrt( (B_coeff * B_coeff) + 4);
+  double t_coeff = sqrt( (B_coeff * B_coeff) + 4);
   t_coeff = t_coeff - B_coeff;
   t_coeff = t_coeff / 2;
   t_coeff = pow(t_coeff, (1./3));
 
-  mu = (1./t_coeff) - t_coeff;
+  double mu = (1./t_coeff) - t_coeff;
 
   if (fabs(mu) > 1)
   {
@@ -282,5 +263,5 @@ double thomson_angle()
     exit(0);
   }
 
-  return(mu);
+  return mu;
 }

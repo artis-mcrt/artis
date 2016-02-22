@@ -15,10 +15,9 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
   double emitt_energy;
   struct grid *grid_ptr;
   double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr);
-  double tfact;
 
   grid_ptr = &cell[ray_ptr->where];
-  tfact = pow((tmin/single_t), 3);
+  double tfact = pow((tmin/single_t), 3);
 
   if (gam_line_list.type[lindex] == NI_GAM_LINE_ID)
   {
@@ -73,7 +72,6 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
     exit(0);
   }
 
-
   /* I'm changing the next bit here (Jan 06) because I think what was
      here before (below) was wrong in the Doppler terms.
 
@@ -107,11 +105,10 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   /* It should account for the changes in the ray intensity due to
      continuum processes along the path. */
   PKT dummy;
-  double kap_compton, kap_photo_electric, kap_tot, tau_cont, kap_pair_prod;
   double sig_comp(), sig_photo_electric();
   double sig_pair_prod(), doppler();
   int get_velocity();
-  double vel_vec[3], dop_fac;
+  double vel_vec[3];
 
   /* Make a dummy packet that carries the ray properties. */
 
@@ -126,14 +123,14 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   dummy.where = ray_ptr->where;
   dummy.nu_cmf = ray_ptr->nu_cmf[nray];
 
-  kap_compton = sig_comp(&dummy,single_t);
-  kap_photo_electric = sig_photo_electric(&dummy, single_t);
-  kap_pair_prod = sig_pair_prod(&dummy, single_t);
-  kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
+  double kap_compton = sig_comp(&dummy,single_t);
+  double kap_photo_electric = sig_photo_electric(&dummy, single_t);
+  double kap_pair_prod = sig_pair_prod(&dummy, single_t);
+  double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
 
   /* For now no emissivity - only destruction. So very simple. */
 
-  tau_cont = kap_tot * ldist;
+  double tau_cont = kap_tot * ldist;
 
   ray_ptr->e_rf[nray] = ray_ptr->e_rf[nray] * exp(-1. * tau_cont);
 
@@ -142,7 +139,7 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   if (lindex != RED_OF_LIST)
   {
     get_velocity(single_pos, vel_vec, single_t);
-    dop_fac = 1./doppler(syn_dir, vel_vec);
+    double dop_fac = 1./doppler(syn_dir, vel_vec);
 
     if (tau_cont > 1.e-6)
     {
@@ -159,7 +156,7 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   /* This MUST be followed by a call to move_one_ray() in source
      since e_cmf is NOT reset here. */
 
-  return(0);
+  return 0;
 }
 
 /*******************************************************/
@@ -171,15 +168,12 @@ int compton_emiss_cont(pkt_ptr, dist, t_current)
 compton emissivity. Called with a packet that is about to travel a
 distance dist in the lab frame. Time at start of distance is t_current.*/
 
-  double mu_cmf;
   double vel_vec[3], cmf_dir[3], cmf_syn_dir[3];
   double dot();
   int get_velocity(), angle_ab();
   double doppler();
   double vec_len();
-  double f, dsigma_domega_cmf;
-  double freq_out, emiss_cont, dop_fac;
-  int lindex, get_nul();
+  int get_nul();
 
   /* First we need to know the scattering angle needed from the
 packet's direction of motion to the desired observer. Call this angle
@@ -190,7 +184,6 @@ motion and the local velocity vectors to the cmf.*/
   angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
   angle_ab(syn_dir, vel_vec, cmf_syn_dir);
 
-
   //  printout("pos %g %g %g\n", pkt_ptr->pos[0],pkt_ptr->pos[1], pkt_ptr->pos[2]);
   //  printout("dir %g %g %g\n", pkt_ptr->dir[0],pkt_ptr->dir[1], pkt_ptr->dir[2]);
   //  printout("vel %g %g %g\n", vel_vec[0], vel_vec[1], vel_vec[2]);
@@ -198,10 +191,7 @@ motion and the local velocity vectors to the cmf.*/
   //  printout("syn_dir %g %g %g\n", syn_dir[0], syn_dir[1], syn_dir[2]);
   //  printout("cmf_syn_dir %g %g %g\n", cmf_syn_dir[0], cmf_syn_dir[1], cmf_syn_dir[2]);
 
-
-
-
-  mu_cmf = dot(cmf_dir,cmf_syn_dir);
+  double mu_cmf = dot(cmf_dir,cmf_syn_dir);
 
   if (mu_cmf > 1 || mu_cmf < -1)
   {
@@ -212,7 +202,7 @@ motion and the local velocity vectors to the cmf.*/
   /* Now get the factor by which the frequency will change, f, for going
      in this direction. f = old energy / new eneregy - always should be > 1*/
 
-  f = 1 + (H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT * (1. - mu_cmf));
+  double f = 1 + (H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT * (1. - mu_cmf));
 
   //  printout("compton reducion factor %g freq %g mu %g\n", f, H*pkt_ptr->nu_cmf/MEV, mu_cmf );
 
@@ -220,10 +210,10 @@ motion and the local velocity vectors to the cmf.*/
      light will have frequency (nu_cmf / f) in the cmf frame. And it
      travels in direction syn_dir in the rf. */
 
-  freq_out = pkt_ptr->nu_cmf /f; /// doppler(syn_dir, vel_vec);
+  double freq_out = pkt_ptr->nu_cmf /f; /// doppler(syn_dir, vel_vec);
   // do we want ?/ doppler(syn_dir, vel_vec)
 
-  lindex = get_nul(freq_out); // This is the index of the next line to
+  int lindex = get_nul(freq_out); // This is the index of the next line to
                               // the red. The emissivity will go in this
                               // bin. However, since there's an offset
                               // in the emissivities, we shift the
@@ -240,7 +230,7 @@ motion and the local velocity vectors to the cmf.*/
     /* Then get partial crossection dsigma_domega in cmf */
     /* Coeff is 3 / 16 / PI */
 
-    dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f *
+    double dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f *
       (f + (1./f) + (mu_cmf*mu_cmf) - 1.);
 
     //speed = vec_len(vel_vec);
@@ -257,9 +247,9 @@ motion and the local velocity vectors to the cmf.*/
     /* so now determine the contribution to the emissivity and which
  frequency bin it should be in */
 
-    dop_fac = doppler(pkt_ptr->dir, vel_vec);
+    double dop_fac = doppler(pkt_ptr->dir, vel_vec);
 
-    emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
+    double emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
 
     /* For normalisation this needs to be
        1) divided by volume
@@ -283,7 +273,7 @@ motion and the local velocity vectors to the cmf.*/
 
   }
 
-  return(0);
+  return 0;
 }
 
 /*******************************************************/
@@ -320,17 +310,15 @@ int pp_emiss_cont(pkt_ptr, dist, t_current)
   /* Note (SS May 07) - the Doppler factors are not all sorted out yet - the expression used above needs to be
      consistent with what syn_lc does. */
 
-  return(0);
+  return 0;
 }
 
 
 /***********************************************/
 int zero_estimators()
 {
-  int i,n,m,element,ion;
-
   //for (n=0; n < ngrid; n++)
-  for (n=0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
     J[n] = 0.;
     #ifndef FORCE_LTE
@@ -349,9 +337,9 @@ int zero_estimators()
       kbfabs[n] = 0.;
       kgammadep[n] = 0.;
       */
-      for (element = 0; element < nelements; element++)
+      for (int element = 0; element < nelements; element++)
       {
-        for (ion = 0; ion < maxion; ion++)
+        for (int ion = 0; ion < maxion; ion++)
         {
           gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
           bfheatingestimator[n*nelements*maxion+element*maxion+ion] = 0.;
@@ -366,7 +354,7 @@ int zero_estimators()
     #endif
     // cell[n].heating_ff = 0.;
     // cell[n].heating_bf = 0.;
-    for (m=0; m < emiss_max; m++)
+    for (int m = 0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = 0.0;
     }
@@ -374,23 +362,20 @@ int zero_estimators()
     rpkt_emiss[n] = 0.0;
   }
 
-  return(0);
+  return 0;
 }
 
 
 /******************************************/
 int normalise_estimators(int nts)
 {
-  int n,m;
-  int assoc_cells;
   double vol_init(CELL *pkt_ptr);
-  double dfreq[EMISS_MAX], get_gam_freq();
-  double time_factor;
-  double volume;
+  double dfreq[EMISS_MAX];
+  double get_gam_freq();
 
-  time_factor = 1. / pow(time_step[nts].mid / tmin, 3.0) / time_step[nts].width;
+  double time_factor = 1. / pow(time_step[nts].mid / tmin, 3.0) / time_step[nts].width;
 
-  for (m=0; m < emiss_max; m++)
+  for (int m = 0; m < emiss_max; m++)
   {
     dfreq[m] = get_gam_freq(&gam_line_list, m + emiss_offset+1) -
       get_gam_freq(&gam_line_list, m + emiss_offset);
@@ -403,11 +388,11 @@ int normalise_estimators(int nts)
   }
 
   //for (n=0; n < ngrid; n++)
-  for (n=0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
-    assoc_cells = modelgrid[n].associated_cells;
-    volume = 1. / vol_init(&cell[n]);  ///That's not going to work if the parameter matters!!!!!!!!!!!!!!!!!!
-    for (m=0; m < emiss_max; m++)
+    int assoc_cells = modelgrid[n].associated_cells;
+    double volume = 1. / vol_init(&cell[n]);  ///That's not going to work if the parameter matters!!!!!!!!!!!!!!!!!!
+    for (int m = 0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = compton_emiss[n][m] * time_factor * volume / nprocs / assoc_cells;
 
@@ -418,21 +403,18 @@ int normalise_estimators(int nts)
       }
     }
   }
-  return(0);
-}
 
+  return 0;
+}
 
 /*************************************************/
 int write_estimators(nts)
      int nts;
 {
-  int n,m;
   FILE *est_file, *dummy;
   char chch;
   char filename[100] = "est_";
   char junk[100];
-  int i;
-  float dum;
 
   if ((dummy = fopen("dummy", "w+")) == NULL)
   {
@@ -446,11 +428,11 @@ int write_estimators(nts)
     printout("Cannot open dummy.\n");
     exit(0);
   }
-  i=0;
+  int i = 0;
   while ((chch=fgetc(dummy)) != EOF)
   {
     junk[i] = chch;
-    i= i+1;
+    i = i+1;
   }
   junk[i] = '\0';
   fclose(dummy);
@@ -467,10 +449,11 @@ int write_estimators(nts)
     }
 
       //for (n=0; n < ngrid; n++)
-    for (n=0; n < npts_model; n++)
+    for (int n = 0; n < npts_model; n++)
     {
-      for (m=0; m < emiss_max; m++)
+      for (int m = 0; m < emiss_max; m++)
 	    {
+        float dum;
 	      fread(&dum, sizeof(float), 1, est_file);
 	      //fscanf(est_file, "%g", &dum);
 	      compton_emiss[n][m] += dum;
@@ -478,7 +461,6 @@ int write_estimators(nts)
     }
     fclose(est_file);
   }
-
 
   if ((est_file = fopen(filename, "wb+")) == NULL)
   {
@@ -488,32 +470,28 @@ int write_estimators(nts)
 
 
   //for (n=0; n < ngrid; n++)
-  for (n=0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
-    for (m=0; m < emiss_max; m++)
+    for (int m = 0; m < emiss_max; m++)
     {
       fwrite(&compton_emiss[n][m], sizeof(float), 1, est_file);
     }
   }
   fclose(est_file);
-  return(0);
+  return 0;
 }
 
 /***********************************************/
 int estim_switch(nts)
      int nts; //index for time step
 {
-  int on_or_off;
-  double tstart, tend;
-  double ts_want, te_want;
+  int on_or_off = 1; //on
 
-  on_or_off = 1; //on
+  double tstart = time_step[nts].start;
+  double tend = time_step[nts].start + time_step[nts].width;
 
-  tstart = time_step[nts].start;
-  tend = time_step[nts].start + time_step[nts].width;
-
-  ts_want = time_syn[0] * ((1. - rmax/tmin/CLIGHT_PROP));
-  te_want = time_syn[nsyn_time-1] * (1. + rmax/tmin/CLIGHT_PROP);
+  double ts_want = time_syn[0] * ((1. - rmax/tmin/CLIGHT_PROP));
+  double te_want = time_syn[nsyn_time-1] * (1. + rmax/tmin/CLIGHT_PROP);
 
   if (tstart > te_want)
   {
@@ -525,7 +503,7 @@ int estim_switch(nts)
     on_or_off = 0;
   }
 
-  return(on_or_off);
+  return on_or_off;
 }
 
 /*************************************************/
@@ -533,13 +511,10 @@ int emiss_load(nts)
      int nts;
 {
   /* Routine to read in the stored estimators for the time step that is about to begin. */
-  int n,m;
   FILE *est_file, *dummy;
   char chch;
   char filename[100] = "est_";
   char junk[100];
-  int i;
-  float dum;
 
   if ((dummy = fopen("dummy", "w+")) == NULL)
   {
@@ -553,11 +528,11 @@ int emiss_load(nts)
     printout("Cannot open dummy.\n");
     exit(0);
   }
-  i=0;
+  int i = 0;
   while ((chch=fgetc(dummy)) != EOF)
   {
     junk[i] = chch;
-    i= i+1;
+    i = i+1;
   }
   junk[i] = '\0';
   fclose(dummy);
@@ -573,15 +548,16 @@ int emiss_load(nts)
 
 
   //for (n=0; n < ngrid; n++)
-  for (n=0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
-    for (m=0; m < emiss_max; m++)
+    for (int m = 0; m < emiss_max; m++)
     {
+      float dum;
       fscanf(est_file, "%g", &dum);
       compton_emiss[n][m] = dum;
     }
   }
   fclose(est_file);
-  return(0);
+  return 0;
 }
 /***********************************************/

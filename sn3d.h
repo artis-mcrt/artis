@@ -343,10 +343,10 @@ double time_syn[MSYN_TIME];
 double DeltaA; /* area used for syn */ ///possible to do this as local variable?
 
 #define EMISS_MAX 2 /* Maxmimum number of frequency points in
-			     grid used to store emissivity estimators. */
-int emiss_offset; /*the index in the line list of the 1st line for which
-		    an emissivity estimator is recorded*/
-int emiss_max; /* actual number of frequency points in emissivity grid */
+                       grid used to store emissivity estimators. */
+int emiss_offset;   /* the index in the line list of the 1st line for which
+                       an emissivity estimator is recorded*/
+int emiss_max;      /* actual number of frequency points in emissivity grid */
 
 
 modelgrid_t modelgrid[MMODELGRID+1];

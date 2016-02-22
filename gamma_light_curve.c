@@ -5,8 +5,7 @@
 
 /* Routine to make a MC angle-dependent light curve for the gamma-packets. */
 
-int
-make_gamma_light_curve()
+int make_gamma_light_curve()
 {
   int gather_gamma_light_curve();
   int write_gamma_light_curve();
@@ -17,8 +16,7 @@ make_gamma_light_curve()
 }
 /**********************************************************************/
 
-int
-gather_gamma_light_curve(my_rank)
+int gather_gamma_light_curve(my_rank)
      int my_rank;
 {
   void read_packets(FILE *packets_file);
@@ -87,8 +85,7 @@ gather_gamma_light_curve(my_rank)
   return(0);
 }
 /***********************************************************************************/
-int
-write_gamma_light_curve()
+int write_gamma_light_curve()
 {
   FILE *lc_gamma_file;
   int m,nn;
@@ -111,10 +108,10 @@ write_gamma_light_curve()
     {
       fscanf(lc_gamma_file, "%g", &dum1);
       for (nn=0; nn < MANGLCBINS; nn++)
-	    {
-	      fscanf(lc_gamma_file, " %g ",&dum2);
-	      save[m][nn]=dum2;
-	    }
+      {
+        fscanf(lc_gamma_file, " %g ",&dum2);
+        save[m][nn]=dum2;
+      }
     }
     fclose(lc_gamma_file);
   }
@@ -124,8 +121,8 @@ write_gamma_light_curve()
     {
       for (nn=0; nn < MANGLCBINS; nn++)
       {
-	      save[m][nn]=0.0;
-	    }
+        save[m][nn]=0.0;
+      }
     }
   }
 

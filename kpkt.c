@@ -27,7 +27,6 @@ void calculate_kpkt_rates(int modelgridindex)
   //double alpha_sp,modified_alpha_sp;
   double nncurrention,nnnextionlevel;
   double epsilon_current,epsilon_upper,epsilon_trans;
-  int element,ion,level,upper,phixstargetindex;
   int nlevels_currention,ionisinglevels;
   int i,ii,lineindex;
   int ioncharge;
@@ -58,14 +57,14 @@ void calculate_kpkt_rates(int modelgridindex)
   //C_ion = 0.;  /// collisional ionisation of macroatoms
   contrib = 0.;
   i = 0;
-  for (element=0; element < nelements; element++)
+  for (int element = 0; element < nelements; element++)
   {
     //printout("[debug] do_kpkt: element %d\n",element);
     mastate[tid].element = element;
     nions = get_nions(element);
     //if (get_abundance(modelgridindex,element) > 0.)
     //{
-      for (ion=0; ion < nions; ion++)
+      for (int ion = 0; ion < nions; ion++)
       {
         C_ion = 0.;
         //printout("[debug] do_kpkt: ion %d\n",ion);
@@ -96,7 +95,7 @@ void calculate_kpkt_rates(int modelgridindex)
           i += 1;
         }
 
-        for (level = 0; level < nlevels_currention; level++)
+        for (int level = 0; level < nlevels_currention; level++)
         {
           //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
           epsilon_current = epsilon(element,ion,level);
@@ -110,7 +109,7 @@ void calculate_kpkt_rates(int modelgridindex)
           nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
           for (ii = 1; ii <= nuptrans; ii++)
           {
-            upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
+            int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
             lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
             //printout("    excitation to level %d possible\n",upper);
             //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
@@ -140,9 +139,9 @@ void calculate_kpkt_rates(int modelgridindex)
             /// -------------------------------------
 
             C = 0.0;
-            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
-              upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+              int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
               epsilon_upper = epsilon(element,ion+1,upper);
               epsilon_trans = epsilon_upper - epsilon_current;
               //printout("cooling list: col_ionization\n");
@@ -173,7 +172,7 @@ void calculate_kpkt_rates(int modelgridindex)
             //epsilon_upper = epsilon(element,ion+1,0);
             //E_threshold = epsilon_upper - epsilon_current;
             C = 0.0;
-            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
                 C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
             }
@@ -278,7 +277,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
   //double alpha_sp,modified_alpha_sp;
   double nncurrention,nnnextionlevel;
   double epsilon_current,epsilon_upper,epsilon_trans;
-  int level,upper,phixstargetindex;
+  int level,upper;
   int nlevels_currention,ionisinglevels;
   int i,ii,lineindex;
   int ioncharge;
@@ -383,7 +382,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
       /// for speed issues (reduced number of calls to epsilon) it is now done also
       /// here explicitly
       C = 0.0;
-      for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+      for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
         upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
         epsilon_upper = epsilon(element,ion+1,upper);
@@ -417,7 +416,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
       //epsilon_upper = epsilon(element,ion+1,0);
       //E_threshold = epsilon_upper - epsilon_current;
       C = 0.0;
-      for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+      for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
         C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
       }

@@ -15,10 +15,7 @@ int update_packets(int nts)
   void determine_kpkt_cuts(int cellnumber);
   //void calculate_kpkt_rates(int cellnumber);
   void calculate_levelpops(int cellnumber);
-  int n; ///loop variable
-  int mgi;
   PKT *pkt_ptr;
-  double ts, tw;
   int packet_prop();
   int pellet_decay();
   //double n_1;
@@ -29,8 +26,8 @@ int update_packets(int nts)
   matter. Those that are photons (or one sort or another) will already have a position and
   a direction.*/
 
-  ts = time_step[nts].start;
-  tw = time_step[nts].width;
+  double ts = time_step[nts].start;
+  double tw = time_step[nts].width;
 
   /*for (n = 0; n < npkts; n++)
   {
@@ -56,7 +53,7 @@ int update_packets(int nts)
     {
       #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
   #endif
-      for (n = 0; n < npkts; n++)
+      for (int n = 0; n < npkts; n++)
       {
         //printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
         if (n % 500 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
@@ -72,7 +69,7 @@ int update_packets(int nts)
 
         if (debuglevel == 2) printout("[debug] update_packets: updating packet %d for timestep %d __________________________\n",n,nts);
 
-        mgi = cell[pkt_ptr->where].modelgridindex;
+        int mgi = cell[pkt_ptr->where].modelgridindex;
         /// for non empty cells update the global available level populations and cooling terms
         if (mgi != MMODELGRID)
         {
@@ -198,7 +195,7 @@ int update_packets(int nts)
 
   printout("end of update_packets parallel for loop %d\n",time(NULL));
   //printout("[debug] update_packets: packet %d updated for timestep %d\n",n,nts);
-  return(0);
+  return 0;
 }
 
 
@@ -311,9 +308,6 @@ void update_cell(int cellnumber)
   double get_groundlevelpop(int cellnumber, int element, int ion);
   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
   int get_nphixstargets(int element, int ion, int level);
-  int element,ion,level,phixstargetindex;
-  double population;
-  int nions,nlevels;
 
   updatecellcounter += 1;
 
@@ -324,19 +318,19 @@ void update_cell(int cellnumber)
   /// Calculate the level populations for this cell, and flag the other entries
   /// as empty.
   //printout("update cell %d at histindex %d\n",cellnumber,histindex);
-  for (element = 0; element < nelements; element++)
+  for (int element = 0; element < nelements; element++)
   {
-    nions = get_nions(element);
-    for (ion = 0; ion < nions; ion++)
+    int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
     {
       cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution = COOLING_UNDEFINED;
-      nlevels = get_nlevels(element,ion);
-      for (level = 0; level < nlevels; level++)
+      int nlevels = get_nlevels(element,ion);
+      for (int level = 0; level < nlevels; level++)
       {
-        population = calculate_exclevelpop(cellnumber,element,ion,level);
+        double population = calculate_exclevelpop(cellnumber,element,ion,level);
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
 
-        for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = -99.;
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = -99.;

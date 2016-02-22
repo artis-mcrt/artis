@@ -2,8 +2,7 @@
 
 /* Stuff for photo electric effect scattering. */
 
-double
-sig_photo_electric(pkt_ptr,t_current)
+double sig_photo_electric(pkt_ptr,t_current)
      PKT *pkt_ptr;
      double t_current;
 {

@@ -9,7 +9,6 @@ int packet_prop(pkt_ptr, t1, t2, nts)
      double t1, t2;
      int nts; //the time step we are doing
 {
-  double t_current;
   double do_gamma();
   double do_rpkt();
   double do_rpkt_thickcell();
@@ -17,16 +16,14 @@ int packet_prop(pkt_ptr, t1, t2, nts)
   double do_kpkt_bb();
   double do_kpkt_ffonly();
   double do_ma();
-  int end_packet;
   double t_change_type;
 
-  end_packet = 0;  //means "keep working"
+  int end_packet = 0;  //means "keep working"
 
-  t_current = t1;
+  double t_current = t1;
 
   /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
-
 
   while (end_packet == 0)
   {
@@ -148,5 +145,5 @@ int packet_prop(pkt_ptr, t1, t2, nts)
 
   }
 
-  return(0);
+  return 0;
 }

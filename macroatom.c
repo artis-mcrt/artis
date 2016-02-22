@@ -295,14 +295,11 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         C = 0.0;
         for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
-          if (get_phixsupperlevel(element,ion,level,phixstargetindex) == upper)
-          {
-            epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            R = photoionization(modelgridindex,phixstargetindex,epsilon_trans);
-            C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
-            printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g, saved_internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current,cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher);
-            break;
-          }
+          upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+          epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
+          R += photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+          C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
+          printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g, saved_internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current,cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher);
         }
 
         double T_R = get_TR(modelgridindex);
@@ -683,7 +680,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       //nlevels = get_nlevels(element,ion-1);
       nlevels = get_bfcontinua(element,ion-1);
       //nlevels = get_ionisinglevels(element,ion-1);
-      for (lower=0; lower < nlevels; lower++)
+      for (lower = 0; lower < nlevels; lower++)
       {
         epsilon_target = epsilon(element,ion-1,lower);
         epsilon_trans = epsilon_current - epsilon_target;
@@ -1040,20 +1037,19 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
   double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   int get_nphixstargets(int element, int ion, int level);
   int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-  double R;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int upper = mastate[tid].level;
-  int phixstargetindex;
+  double nnlevel = mastate[tid].nnlevel;
   double nne = get_nne(modelgridindex);
 
-  R = 0.0;
-  for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
+  double R = 0.0;
+  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
     {
-      R = mastate[tid].nnlevel * nne * get_spontrecombcoeff(element,ion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
+      R = nnlevel * nne * get_spontrecombcoeff(element,ion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
       //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
       break;
     }
@@ -1080,7 +1076,6 @@ double photoionization(int modelgridindex, int phixstargetindex, double epsilon_
   double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   int get_nphixstargets(int element, int ion, int level);
   int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-  double R;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -1094,8 +1089,8 @@ double photoionization(int modelgridindex, int phixstargetindex, double epsilon_
     }
   #endif
 
-  R = mastate[tid].nnlevel * get_corrphotoioncoeff(element,ion,lower,phixstargetindex,modelgridindex);
-  //R = get_corrphotoionrate(element,ion,lower,pkt_ptr->where);
+  double R = mastate[tid].nnlevel * get_corrphotoioncoeff(element,ion,lower,phixstargetindex,modelgridindex);
+  //double R = get_corrphotoionrate(element,ion,lower,pkt_ptr->where);
 
   #ifdef DEBUG_ON
     //printout("[photoionization] R %g\n",R);
@@ -1120,8 +1115,6 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   double coll_str(int lineindex);
   double statw_up(int lineindex);
   double statw_down(int lineindex);
-  double fac1;
-  double nne,T_e;
   double C;
   double g_bar,test,Gamma;
 
@@ -1138,14 +1131,13 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
     }
   #endif
 
-  T_e = get_Te(modelgridindex);
-  fac1 = epsilon_trans/KB/T_e;
-  nne = get_nne(modelgridindex);
+  double T_e = get_Te(modelgridindex);
+  double fac1 = epsilon_trans/KB/T_e;
+  double nne = get_nne(modelgridindex);
 
   if (coll_str(lineindex) > 0.0) //positive values are treated as effective collision strengths
   {
     //from Osterbrock and Ferland, p51
-
     C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) * exp(-fac1) / statw_down(lineindex);
     //test test
     //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
@@ -1189,14 +1181,14 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
     if (debuglevel == 777)
       printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
     if (!isfinite(C))
-	{
-	  printout("fatal a5: abort\n");
-	  printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
-	  printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-	  printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
-	  printout("[debug] col_exc: coll_str(lineindex) %g statw_up(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_up(lineindex),mastate[tid].statweight);
-	  abort();
-	}
+    {
+      printout("fatal a5: abort\n");
+      printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
+      printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
+      printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
+      printout("[debug] col_exc: coll_str(lineindex) %g statw_up(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_up(lineindex),mastate[tid].statweight);
+      abort();
+    }
   #endif
   return C;
 }
@@ -1211,10 +1203,7 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
   double epsilon(int element, int ion, int level);
   double photoionization_crosssection(double nu_edge, double nu);
-  double nu_lower;
-  double fac1,sigma_bf;
-  double nne,T_e;
-  double g,C;
+  double g;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -1229,11 +1218,11 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
     abort();
   }
 
-  T_e = get_Te(modelgridindex);
-  nne = get_nne(modelgridindex);
+  double T_e = get_Te(modelgridindex);
+  double nne = get_nne(modelgridindex);
 
-  nu_lower = epsilon_trans/H;
-  fac1 = epsilon_trans/KB/T_e;
+  double nu_lower = epsilon_trans/H;
+  double fac1 = epsilon_trans/KB/T_e;
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge
@@ -1245,8 +1234,8 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   else
     g = 0.3;
 
-  sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion,lower,phixstargetindex);
-  C = n_l*nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1)/fac1; ///photoionization at the edge
+  double sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion,lower,phixstargetindex);
+  double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
   #ifdef DEBUG_ON
     if (debuglevel == 777)
@@ -1270,8 +1259,6 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
   double osc_strength(int lineindex);
   double coll_str(int lineindex);
   double epsilon(int element, int ion, int level);
-  double fac1;
-  double nne,T_e;
   double C;
   double g_bar,test,Gamma,g_ratio;
 
@@ -1288,9 +1275,9 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
     }
   #endif
 
-  T_e = get_Te(modelgridindex);
-  fac1 = epsilon_trans/KB/T_e;
-  nne = get_nne(modelgridindex);
+  double T_e = get_Te(modelgridindex);
+  double fac1 = epsilon_trans/KB/T_e;
+  double nne = get_nne(modelgridindex);
 
   if (coll_str(lineindex) > 0.0) //positive values are treated as effective collision strengths
   {
@@ -1354,8 +1341,8 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
 
 
 ///***************************************************************************/
-double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 /// collisional recombination rate: paperII 3.5.1
+double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 {
   double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double photoionization_crosssection(double nu_edge, double nu);
@@ -1363,31 +1350,26 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
   int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
   float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
   int get_ionstage(int element, int ion);
-  double nu_lower;
-  double fac1;
-  double nne,T_e;
-  double sigma_bf,g,C;
-  int phixstargetindex;
+  double g,C;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int upper = mastate[tid].level;
   double n_u = mastate[tid].nnlevel;
-  int ionstage;
 
-  nu_lower = epsilon_trans/H;
-  T_e = get_Te(modelgridindex);
-  fac1 = epsilon_trans/KB/T_e;
-  nne = get_nne(modelgridindex);
+  double nu_lower = epsilon_trans/H;
+  double T_e = get_Te(modelgridindex);
+  double fac1 = epsilon_trans/KB/T_e;
+  double nne = get_nne(modelgridindex);
 
   C = 0.0;
-  for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
+  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
     {
       ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
       ///select gaunt factor according to ionic charge
-      ionstage = get_ionstage(element,ion);
+      int ionstage = get_ionstage(element,ion);
       #ifdef DEBUG_ON
         if (debuglevel == 777) printout("ionstage %d\n",ionstage);
       #endif
@@ -1399,13 +1381,13 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
         g = 0.3;
       mastate[tid].ion = ion-1;      ///the same for mastate[tid].ion
       mastate[tid].level = lower;    ///set mastate[tid].level the lower level for photoionization_crosssection
-      sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion-1,lower,phixstargetindex);
+      double sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion-1,lower,phixstargetindex);
       #ifdef DEBUG_ON
         if (debuglevel == 777) printout("sigma_bf %g\n",sigma_bf);
       #endif
       mastate[tid].ion = ion;
       mastate[tid].level = upper;    ///restore the old values of pkt_ptr
-      C = n_u*nne*nne * get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans) * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1)/fac1;
+      C = n_u * nne * nne * get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans) * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
       #ifdef DEBUG_ON
         if (debuglevel == 777)
@@ -1431,24 +1413,17 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 double radfield(double nu, int modelgridindex)
 /// calculates ambient radiation field, which is parameterised as a diluted black body
 {
-  double B;
-  double T_R,W;
+  double T_R = get_TR(modelgridindex);
+  double W   = get_W(modelgridindex);
 
-  T_R = get_TR(modelgridindex);
-  W   = get_W(modelgridindex);
-
-  B = W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T_R) - 1);
-  return B;
+  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T_R) - 1);
 }
 
 ///***************************************************************************/
 double radfield2(double nu, double T, double W)
 /// calculates ambient radiation field, which is parameterised as a diluted black body
 {
-  double B;
-
-  B = W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T) - 1);
-  return B;
+  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T) - 1);
 }
 
 

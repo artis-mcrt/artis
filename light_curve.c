@@ -17,7 +17,6 @@ int make_light_curve()
 
 void init_light_curve(void)
 {
-  int n;
   if (ntlcbins > MTLCBINS)
   {
     printout("Too many time bins in light curve - reducing.\n");
@@ -30,7 +29,7 @@ void init_light_curve(void)
   ///Should be moved to input.c or exspec.c
   dlogtlc = (log(tmax) - log(tmin))/ntlcbins;
 
-  for (n = 0; n < ntlcbins; n++)
+  for (int n = 0; n < ntlcbins; n++)
   {
     light_curve[n].lower_time = exp( log(tmin) + (n * (dlogtlc)));
     light_curve[n].delta_t = exp( log(tmin) + ((n+1) * (dlogtlc))) - light_curve[n].lower_time;
@@ -44,7 +43,6 @@ void init_light_curve(void)
 /**********************************************************************/
 int write_light_curve(FILE *lc_file, int current_abin)
 {
-  int m;
   /*
   FILE *lc_file;
   double save2[MTSTEP][2];
@@ -54,42 +52,41 @@ int write_light_curve(FILE *lc_file, int current_abin)
   /// Light curve is done - write it out.
   /// If needed, start by reading in existing file and storing old numbers.
   if (file_set == 1)
+  {
+    if ((lc_file = fopen("light_curve.out", "r")) == NULL)
     {
-      if ((lc_file = fopen("light_curve.out", "r")) == NULL){
-	printout("Cannot open lc_file.txt.\n");
-	exit(0);
-      }
-      for (m=0; m < ntlcbins; m++)
-	{
-	  fscanf(lc_file, "%g %g %g\n", &dum1, &dum2, &dum3);
-	  save[m][0]=dum2;
-	  save[m][1]=dum3;
-	}
-
-      for (m=0; m < ntstep; m++)
-	{
-	  fscanf(lc_file, "%g %g %g\n", &dum1, &dum2, &dum3);
-	  save2[m][0]=dum2;
-	  save2[m][1]=dum3;
-	}
-      fclose(lc_file);
+      printout("Cannot open lc_file.txt.\n");
+      exit(0);
     }
+    for (int m = 0; m < ntlcbins; m++)
+    {
+        fscanf(lc_file, "%g %g %g\n", &dum1, &dum2, &dum3);
+        save[m][0]=dum2;
+        save[m][1]=dum3;
+  	}
+
+    for (int m = 0; m < ntstep; m++)
+    {
+      fscanf(lc_file, "%g %g %g\n", &dum1, &dum2, &dum3);
+      save2[m][0]=dum2;
+      save2[m][1]=dum3;
+    }
+    fclose(lc_file);
+  }
   else
+  {
+    for (int m = 0; m < ntlcbins; m++)
     {
-      for (m=0; m < ntlcbins; m++)
-	{
-	  save[m][0]=0.0;
-	  save[m][1]=0.0;
-	}
-
-      for (m=0; m < ntstep; m++)
-	{
-	  save2[m][0]=0.0;
-	  save2[m][1]=0.0;
-	}
+      save[m][0]=0.0;
+      save[m][1]=0.0;
     }
 
-
+    for (int m = 0; m < ntstep; m++)
+    {
+      save2[m][0]=0.0;
+      save2[m][1]=0.0;
+    }
+  }
 
 
   if ((lc_file = fopen("light_curve.out", "w+")) == NULL){
@@ -97,26 +94,23 @@ int write_light_curve(FILE *lc_file, int current_abin)
     exit(0);
   }
 
-  for (m=0; m < ntlcbins; m++)
-    {
-      fprintf(lc_file, "%g %g %g\n", sqrt(light_curve[m].lower_time*(light_curve[m].lower_time + light_curve[m].delta_t))/DAY, ((light_curve[m].lum/LSUN) + save[m][0]), ((light_curve_cmf[m].lum/LSUN) + save[m][1]));
-    }
+  for (int m = 0; m < ntlcbins; m++)
+  {
+    fprintf(lc_file, "%g %g %g\n", sqrt(light_curve[m].lower_time*(light_curve[m].lower_time + light_curve[m].delta_t))/DAY, ((light_curve[m].lum/LSUN) + save[m][0]), ((light_curve_cmf[m].lum/LSUN) + save[m][1]));
+  }
 
   /// Now print out the gamma ray deposition rate in the same file.
 
-  for (m=0; m < ntstep; m++)
-    {
-      fprintf(lc_file, "%g %g %g\n", time_step[m].mid/DAY, save2[m][0] + (time_step[m].gamma_dep/LSUN/time_step[m].width), save2[m][1] + (time_step[m].cmf_lum/time_step[m].width/LSUN));
-    }
-
+  for (int m = 0; m < ntstep; m++)
+  {
+    fprintf(lc_file, "%g %g %g\n", time_step[m].mid/DAY, save2[m][0] + (time_step[m].gamma_dep/LSUN/time_step[m].width), save2[m][1] + (time_step[m].cmf_lum/time_step[m].width/LSUN));
+  }
 
   fclose(lc_file);
   */
 
-
-
   /// Print out the UVOIR bolometric light curve.
-  for (m=0; m < ntlcbins; m++)
+  for (int m = 0; m < ntlcbins; m++)
   {
     fprintf(lc_file, "%g %g %g\n", sqrt(light_curve[m].lower_time*(light_curve[m].lower_time + light_curve[m].delta_t))/DAY, (light_curve[m].lum/LSUN), (light_curve_cmf[m].lum/LSUN));
   }
@@ -124,7 +118,7 @@ int write_light_curve(FILE *lc_file, int current_abin)
   if (current_abin == -1)
   {
     /// Now print out the gamma ray deposition rate in the same file.
-    for (m=0; m < ntstep; m++)
+    for (int m = 0; m < ntstep; m++)
     {
       fprintf(lc_file, "%g %g %g\n", time_step[m].mid/DAY, (time_step[m].gamma_dep/LSUN/time_step[m].width),  (time_step[m].cmf_lum/time_step[m].width/LSUN));
     }
@@ -141,16 +135,14 @@ int gather_light_curve(void)
   int add_to_lc(EPKT *pkt_ptr);
   //void read_packets(FILE *packets_file);
   EPKT *pkt_ptr;
-  int p;
   //int i,n,p;
-
 
   /// Set up the light curve grid and initialise the bins to zero.
   init_light_curve();
 
   /// Now add the energy of all the escaping packets to the
   /// appropriate bins.
-  for (p = 0; p < nepkts; p++)
+  for (int p = 0; p < nepkts; p++)
   {
     pkt_ptr = &epkts[p];
     add_to_lc(pkt_ptr);
@@ -158,7 +150,6 @@ int gather_light_curve(void)
 
   return(0);
 }
-
 
 
 
@@ -172,7 +163,6 @@ int add_to_lc(EPKT *pkt_ptr)
   double t_arrive;
   int nt;
 
-
   /// Put this into the time grid
   t_arrive = pkt_ptr->arrive_time;
   if (t_arrive > tmin && t_arrive < tmax)
@@ -180,7 +170,6 @@ int add_to_lc(EPKT *pkt_ptr)
     nt = (log(t_arrive) - log(tmin)) / dlogtlc;
     light_curve[nt].lum += pkt_ptr->e_rf / light_curve[nt].delta_t / nprocs;
   }
-
 
   /// Now do the cmf light curve.
   //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHT2));
@@ -192,7 +181,6 @@ int add_to_lc(EPKT *pkt_ptr)
   }
 
   return(0);
-
 }
 
 
@@ -205,14 +193,13 @@ int gather_light_curve_res(int current_abin)
   int add_to_lc_res(EPKT *pkt_ptr, int current_abin);
   void init_light_curve(void);
   EPKT *pkt_ptr;
-  int p;
 
   /// Set up the light curve grid and initialise the bins to zero.
   init_light_curve();
 
   /// Now add the energy of all the escaping packets to the
   /// appropriate bins.
-  for (p = 0; p < nepkts; p++)
+  for (int p = 0; p < nepkts; p++)
   {
     pkt_ptr = &epkts[p];
     add_to_lc_res(pkt_ptr,current_abin);

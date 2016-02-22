@@ -2,15 +2,10 @@
 
 /* Material for handing gamma rays - creation and propagation. */
 
-int
-pellet_decay(nts,pkt_ptr)
+int pellet_decay(nts,pkt_ptr)
      int nts;
      PKT *pkt_ptr;
 {
-
-  double zrand;
-  double zrand2;
-  double mu, phi, sintheta;
   double vec_len();
   double dummy_dir[3], vel_vec[3];
   int get_velocity();
@@ -39,15 +34,15 @@ pellet_decay(nts,pkt_ptr)
 
   /*Now let's give the gamma ray a direction. */
 
-  zrand = gsl_rng_uniform(rng);
-  zrand2 = gsl_rng_uniform(rng);
+  double zrand = gsl_rng_uniform(rng);
+  double zrand2 = gsl_rng_uniform(rng);
 
   /*Assuming isotropic emission in cmf, use these two random numbers to set
   up a cmf direction in cos(theta) and phi. */
 
-  mu = -1 + (2.*zrand);
-  phi = zrand2 * 2 * PI;
-  sintheta = sqrt(1. - (mu * mu));
+  double mu = -1 + (2.*zrand);
+  double phi = zrand2 * 2 * PI;
+  double sintheta = sqrt(1. - (mu * mu));
 
   pkt_ptr->dir[0] = sintheta * cos(phi);
   pkt_ptr->dir[1] = sintheta * sin(phi);
@@ -77,10 +72,8 @@ pellet_decay(nts,pkt_ptr)
 
   choose_gamma_ray(pkt_ptr);
 
-
   /* Finally we want to put in the rest frame energy and frequency. And record
   that it's now a gamma ray.*/
-
 
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
 
@@ -113,19 +106,16 @@ pellet_decay(nts,pkt_ptr)
 
 /******************************************************/
 
-int
-choose_gamma_ray(pkt_ptr)
+int choose_gamma_ray(pkt_ptr)
     PKT *pkt_ptr;
 {
-  double zrand, runtot;
-  int n;
   /* Routine to choose which gamma ray line it'll be. */
 
   if (pkt_ptr->type == TYPE_NICKEL_PELLET)
   {
-    n=0;
-    runtot=0.0;
-    zrand = gsl_rng_uniform(rng);
+    int n = 0;
+    double runtot = 0.0;
+    double zrand = gsl_rng_uniform(rng);
     while (zrand > runtot)
     {
       runtot += nickel_spec.probability[n] * nickel_spec.energy[n] / ENICKEL;
@@ -144,9 +134,9 @@ choose_gamma_ray(pkt_ptr)
   }
   else if (pkt_ptr->type == TYPE_COBALT_PELLET)
   {
-    n=0;
-    runtot=0.0;
-    zrand = gsl_rng_uniform(rng);
+    int n = 0;
+    double runtot = 0.0;
+    double zrand = gsl_rng_uniform(rng);
     while (zrand > runtot)
     {
       runtot += cobalt_spec.probability[n] * cobalt_spec.energy[n] / ECOBALT_GAMMA;
@@ -165,9 +155,9 @@ choose_gamma_ray(pkt_ptr)
   }
   else if (pkt_ptr->type == TYPE_48CR_PELLET)
   {
-    n=0;
-    runtot=0.0;
-    zrand = gsl_rng_uniform(rng);
+    int n = 0;
+    double runtot = 0.0;
+    double zrand = gsl_rng_uniform(rng);
     while (zrand > runtot)
     {
       runtot += cr48_spec.probability[n] * cr48_spec.energy[n] / E48CR;
@@ -186,9 +176,9 @@ choose_gamma_ray(pkt_ptr)
   }
   else if (pkt_ptr->type == TYPE_48V_PELLET)
   {
-    n=0;
-    runtot=0.0;
-    zrand = gsl_rng_uniform(rng);
+    int n = 0;
+    double runtot = 0.0;
+    double zrand = gsl_rng_uniform(rng);
     while (zrand > runtot)
     {
       runtot += v48_spec.probability[n] * v48_spec.energy[n] / E48V;
@@ -221,44 +211,36 @@ choose_gamma_ray(pkt_ptr)
 a gamma packet with known properties at time t1 and we want to follow it
 until time t2. */
 
-double
-      do_gamma (pkt_ptr, t1, t2)
+double do_gamma (pkt_ptr, t1, t2)
       PKT *pkt_ptr;
      double t1, t2;
 {
-  double t_current;
-  double sdist, tdist,edist;
-  int snext;
-  double zrand;
   double boundary_cross();
-  double tau_next, tau_current;
   int move_pkt(PKT *pkt_ptr, double distance, double time);
   int change_cell();
-  int end_packet; //tells us when to stop working on this packet
-  double kap_tot, kap_compton, kap_photo_electric, kap_pair_prod;
   double sig_comp();
   double sig_photo_electric();
   double sig_pair_prod();
   int com_sca(), compton_emiss_cont(), rlc_emiss_gamma(), pair_prod();
   int pp_emiss_cont();
 
-  end_packet = 0; //means "keep working"
+  double t_current = t1; //this will keep track of time in the calculation
 
-  t_current = t1; //this will keep track of time in the calculation
-
+  int end_packet = 0; //tells us when to stop working on this packet
   while (end_packet == 0)
   {
-      /* Assign optical depth to next physical event. And start counter of
+    /* Assign optical depth to next physical event. And start counter of
     optical depth for this path.*/
-    zrand = gsl_rng_uniform(rng);
-    tau_next = -1. * log(zrand);
-    tau_current = 0.0;
+    double zrand = gsl_rng_uniform(rng);
+    double tau_next = -1. * log(zrand);
+    double tau_current = 0.0;
 
       /* Start by finding the distance to the crossing of the grid cell
     boundaries. sdist is the boundary distance and snext is the
     grid cell into which we pass.*/
 
-    sdist = boundary_cross(pkt_ptr, t_current, &snext);
+    int snext;
+    double sdist = boundary_cross(pkt_ptr, t_current, &snext);
 
     if (sdist > (rmax * t_current/tmin))
     {
@@ -269,7 +251,7 @@ double
     if (sdist < 1)
     {
       printout("Negative distance (sdist). Abort?\n");
-      sdist =0;
+      sdist = 0;
     }
     if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
     {
@@ -287,21 +269,19 @@ double
     /* Compton scattering - need to determine the scattering co-efficient.*/
     /* Routine returns the value in the rest frame. */
 
+    double kap_compton = 0.0;
     if (gamma_grey < 0)
     {
       kap_compton = sig_comp(pkt_ptr,t_current);
     }
-    else
-    {
-      kap_compton = 0.0;
-    }
-    kap_photo_electric = sig_photo_electric(pkt_ptr, t_current);
-    kap_pair_prod = sig_pair_prod(pkt_ptr, t_current);
-    kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
+
+    double kap_photo_electric = sig_photo_electric(pkt_ptr, t_current);
+    double kap_pair_prod = sig_pair_prod(pkt_ptr, t_current);
+    double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
 
     /* So distance before physical event is...*/
 
-    edist = (tau_next - tau_current) / kap_tot;
+    double edist = (tau_next - tau_current) / kap_tot;
 
     if (edist < 0)
     {
@@ -309,10 +289,9 @@ double
       exit(0);
     }
 
-
     /* Find how far it can travel during the time inverval. */
 
-    tdist = (t2 - t_current) * CLIGHT_PROP;
+    double tdist = (t2 - t_current) * CLIGHT_PROP;
 
     if (tdist < 0)
     {
@@ -321,7 +300,6 @@ double
     }
 
       //printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
-
 
     if ((sdist < tdist) && (sdist < edist))
     {
