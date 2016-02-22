@@ -28,7 +28,6 @@ int main(int argc, char** argv)
   void write_grid_restart_data(void);
   void update_parameterfile(int nts);
 
-  int get_element(int element);
   int get_ionstage(int element, int ion);
   int time_init();
   int grid_init();
@@ -1404,7 +1403,6 @@ void printout(char *fmt, ...)
 ///****************************************************************************
 /*void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element)
 {
-  double epsilon(int element, int ion, int level);
   double stat_weight(int element, int ion, int level);
   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
   double einstein_spontaneous_emission(int lineindex);

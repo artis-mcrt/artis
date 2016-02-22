@@ -1,5 +1,5 @@
 #include "sn3d.h"
-
+#include "grid_init.h"
 
 ///***************************************************************************
 /// Subroutine that initialises the grid cells. Designed so that grid cells
@@ -15,8 +15,6 @@ int grid_init ()
   void abundances_3d_read(), abundances_1d_read();
   void assign_temperature();
 
-  int i,n;
-
   /// Start by checking that the number of grid cells is okay */
   //ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
   //if (ngrid > MGRID)
@@ -24,7 +22,7 @@ int grid_init ()
   //  printout("[fatal] grid_init: Error: too many grid cells. Abort.");
   //  exit(0);
   //}
-  for (n = 0; n <= MMODELGRID; n++)
+  for (int n = 0; n <= MMODELGRID; n++)
   {
     modelgrid[n].initial_radial_pos = 0;
   }
@@ -1488,7 +1486,6 @@ void allocate_cooling(int modelgridindex)
 {
   double vec_len(double x[3]);
   int get_elementindex(int anumber);
-  int get_element(int element);
   double dcen[3],m_r;
   int element,n;
 
@@ -1568,7 +1565,6 @@ void allocate_cooling(int modelgridindex)
 
 void abundances_3d_read()
 {
-  int get_element(int element);
   FILE *abundance_file;
   float abundance,dum[30];
   int cellnumber,n;
@@ -1639,7 +1635,6 @@ void abundances_3d_read()
 ///***************************************************************************/
 void abundances_1d_read()
 {
-  int get_element(int element);
   FILE *abundance_file;
   float norm,dum[30];
   int n, nn, cellnumber;

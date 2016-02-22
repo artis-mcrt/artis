@@ -307,7 +307,6 @@ void update_cell(int cellnumber)
   int get_coolinglistoffset(int element, int ion);
   double get_groundlevelpop(int cellnumber, int element, int ion);
   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-  int get_nphixstargets(int element, int ion, int level);
 
   updatecellcounter += 1;
 

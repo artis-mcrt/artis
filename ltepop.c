@@ -1,5 +1,5 @@
 #include "sn3d.h"
-
+#include "ltepop.h"
 
 ///***************************************************************************/
 double nne_solution_f(double x, void *paras)
@@ -7,7 +7,6 @@ double nne_solution_f(double x, void *paras)
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)
 {
-  int get_ionstage(int element, int ion);
   double ionfract(int element, int ion, int modelgridindex, double nne);
   double outersum, innersum, abundance;
   int element, ion;
@@ -66,7 +65,6 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
 {
   double phi(int element, int ion, int modelgridindex);
   int get_ionstage(int element, int ion);
-  int get_element(int element);
 
   //printout("debug nne %g\n",nne);
   //int nions = get_nions(element);
@@ -130,24 +128,14 @@ double phi(int element, int ion, int modelgridindex)
   //double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
   double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
   //double interpolate_zeta(int element, int ion, double T);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-  double epsilon(int element, int ion, int level);
-  double stat_weight(int element, int ion, int level);
   float get_rho(int modelgridindex);
   double gamma_lte; //zeta;
   double phi;
 
   //double Y_nt, ionpot_in;
   //int element_in, ion_in, nions_in;
-  double ionstagepop(int modelgridindex, int element, int ion);
   double rate_use;
 
-  double col_recombination(int modelgridindex, int lower, double epsilon_trans);
-  int get_bfcontinua(int element, int ion);
-  double nt_ionization_rate(int modelgridindex, int element, int ion);
-  int get_nlevels(int element, int ion);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
   //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
@@ -322,7 +310,6 @@ double phi(int element, int ion, int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/N_j+1,k* * nne
 /*{
-  double epsilon(int element, int ion, int level);
   double partfunct_ratio;
   double phi;
 
@@ -348,8 +335,6 @@ double calculate_ltepartfunct(int element, int ion, double T)
 /// Calculates the LTE partition function for ion=ion of element=element at
 /// temperature T
 {
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
   double U;
   double epsilon_groundlevel;
   double oneoverkbt;
@@ -376,9 +361,6 @@ double calculate_partfunct_old(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
 
@@ -440,11 +422,6 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in
 /// cell modelgridindex
 {
-  double stat_weight(int element, int ion, int level);
-  //double epsilon(int element, int ion, int level);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-
   double pop_store;
   //double E_level, E_ground, test;
 
@@ -560,8 +537,6 @@ float calculate_groundlevelpop(int element, int ion, double T, int cellnumber, d
 ///further the total population number nnnextion of the next higher ionisation stage is needed
 {
   double partfunct(int element, int ion, double T);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
 
   double deltaE = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   double n0;
@@ -581,7 +556,6 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
   //double nn = modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
   //if (nn < MINPOP) nn = MINPOP;
   //return nn;
-  double get_abundance(int modelgridindex, int element);
 
   double nn = modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
   if (nn < MINPOP)
@@ -601,10 +575,6 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
 /// using a modified version of the Boltzmann formula, which fulfills the diluted BB
 /// approximation (or nebular approximation).
 {
-  double get_abundance(int modelgridindex, int element);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
   double nn;
 
   double T_exc = get_TJ(modelgridindex);
@@ -662,14 +632,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 /// using a modified version of the Boltzmann formula, which fulfills the diluted BB
 /// approximation (or nebular approximation).
 {
-  double get_abundance(int modelgridindex, int element);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
   double nn, test;
-  double superlevel_boltzmann(int modelgridindex, int element, int ion, int level);
-  int get_nlevels_nlte(int element, int ion);
-  short is_nlte(int element, int ion, int level);
   int nlte_levels;
 
   double T_exc = get_TJ(modelgridindex);
@@ -783,9 +746,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 /*
 #ifdef FORCE_LTE
 {
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
   double nn;
 
   double T_R = get_TR(modelgridindex);
@@ -798,9 +758,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 }
 #else
 {
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
   double E_level,E_ground;
   double nn;
 
@@ -829,9 +786,6 @@ double ionstagepop(int modelgridindex, int element, int ion)
 /// Calculates the given ionstages total population in nebular approximation for modelgridindex
 /// The precalculated ground level population and partition function are used.
 {
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double stat_weight(int element, int ion, int level);
-
   return get_groundlevelpop(modelgridindex,element,ion) * modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element,ion,0);
 }
 
@@ -841,9 +795,6 @@ void calculate_levelpops(int modelgridindex)
 /// Calculates the full level populations for a given grid cell
 /// and stores them to the active entry of the cellhistory.
 {
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-
   for (int element = 0; element < nelements; element++)
   {
     int nions = get_nions(element);
@@ -876,7 +827,6 @@ double get_levelpop(int element, int ion, int level)
 double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
-  double stat_weight(int element, int ion, int level);
   int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
@@ -895,7 +845,6 @@ double calculate_sahafact(int element, int ion, int level, int phixstargetindex,
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
 /// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
-  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double sf;
 
   if (use_cellhist >= 0)
@@ -924,8 +873,6 @@ void initialise_photoionestimators()
   //double interpolate_zeta(int element, int ion, double T);
   //double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   //double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
-  //double stat_weight(int element, int ion, int level);
-  //double epsilon(int element, int ion, int level);
 
   //for (n = 0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)

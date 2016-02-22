@@ -2,6 +2,7 @@
 //#include <math.h>
 //#include <stdlib.h>
 #include "sn3d.h"
+#include "input.h"
 #ifdef DO_EXSPEC
   #include "exspec.h"
 #endif
@@ -12,11 +13,6 @@
 int input(rank)
      int rank;
 {
-  void read_atomicdata();
-  void read_parameterfile();
-  int read_1d_model();
-  int read_2d_model();
-  int read_3d_model();
   int get_gam_ll();
   int get_nul();
   int read_binding_energies();
@@ -313,25 +309,9 @@ int input(rank)
 void read_atomicdata()
 {
   ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
-  int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator,int element, int ion, int level);
   //int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator);
   int index_in_groundlevelcontestimator;
-  int compare_linelistentry();
-  int get_elementindex(int Z);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-  int get_element(int element);
-  int get_ionstage(int element, int ion);
-  int transitioncheck(int upper, int lower);
   //double einstein_spontaneous_emission(int element, int ion, int upper, int lower);
-  int get_nions(int element);
-  int get_nlevels(int element, int ion);
-  int get_nlevels_nlte(int element, int ion);
-  int get_bfcontinua(int element, int ion);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-  float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-  short is_nlte(int element, int ion, int level);
 
   FILE *compositiondata;
   FILE *adata;
@@ -340,7 +320,7 @@ void read_atomicdata()
   FILE *modelatom;
   FILE *linelist_file;
   transitiontable_entry *transitiontable;
-  int skip_this_table;
+  int skip_this_phixs_table;
 
   phixstarget_entry *phixstargets;
 
@@ -1029,18 +1009,18 @@ void read_atomicdata()
 
             //nbfcontinua += 1;
             //printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
-            skip_this_table = 0;
+            skip_this_phixs_table = 0;
         }
         else
         {
-          skip_this_table = 1;
+          skip_this_phixs_table = 1;
         }
       }
       else
       {
-        skip_this_table = 1;
+        skip_this_phixs_table = 1;
       }
-      if (skip_this_table == 1) // for ions or elements that are not part of the current model atom, proceed through the lines and throw away the data
+      if (skip_this_phixs_table == 1) // for ions or elements that are not part of the current model atom, proceed through the lines and throw away the data
       {
         if (upperlevel < 0) // a table of target states and probabilities exists, so read through those lines
         {
@@ -1791,7 +1771,7 @@ void read_parameterfile(rank)
   FILE *input_file;
   double rr, z1, z2, x;
   float dum2, dum3, dum4;
-  int dum1, dum5, n, i;
+  int dum1, dum5;
   unsigned long int zseed; /* rnum generator seed */
   unsigned long int xseed,pre_zseed;
 
@@ -1837,7 +1817,7 @@ void read_parameterfile(rank)
       rng = gsl_rng_alloc (gsl_rng_ran3);
       gsl_rng_set ( rng, zseed);
       /// call it a few times to get it in motion.
-      for (n = 0; n< 100; n++)
+      for (int n = 0; n< 100; n++)
       {
         x = gsl_rng_uniform(rng);
         //printout("zrand %g\n", x);
@@ -1866,7 +1846,7 @@ void read_parameterfile(rank)
   fscanf(input_file, "%d", &dum1); ///number of times for synthesis
   nsyn_time = dum1;
   fscanf(input_file, "%g %g", &dum2, &dum3);///start and end times for synthesis
-  for (i = 0; i < nsyn_time; i++)
+  for (int i = 0; i < nsyn_time; i++)
   {
     time_syn[i] = exp(log(dum2) + (dum3*i)) * DAY;
   }
@@ -2047,9 +2027,6 @@ void read_parameterfile(rank)
 int read_1d_model()
 {
   FILE *model_input;
-  int dum1;
-  float dum2, dum3, dum4, dum5, dum6, dum7, dum8;
-  double mass_in_shell;
 
   if ((model_input = fopen("model.txt", "r")) == NULL)
   {
@@ -2058,6 +2035,7 @@ int read_1d_model()
   }
 
   /* 1st read the number of data points in the table of input model. */
+  int dum1;
   fscanf(model_input, "%d", &dum1);
   npts_model = dum1;
   if (npts_model > MMODELGRID)
@@ -2066,6 +2044,7 @@ int read_1d_model()
     exit(0);
   }
   /* Now read the time (in days) at which the model is specified. */
+  float dum2;
   fscanf(model_input, "%g", &dum2);
   t_model = dum2 * DAY;
 
@@ -2078,7 +2057,9 @@ int read_1d_model()
 
   for (int n = 0; n < npts_model; n++)
   {
-    fscanf(model_input, "%d %g %g %g %g %g %g %g", &dum1, &dum2,  &dum3, &dum4, &dum5, &dum6, &dum7, &dum8);
+    int dum1;
+    float dum2,dum3,dum4,dum5,dum6,dum7,dum8;
+    fscanf(model_input, "%d %g %g %g %g %g %g %g", &dum1, &dum2, &dum3, &dum4, &dum5, &dum6, &dum7, &dum8);
     vout_model[n] = dum2 * 1.e5;
     rho_model[n] = pow(10., dum3);
     ffegrp_model[n] = dum4;
@@ -2099,7 +2080,7 @@ int read_1d_model()
   mfeg = 0.0;
 
   /* do inner most cell 1st */
-  mass_in_shell = rho_model[0] * (pow(vout_model[0],3.)) * 4. * PI * pow(t_model,3.) / 3.;
+  double mass_in_shell = rho_model[0] * (pow(vout_model[0],3.)) * 4. * PI * pow(t_model,3.) / 3.;
   mtot += mass_in_shell;
   mni56 += mass_in_shell * fni_model[0];
   mfe52 += mass_in_shell * f52fe_model[0];
@@ -2133,10 +2114,6 @@ int read_1d_model()
 int read_2d_model()
 {
   FILE *model_input;
-  int dum1, dum12, n, n1;
-  float dum2, dum3, dum4, dum5, dum6, dum7, dum8, dum9;
-  double mass_in_shell;
-
   if ((model_input = fopen("model.txt", "r")) == NULL)
   {
     printout("Cannot open model.txt.\n");
@@ -2144,6 +2121,7 @@ int read_2d_model()
   }
 
   /* 1st read the number of data points in the table of input model. */
+  int dum1, dum12;
   fscanf(model_input, "%d %d", &dum1, &dum12);
   ncoord1_model = dum1; //r (cylindrical polar)
   ncoord2_model = dum12;//z (cylindrical polar)
@@ -2155,6 +2133,7 @@ int read_2d_model()
     exit(0);
   }
   /* Now read the time (in days) at which the model is specified. */
+  float dum2, dum3, dum4, dum5, dum6, dum7, dum8, dum9;
   fscanf(model_input, "%g", &dum2);
   t_model = dum2 * DAY;
 
@@ -2170,7 +2149,7 @@ int read_2d_model()
      then its total mass density.
      Second is the total FeG mass, initial 56Ni mass, initial 56Co mass */
 
-  for (n = 0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
     fscanf(model_input, "%d %g %g %g", &dum1, &dum2,  &dum3, &dum4);
     fscanf(model_input, "%g %g %g %g %g",&dum5, &dum6, &dum7, &dum8, &dum9);
@@ -2192,11 +2171,11 @@ int read_2d_model()
   mcr48 = 0.0;
   mfeg = 0.0;
 
-  n1 = 0;
+  int n1 = 0;
   /* Now do the rest. */
-  for (n = 0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
-    mass_in_shell = rho_model[n] * ((2*n1) + 1) * PI * dcoord2 * pow(dcoord1,2.);
+    double mass_in_shell = rho_model[n] * ((2*n1) + 1) * PI * dcoord2 * pow(dcoord1,2.);
     mtot += mass_in_shell;
     mni56 += mass_in_shell * fni_model[n];
     mfe52 += mass_in_shell * f52fe_model[n];
@@ -2205,7 +2184,7 @@ int read_2d_model()
     n1++;
     if (n1 == ncoord1_model)
     {
-      n1=0;
+      n1 = 0;
     }
   }
 
@@ -2224,13 +2203,11 @@ int read_3d_model()
 {
   void allocate_compositiondata(int cellnumber);
   void allocate_cooling(int modelgridindex);
-  FILE *model_input;
-  int dum1, n;
   float dum2, dum3, dum4, dum5, dum6;
   float rho_model;
   double mass_in_shell, helper;
-  int mgi;
 
+  FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
   {
     printout("Cannot open model.txt.\n");
@@ -2239,6 +2216,7 @@ int read_3d_model()
 
   /// 1st read the number of data points in the table of input model.
   /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
+  int dum1;
   fscanf(model_input, "%d", &dum1);
   npts_model = dum1;
   if (npts_model > MMODELGRID)
@@ -2265,8 +2243,8 @@ int read_3d_model()
 
   /*mgi is the index to the model grid - empty cells are sent to MMODELGRID, otherwise each input cell is one modelgrid cell */
 
-  mgi=0;
-  for (n = 0; n < npts_model; n++)
+  int mgi = 0;
+  for (int n = 0; n < npts_model; n++)
   {
     fscanf(model_input, "%d %g %g %g %g", &dum1, &dum3,  &dum4, &dum5, &rho_model);
     //printout("cell %d, vz %g, vy %g, vx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/tmin), 3.));
@@ -2352,7 +2330,7 @@ int read_3d_model()
   mfeg = 0.0;
 
   //for (n = 0; n < npts_model; n++)
-  for (mgi = 0; mgi < npts_model; mgi++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
     //mgi = cell[n].modelgridindex;
     mass_in_shell = get_rhoinit(mgi);
@@ -2408,7 +2386,7 @@ int read_3d_model()
 //        exit(0);
 //      }
 
-   return(0);
+   return 0;
 }
 
 
@@ -2488,7 +2466,6 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
 /// continuum return -1.
 /// NB: groundphixslist must be in ascending order.
 {
-  double epsilon(int element, int ion, int level);
   int index,element,ion,level;
 
   if (nu_edge < phixslist[tid].groundcont[0].nu_edge)
@@ -2563,9 +2540,6 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
 void update_parameterfile(int nts)
 {
   FILE *input_file;
-  float dum2, dum3, dum4;
-  int dum1;
-
   if ((input_file = fopen("input.txt", "r+")) == NULL)
   {
     printout("Cannot open input.txt.\n");
@@ -2573,6 +2547,7 @@ void update_parameterfile(int nts)
   }
   //setvbuf(input_file, NULL, _IOLBF, 0);
 
+  int dum1;
   fscanf(input_file, "%d\n", &dum1); /// Random number seed
   fscanf(input_file, "%d\n", &dum1); /// Number of time steps
 
@@ -2581,6 +2556,7 @@ void update_parameterfile(int nts)
   fprintf(input_file, "%3.3d %3.3d\n", nts, ftstep);
   fseek(input_file,0,SEEK_CUR);
 
+  float dum2, dum3, dum4;
   fscanf(input_file, "%g %g\n", &dum2, &dum3);  ///start and end times
   fscanf(input_file, "%g %g\n", &dum2, &dum3);  ///lowest and highest frequency to synthesise in MeV
   fscanf(input_file, "%d\n", &dum1);            ///number of times for synthesis

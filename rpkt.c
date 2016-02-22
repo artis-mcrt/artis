@@ -517,11 +517,6 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
 ///****************************************************************************
 int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
 {
-  double get_levelpop(int element, int ion, int level);
-  double get_groundlevelpop(int cellnumber, int element, int ion);
-  double epsilon(int element, int ion, int level);
-  double photoionization_crosssection(double nu_edge, double nu);
-  double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   //void emitt_rpkt(PKT *pkt_ptr, double t_current);
   void escat_rpkt(PKT *pkt_ptr, double t_current);
@@ -1011,24 +1006,9 @@ double closest_transition_empty(PKT *pkt_ptr)
 }
 
 
-
-
 ///****************************************************************************
 void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
 {
-  double get_abundance(int modelgridindex, int element);
-
-  double get_groundlevelpop(int cellnumber, int element, int ion);
-  double ionstagepop(int cellnumber, int element, int ion);
-  double get_levelpop(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-  double stat_weight(int element, int ion, int level);
-  int get_element(int element);
-  int get_ionstage(int element, int ion);
-  double photoionization_crosssection(double nu_edge, double nu);
-  int get_nphixstargets(int element, int ion, int level);
-  float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-  double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   int get_velocity();
   double doppler();
 

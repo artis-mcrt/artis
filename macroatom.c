@@ -1,6 +1,6 @@
 #include "sn3d.h"
 #include <gsl/gsl_integration.h>
-
+#include "macroatom.h"
 
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.
@@ -14,29 +14,9 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   int rpkt_event();
   int rlc_emiss_rpkt();
 
-  double get_individ_rad_deexc(int i);
-  double get_individ_internal_down_same(int i);
-  double get_individ_internal_up_same(int i);
-
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-  double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex, double t_current);
-  double rad_recombination(int modelgridindex, int lower, double epsilon_trans);
-  double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double statweight_target, int lineindex, double t_current);//, double T_R, double W);
-  double photoionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
-  double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
-  double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, double statweight_target, int lineindex);
-  double col_recombination(int modelgridindex, int lower, double epsilon_trans);
   double get_levelpop(int element, int ion, int level);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-  int get_element(int element);
-  int get_ionstage(int element, int ion);
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
-  int get_continuumindex(int element, int ion, int level);
-  int get_bfcontinua(int element, int ion);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   double rad_deexc,rad_recomb,col_deexc,col_recomb;
   double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
@@ -73,7 +53,6 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_lower,deltanu,alpha_sp,total_alpha_sp,alpha_sp_old,nuoffset;
-  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   wsp = gsl_integration_workspace_alloc(1000);
 
@@ -873,7 +852,6 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
   double einstein_spontaneous_emission(int lineindex);
   double get_levelpop(int element, int ion, int level);
   //double boltzmann(PKT *pkt_ptr, int targetlevel);
-  double epsilon(int element, int ion, int level);
   double A_ul,B_ul,B_lu;
   double n_u,n_l;
   double nu_trans;
@@ -954,7 +932,6 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
   //double einstein_spontaneous_emission(int element, int ion, int upper, int lower);
   double einstein_spontaneous_emission(int lineindex);
   double get_levelpop(int element, int ion, int level);
-  double radfield(double nu, int modelgridindex);
   double A_ul,B_ul,B_lu;
   double n_u,n_l;//,n_u2;
   double nu_trans;
@@ -1035,8 +1012,6 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
 ///radiative recombination rate: paperII 3.5.2
 {
   double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -1074,8 +1049,6 @@ double photoionization(int modelgridindex, int phixstargetindex, double epsilon_
 /// n_1 - occupation number of ground state
 {
   double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -1111,10 +1084,6 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 /// collisional excitation rate: paperII 3.5.1
 {
   //double osc_strength(int element, int ion, int upper, int lower);
-  double osc_strength(int lineindex);
-  double coll_str(int lineindex);
-  double statw_up(int lineindex);
-  double statw_down(int lineindex);
   double C;
   double g_bar,test,Gamma;
 
@@ -1198,19 +1167,12 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
 /// collisional ionization rate: paperII 3.5.1
 {
-  int get_ionstage(int element, int ion);
-  int get_nphixstargets(int element, int ion, int level);
-  float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-  double epsilon(int element, int ion, int level);
-  double photoionization_crosssection(double nu_edge, double nu);
   double g;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int lower = mastate[tid].level;
   double n_l = mastate[tid].nnlevel;
-
-  int ionstage;
 
   if (phixstargetindex > get_nphixstargets(element,ion,lower))
   {
@@ -1226,7 +1188,7 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge
-  ionstage = get_ionstage(element,ion);
+  int ionstage = get_ionstage(element,ion);
   if (ionstage == 1)
     g = 0.1;
   else if (ionstage == 2)
@@ -1258,7 +1220,6 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
   //double osc_strength(int element, int ion, int upper, int lower);
   double osc_strength(int lineindex);
   double coll_str(int lineindex);
-  double epsilon(int element, int ion, int level);
   double C;
   double g_bar,test,Gamma,g_ratio;
 
@@ -1344,12 +1305,6 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
 /// collisional recombination rate: paperII 3.5.1
 double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 {
-  double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
-  double photoionization_crosssection(double nu_edge, double nu);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-  float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-  int get_ionstage(int element, int ion);
   double g,C;
 
   int element = mastate[tid].element;

@@ -10,14 +10,13 @@ int make_spectrum()
   gather_spectrum(0);
   write_spectrum();
 
-  return(0);
+  return 0;
 }
 
 
 /*******************************************************/
 int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
 {
-  int i,m,p;
   //FILE *spec_file,*emission_file;
 
   /*
@@ -65,7 +64,7 @@ int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
   */
 
   fprintf(spec_file, "%g ", 0.0);
-  for (p = 0; p < ntbins; p++)
+  for (int p = 0; p < ntbins; p++)
   {
     /// ????????????????????????????????????????????????????????????????????????????????????????????????
     /// WHY HERE OTHER CALCULATION OF "SPECTRA.MIDTIME" THAN FOR time_step.mid ?????????????????????????
@@ -73,19 +72,19 @@ int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
   }
   fprintf(spec_file, "\n");
 
-  for (m=0; m < nnubins; m++)
+  for (int m = 0; m < nnubins; m++)
   {
     fprintf(spec_file, "%g ", ((spectra[0].lower_freq[m]+(spectra[0].delta_freq[m]/2))));
 
-    for (p = 0; p < ntbins; p++)
+    for (int p = 0; p < ntbins; p++)
     {
       fprintf(spec_file, "%g ", spectra[p].flux[m]);
       if (do_emission_res == 1)
       {
-        for (i = 0; i < 2*nelements*maxion+1; i++)
+        for (int i = 0; i < 2*nelements*maxion+1; i++)
           fprintf(emission_file, "%g ", spectra[p].stat[m].emission[i]);
         fprintf(emission_file, "\n");
-        for (i = 0; i < nelements*maxion; i++)
+        for (int i = 0; i < nelements*maxion; i++)
           fprintf(absorption_file, "%g ", spectra[p].stat[m].absorption[i]);
         fprintf(absorption_file, "\n");
       }
@@ -97,15 +96,13 @@ int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
   fclose(spec_file);
   fclose(emission_file);
   */
-  return(0);
+  return 0;
 }
 
 
 /**********************************************************************/
 void init_spectrum(void)
 {
-  int n,m,i;
-
   if (nnubins > MNUBINS)
   {
     printout("Too many frequency bins in spectrum - reducing.\n");
@@ -124,35 +121,32 @@ void init_spectrum(void)
   dlogt = (log(tmax) - log(tmin))/ntbins;
   dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
 
-  for (n = 0; n < ntbins; n++)
+  for (int n = 0; n < ntbins; n++)
   {
     spectra[n].lower_time = exp( log(tmin) + (n * (dlogt)));
     spectra[n].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - spectra[n].lower_time;
-    for (m=0; m < nnubins; m++)
+    for (int m = 0; m < nnubins; m++)
     {
       spectra[n].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
       spectra[n].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - spectra[n].lower_freq[m];
       spectra[n].flux[m] = 0.0;
-      for (i = 0; i < 2*nelements*maxion+1; i++)
+      for (int i = 0; i < 2*nelements*maxion+1; i++)
         spectra[n].stat[m].emission[i] = 0;  ///added
-      for (i = 0; i < nelements*maxion; i++)
+      for (int i = 0; i < nelements*maxion; i++)
         spectra[n].stat[m].absorption[i] = 0;  ///added
     }
   }
 }
-
 
 int gather_spectrum(int depth)
 {
   void init_spectrum();
   int add_to_spec(EPKT *pkt_ptr);
   //void read_packets(FILE *packets_file);
-  int p;
   EPKT *pkt_ptr;
   //int i,n,m,p;
   //PKT *pkt_ptr;
   //int add_to_spec();
-  double vcut,vem;
 
   /// Set up the spectrum grid and initialise the bins to zero.
   init_spectrum();
@@ -162,7 +156,7 @@ int gather_spectrum(int depth)
     /// Do not extract depth-dependent spectra
     /// Now add the energy of all the escaping packets to the
     /// appropriate bins.
-    for (p = 0; p < nepkts; p++)
+    for (int p = 0; p < nepkts; p++)
     {
       pkt_ptr = &epkts[p];
       add_to_spec(pkt_ptr);
@@ -172,23 +166,26 @@ int gather_spectrum(int depth)
   {
     /// Extract depth-dependent spectra
     /// Set velocity cut
-    if (depth < 9) vcut=(depth+1.)*vmax/10.;
-    else vcut=100*vmax;  /// Make sure that all escaping packets are taken for
+    double vcut;
+    if (depth < 9)
+      vcut = (depth+1.)*vmax/10.;
+    else
+      vcut = 100*vmax;     /// Make sure that all escaping packets are taken for
                         /// depth=9 . For 2d and 3d models the corners of a
                         /// simulation box contain material with v>vmax.
 
     /// Now add the energy of all the escaping packets to the
     /// appropriate bins.
-    for (p = 0; p < nepkts; p++)
+    for (int p = 0; p < nepkts; p++)
     {
       pkt_ptr = &epkts[p];
-      vem = sqrt(pow(pkt_ptr->em_pos[0],2)+pow(pkt_ptr->em_pos[1],2)+pow(pkt_ptr->em_pos[2],2))/pkt_ptr->em_time;
+      double vem = sqrt(pow(pkt_ptr->em_pos[0],2)+pow(pkt_ptr->em_pos[1],2)+pow(pkt_ptr->em_pos[2],2))/pkt_ptr->em_time;
       //printout("vem %g, vcut %g, vmax %g, time %d\n",vem,vcut,vmax,pkt_ptr->em_time);
       if (vem < vcut) add_to_spec(pkt_ptr);
     }
   }
 
-  return(0);
+  return 0;
 }
 
 
@@ -198,25 +195,21 @@ int add_to_spec(EPKT *pkt_ptr)
 {
   /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
-
   double dot();
-  double t_arrive,deltaE;
-  int nt, nnu;
-  int at,et,element,ion,nproc;
-
+  int at,element,ion,nproc;
 
   /// Put this into the time grid.
-  t_arrive = pkt_ptr->arrive_time;
+  double t_arrive = pkt_ptr->arrive_time;
   if (t_arrive > tmin && t_arrive < tmax)
   {
-    nt = (log(t_arrive) - log(tmin)) / dlogt;
+    int nt = (log(t_arrive) - log(tmin)) / dlogt;
     if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
     {
-      nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-      deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+      int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
+      double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
       spectra[nt].flux[nnu] += deltaE;
 
-      et = pkt_ptr->emissiontype;
+      int et = pkt_ptr->emissiontype;
       if (et >= 0)
       {
         /// bb-emission
@@ -256,8 +249,7 @@ int add_to_spec(EPKT *pkt_ptr)
     }
   }
 
-  return(0);
-
+  return 0;
 }
 
 
@@ -270,23 +262,20 @@ int gather_spectrum_res(int current_abin)
   int add_to_spec_res(EPKT *pkt_ptr, int current_abin);
   void init_spectrum(void);
   EPKT *pkt_ptr;
-  int p;
-
 
   /// Set up the spectrum grid and initialise the bins to zero.
   init_spectrum();
 
   /// Now add the energy of all the escaping packets to the
   /// appropriate bins.
-  for (p = 0; p < nepkts; p++)
+  for (int p = 0; p < nepkts; p++)
   {
     pkt_ptr = &epkts[p];
     add_to_spec_res(pkt_ptr,current_abin);
   }
 
-  return(0);
+  return 0;
 }
-
 
 
 /**********************************************************************/
@@ -303,27 +292,24 @@ int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
   double dot(), vec_len();
   int cross_prod();
   double t_arrive,deltaE;
-  int i, nt, nnu, na;
-  int thetabin, phibin;
+  int i, nt, nnu;
+  int phibin;
   double vec1[3], vec2[3], vec3[3], xhat[3];
-  double costheta, cosphi, testphi;
   int at,et,element,ion,nproc;
 
-  xhat[0]=1.0;
-  xhat[1]=0;
-  xhat[2]=0;
-
-
+  xhat[0] = 1.0;
+  xhat[1] = 0;
+  xhat[2] = 0;
 
   /// Angle resolved case: need to work out the correct angle bin
-  costheta = dot(pkt_ptr->dir, syn_dir);
-  thetabin = ((costheta + 1.0) * sqrt(MABINS) / 2.0);
+  double costheta = dot(pkt_ptr->dir, syn_dir);
+  double thetabin = ((costheta + 1.0) * sqrt(MABINS) / 2.0);
   cross_prod(pkt_ptr->dir, syn_dir, vec1);
   cross_prod(xhat, syn_dir, vec2);
-  cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
+  double cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
 
   cross_prod(vec2, syn_dir, vec3);
-  testphi = dot(vec1,vec3);
+  double testphi = dot(vec1,vec3);
 
   if (testphi > 0)
   {
@@ -333,7 +319,7 @@ int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
   {
     phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MABINS));
   }
-  na = (thetabin*sqrt(MABINS)) + phibin;
+  int na = (thetabin*sqrt(MABINS)) + phibin;
 
   /// Add only packets which escape to the current angle bin
   if (na == current_abin)
@@ -395,5 +381,5 @@ int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
     }
   }
 
-  return(0);
+  return 0;
 }

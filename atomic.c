@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "atomic.h"
 
 ///****************************************************************************
 int get_element(int element)
@@ -34,7 +35,6 @@ int get_nions(int element)
 {
   return elements[element].nions;
 }
-
 
 
 ///****************************************************************************
@@ -144,7 +144,6 @@ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
   #ifdef DEBUG_ON
-    int get_nphixstargets(int element, int ion, int level);
     if ((phixstargetindex < 0) || (phixstargetindex >= get_nphixstargets(element,ion,level)))
     {
       printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex");
@@ -161,7 +160,6 @@ float get_phixsprobability(int element, int ion, int level, int phixstargetindex
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
   #ifdef DEBUG_ON
-    int get_nphixstargets(int element, int ion, int level);
     if ((phixstargetindex < 0) || (phixstargetindex >= get_nphixstargets(element,ion,level)))
     {
       printout("[fatal]   get_phixsprobability called with invalid phixstargetindex");
@@ -361,7 +359,6 @@ double photoionization_crosssection(double nu_edge, double nu)
 ///        - BE AWARE: the elements of the global structure variable mastate
 ///                    must fit to the bound state of the desired bf-continuum!!!
 {
-  double epsilon(int element, int ion, int level);
   double sigma_bf;
 
   int element = mastate[tid].element;

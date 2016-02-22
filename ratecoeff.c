@@ -1,6 +1,6 @@
 #include "sn3d.h"
+#include "ratecoeff.h"
 #include <gsl/gsl_integration.h>
-
 
 ///****************************************************************************
 void tabulate_ratecoefficients_gsl()
@@ -11,22 +11,6 @@ void tabulate_ratecoefficients_gsl()
 /// W is easily factored out. For stimulated recombination we must assume
 /// T_e = T_R for this precalculation.
 {
-  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
-  double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
-  double epsilon(int element, int ion, int level);
-  int get_ionstage(int element, int ion);
-  int get_element(int element);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-  float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-  double stat_weight(int element, int ion, int level);
-
-  double alpha_sp_integrand_gsl(double nu, void *paras);
-  double alpha_sp_E_integrand_gsl(double nu, void *paras);
-  double gamma_integrand_gsl(double nu, void *paras);
-  double gammacorr_integrand_gsl(double nu, void *paras);
-  double approx_bfheating_integrand_gsl(double nu, void *paras);
-  double bfcooling_integrand_gsl(double nu, void *paras);
   //double stimulated_bfcooling_integrand_gsl(double nu, void *paras);
   //double stimulated_recomb_integrand_gsl(double nu, void *paras);
 
@@ -325,9 +309,6 @@ double alpha_sp_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  double photoionization_crosssection(double nu_edge, double nu);
-  //double epsilon(int element, int ion, int level);
-
   //int element = mastate[tid].element;
   //int ion = mastate[tid].ion;
   //int level = mastate[tid].level;
@@ -354,9 +335,6 @@ double alpha_sp_E_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  double photoionization_crosssection(double nu_edge, double nu);
-  //double epsilon(int element, int ion, int level);
-
   //int element = mastate[tid].element;
   //int ion = mastate[tid].ion;
   //int level = mastate[tid].level;
@@ -384,8 +362,6 @@ double gamma_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators.
 {
-  double photoionization_crosssection(double nu_edge, double nu);
-  double radfield2(double nu, double T, double W);
   double T = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
@@ -409,8 +385,6 @@ double gammacorr_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators.
 {
-  double photoionization_crosssection(double nu_edge, double nu);
-  double radfield2(double nu, double T, double W);
   double T = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
@@ -431,10 +405,6 @@ double approx_bfheating_integrand_gsl(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-//  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
-  double photoionization_crosssection(double nu_edge, double nu);
-  double radfield2(double nu, double T, double W);
-
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
@@ -465,10 +435,7 @@ double approx_bfheating_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the modified rate coefficient for photoionization
 /// using gsl integrators.
 {
-  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double get_groundlevelpop(int cellnumber, int element, int ion);
-  double photoionization_crosssection(double nu_edge, double nu);
-  double radfield2(double nu, double T, double W);
   double x;
 
   int cellnumber = ((gslintegration_bfheatingparas *) paras)->cellnumber;
@@ -499,9 +466,7 @@ double approx_bfheating_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the free-free heating rate using gsl integrators.
 {
   double ionstagepop(int cellnumber, int element, int ion);
-  double radfield2(double nu, double T, double W);
   int get_ionstage(int element, int ion);
-  int get_element(int element);
 
   double nne;//,nnion;//,nnlevel;
   double g_ff,kappa_ff;
@@ -556,8 +521,6 @@ double bfcooling_integrand_gsl(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  double photoionization_crosssection(double nu_edge, double nu);
-
   float T  = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
@@ -575,8 +538,6 @@ double bfcooling_integrand_gsl_2(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  double photoionization_crosssection(double nu_edge, double nu);
-
   float T  = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
@@ -595,9 +556,6 @@ double stimulated_bfcooling_integrand_gsl(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  double photoionization_crosssection(double nu_edge, double nu);
-  double radfield2(double nu, double T, double W);
-
   float T  = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
@@ -614,10 +572,6 @@ double stimulated_recomb_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  double photoionization_crosssection(double nu_edge, double nu);
-  //double epsilon(int element, int ion, int level);
-  double radfield2(double nu, double T, double W);
-
   //int element = mastate[tid].element;
   //int ion = mastate[tid].ion;
   //int level = mastate[tid].level;
@@ -1135,9 +1089,6 @@ void check_interpolation(double T_min, double T_max)
 /// to alpha_sp_file, alpha_st_file and gamma_file to judge the quality
 /// of the interpolation. Both integrator types are used.
 {
-  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
-  double epsilon(int element, int ion, int level);
-
   double interpolate_alpha_sp(int element, int ion, int level, double T_e);
   double interpolate_modified_alpha_sp(int element, int ion, int level, double T_e);
   double interpolate_alpha_st(int element, int ion, int level, double T_e);

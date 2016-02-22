@@ -7,8 +7,6 @@ void update_estimators(PKT *pkt_ptr, double distance)
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
 {
-  double get_abundance(int modelgridindex, int element);
-
   int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   /// Update only non-empty cells

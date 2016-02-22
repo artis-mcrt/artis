@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "nltepop.h"
 
 double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
@@ -20,30 +21,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
   double s_renorm;
   PKT dummy;
 
-  short is_nlte(int element, int ion, int level);
-  double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex, double t_current);
-  double rad_recombination(int modelgridindex, int lower, double epsilon_trans);
-  double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double statweight_target, int lineindex, double t_current);//, double T_R, double W);
-  double photoionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
-  double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
-  double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, double statweight_target, int lineindex);
-  double col_recombination(int modelgridindex, int lower, double epsilon_trans);
-  double get_levelpop(int element, int ion, int level);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-  int get_element(int element);
-  int get_ionstage(int element, int ion);
-  int get_nlevels(int element, int ion);
-  int get_nlevels_nlte(int element, int ion);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-  double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  int get_bfcontinua(int element, int ion);
-  double nt_ionization_rate(int modelgridindex, int element, int ion);
   int nlte_size, nlte_start;
-  double superlevel_boltzmann(int modelgridindex, int element, int ion, int level);
 
   double test_ratio;//,lag, check;
   double test_ratio_upper;
@@ -55,7 +33,6 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
   //double get_nne(int modelgridindex);
   //double get_Te(int modelgridindex);
   double T_e, nne;
-  double get_abundance(int modelgridindex, int element);
 
   if (get_nlevels(element,ion) > 1)
   {
@@ -790,7 +767,6 @@ double nt_ionization_rate(int modelgridindex, int element, int ion)
 double superlevel_boltzmann(int modelgridindex, int element, int ion, int level)
 {
   double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
   int get_nlevels_nlte(int element, int ion);
 
   double T_exc = get_TJ(modelgridindex);

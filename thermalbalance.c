@@ -283,9 +283,6 @@ void calculate_heating_rates(int modelgridindex)
 //  double col_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex);
 //  double col_recombination(PKT *pkt_ptr, int lower, double epsilon_trans);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  double stat_weight(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-  int get_nphixstargets(int element, int ion, int level);
 
   double epsilon_current,epsilon_target,epsilon_trans,nnlevel;
   double C;
@@ -500,16 +497,10 @@ void calculate_cooling_rates(int modelgridindex)
 /// via the elements of the global coolingrates data structure.
 {
   double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-  int get_element(int element);
   int get_ionstage(int element, int ion);
   double ionstagepop(int modelgridindex, int element, int ion);
   double get_groundlevelpop(int modelgridindex, int element, int ion);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   double C,C_ff,C_fb,C_exc,C_ion;
   double nncurrention,nnnextionlevel;
@@ -638,7 +629,6 @@ void calculate_cooling_rates(int modelgridindex)
 //   double col_recombination(PKT *pkt_ptr, int lower, double epsilon_trans);
 //   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
 //   double stat_weight(int element, int ion, int level);
-//   double epsilon(int element, int ion, int level);
 //
 //   double epsilon_current,epsilon_target,epsilon_trans,nnlevel;
 //   double C;

@@ -5,15 +5,14 @@ int packet_init(int middle_iteration, int my_rank)
 {
   int setup_packets(int pktnumberoffset);
   void write_packets(FILE *packets_file);
-  FILE *packets_file;
-  int pktnumberoffset;
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
 
   if (!continue_simulation)
   {
-    pktnumberoffset = middle_iteration*npkts;
+    int pktnumberoffset = middle_iteration*npkts;
     setup_packets(pktnumberoffset);
     sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank);
+    FILE *packets_file;
     if ((packets_file = fopen(filename, "wb")) == NULL)
     {
       printf("[fatal]: packet_init: Cannot open packets file\n");

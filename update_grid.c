@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "update_grid.h"
 
 /** Subroutine to update the matter quantities in the grid cells at the start
    of the new timestep. */
@@ -25,17 +26,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double old,new;
 
   int nlte;
-  int get_nlevels(int element, int ion);
-  int get_nlevels_nlte(int element, int ion);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
   int dummy_element, dummy_ion, dummy_level;
-  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
-  double col_recombination(int modelgridindex, int lower, double epsilon_trans);
-  double epsilon(int element, int ion, int level);
   double epsilon_trans;
-  int get_bfcontinua(int element, int ion);
-  int get_nphixstargets(int element, int ion, int level);
   int ionisinglevels;
 
   double Col_ion;
@@ -88,7 +80,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double trat, tratmid;
   double cell_len_scale;
   double check1, check2; //MK
-  int element,ion,level,phixstargetindex,upperlevel;
+  int element,ion,level,upperlevel;
   double t_current,t_previous;
   double rho,T_R,T_e,T_J,W;//,W_D;
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
@@ -108,8 +100,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   //temprange_paras paras2;
   //int status;
-  //int iter;
-  int i;//,iter2;
   //double x_0,x_lo,x_hi;
   double T_lo,T_hi,T_min,T_max,T_e_old;
   //int kpkt_cuts_determined = 0;
@@ -120,7 +110,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //FILE *temperature_file,*ionfract_file,*corrphotoion_file,*thermal_file,*Gamma_file,*Alpha_file,*bfcount_file;
   //FILE *gammaest_file,*gammaana_file;
   double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
-  int jjj;
   int nlte_iter;
 
   double nlte_test;
@@ -138,7 +127,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   trat = time_step[m].start / tmin;
   tratmid = time_step[m].mid / tmin;
 
-  for (i=0; i < nthreads; i++)
+  for (int i = 0; i < nthreads; i++)
   {
     mps[i] = 1.e35;
   }
@@ -251,7 +240,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
       n = nonemptycells[my_rank+ncl*nprocs];
       fprintf(photoion_file,"%d ",n);
       fprintf(bf_file,"%d ",n);
-      for (i=0; i < 9; i++)
+      for (int i = 0; i < 9; i++)
       {
         fprintf(photoion_file,"%g %g ",cell[n].photoion[i],cell[n].radrecomb[i]);
         fprintf(bf_file,"%g %g ",cell[n].bfabs[i],cell[n].bfem[i]);
@@ -304,7 +293,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           {
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = -99.;
 
-            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = -99.;
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = -99.;
@@ -405,7 +394,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 nntot = calculate_populations(n,0);
 
 #ifdef NT_ON
-		//		for (jjj=0; jjj < 10; jjj++)
+		//		for (int jjj=0; jjj < 10; jjj++)
 		//  {
 		//    nntot = calculate_populations(n,0);
 		//  }
@@ -656,7 +645,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                           for (level = 0; level < nlevels; level++)
                           {
-                            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+                            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
                             {
                               Gamma += calculate_exclevelpop(n,element,ion,level) * get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
                              //printout("mgi %d, element %d, ion %d, level %d, pop %g, corrphotoion %g\n",n,element,ion,level,calculate_exclevelpop(n,element,ion,level),get_corrphotoioncoeff(element,ion,phixstargetindex,level,n));
@@ -733,9 +722,10 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                                 mastate[tid].nnlevel = 1.0;
                                 for (level = 0; level < nlevels; level++)
                                 {
-                                  for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+                                  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
                                   {
                                     upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+                                    //TODO: replace calls to calculate_exclevelpop with nnlevel variable
                                     Gamma += calculate_exclevelpop(n,element,ion,level) * get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
                                     if (level < ionisinglevels)
                                     {
@@ -1220,7 +1210,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   /// Assign the minimum of thread private mps to the global variable max_path_step
   max_path_step = mps[0];
-  for (i=1; i < nthreads; i++)
+  for (int i = 1; i < nthreads; i++)
   {
     if (mps[i] < max_path_step)
     {
@@ -1255,19 +1245,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 int get_cell(x, y, z, t)
     double x, y, z, t;
 {
-  double trat;
-  int n;
-  int nx, ny, nz;
-
   /* Original version of this was general but very slow. Modifying to be
   faster but only work for regular grid. */
 
-  trat = t / tmin;
-  nx = (x - (cell[0].pos_init[0] * trat))/(wid_init * trat);
-  ny = (y - (cell[0].pos_init[1] * trat))/(wid_init * trat);
-  nz = (z - (cell[0].pos_init[2] * trat))/(wid_init * trat);
+  double trat = t / tmin;
+  int nx = (x - (cell[0].pos_init[0] * trat))/(wid_init * trat);
+  int ny = (y - (cell[0].pos_init[1] * trat))/(wid_init * trat);
+  int nz = (z - (cell[0].pos_init[2] * trat))/(wid_init * trat);
 
-  n = nx + (nxgrid * ny) + (nxgrid * nygrid * nz);
+  int n = nx + (nxgrid * ny) + (nxgrid * nygrid * nz);
 
   /* do a check */
 
@@ -1348,7 +1334,6 @@ double get_abundance(int modelgridindex, int element)
 }
 
 
-
 ///***************************************************************************/
 void update_abundances(int modelgridindex, double t_current)
 /// Updates the mass fractions of elements associated with the decay sequence
@@ -1356,24 +1341,17 @@ void update_abundances(int modelgridindex, double t_current)
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
 ///             - t_current: current time (here mid of current timestep)
 {
-  //double get_abundance(int modelgridindex, int element);
-  int get_elementindex(int anumber);
-  int get_element(int element);
   double nifrac,cofrac,fefrac,mnfrac,crfrac,vfrac,tifrac;
   double ni_in,co_in,fe_in,fe52_in,cr48_in;
-  double lambdani,lambdaco;
-  double lambdacr,lambdav;
-  double lambdafe,lambdamn;
   double deltat;
-  int element;
 
   t_current -= t_model;
-  lambdani = 1./TNICKEL;
-  lambdaco = 1./TCOBALT;
-  lambdafe = 1./T52FE;
-  lambdamn = 1./T52MN;
-  lambdacr = 1./T48CR;
-  lambdav = 1./T48V;
+  double lambdani = 1./TNICKEL;
+  double lambdaco = 1./TCOBALT;
+  double lambdafe = 1./T52FE;
+  double lambdamn = 1./T52MN;
+  double lambdacr = 1./T48CR;
+  double lambdav = 1./T48V;
 
   if (homogeneous_abundances == 1)
   {
@@ -1381,7 +1359,7 @@ void update_abundances(int modelgridindex, double t_current)
     co_in = elements[get_elementindex(27)].abundance;
     fe_in = elements[get_elementindex(26)].abundance;
     //fe_in = cell[modelgridindex].f_fe_init;
-    for (element = nelements-1; element >= 0; element--)
+    for (int element = nelements-1; element >= 0; element--)
     {
       if (get_element(element) == 28)
       {
@@ -1407,7 +1385,7 @@ void update_abundances(int modelgridindex, double t_current)
     fe52_in = modelgrid[modelgridindex].f52fe;
     cr48_in = modelgrid[modelgridindex].f48cr;
     //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe_in);
-    for (element = nelements-1; element >= 0; element--)
+    for (int element = nelements-1; element >= 0; element--)
     {
       if (get_element(element) == 28)
       {
@@ -1433,7 +1411,7 @@ void update_abundances(int modelgridindex, double t_current)
       if (get_element(element) == 24)
       {
         crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
-	modelgrid[modelgridindex].composition[element].abundance = crfrac;
+	      modelgrid[modelgridindex].composition[element].abundance = crfrac;
       }
       if (get_element(element) == 23)
       {
@@ -1464,7 +1442,6 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   double stat_weight(int element, int ion, int level);
   double nne_solution_f(double x, void *paras);
   int get_ionstage(int element, int ion);
-  int get_element(int element);
   double get_abundance(int modelgridindex, int element);
 
   double nne,nne_lo,nne_hi,nne_check,nne_tot;
@@ -1701,7 +1678,6 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     }
   }
 
-
   set_nnetot(modelgridindex, nne_tot);
   return nntot;
 }
@@ -1715,14 +1691,13 @@ void precalculate_partfuncts(int modelgridindex)
 {
   double calculate_partfunct(int element, int ion, int modelgridindex);
   //double calculate_ltepartfunct(int element, int ion, double T);
-  int element,ion,nions;
 
   /// Precalculate partition functions for each ion in every cell
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
-  for (element = 0; element < nelements; element++)
+  for (int element = 0; element < nelements; element++)
   {
-    nions = get_nions(element);
-    for (ion = 0; ion < nions; ion++)
+    int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
     {
       //printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);
       //cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
@@ -1732,14 +1707,9 @@ void precalculate_partfuncts(int modelgridindex)
 }
 
 
-
-
 void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W)
 {
-  int i;
-  double T,nubar;
-
-  nubar = nuJ/J;
+  double nubar = nuJ/J;
   if (!isfinite(nubar) || nubar == 0.)
   {
     /// Return old T_R
@@ -1845,7 +1815,6 @@ double get_radrecomb(int element, int ion, int level, int cellnumber)
 {
   double interpolate_spontrecombcoeff(int element, int ion, int level, double T);
   double get_groundlevelpop(int cellnumber, int element, int ion);
-  double epsilon(int element, int ion, int level);
   double T_e,nne,nnion,E_threshold,alpha_sp;
 
   T_e = cell[cellnumber].T_e;
@@ -1930,33 +1899,31 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 
 void write_grid_restart_data(void)
 {
-  int n,element,nions,ion;
   FILE *gridsave_file;
-
   if ((gridsave_file = fopen("gridsave.dat", "w")) == NULL)
   {
     printout("Cannot open gridsave.dat.\n");
     exit(0);
   }
 
-  for (n = 0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
     if (modelgrid[n].associated_cells > 0)
     {
       fprintf(gridsave_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
 #ifndef FORCE_LTE
-        for (element = 0; element < nelements; element++)
+        for (int element = 0; element < nelements; element++)
         {
-          nions = get_nions(element);
-          for (ion = 0; ion < nions; ion++)
+          int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
           {
             fprintf(gridsave_file,"%g ",corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]);
           }
         }
-        for (element = 0; element < nelements; element++)
+        for (int element = 0; element < nelements; element++)
         {
-          nions = get_nions(element);
-          for (ion = 0; ion < nions; ion++)
+          int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
           {
             fprintf(gridsave_file,"%g ",gammaestimator[n*nelements*maxion+element*maxion+ion]);
           }
@@ -1971,18 +1938,18 @@ void write_grid_restart_data(void)
       fprintf(gridsave_file,"%d %g %g %g %g %d ",n,0.,0.,0.,0.,0);
 
       #ifndef FORCE_LTE
-        for (element = 0; element < nelements; element++)
+        for (int element = 0; element < nelements; element++)
         {
-          nions = get_nions(element);
-          for (ion = 0; ion < nions; ion++)
+          int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
           {
             fprintf(gridsave_file,"%g ",0.);
           }
         }
-        for (element = 0; element < nelements; element++)
+        for (int element = 0; element < nelements; element++)
         {
-          nions = get_nions(element);
-          for (ion = 0; ion < nions; ion++)
+          int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
           {
             fprintf(gridsave_file,"%g ",0.);
           }

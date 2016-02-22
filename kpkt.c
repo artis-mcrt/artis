@@ -8,19 +8,8 @@ void calculate_kpkt_rates(int modelgridindex)
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  double get_abundance(int modelgridindex, int element);
   double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
-  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
-  int get_ionstage(int element, int ion);
   double ionstagepop(int modelgridindex, int element, int ion);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  //double get_levelpop(int element, int ion, int level);
-  int get_bfcontinua(int element, int ion);
-  int get_nphixstargets(int element, int ion, int level);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   double C,C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
   double E_threshold;//,nu_threshold;
@@ -260,17 +249,9 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 /// cooling list by the strength of the individual process contribution.
 {
   double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  int get_nphixstargets(int element, int ion, int level);
-  double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
-  double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
   //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
   int get_ionstage(int element, int ion);
   double ionstagepop(int modelgridindex, int element, int ion);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double get_levelpop(int element, int ion, int level);
-  int get_bfcontinua(int element, int ion);
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 
   double C,C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
   double E_threshold;//,nu_threshold;
@@ -467,7 +448,6 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   double get_levelpop(int element, int ion, int level);
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
-  int get_element(int element);
 
   double coolingsum;  void update_cell(int cellnumber);
 
@@ -579,14 +559,11 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   double zrand;
 
   double sample_planck(double T);
-  int get_continuumindex(int element, int ion, int level);
-  double epsilon(int element, int ion, int level);
   //void calculate_kpkt_rates(int modelgridindex);
   void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum, int high);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   double get_levelpop(int element, int ion, int level);
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
-  int get_element(int element);
   int get_coolinglistoffset(int element, int ion);
   int get_ncoolingterms(int element, int ion);
 
@@ -607,7 +584,6 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_lower,deltanu,sf,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
-  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   int ii;
   int ilow,low,high;
   double rndcool;
@@ -1024,9 +1000,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 /// or update_grid. Therefore we need to decide whether a cell history is
 /// known or not.
 {
-  double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
   double get_groundlevelpop(int cellnumber, int element, int ion);
-  double epsilon(int element, int ion, int level);
   double bfcooling;
 
   gsl_integration_workspace *wsp;
