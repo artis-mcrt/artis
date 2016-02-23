@@ -11,11 +11,9 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   double boundary_cross();
   int locate();
   int change_cell();
-  int rpkt_event();
   int rlc_emiss_rpkt();
 
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-  double get_levelpop(int element, int ion, int level);
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
 
   double rad_deexc,rad_recomb,col_deexc,col_recomb;
@@ -45,15 +43,12 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
   gsl_integration_workspace *wsp;
   gslintegration_paras intparas;
-  double alpha_sp_integrand_gsl(double nu, void *paras);
-  double alpha_sp_E_integrand_gsl(double nu, void *paras);
   gsl_function F_alpha_sp;
   //F_alpha_sp.function = &alpha_sp_integrand_gsl;
   F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_lower,deltanu,alpha_sp,total_alpha_sp,alpha_sp_old,nuoffset;
-  double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   wsp = gsl_integration_workspace_alloc(1000);
 
   //printout("[debug] do MA\n");
@@ -848,10 +843,6 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
 ///radiative deexcitation rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  //double einstein_spontaneous_emission(int element, int ion, int upper, int lower);
-  double einstein_spontaneous_emission(int lineindex);
-  double get_levelpop(int element, int ion, int level);
-  //double boltzmann(PKT *pkt_ptr, int targetlevel);
   double A_ul,B_ul,B_lu;
   double n_u,n_l;
   double nu_trans;
@@ -929,12 +920,6 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
 ///radiative excitation rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  //double einstein_spontaneous_emission(int element, int ion, int upper, int lower);
-  double einstein_spontaneous_emission(int lineindex);
-  double get_levelpop(int element, int ion, int level);
-  double A_ul,B_ul,B_lu;
-  double n_u,n_l;//,n_u2;
-  double nu_trans;
   double tau_sobolev,beta;
   double R;
 
@@ -952,16 +937,16 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
     }
   #endif
 
-  nu_trans = epsilon_trans/H;
+  double nu_trans = epsilon_trans/H;
   //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
-  A_ul = einstein_spontaneous_emission(lineindex);
-  B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
-  B_lu = statweight_target/mastate[tid].statweight * B_ul;
+  double A_ul = einstein_spontaneous_emission(lineindex);
+  double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
+  double B_lu = statweight_target/mastate[tid].statweight * B_ul;
   //double g_ratio = statweight_target/mastate[tid].statweight;
   //B_lu = g_ratio * B_ul;
 
-  n_u = get_levelpop(element,ion,upper);
-  n_l = get_levelpop(element,ion,lower);
+  double n_u = get_levelpop(element,ion,upper);
+  double n_l = get_levelpop(element,ion,lower);
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
   //n_u = n_l * W * g_ratio * exp(-epsilon_trans/KB/T_R);
@@ -1011,8 +996,6 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
 double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
 ///radiative recombination rate: paperII 3.5.2
 {
-  double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int upper = mastate[tid].level;
@@ -1048,8 +1031,6 @@ double photoionization(int modelgridindex, int phixstargetindex, double epsilon_
 ///photoionization rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int lower = mastate[tid].level;
@@ -1167,8 +1148,6 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
 /// collisional ionization rate: paperII 3.5.1
 {
-  double g;
-
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int lower = mastate[tid].level;
@@ -1188,6 +1167,7 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge
+  double g;
   int ionstage = get_ionstage(element,ion);
   if (ionstage == 1)
     g = 0.1;
@@ -1217,9 +1197,6 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
 double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, double statweight_target, int lineindex)
 /// collisional deexcitation rate: paperII 3.5.1
 {
-  //double osc_strength(int element, int ion, int upper, int lower);
-  double osc_strength(int lineindex);
-  double coll_str(int lineindex);
   double C;
   double g_bar,test,Gamma,g_ratio;
 
@@ -1305,8 +1282,6 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
 /// collisional recombination rate: paperII 3.5.1
 double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 {
-  double g,C;
-
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int upper = mastate[tid].level;
@@ -1317,7 +1292,7 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
   double fac1 = epsilon_trans/KB/T_e;
   double nne = get_nne(modelgridindex);
 
-  C = 0.0;
+  double C = 0.0;
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
@@ -1328,6 +1303,7 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
       #ifdef DEBUG_ON
         if (debuglevel == 777) printout("ionstage %d\n",ionstage);
       #endif
+      double g;
       if (ionstage-1 == 1)
         g = 0.1;
       else if (ionstage-1 == 2)

@@ -15,6 +15,8 @@
 #include "ltepop.h"
 #include "nltepop.h"
 #include "ratecoeff.h"
+#include "rpkt.h"
+#include "thermalbalance.h"
 #include "update_grid.h"
 
 //#define TB_CUTS

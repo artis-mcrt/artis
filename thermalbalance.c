@@ -1,13 +1,12 @@
 #include "sn3d.h"
 #include <gsl/gsl_integration.h>
+#include "thermalbalance.h"
 
 #ifndef FORCE_LTE
 
 ///****************************************************************************
 double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double T_min, double T_max)
 {
-  double find_T_e(double T_e, void *paras);
-
   double fractional_accuracy = 1e-2;
   int maxit = 100;
   int iter2,status;
@@ -208,9 +207,6 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
 double find_T_e(double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
-  double calculate_populations(int modelgridindex, int first_nonempty_cell);
-  void calculate_cooling_rates(int modelgridindex);
-  void calculate_heating_rates(int modelgridindex);
   double nntot;
   int element,ion,nions;
 
@@ -274,22 +270,12 @@ void calculate_heating_rates(int modelgridindex)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
-  double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  double interpolate_bfheatingcoeff_below(int element, int ion, int level, double T_R);
-  double interpolate_bfheatingcoeff_above(int element, int ion, int level, double T_R);
-  double bfheating_integrand_gsl(double nu, void *paras);
-  double ffheating_integrand_gsl(double nu, void *paras);
-  double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, double statweight_target, int lineindex);
-//  double col_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex);
-//  double col_recombination(PKT *pkt_ptr, int lower, double epsilon_trans);
-  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-
   double epsilon_current,epsilon_target,epsilon_trans,nnlevel;
   double C;
   double statweight_target;
   double T_e,T_R,T_D,W,W_D;
 
-  int nions,nlevels_currention,nlevels_lowerion,ndowntrans,phixstargetindex;
+  int nions,nlevels_currention,nlevels_lowerion,ndowntrans;
   int element,ion,level,lower;
   int ii,lineindex;
 
@@ -434,7 +420,7 @@ void calculate_heating_rates(int modelgridindex)
         for (level = 0; level < nlevels_currention; level++)
         {
           nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             bfheating += nnlevel * get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
           }
@@ -442,9 +428,6 @@ void calculate_heating_rates(int modelgridindex)
       }
     }
   }
-
-
-
 
 
 
@@ -496,16 +479,10 @@ void calculate_cooling_rates(int modelgridindex)
 /// Calculate the cooling rates for a given cell. Results are returned
 /// via the elements of the global coolingrates data structure.
 {
-  double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  int get_ionstage(int element, int ion);
-  double ionstagepop(int modelgridindex, int element, int ion);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-
   double C,C_ff,C_fb,C_exc,C_ion;
   double nncurrention,nnnextionlevel;
   double epsilon_current,epsilon_upper,epsilon_trans;
-  int element,ion,level,upper,phixstargetindex;
+  int element,ion,level,upper;
   int nlevels_currention,ionisinglevels;
   int ii,lineindex;
   int ioncharge;
@@ -525,12 +502,12 @@ void calculate_cooling_rates(int modelgridindex)
   C_fb = 0.;   /// free-bound creation of rpkt
   C_exc = 0.;  /// collisional excitation of macroatoms
   C_ion = 0.;  /// collisional ionisation of macroatoms
-  for (element=0; element < nelements; element++)
+  for (element = 0; element < nelements; element++)
   {
     //printout("[debug] do_kpkt: element %d\n",element);
     mastate[tid].element = element;
     nions = get_nions(element);
-    for (ion=0; ion < nions; ion++)
+    for (ion = 0; ion < nions; ion++)
     {
       //printout("[debug] do_kpkt: ion %d\n",ion);
       mastate[tid].ion = ion;
@@ -576,7 +553,7 @@ void calculate_cooling_rates(int modelgridindex)
           /// ionization to higher ionization stage
           /// -------------------------------------
           C = 0.0;
-          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_upper = epsilon(element,ion+1,upper);
@@ -595,7 +572,7 @@ void calculate_cooling_rates(int modelgridindex)
           //E_threshold = epsilon_trans;
           //printout("get_bfcooling(%d,%d,%d,%d) for histindex %d\n",element,ion,level,cellnumber,histindex);
           C = 0.0;
-          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
           }
@@ -628,7 +605,6 @@ void calculate_cooling_rates(int modelgridindex)
 //   double col_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex);
 //   double col_recombination(PKT *pkt_ptr, int lower, double epsilon_trans);
 //   double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-//   double stat_weight(int element, int ion, int level);
 //
 //   double epsilon_current,epsilon_target,epsilon_trans,nnlevel;
 //   double C;

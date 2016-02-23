@@ -27,7 +27,6 @@ int main(int argc, char** argv)
   void write_packets(FILE *packets_file);
   void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
 
-  int get_ionstage(int element, int ion);
   int time_init();
   int grid_init();
   int packet_init(int middle_iteration, int my_rank);

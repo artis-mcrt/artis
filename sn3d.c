@@ -21,14 +21,12 @@ int main(int argc, char** argv)
   void initialise_photoionestimators();
 //  void precalculate_partfuncts(int cellnumber);
   void tabulate_bb_rad();
-  void tabulate_ratecoefficients_gsl();
   void read_packets(FILE *packets_file);
   void write_packets(FILE *packets_file);
   void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
   void write_grid_restart_data(void);
   void update_parameterfile(int nts);
 
-  int get_ionstage(int element, int ion);
   int time_init();
   int grid_init();
   int packet_init(int middle_iteration, int my_rank);
@@ -1403,10 +1401,6 @@ void printout(char *fmt, ...)
 ///****************************************************************************
 /*void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element)
 {
-  double stat_weight(int element, int ion, int level);
-  double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-  double einstein_spontaneous_emission(int lineindex);
-
   int nions,nlevels,nuptrans;
   int ion,lower,upper,lineindex;
   int i;

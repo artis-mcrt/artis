@@ -11,13 +11,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   void calculate_kpkt_rates(int modelgridindex);
   int get_coolinglistoffset(int element, int ion);
   double vel;
-  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double hhelper;
   int jj;
-  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level);
-  double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double renormcoeff;
   double get_Gamma_phys(int modelgridindex, int element, int ion);
   double get_Gamma(int modelgridindex, int element, int ion);
@@ -47,17 +42,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //double interpolate_zeta(int element, int ion, double T);
   //double gamma_lte,zeta;
 
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
   void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
-  double ionstagepop(int modelgridindex, int element, int ion);
-  double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double T_min, double T_max);
-  void precalculate_partfuncts(int modelgridindex);
-  double calculate_populations(int modelgridindex, int first_nonempty_cell);
   //double ionstagepop(int cellnumber, int element, int ion);
-  void calculate_cooling_rates(int modelgridindex);
-  void calculate_heating_rates(int modelgridindex);
   //void check_interpolation(double T_min, double T_max);
-  double find_T_e(double T_e, void *paras);
   //double mintemp_solution_f(double T, void *paras);
   //double maxtemp_solution_f(double T, void *paras);
   //double calculate_ltepartfunct(int element, int ion, double T);
@@ -109,7 +96,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //char tempfilename[100],ionfractfilename[100],Gammafilename[100],Alphaspfilename[100];
   //FILE *temperature_file,*ionfract_file,*corrphotoion_file,*thermal_file,*Gamma_file,*Alpha_file,*bfcount_file;
   //FILE *gammaest_file,*gammaana_file;
-  double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
   int nlte_iter;
 
   double nlte_test;
@@ -1437,13 +1423,6 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  double ionfract(int element, int ion, int modelgridindex, double nne);
-  double phi(int element, int ion, int modelgridindex);
-  double stat_weight(int element, int ion, int level);
-  double nne_solution_f(double x, void *paras);
-  int get_ionstage(int element, int ion);
-  double get_abundance(int modelgridindex, int element);
-
   double nne,nne_lo,nne_hi,nne_check,nne_tot;
   double nnelement,nnion;
   int element,ion;
@@ -1689,9 +1668,6 @@ void precalculate_partfuncts(int modelgridindex)
 /// change during any iteration on T_e. Therefore their precalculation was
 /// taken out of calculate_populations to save runtime.
 {
-  double calculate_partfunct(int element, int ion, int modelgridindex);
-  //double calculate_ltepartfunct(int element, int ion, double T);
-
   /// Precalculate partition functions for each ion in every cell
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
   for (int element = 0; element < nelements; element++)
@@ -1776,7 +1752,6 @@ double B_nu_integrand(double nu, void *paras)
 double get_ffcooling(int element, int ion, int cellnumber)
 {
   double ionstagepop(int cellnumber, int element, int ion);
-  int get_ionstage(int element, int ion);
   int ioncharge;
   double T_e,nne,nncurrention,C_ff;
 

@@ -76,8 +76,6 @@ int get_ionisinglevels(int element, int ion)
 int get_bfcontinua(int element, int ion)
 /// Returns the number of bf-continua associated with ion ion of element element.
 {
-  int get_ionisinglevels(int element, int ion);
-
   int nionisinglevels = get_ionisinglevels(element,ion);
 
   if (nionisinglevels < max_bf_continua)

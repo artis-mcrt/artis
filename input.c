@@ -324,9 +324,6 @@ void read_atomicdata()
 
   phixstarget_entry *phixstargets;
 
-  int compare_phixslistentry_bynuedge(const void *p1, const void *p2);
-  int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2);
-
   //int upperion,upperlevel,lowerion,lowerlevel,nphixstargets;
 
   //FILE *database_file,*interpol_file;
@@ -431,9 +428,9 @@ void read_atomicdata()
 
         /// read information for the elements next ionstage
         int Zcheck2,ionstage,nlevels;
-        fscanf(adata,"%d %d %d %lg",&Zcheck2,&ionstage,&nlevels,&ionpot);
+        fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
         printout("readin level information for adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
-        while (Zcheck2 != Z || ionstage != lowermost_ionstage+ion)
+        while (Zcheck2 != Z || ionstage != lowermost_ionstage + ion)
         {
           if (Zcheck2 == Z)
           {
@@ -444,9 +441,9 @@ void read_atomicdata()
           {
             double levelenergy,statweight;
             int levelindex,ntransitions;
-            fscanf(adata,"%d %lg %lg %d",&levelindex,&levelenergy,&statweight,&ntransitions);
+            fscanf(adata,"%d %lg %lg %d\n",&levelindex,&levelenergy,&statweight,&ntransitions);
           }
-          fscanf(adata,"%d %d %d %lg",&Zcheck2,&ionstage,&nlevels,&ionpot);
+          fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
           printout("proceed through adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
         }
         if (nlevelsmax < 0)
@@ -467,7 +464,7 @@ void read_atomicdata()
 
         /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
         int Zcheck,ionstagecheck,tottransitions;
-        fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
+        fscanf(transitiondata,"%d %d %d\n",&Zcheck,&ionstagecheck,&tottransitions);
         printout("readin transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
         while (Zcheck != Z || ionstagecheck != ionstage)
         {
@@ -475,9 +472,9 @@ void read_atomicdata()
           {
             double A,coll_str;
             int transitionindex,lower,upper;
-            fscanf(transitiondata,"%d %d %d %lg %lg",&transitionindex,&lower,&upper,&A,&coll_str);
+            fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
           }
-          fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
+          fscanf(transitiondata,"%d %d %d\n",&Zcheck,&ionstagecheck,&tottransitions);
           printout("proceed through transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
         }
 
@@ -504,9 +501,10 @@ void read_atomicdata()
           {
             for (int i = 0; i < tottransitions_all; i++)
             {
-              double A,coll_str;
+              /* TODO: code here is never excuted, keep? */
+              double A, coll_str;
               int transitionindex,lower,upper;
-              fscanf(transitiondata,"%d %d %d %lg %lg",&transitionindex,&lower,&upper,&A,&coll_str);
+              fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
               //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
             }
           }
@@ -516,7 +514,7 @@ void read_atomicdata()
             {
               double A,coll_str;
               int transitionindex,lower,upper;
-              fscanf(transitiondata,"%d %d %d %lg %lg",&transitionindex,&lower,&upper,&A,&coll_str);
+              fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
               transitiontable[i].lower = lower-1;
               transitiontable[i].upper = upper-1;
               transitiontable[i].A = A;
@@ -568,8 +566,8 @@ void read_atomicdata()
           for (int level = 0; level < nlevels; level++)
           {
             double levelenergy, statweight;
-            int levelindex,ntransitions;
-            fscanf(adata,"%d %lg %lg %d",&levelindex,&levelenergy,&statweight,&ntransitions);
+            int levelindex, ntransitions;
+            fscanf(adata,"%d %lg %lg %d\n",&levelindex,&levelenergy,&statweight,&ntransitions);
             //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
             if (level < nlevelsmax)
             {
@@ -852,14 +850,14 @@ void read_atomicdata()
       int ion = linelist[i].ionindex;
       int lowerlevel = linelist[i].lowerlevelindex;
       int upperlevel = linelist[i].upperlevelindex;
-      for (int ii=1; ii <= elements[element].ions[ion].levels[upperlevel].downtrans[0].targetlevel; ii++)
+      for (int ii = 1; ii <= elements[element].ions[ion].levels[upperlevel].downtrans[0].targetlevel; ii++)
       {
         if (elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevel == lowerlevel)
         {
           elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = i;
         }
       }
-      for (int ii=1; ii <= elements[element].ions[ion].levels[lowerlevel].uptrans[0].targetlevel; ii++)
+      for (int ii = 1; ii <= elements[element].ions[ion].levels[lowerlevel].uptrans[0].targetlevel; ii++)
       {
         if (elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevel == upperlevel)
         {
@@ -1735,7 +1733,7 @@ void read_atomicdata()
         int count = 0;
         if (nlevels > 1)
         {
-          for (level=1; level < nlevels; level++)
+          for (int level = 1; level < nlevels; level++)
           {
             if (is_nlte(element,ion,level) == 1)
             {
@@ -1768,19 +1766,19 @@ void read_atomicdata()
 void read_parameterfile(rank)
      int rank;
 {
-  FILE *input_file;
-  double rr, z1, z2, x;
-  float dum2, dum3, dum4;
-  int dum1, dum5;
+  //double z1, z2, x;
+  double x;
   unsigned long int zseed; /* rnum generator seed */
   unsigned long int xseed,pre_zseed;
 
+  FILE *input_file;
   if ((input_file = fopen("input.txt", "r")) == NULL)
   {
     printout("Cannot open input.txt.\n");
     exit(0);
   }
 
+  int dum1;
   fscanf(input_file, "%d", &dum1);
   if (dum1 > 0)
   {
@@ -1817,7 +1815,7 @@ void read_parameterfile(rank)
       rng = gsl_rng_alloc (gsl_rng_ran3);
       gsl_rng_set ( rng, zseed);
       /// call it a few times to get it in motion.
-      for (int n = 0; n< 100; n++)
+      for (int n = 0; n < 100; n++)
       {
         x = gsl_rng_uniform(rng);
         //printout("zrand %g\n", x);
@@ -1829,9 +1827,11 @@ void read_parameterfile(rank)
 
   fscanf(input_file, "%d", &dum1); ///number of time steps
   ntstep = dum1;
+  int dum5;
   fscanf(input_file, "%d %d", &dum1, &dum5); ///number of start and end time step
   itstep = dum1;
   ftstep = dum5;
+  float dum2, dum3;
   fscanf(input_file, "%g %g", &dum2, &dum3); ///start and end times
   tmin = dum2 * DAY;
   tmax = dum3 * DAY;
@@ -1904,9 +1904,10 @@ void read_parameterfile(rank)
   fscanf(input_file, "%g", &dum2); ///use grey opacity for gammas?
   gamma_grey = dum2;
 
-
+  float dum4;
   fscanf(input_file, "%g %g %g", &dum2, &dum3, &dum4); ///components of syn_dir
 
+  double rr;
   if ((rr =(dum2*dum2) + (dum3*dum3) + (dum4*dum4)) > 1.e-6)
   {
     syn_dir[0] = dum2 / sqrt( rr );
@@ -1915,8 +1916,8 @@ void read_parameterfile(rank)
   }
   else
   {
-    z1 = 1. - (2.*gsl_rng_uniform(rng));
-    z2 = gsl_rng_uniform(rng) * 2.0 * PI;
+    double z1 = 1. - (2.*gsl_rng_uniform(rng));
+    double z2 = gsl_rng_uniform(rng) * 2.0 * PI;
     syn_dir[2] = z1;
     syn_dir[0] = sqrt( (1. - (z1*z1))) * cos(z2);
     syn_dir[1] = sqrt( (1. - (z1*z1))) * sin(z2);
@@ -2027,7 +2028,6 @@ void read_parameterfile(rank)
 int read_1d_model()
 {
   FILE *model_input;
-
   if ((model_input = fopen("model.txt", "r")) == NULL)
   {
     printout("Cannot open model.txt.\n");

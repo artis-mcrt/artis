@@ -10,7 +10,6 @@ int packet_prop(pkt_ptr, t1, t2, nts)
      int nts; //the time step we are doing
 {
   double do_gamma();
-  double do_rpkt();
   double do_rpkt_thickcell();
   double do_kpkt();
   double do_kpkt_bb();

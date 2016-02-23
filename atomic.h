@@ -22,6 +22,5 @@
   double coll_str(int lineindex);
   double statw_up(int lineindex);
   double statw_down(int lineindex);
-  double osc_strength_old(int lineindex);
   double photoionization_crosssection(double nu_edge, double nu);
 #endif //ATOMIC_H

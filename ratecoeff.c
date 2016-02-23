@@ -466,7 +466,6 @@ double approx_bfheating_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the free-free heating rate using gsl integrators.
 {
   double ionstagepop(int cellnumber, int element, int ion);
-  int get_ionstage(int element, int ion);
 
   double nne;//,nnion;//,nnlevel;
   double g_ff,kappa_ff;
@@ -835,7 +834,6 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
 /// cell history if known.
 /// For ionisation to other levels than the ground level this must be adapted.
 {
-  double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
   double alpha_sp;
 
   double T_e = get_Te(modelgridindex);
@@ -868,7 +866,6 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 /// Only needed during packet propagation, therefore the value is taken from the
 /// cell history if known.
 {
-  double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
   double gammacorr;
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
@@ -940,8 +937,6 @@ double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstarge
 /// Only needed during packet propagation, therefore the value is taken from the
 /// cell history if known.
 {
-  double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
-
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!

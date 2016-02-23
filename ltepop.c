@@ -7,9 +7,7 @@ double nne_solution_f(double x, void *paras)
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)
 {
-  double ionfract(int element, int ion, int modelgridindex, double nne);
   double outersum, innersum, abundance;
-  int element, ion;
   int uppermost_ion;
 
   int n = ((nne_solution_paras *) paras)->cellnumber;
@@ -19,7 +17,7 @@ double nne_solution_f(double x, void *paras)
   //printout("n, x, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g\n",n,x,T,cell[n].T_e,cell[n].W,cell[n].rho);
   outersum = 0.;
   //printout("debug nelements %d =========================\n",nelements);
-  for (element = 0; element < nelements; element++)
+  for (int element = 0; element < nelements; element++)
   {
     abundance = modelgrid[n].composition[element].abundance;
     if (abundance > 0)
@@ -36,6 +34,7 @@ double nne_solution_f(double x, void *paras)
         uppermost_ion = elements_uppermost_ion[tid][element];
       #endif
       */
+      int ion;
       for (ion = 0; ion <= uppermost_ion; ion++)
       {
         //printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfract(element,ion,T,x));
@@ -63,9 +62,6 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
 /// temperature T and electron number density nne
 /// modelgridindex needed to access precalculated partition functions
 {
-  double phi(int element, int ion, int modelgridindex);
-  int get_ionstage(int element, int ion);
-
   //printout("debug nne %g\n",nne);
   //int nions = get_nions(element);
 
@@ -126,9 +122,7 @@ double phi(int element, int ion, int modelgridindex)
   //double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
   //double interpolate_photoioncoeff_below(int element, int ion, int level, double T);
   //double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
-  double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
   //double interpolate_zeta(int element, int ion, double T);
-  float get_rho(int modelgridindex);
   double gamma_lte; //zeta;
   double phi;
 
@@ -827,8 +821,6 @@ double get_levelpop(int element, int ion, int level)
 double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
 {
-  int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-
   int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   double sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
   //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );

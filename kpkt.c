@@ -8,9 +8,6 @@ void calculate_kpkt_rates(int modelgridindex)
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  double ionstagepop(int modelgridindex, int element, int ion);
-
   double C,C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
   double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
@@ -248,12 +245,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  int get_ionstage(int element, int ion);
-  double ionstagepop(int modelgridindex, int element, int ion);
-
-  double C,C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
+  double C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
   double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
   double nncurrention,nnnextionlevel;
@@ -276,7 +268,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 
 
   /// calculate rates for
-  C = 0.;
+  double C = 0.;
   //C_ff = 0.;   /// free-free creation of rpkts
   //C_fb = 0.;   /// free-bound creation of rpkt
   //C_exc = 0.;  /// collisional excitation of macroatoms
@@ -446,7 +438,6 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
 
   double sample_planck(double T);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-  double get_levelpop(int element, int ion, int level);
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
 
   double coolingsum;  void update_cell(int cellnumber);
@@ -533,20 +524,6 @@ double planck(double nu, double T)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ///****************************************************************************
 double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
@@ -562,7 +539,6 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   //void calculate_kpkt_rates(int modelgridindex);
   void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum, int high);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-  double get_levelpop(int element, int ion, int level);
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
   int get_coolinglistoffset(int element, int ion);
   int get_ncoolingterms(int element, int ion);

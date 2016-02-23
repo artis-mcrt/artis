@@ -359,7 +359,6 @@ int change_cell(pkt_ptr, snext, end_packet, t_current)
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   void determine_kpkt_cuts(int cellnumber);
   //void calculate_kpkt_rates(int cellnumber);
-  void calculate_levelpops(int cellnumber);
   //int element, ion, level;
   int oldpos,mgi,old_mgi;
 

@@ -370,7 +370,6 @@ void update_cell(int cellnumber)
 ///***************************************************************************/
 /*void copy_populations_to_phixslist()
 {
-  double get_levelpop(int element, int ion, int level);
   //double nnlevel;
   int i;
   for (i=0; i < importantbfcontinua; i++)

@@ -5,7 +5,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
 {
   int nlte_levels;
-  int level, upper, lower, level_use, lower_use, upper_use, phixstargetindex;
+  int level, upper, lower, level_use, lower_use, upper_use;
 
   double* rate_matrix;
   double* balance_vector;
@@ -25,9 +25,6 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
   double test_ratio;//,lag, check;
   double test_ratio_upper;
-  double calculate_partfunct(int element, int ion, int modelgridindex);
-  double phi(int element, int ion, int modelgridindex);
-  double ionfract(int element, int ion, int modelgridindex, double nne);
 
   int super_level;
   //double get_nne(int modelgridindex);
@@ -131,7 +128,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           R = rad_deexcitation(&dummy,lower,epsilon_trans,statweight_target,lineindex,t_mid);
           C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex);
 
-          s_renorm=1.0;
+          s_renorm = 1.0;
 
           if ((level == 0) || (is_nlte(element, ion, level) == 1))
           {
@@ -175,7 +172,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           R = rad_excitation(&dummy,upper,epsilon_trans,statweight_target,lineindex,t_mid);//,T_R,W);
           C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
 
-          s_renorm=1.0;
+          s_renorm = 1.0;
 
           if ((level == 0) || (is_nlte(element, ion, level) == 1))
           {
@@ -205,7 +202,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           if (ion < get_nions(element)-1)
           {
             Y = nt_ionization_rate(modelgridindex, element, ion);
-            s_renorm=1.0;
+            s_renorm = 1.0;
 
             if ((level == 0) || (is_nlte(element, ion, level) == 1))
             {
@@ -235,7 +232,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
           R = 0.0;
           C = 0.0;
-          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
@@ -267,7 +264,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].element = element;
           mastate[tid].ion = ion+1;
           mastate[tid].nnlevel = 1.0;
-          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             mastate[tid].level = upper;
@@ -476,7 +473,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
     else
     {
       //STUFF FOR "NOT USING" CASE
-      for (level=1; level < nlte_levels+1; level++)
+      for (level = 1; level < nlte_levels+1; level++)
       {
         modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = -1.0;///flag to indicate no useful data
       }
@@ -503,7 +500,6 @@ double get_tot_nion(int modelgridindex)
   //double ionstagepop(int modelgridindex, int element, int ion);
   //int nions;
   double result;
-  float get_rho(int modelgridindex);
 
   result = 0.;
   for (int element = 0; element < nelements; element++)
@@ -527,7 +523,6 @@ double get_oneoverw(int element, int ion, int modelgridindex)
   /* Routine to compute the work per ion pair for doing the NT ionization calculation. Makes use of EXTREMELY SIMPLE approximations - high energy limits only */
 
   double Zbar;
-  double get_mean_binding_energy(int element, int ion);
 
   /* Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
      We are going to start by taking all the high energy limits and ignoring Lelec, so that the
@@ -551,7 +546,6 @@ double get_oneoverw(int element, int ion, int modelgridindex)
 /*****************************************************************/
 double get_mean_binding_energy(int element, int ion)
 {
-  int get_ionstage(int element, int ion);
   int electron_loop;
   int q[M_NT_SHELLS];
   double total, use1, use2, use3;
@@ -713,15 +707,13 @@ double get_mean_binding_energy(int element, int ion)
 int read_binding_energies()
 {
   FILE *binding;
-  float dum[10];
-  int dum1, dum2;
-
   if ((binding = fopen("binding_energies.txt", "r")) == NULL)
   {
     printout("Cannot open binding_energies.txt.\n");
     exit(0);
   }
 
+  int dum1, dum2;
   fscanf(binding, "%d %d", &dum1, &dum2); //dimensions of the table
   if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING))
   {
@@ -731,6 +723,7 @@ int read_binding_energies()
 
   for (int index1 = 0; index1 < dum2; index1++)
   {
+    float dum[10];
     fscanf(binding, "%g %g %g %g %g %g %g %g %g %g", &dum[0],&dum[1], &dum[2],&dum[3],&dum[4],&dum[5],&dum[6],&dum[7],&dum[8],&dum[9]);
     for (int index2 = 0; index2 < 10; index2++)
     {
@@ -746,11 +739,7 @@ int read_binding_energies()
 /*****************************************************************/
 double nt_ionization_rate(int modelgridindex, int element, int ion)
 {
-  double Y_nt;
-  double get_tot_nion(int modelgridindex);
-  double get_oneoverw(int element, int ion, int modelgridindex);
-
-  Y_nt = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;
+  double Y_nt = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;
   // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
   Y_nt += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
   Y_nt += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
@@ -766,9 +755,6 @@ double nt_ionization_rate(int modelgridindex, int element, int ion)
 /***************************************************************/
 double superlevel_boltzmann(int modelgridindex, int element, int ion, int level)
 {
-  double stat_weight(int element, int ion, int level);
-  int get_nlevels_nlte(int element, int ion);
-
   double T_exc = get_TJ(modelgridindex);
   double E_level = epsilon(element,ion,level);
   double E_ground = epsilon(element,ion,get_nlevels_nlte(element, ion));

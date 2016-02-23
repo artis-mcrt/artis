@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "rpkt.h"
 
 /* Material for handing r-packet propagation. */
 
@@ -7,11 +8,6 @@
 double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort);
-  int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current);
-  void rpkt_event_thickcell(PKT *pkt_ptr, double t_current);
-  double closest_transition_empty(PKT *pkt_ptr);
-  double min(double a, double b);
   double boundary_cross();
   int move_pkt(PKT *pkt_ptr, double distance, double time);
   void update_estimators(PKT *pkt_ptr, double distance);
@@ -288,11 +284,7 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
 /// BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!!
 {
   int move_pkt(PKT *pkt_ptr, double distance, double time);
-  double einstein_spontaneous_emission(int lineindex);
   //double einstein_spontaneous_emission(int element, int ion, int upper, int lower);
-  double closest_transition(PKT *pkt_ptr);
-  double stat_weight(int element, int ion, int level);
-  double get_levelpop(int element, int ion, int level);
   //double boltzmann(PKT *pkt_ptr, int targetlevel);
   //double vec_len();
 
@@ -1013,7 +1005,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   double doppler();
 
   double vel_vec[3];
-  double sigma,kappa_bf,kappa_ff,kappa_ffheating;//,kappa_bfheating;
+  double sigma,kappa_ffheating;//,kappa_bfheating;
   double nne,T_e,T_R,nu;
   double g_ff,g_bf;
   double nnion,nnionlevel,nnlevel,departure_ratio;
@@ -1029,8 +1021,8 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   double ionpops_local[MELEMENTS][MIONS];
   float get_nnetot(int modelgridindex);
 
-  kappa_ff = 0.;
-  kappa_bf = 0.;
+  double kappa_ff = 0.;
+  double kappa_bf = 0.;
 
   int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
@@ -1352,14 +1344,9 @@ double do_rpkt_thickcell(pkt_ptr, t1, t2)
      double t1, t2;
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort);
-  int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current);
-  double closest_transition_empty(PKT *pkt_ptr);
-  double min(double a, double b);
   double boundary_cross();
   int move_pkt(PKT *pkt_ptr, double distance, double time);
   void update_estimators(PKT *pkt_ptr, double distance);
-  void emitt_rpkt(PKT *pkt_ptr, double t_current);
   int locate();
   int change_cell();
   int rlc_emiss_rpkt();
