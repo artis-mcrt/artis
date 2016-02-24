@@ -12,6 +12,7 @@
 
   double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
   double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
+
   double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
   double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);

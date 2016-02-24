@@ -1,6 +1,7 @@
 #ifndef INPUT_H
   #define INPUT_H
 
+  int input(int rank);
   void read_atomicdata();
   void read_parameterfile();
   int read_1d_model();

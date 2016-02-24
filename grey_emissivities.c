@@ -23,8 +23,6 @@ to be) used for the new light_curve syn-style calculation. */
 distance dist in the lab frame. Time at start of distance is t_current.*/
 
   double vel_vec[3];
-  double dot();
-  int get_velocity();
   double sig_photo_electric(), meanf_sigma(), sig_pair_prod();
   double boundary_cross();
   double calculate_kappa_rpkt_cont();
@@ -111,7 +109,6 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
   return 0;
 }
 
-/***********************************************/
 /*******************************************************/
 int rlc_emiss_rpkt(pkt_ptr, dist, t_current)
      PKT *pkt_ptr;
@@ -126,9 +123,6 @@ int rlc_emiss_rpkt(pkt_ptr, dist, t_current)
      distance dist in the lab frame. Time at start of distance is t_current.*/
 
   double vel_vec[3];
-  double dot();
-  int get_velocity();
-  double boundary_cross();
   double calculate_kappa_rpkt_cont();
   PKT dummy;
   int move_pkt(PKT *pkt_ptr, double distance, double time);
@@ -210,8 +204,6 @@ int rlc_emiss_rpkt(pkt_ptr, dist, t_current)
 /***********************************************/
 int normalise_grey(int nts)
 {
-  double vol_init(CELL *pkt_ptr);
-
   //for (n=0; n < ngrid; n++)
   double dt = time_step[nts].width;
   double helper = pow(time_step[nts].mid / tmin, 3.0);
@@ -227,7 +219,6 @@ int normalise_grey(int nts)
 
 
 /*************************************************/
-
 int write_grey(int nts)
 {
   FILE *est_file, *dummy;
@@ -313,8 +304,7 @@ double meanf_sigma(x)
 }
 
 /**************************************************************/
-int emiss_rlc_load(nts)
-     int nts;
+int emiss_rlc_load(int nts)
 {
   /* Routine to read in the stored estimators for the time step that is about to begin. */
   FILE *est_file, *dummy;
@@ -377,10 +367,6 @@ int grey_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
   double kap_tot, tau_cont;
   double calculate_kappa_rpkt_cont();
   double vel_vec[3];
-  int get_velocity();
-  double doppler();
-  double vol_init();
-  double vec_len();
 
   /* Make a dummy packet that carries the ray properties. */
 

@@ -9,15 +9,21 @@
 #endif
 
 #include "atomic.h"
-#include "macroatom.h"
+#include "boundary.h"
+#include "emissivities.h"
 #include "grid_init.h"
 #include "input.h"
+#include "kpkt.h"
 #include "ltepop.h"
+#include "macroatom.h"
 #include "nltepop.h"
 #include "ratecoeff.h"
+#include "ray_prop.h"
 #include "rpkt.h"
 #include "thermalbalance.h"
 #include "update_grid.h"
+#include "update_packets.h"
+#include "vectors.h"
 
 //#define TB_CUTS
 #define DEBUG_ON

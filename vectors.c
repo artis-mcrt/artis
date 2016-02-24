@@ -1,13 +1,12 @@
 #include "sn3d.h"
+#include "vectors.h"
 
 /***********************************************************/
 /*Routine for getting the magnitude of a vector.*/
-double vec_len (x)
-double x[3];
+double vec_len(double x[3])
 {
-  double y = (x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]);
-
-  y = sqrt(y);
+  double ysquared = (x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]);
+  double y = sqrt(ysquared);
 
   if (y < 0)
   {
@@ -20,7 +19,7 @@ double x[3];
 
 /************************************************************/
 /*Routine for normalizing a vector.*/
-void vec_norm (double x[3], double z[3])
+void vec_norm(double x[3], double z[3])
 {
   double y = (x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]);
 
@@ -40,9 +39,7 @@ void vec_norm (double x[3], double z[3])
 /************************************************************/
 /*Routine for taking dot product.*/
 
-double dot (x,y)
-     double *x;
-     double *y;
+double dot(double *x, double *y)
 {
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
 }
@@ -50,9 +47,7 @@ double dot (x,y)
 /************************************************************/
 /*Routine for getting velocity vector of the flow at a position.*/
 
-int get_velocity (x,y,t)
-     double *x, *y;
-     double t;
+int get_velocity(double *x, double *y, double t)
 {
   /* For homologous expansion. */
 
@@ -66,11 +61,8 @@ int get_velocity (x,y,t)
 /************************************************************/
 /*Routine for aberation of angles in SR. Takes one direction and velocity
  as input and gives back another direction.*/
-int angle_ab (dir1,vel,dir2)
-     double *dir1,*vel,*dir2;
+int angle_ab(double *dir1, double *vel, double *dir2)
 {
-  double dot();
-
   double vsqr = dot(vel,vel)/CLIGHT2;
   double gamma_rel = 1./(sqrt(1 - vsqr));
 
@@ -88,11 +80,8 @@ int angle_ab (dir1,vel,dir2)
 /************************************************************/
 /*Routine for Doppler shift in SR. Takes one direction and velocity
  as input and gives back double.*/
-double doppler (dir1,vel)
-     double *dir1,*vel;
+double doppler (double *dir1, double *vel)
 {
-  double dot();
-
   //double vsqr = dot(vel,vel)/CLIGHT2;
   //double gamma_rel = 1./(sqrt(1 - vsqr));
   double gamma_rel = 1.;
@@ -111,9 +100,7 @@ double doppler (dir1,vel)
 
 /*Routine for scattering a direction through angle theta.*/
 
-int scatter_dir(dir_in, cos_theta, dir_out)
-     double *dir_in,*dir_out;
-     double cos_theta;
+int scatter_dir(double *dir_in, double cos_theta, double *dir_out)
 {
   /*begin with setting the direction in coordinates where original direction
     is parallel to z-hat.*/
@@ -152,8 +139,7 @@ int scatter_dir(dir_in, cos_theta, dir_out)
 
 
 /**********************************************************************/
-int cross_prod (v1, v2, v3)
-     double v1[3], v2[3], v3[3];
+int cross_prod(double v1[3], double v2[3], double v3[3])
 {
   v3[0] = (v1[1]*v2[2]) - (v2[1]*v1[2]);
   v3[1] = (v1[2]*v2[0]) - (v2[2]*v1[0]);

@@ -1,6 +1,8 @@
 #ifndef GRIDINIT_H
   #define GRIDINIT_H
-  
+
+  int grid_init();
+  double vol_init(CELL *grid_ptr);
   float get_rhoinit(int modelgridindex);
   float get_rho(int modelgridindex);
   float get_nne(int modelgridindex);

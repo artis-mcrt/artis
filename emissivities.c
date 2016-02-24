@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include <string.h>
+#include "emissivities.h"
 
 int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
      RAY *ray_ptr;
@@ -10,8 +11,6 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
 {
 
   double vel_vec[3];
-  int get_velocity();
-  double doppler();
   double emitt_energy;
   struct grid *grid_ptr;
   double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr);
@@ -106,8 +105,7 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
      continuum processes along the path. */
   PKT dummy;
   double sig_comp(), sig_photo_electric();
-  double sig_pair_prod(), doppler();
-  int get_velocity();
+  double sig_pair_prod();
   double vel_vec[3];
 
   /* Make a dummy packet that carries the ray properties. */
@@ -369,7 +367,6 @@ int zero_estimators()
 /******************************************/
 int normalise_estimators(int nts)
 {
-  double vol_init(CELL *pkt_ptr);
   double dfreq[EMISS_MAX];
   double get_gam_freq();
 
@@ -408,8 +405,7 @@ int normalise_estimators(int nts)
 }
 
 /*************************************************/
-int write_estimators(nts)
-     int nts;
+int write_estimators(int nts)
 {
   FILE *est_file, *dummy;
   char chch;
@@ -482,8 +478,7 @@ int write_estimators(nts)
 }
 
 /***********************************************/
-int estim_switch(nts)
-     int nts; //index for time step
+int estim_switch(int nts)
 {
   int on_or_off = 1; //on
 
@@ -507,8 +502,7 @@ int estim_switch(nts)
 }
 
 /*************************************************/
-int emiss_load(nts)
-     int nts;
+int emiss_load(int nts)
 {
   /* Routine to read in the stored estimators for the time step that is about to begin. */
   FILE *est_file, *dummy;

@@ -25,14 +25,10 @@ int main(int argc, char** argv)
   void write_packets(FILE *packets_file);
   void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
   void write_grid_restart_data(void);
-  void update_parameterfile(int nts);
 
   int time_init();
-  int grid_init();
   int packet_init(int middle_iteration, int my_rank);
-  int input();
   int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
-  int update_packets();
   int make_spectrum_res();
   int make_spectrum();
   int make_light_curve();
@@ -40,12 +36,10 @@ int main(int argc, char** argv)
   int make_gamma_light_curve();
   double syn_gamma();
   int estim_switch();
-  int zero_estimators(), normalise_estimators(), write_estimators();
   int normalise_grey(), write_grey();
   int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
   int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
   int gather_gamma_light_curve(), write_gamma_light_curve();
-  double calculate_populations(int cellnumber, int first_nonempty_cell);
   //void determine_important_bfcontinua(int cellnumber, int timestep, int samplecell);
   int i,ii,iii,interactions;
   double meaninteractions;

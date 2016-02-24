@@ -10,8 +10,7 @@
 #include <gsl/gsl_spline.h>
 
 /// To govern the input. For now hardwire everything.
-int input(rank)
-     int rank;
+int input(int rank)
 {
   int get_gam_ll();
   int get_nul();

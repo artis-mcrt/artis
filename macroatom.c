@@ -8,13 +8,9 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   double t_current;
   int end_packet;
   double zrand;
-  double boundary_cross();
-  int locate();
-  int change_cell();
   int rlc_emiss_rpkt();
 
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-  void emitt_rpkt(PKT *pkt_ptr, double t_current);
 
   double rad_deexc,rad_recomb,col_deexc,col_recomb;
   double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;

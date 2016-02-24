@@ -4,12 +4,10 @@
 /** Subroutine to update the matter quantities in the grid cells at the start
    of the new timestep. */
 
-//int update_grid(int m, int nstart, int nblock)
 int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     /// m timestep
 {
   void calculate_kpkt_rates(int modelgridindex);
-  int get_coolinglistoffset(int element, int ion);
   double vel;
   double hhelper;
   int jj;
@@ -109,7 +107,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   int tb_info = 0;
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
-  check1=check2=0.0; /// MK
+  check1 = check2 = 0.0; /// MK
   trat = time_step[m].start / tmin;
   tratmid = time_step[m].mid / tmin;
 

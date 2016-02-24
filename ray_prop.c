@@ -1,16 +1,12 @@
 #include "sn3d.h"
+#include "ray_prop.h"
 
 /* Master routine for moving along ray. When it called,
    it is given the time at start of inverval and at end - when it finishes,
    everything the ray passes during this time should be sorted out. */
 
-int ray_prop(ray_ptr, t1, t2, nts)
-     RAY *ray_ptr;
-     double t1, t2;
-     int nts; //the time step we are doing
+int ray_prop(RAY *ray_ptr, double t1, double t2, int nts)
 {
-  double do_gamma_ray();
-
   int end_packet = 0;  //means "keep working"
 
   double t_current = t1;
@@ -48,9 +44,7 @@ int ray_prop(ray_ptr, t1, t2, nts)
 }
 
 /***************************************************************/
-double do_gamma_ray(ray_ptr, t1, t2)
-     RAY *ray_ptr;
-     double t1, t2;
+double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 {
   double boundary_cross_ray();
   RAY dum_ray;
@@ -257,10 +251,7 @@ double do_gamma_ray(ray_ptr, t1, t2)
 
 
 /****************************************************/
-double boundary_cross_ray(ray_ptr, tstart, snext)
-     RAY *ray_ptr;
-     double tstart;
-     int *snext;
+double boundary_cross_ray(RAY *ray_ptr, double tstart, int *snext)
 {
   PKT dummy;
   double boundary_cross();
@@ -287,11 +278,7 @@ double boundary_cross_ray(ray_ptr, tstart, snext)
 }
 
 /****************************************************/
-int change_cell_ray(ray_ptr, snext, end_packet, t_current)
-     RAY *ray_ptr;
-     double t_current;
-     int snext;
-     int *end_packet;
+int change_cell_ray(RAY *ray_ptr, int snext, int *end_packet, double t_current)
 {
   PKT dummy;
   int change_cell();
@@ -322,8 +309,7 @@ int change_cell_ray(ray_ptr, snext, end_packet, t_current)
 }
 
 /**************************************************/
-int copy_ray (ray1, ray2)
-     RAY *ray1, *ray2;
+int copy_ray (RAY *ray1, RAY *ray2)
 {
   ray2->last_cross = ray1->last_cross;
   ray2->where = ray1->where;
@@ -346,10 +332,7 @@ int copy_ray (ray1, ray2)
 }
 
 /**********************************************/
-int move_ray(ray_ptr, dist, time)
-     RAY *ray_ptr;
-     double dist;
-     double time;
+int move_ray(RAY *ray_ptr, double dist, double time)
 {
   /* just make a dummy packet and use move. */
 
@@ -387,23 +370,17 @@ int move_ray(ray_ptr, dist, time)
     }
   return(0);
 }
+
 /**************************************************************/
-int
-move_one_ray(ray_ptr, nray, dist, single_pos, single_t)
-     RAY *ray_ptr;
-     int nray;
-     double dist, single_t;
-     double *single_pos;
+int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double single_t)
 {
-  int get_velocity();
-  double doppler();
   double vel_vec[3];
 
   if (dist < 0)
-    {
-      printout("Trying to move -v distance. Abort.\n");
-      exit(0);
-    }
+  {
+    printout("Trying to move -v distance. Abort.\n");
+    exit(0);
+  }
 
   single_pos[0] += syn_dir[0] * dist;
   single_pos[1] += syn_dir[1] * dist;
@@ -421,10 +398,7 @@ move_one_ray(ray_ptr, nray, dist, single_pos, single_t)
 
 
 /**************************************************************/
-
-int
-get_nul(freq)
-     double freq;
+int get_nul(double freq)
 {
   int too_high, too_low, try;
   double freq_max, freq_min, freq_try;
@@ -466,10 +440,7 @@ get_nul(freq)
 }
 
 /**************************************************************/
-double
-get_gam_freq(line_list, n)
-     LIST *line_list;
-     int n;
+double get_gam_freq(LIST *line_list, int n)
 {
   double freq;
 

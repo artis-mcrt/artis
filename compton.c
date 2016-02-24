@@ -7,8 +7,6 @@ double sig_comp(pkt_ptr,t_current)
      double t_current;
 {
   double vel_vec[3];
-  double doppler();
-  int get_velocity();
   double fmax;
   double sigma_cmf;
   double sigma_compton_partial();
@@ -54,8 +52,6 @@ int com_sca(pkt_ptr,t_current)
   int scatter_dir();
   double dot();
   double prob_gamma;
-  int get_velocity(), angle_ab();
-  double doppler();
   double thomson_angle();
 
   //  printout("Compton scattering.\n");

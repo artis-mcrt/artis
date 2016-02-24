@@ -8,12 +8,7 @@ int pellet_decay(nts,pkt_ptr)
 {
   double vec_len();
   double dummy_dir[3], vel_vec[3];
-  int get_velocity();
-  int angle_ab();
   int choose_gamma_ray();
-  int cross_prod();
-  double dot();
-  double doppler();
   void vec_norm(double x[3], double z[3]);
 
   /*Subroutine to convert a pellet to a gamma ray. */

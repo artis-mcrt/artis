@@ -10,11 +10,7 @@ int packet_prop(pkt_ptr, t1, t2, nts)
      int nts; //the time step we are doing
 {
   double do_gamma();
-  double do_rpkt_thickcell();
-  double do_kpkt();
-  double do_kpkt_bb();
-  double do_kpkt_ffonly();
-  double do_ma();
+  //double do_kpkt_ffonly(); no longer exists?
   double t_change_type;
 
   int end_packet = 0;  //means "keep working"

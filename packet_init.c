@@ -75,7 +75,6 @@ int setup_packets (int pktnumberoffset)
   int m;
   CELL *grid_ptr;
   double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
-  double vol_init(CELL *grid_ptr);
   // float cont[MGRID+1];
 
   /// The total number of pellets that we want to start with is just

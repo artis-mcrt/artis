@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "update_packets.h"
 
 /** Subroutine to move the packets and update them during the currect timestep. */
 
@@ -7,14 +8,10 @@ int update_packets(int nts)
 {
   //void copy_populations_to_phixslist();
   //int compare_packets_bymodelgridposition(const void *p1, const void *p2);
-  int compare_packets_bymodelgriddensity(const void *p1, const void *p2);
   int search_cellhistory(int cellnumber);
   int find_farthestcell_initial(int cellnumber);
-  void update_cell(int cellnumber);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   void determine_kpkt_cuts(int cellnumber);
-  //void calculate_kpkt_rates(int cellnumber);
-  void calculate_levelpops(int cellnumber);
   PKT *pkt_ptr;
   int packet_prop();
   int pellet_decay();
@@ -304,10 +301,6 @@ void update_cell(int cellnumber)
 ///=calculate_levelpops for non isothermal homogeneous grids
 ///
 {
-  int get_coolinglistoffset(int element, int ion);
-  double get_groundlevelpop(int cellnumber, int element, int ion);
-  double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-
   updatecellcounter += 1;
 
   /// Make known that cellhistory[tid] contains information about the

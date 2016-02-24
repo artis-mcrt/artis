@@ -569,8 +569,6 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
 /// using a modified version of the Boltzmann formula, which fulfills the diluted BB
 /// approximation (or nebular approximation).
 {
-  double nn;
-
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
 
@@ -590,6 +588,7 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
     }
   }*/
 
+  double nn;
   if (level == 0)
     nn = get_groundlevelpop(modelgridindex,element,ion);
   else

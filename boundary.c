@@ -1,13 +1,9 @@
 #include "sn3d.h"
-
+#include "boundary.h"
 
 ///****************************************************************************
 /// Basic routine to compute distance to a call boundary.
-double boundary_cross (pkt_ptr, tstart, snext)
-     PKT *pkt_ptr;
-     double tstart;
-     int *snext;
-     //   double *closest;
+double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
 {
   //double close, close_try;
 
@@ -346,16 +342,11 @@ double boundary_cross (pkt_ptr, tstart, snext)
 
 ///****************************************************************************
 /// Routine to take a packet across a boundary.
-int change_cell(pkt_ptr, snext, end_packet, t_current)
-    PKT *pkt_ptr;
-     double t_current;
-     int snext;
-     int *end_packet;
+int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
 {
   //void copy_populations_to_phixslist();
   int search_cellhistory(int cellnumber);
   int find_farthestcell(int cellnumber);
-  void update_cell(int cellnumber);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   void determine_kpkt_cuts(int cellnumber);
   //void calculate_kpkt_rates(int cellnumber);
@@ -536,9 +527,7 @@ int change_cell(pkt_ptr, snext, end_packet, t_current)
 
 ///****************************************************************************
 /// Routine to return which grid cell the packet is in.
-int locate(pkt_ptr, t_current)
-    PKT *pkt_ptr;
-     double t_current;
+int locate(PKT *pkt_ptr, double t_current)
 {
   /* Cheap and nasty version for now - assume a uniform grid. */
   int xx = (pkt_ptr->pos[0] - (cell[0].pos_init[0]*t_current/tmin)) / (wid_init*t_current/tmin);

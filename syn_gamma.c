@@ -7,7 +7,6 @@ double syn_gamma()
   externally set: syn_dir[3]. */
 {
   int syn_gamma_init();
-  int grid_init();
   int time_init();
   int update_gamma_rays();
   int update_grid();

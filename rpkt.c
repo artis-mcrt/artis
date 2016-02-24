@@ -8,11 +8,8 @@
 double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  double boundary_cross();
   int move_pkt(PKT *pkt_ptr, double distance, double time);
   void update_estimators(PKT *pkt_ptr, double distance);
-  int locate();
-  int change_cell();
   int rlc_emiss_rpkt();
   double doppler();
   double vel_vec[3];
@@ -1334,29 +1331,17 @@ int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2)
 }
 
 
-
-
-
-
 ///****************************************************************************
-double do_rpkt_thickcell(pkt_ptr, t1, t2)
-     PKT *pkt_ptr;
-     double t1, t2;
+double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  double boundary_cross();
   int move_pkt(PKT *pkt_ptr, double distance, double time);
   void update_estimators(PKT *pkt_ptr, double distance);
-  int locate();
-  int change_cell();
   int rlc_emiss_rpkt();
   double doppler();
   double vel_vec[3];
   int get_velocity();
 
-
-  double t_current;
-  int end_packet;
   double zrand, tau_next, tau_current, tdist;
   double sdist, edist;
   int snext;
@@ -1369,9 +1354,9 @@ double do_rpkt_thickcell(pkt_ptr, t1, t2)
   kappaff_ptr = &kappa_ff;
   kappabf_ptr = &kappa_bf;
 
-  end_packet = 0; ///means "keep working"
+  int end_packet = 0; ///means "keep working"
 
-  t_current = t1; ///this will keep track of time in the calculation
+  double t_current = t1; ///this will keep track of time in the calculation
   //printout("[debug] r-pkt propagation init\n");
   //int it = 1;
 

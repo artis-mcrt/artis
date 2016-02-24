@@ -4,7 +4,7 @@
 ///***************************************************************************
 /// Subroutine that initialises the grid cells. Designed so that grid cells
 /// don't need to be uniform but for the moment they are.
-int grid_init ()
+int grid_init()
 {
   int uniform_grid_setup ();
   int uniform_density_setup ();
@@ -1807,13 +1807,11 @@ void assign_temperature()
 
 ///****************************************************************************
 /// Routine for getting the initial cell volume.
-double vol_init (CELL *grid_ptr)
+double vol_init(CELL *grid_ptr)
 {
-  double vol;
+  double vol = wid_init * wid_init * wid_init;
 
-  vol = wid_init * wid_init * wid_init;
-
-  return(vol);
+  return vol;
 }
 
 
