@@ -101,14 +101,12 @@ int get_gam_ll()
   }
   fclose(line_list);
 
-  return(0);
+  return 0;
 }
 
 
 /********************************************************************************************/
-int identify_gam_line(ele_type, ele_index, eret, pret)
-double *eret, *pret;
-int ele_type, ele_index;
+int identify_gam_line(int ele_type, int ele_index, double *eret, double *pret)
 {
   if (ele_type == NI_GAM_LINE_ID)
   {
@@ -141,5 +139,5 @@ int ele_type, ele_index;
     exit(0);
   }
 
-  return(0);
+  return 0;
 }

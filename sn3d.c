@@ -18,26 +18,15 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  void initialise_photoionestimators();
-//  void precalculate_partfuncts(int cellnumber);
-  void tabulate_bb_rad();
-  void read_packets(FILE *packets_file);
-  void write_packets(FILE *packets_file);
   void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
-  void write_grid_restart_data(void);
 
   int time_init();
-  int packet_init(int middle_iteration, int my_rank);
   int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
   int make_spectrum_res();
   int make_spectrum();
-  int make_light_curve();
-  int make_light_curve_res();
   int make_gamma_light_curve();
   double syn_gamma();
-  int estim_switch();
   int normalise_grey(), write_grey();
-  int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
   int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
   int gather_gamma_light_curve(), write_gamma_light_curve();
   //void determine_important_bfcontinua(int cellnumber, int timestep, int samplecell);
@@ -270,7 +259,6 @@ int main(int argc, char** argv)
   printout("time before tabulation of rate coefficients %d\n",time(NULL));
   tabulate_ratecoefficients_gsl();
   printout("time after tabulation of rate coefficients %d\n",time(NULL));
-  //tabulate_bb_rad();
   printout("time after tabulation of radfield helpers %d\n",time(NULL));
   //abort();
 

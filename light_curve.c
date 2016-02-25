@@ -1,19 +1,17 @@
 #include "sn3d.h"
 #include "exspec.h"
+#include "light_curve.h"
 
 /* Routine to make a MC light curve from the r-packets. */
 
-int make_light_curve()
+/*int make_light_curve()
 {
-  int gather_light_curve();
-  int write_light_curve();
-
-  gather_light_curve(0);
+  gather_light_curve();
   write_light_curve();
-  return(0);
+
+  return 0;
 }
-
-
+*/
 
 void init_light_curve(void)
 {
@@ -37,7 +35,6 @@ void init_light_curve(void)
     light_curve_cmf[n].lum = 0.0;
   }
 }
-
 
 
 /**********************************************************************/
@@ -124,7 +121,7 @@ int write_light_curve(FILE *lc_file, int current_abin)
     }
   }
 
-  return(0);
+  return 0;
 }
 
 
@@ -148,7 +145,7 @@ int gather_light_curve(void)
     add_to_lc(pkt_ptr);
   }
 
-  return(0);
+  return 0;
 }
 
 
@@ -159,12 +156,10 @@ int gather_light_curve(void)
 /**See add_to_spec.*/
 int add_to_lc(EPKT *pkt_ptr)
 {
-  double dot();
-  double t_arrive;
   int nt;
 
   /// Put this into the time grid
-  t_arrive = pkt_ptr->arrive_time;
+  double t_arrive = pkt_ptr->arrive_time;
   if (t_arrive > tmin && t_arrive < tmax)
   {
     nt = (log(t_arrive) - log(tmin)) / dlogtlc;
@@ -180,7 +175,7 @@ int add_to_lc(EPKT *pkt_ptr)
     light_curve_cmf[nt].lum += pkt_ptr->e_cmf / light_curve[nt].delta_t / nprocs / sqrt(1. - (vmax*vmax/CLIGHT2));
   }
 
-  return(0);
+  return 0;
 }
 
 
@@ -204,9 +199,8 @@ int gather_light_curve_res(int current_abin)
     pkt_ptr = &epkts[p];
     add_to_lc_res(pkt_ptr,current_abin);
   }
-  return(0);
+  return 0;
 }
-
 
 
 /**********************************************************************/
@@ -214,8 +208,6 @@ int gather_light_curve_res(int current_abin)
 /**See add_to_spec.*/
 int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
 {
-  double dot(), vec_len();
-  int cross_prod();
   double t_arrive;
   int nt, na;
   int thetabin, phibin;
@@ -225,7 +217,6 @@ int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
   xhat[0]=1.0;
   xhat[1]=0;
   xhat[2]=0;
-
 
   /// Angle resolved case: need to work out the correct angle bin too. */
   costheta = dot(pkt_ptr->dir, syn_dir);
@@ -259,5 +250,5 @@ int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
     }
   }
 
-  return(0);
+  return 0;
 }

@@ -3,26 +3,17 @@
 
 /* Material for handing r-packet propagation. */
 
-
 ///****************************************************************************
 double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  int move_pkt(PKT *pkt_ptr, double distance, double time);
-  void update_estimators(PKT *pkt_ptr, double distance);
-  int rlc_emiss_rpkt();
-  double doppler();
   double vel_vec[3];
-  int get_velocity();
 
-  double t_current;
-  int end_packet;
   double zrand, tau_next, tau_current, tdist;
   double sdist, edist;
   int snext;
   int find_nextline;
   int rpkt_eventtype;
-  int mgi;
 
   double kappa, kappa_cont, sigma, kappa_ff, kappa_bf;
   double *kappacont_ptr, *sigma_ptr, *kappaff_ptr, *kappabf_ptr;
@@ -31,10 +22,10 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
   kappaff_ptr = &kappa_ff;
   kappabf_ptr = &kappa_bf;
 
-  mgi = cell[pkt_ptr->where].modelgridindex;
-  end_packet = 0; ///means "keep working"
+  int mgi = cell[pkt_ptr->where].modelgridindex;
+  int end_packet = 0; ///means "keep working"
 
-  t_current = t1; ///this will keep track of time in the calculation
+  double t_current = t1; ///this will keep track of time in the calculation
   //printout("[debug] r-pkt propagation init\n");
   //int it = 1;
 
@@ -280,26 +271,20 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
 ///     double abort_dist;      //maximal travel distance before packet leaves cell or time step ends
 /// BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!!
 {
-  int move_pkt(PKT *pkt_ptr, double distance, double time);
-  //double einstein_spontaneous_emission(int element, int ion, int upper, int lower);
-  //double boltzmann(PKT *pkt_ptr, int targetlevel);
-  //double vec_len();
-
   int element,ion,upper,lower;
   double nu_trans;
-  double dist,ldist,edist;
-  double tau,tau_cont,tau_line;
+  double ldist;
+  double tau_cont,tau_line;
   double kap_cont;
-  int endloop;
 
   double A_ul,B_ul,B_lu;
   double n_u,n_l;
 
   /// initialize loop variables
-  tau = 0.;        ///initial optical depth along path
-  dist = 0.;       ///initial position on path
-  edist = 0.;
-  endloop = 0;    //
+  double tau = 0.;        ///initial optical depth along path
+  double dist = 0.;       ///initial position on path
+  double edist = 0.;
+  int endloop = 0;    //
 
   PKT dummypkt;
   dummypkt = *pkt_ptr;
@@ -507,13 +492,11 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
 int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
 {
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-  //void emitt_rpkt(PKT *pkt_ptr, double t_current);
   void escat_rpkt(PKT *pkt_ptr, double t_current);
 
   double zrand;
   //double nnionlevel,nnlevel,nne;
-  double nne;
-  double nu,T_e,nu_edge;
+  double nu_edge;
   //double ma_prob,p_maactivate,p_bf,prob;
   //double departure_ratio,corr_photoion;
   //double sigma_bf;
@@ -524,9 +507,9 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
 
   int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
-  nne = get_nne(modelgridindex);
-  T_e = get_Te(modelgridindex);
-  nu = pkt_ptr->nu_cmf;
+  double nne = get_nne(modelgridindex);
+  double T_e = get_Te(modelgridindex);
+  double nu = pkt_ptr->nu_cmf;
 
   double kappa_cont = kappa_rpkt_cont[tid].total;;
   double sigma = kappa_rpkt_cont[tid].es;
@@ -825,32 +808,22 @@ double min(double a, double b)
 }
 
 
-
-
 ///****************************************************************************
 void emitt_rpkt(PKT *pkt_ptr, double t_current)
 {
-  double vec_len(), doppler();
-  int get_velocity(), angle_ab();
-
-  double zrand,zrand2;
-  double mu,phi,sintheta;
   double dummy_dir[3], vel_vec[3];
-  double dot();
-  int cross_prod();
-  void vec_norm(double x[3], double z[3]);
 
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
 
   /// Need to assign a new direction. Assume isotropic emission in the cmf
-  zrand = gsl_rng_uniform(rng);
-  zrand2 = gsl_rng_uniform(rng);
+  double zrand = gsl_rng_uniform(rng);
+  double zrand2 = gsl_rng_uniform(rng);
 
-  mu = -1 + (2.*zrand);
-  phi = zrand2 * 2 * PI;
-  sintheta = sqrt(1. - (mu * mu));
+  double mu = -1 + (2.*zrand);
+  double phi = zrand2 * 2 * PI;
+  double sintheta = sqrt(1. - (mu * mu));
 
   pkt_ptr->dir[0] = sintheta * cos(phi);
   pkt_ptr->dir[1] = sintheta * sin(phi);
@@ -898,12 +871,12 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
   dummy_dir[2]=1.0;
   cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
   if ((dot(pkt_ptr->pol_dir,pkt_ptr->pol_dir)) < 1.e-8)
-    {
-      dummy_dir[0]=dummy_dir[2]=0.0;
-      dummy_dir[1]=1.0;
-      cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
+  {
+    dummy_dir[0]=dummy_dir[2]=0.0;
+    dummy_dir[1]=1.0;
+    cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
 
-    }
+  }
 
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
   //printout("initialise pol state of packet %g, %g, %g, %g, %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
@@ -911,15 +884,12 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
 }
 
 
-
 ///****************************************************************************
 double closest_transition_empty(PKT *pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
-  double nu_trans;
   int match;
-
   //int left = 0;
   int left = pkt_ptr->next_trans;
   //printout("[debug] closest_transition: initial left %d\n",left);
@@ -977,7 +947,7 @@ double closest_transition_empty(PKT *pkt_ptr)
   /// next transition for this packet. To save memory it is stored
   /// to the macro atoms state variables. This has no influence until
   /// the macro atom becomes activated by rpkt_event.
-  nu_trans = linelist[match].nu;
+  double nu_trans = linelist[match].nu;
   //mastate[tid].element = linelist[match].elementindex;
   //mastate[tid].ion     = linelist[match].ionindex;
   //mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
@@ -998,9 +968,6 @@ double closest_transition_empty(PKT *pkt_ptr)
 ///****************************************************************************
 void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
 {
-  int get_velocity();
-  double doppler();
-
   double vel_vec[3];
   double sigma,kappa_ffheating;//,kappa_bfheating;
   double nne,T_e,T_R,nu;
@@ -1016,7 +983,6 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   int gphixsindex;
   double corrfactor;
   double ionpops_local[MELEMENTS][MIONS];
-  float get_nnetot(int modelgridindex);
 
   double kappa_ff = 0.;
   double kappa_bf = 0.;
@@ -1335,12 +1301,7 @@ int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2)
 double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  int move_pkt(PKT *pkt_ptr, double distance, double time);
-  void update_estimators(PKT *pkt_ptr, double distance);
-  int rlc_emiss_rpkt();
-  double doppler();
   double vel_vec[3];
-  int get_velocity();
 
   double zrand, tau_next, tau_current, tdist;
   double sdist, edist;
@@ -1354,12 +1315,11 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
   kappaff_ptr = &kappa_ff;
   kappabf_ptr = &kappa_bf;
 
-  int end_packet = 0; ///means "keep working"
-
   double t_current = t1; ///this will keep track of time in the calculation
   //printout("[debug] r-pkt propagation init\n");
   //int it = 1;
 
+  int end_packet = 0; ///means "keep working"
   while (end_packet == 0)
   {
 
@@ -1559,15 +1519,12 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
 }
 
 
-
 void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
 /// but with different direction.
 {
-  void emitt_rpkt(PKT *pkt_ptr, double t_current);
-
   #ifdef DEBUG_ON
     if (debuglevel == 2) printout("[debug] rpkt_event_thickcell:   electron scattering\n");
     pkt_ptr->interactions += 1;

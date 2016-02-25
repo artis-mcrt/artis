@@ -1,16 +1,13 @@
 #include "sn3d.h"
-
+#include "packet_init.h"
 
 int packet_init(int middle_iteration, int my_rank)
 {
-  int setup_packets(int pktnumberoffset);
-  void write_packets(FILE *packets_file);
-  char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
-
   if (!continue_simulation)
   {
     int pktnumberoffset = middle_iteration*npkts;
     setup_packets(pktnumberoffset);
+    char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
     sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank);
     FILE *packets_file;
     if ((packets_file = fopen(filename, "wb")) == NULL)
@@ -71,10 +68,7 @@ int packet_init(int middle_iteration, int my_rank)
 int setup_packets (int pktnumberoffset)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
-  int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset);
-  int m;
   CELL *grid_ptr;
-  double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
   // float cont[MGRID+1];
 
   /// The total number of pellets that we want to start with is just
@@ -96,7 +90,7 @@ int setup_packets (int pktnumberoffset)
 
   /* Need to get a normalisation factor. */
   float norm = 0.0;
-  for (m = 0; m < ngrid; m++)
+  for (int m = 0; m < ngrid; m++)
   {
     grid_ptr = &cell[m];
     cont[m] = norm;
@@ -116,7 +110,6 @@ int setup_packets (int pktnumberoffset)
 
   int n = 0;
   int packet_reset = 0;
-
   while (n < npkts)
   {
     /// Get random number.
@@ -124,6 +117,7 @@ int setup_packets (int pktnumberoffset)
     int mabove = ngrid;
     int mbelow = 0;
     double zrand = gsl_rng_uniform(rng);
+    int m;
 
     while (mabove != (mbelow+1))
     {
@@ -131,6 +125,7 @@ int setup_packets (int pktnumberoffset)
         m = mbelow + 1;
       else
         m = (mabove + mbelow)/2;
+
       if (cont[m] > (zrand*norm))
         mabove = m;
       else
@@ -205,18 +200,15 @@ int setup_packets (int pktnumberoffset)
 double fni(CELL *grid_ptr)
 /// Subroutine that gives the Ni56 mass fraction.
 {
-  double vec_len();
-  double dcen[3];
-  double fraction = 0.0;
-
   if (model_type == RHO_UNIFORM)
   {
-    dcen[0]=grid_ptr->pos_init[0] + (0.5*wid_init);
-    dcen[1]=grid_ptr->pos_init[1] + (0.5*wid_init);
-    dcen[2]=grid_ptr->pos_init[2] + (0.5*wid_init);
+    double dcen[3];
+    dcen[0] = grid_ptr->pos_init[0] + (0.5*wid_init);
+    dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
+    dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
 
-    double m_r = vec_len(dcen) / rmax;
-    m_r = pow(m_r,3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
+    double r_on_rmax = vec_len(dcen) / rmax;
+    double m_r = pow(r_on_rmax,3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
 
     if (m_r < 0.5)
       return(1.0);
@@ -228,11 +220,13 @@ double fni(CELL *grid_ptr)
   else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
   {
     /* This is a 1-D model read in. Just find value from input file and return. */
+    /*
+    double dcen[3];
     dcen[0] = grid_ptr->pos_init[0] + (0.5*wid_init);
     dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
 
-    /*double radial_pos = vec_len(dcen);
+    double radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
       fraction = fni_model[0];
@@ -248,16 +242,13 @@ double fni(CELL *grid_ptr)
     {
       fraction = 0.0;
     }*/
-    fraction = get_fni(grid_ptr->modelgridindex);
-
-    return(fraction);
+    return get_fni(grid_ptr->modelgridindex);
   }
   else if (model_type == RHO_3D_READ)
   {
     /* This is a 3-D model read in. Just return input value. */
     //fraction = grid_ptr->f_ni;
-    fraction = get_fni(grid_ptr->modelgridindex);
-    return(fraction);
+    return get_fni(grid_ptr->modelgridindex);
   }
   else
   {
@@ -265,7 +256,7 @@ double fni(CELL *grid_ptr)
     exit(0);
   }
 
-  return(-99);
+  return -99;
 }
 
 
@@ -273,23 +264,19 @@ double fni(CELL *grid_ptr)
 double f52fe(CELL *grid_ptr)
 /// Subroutine that gives the Fe52 mass fraction.
 {
-  double fraction = 0.0;
-
   if (model_type == RHO_UNIFORM)
   {
-    return(0.0);
+    return 0.0;
   }
   else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
   {
-    fraction = get_f52fe(grid_ptr->modelgridindex);
-    return(fraction);
+    return get_f52fe(grid_ptr->modelgridindex);
   }
   else if (model_type == RHO_3D_READ)
   {
     /* This is a 3-D model read in. Just return input value. */
     //fraction = grid_ptr->f_ni;
-    fraction = get_f52fe(grid_ptr->modelgridindex);
-    return(fraction);
+    return get_f52fe(grid_ptr->modelgridindex);
   }
   else
   {
@@ -297,30 +284,26 @@ double f52fe(CELL *grid_ptr)
     exit(0);
   }
 
-  return(-99);
+  return -99;
 }
 
 ///***************************************************************************/
 double f48cr(CELL *grid_ptr)
 /// Subroutine that gives the Cr48 mass fraction.
 {
-  double fraction = 0.0;
-
   if (model_type == RHO_UNIFORM)
   {
-    return(0.0);
+    return 0.0;
   }
   else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
   {
-    fraction = get_f48cr(grid_ptr->modelgridindex);
-    return(fraction);
+    return get_f48cr(grid_ptr->modelgridindex);
   }
   else if (model_type == RHO_3D_READ)
   {
     /* This is a 3-D model read in. Just return input value. */
     //fraction = grid_ptr->f_ni;
-    fraction = get_f48cr(grid_ptr->modelgridindex);
-    return(fraction);
+    return get_f48cr(grid_ptr->modelgridindex);
   }
   else
   {
@@ -328,7 +311,7 @@ double f48cr(CELL *grid_ptr)
     exit(0);
   }
 
-  return(-99);
+  return -99;
 }
 
 
@@ -338,7 +321,6 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
   double prob_chain[3];
-  double fni(CELL *grid_ptr), f48cr(CELL *grid_ptr), f52fe(CELL *grid_ptr);
 
   /// First choose a position for the pellet. In the cell.
   /// n is the index of the packet. m is the index for the grid cell.
@@ -452,7 +434,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
   /// Now assign the energy to the pellet.
   pkt[n].e_cmf = e0;
 
-  return(0);
+  return 0;
 }
 
 

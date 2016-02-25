@@ -1,15 +1,11 @@
 #include "sn3d.h"
+#include "compton.h"
 
 /* Stuff for compton scattering. */
 
-double sig_comp(pkt_ptr,t_current)
-     PKT *pkt_ptr;
-     double t_current;
+double sig_comp(PKT *pkt_ptr, double t_current)
 {
-  double vel_vec[3];
-  double fmax;
   double sigma_cmf;
-  double sigma_compton_partial();
   /* Start by working out the compton x-section in the co-moving frame.*/
 
   double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -22,7 +18,7 @@ double sig_comp(pkt_ptr,t_current)
   }
   else
   {
-    fmax = (1 + (2*xx));
+    double fmax = (1 + (2*xx));
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
 
@@ -32,27 +28,22 @@ double sig_comp(pkt_ptr,t_current)
 
   /* Now need to convert between frames. */
 
+  double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
   double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
 
-  return(sigma_rf);
+  return sigma_rf;
 }
 
 /******************************************************************/
 /*Routine to deal with physical Compton scattering event. */
-int com_sca(pkt_ptr,t_current)
-     PKT *pkt_ptr;
-     double t_current;
+int com_sca(PKT *pkt_ptr, double t_current)
 {
   double f;
-  double choose_f();
   double vel_vec[3];
   double cmf_dir[3], new_dir[3], final_dir[3];
   double cos_theta;
-  int scatter_dir();
-  double dot();
   double prob_gamma;
-  double thomson_angle();
 
   //  printout("Compton scattering.\n");
 
@@ -178,25 +169,20 @@ int com_sca(pkt_ptr,t_current)
    xx is the photon energy (in units of electron mass) and f
    is the energy loss factor up to which we wish to integrate.*/
 
-double sigma_compton_partial(x, f)
-     double x, f;
+double sigma_compton_partial(double x, double f)
 {
   double term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
   double term2 = ( ((f*f) -1) / (f * f)) / 2;
   double term3 = ( (f - 1) / x) * ( (1/x) + (2/f) + (1/(x*f)));
 
-  double tot = 3 * SIGMA_T * (term1 + term2 + term3) / (8 * x);
-
-  return tot;
+  return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-/**************************************************************/
 
+/**************************************************************/
 /* To choose the value of f to integrate to - idea is we want
    sigma_compton_partial(xx,f) = zrand. */
-
-double choose_f(xx,zrand)
-     double xx, zrand;
+double choose_f(double xx, double zrand)
 {
   double ftry, try;
 
@@ -236,6 +222,7 @@ double choose_f(xx,zrand)
 
   return ftry;
 }
+
 
 /******************************************************************/
 double thomson_angle()

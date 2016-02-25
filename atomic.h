@@ -23,4 +23,5 @@
   double statw_up(int lineindex);
   double statw_down(int lineindex);
   double photoionization_crosssection(double nu_edge, double nu);
+
 #endif //ATOMIC_H

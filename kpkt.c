@@ -168,7 +168,6 @@ void calculate_kpkt_rates(int modelgridindex)
             //printout("nonE %g, E %g \n",interpolate_bfcoolingcoeff(element,ion,level,T_e), interpolate_stimulated_bfcoolingcoeff(element,ion,level,T_R));
             //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * (stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]) * E_threshold);
             //printout("element %d, ion %d, modified %g, usual %g, diff %g, nonE %g\n",element,ion,stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion],stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion],(stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion])*E_threshold,interpolate_bfcoolingcoeff(element,ion,level,T_e));
-            //double interpolate_spontrecombcoeff(int element, int ion, int level, double T);
             //printout("alpha_sp %g , alpha_st %g\n",interpolate_spontrecombcoeff(element,ion,level,T_e),interpolate_stimulated_recomb(element,ion,level,T_R));
             //epsilon_upper = epsilon(element,ion+1,0);
             //E_threshold = epsilon_upper - epsilon_current;
@@ -391,7 +390,6 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
       //printout("nonE %g, E %g \n",interpolate_bfcoolingcoeff(element,ion,level,T_e), interpolate_stimulated_bfcoolingcoeff(element,ion,level,T_R));
       //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * (stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]) * E_threshold);
       //printout("element %d, ion %d, modified %g, usual %g, diff %g, nonE %g\n",element,ion,stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion],stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion],(stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion])*E_threshold,interpolate_bfcoolingcoeff(element,ion,level,T_e));
-      //double interpolate_spontrecombcoeff(int element, int ion, int level, double T);
       //printout("alpha_sp %g , alpha_st %g\n",interpolate_spontrecombcoeff(element,ion,level,T_e),interpolate_stimulated_recomb(element,ion,level,T_R));
       //epsilon_upper = epsilon(element,ion+1,0);
       //E_threshold = epsilon_upper - epsilon_current;
@@ -465,12 +463,13 @@ double sample_planck(double T)
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
 {
-  double nu;
-
   double nu_peak = 5.879e10 * T;
   if (nu_peak > nu_max_r || nu_peak < nu_min_r)
     printout("[warning] sample_planck: intensity peaks outside frequency range\n");
+
   double B_peak = planck(nu_peak,T);
+
+  double nu;
   int endloop = 0;
   int i = 0;
   while (endloop == 0)
@@ -479,7 +478,8 @@ double sample_planck(double T)
     double zrand = gsl_rng_uniform(rng);
     double zrand2 = gsl_rng_uniform(rng);
     nu = nu_min_r + zrand * (nu_max_r - nu_min_r);
-    if (zrand2 * B_peak <= planck(nu,T)) endloop = 1;
+    if (zrand2 * B_peak <= planck(nu,T))
+      endloop = 1;
     //printout("[debug] sample_planck: planck_sampling %d\n",i);
   }
 
@@ -491,10 +491,8 @@ double planck(double nu, double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
 {
-  return TWOHOVERCLIGHTSQUARED*pow(nu,3) / (exp(HOVERKB*nu/T) - 1);
+  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / (exp(HOVERKB*nu/T) - 1);
 }
-
-
 
 
 ///****************************************************************************
@@ -517,7 +515,6 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   gsl_integration_workspace *wsp;
   gslintegration_paras intparas;
   double bfcooling_integrand_gsl_2(double nu, void *paras);
-  double alpha_sp_E_integrand_gsl(double nu, void *paras);
   gsl_function F_bfcooling;
   //F_bfcooling.function = &bfcooling_integrand_gsl_2;
   F_bfcooling.function = &alpha_sp_E_integrand_gsl;

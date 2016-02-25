@@ -19,25 +19,14 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  void initialise_photoionestimators();
-//  void precalculate_partfuncts(int cellnumber);
-  void tabulate_bb_rad();
-  void read_packets(FILE *packets_file);
-  void write_packets(FILE *packets_file);
-  void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
-
   int time_init();
-  int packet_init(int middle_iteration, int my_rank);
   int nts;
 
   //void init_spectrum();
   int gather_spectrum(int depth);
   int gather_spectrum_res(int current_abin);
-  int gather_light_curve();
   int gather_light_curve_res(int current_abin);
   int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file);
-  int write_light_curve(FILE *lc_file, int current_abin);
-  double dot();
 
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
   int j,t_arrive;
@@ -49,7 +38,6 @@ int main(int argc, char** argv)
   //int make_light_curve_res();
   //int make_gamma_light_curve();
   double syn_gamma();
-  int estim_switch();
   int outer_iteration;
   int normalise_grey(), write_grey();
   //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
@@ -175,7 +163,7 @@ int main(int argc, char** argv)
       /// Loop over all packets in all the packets files of the simulation and check if
       /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
       /// epkts array, which is then used for the binning.
-      j=0;
+      j = 0;
       for (i = 0; i < nprocs; i++)
       {
         /// Read in the next bunch of packets to work on

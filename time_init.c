@@ -35,7 +35,7 @@ int time_init()
 
     time_step[n].pellet_decays = 0;
     time_step[n].gamma_dep = 0.0;
-    time_step[n].cmf_lum =0.0;
+    time_step[n].cmf_lum = 0.0;
   }
 
   /// and add a dummy timestep which contains the endtime

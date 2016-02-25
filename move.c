@@ -1,5 +1,5 @@
 #include "sn3d.h"
-
+#include "move.h"
 
 ///****************************************************************************
 void update_estimators(PKT *pkt_ptr, double distance)
@@ -101,11 +101,6 @@ int move_pkt(PKT *pkt_ptr, double distance, double time)
 /// dir vector). The distance moved is in the rest frame. Time must be the
 /// time at the end of distance travelled.
 {
-  double doppler();
-  int get_velocity();
-
-  double vel_vec[3];
-
   /// First update pos.
   if (distance < 0)
   {
@@ -120,6 +115,7 @@ int move_pkt(PKT *pkt_ptr, double distance, double time)
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
+  double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, time);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * doppler(pkt_ptr->dir, vel_vec);
   pkt_ptr->e_cmf = pkt_ptr->e_rf * pkt_ptr->nu_cmf / pkt_ptr->nu_rf;

@@ -194,8 +194,6 @@ int gather_spectrum(int depth)
 int add_to_spec(EPKT *pkt_ptr)
 {
   /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
-
-  double dot();
   int at,element,ion,nproc;
 
   /// Put this into the time grid.

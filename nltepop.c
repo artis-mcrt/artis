@@ -488,20 +488,17 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
   }
   else
   {
-    return(0); //Case for ion with only one level
+    return 0; //Case for ion with only one level
   }
 }
 
-/*****************************************************************/
 
+/*****************************************************************/
 double get_tot_nion(int modelgridindex)
 {
-
   //double ionstagepop(int modelgridindex, int element, int ion);
   //int nions;
-  double result;
-
-  result = 0.;
+  double result = 0.;
   for (int element = 0; element < nelements; element++)
   {
     result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
@@ -516,8 +513,8 @@ double get_tot_nion(int modelgridindex)
   return result;
 }
 
-/*****************************************************************/
 
+/*****************************************************************/
 double get_oneoverw(int element, int ion, int modelgridindex)
 {
   /* Routine to compute the work per ion pair for doing the NT ionization calculation. Makes use of EXTREMELY SIMPLE approximations - high energy limits only */
@@ -543,10 +540,10 @@ double get_oneoverw(int element, int ion, int modelgridindex)
   return oneoverW;
 }
 
+
 /*****************************************************************/
 double get_mean_binding_energy(int element, int ion)
 {
-  int electron_loop;
   int q[M_NT_SHELLS];
   double total, use1, use2, use3;
 
@@ -555,12 +552,12 @@ double get_mean_binding_energy(int element, int ion)
 
   if (nbound > 0)
   {
-    for (electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
+    for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
     {
       q[electron_loop] = 0;
     }
 
-    for (electron_loop = 0; electron_loop < nbound; electron_loop++)
+    for (int electron_loop = 0; electron_loop < nbound; electron_loop++)
     {
       if (q[0] < 2) //K 1s
       {
@@ -652,7 +649,7 @@ double get_mean_binding_energy(int element, int ion)
     //printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[elements[element].anumber-1][0], electron_binding[elements[element].anumber-1][1], electron_binding[elements[element].anumber-1][2],electron_binding[elements[element].anumber-1][3],electron_binding[elements[element].anumber-1][4],electron_binding[elements[element].anumber-1][5],electron_binding[elements[element].anumber-1][6],electron_binding[elements[element].anumber-1][7],electron_binding[elements[element].anumber-1][8],electron_binding[elements[element].anumber-1][9]);
 
     total = 0.0;
-    for (electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
+    for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
     {
       if ((use1 = q[electron_loop]) > 0)
       {
@@ -732,7 +729,7 @@ int read_binding_energies()
   }
 
   fclose(binding);
-  return(0);
+  return 0;
 }
 
 

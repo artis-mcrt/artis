@@ -2,6 +2,16 @@
   #define GRIDINIT_H
 
   int grid_init();
+  int uniform_grid_setup();
+  int density_1d_read();
+  int density_2d_read();
+  int density_3d_read();
+  void allocate_compositiondata(int cellnumber);
+  void allocate_cooling(int modelgridindex);
+  void abundances_setup();
+  void abundances_3d_read();
+  void abundances_1d_read();
+  void assign_temperature();
   double vol_init(CELL *grid_ptr);
   float get_rhoinit(int modelgridindex);
   float get_rho(int modelgridindex);

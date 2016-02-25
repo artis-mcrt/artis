@@ -19,16 +19,7 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  void initialise_photoionestimators();
-//  void precalculate_partfuncts(int cellnumber);
-  void tabulate_bb_rad();
-  void tabulate_ratecoefficients_gsl();
-  void read_packets(FILE *packets_file);
-  void write_packets(FILE *packets_file);
-  void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
-
   int time_init();
-  int packet_init(int middle_iteration, int my_rank);
   int nts;
 
   //void init_spectrum();
@@ -38,7 +29,6 @@ int main(int argc, char** argv)
   int gather_light_curve_res(int current_abin);
   int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file);
   int write_light_curve(FILE *lc_file, int current_abin);
-  double dot();
 
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
   int j,t_arrive;
@@ -46,11 +36,8 @@ int main(int argc, char** argv)
 
   //int make_spectrum_res();
   //int make_spectrum();
-  //int make_light_curve();
-  //int make_light_curve_res();
   //int make_gamma_light_curve();
   double syn_gamma();
-  int estim_switch();
   int outer_iteration;
   int normalise_grey(), write_grey();
   //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();

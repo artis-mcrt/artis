@@ -3,22 +3,19 @@
 
 /* Routine to make a MC spectrum from the packets. */
 
-int
-make_spectrum_res()
+int make_spectrum_res()
 {
   int gather_spectrum_res();
   int write_spectrum_res();
 
   gather_spectrum_res(0);
   write_spectrum_res();
-  return(0);
+  return 0;
 }
 
 
 void init_spectrum_res()
 {
-  int n,nn,m,i;
-
   if (nnubins > MNUBINS)
   {
     printout("Too many frequency bins in spectrum - reducing.\n");
@@ -37,13 +34,13 @@ void init_spectrum_res()
   dlogt = (log(tmax) - log(tmin))/ntbins;
   dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
 
-  for (nn = 0; nn < MABINS; nn++)
+  for (int nn = 0; nn < MABINS; nn++)
   {
-    for (n = 0; n < ntbins; n++)
+    for (int n = 0; n < ntbins; n++)
     {
       spectra_res[n][nn].lower_time = exp( log(tmin) + (n * (dlogt)));
       spectra_res[n][nn].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - spectra_res[n][nn].lower_time;
-      for (m=0; m < nnubins; m++)
+      for (int m = 0; m < nnubins; m++)
       {
         spectra_res[n][nn].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
         spectra_res[n][nn].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - spectra_res[n][nn].lower_freq[m];
@@ -51,31 +48,26 @@ void init_spectrum_res()
 
         if (do_emission_res == 1)
         {
-          for (i = 0; i < 2*nelements*maxion+1; i++)
+          for (int i = 0; i < 2*nelements*maxion+1; i++)
             spectra_res[n][nn].emission[m].count[i] = 0;
         }
       }
     }
   }
 }
+
 /***********************************************/
-int
-gather_spectrum_res(my_rank)
-     int my_rank;
+int gather_spectrum_res(int my_rank)
 {
-  void read_packets(FILE *packets_file);
-  int i,n,m,nn,p;
-  PKT *pkt_ptr;
   int add_to_spec_res();
-
-
 
   /// The grids are now set up. Now we loop over all the packets, check if they made it out or not,
   /// and if they did we add their rest frame energy to the appropriate cell.
 
   /// And figure out the escaping packets of those.
-  for (p = 0; p < npkts; p++)
+  for (int p = 0; p < npkts; p++)
   {
+    PKT *pkt_ptr;
     pkt_ptr = &pkt[p];
     if (pkt_ptr->type == TYPE_ESCAPE && pkt_ptr->escape_type == TYPE_RPKT)
     {
@@ -84,57 +76,54 @@ gather_spectrum_res(my_rank)
     }
   }
 
-  return(0);
+  return 0;
 }
 
 
 /*************************************************************************/
-int
-write_spectrum_res()
+int write_spectrum_res()
 {
-  int i,m,p,nn;
   FILE *spec_file;
   FILE *emission_file;
   float dum1, dum2;
 
-
-
   /// The spectra are now done - just need to print them out.
   if (file_set == 1)
+  {
+    if ((spec_file = fopen("spec_res.out", "r")) == NULL)
     {
-      if ((spec_file = fopen("spec_res.out", "r")) == NULL){
-	printout("Cannot open spec_file.txt.\n");
-	exit(0);
-      }
+      printout("Cannot open spec_file.txt.\n");
+      exit(0);
+    }
+    fscanf(spec_file, "%g ", &dum1);
+
+    for (int p = 0; p < ntbins; p++)
+    {
       fscanf(spec_file, "%g ", &dum1);
-
-      for (p = 0; p < ntbins; p++)
-	{
-	  fscanf(spec_file, "%g ", &dum1);
-	}
-
-      for (nn=0; nn < MABINS; nn++)
-	{
-	  for (m=0; m < nnubins; m++)
-	    {
-	      fscanf(spec_file, "%g ", &dum1);
-
-	      for (p = 0; p < ntbins; p++)
-		{
-		  fscanf(spec_file, "%g ",
-			 &dum2);
-		  spectra_res[p][nn].flux[m] += dum2;
-		}
-	    }
-	}
-      fclose(spec_file);
     }
 
+    for (int nn = 0; nn < MABINS; nn++)
+    {
+      for (int m = 0; m < nnubins; m++)
+      {
+        fscanf(spec_file, "%g ", &dum1);
 
-  if ((spec_file = fopen("spec_res.out", "w+")) == NULL){
+        for (int p = 0; p < ntbins; p++)
+        {
+          fscanf(spec_file, "%g ", &dum2);
+          spectra_res[p][nn].flux[m] += dum2;
+        }
+      }
+    }
+    fclose(spec_file);
+  }
+
+  if ((spec_file = fopen("spec_res.out", "w+")) == NULL)
+  {
     printout("Cannot open spec_file.txt.\n");
     exit(0);
   }
+
   if (do_emission_res == 1)
   {
     if ((emission_file = fopen("emission_res.out", "w")) == NULL)
@@ -144,53 +133,47 @@ write_spectrum_res()
     }
   }
 
-
   fprintf(spec_file, "%g ", 0.0);
 
-  for (p = 0; p < ntbins; p++)
-    {
-      fprintf(spec_file, "%g ", (spectra_res[p][0].lower_time + (spectra_res[0][p].delta_t/2))/DAY);
-    }
+  for (int p = 0; p < ntbins; p++)
+  {
+    fprintf(spec_file, "%g ", (spectra_res[p][0].lower_time + (spectra_res[0][p].delta_t/2))/DAY);
+  }
 
   fprintf(spec_file, "\n");
 
-  for (nn=0; nn < MABINS; nn++)
+  for (int nn = 0; nn < MABINS; nn++)
+  {
+    for (int m = 0; m < nnubins; m++)
     {
-      for (m=0; m < nnubins; m++)
-	{
-	  fprintf(spec_file, "%g ", ((spectra_res[0][0].lower_freq[m]+(spectra_res[0][0].delta_freq[m]/2))));
+      fprintf(spec_file, "%g ", ((spectra_res[0][0].lower_freq[m]+(spectra_res[0][0].delta_freq[m]/2))));
 
-	  for (p = 0; p < ntbins; p++)
-	    {
-	      fprintf(spec_file, "%g ",
-		      spectra_res[p][nn].flux[m]);
+      for (int p = 0; p < ntbins; p++)
+      {
+        fprintf(spec_file, "%g ", spectra_res[p][nn].flux[m]);
 
-              if (do_emission_res == 1)
-              {
-                for (i = 0; i < 2*nelements*maxion+1; i++)
-                  fprintf(emission_file, "%d ", spectra_res[p][nn].emission[m].count[i]);
-                fprintf(emission_file, "\n");
-              }
-	    }
-	  fprintf(spec_file, "\n");
-	}
-
+        if (do_emission_res == 1)
+        {
+          for (int i = 0; i < 2*nelements*maxion+1; i++)
+            fprintf(emission_file, "%d ", spectra_res[p][nn].emission[m].count[i]);
+          fprintf(emission_file, "\n");
+        }
+      }
+    fprintf(spec_file, "\n");
     }
 
+  }
+
   fclose(spec_file);
-  if (do_emission_res == 1) fclose(emission_file);
+  if (do_emission_res == 1)
+    fclose(emission_file);
 
-
-  return(0);
+  return 0;
 }
 
 /**********************************************************************/
-
 /*Routine to add a packet to the outcoming spectrum.*/
-
-int
-add_to_spec_res(pkt_ptr)
-     PKT *pkt_ptr;
+int add_to_spec_res(PKT *pkt_ptr)
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
@@ -199,9 +182,6 @@ add_to_spec_res(pkt_ptr)
      The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
   */
 
-  double dot(), vec_len();
-  int cross_prod();
-  double t_arrive;
   int i, nt, nnu, na;
   int thetabin, phibin;
   double vec1[3], vec2[3], vec3[3], xhat[3];
@@ -212,9 +192,7 @@ add_to_spec_res(pkt_ptr)
   xhat[1]=0;
   xhat[2]=0;
 
-
-
-  t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
+  double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
 
   /* Put this into the time grid. */
 
@@ -243,7 +221,6 @@ add_to_spec_res(pkt_ptr)
     }
 
     na = (thetabin*sqrt(MABINS)) + phibin;
-
 
     if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
     {
@@ -279,6 +256,5 @@ add_to_spec_res(pkt_ptr)
     }
   }
 
-  return(0);
-
+  return 0;
 }

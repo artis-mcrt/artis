@@ -21,9 +21,8 @@ double vec_len(double x[3])
 /*Routine for normalizing a vector.*/
 void vec_norm(double x[3], double z[3])
 {
-  double y = (x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]);
-
-  y = sqrt(y);
+  double ysquared = (x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]);
+  double y = sqrt(ysquared);
 
   if (y < 0)
   {
@@ -108,8 +107,8 @@ int scatter_dir(double *dir_in, double cos_theta, double *dir_out)
   double zrand = gsl_rng_uniform(rng);
   double phi = zrand * 2 * PI;
 
-  double sin_theta = 1. - (cos_theta*cos_theta);
-  sin_theta = sqrt(sin_theta);
+  double sin_theta_sq = 1. - (cos_theta*cos_theta);
+  double sin_theta = sqrt(sin_theta_sq);
   double zprime = cos_theta;
   double xprime = sin_theta * cos(phi);
   double yprime = sin_theta * sin(phi);

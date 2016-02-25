@@ -26,32 +26,16 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double Col_ion;
 
   //void dilute_pops(int cellnumber, int nts);
-  void calculate_cooling_rates(int modelgridindex);
-  void calculate_oldheating_rates(int modelgridindex);
-  double get_radrecomb(int element, int ion, int level, int modelgridindex);
-  double get_thermalratio(int element, int ion, int level, int modelgridindex);
-  double get_adcool(int modelgridindex, int nts);
-  double get_ffcooling(int element, int ion, int modelgridindex);
-  //double get_twiddleabs(int element, int ion, int level, int modelgridindex);
-  double get_bfheating(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-//  double interpolate_photoioncoeff_below(int element, int ion, int level, double T);
-//  double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
-  //double interpolate_zeta(int element, int ion, double T);
   //double gamma_lte,zeta;
 
-  void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
   //double ionstagepop(int cellnumber, int element, int ion);
   //void check_interpolation(double T_min, double T_max);
   //double mintemp_solution_f(double T, void *paras);
   //double maxtemp_solution_f(double T, void *paras);
   //double calculate_ltepartfunct(int element, int ion, double T);
   //float calculate_groundlevelpop(int element, int ion, double T, int cellnumber, double nne, double nnnextion);
-  void update_abundances(int modelgridindex, double t_current);
-  double nlte_pops(int element, int ion, int modelgridindex, int timestep);
 
   int search_cellhistory(int cellnumber);
-  void determine_kpkt_cuts(int cellnumber);
 
 
   /// only needed if all level populations should be printed to the output-file
@@ -1226,8 +1210,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
 ///****************************************************************************
 /// subroutine to identify the cell index from a position and a time. */
-int get_cell(x, y, z, t)
-    double x, y, z, t;
+int get_cell(double x, double y, double z, double t)
 {
   /* Original version of this was general but very slow. Modifying to be
   faster but only work for regular grid. */
@@ -1786,8 +1769,6 @@ double get_adcool(int cellnumber, int nts)
 
 double get_radrecomb(int element, int ion, int level, int cellnumber)
 {
-  double interpolate_spontrecombcoeff(int element, int ion, int level, double T);
-  double get_groundlevelpop(int cellnumber, int element, int ion);
   double T_e,nne,nnion,E_threshold,alpha_sp;
 
   T_e = cell[cellnumber].T_e;
@@ -1807,8 +1788,6 @@ double get_radrecomb(int element, int ion, int level, int cellnumber)
 /*
 double get_thermalratio(int element, int ion, int level, int cellnumber)
 {
-  double interpolate_spontrecombcoeff(int element, int ion, int level, double T);
-  double interpolate_spontrecombcoeff_E(int element, int ion, int level, double T);
   double T_e,alpha_sp,alpha_sp_E;
 
   T_e = cell[cellnumber].T_e;

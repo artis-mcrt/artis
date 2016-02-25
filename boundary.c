@@ -53,7 +53,7 @@ double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
     {
       *snext = pkt_ptr->where + 1;
       pkt_ptr->last_cross = POS_X;
-      return(0);
+      return 0;
     }
     else
     {
@@ -73,7 +73,7 @@ double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
     {
       *snext = pkt_ptr->where - 1;
       pkt_ptr->last_cross = NEG_X;
-      return(0);
+      return 0;
     }
     else
     {
@@ -93,7 +93,7 @@ double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
     {
       *snext = pkt_ptr->where + nxgrid;
       pkt_ptr->last_cross = POS_Y;
-      return(0);
+      return 0;
     }
     else
     {
@@ -113,7 +113,7 @@ double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
     {
       *snext = pkt_ptr->where - nxgrid;
       pkt_ptr->last_cross = NEG_Y;
-      return(0);
+      return 0;
     }
     else
     {
@@ -133,7 +133,7 @@ double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
     {
       *snext = pkt_ptr->where + (nxgrid*nygrid);
       pkt_ptr->last_cross = POS_Z;
-      return(0);
+      return 0;
     }
     else
     {
@@ -153,7 +153,7 @@ double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
     {
       *snext = pkt_ptr->where - (nxgrid*nygrid);
       pkt_ptr->last_cross = NEG_Z;
-      return(0);
+      return 0;
     }
     else
     {
@@ -348,7 +348,6 @@ int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
   int search_cellhistory(int cellnumber);
   int find_farthestcell(int cellnumber);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-  void determine_kpkt_cuts(int cellnumber);
   //void calculate_kpkt_rates(int cellnumber);
   //int element, ion, level;
   int oldpos,mgi,old_mgi;
@@ -370,7 +369,7 @@ int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
     pkt_ptr->type = TYPE_ESCAPE;
     nesc += 1;
     *end_packet = 1;
-    return(0);
+    return 0;
   }
   else
   {

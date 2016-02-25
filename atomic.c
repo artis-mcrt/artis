@@ -18,7 +18,8 @@ int get_elementindex(int Z)
   for (int i = 0; i < nelements; i++)
   {
     //printf("i %d, Z %d, elements[i].anumber %d\n",i,Z,elements[i].anumber);
-    if (Z == elements[i].anumber) return i;
+    if (Z == elements[i].anumber)
+      return i;
   }
 
   //printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections for this element\n",Z);
@@ -125,6 +126,7 @@ int get_continuumindex(int element, int ion, int level)
   return elements[element].ions[ion].levels[level].cont_index;
 }
 
+
 ///***************************************************************************/
 int get_nphixstargets(int element, int ion, int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
@@ -136,6 +138,7 @@ int get_nphixstargets(int element, int ion, int level)
   else
     return 0;
 }
+
 
 ///***************************************************************************/
 int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
@@ -153,6 +156,7 @@ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
   return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
 }
 
+
 ///***************************************************************************/
 float get_phixsprobability(int element, int ion, int level, int phixstargetindex)
 /// Returns the probability of a target state for photoionization of (element,ion,level).
@@ -169,12 +173,13 @@ float get_phixsprobability(int element, int ion, int level, int phixstargetindex
   return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
 }
 
+
 ///***************************************************************************/
 int transitioncheck(int upper, int lower)
 /// reads A_ul from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
 {
-  int index = (upper-lower) - 1;
+  int index = (upper - lower) - 1;
   int flag = transitions[upper].to[index];
 
   return flag;

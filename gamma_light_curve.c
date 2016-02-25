@@ -12,14 +12,13 @@ int make_gamma_light_curve()
 
   gather_gamma_light_curve(0);
   write_gamma_light_curve();
-  return(0);
-}
-/**********************************************************************/
 
-int gather_gamma_light_curve(my_rank)
-     int my_rank;
+  return 0;
+}
+
+/**********************************************************************/
+int gather_gamma_light_curve(int my_rank)
 {
-  void read_packets(FILE *packets_file);
   PKT *pkt_ptr;
   int add_to_lc_angle();
   int i,n,p,nn;
@@ -82,20 +81,19 @@ int gather_gamma_light_curve(my_rank)
     }
   }
 
-  return(0);
+  return 0;
 }
+
 /***********************************************************************************/
 int write_gamma_light_curve()
 {
-  FILE *lc_gamma_file;
-  int m,nn;
-  float dum1, dum2;
   double save[MTLCBINS][MANGLCBINS];
-
 
   /* Light curve is done - write it out. */
 
   /* If needed, start by reading in existing file and storing old numbers. */
+
+  FILE *lc_gamma_file;
 
   if (file_set == 1)
   {
@@ -104,10 +102,11 @@ int write_gamma_light_curve()
       printout("Cannot open lc_gamma_file.txt.\n");
       exit(0);
     }
-    for (m=0; m < ntlcbins; m++)
+    for (int m = 0; m < ntlcbins; m++)
     {
+      float dum1, dum2;
       fscanf(lc_gamma_file, "%g", &dum1);
-      for (nn=0; nn < MANGLCBINS; nn++)
+      for (int nn = 0; nn < MANGLCBINS; nn++)
       {
         fscanf(lc_gamma_file, " %g ",&dum2);
         save[m][nn]=dum2;
@@ -117,9 +116,9 @@ int write_gamma_light_curve()
   }
   else
   {
-    for (m=0; m < ntlcbins; m++)
+    for (int m = 0; m < ntlcbins; m++)
     {
-      for (nn=0; nn < MANGLCBINS; nn++)
+      for (int nn = 0; nn < MANGLCBINS; nn++)
       {
         save[m][nn]=0.0;
       }
@@ -133,10 +132,10 @@ int write_gamma_light_curve()
     exit(0);
   }
 
-  for (m=0; m < ntlcbins; m++)
+  for (int m = 0; m < ntlcbins; m++)
   {
     fprintf(lc_gamma_file, "%g ", sqrt(light_curve_angle[m][0].lower_time*(light_curve_angle[m][0].lower_time + light_curve_angle[m][0].delta_t))/DAY);
-    for (nn=0; nn < MANGLCBINS; nn++)
+    for (int nn = 0; nn < MANGLCBINS; nn++)
     {
       fprintf(lc_gamma_file, " %g ",(light_curve_angle[m][nn].lum/LSUN) + save[m][nn]);
     }
@@ -146,7 +145,7 @@ int write_gamma_light_curve()
 
   fclose(lc_gamma_file);
 
-  return(0);
+  return 0;
 }
 
 /**********************************************************************/
@@ -154,25 +153,20 @@ int write_gamma_light_curve()
 /*Routine to add a packet to the outcoming light-curve.*/
 /*See add_to_spec.*/
 
-int
-add_to_lc_angle(pkt_ptr)
-     PKT *pkt_ptr;
+int add_to_lc_angle(PKT *pkt_ptr)
 {
-  int cross_prod();
-  double dot(), vec_len();
-  double t_arrive;
   int nt, na;
   int thetabin, phibin;
   double vec1[3], vec2[3], xhat[3], vec3[3];
   double costheta, cosphi, testphi;
 
-  xhat[0]=1.0;
-  xhat[1]=0;
-  xhat[2]=0;
+  xhat[0] = 1.0;
+  xhat[1] = 0;
+  xhat[2] = 0;
 
   /* Formula from Leon's paper. */
 
-  t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
+  double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
 
   /* Put this into the time grid. */
 
@@ -200,11 +194,10 @@ add_to_lc_angle(pkt_ptr)
       phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MANGLCBINS));
     }
 
-    na = (thetabin*sqrt(MANGLCBINS)) + phibin;
-
+    na = (thetabin * sqrt(MANGLCBINS)) + phibin;
 
     light_curve_angle[nt][na].lum += pkt_ptr->e_rf / light_curve_angle[nt][na].delta_t * MANGLCBINS / nprocs;
   }
 
-  return(0);
+  return 0;
 }

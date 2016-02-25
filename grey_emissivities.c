@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "grey_emissivities.h"
 #include <string.h>
 
 ///In this file the call to kappa_rpkt does not fit kappa_rpkts definition any loger!!!
@@ -23,12 +24,8 @@ to be) used for the new light_curve syn-style calculation. */
 distance dist in the lab frame. Time at start of distance is t_current.*/
 
   double vel_vec[3];
-  double sig_photo_electric(), meanf_sigma(), sig_pair_prod();
-  double boundary_cross();
   double calculate_kappa_rpkt_cont();
   PKT dummy;
-  int move_pkt(PKT *pkt_ptr, double distance, double time);
-  int change_cell();
 
   //printout("[debug] Execution of rlc_emiss_gamma\n");
 
@@ -110,9 +107,7 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
 }
 
 /*******************************************************/
-int rlc_emiss_rpkt(pkt_ptr, dist, t_current)
-     PKT *pkt_ptr;
-     double dist, t_current;
+int rlc_emiss_rpkt(PKT *pkt_ptr, double dist, double t_current)
 {
   /* Subroutine to record the rate of destruction (and re-creation) of
      r-packets by the grey opacity. */
@@ -287,8 +282,7 @@ int write_grey(int nts)
 /* Routine to compute the mean energy converted to non-thermal electrons times
 the Klein-Nishina cross section. */
 
-double meanf_sigma(x)
-     double x;
+double meanf_sigma(double x)
 {
   double f = 1+(2*x);
 
@@ -354,11 +348,7 @@ int emiss_rlc_load(int nts)
 }
 
 /***********************************************/
-int grey_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
-     RAY *ray_ptr;
-     int nray, lindex;
-     double ldist, single_t;
-     double *single_pos;
+int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)
 {
   /* This is called when a grey ray is about to be moved a distance ldist. */
   /* It should account for the changes in the ray intensity due to

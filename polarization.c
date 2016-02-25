@@ -4,14 +4,9 @@
 ///****************************************************************************
 void escat_rpkt(PKT *pkt_ptr, double t_current)
 {
-  double vec_len(), doppler(), dot();
-  int get_velocity(), angle_ab();
-
   double dummy_dir[3], vel_vec[3];
   double old_dir_cmf[3],new_dir_cmf[3],dir_perp[3];
   double old_dir_rf[3];
-  int cross_prod();
-  void vec_norm (double x[3], double z[3]);
 
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;

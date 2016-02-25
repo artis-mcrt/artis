@@ -1,15 +1,11 @@
 #include "sn3d.h"
+#include "gamma.h"
 
 /* Material for handing gamma rays - creation and propagation. */
 
-int pellet_decay(nts,pkt_ptr)
-     int nts;
-     PKT *pkt_ptr;
+int pellet_decay(int nts, PKT *pkt_ptr)
 {
-  double vec_len();
   double dummy_dir[3], vel_vec[3];
-  int choose_gamma_ray();
-  void vec_norm(double x[3], double z[3]);
 
   /*Subroutine to convert a pellet to a gamma ray. */
   /*nts defines the time step we are in. pkt_ptr is a pointer to the packet
@@ -95,14 +91,12 @@ int pellet_decay(nts,pkt_ptr)
   //printout("initialise pol state of packet %g, %g, %g, %g, %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   //printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
-  return(0);
+  return 0;
 }
 
 
 /******************************************************/
-
-int choose_gamma_ray(pkt_ptr)
-    PKT *pkt_ptr;
+int choose_gamma_ray(PKT *pkt_ptr)
 {
   /* Routine to choose which gamma ray line it'll be. */
 
@@ -196,29 +190,16 @@ int choose_gamma_ray(pkt_ptr)
     exit(0);
   }
 
-  return(0);
+  return 0;
 }
 
 
 /********************************************************/
-
 /* Now routine for moving a gamma packet. Idea is that we have as input
 a gamma packet with known properties at time t1 and we want to follow it
 until time t2. */
-
-double do_gamma (pkt_ptr, t1, t2)
-      PKT *pkt_ptr;
-     double t1, t2;
+double do_gamma (PKT *pkt_ptr, double t1, double t2)
 {
-  double boundary_cross();
-  int move_pkt(PKT *pkt_ptr, double distance, double time);
-  int change_cell();
-  double sig_comp();
-  double sig_photo_electric();
-  double sig_pair_prod();
-  int com_sca(), compton_emiss_cont(), rlc_emiss_gamma(), pair_prod();
-  int pp_emiss_cont();
-
   double t_current = t1; //this will keep track of time in the calculation
 
   int end_packet = 0; //tells us when to stop working on this packet
@@ -431,5 +412,5 @@ double do_gamma (pkt_ptr, t1, t2)
       exit(0);
     }
   }
-  return(PACKET_SAME);
+  return PACKET_SAME;
 }

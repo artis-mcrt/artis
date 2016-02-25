@@ -1,11 +1,10 @@
 #include "types.h"
 
-
 int tid;
 short use_cellhist;
 //int histindex;
 short neutral_flag;
-gsl_rng *rng; 
+gsl_rng *rng;
 
 //int debuglevel;
 //int propagationcounter;
@@ -17,9 +16,9 @@ gsl_rng *rng;
 //rpkt_cont_opacity_struct kappa_rpkt_cont;
 //coolingrates_t coolingrates;
 //heatingrates_t heatingrates;
-//short elements_uppermost_ion[MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element 
-//                                                 /// in a given cell. Be aware that this must not be used outside of the update_grid 
-//                                                 /// routine and their doughters. 
+//short elements_uppermost_ion[MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element
+//                                                 /// in a given cell. Be aware that this must not be used outside of the update_grid
+//                                                 /// routine and their doughters.
 
 //cellhistory_struct *cellhistory;
 //phixslist_t *phixslist;

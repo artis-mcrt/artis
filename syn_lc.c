@@ -3,16 +3,14 @@
 /* Master subroutine for computing the formal integral grey optical light curve. */
 
 double syn_lc()
-     /* Note the direction (vector pointing from origin to observer is
+   /* Note the direction (vector pointing from origin to observer is
   externally set: syn_dir[3]. */
 {
-
   int syn_lc_init();
   int time_init();
   int update_gamma_rays();
   int update_grid();
   FILE *syn_file;
-  int emiss_rlc_load();
 
   if ((syn_file = fopen("syn_lc.out", "w+")) == NULL)
   {

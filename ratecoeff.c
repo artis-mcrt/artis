@@ -951,9 +951,6 @@ double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstarge
 ///***************************************************************************/
 double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, double T);
-  //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
@@ -985,8 +982,6 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
 ///***************************************************************************/
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, double T);
-  //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
   //double nnlevel;
 
   /// The correction factor for stimulated emission in gammacorr is set to its
@@ -1009,9 +1004,6 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 /// or update_grid. Therefore we need to decide whether a cell history is
 /// known or not.
 {
-  double interpolate_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, double T);
-  double get_groundlevelpop(int modelgridindex, int element, int ion);
-  double ionstagepop(int modelgridindex, int element, int ion);
   double bfcooling;
 
   double T_e = get_Te(modelgridindex);
@@ -1060,8 +1052,6 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 /// cell history if known.
 /// For ionisation to other levels than the ground level this must be adapted.
 {
-  double interpolate_spontrecombcoeff(int element, int ion, int level, double T);
-  double get_groundlevelpop(int cellnumber, int element, int ion);
   double alpha_sp;
 
   double T_e = cell[cellnumber].T_e;
@@ -1091,11 +1081,9 @@ void check_interpolation(double T_min, double T_max)
   double interpolate_gamma(int element, int ion, int level, double T_e);
   double interpolate_modified_gamma(int element, int ion, int level, double T_e);
 
-  double alpha_sp_integrand_gsl(double nu, void * paras);
   double modified_alpha_sp_integrand_gsl(double nu, void * paras);
   double alpha_st_integrand_gsl(double nu, void * paras);
   double modified_alpha_st_integrand_gsl(double nu, void * paras);
-  double gamma_integrand_gsl(double nu, void * paras);
   double modified_gamma_integrand_gsl(double nu, void * paras);
 
   gslintegration_paras intparas;

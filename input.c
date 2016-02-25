@@ -13,8 +13,6 @@
 int input(int rank)
 {
   int get_gam_ll();
-  int get_nul();
-  int read_binding_energies();
 
   FILE *co_lines;
   FILE *ni_lines;
@@ -1762,8 +1760,7 @@ void read_atomicdata()
 
 ///****************************************************************************
 /// Subroutine to read in input parameters from input.txt.
-void read_parameterfile(rank)
-     int rank;
+void read_parameterfile(int rank)
 {
   //double z1, z2, x;
   double x;

@@ -12,9 +12,6 @@ double syn_gamma()
   int update_grid();
   FILE *syn_file;
   double spec_syn[NSYN];
-  int emiss_load();
-  int estim_switch();
-
 
   if ((syn_file = fopen("syn.out", "w+")) == NULL)
   {

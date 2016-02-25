@@ -11,10 +11,8 @@ int update_packets(int nts)
   int search_cellhistory(int cellnumber);
   int find_farthestcell_initial(int cellnumber);
   void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-  void determine_kpkt_cuts(int cellnumber);
   PKT *pkt_ptr;
   int packet_prop();
-  int pellet_decay();
   //double n_1;
   //double boltzmann(PKT *pkt_ptr, int reflevel, double n_reflevel, int targetlevel);
 
