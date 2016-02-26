@@ -90,7 +90,7 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
   }
 
 
-  return(0);
+  return 0;
 }
 
 /*******************************************************/

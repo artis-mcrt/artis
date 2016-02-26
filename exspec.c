@@ -22,24 +22,12 @@ int main(int argc, char** argv)
   int time_init();
   int nts;
 
-  //void init_spectrum();
-  int gather_spectrum(int depth);
-  int gather_spectrum_res(int current_abin);
-  int gather_light_curve_res(int current_abin);
-  int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file);
-
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
   int j,t_arrive;
   PKT *pkt_ptr;
 
-  //int make_spectrum_res();
-  //int make_spectrum();
-  //int make_light_curve();
-  //int make_light_curve_res();
-  //int make_gamma_light_curve();
   double syn_gamma();
   int outer_iteration;
-  int normalise_grey(), write_grey();
   //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
   //int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
   //int gather_gamma_light_curve(), write_gamma_light_curve();

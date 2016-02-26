@@ -6,15 +6,6 @@
 /// don't need to be uniform but for the moment they are.
 int grid_init()
 {
-  int uniform_grid_setup ();
-  int uniform_density_setup ();
-  int density_1d_read();
-  int density_2d_read();
-  int density_3d_read();
-  void abundances_setup();
-  void abundances_3d_read(), abundances_1d_read();
-  void assign_temperature();
-
   /// Start by checking that the number of grid cells is okay */
   //ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
   //if (ngrid > MGRID)
@@ -31,7 +22,7 @@ int grid_init()
   /// sets up the initial positions and widths of the cells.
   if (grid_type == GRID_UNIFORM)
   {
-    uniform_grid_setup ();
+    uniform_grid_setup();
   }
   else
   {
@@ -98,17 +89,13 @@ int grid_init()
 
 
 ///***************************************************************************/
-int uniform_grid_setup ()
+int uniform_grid_setup()
 /// Routine for doing a uniform cuboidal grid.
 {
-  int n; /// loop variable over the grid cells
-  int nx, ny, nz;
-  int element;
-
-  nx = 0;
-  ny = 0;
-  nz = 0;
-  for (n = 0; n < ngrid; n++)
+  int nx = 0;
+  int ny = 0;
+  int nz = 0;
+  for (int n = 0; n < ngrid; n++)
   {
     cell[n].pos_init[0] = -xmax + (2 * nx * xmax / nxgrid);
     cell[n].pos_init[1] = -ymax + (2 * ny * ymax / nygrid);
@@ -314,7 +301,7 @@ int uniform_grid_setup ()
   printout("Initial densities assigned uniformly.\n");
   printout("Grey normalisation check: %g\n", check1/check2);
 
-  return(0);
+  return 0;
 }*/
 
 
@@ -323,10 +310,7 @@ int uniform_grid_setup ()
 /// Routine for doing a density grid read from a 1-D model.
 int density_1d_read ()
 {
-  void allocate_compositiondata(int cellnumber);
-  void allocate_cooling(int modelgridindex);
   int n, m;
-  double vec_len();
   double radial_pos;
   double dcen[3];
   double check1, check2;
@@ -335,7 +319,7 @@ int density_1d_read ()
   //double den_norm[MMODELGRID];
   double opcase2_normal,opcase3_sum;
   int empty_cells;
-  int element, anumber, get_element();
+  int element, anumber;
   float abundance;
 
   double helper;
@@ -859,17 +843,14 @@ int density_1d_read ()
   printout("Grey normalisation check: %g\n", check1/check2);
   printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN);
 
-  return(0);
+  return 0;
 }
 
 ///****************************************************************************
 /// Routine for doing a density grid read from a 2-D model.
-int density_2d_read ()
+int density_2d_read()
 {
-  void allocate_compositiondata(int cellnumber);
-  void allocate_cooling(int modelgridindex);
   int n, m;
-  double vec_len();
   double radial_pos;
   double dcen[3];
   double check1, check2;
@@ -878,7 +859,7 @@ int density_2d_read ()
   //double den_norm[MMODELGRID];
   double opcase2_normal,opcase3_sum;
   int empty_cells;
-  int element, anumber, get_element();
+  int element, anumber;
   float abundance;
   double zcylindrical, rcylindrical;
 
@@ -1137,7 +1118,7 @@ int density_2d_read ()
   printout("Grey normalisation check: %g\n", check1/check2);
   printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN);
 
-  return(0);
+  return 0;
 }
 
 
@@ -1146,15 +1127,12 @@ int density_2d_read ()
 /// Routine for doing a density grid read from a 3-D model.
 int density_3d_read ()
 {
-  void allocate_compositiondata(int cellnumber);
-  double vec_len();
   int n;
   double radial_pos;
   double dcen[3];
   double check1, check2;
   double opcase2_normal;
   int empty_cells, mgi;
-
 
   check1 = check2 = 0.0;
   rho_sum = 0.0;
@@ -1395,7 +1373,7 @@ int density_3d_read ()
   printout("Initial densities taken from readin.\n");
   printout("Grey normalisation check: %g\n", check1/check2);
 
-  return(0);
+  return 0;
 }
 
 
@@ -1809,9 +1787,7 @@ void assign_temperature()
 /// Routine for getting the initial cell volume.
 double vol_init(CELL *grid_ptr)
 {
-  double vol = wid_init * wid_init * wid_init;
-
-  return vol;
+  return (wid_init * wid_init * wid_init);
 }
 
 

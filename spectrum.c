@@ -1,17 +1,15 @@
 #include "sn3d.h"
 #include "exspec.h"
+#include "spectrum.h"
 
-int make_spectrum()
+/*int make_spectrum()
 /// Routine to make a MC spectrum from the packets.
 {
-  int gather_spectrum();
-  int write_spectrum();
-
   gather_spectrum(0);
   write_spectrum();
 
   return 0;
-}
+}*/
 
 
 /*******************************************************/
@@ -140,8 +138,6 @@ void init_spectrum(void)
 
 int gather_spectrum(int depth)
 {
-  void init_spectrum();
-  int add_to_spec(EPKT *pkt_ptr);
   //void read_packets(FILE *packets_file);
   EPKT *pkt_ptr;
   //int i,n,m,p;
@@ -257,8 +253,6 @@ int gather_spectrum_res(int current_abin)
 {
   //void read_packets(FILE *packets_file);
   //int i,n,m,nn,p;
-  int add_to_spec_res(EPKT *pkt_ptr, int current_abin);
-  void init_spectrum(void);
   EPKT *pkt_ptr;
 
   /// Set up the spectrum grid and initialise the bins to zero.
@@ -287,8 +281,6 @@ int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
      The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
   */
 
-  double dot(), vec_len();
-  int cross_prod();
   double t_arrive,deltaE;
   int i, nt, nnu;
   int phibin;

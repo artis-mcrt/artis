@@ -46,19 +46,9 @@ int ray_prop(RAY *ray_ptr, double t1, double t2, int nts)
 /***************************************************************/
 double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 {
-  double boundary_cross_ray();
   RAY dum_ray;
   double dnuds[NSYN];
-  int get_nul();
-  int copy_ray();
   double single_pos[3];
-  double get_gam_freq();
-  int move_one_ray();
-  int move_ray();
-  int change_cell_ray();
-  int add_gam_line_emissivity();
-  int continuum_rt();
-  int grey_rt();
 
   double t_current = t1; //this will keep track of time in the calculation
 
@@ -177,7 +167,7 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
           {
             printout("Ermmm. What?\n");
             exit(0);
-            grey_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex);
+            //grey_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex);
           }
           else
           {
@@ -253,11 +243,10 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 /****************************************************/
 double boundary_cross_ray(RAY *ray_ptr, double tstart, int *snext)
 {
-  PKT dummy;
-  double boundary_cross();
-
   /* This is just a front end to use boundary_cross with a ray. Puts relevant
      info in to a fake packet and passes. Then sets return in ray. */
+
+  PKT dummy;
 
   dummy.pos[0] = ray_ptr->pos[0];
   dummy.pos[1] = ray_ptr->pos[1];
@@ -305,7 +294,7 @@ int change_cell_ray(RAY *ray_ptr, int snext, int *end_packet, double t_current)
       ray_ptr->status = FINISHED;
     }
 
-  return(0);
+  return 0;
 }
 
 /**************************************************/
@@ -321,6 +310,7 @@ int copy_ray (RAY *ray1, RAY *ray2)
   ray2->pos[0] = ray1->pos[0];
   ray2->pos[1] = ray1->pos[1];
   ray2->pos[2] = ray1->pos[2];
+
   for (int n = 0; n < NSYN; n++)
   {
     ray2->nu_rf[n] = ray1->nu_rf[n];
@@ -328,7 +318,8 @@ int copy_ray (RAY *ray1, RAY *ray2)
     ray2->e_rf[n] = ray1->e_rf[n];
     ray2->e_cmf[n] = ray1->e_cmf[n];
   }
-  return(0);
+
+  return 0;
 }
 
 /**********************************************/
@@ -337,9 +328,6 @@ int move_ray(RAY *ray_ptr, double dist, double time)
   /* just make a dummy packet and use move. */
 
   PKT dummy;
-  int move_pkt(PKT *pkt_ptr, double distance, double time);
-  double doppler_fac;
-  int n;
 
   dummy.pos[0] = ray_ptr->pos[0];
   dummy.pos[1] = ray_ptr->pos[1];
@@ -359,23 +347,22 @@ int move_ray(RAY *ray_ptr, double dist, double time)
   ray_ptr->pos[1] = dummy.pos[1];
   ray_ptr->pos[2] = dummy.pos[2];
 
-  doppler_fac = dummy.nu_cmf / dummy.nu_rf;
+  double doppler_fac = dummy.nu_cmf / dummy.nu_rf;
 
-  for (n = 0; n < NSYN; n++)
-    {
-      ray_ptr->nu_cmf[n] = ray_ptr->nu_rf[n] * doppler_fac;
+  for (int n = 0; n < NSYN; n++)
+  {
+    ray_ptr->nu_cmf[n] = ray_ptr->nu_rf[n] * doppler_fac;
 
-      /* removing next line (Jan06) since e_cmf seems redundant for rays. */
-      //      ray_ptr->e_cmf[n] = ray_ptr->e_rf[n] * doppler_fac;
-    }
-  return(0);
+    /* removing next line (Jan06) since e_cmf seems redundant for rays. */
+    //      ray_ptr->e_cmf[n] = ray_ptr->e_rf[n] * doppler_fac;
+  }
+
+  return 0;
 }
 
 /**************************************************************/
 int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double single_t)
 {
-  double vel_vec[3];
-
   if (dist < 0)
   {
     printout("Trying to move -v distance. Abort.\n");
@@ -386,13 +373,14 @@ int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double
   single_pos[1] += syn_dir[1] * dist;
   single_pos[2] += syn_dir[2] * dist;
 
+  double vel_vec[3];
   get_velocity(single_pos, vel_vec, single_t);
 
   ray_ptr->nu_cmf[nray] = ray_ptr->nu_rf[nray] * doppler(syn_dir, vel_vec);
   // again, rmoving next line since e_cmf seems redundant.
   //ray_ptr->e_cmf[nray] = ray_ptr->e_rf[nray] * ray_ptr->nu_cmf[nray] / ray_ptr->nu_rf[nray];
 
-  return(0);
+  return 0;
 }
 
 
@@ -401,42 +389,42 @@ int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double
 int get_nul(double freq)
 {
   int too_high, too_low, try;
-  double freq_max, freq_min, freq_try;
+  double freq_try;
   double get_gam_freq();
 
-  freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
-  freq_min = get_gam_freq(&gam_line_list, 0);
+  double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
+  double freq_min = get_gam_freq(&gam_line_list, 0);
 
   if (freq > freq_max)
-    {
-      return(gam_line_list.total-1);
-    }
+  {
+    return(gam_line_list.total-1);
+  }
   else if (freq < freq_min)
-    {
-      return(RED_OF_LIST);
-    }
+  {
+    return(RED_OF_LIST);
+  }
   else
-    {
-      too_high = gam_line_list.total - 1;
-      too_low = 0;
+  {
+    too_high = gam_line_list.total - 1;
+    too_low = 0;
 
-      while (too_high != too_low + 1)
-	{
+    while (too_high != too_low + 1)
+  	{
 
-	  try = (too_high + too_low)/2;
-	  freq_try = get_gam_freq(&gam_line_list, try);
-	  if (freq_try >= freq)
+  	  try = (too_high + too_low)/2;
+  	  freq_try = get_gam_freq(&gam_line_list, try);
+  	  if (freq_try >= freq)
 	    {
 	      too_high = try;
 	    }
-	  else
+  	  else
 	    {
 	      too_low = try;
 	    }
-	}
+  	}
 
-      return(too_low);
-    }
+    return(too_low);
+  }
 }
 
 /**************************************************************/

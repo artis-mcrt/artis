@@ -5,8 +5,7 @@
 
 double sig_photo_electric(PKT *pkt_ptr, double t_current)
 {
-  double vel_vec[3];
-  double sigma_cmf,sigma_rf;
+  double sigma_cmf;
   double sigma_cmf_si, sigma_cmf_cno, sigma_cmf_fe;
   /* Start by working out the x-section in the co-moving frame.*/
 
@@ -45,9 +44,9 @@ double sig_photo_electric(PKT *pkt_ptr, double t_current)
 
   /* Now need to convert between frames. */
 
+  double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
-
+  double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
   return sigma_rf;
 }
 
@@ -55,8 +54,7 @@ double sig_photo_electric(PKT *pkt_ptr, double t_current)
 
 double sig_pair_prod(PKT *pkt_ptr, double t_current)
 {
-  double vel_vec[3];
-  double sigma_cmf,sigma_rf;
+  double sigma_cmf;
   double sigma_cmf_si, sigma_cmf_cno, sigma_cmf_fe;
 
   /* Start by working out the x-section in the co-moving frame.*/
@@ -117,8 +115,9 @@ double sig_pair_prod(PKT *pkt_ptr, double t_current)
 
   /* Now need to convert between frames. */
 
+  double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
+  double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
 
   if (sigma_rf < 0)
   {
@@ -132,10 +131,6 @@ double sig_pair_prod(PKT *pkt_ptr, double t_current)
 /* Routine to deal with pair production. */
 int pair_prod(PKT *pkt_ptr, double t_current)
 {
-  double zrand, zrand2, zrand3;
-  double mu, phi, sintheta;
-  double dummy_dir[3], vel_vec[3];
-
   /* In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
      gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
      the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
@@ -150,64 +145,64 @@ int pair_prod(PKT *pkt_ptr, double t_current)
     exit(0);
   }
 
-  zrand = gsl_rng_uniform(rng);
+  double zrand = gsl_rng_uniform(rng);
 
   if (zrand > prob_gamma)
-    {
-      /* Convert it to an e-minus packet - actually it could be positron EK too, but this works
-         for consistency with com_sca.*/
-      pkt_ptr->type = TYPE_EMINUS;
-      pkt_ptr->absorptiontype = -5;
-    }
+  {
+    /* Convert it to an e-minus packet - actually it could be positron EK too, but this works
+       for consistency with com_sca.*/
+    pkt_ptr->type = TYPE_EMINUS;
+    pkt_ptr->absorptiontype = -5;
+  }
   else
+  {
+    /* The energy goes into emission at 511 keV. */
+    pkt_ptr->nu_cmf = 0.511 * MEV / H;
+
+    /*Now let's give the gamma ray a direction. */
+
+    double zrand2 = gsl_rng_uniform(rng);
+    double zrand3 = gsl_rng_uniform(rng);
+
+    /*Assuming isotropic emission in cmf, use these two random numbers to set
+up a cmf direction in cos(theta) and phi. */
+
+    double mu = -1 + (2.*zrand2);
+    double phi = zrand3 * 2 * PI;
+    double sintheta = sqrt(1. - (mu * mu));
+
+    pkt_ptr->dir[0] = sintheta * cos(phi);
+    pkt_ptr->dir[1] = sintheta * sin(phi);
+    pkt_ptr->dir[2] = mu;
+
+    /* This direction is in the cmf - we want to convert it to the rest
+       frame - use aberation of angles. We want to convert from cmf to
+       rest so need -ve velocity. */
+    double vel_vec[3];
+    get_velocity(pkt_ptr->pos, vel_vec, (-1*(t_current)));
+    //negative time since we want the backwards transformation here
+    double dummy_dir[3];
+    angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
+
+    pkt_ptr->dir[0] = dummy_dir[0];
+    pkt_ptr->dir[1] = dummy_dir[1];
+    pkt_ptr->dir[2] = dummy_dir[2];
+
+    /*Check unit vector.*/
+    if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
     {
-      /* The energy goes into emission at 511 keV. */
-      pkt_ptr->nu_cmf = 0.511 * MEV / H;
-
-      /*Now let's give the gamma ray a direction. */
-
-      zrand2 = gsl_rng_uniform(rng);
-      zrand3 = gsl_rng_uniform(rng);
-
-      /*Assuming isotropic emission in cmf, use these two random numbers to set
-  up a cmf direction in cos(theta) and phi. */
-
-      mu = -1 + (2.*zrand2);
-      phi = zrand3 * 2 * PI;
-      sintheta = sqrt(1. - (mu * mu));
-
-      pkt_ptr->dir[0] = sintheta * cos(phi);
-      pkt_ptr->dir[1] = sintheta * sin(phi);
-      pkt_ptr->dir[2] = mu;
-
-      /* This direction is in the cmf - we want to convert it to the rest
-   frame - use aberation of angles. We want to convert from cmf to
-   rest so need -ve velocity. */
-
-      get_velocity(pkt_ptr->pos, vel_vec, (-1*(t_current)));
-      //negative time since we want the backwards transformation here
-
-      angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
-
-      pkt_ptr->dir[0] = dummy_dir[0];
-      pkt_ptr->dir[1] = dummy_dir[1];
-      pkt_ptr->dir[2] = dummy_dir[2];
-
-      /*Check unit vector.*/
-      if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
-      {
-        printout("Not a unit vector. Abort.\n");
-        exit(0);
-      }
-
-      get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
-      pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
-      pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
-
-      pkt_ptr->type = TYPE_GAMMA;
-      pkt_ptr->last_cross = NONE;
-
+      printout("Not a unit vector. Abort.\n");
+      exit(0);
     }
+
+    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
+    pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
+    pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
+
+    pkt_ptr->type = TYPE_GAMMA;
+    pkt_ptr->last_cross = NONE;
+
+  }
 
   return 0;
 }

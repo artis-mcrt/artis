@@ -6,7 +6,6 @@ int update_gamma_rays(nts)
      int nts;  //the time step we're doing
 {
   RAY *ray_ptr;
-  int ray_prop();
 
   /* At the start, the rays are either still at their starting points or have already been
      processed for one or more timesteps. */

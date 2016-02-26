@@ -4,7 +4,7 @@
 ///****************************************************************************
 void escat_rpkt(PKT *pkt_ptr, double t_current)
 {
-  double dummy_dir[3], vel_vec[3];
+  double dummy_dir[3],vel_vec[3];
   double old_dir_cmf[3],new_dir_cmf[3],dir_perp[3];
   double old_dir_rf[3];
 

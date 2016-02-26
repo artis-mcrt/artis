@@ -12,8 +12,6 @@
 /// To govern the input. For now hardwire everything.
 int input(int rank)
 {
-  int get_gam_ll();
-
   FILE *co_lines;
   FILE *ni_lines;
   FILE *v48_lines;

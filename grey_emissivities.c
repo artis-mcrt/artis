@@ -24,7 +24,6 @@ to be) used for the new light_curve syn-style calculation. */
 distance dist in the lab frame. Time at start of distance is t_current.*/
 
   double vel_vec[3];
-  double calculate_kappa_rpkt_cont();
   PKT dummy;
 
   //printout("[debug] Execution of rlc_emiss_gamma\n");
@@ -39,69 +38,31 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
   dummy.last_cross = NONE;
 
   int end_packet = 0;
-  double tau_tot = 0;
   double sdist = 0;
-  double t_future = t_current;
-  double tautau = 1.e-8;
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
 
   if (dist > 0)
   {
-    /* approach for opacity weighted estimators. */
-    if (do_rlc_est == 2)
-    {
-      double mumu = dot(pkt_ptr->dir, syn_dir);
-      double tautau = dist * calculate_kappa_rpkt_cont(&dummy, t_current) * mumu;
-      while (end_packet == 0 && tau_tot < 15.)
-      {
-        int snext;
-        sdist = boundary_cross(&dummy, t_future, &snext);
-        double kap_tot = calculate_kappa_rpkt_cont(&dummy, t_future);
-        tau_tot += kap_tot * sdist * t_current * t_current * t_current
-        / (t_future * t_future * t_future);
-        t_future += (sdist / CLIGHT_PROP);
-        move_pkt(&dummy, sdist, t_future);
-        change_cell(&dummy, snext, &end_packet, t_future);
-      }
-      nesc -= 1;
-    }
+    get_velocity(pkt_ptr->pos, vel_vec, t_current);
+    double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
-    if (tau_tot < 15.)
-    {
+    double heating_cont = ((meanf_sigma(xx)*get_nnetot(mgi)) + sig_photo_electric(pkt_ptr,t_current) + (sig_pair_prod(pkt_ptr, t_current) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+    heating_cont = heating_cont * pkt_ptr->e_rf * dist * (1. - (2.*dot(vel_vec, pkt_ptr->dir)/CLIGHT));
 
-      get_velocity(pkt_ptr->pos, vel_vec, t_current);
-      double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+    /* The terms in the above are for Compton, photoelectric and pair production. The pair production  one assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised. The remaining 1.022 MeV is made into gamma rays */
 
-      double heating_cont = ((meanf_sigma(xx)*get_nnetot(mgi)) + sig_photo_electric(pkt_ptr,t_current) + (sig_pair_prod(pkt_ptr, t_current) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
-      heating_cont = heating_cont * pkt_ptr->e_rf * dist * (1. - (2.*dot(vel_vec, pkt_ptr->dir)/CLIGHT));
+    /* For normalisation this needs to be
+       1) divided by volume
+       2) divided by the length of the time step
+       3) divided by 4 pi sr
+       This will all be done later
+    */
 
-      /* The terms in the above are for Compton, photoelectric and pair production. The pair production  one assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised. The remaining 1.022 MeV is made into gamma rays */
-
-      /* For normalisation this needs to be
-         1) divided by volume
-         2) divided by the length of the time step
-         3) divided by 4 pi sr
-         This will all be done later
-      */
-
-
-      //  printout("%g %g (1)\n",heating_cont,tautau);
-      if (tautau > 0.001)
-      {
-              #ifdef _OPENMP
-                #pragma omp atomic
-              #endif
-        rpkt_emiss[mgi] += 1.e-20 * heating_cont * exp( -1. * (tau_tot + (0.5*tautau))) * (exp(tautau) - 1.0) / tautau;
-      }
-      else
-      {
-        #ifdef _OPENMP
-          #pragma omp atomic
-        #endif
-        rpkt_emiss[mgi] += 1.e-20 * heating_cont * exp( -1. * tau_tot);
-      }
-    }
+    #ifdef _OPENMP
+      #pragma omp atomic
+    #endif
+    rpkt_emiss[mgi] += 1.e-20 * heating_cont;
   }
   return 0;
 }
@@ -118,10 +79,7 @@ int rlc_emiss_rpkt(PKT *pkt_ptr, double dist, double t_current)
      distance dist in the lab frame. Time at start of distance is t_current.*/
 
   double vel_vec[3];
-  double calculate_kappa_rpkt_cont();
   PKT dummy;
-  int move_pkt(PKT *pkt_ptr, double distance, double time);
-  int change_cell();
 
   dummy.pos[0] = pkt_ptr->pos[0];
   dummy.pos[1] = pkt_ptr->pos[1];
@@ -133,64 +91,30 @@ int rlc_emiss_rpkt(PKT *pkt_ptr, double dist, double t_current)
   dummy.last_cross = NONE;
 
   int end_packet = 0;
-  double tau_tot = 0;
-  double sdist = 0;
-  double t_future = t_current;
-  double tautau = 1.e-8;
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
 
   if (dist > 0.0)
   {
     /* for the weighted estimators version */
-    if (do_rlc_est == 2)
-    {
-      double mumu = dot(pkt_ptr->dir, syn_dir);
-      tautau = dist * calculate_kappa_rpkt_cont(&dummy, t_current) * mumu;
-      while (end_packet == 0 && tau_tot < 15.)
-      {
-        int snext;
-        sdist = boundary_cross(&dummy, t_future, &snext);
-        double kap_tot = calculate_kappa_rpkt_cont(&dummy, t_future);
-        tau_tot += kap_tot * sdist * t_current * t_current * t_current
-          / (t_future * t_future * t_future);
-        t_future += (sdist / CLIGHT_PROP);
-        move_pkt(&dummy, sdist, t_future);
-        change_cell(&dummy, snext, &end_packet, t_future);
-      }
-      nesc -= 1;
-    }
 
-    if (tau_tot < 15.)
-    {
-      get_velocity(pkt_ptr->pos, vel_vec, t_current);
+    get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
-      double cont = (get_kappagrey(mgi) * get_rho(mgi));
-      cont = cont * pkt_ptr->e_rf * dist * (1. - (2.*dot(vel_vec, pkt_ptr->dir)/CLIGHT));
+    double cont = (get_kappagrey(mgi) * get_rho(mgi));
+    cont = cont * pkt_ptr->e_rf * dist * (1. - (2.*dot(vel_vec, pkt_ptr->dir)/CLIGHT));
 
-      /* For normalisation this needs to be
-         1) divided by volume
-         2) divided by the length of the time step
-         3) divided by 4 pi sr
-         This will all be done later
-      */
+    /* For normalisation this needs to be
+       1) divided by volume
+       2) divided by the length of the time step
+       3) divided by 4 pi sr
+       This will all be done later
+    */
 
-      //printout("%g %g(2)\n",tautau,cont);
-      if (tautau > 0.001)
-      {
-        #ifdef _OPENMP
-          #pragma omp atomic
-        #endif
-        rpkt_emiss[mgi] += 1.e-20 * cont * exp( -1. * (tau_tot + (0.5*tautau))) * (exp(tautau) - 1.0) / tautau;
-      }
-      else
-      {
-        #ifdef _OPENMP
-          #pragma omp atomic
-        #endif
-        rpkt_emiss[mgi] += 1.e-20 * cont * exp( -1. * tau_tot);
-      }
-    }
+    //printout("%g %g(2)\n",tautau,cont);
+    #ifdef _OPENMP
+      #pragma omp atomic
+    #endif
+    rpkt_emiss[mgi] += 1.e-20 * cont;
   }
   return 0;
 }
@@ -350,15 +274,18 @@ int emiss_rlc_load(int nts)
 /***********************************************/
 int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)
 {
-  /* This is called when a grey ray is about to be moved a distance ldist. */
-  /* It should account for the changes in the ray intensity due to
-     grey processes along the path. */
+  printout("grey_rt was called");
+  abort();
+}/*
+  // This is called when a grey ray is about to be moved a distance ldist.
+  // It should account for the changes in the ray intensity due to
+  //   grey processes along the path.
   PKT dummy;
   double kap_tot, tau_cont;
   double calculate_kappa_rpkt_cont();
   double vel_vec[3];
 
-  /* Make a dummy packet that carries the ray properties. */
+  /// Make a dummy packet that carries the ray properties.
 
   dummy.pos[0] = single_pos[0];
   dummy.pos[1] = single_pos[1];
@@ -391,9 +318,9 @@ int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double sin
     exit(0);
   }
 
-   /* Now adding the emissivity term. */
-  /* I think it's a doppler^3 term because it's a doppler^2 term in Castor + there's an
-     extra doppler from the integration over frequency of the RT equation. */
+   // Now adding the emissivity term.
+  // I think it's a doppler^3 term because it's a doppler^2 term in Castor + there's an
+  //   extra doppler from the integration over frequency of the RT equation.
 
   if (tau_cont > 1.e-6)
   {
@@ -408,8 +335,8 @@ int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double sin
           * ldist);
   }
 
-  /* This MUST be followed by a call to move_one_ray() in source
-     since e_cmf is NOT reset here. */
+  //This MUST be followed by a call to move_one_ray() in source
+  // since e_cmf is NOT reset here.
 
   return 0;
-}
+}*/

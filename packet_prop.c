@@ -4,22 +4,17 @@
    it is given the time at start of inverval and at end - when it finishes,
    everything the packet does during this time should be sorted out. */
 
-int packet_prop(pkt_ptr, t1, t2, nts)
-     PKT *pkt_ptr;
-     double t1, t2;
-     int nts; //the time step we are doing
+int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
 {
-  double do_gamma();
-  //double do_kpkt_ffonly(); no longer exists?
   double t_change_type;
 
-  int end_packet = 0;  //means "keep working"
 
   double t_current = t1;
 
   /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
 
+  int end_packet = 0;  //means "keep working"
   while (end_packet == 0)
   {
     /* Start by sorting out what sort of packet it is.*/
@@ -29,7 +24,7 @@ int packet_prop(pkt_ptr, t1, t2, nts)
       /*It's a gamma-ray packet.*/
       /* Call do_gamma. */
       //printout("gamma propagation\n");
-      t_change_type = do_gamma( pkt_ptr, t_current, t2);
+      t_change_type = do_gamma(pkt_ptr, t_current, t2);
 	  /* This returns a flag if the packet gets to t2 without
       changing to something else. If the packet does change it
       returns the time of change and sets everything for the
