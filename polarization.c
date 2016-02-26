@@ -17,7 +17,6 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   /// We have incoming dir in rf - we want to convert it to the cmf
   /// - use aberation of angles.
 
-
   ///get_velocity(pkt_ptr->pos, vel_vec, t_current);
   ///angle_ab(pkt_ptr->dir, vel_vec, old_dir_cmf);
 

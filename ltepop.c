@@ -7,7 +7,7 @@ double nne_solution_f(double x, void *paras)
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)
 {
-  double outersum, innersum, abundance;
+  double innersum, abundance;
   int uppermost_ion;
 
   int n = ((nne_solution_paras *) paras)->cellnumber;
@@ -15,7 +15,7 @@ double nne_solution_f(double x, void *paras)
   double rho = modelgrid[n].rho;
 
   //printout("n, x, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g\n",n,x,T,cell[n].T_e,cell[n].W,cell[n].rho);
-  outersum = 0.;
+  double outersum = 0.;
   //printout("debug nelements %d =========================\n",nelements);
   for (int element = 0; element < nelements; element++)
   {
@@ -818,7 +818,7 @@ double get_levelpop(int element, int ion, int level)
 
 ///***************************************************************************/
 double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
-/// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
+/// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
   int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   double sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);

@@ -1,6 +1,6 @@
 #include "sn3d.h"
 #include "nltepop.h"
-
+//TODO: change to operate on whole element at once
 double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
 {

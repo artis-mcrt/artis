@@ -2,9 +2,9 @@
 
 /* Master subroutine for computing the formal integral grey optical light curve. */
 
-double syn_lc()
-   /* Note the direction (vector pointing from origin to observer is
-  externally set: syn_dir[3]. */
+/*double syn_lc()
+   // Note the direction (vector pointing from origin to observer is
+  //  externally set: syn_dir[3].
 {
   int syn_lc_init();
   int time_init();
@@ -18,7 +18,7 @@ double syn_lc()
     exit(0);
   }
 
-  /* main loop over the set of times for which we want spectra. */
+  // main loop over the set of times for which we want spectra.
 
   for (int time_loop = 0; time_loop < nsyn_time; time_loop++)
   {
@@ -26,7 +26,7 @@ double syn_lc()
 
     syn_lc_init(time_syn[time_loop]);
 
-    /* Now start off the calculation as in sn3d: (re)initialise the grid. */
+    // Now start off the calculation as in sn3d: (re)initialise the grid.
 
     grid_init();
 
@@ -53,7 +53,7 @@ double syn_lc()
                                //use the same ray tracing routines that were made for gamma rays
     }
 
-    /* Now make the rays into a spectrum and print it out. */
+    // Now make the rays into a spectrum and print it out.
 
     double lc_syn = 0;
 
@@ -73,7 +73,7 @@ double syn_lc()
   fclose(syn_file);
 
   return 0;
-}
+}*/
 
 /* ************************************************************** */
 int syn_lc_init(time)
@@ -81,11 +81,7 @@ int syn_lc_init(time)
 {
   double max_proj;
   double r0[3];
-  int get_velocity();
-  double doppler();
   double vel_vec[3];
-  int get_cell();
-  double vec_len(), dot();
   double kick[3];
 
   int num_in = 0;

@@ -8,7 +8,6 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
 {
   double t_change_type;
 
-
   double t_current = t1;
 
   /* 0 the scatter counter for the packet. */

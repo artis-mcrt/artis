@@ -5,12 +5,7 @@
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.
 {
-  double t_current;
-  int end_packet;
   double zrand;
-  int rlc_emiss_rpkt();
-
-  void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
 
   double rad_deexc,rad_recomb,col_deexc,col_recomb;
   double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
@@ -18,7 +13,6 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   double R,C;
   double total_transitions;
   double rate;
-  double t_mid;
   double oldnucmf;
 
   double nu_threshold, nu_max_phixs;
@@ -29,13 +23,13 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
   int i,lineindex;
   int linelistindex = -99;
-  int element,ion,level,upper,lower,phixstargetindex;
+  int element,ion,level,upper,lower;
   int ndowntrans,nuptrans;
   int nlevels,ionisinglevels;
 
-  end_packet = 0; ///means "keep working"
-  t_current = t1; ///this will keep track of time in the calculation
-  t_mid = time_step[timestep].mid;
+  int end_packet = 0; ///means "keep working"
+  double t_current = t1; ///this will keep track of time in the calculation
+  double t_mid = time_step[timestep].mid;
 
   gsl_integration_workspace *wsp;
   gslintegration_paras intparas;
@@ -219,7 +213,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       internal_up_higher = 0.;
       if (ion < get_nions(element)-1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
       {
-        for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
           upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
@@ -263,7 +257,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
         R = 0.0;
         C = 0.0;
-        for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
           upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
@@ -274,9 +268,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
         double T_R = get_TR(modelgridindex);
         double W = get_W(modelgridindex);
-        double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
         printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,T_e,W,get_TJ(modelgridindex));
-        double gammacorr = W*interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
+        double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
         int index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
         double renorm  = corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
         printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
@@ -449,7 +442,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       //nlevels = get_nlevels(element,ion-1);
       nlevels = get_bfcontinua(element,ion-1);
       //nlevels = get_ionisinglevels(element,ion-1);
-      for (lower=0; lower < nlevels; lower++)
+      for (lower = 0; lower < nlevels; lower++)
       {
         epsilon_trans = epsilon_current - epsilon(element,ion-1,lower);
         R = rad_recombination(modelgridindex,lower,epsilon_trans);
@@ -495,7 +488,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       // use the overlap with the previous integral and add on a piece each time instead of recalculating the
       // integral over the entire region
       {
-        // the reason the lower limit of integration is incremented is that most of the probability is in the low
+        // the reason the lower limit of integration is incremented is that most of the probability distribution is at the low
         // frequency end, so this minimizes the number of iterations needed
         alpha_sp_old = alpha_sp;
         if (i > 0)
@@ -725,7 +718,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       /// Randomly select the occuring transition
       zrand = gsl_rng_uniform(rng);
       rate = 0.;
-      for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+      for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
         upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
         epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
@@ -803,7 +796,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           printout("[debug]    check ionisation\n");
           R = 0.0;
           C = 0.0;
-          for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
@@ -916,8 +909,7 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
 ///radiative excitation rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  double tau_sobolev,beta;
-  double R;
+  double beta,R;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -946,7 +938,7 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
   //n_u = n_l * W * g_ratio * exp(-epsilon_trans/KB/T_R);
-  tau_sobolev = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
+  double tau_sobolev = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
 
   if (tau_sobolev <= 0)
   {
@@ -1258,10 +1250,10 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
     if (debuglevel == 2)
     {
       printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-      printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
+      printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     }
     if (debuglevel == 777)
-    printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
+    printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
     if (!isfinite(C))
     {

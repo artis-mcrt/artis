@@ -345,9 +345,6 @@ double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
 int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
 {
   //void copy_populations_to_phixslist();
-  int search_cellhistory(int cellnumber);
-  int find_farthestcell(int cellnumber);
-  void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   //void calculate_kpkt_rates(int cellnumber);
   //int element, ion, level;
   int oldpos,mgi,old_mgi;

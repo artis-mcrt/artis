@@ -1,7 +1,7 @@
 #ifndef UPDATE_GRID_H
   #define UPDATE_GRID_H
 
-  //int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
+  int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
   int get_cell(double x, double y, double z, double t);
   double get_abundance(int modelgridindex, int element);
   void update_abundances(int modelgridindex, double t_current);

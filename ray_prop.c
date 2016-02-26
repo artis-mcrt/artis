@@ -7,10 +7,9 @@
 
 int ray_prop(RAY *ray_ptr, double t1, double t2, int nts)
 {
-  int end_packet = 0;  //means "keep working"
-
   double t_current = t1;
 
+  int end_packet = 0;  //means "keep working"
   while (end_packet == 0)
   {
     /* Start by sorting out what sort of packet it is.*/
@@ -46,10 +45,6 @@ int ray_prop(RAY *ray_ptr, double t1, double t2, int nts)
 /***************************************************************/
 double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 {
-  RAY dum_ray;
-  double dnuds[NSYN];
-  double single_pos[3];
-
   double t_current = t1; //this will keep track of time in the calculation
 
   for (int nray = 0; nray < NSYN; nray++)
@@ -122,8 +117,10 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
     /* First get an array of DNUDS for all the rays in the bundle. Copy ray and move copy to next
        boundary. */
 
+    RAY dum_ray;
     copy_ray(ray_ptr, &dum_ray);
     move_ray(&dum_ray, stop_dist, t_current + stop_time);
+    double dnuds[NSYN];
     for (int nray = 0; nray < NSYN; nray++)
     {
       dnuds[nray] = (dum_ray.nu_cmf[nray] - ray_ptr->nu_cmf[nray])/stop_dist;
@@ -140,13 +137,13 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
       /* need to start by identifying next spectral line in list. */
 
       int lindex = ray_ptr->lindex[nray];
+      double single_pos[3];
       single_pos[0] = ray_ptr->pos[0];
       single_pos[1] = ray_ptr->pos[1];
       single_pos[2] = ray_ptr->pos[2];
       double single_t = t_current;
 
       double trav_dist = 0.0;
-
       while (trav_dist < stop_dist)
       {
         double ldist = (get_gam_freq(&gam_line_list, lindex) - ray_ptr->nu_cmf[nray]) / dnuds[nray];
@@ -182,13 +179,9 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
           /* end dodgy example lines */
           trav_dist += ldist;
           if (lindex > 0)
-          {
             lindex = lindex - 1;
-          }
           else
-          {
             lindex = RED_OF_LIST;
-          }
         }
         else
         {

@@ -2,9 +2,9 @@
 
 /* Master subroutine for computing the formal integral gamma ray spectrum. */
 
-double syn_gamma()
-     /* Note the direction (vector pointing from origin to observer is
-  externally set: syn_dir[3]. */
+/*double syn_gamma()
+     // Note the direction (vector pointing from origin to observer
+     // is externally set: syn_dir[3].
 {
   int syn_gamma_init();
   int time_init();
@@ -19,7 +19,7 @@ double syn_gamma()
     exit(0);
   }
 
-  /* main loop over the set of times for which we want spectra. */
+  /// main loop over the set of times for which we want spectra.
 
   for (int time_loop = 0; time_loop < nsyn_time; time_loop++)
   {
@@ -27,7 +27,7 @@ double syn_gamma()
 
     syn_gamma_init(time_syn[time_loop]);
 
-    /* Now start off the calculation as in sn3d: (re)initialise the grid. */
+    // Now start off the calculation as in sn3d: (re)initialise the grid.
 
     grid_init();
 
@@ -46,7 +46,7 @@ double syn_gamma()
       update_gamma_rays(nts);
     }
 
-    /* Now make the rays into a spectrum and print it out. */
+    // Now make the rays into a spectrum and print it out.
 
     for (int n = 0; n < NSYN; n++)
     {
@@ -71,23 +71,17 @@ double syn_gamma()
   fclose(syn_file);
 
   return 0;
-}
+}*/
 
 /* ************************************************************** */
-int
-syn_gamma_init(time)
-     double time;
+int syn_gamma_init(double time)
 {
   double zrand;
   double max_proj, r_proj, phi_proj;
   double r0[3];
   double r11, r12, r13, r21, r22, r23, r31, r32, r33;
   double tin, tou, tin_kick;
-  int get_velocity();
-  double doppler();
   double vel_vec[3];
-  int get_cell();
-  double vec_len();
   double kick[3];
 
   int num_in = 0;

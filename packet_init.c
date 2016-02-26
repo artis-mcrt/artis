@@ -184,7 +184,7 @@ int setup_packets (int pktnumberoffset)
   /// Some fraction of the packets we reasigned because they were not going
   /// to activate in the time of interest so need to renormalise energies
   /// to account for this.
-  for (n = 0; n < npkts; n++)
+  for (int n = 0; n < npkts; n++)
   {
     pkt[n].e_cmf = pkt[n].e_cmf * npkts / (npkts + packet_reset);
     pkt[n].interactions = 0;

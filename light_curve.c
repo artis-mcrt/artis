@@ -128,8 +128,6 @@ int write_light_curve(FILE *lc_file, int current_abin)
 /***********************************************************************/
 int gather_light_curve(void)
 {
-  void init_light_curve(void);
-  int add_to_lc(EPKT *pkt_ptr);
   //void read_packets(FILE *packets_file);
   EPKT *pkt_ptr;
   //int i,n,p;
@@ -156,13 +154,11 @@ int gather_light_curve(void)
 /**See add_to_spec.*/
 int add_to_lc(EPKT *pkt_ptr)
 {
-  int nt;
-
   /// Put this into the time grid
   double t_arrive = pkt_ptr->arrive_time;
   if (t_arrive > tmin && t_arrive < tmax)
   {
-    nt = (log(t_arrive) - log(tmin)) / dlogtlc;
+    int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
     light_curve[nt].lum += pkt_ptr->e_rf / light_curve[nt].delta_t / nprocs;
   }
 
@@ -171,7 +167,7 @@ int add_to_lc(EPKT *pkt_ptr)
   t_arrive = pkt_ptr->arrive_time_cmf;
   if (t_arrive > tmin && t_arrive < tmax)
   {
-    nt = (log(t_arrive) - log(tmin)) / dlogtlc;
+    int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
     light_curve_cmf[nt].lum += pkt_ptr->e_cmf / light_curve[nt].delta_t / nprocs / sqrt(1. - (vmax*vmax/CLIGHT2));
   }
 
@@ -185,8 +181,6 @@ int gather_light_curve_res(int current_abin)
 {
   //void read_packets(FILE *packets_file);
   //int i,n,p,nn;
-  int add_to_lc_res(EPKT *pkt_ptr, int current_abin);
-  void init_light_curve(void);
   EPKT *pkt_ptr;
 
   /// Set up the light curve grid and initialise the bins to zero.
@@ -208,26 +202,23 @@ int gather_light_curve_res(int current_abin)
 /**See add_to_spec.*/
 int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
 {
-  double t_arrive;
-  int nt, na;
-  int thetabin, phibin;
   double vec1[3], vec2[3], xhat[3], vec3[3];
-  double costheta, cosphi, testphi;
 
-  xhat[0]=1.0;
-  xhat[1]=0;
-  xhat[2]=0;
+  xhat[0] = 1.0;
+  xhat[1] = 0;
+  xhat[2] = 0;
 
   /// Angle resolved case: need to work out the correct angle bin too. */
-  costheta = dot(pkt_ptr->dir, syn_dir);
-  thetabin = ((costheta + 1.0) * sqrt(MALCBINS) / 2.0);
+  double costheta = dot(pkt_ptr->dir, syn_dir);
+  int thetabin = ((costheta + 1.0) * sqrt(MALCBINS) / 2.0);
   cross_prod(pkt_ptr->dir, syn_dir, vec1);
   cross_prod(xhat, syn_dir, vec2);
-  cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
+  double cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
 
   cross_prod(vec2, syn_dir, vec3);
-  testphi = dot(vec1,vec3);
+  double testphi = dot(vec1,vec3);
 
+  int phibin;
   if (testphi > 0)
   {
     phibin = (acos(cosphi) /2. / PI * sqrt(MALCBINS));
@@ -236,16 +227,16 @@ int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
   {
     phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MALCBINS));
   }
-  na = (thetabin*sqrt(MALCBINS)) + phibin;
+  int na = (thetabin*sqrt(MALCBINS)) + phibin;
 
   /// Add only packets which escape to the current angle bin
   if (na == current_abin)
   {
     /// Put this into the time grid.
-    t_arrive = pkt_ptr->arrive_time;
+    double t_arrive = pkt_ptr->arrive_time;
     if (t_arrive > tmin && t_arrive < tmax)
     {
-      nt = (log(t_arrive) - log(tmin)) / dlogtlc;
+      int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
       light_curve[nt].lum += pkt_ptr->e_rf / light_curve[nt].delta_t * MALCBINS / nprocs;
     }
   }

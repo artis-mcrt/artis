@@ -8,7 +8,7 @@ void calculate_kpkt_rates(int modelgridindex)
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  double C,C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
+  double C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
   double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
   double nncurrention,nnnextionlevel;
@@ -19,7 +19,6 @@ void calculate_kpkt_rates(int modelgridindex)
   //double sf;
   int nions,nuptrans;
   double totalcooling;//partialcoolingsum;
-  double contrib;
 
   //double interpolate_stimulated_bfcoolingcoeff(int element, int ion, int level, double T);
 
@@ -36,12 +35,12 @@ void calculate_kpkt_rates(int modelgridindex)
 
 
   /// calculate rates for
-  C = 0.;
+  double C = 0.;
   //C_ff = 0.;   /// free-free creation of rpkts
   //C_fb = 0.;   /// free-bound creation of rpkt
   //C_exc = 0.;  /// collisional excitation of macroatoms
   //C_ion = 0.;  /// collisional ionisation of macroatoms
-  contrib = 0.;
+  double contrib = 0.;
   i = 0;
   for (int element = 0; element < nelements; element++)
   {
@@ -423,8 +422,6 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
-  void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
-
   //double nne = cell[pkt_ptr->where].nne ;
   double T_e = get_Te(cell[pkt_ptr->where].modelgridindex);
   double t_current = t1;
@@ -503,7 +500,6 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 //  return do_kpkt_bb(pkt_ptr, t1, t2);
 //}
 {
-  void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   double zrand;
 
   double coolingsum;

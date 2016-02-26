@@ -8,11 +8,7 @@ int update_packets(int nts)
 {
   //void copy_populations_to_phixslist();
   //int compare_packets_bymodelgridposition(const void *p1, const void *p2);
-  int search_cellhistory(int cellnumber);
-  int find_farthestcell_initial(int cellnumber);
-  void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
   PKT *pkt_ptr;
-  int packet_prop();
   //double n_1;
   //double boltzmann(PKT *pkt_ptr, int reflevel, double n_reflevel, int targetlevel);
 

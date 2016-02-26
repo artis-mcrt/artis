@@ -11,8 +11,6 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   int maxit = 100;
   int iter2,status;
   double T_e,T_e_min,T_e_max;
-  double thermalmin,thermalmax;
-  double deltat;
   int i;
 
   //gsl_root_fsolver *solver;
@@ -45,7 +43,7 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   find_T_e_f.function = &find_T_e;
   find_T_e_f.params = &paras;
 
-  deltat = (T_max-T_min)/100;
+  double deltat = (T_max - T_min) / 100;
 
   /// Force tb_info switch to 1 for selected cells in serial calculations
   /*
@@ -59,8 +57,8 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   //tb_info = 1;
 
   /// Check whether the thermal balance equation has a root in [T_min,T_max]
-  thermalmin = find_T_e(T_min,find_T_e_f.params);
-  thermalmax = find_T_e(T_max,find_T_e_f.params);
+  double thermalmin = find_T_e(T_min,find_T_e_f.params);
+  double thermalmax = find_T_e(T_max,find_T_e_f.params);
   if (!isfinite(thermalmin) || !isfinite(thermalmax))
   {
     printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);

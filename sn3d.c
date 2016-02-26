@@ -18,14 +18,9 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
+  //void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
 
   int time_init();
-  int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
-  int make_gamma_light_curve();
-  double syn_gamma();
-  int gather_gamma_light_curve(), write_gamma_light_curve();
-  //void determine_important_bfcontinua(int cellnumber, int timestep, int samplecell);
   int i,ii,iii,interactions;
   double meaninteractions;
   FILE *syn_file;

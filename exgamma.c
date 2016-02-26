@@ -43,7 +43,6 @@ int main(int argc, char** argv)
   //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
   //int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
   //int gather_gamma_light_curve(), write_gamma_light_curve();
-  //void determine_important_bfcontinua(int cellnumber, int timestep, int samplecell);
   int i,ii,iii,interactions;
   double meaninteractions;
   FILE *syn_file;

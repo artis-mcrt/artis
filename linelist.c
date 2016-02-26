@@ -5,8 +5,6 @@
 
 int get_gam_ll()
 {
-  FILE *line_list;
-
   /* Start by setting up the grid of fake lines and their energies. */
   fakeg_spec.nlines = nfake_gam;
 
@@ -18,7 +16,7 @@ int get_gam_ll()
     fakeg_spec.probability[i]= 0.0;
   }
 
-  /* No do the sorting. */
+  /* Now do the sorting. */
 
   int total_lines = cobalt_spec.nlines + nickel_spec.nlines + fakeg_spec.nlines + cr48_spec.nlines + v48_spec.nlines;
   gam_line_list.total = total_lines;
@@ -88,6 +86,7 @@ int get_gam_ll()
     energy_last = energy_try;
   }
 
+  FILE *line_list;
   if ((line_list = fopen("line_list.txt", "w+")) == NULL){
     printout("Cannot open line_list.txt.\n");
     exit(0);
