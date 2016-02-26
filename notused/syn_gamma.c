@@ -2,12 +2,11 @@
 
 /* Master subroutine for computing the formal integral gamma ray spectrum. */
 
-/*double syn_gamma()
+double syn_gamma()
      // Note the direction (vector pointing from origin to observer
      // is externally set: syn_dir[3].
 {
   int syn_gamma_init();
-  int time_init();
   int update_gamma_rays();
   int update_grid();
   FILE *syn_file;
@@ -71,9 +70,9 @@
   fclose(syn_file);
 
   return 0;
-}*/
+}
 
-/* ************************************************************** */
+/****************************************************************/
 int syn_gamma_init(double time)
 {
   double zrand;

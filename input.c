@@ -1807,7 +1807,7 @@ void read_parameterfile(int rank)
       printout("rank %d: thread %d has zseed %d\n",rank,tid,zseed);
       /// start by setting up the randon number generator
       rng = gsl_rng_alloc (gsl_rng_ran3);
-      gsl_rng_set ( rng, zseed);
+      gsl_rng_set (rng, zseed);
       /// call it a few times to get it in motion.
       for (int n = 0; n < 100; n++)
       {
@@ -1887,10 +1887,8 @@ void read_parameterfile(int rank)
     exit(0);
   }
 
-
   fscanf(input_file, "%d", &dum1); ///number of iterations
   n_out_it = dum1;
-
 
   fscanf(input_file, "%g", &dum2); ///change speed of light?
   CLIGHT_PROP = dum2 * CLIGHT;

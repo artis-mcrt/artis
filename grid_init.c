@@ -310,10 +310,8 @@ int uniform_grid_setup()
 /// Routine for doing a density grid read from a 1-D model.
 int density_1d_read ()
 {
-  int n, m;
   double radial_pos;
   double dcen[3];
-  double check1, check2;
   int mkeep;
   //int renorm[MMODELGRID];
   //double den_norm[MMODELGRID];
@@ -323,7 +321,6 @@ int density_1d_read ()
   float abundance;
 
   double helper;
-  int mgi;
 
   //Calculate the critical opacity at which opacity_case 3 switches from a
   //regime proportional to the density to a regime independent of the density
@@ -332,8 +329,8 @@ int density_1d_read ()
   rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
   printout("grid_init: rho_crit = %g\n", rho_crit);
 
-  check1=0.0;
-  check2=0.0;
+  double check1 = 0.0;
+  double check2 = 0.0;
   /*for (n=0;n<MMODELGRID;n++)
   {
     renorm[n]=0;
@@ -456,7 +453,7 @@ int density_1d_read ()
   */
 
 
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
@@ -468,7 +465,7 @@ int density_1d_read ()
       mkeep = 0;
       cell[n].modelgridindex = 0;
 
-      for (m = 0; m < (npts_model-1); m++)
+      for (int m = 0; m < (npts_model-1); m++)
       {
         if (radial_pos > (vout_model[m] * tmin))
         {
@@ -487,11 +484,10 @@ int density_1d_read ()
 
 
   /// Determine the number of simulation cells associated with the model cells
-  int i,ii,count;
-  for (i = 0; i < npts_model; i++)
+  for (int i = 0; i < npts_model; i++)
   {
-    count = 0;
-    for (ii = 0; ii < ngrid; ii++)
+    int count = 0;
+    for (int ii = 0; ii < ngrid; ii++)
     {
       if (cell[ii].modelgridindex == i) count++;
     }
@@ -502,7 +498,7 @@ int density_1d_read ()
 //  for (n=0;n < ngrid; n++)
 //  {
 //    mgi = cell[n].modelgridindex;
-  for (mgi = 0; mgi < npts_model; mgi++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
     if (modelgrid[mgi].associated_cells > 0)
     {
@@ -582,9 +578,9 @@ int density_1d_read ()
 
 
   /// First pass through to get normalisation coefficients
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
-    mgi = cell[n].modelgridindex;
+    int mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffe(mgi);
 
@@ -625,9 +621,9 @@ int density_1d_read ()
   }
 
   /// Second pass through allows calculation of normalized kappa_grey
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
-    mgi = cell[n].modelgridindex;
+    int mgi = cell[n].modelgridindex;
     if (rank_global == 0 && mgi != MMODELGRID) fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
     if (get_rhoinit(mgi) > 0)
     {

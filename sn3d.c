@@ -10,7 +10,6 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-
 #include "threadprivate.h"
 #include "sn3d.h"
 #include <stdarg.h>  /// MK: needed for printout()
@@ -18,18 +17,12 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  //void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
-
-  int time_init();
-  int i,ii,iii,interactions;
-  double meaninteractions;
   FILE *syn_file;
   FILE *linestat_file;
   FILE *packets_file;
   FILE *temperature_file;
   int my_rank;
   int p;
-  int nnn, nn, n;
   int element;
   #ifdef MPI_ON
     double a, b;
@@ -45,7 +38,6 @@ int main(int argc, char** argv)
   char filename[100];
   //int HUGEE2;
   //char *buffer2;
-  double deltat;
   int do_this_full_loop;
 
 //  int HUGEE;
@@ -61,7 +53,6 @@ int main(int argc, char** argv)
 
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
-
 
   #ifdef _OPENMP
     /// Explicitly turn off dynamic threads becaucse we use the threadprivate directive!!!
@@ -144,7 +135,7 @@ int main(int argc, char** argv)
 
   test1 = NULL;
   printout("allocate 400MB of floats step by step\n");
-  for (i=0; i < 4*26214400; i++)
+  for (int i=0; i < 4*26214400; i++)
   {
     if ((test = my_malloc(sizeof(float))) == NULL)
     {
@@ -210,7 +201,7 @@ int main(int argc, char** argv)
   }
   setvbuf(nlte_file, NULL, _IOLBF, 1);
 
-  printout("Begining.\n");
+  printout("Beginning.\n");
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
@@ -221,20 +212,21 @@ int main(int argc, char** argv)
   /// Initialise linestat file
   if (my_rank == 0)
   {
-    if ((linestat_file = fopen("linestat.out", "w")) == NULL){
+    if ((linestat_file = fopen("linestat.out", "w")) == NULL)
+    {
       printout("Cannot open line_stat.out.\n");
       exit(0);
     }
     setvbuf(linestat_file, NULL, _IOLBF, 1);
-    for (i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
+    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
     fprintf(linestat_file,"\n");
-    for (i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
+    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
     fprintf(linestat_file,"\n");
-    for (i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
+    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
     fprintf(linestat_file,"\n");
-    for (i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
+    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
     fprintf(linestat_file,"\n");
-    for (i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
+    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
     fprintf(linestat_file,"\n");
   }
 
@@ -479,7 +471,7 @@ int main(int argc, char** argv)
 
         #ifdef RECORD_LINESTAT
           /// The same for absorption/emission of r-pkts in lines
-          for (i = 0; i < nlines; i++)
+          for (int i = 0; i < nlines; i++)
           {
             acounter[i] = 0;
             ecounter[i] = 0;
@@ -511,7 +503,7 @@ int main(int argc, char** argv)
           else
           {
             printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-            for (i = 0; i < MMODELGRID*nelements*maxion; i++)
+            for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
             {
               corrphotoionrenorm[i] = 0.;
             }
@@ -533,13 +525,13 @@ int main(int argc, char** argv)
 
         /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
         #ifdef MPI_ON
-          for (n = 0; n < p; n++)
+          for (int n = 0; n < p; n++)
           {
             if (my_rank == n)
             {
               position = 0;
               MPI_Pack(&ndo, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-              for (mgi = nstart; mgi < (nstart+ndo); mgi++)
+              for (int mgi = nstart; mgi < (nstart+ndo); mgi++)
               //for (nncl = 0; nncl < ndo; nncl++)
               {
                 //nn = nonemptycells[my_rank+nncl*nprocs];
@@ -575,7 +567,7 @@ int main(int argc, char** argv)
 
             position = 0;
             MPI_Unpack(buffer, HUGEE, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-            for (nn = 0; nn < nlp; nn++)
+            for (int nn = 0; nn < nlp; nn++)
             {
               MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
               //if (cell[ncl].rho > MINDENSITY)
@@ -606,13 +598,13 @@ int main(int argc, char** argv)
           }
 
           #ifdef NLTE_POPS_ON
-            for (n = 0; n < p; n++)
+            for (int n = 0; n < p; n++)
             {
               if (my_rank == n)
               {
                 position = 0;
                 MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
-                for (mgi = nstart; mgi < (nstart+ndo); mgi++)
+                for (int mgi = nstart; mgi < (nstart+ndo); mgi++)
                 //for (nncl = 0; nncl < ndo; nncl++)
                 {
                   //nn = nonemptycells[my_rank+nncl*nprocs];
@@ -629,7 +621,7 @@ int main(int argc, char** argv)
 
               position = 0;
               MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-              for (nn = 0; nn < nlp; nn++)
+              for (int nn = 0; nn < nlp; nn++)
               {
                 MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
                 //if (cell[ncl].rho > MINDENSITY)
@@ -652,7 +644,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&corrphotoionrenorm, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
                 {
                   corrphotoionrenorm[i] = redhelper[i];
                 }
@@ -665,7 +657,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
                 {
                   gammaestimator[i] = redhelper[i];
                 }
@@ -767,12 +759,12 @@ int main(int argc, char** argv)
           */
 
           /// Calculate mean interaction per packet
-          interactions = 0;
-          for (i = 0; i < npkts; i++)
+          int interactions = 0;
+          for (int i = 0; i < npkts; i++)
           {
             interactions += pkt[i].interactions;
           }
-          meaninteractions = interactions / npkts;
+          double meaninteractions = interactions / npkts;
           printout("mean number of interactions per packet = %g\n",meaninteractions);
 
           /// Printout packet statistics
@@ -822,7 +814,7 @@ int main(int argc, char** argv)
             MPI_Reduce(&J, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
             if (my_rank == 0)
             {
-              for (i = 0; i < MMODELGRID; i++)
+              for (int i = 0; i < MMODELGRID; i++)
               {
                 J[i] = redhelper[i];
               }
@@ -831,7 +823,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&nuJ, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   nuJ[i] = redhelper[i];
                 }
@@ -839,7 +831,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&ffheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   ffheatingestimator[i] = redhelper[i];
                 }
@@ -847,7 +839,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&colheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   colheatingestimator[i] = redhelper[i];
                 }
@@ -856,7 +848,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
                 {
                   gammaestimator[i] = redhelper[i];
                 }
@@ -865,7 +857,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&bfheatingestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
                 {
                   bfheatingestimator[i] = redhelper[i];
                 }
@@ -873,7 +865,7 @@ int main(int argc, char** argv)
     /*          MPI_Reduce(&ionfluxestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
                 {
                   ionfluxestimator[i] = redhelper[i];
                 }
@@ -881,7 +873,7 @@ int main(int argc, char** argv)
       /*        MPI_Reduce(&twiddle, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
                 {
                   twiddle[i] = redhelper[i];
                 }
@@ -889,7 +881,7 @@ int main(int argc, char** argv)
     /*          MPI_Reduce(&stimrecombestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
                 {
                   stimrecombestimator[i] = redhelper[i];
                 }
@@ -898,7 +890,7 @@ int main(int argc, char** argv)
     /*          MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   mabfcount[i] = redhelper[i]/p;
                 }
@@ -906,7 +898,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&mabfcount_thermal, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   mabfcount_thermal[i] = redhelper[i]/p;
                 }
@@ -914,7 +906,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&kbfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   kbfcount[i] = redhelper[i]/p;
                 }
@@ -922,7 +914,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&kbfcount_ion, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   kbfcount_ion[i] = redhelper[i]/p;
                 }
@@ -930,7 +922,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&kffcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   kffcount[i] = redhelper[i]/p;
                 }
@@ -938,7 +930,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&kffabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   kffabs[i] = redhelper[i]/p;
                 }
@@ -946,7 +938,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&kbfabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   kbfabs[i] = redhelper[i]/p;
                 }
@@ -954,7 +946,7 @@ int main(int argc, char** argv)
               MPI_Reduce(&kgammadep, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   kgammadep[i] = redhelper[i]/p;
                 }
@@ -965,7 +957,7 @@ int main(int argc, char** argv)
               MPI_Reduce(ecounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < nlines; i++)
+                for (int i = 0; i < nlines; i++)
                 {
                   ecounter[i] = linestat_reduced[i];
                 }
@@ -973,7 +965,7 @@ int main(int argc, char** argv)
               MPI_Reduce(acounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < nlines; i++)
+                for (int i = 0; i < nlines; i++)
                 {
                   acounter[i] = linestat_reduced[i];
                 }
@@ -981,13 +973,13 @@ int main(int argc, char** argv)
             #endif
 
             double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
-            deltat = time_step[nts].width;
+            double deltat = time_step[nts].width;
             if (do_rlc_est != 0)
             {
               MPI_Reduce(&rpkt_emiss, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (i = 0; i < MMODELGRID; i++)
+                for (int i = 0; i < MMODELGRID; i++)
                 {
                   rpkt_emiss[i] = redhelper[i];
                 }
@@ -998,10 +990,10 @@ int main(int argc, char** argv)
               MPI_Reduce(&compton_emiss, &redhelper, MMODELGRID*EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                i = 0;
-                for (n = 0; n < MMODELGRID; n++)
+                int i = 0;
+                for (int n = 0; n < MMODELGRID; n++)
                 {
-                  for (nn = 0; nn < EMISS_MAX; nn++)
+                  for (int nn = 0; nn < EMISS_MAX; nn++)
                   {
                     compton_emiss[n][nn] = redhelper[i];
                     i++;
@@ -1079,15 +1071,15 @@ int main(int argc, char** argv)
               /// Print net absorption/emission in lines to the linestat_file
               /// Currently linestat information is only properly implemented for MPI only runs
               /// For hybrid runs only data from thread 0 is recorded
-              for (i = 0; i < nlines; i++)
+              for (int i = 0; i < nlines; i++)
                 fprintf(linestat_file,"%d ", ecounter[i]);
               fprintf(linestat_file,"\n");
-              for (i = 0; i < nlines; i++)
+              for (int i = 0; i < nlines; i++)
                 fprintf(linestat_file,"%d ", acounter[i]);
               fprintf(linestat_file,"\n");
 
               ///Old style
-              //for (i = 0; i < nlines; i++) fprintf(linestat_file,"%g %d %d %d %d %d %d\n", CLIGHT/linelist[i].nu, get_element(linelist[i].elementindex), get_ionstage(linelist[i].elementindex,linelist[i].ionindex), linelist[i].upperlevelindex+1, linelist[i].lowerlevelindex+1,ecounter_reduced[i],acounter_reduced[i]);
+              //for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g %d %d %d %d %d %d\n", CLIGHT/linelist[i].nu, get_element(linelist[i].elementindex), get_ionstage(linelist[i].elementindex,linelist[i].ionindex), linelist[i].upperlevelindex+1, linelist[i].lowerlevelindex+1,ecounter_reduced[i],acounter_reduced[i]);
             }
           #endif
 
@@ -1201,7 +1193,7 @@ int main(int argc, char** argv)
 
         position = 0;
         MPI_Unpack(buffer, HUGEE, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-        for (nn = 0; nn < nlp; nn++)
+        for (int nn = 0; nn < nlp; nn++)
         {
           MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
           if (modelgrid[mgi].associated_cells > 0)
@@ -1405,7 +1397,7 @@ void printout(char *fmt, ...)
     {
       epsilon_lower = epsilon(element,ion,lower);
       nuptrans = elements[element].ions[ion].levels[lower].uptrans[0].targetlevel;
-      for (i = 1; i <= nuptrans; i++)
+      int i = 1; i <= nuptrans; i++)
       {
         upper = elements[element].ions[ion].levels[lower].uptrans[i].targetlevel;
         lineindex = elements[element].ions[ion].levels[lower].uptrans[i].lineindex;

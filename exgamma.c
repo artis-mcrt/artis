@@ -10,25 +10,20 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-
 #include "threadprivate.h"
 #include "exspec.h"
 #include "sn3d.h"
 #include <stdarg.h>  /// MK: needed for printout()
+#include "gamma_light_curve.h"
+#include "light_curve.h"
+#include "spectrum.h"
 
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  int time_init();
   int nts;
 
   //void init_spectrum();
-  int gather_spectrum(int depth);
-  int gather_spectrum_res(int current_abin);
-  int gather_light_curve();
-  int gather_light_curve_res(int current_abin);
-  int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file);
-  int write_light_curve(FILE *lc_file, int current_abin);
 
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
   int j,t_arrive;
@@ -37,9 +32,7 @@ int main(int argc, char** argv)
   //int make_spectrum_res();
   //int make_spectrum();
   //int make_gamma_light_curve();
-  double syn_gamma();
   int outer_iteration;
-  int normalise_grey(), write_grey();
   //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
   //int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
   //int gather_gamma_light_curve(), write_gamma_light_curve();
@@ -82,7 +75,7 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &p);
   #else
     my_rank = 0;
-    p=1;
+    p = 1;
   #endif
 
   nprocs = p;              /// Global variable which holds the number of MPI processes

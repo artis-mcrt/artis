@@ -5,7 +5,7 @@
 void escat_rpkt(PKT *pkt_ptr, double t_current)
 {
   double dummy_dir[3],vel_vec[3];
-  double old_dir_cmf[3],new_dir_cmf[3],dir_perp[3];
+  double new_dir_cmf[3],dir_perp[3];
   double old_dir_rf[3];
 
   /// now make the packet a r-pkt and set further flags
@@ -16,7 +16,7 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
 
   /// We have incoming dir in rf - we want to convert it to the cmf
   /// - use aberation of angles.
-
+  //double old_dir_cmf[3];
   ///get_velocity(pkt_ptr->pos, vel_vec, t_current);
   ///angle_ab(pkt_ptr->dir, vel_vec, old_dir_cmf);
 

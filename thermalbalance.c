@@ -11,7 +11,6 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   int maxit = 100;
   int iter2,status;
   double T_e,T_e_min,T_e_max;
-  int i;
 
   //gsl_root_fsolver *solver;
   //solver = gsl_root_fsolver_alloc(solvertype);
@@ -43,7 +42,7 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
   find_T_e_f.function = &find_T_e;
   find_T_e_f.params = &paras;
 
-  double deltat = (T_max - T_min) / 100;
+  //double deltat = (T_max - T_min) / 100;
 
   /// Force tb_info switch to 1 for selected cells in serial calculations
   /*
@@ -206,7 +205,6 @@ double find_T_e(double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
   double nntot;
-  int element,ion,nions;
 
   int modelgridindex = ((Te_solution_paras *) paras)->cellnumber;
   double t_current = ((Te_solution_paras *) paras)->t_current;
@@ -249,12 +247,11 @@ double find_T_e(double T_e, void *paras)
   //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL))) - factor/t_current);
 
   /// Adiabatic cooling term
-  double p,dV,V;
-  p = nntot*KB*T_e;
-  dV = 3*pow(wid_init/tmin,3)*pow(t_current,2);
-  V = pow(wid_init*t_current/tmin,3);
+  double p = nntot*KB*T_e;
+  double dV = 3 * pow(wid_init/tmin,3) * pow(t_current,2);
+  double V = pow(wid_init * t_current / tmin,3);
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
-  coolingrates[tid].adiabatic = p*dV/V;
+  coolingrates[tid].adiabatic = p * dV / V;
 
   return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collisional + heatingrates[tid].gamma - coolingrates[tid].adiabatic; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
   //return heatingrates[tid].gamma - coolingrates[tid].fb; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
@@ -271,15 +268,14 @@ void calculate_heating_rates(int modelgridindex)
   double epsilon_current,epsilon_target,epsilon_trans,nnlevel;
   double C;
   double statweight_target;
-  double T_e,T_R,T_D,W,W_D;
 
   int nions,nlevels_currention,nlevels_lowerion,ndowntrans;
   int element,ion,level,lower;
   int ii,lineindex;
 
   gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1000);
-  double intaccuracy = 1e-2;
-  double error;
+  //double intaccuracy = 1e-2;
+  //double error;
   //size_t neval; ///for qng integrator
 
   /*
@@ -295,9 +291,9 @@ void calculate_heating_rates(int modelgridindex)
   PKT *pkt_ptr;
   pkt_ptr = &dummypkt;*/
 
-  T_e = get_Te(modelgridindex);
-  T_R = get_TR(modelgridindex);
-  W = get_W(modelgridindex);
+  double T_e = get_Te(modelgridindex);
+  double T_R = get_TR(modelgridindex);
+  double W = get_W(modelgridindex);
 
   double C_deexc = 0.;
   double C_recomb = 0.;

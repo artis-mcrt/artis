@@ -37,7 +37,6 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
   dummy.where = pkt_ptr->where;
   dummy.last_cross = NONE;
 
-  int end_packet = 0;
   double sdist = 0;
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
@@ -89,8 +88,6 @@ int rlc_emiss_rpkt(PKT *pkt_ptr, double dist, double t_current)
   dummy.dir[2] = syn_dir[2];
   dummy.where = pkt_ptr->where;
   dummy.last_cross = NONE;
-
-  int end_packet = 0;
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
 

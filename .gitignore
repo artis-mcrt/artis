@@ -4,7 +4,6 @@ version.h
 *.o
 *.exe
 sn3d
-Makefile
 exspec
 *.o-*
 tags

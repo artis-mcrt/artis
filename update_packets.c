@@ -47,7 +47,7 @@ int update_packets(int nts)
       for (int n = 0; n < npkts; n++)
       {
         //printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
-        if (n % 500 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
+        if (n % 1000 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
         //if (n == 5000) exit(0);
 
 	      pkt_ptr = &pkt[n];

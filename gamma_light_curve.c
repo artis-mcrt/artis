@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "exspec.h"
+#include "gamma_light_curve.h"
 
 /* This is very like "light_curve" except that it now bins in angle. */
 
@@ -7,9 +8,6 @@
 
 int make_gamma_light_curve()
 {
-  int gather_gamma_light_curve();
-  int write_gamma_light_curve();
-
   gather_gamma_light_curve(0);
   write_gamma_light_curve();
 
@@ -20,7 +18,6 @@ int make_gamma_light_curve()
 int gather_gamma_light_curve(int my_rank)
 {
   PKT *pkt_ptr;
-  int add_to_lc_angle();
   int i,n,p,nn;
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
 

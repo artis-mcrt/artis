@@ -10,23 +10,23 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-
 #include "threadprivate.h"
 #include "exspec.h"
 #include "sn3d.h"
 #include <stdarg.h>  /// MK: needed for printout()
+#include "gamma_light_curve.h"
+#include "light_curve.h"
+#include "spectrum.h"
 
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  int time_init();
   int nts;
 
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
   int j,t_arrive;
   PKT *pkt_ptr;
 
-  double syn_gamma();
   int outer_iteration;
   //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
   //int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
@@ -70,15 +70,13 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &p);
   #else
     my_rank = 0;
-    p=1;
+    p = 1;
   #endif
 
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
   if (my_rank == 0)
   {
-
-
     tid = 0;
     nthreads = 1;
     sprintf(filename,"exspec_%d-%d.txt",my_rank,tid);

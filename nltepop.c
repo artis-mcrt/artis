@@ -12,7 +12,6 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
   int ionisinglevels, ndowntrans, nuptrans, i;
   double statweight, epsilon_current;
-  double tmid;
   double superlevel_partition;
   double R, C, Y;
   double t_mid;

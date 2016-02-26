@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "packet_prop.h"
 
 /* Master routine for moving packets around. When it called,
    it is given the time at start of inverval and at end - when it finishes,

@@ -113,7 +113,6 @@ int setup_packets (int pktnumberoffset)
   while (n < npkts)
   {
     /// Get random number.
-    double runtot = 0.0;
     int mabove = ngrid;
     int mbelow = 0;
     double zrand = gsl_rng_uniform(rng);
@@ -148,6 +147,7 @@ int setup_packets (int pktnumberoffset)
     //exit(0);
     /*
     m=0;
+    double runtot = 0.0;
     while (runtot < (zrand))
     {
       grid_ptr = &cell[m];
