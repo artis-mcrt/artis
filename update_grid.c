@@ -7,13 +7,10 @@
 int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     /// m timestep
 {
-  void calculate_kpkt_rates(int modelgridindex);
   double vel;
   double hhelper;
   int jj;
   double renormcoeff;
-  double get_Gamma_phys(int modelgridindex, int element, int ion);
-  double get_Gamma(int modelgridindex, int element, int ion);
   double bfheating_est,ffheating_est,ffcooling_ana,bfheating_ana,bfcooling_ana,photoabs_est,photoabs_twiddle_est,radrecomb_ana,thermalratio;
   int counter;
   double old,new;
@@ -25,18 +22,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   double Col_ion;
 
-  //void dilute_pops(int cellnumber, int nts);
   //double gamma_lte,zeta;
-
-  //double ionstagepop(int cellnumber, int element, int ion);
-  //void check_interpolation(double T_min, double T_max);
-  //double mintemp_solution_f(double T, void *paras);
-  //double maxtemp_solution_f(double T, void *paras);
-  //double calculate_ltepartfunct(int element, int ion, double T);
-  //float calculate_groundlevelpop(int element, int ion, double T, int cellnumber, double nne, double nnnextion);
-
-  int search_cellhistory(int cellnumber);
-
 
   /// only needed if all level populations should be printed to the output-file
   //double pop, excitedlevelpops;
@@ -757,15 +743,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                               if ((trial < 1.0) && (trial > 0.0))
                               {
                                 trial = 1./trial;
-                            }
-                            if (trial > nlte_test)
-                            {
-                              nlte_test = trial;
-                            }
-                            //			    printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+                              }
+                              if (trial > nlte_test)
+                              {
+                                nlte_test = trial;
+                              }
+                              //printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
                             }
                           }
-                          printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, m, nlte_test, nlte_test);
+                          printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, m, nlte_test);
                           if (nlte_iter > NLTEITER)
                           {
                             printout("NLTE solver failed to converge after %d iterations. Test %g.\n", NLTEITER, nlte_test);
@@ -861,11 +847,47 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
               #ifdef NLTE_POPS_ON
-                fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+                fprintf(nlte_file,"timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g\n",m,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
                 for (nlte = 0; nlte < total_nlte_levels; nlte++)
+                {
+                  int element = -1;
+                  int ion = -1;
+                  int level = -1;
+                  for (int dum_element = 0; dum_element < nelements; dum_element++)
                   {
-                    fprintf(nlte_file,"%g ", modelgrid[n].nlte_pops[nlte]*modelgrid[n].rho);
+                    nions = get_nions(dum_element);
+                    for (int dum_ion = 0; dum_ion < nions; dum_ion++)
+                    {
+                      int ion_first_nlte = elements[dum_element].ions[dum_ion].first_nlte;
+                      //printout("NLTETEST: element %d ion %d first_nlte %d looking for %d\n",dum_element,dum_ion,ion_first_nlte,nlte);
+                      if (nlte >= ion_first_nlte)
+                      {
+                        element = dum_element;
+                        ion = dum_ion;
+                        level = nlte - ion_first_nlte + 1;
+                      }
+                    }
                   }
+                  if (level == -1)
+                  {
+                    printout("FATAL: matching ion & level for NLTE index %d not found",nlte);
+                    abort();
+                  }
+                  else
+                  {
+                    //printout("found it in element %d ion %d level %d\n",element,ion,level);
+                  }
+                  double nnlevel = modelgrid[n].nlte_pops[nlte] * modelgrid[n].rho;
+                  double E_level = epsilon(element,ion,level);
+                  double E_ground = epsilon(element,ion,0);
+                  double T_e = get_Te(n);
+                  double W = get_W(n);
+                  double nnlevellte = get_groundlevelpop(n,element,ion) * W *
+                      stat_weight(element,ion,level)/stat_weight(element,ion,0) *
+                      exp(-(E_level-E_ground)/KB/T_e);
+                  if (ion == 1)
+                    fprintf(nlte_file,"nlte_index %d element %d ion_stage %d level %d energy %g nnlevel %g nlte_pop %g nnlevellte %g\n",nlte,element,ion+1,level,E_level-E_ground,nnlevel,modelgrid[n].nlte_pops[nlte],nnlevellte);
+                }
                 fprintf(nlte_file,"\n");
                 //	      printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
 
@@ -1027,7 +1049,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
       use_cellhist = 1;
     #ifdef _OPENMP
     } /// end OpenMP parallel section
-  #endif
+    #endif
 
   ///Write estimators for OpenMP version
   ///compton_optical_depth and heating/cooling rates which don't live on the grid
@@ -1037,32 +1059,33 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     {
       if (modelgrid[n].associated_cells > 0)
       {
+        fprintf(estimators_file,"populations ");
         //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
         fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].grey_depth);
         //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
 
-    #ifdef NLTE_POPS_ON
-      fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-      for (nlte = 0; nlte < total_nlte_levels; nlte++)
-      {
-        fprintf(nlte_file,"%g ", modelgrid[n].nlte_pops[nlte]*modelgrid[n].rho);
-      }
-      fprintf(nlte_file,"\n");
-      //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-      for (dummy_element = 0; dummy_element < nelements; dummy_element++)
-      {
-        nions = get_nions(dummy_element);
-        for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
-        {
-          if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
+        #ifdef NLTE_POPS_ON
+          fprintf(nlte_file,"%d T_R %g T_e %g W %g T_J %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+          for (nlte = 0; nlte < total_nlte_levels; nlte++)
           {
-            for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
-              //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
+            fprintf(nlte_file,"%g ", modelgrid[n].nlte_pops[nlte]*modelgrid[n].rho);
           }
-        }
-      }
-      //fprintf(nlte_file,"\n");
-    #endif
+          fprintf(nlte_file,"\n");
+          //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+          for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+          {
+            nions = get_nions(dummy_element);
+            for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
+            {
+              if ((nlte = get_nlevels_nlte(dummy_element, dummy_ion)) > 0)
+              {
+                for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+                  //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
+              }
+            }
+          }
+          //fprintf(nlte_file,"\n");
+        #endif
 
         for (element = 0; element < nelements; element++)
         {
@@ -1404,12 +1427,13 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  double nne,nne_lo,nne_hi,nne_check,nne_tot;
+  double nne_lo,nne_hi,nne_check,nne_tot;
   double nnelement,nnion;
   int element,ion;
   int nions;
   int iter;
   double nntot;
+  double nne = 0.;
 
   /// Initialise the gsl solver
   const gsl_root_fsolver_type *solvertype;
@@ -1557,12 +1581,12 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
       printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
       #ifndef FORCE_LTE
-        for (element=0; element < nelements; element++)
+        for (element = 0; element < nelements; element++)
         {
           //printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements[element].uppermost_ion);
           printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements_uppermost_ion[tid][element]);
           //for (ion=0; ion <= elements[element].uppermost_ion; ion++)
-          for (ion=0; ion <= elements_uppermost_ion[tid][element]; ion++)
+          for (ion = 0; ion <= elements_uppermost_ion[tid][element]; ion++)
           {
             //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
             printout("element %d, ion %d, photoionest %g\n",element,ion,gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
@@ -1848,7 +1872,6 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 #endif
 
 
-
 void write_grid_restart_data(void)
 {
   FILE *gridsave_file;
@@ -1863,7 +1886,7 @@ void write_grid_restart_data(void)
     if (modelgrid[n].associated_cells > 0)
     {
       fprintf(gridsave_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
-#ifndef FORCE_LTE
+      #ifndef FORCE_LTE
         for (int element = 0; element < nelements; element++)
         {
           int nions = get_nions(element);

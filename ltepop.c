@@ -119,16 +119,12 @@ double phi(int element, int ion, int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
-  //double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
-  //double interpolate_photoioncoeff_below(int element, int ion, int level, double T);
-  //double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
-  //double interpolate_zeta(int element, int ion, double T);
   double gamma_lte; //zeta;
   double phi;
 
   //double Y_nt, ionpot_in;
   //int element_in, ion_in, nions_in;
-  double rate_use;
+  //double rate_use;
 
   //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 
@@ -724,7 +720,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }
 
   #ifdef DEBUG_ON
-    double ionstagepop(int modelgridindex, int element, int ion);
     if (!isfinite(nn))
     {
       printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
@@ -859,12 +854,6 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 /// fluctuations over timestep iterations if DO_TITER is defined) to -1.
 void initialise_photoionestimators()
 {
-  //double interpolate_photoioncoeff_below(int element, int ion, int level, double T);
-  //double interpolate_photoioncoeff_above(int element, int ion, int level, double T);
-  //double interpolate_zeta(int element, int ion, double T);
-  //double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-  //double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
-
   //for (n = 0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {

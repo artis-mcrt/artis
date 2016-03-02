@@ -23,7 +23,6 @@ int main(int argc, char** argv)
   FILE *temperature_file;
   int my_rank;
   int p;
-  int element;
   #ifdef MPI_ON
     double a, b;
     int aa, bb;
@@ -31,7 +30,7 @@ int main(int argc, char** argv)
   #endif
   int nstart, nknown, ndo;
   double rho_tot, te_tot, tr_tot, w_tot, n_count;
-  int position, nlp, ncl, nncl, mgi;
+  int position, nlp, ncl, mgi;
   double T_R_max,T_R_min,T_R_step;
   double T_e_max,T_e_min,T_e_step;
   double rho_max,rho_min,rho_step;
@@ -532,7 +531,7 @@ int main(int argc, char** argv)
               position = 0;
               MPI_Pack(&ndo, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
               for (int mgi = nstart; mgi < (nstart+ndo); mgi++)
-              //for (nncl = 0; nncl < ndo; nncl++)
+              //for (int nncl = 0; nncl < ndo; nncl++)
               {
                 //nn = nonemptycells[my_rank+nncl*nprocs];
                 MPI_Pack(&mgi, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
@@ -605,7 +604,7 @@ int main(int argc, char** argv)
                 position = 0;
                 MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
                 for (int mgi = nstart; mgi < (nstart+ndo); mgi++)
-                //for (nncl = 0; nncl < ndo; nncl++)
+                //for (int nncl = 0; nncl < ndo; nncl++)
                 {
                   //nn = nonemptycells[my_rank+nncl*nprocs];
                   MPI_Pack(&mgi, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);

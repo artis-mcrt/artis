@@ -753,7 +753,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           //nlevels = get_nlevels(element,ion-1);
           nlevels = get_bfcontinua(element,ion-1);
           //nlevels = get_ionisinglevels(element,ion-1);
-          for (lower=0; lower < nlevels; lower++)
+          for (lower = 0; lower < nlevels; lower++)
           {
             epsilon_target = epsilon(element,ion-1,lower);
             epsilon_trans = epsilon_current - epsilon_target;

@@ -958,7 +958,7 @@ double closest_transition_empty(PKT *pkt_ptr)
 void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
 {
   double vel_vec[3];
-  double sigma,kappa_ffheating;//,kappa_bfheating;
+  double sigma;//,kappa_bfheating;
   double nne,T_e,T_R,nu;
   double g_ff,g_bf;
   double nnion,nnionlevel,nnlevel,departure_ratio;
@@ -966,13 +966,14 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   int element,ion,level,phixstargetindex;//,samplecell;
   int Z;
   double nu_edge;
-  int i,ii,nions;
+  int i,nions;
   double sf,check;
   double helper;
   int gphixsindex;
   double corrfactor;
   double ionpops_local[MELEMENTS][MIONS];
 
+  double kappa_ffheating = 0.;
   double kappa_ff = 0.;
   double kappa_bf = 0.;
 
@@ -1180,10 +1181,10 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
 
       /// Second contribution: free-free absorption
       kappa_ff = 0.;
-      for (element=0; element < nelements; element++)
+      for (element = 0; element < nelements; element++)
       {
         nions = get_nions(element);
-        for (ion=0; ion < nions; ion++)
+        for (ion = 0; ion < nions; ion++)
         {
           ///calculate population of ionstage ...
           nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted

@@ -40,7 +40,7 @@ int input(int rank)
   ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
   if (ngrid > MGRID)
   {
-    printout("[fatal] input: Error: too many grid cells. Abort.");
+    printout("[fatal] input: Error: too many grid cells. Abort. %d>%d",ngrid,MGRID);
     exit(0);
   }
 
@@ -316,10 +316,6 @@ void read_atomicdata()
   FILE *linelist_file;
   transitiontable_entry *transitiontable;
   int skip_this_phixs_table;
-
-  phixstarget_entry *phixstargets;
-
-  //int upperion,upperlevel,lowerion,lowerlevel,nphixstargets;
 
   //FILE *database_file,*interpol_file;
   //char filename1[100],filename2[100];
@@ -1480,6 +1476,7 @@ void read_atomicdata()
     exit(0);
   }
   #ifdef _OPENMP
+    int element,ion,level,nions,nlevels,ndowntrans,nuptrans;
     #pragma omp parallel private(element,ion,level,nions,nlevels,ndowntrans,nuptrans)
     {
   #endif
@@ -1714,7 +1711,7 @@ void read_atomicdata()
   ///set-up/gather information for nlte stuff
 
   total_nlte_levels = 0;
-  n_super_levels= 0;
+  n_super_levels = 0;
 
   #ifdef NLTE_POPS_ON
     for (int element = 0; element < nelements; element++)
@@ -1745,7 +1742,7 @@ void read_atomicdata()
           n_super_levels++;
         }
 
-        elements[element].ions[ion].nlevels_nlte=count;
+        elements[element].ions[ion].nlevels_nlte = count;
 
         printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element), get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
       }
@@ -1786,7 +1783,7 @@ void read_parameterfile(int rank)
   }
 
   #ifdef _OPENMP
-    #pragma omp parallel private(x,zseed,n)
+    #pragma omp parallel private(x,zseed)
     {
 /*      tid = omp_get_thread_num();
       nthreads = omp_get_num_threads();
@@ -2193,8 +2190,6 @@ int read_2d_model()
 /// Subroutine to read in a 3-D model.
 int read_3d_model()
 {
-  void allocate_compositiondata(int cellnumber);
-  void allocate_cooling(int modelgridindex);
   float dum2, dum3, dum4, dum5, dum6;
   float rho_model;
   double mass_in_shell, helper;
@@ -2213,12 +2208,12 @@ int read_3d_model()
   npts_model = dum1;
   if (npts_model > MMODELGRID)
   {
-    printout("Too many points in input model. Abort.\n");
+    printout("Too many points in input model. Abort. (%d > %d)\n",npts_model,MMODELGRID);
     exit(0);
   }
   if (npts_model != nxgrid * nygrid * nzgrid)
   {
-    printout("3D model/grid mismatch. Abort.\n");
+    printout("3D model/grid mismatch. Abort. %d != %d\n",npts_model, nxgrid * nygrid * nzgrid);
     exit(0);
   }
 

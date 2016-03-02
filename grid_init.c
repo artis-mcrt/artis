@@ -38,13 +38,13 @@ int grid_init()
   }
   else if (model_type == RHO_1D_READ)
   {
-    abundances_1d_read ();
-    density_1d_read ();
+    abundances_1d_read();
+    density_1d_read();
   }
   else if (model_type == RHO_2D_READ)
   {
-    abundances_1d_read (); //for 2d can handle abundances exactly as for 1D
-    density_2d_read ();
+    abundances_1d_read(); //for 2d can handle abundances exactly as for 1D
+    density_2d_read();
   }
   else if (model_type == RHO_3D_READ)
   {
@@ -1377,9 +1377,6 @@ int density_3d_read ()
 /// Initialise composition dependent cell data for the given cell
 void allocate_compositiondata(int modelgridindex)
 {
-  int element;
-  int ion_index;
-
   if ((modelgrid[modelgridindex].composition = malloc(nelements*sizeof(compositionlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
@@ -1392,15 +1389,15 @@ void allocate_compositiondata(int modelgridindex)
     exit(0);
   }
 
-  for (element = 0; element < total_nlte_levels; element++)
+  for (int element = 0; element < total_nlte_levels; element++)
   {
     modelgrid[modelgridindex].nlte_pops[element] = -1.0; ///flag to indicate that there is
                                                          /// currently no information on the nlte populations
   }
 
-  printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
+  //printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
 
-  for (element = 0; element < nelements; element++)
+  for (int element = 0; element < nelements; element++)
   {
     /// Set initial abundances to zero
     modelgrid[modelgridindex].composition[element].abundance = 0.;
@@ -1411,10 +1408,10 @@ void allocate_compositiondata(int modelgridindex)
       printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
       exit(0);
     }
-    for (ion_index=0; ion_index<get_nions(element); ion_index++)
-      {
-        modelgrid[modelgridindex].composition[element].groundlevelpop[ion_index]=0.0;
-      }
+    for (int ion_index = 0; ion_index < get_nions(element); ion_index++)
+    {
+      modelgrid[modelgridindex].composition[element].groundlevelpop[ion_index]=0.0;
+    }
 
     if ((modelgrid[modelgridindex].composition[element].partfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
     {
@@ -1436,15 +1433,13 @@ void allocate_compositiondata(int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 void allocate_cooling(int modelgridindex)
 {
-  int element;
-
   if ((modelgrid[modelgridindex].cooling = malloc(nelements*sizeof(mgicooling_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
     exit(0);
   }
 
-  for (element = 0; element < nelements; element++)
+  for (int element = 0; element < nelements; element++)
   {
     /// and allocate memory to store the ground level populations for each ionisation stage
     if ((modelgrid[modelgridindex].cooling[element].contrib = malloc(get_nions(element)*sizeof(double))) == NULL)
@@ -1540,10 +1535,6 @@ void allocate_cooling(int modelgridindex)
 void abundances_3d_read()
 {
   FILE *abundance_file;
-  float abundance,dum[30];
-  int cellnumber,n;
-  int anumber,element, mgi;
-
   /// Open the abundances file
   if ((abundance_file = fopen("abundances.txt", "r")) == NULL)
   {
@@ -1556,10 +1547,12 @@ void abundances_3d_read()
   /// cells. Its format must be cellnumber (integer), abundance for
   /// element Z=1 (float) up to abundance for element Z=30 (float)
   /// i.e. in total one integer and 30 floats.
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
-    mgi = cell[n].modelgridindex;
+    int mgi = cell[n].modelgridindex;
 
+    float dum[30];
+    int cellnumber;
     fscanf(abundance_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
 
     if (n != cellnumber-1)
@@ -1569,12 +1562,12 @@ void abundances_3d_read()
       abort();
     }
 
-    for (element = 0; element < nelements; element++)
+    for (int element = 0; element < nelements; element++)
     {
       ///now set the abundances (by mass) of included elements, i.e.
       ///read out the abundances specified in the atomic data file
-      anumber = get_element(element);
-      abundance = dum[anumber-1];
+      int anumber = get_element(element);
+      float abundance = dum[anumber-1];
       modelgrid[mgi].composition[element].abundance = abundance;
 
       if (anumber == 28)

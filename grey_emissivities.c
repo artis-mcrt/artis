@@ -37,8 +37,6 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
   dummy.where = pkt_ptr->where;
   dummy.last_cross = NONE;
 
-  double sdist = 0;
-
   int mgi = cell[pkt_ptr->where].modelgridindex;
 
   if (dist > 0)
