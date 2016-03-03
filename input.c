@@ -12,11 +12,6 @@
 /// To govern the input. For now hardwire everything.
 int input(int rank)
 {
-  FILE *co_lines;
-  FILE *ni_lines;
-  FILE *v48_lines;
-  FILE *cr48_lines;
-
   homogeneous_abundances = 0;
   t_model = 0.0;
 
@@ -141,12 +136,13 @@ int input(int rank)
 
   /// Read in data for gamma ray lines.
   ///======================================================
-  int dum1 = 0;
+  FILE *co_lines;
   if ((co_lines = fopen("co_lines.txt", "r")) == NULL)
   {
     printout("Cannot open co_lines.txt.\n");
     exit(0);
   }
+  int dum1 = 0;
   fscanf(co_lines, "%d", &dum1);
   cobalt_spec.nlines = dum1;
 
@@ -167,6 +163,7 @@ int input(int rank)
 
   fclose(co_lines);
 
+  FILE *ni_lines;
   if ((ni_lines = fopen("ni_lines.txt", "r")) == NULL)
   {
     printout("Cannot open ni_lines.txt.\n");
@@ -188,6 +185,7 @@ int input(int rank)
 
   fclose(ni_lines);
 
+  FILE *v48_lines;
   if ((v48_lines = fopen("v48_lines.txt", "r")) == NULL)
   {
     printout("Cannot open v48_lines.txt.\n");
@@ -208,6 +206,7 @@ int input(int rank)
 
   fclose(v48_lines);
 
+  FILE *cr48_lines;
   if ((cr48_lines = fopen("cr48_lines.txt", "r")) == NULL)
   {
     printout("Cannot open cr48_lines.txt.\n");
@@ -1333,7 +1332,6 @@ void read_atomicdata()
 
 void read_phixs_data()
 {
-  int skip_this_phixs_table;
   printout("readin phixs data\n");
   FILE *phixsdata;
   if ((phixsdata = fopen("phixsdata_v2.txt", "r")) == NULL)
@@ -1346,6 +1344,7 @@ void read_phixs_data()
   int Z,upperion,upperlevel,lowerion,lowerlevel;
   while (fscanf(phixsdata,"%d %d %d %d %d\n",&Z,&upperion,&upperlevel,&lowerion,&lowerlevel) != EOF)
   {
+    int skip_this_phixs_table = 0;
     //printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel, %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
     /// translate readin anumber to element index
     int element = get_elementindex(Z);
@@ -1568,7 +1567,7 @@ void read_preprocessed_modelatom(FILE *modelatom)
       for (int level = 0; level < nlevels; level++)
       {
         double levelenergy, statweight;
-        int cont_index = -1;
+        int cont_index;
         fscanf(modelatom,"%lg %lg %d %d\n",&levelenergy,&statweight,&cont_index,&metastable);
 
         elements[element].ions[ion].levels[level].epsilon = levelenergy;
@@ -1731,7 +1730,6 @@ void read_preprocessed_modelatom(FILE *modelatom)
       }
     }
   }
-  fclose(modelatom);
 
   FILE *linelist_file;
   if ((linelist_file = fopen("linelist.dat", "r")) == NULL)
