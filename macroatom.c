@@ -282,8 +282,11 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
     {
       ///radiative deexcitation of MA: emitt rpkt
       #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] do_ma:   radiative deexcitation\n");
-        if (debuglevel == 2) printout("[debug] do_ma:   jumps = %d\n",jumps);
+        if (debuglevel == 2)
+        {
+          printout("[debug] do_ma:   radiative deexcitation\n");
+          printout("[debug] do_ma:   jumps = %d\n",jumps);
+        }
       #endif
 
       ///randomly select which line transitions occurs
@@ -832,11 +835,7 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
 ///radiative deexcitation rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  double A_ul,B_ul,B_lu;
-  double n_u,n_l;
-  double nu_trans;
-  double tau_sobolev,beta;
-  double R;
+  double beta;
 
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -852,20 +851,20 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
     }
   #endif
 
-  nu_trans = epsilon_trans/H;
+  double nu_trans = epsilon_trans/H;
   //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
-  A_ul = einstein_spontaneous_emission(lineindex);
-  B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
-  B_lu = mastate[tid].statweight/statweight_target * B_ul;
+  double A_ul = einstein_spontaneous_emission(lineindex);
+  double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
+  double B_lu = mastate[tid].statweight/statweight_target * B_ul;
   //double g_ratio = mastate[tid].statweight/statweight_target;
   //B_lu = g_ratio * B_ul;
 
-  n_u = get_levelpop(element,ion,upper);
-  n_l = get_levelpop(element,ion,lower);
+  double n_u = get_levelpop(element,ion,upper);
+  double n_l = get_levelpop(element,ion,lower);
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
   //n_l = n_u/W / g_ratio * exp(epsilon_trans/KB/T_R);
-  tau_sobolev = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
+  double tau_sobolev = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
 
   #ifdef DEBUG_ON
     if (tau_sobolev <= 0)
@@ -888,7 +887,7 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
     beta = 1.0/tau_sobolev * (1 - exp(-tau_sobolev));
   #endif
 
-  R = A_ul * beta * mastate[tid].nnlevel;
+  double R = A_ul * beta * mastate[tid].nnlevel;
 
   #ifdef DEBUG_ON
     if (debuglevel == 2) printout("[debug] rad_rates_down: element, ion, upper, lower %d, %d, %d, %d\n",element,ion,upper,lower);

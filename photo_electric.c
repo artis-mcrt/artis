@@ -10,7 +10,6 @@ double sig_photo_electric(PKT *pkt_ptr, double t_current)
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
   double rho = get_rho(mgi);
-  double f_fe = get_ffe(mgi);
 
   if (gamma_grey < 0)
   {
@@ -25,13 +24,15 @@ double sig_photo_electric(PKT *pkt_ptr, double t_current)
     /* Now need to multiply by the particle number density. */
 
     //sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-     /* Assumes Z = 7. So mass = 14. */
+    /* Assumes Z = 7. So mass = 14. */
 
     sigma_cmf_si *= rho / MH / 28;
     /* Assumes Z = 14. So mass = 28. */
 
     sigma_cmf_fe *= rho / MH / 56;
     /* Assumes Z = 28. So mass = 56. */
+
+    double f_fe = get_ffe(mgi);
 
     sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
   }
@@ -53,13 +54,11 @@ double sig_photo_electric(PKT *pkt_ptr, double t_current)
 double sig_pair_prod(PKT *pkt_ptr, double t_current)
 {
   double sigma_cmf;
-  double sigma_cmf_si, sigma_cmf_cno, sigma_cmf_fe;
 
   /* Start by working out the x-section in the co-moving frame.*/
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
   double rho = get_rho(mgi);
-  double f_fe = get_ffe(mgi);
 
   if (gamma_grey < 0)
   {
@@ -68,6 +67,8 @@ double sig_pair_prod(PKT *pkt_ptr, double t_current)
 
     if (pkt_ptr->nu_cmf > 2.46636e+20)
     {
+      double sigma_cmf_si, sigma_cmf_cno, sigma_cmf_fe;
+      double f_fe = get_ffe(mgi);
       if (pkt_ptr->nu_cmf > 3.61990e+20)
       {
 
