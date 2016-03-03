@@ -17,10 +17,9 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  FILE *syn_file;
   FILE *linestat_file;
   FILE *packets_file;
-  FILE *temperature_file;
+  //FILE *temperature_file;
   int my_rank;
   int p;
   #ifdef MPI_ON
@@ -206,7 +205,7 @@ int main(int argc, char** argv)
   /// Get input stuff
   int real_time_start = time(NULL);
   printout("time before input %d\n",time(NULL));
-  input (my_rank);
+  input(my_rank);
 
   /// Initialise linestat file
   if (my_rank == 0)
@@ -249,6 +248,7 @@ int main(int argc, char** argv)
   printout("time after zero estimators %d\n",time(NULL));
 
   /// Record the chosen syn_dir
+  FILE *syn_file;
   if ((syn_file = fopen("syn_dir.txt", "w")) == NULL)
   {
     printout("Cannot open syn_dir.txt.\n");

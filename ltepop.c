@@ -829,7 +829,7 @@ double calculate_sahafact(int element, int ion, int level, int phixstargetindex,
 
 ///***************************************************************************/
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
-/// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_0,ion+1,element)
+/// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
   double sf;
 

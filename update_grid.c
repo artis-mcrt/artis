@@ -16,7 +16,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   double old,new;
 
   int nlte;
-  int dummy_element, dummy_ion, dummy_level;
+  int dummy_ion, dummy_level;
   double epsilon_trans;
   int ionisinglevels;
 
@@ -360,6 +360,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
                 grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                 printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+                //printout("rmax %g, tratmid %g\n",rmax,tratmid);
                 modelgrid[n].grey_depth = grey_optical_depth;
 
   //               grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
@@ -892,7 +893,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 //	      printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
 
                       //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-                for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+                for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
                 {
                   nions = get_nions(dummy_element);
                   for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
@@ -980,7 +981,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 }
                 fprintf(nlte_file,"\n");
                 //fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.,0.);
-                for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+                for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
                 {
                   nions = get_nions(dummy_element);
                   for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
@@ -1072,7 +1073,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           }
           fprintf(nlte_file,"\n");
           //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-          for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+          for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
           {
             nions = get_nions(dummy_element);
             for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)
@@ -1133,7 +1134,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           }
           fprintf(nlte_file,"\n");
           //fprintf(nlte_file,"%d %g %g %g %g ",n,0.0,0.0,0.0,0.0,0.0);
-          for (dummy_element = 0; dummy_element < nelements; dummy_element++)
+          for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
           {
             nions = get_nions(dummy_element);
             for (dummy_ion = 0; dummy_ion < nions; dummy_ion++)

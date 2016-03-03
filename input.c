@@ -862,9 +862,9 @@ void read_atomicdata()
     ///======================================================
     ///finally read in photoionisation cross sections and store them to the atomic data structure
     printout("readin phixs data\n");
-    if ((phixsdata = fopen("phixsdata2.txt", "r")) == NULL)
+    if ((phixsdata = fopen("phixsdata_v2.txt", "r")) == NULL)
     {
-      printout("Cannot open phixsdata2.txt.\n");
+      printout("Cannot open phixsdata_v2.txt.\n");
       exit(0);
     }
     fscanf(phixsdata,"%d\n",&NPHIXSPOINTS);
@@ -1124,11 +1124,9 @@ void read_atomicdata()
       }
       fclose(modelatom);
     }
-
-
   }
 
-  /// Preproccessed model atom available read that in
+  /// Preprocessed model atom available read that in
   else
   {
     printout("[read_atomicdata] Load preprocessed model atom and linelist ...\n");
@@ -2379,7 +2377,6 @@ int read_3d_model()
 
 ///****************************************************************************
 /// Helper function to sort the linelist by frequency.
-
 int compare_linelistentry(const void *p1, const void *p2)
 {
   linelist_entry *a1, *a2;

@@ -277,7 +277,6 @@ int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double sin
   //   grey processes along the path.
   PKT dummy;
   double kap_tot, tau_cont;
-  double calculate_kappa_rpkt_cont();
   double vel_vec[3];
 
   /// Make a dummy packet that carries the ray properties.
