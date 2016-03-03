@@ -4,7 +4,8 @@
 int input(int rank);
 void read_atomicdata();
 void read_phixs_data();
-void read_preprocessed_modelatom(FILE *modelatom);
+void write_processed_modelatom();
+void read_processed_modelatom(FILE *modelatom);
 void read_parameterfile();
 int read_1d_model();
 int read_2d_model();

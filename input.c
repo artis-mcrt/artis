@@ -305,10 +305,6 @@ void read_atomicdata()
   ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
   int index_in_groundlevelcontestimator;
 
-  FILE *compositiondata;
-  FILE *adata;
-  FILE *transitiondata;
-  FILE *modelatom;
   transitiontable_entry *transitiontable;
 
   //FILE *database_file,*interpol_file;
@@ -323,17 +319,20 @@ void read_atomicdata()
   int *nuparr,*ndownarr;
 
   //printout("start input.c\n");
+  FILE *modelatom;
   if ((modelatom = fopen("modelatom.dat", "r")) == NULL)
   {
     /// No preprocessed model atom available ==> do that now
 
 
     ///open atomic data file
+    FILE *compositiondata;
     if ((compositiondata = fopen("compositiondata.txt", "r")) == NULL)
     {
       printout("Cannot open compositiondata.txt.\n");
       exit(0);
     }
+    FILE *adata;
     if ((adata = fopen("adata.txt", "r")) == NULL)
     {
       printout("Cannot open adata.txt.\n");
@@ -365,6 +364,7 @@ void read_atomicdata()
     if (homogeneous_abundances == 1) printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
 
     /// open transition data file
+    FILE *transitiondata;
     if ((transitiondata = fopen("transitiondata.txt", "r")) == NULL)
     {
       printout("Cannot open transitiondata.txt.\n");
@@ -862,100 +862,14 @@ void read_atomicdata()
     /// Now write the model atom to file for reuse
     if (rank_global == 0)
     {
-      if ((modelatom = fopen("modelatom.dat", "w")) == NULL)
-      {
-        printout("Cannot write to modelatom.dat\n");
-        exit(0);
-      }
-      int metastable,targetlevel;
-
-      fprintf(modelatom,"%d\n",NPHIXSPOINTS);
-      fprintf(modelatom,"%lg\n",NPHIXSNUINCREMENT);
-      fprintf(modelatom,"%d\n",nelements);
-      fprintf(modelatom,"%d\n",homogeneous_abundances);
-      for (int element = 0; element < nelements; element++)
-      {
-        int nions = get_nions(element);
-        fprintf(modelatom,"%d %d %g %g\n",elements[element].anumber,nions,elements[element].abundance,elements[element].mass);
-        for (int ion = 0; ion < nions; ion++)
-        {
-          int nlevels = get_nlevels(element,ion);
-          int ionisinglevels = elements[element].ions[ion].ionisinglevels;
-          int ionstage = elements[element].ions[ion].ionstage;
-          double ionpot = elements[element].ions[ion].ionpot;
-//          nbfcont = elements[element].ions[ion].nbfcontinua;
-          fprintf(modelatom,"%d %d %d %lg\n",nlevels,ionisinglevels,ionstage,ionpot);
-          for (int level = 0; level < nlevels; level++)
-          {
-            double levelenergy = elements[element].ions[ion].levels[level].epsilon;
-            double statweight = elements[element].ions[ion].levels[level].stat_weight;
-            cont_index = elements[element].ions[ion].levels[level].cont_index;
-            metastable = elements[element].ions[ion].levels[level].metastable;
-
-            fprintf(modelatom,"%.16e %lg %d %d\n",levelenergy,statweight,cont_index,metastable);
-
-/*            for (i=0; i < level; i++)
-            {
-              einstein_A = elements[element].ions[ion].levels[level].transitions[i].einstein_A;
-              oscillator_strength = elements[element].ions[ion].levels[level].transitions[i].oscillator_strength;
-              linelistindex = elements[element].ions[ion].levels[level].transitions[i].linelistindex;
-              fprintf(modelatom,"%g %g %d\n",einstein_A,oscillator_strength,linelistindex);
-            }*/
-
-            int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-            fprintf(modelatom,"%d\n",ndowntrans);
-            for (int i = 1; i <= ndowntrans; i++)
-            {
-              targetlevel = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-              levelenergy = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
-              statweight = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
-              lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-              fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
-            }
-
-            int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-            fprintf(modelatom,"%d\n",nuptrans);
-            for (int i = 1; i <= nuptrans; i++)
-            {
-              targetlevel = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-              levelenergy = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
-              statweight = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
-              lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-              fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
-            }
-
-            int nphixstargets = get_nphixstargets(element,ion,level);
-            fprintf(modelatom,"%d\n",nphixstargets);
-            if (ion < nions)
-            {
-              if (level < ionisinglevels)
-              {
-               // printout("set phixs: element %d ion %d level %d\n",element,ion,level);
-                for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-                {
-                    int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-                    float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
-                    //printout("> goes to target level %d with probability %g\n",upperlevel,phixstargetprobability);
-                    fprintf(modelatom,"%d %f\n",upperlevel,phixstargetprobability);
-                }
-                for (int i = 0; i < NPHIXSPOINTS; i++)
-                {
-                  float phixs = elements[element].ions[ion].levels[level].photoion_xs[i];
-                  fprintf(modelatom,"%g\n",phixs);
-                }
-              }
-            }
-          }
-        }
-      }
-      fclose(modelatom);
+      write_processed_modelatom();
     }
   }
 
   /// Preprocessed model atom available read that in
   else
   {
-    read_preprocessed_modelatom(modelatom);
+    read_processed_modelatom(modelatom);
     fclose(modelatom);
   }
 
@@ -1333,8 +1247,8 @@ void read_atomicdata()
 void read_phixs_data()
 {
   printout("readin phixs data\n");
-  FILE *phixsdata;
-  if ((phixsdata = fopen("phixsdata_v2.txt", "r")) == NULL)
+  FILE *phixsdata = fopen("phixsdata_v2.txt", "r");
+  if (phixsdata == NULL)
   {
     printout("Cannot open phixsdata_v2.txt.\n");
     exit(0);
@@ -1505,14 +1419,105 @@ void read_phixs_data()
 }
 
 
-void read_preprocessed_modelatom(FILE *modelatom)
+void write_processed_modelatom()
+{
+  FILE *modelatom = fopen("modelatom.dat", "w");
+  if (modelatom == NULL)
+  {
+    printout("Cannot write to modelatom.dat\n");
+    exit(0);
+  }
+  fprintf(modelatom,"%d\n",NPHIXSPOINTS);
+  fprintf(modelatom,"%lg\n",NPHIXSNUINCREMENT);
+  fprintf(modelatom,"%d\n",nelements);
+  fprintf(modelatom,"%d\n",homogeneous_abundances);
+  for (int element = 0; element < nelements; element++)
+  {
+    int nions = get_nions(element);
+    fprintf(modelatom,"%d %d %g %g\n",elements[element].anumber,nions,elements[element].abundance,elements[element].mass);
+    for (int ion = 0; ion < nions; ion++)
+    {
+      int nlevels = get_nlevels(element,ion);
+      int ionisinglevels = elements[element].ions[ion].ionisinglevels;
+      int ionstage = elements[element].ions[ion].ionstage;
+      double ionpot = elements[element].ions[ion].ionpot;
+//          nbfcont = elements[element].ions[ion].nbfcontinua;
+      fprintf(modelatom,"%d %d %d %lg\n",nlevels,ionisinglevels,ionstage,ionpot);
+      for (int level = 0; level < nlevels; level++)
+      {
+        double levelenergy = elements[element].ions[ion].levels[level].epsilon;
+        double statweight = elements[element].ions[ion].levels[level].stat_weight;
+        int cont_index = elements[element].ions[ion].levels[level].cont_index;
+        int metastable = elements[element].ions[ion].levels[level].metastable;
+
+        fprintf(modelatom,"%.16e %lg %d %d\n",levelenergy,statweight,cont_index,metastable);
+
+/*            for (i=0; i < level; i++)
+        {
+          einstein_A = elements[element].ions[ion].levels[level].transitions[i].einstein_A;
+          oscillator_strength = elements[element].ions[ion].levels[level].transitions[i].oscillator_strength;
+          linelistindex = elements[element].ions[ion].levels[level].transitions[i].linelistindex;
+          fprintf(modelatom,"%g %g %d\n",einstein_A,oscillator_strength,linelistindex);
+        }*/
+
+        int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+        fprintf(modelatom,"%d\n",ndowntrans);
+        for (int i = 1; i <= ndowntrans; i++)
+        {
+          int targetlevel = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
+          double levelenergy = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+          double statweight = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
+          int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
+          fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
+        }
+
+        int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        fprintf(modelatom,"%d\n",nuptrans);
+        for (int i = 1; i <= nuptrans; i++)
+        {
+          int targetlevel = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
+          double levelenergy = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
+          double statweight = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
+          int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
+          fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
+        }
+
+        int nphixstargets = get_nphixstargets(element,ion,level);
+        fprintf(modelatom,"%d\n",nphixstargets);
+        if (ion < nions)
+        {
+          if (level < ionisinglevels)
+          {
+           // printout("set phixs: element %d ion %d level %d\n",element,ion,level);
+            for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+            {
+                int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+                float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
+                //printout("> goes to target level %d with probability %g\n",upperlevel,phixstargetprobability);
+                fprintf(modelatom,"%d %f\n",upperlevel,phixstargetprobability);
+            }
+            for (int i = 0; i < NPHIXSPOINTS; i++)
+            {
+              float phixs = elements[element].ions[ion].levels[level].photoion_xs[i];
+              fprintf(modelatom,"%g\n",phixs);
+            }
+          }
+        }
+      }
+    }
+  }
+  fclose(modelatom);
+}
+
+
+void read_processed_modelatom(FILE *modelatom)
 {
   int totaluptrans = 0;
   int totaldowntrans = 0;
 
   printout("[read_atomicdata] Load preprocessed model atom and linelist ...\n");
   printout("[read_atomicdata] Be aware that no consistency checks are done!!!\n");
-  int metastable,targetlevel,dum,anumber;
+  int dum,anumber;
   float abundance,mass;
 
   fscanf(modelatom,"%d",&NPHIXSPOINTS);
@@ -1567,7 +1572,7 @@ void read_preprocessed_modelatom(FILE *modelatom)
       for (int level = 0; level < nlevels; level++)
       {
         double levelenergy, statweight;
-        int cont_index;
+        int cont_index,metastable;
         fscanf(modelatom,"%lg %lg %d %d\n",&levelenergy,&statweight,&cont_index,&metastable);
 
         elements[element].ions[ion].levels[level].epsilon = levelenergy;
@@ -1604,7 +1609,8 @@ void read_preprocessed_modelatom(FILE *modelatom)
         elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndowntrans;
         for (int i = 1; i <= ndowntrans; i++)
         {
-          int lineindex;
+          int targetlevel,lineindex;
+          double levelenergy,statweight;
           fscanf(modelatom,"%d %lg %lg %d\n",&targetlevel,&levelenergy,&statweight,&lineindex);
           elements[element].ions[ion].levels[level].downtrans[i].targetlevel = targetlevel;
           elements[element].ions[ion].levels[level].downtrans[i].epsilon = levelenergy;
@@ -1624,8 +1630,8 @@ void read_preprocessed_modelatom(FILE *modelatom)
         elements[element].ions[ion].levels[level].uptrans[0].targetlevel = nuptrans;
         for (int i = 1; i <= nuptrans; i++)
         {
+          int targetlevel,lineindex;
           double levelenergy,statweight;
-          int lineindex;
           fscanf(modelatom,"%d %lg %lg %d\n",&targetlevel,&levelenergy,&statweight,&lineindex);
           elements[element].ions[ion].levels[level].uptrans[i].targetlevel = targetlevel;
           elements[element].ions[ion].levels[level].uptrans[i].epsilon = levelenergy;
@@ -1772,8 +1778,8 @@ void read_parameterfile(int rank)
   unsigned long int zseed; /* rnum generator seed */
   unsigned long int xseed,pre_zseed;
 
-  FILE *input_file;
-  if ((input_file = fopen("input.txt", "r")) == NULL)
+  FILE *input_file = fopen("input.txt", "r");
+  if (input_file == NULL)
   {
     printout("Cannot open input.txt.\n");
     exit(0);
