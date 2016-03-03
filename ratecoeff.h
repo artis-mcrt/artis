@@ -2,6 +2,8 @@
 #define RATECOEFF_H
 
 void tabulate_ratecoefficients_gsl();
+void calculate_rate_coefficients();
+void write_ratecoeff_dat();
 void calculate_ion_alpha_sp();
 double alpha_sp_integrand_gsl(double nu, void *paras);
 double alpha_sp_E_integrand_gsl(double nu, void *paras);

@@ -14,21 +14,6 @@ void tabulate_ratecoefficients_gsl()
   //double stimulated_bfcooling_integrand_gsl(double nu, void *paras);
   //double stimulated_recomb_integrand_gsl(double nu, void *paras);
 
-  gsl_function F_alpha_sp, F_alpha_sp_E, F_gamma, F_gammacorr;
-  gsl_function F_bfheating,F_bfcooling;//,F_stimulated_bfcooling,F_stimulated_recomb;
-  F_alpha_sp.function = &alpha_sp_integrand_gsl;
-  F_alpha_sp_E.function = &alpha_sp_E_integrand_gsl;
-  F_gamma.function = &gamma_integrand_gsl;
-  F_gammacorr.function = &gammacorr_integrand_gsl;
-  F_bfheating.function = &approx_bfheating_integrand_gsl;
-  F_bfcooling.function = &bfcooling_integrand_gsl;
-  //F_stimulated_bfcooling.function = &stimulated_bfcooling_integrand_gsl;
-  //F_stimulated_recomb.function = &stimulated_recomb_integrand_gsl;
-
-  gsl_integration_workspace *w;
-  gslintegration_paras intparas;
-  FILE *ratecoeff_file;
-  double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   //size_t neval;   /// for qng integrator
   int check,calculate;
 
@@ -37,6 +22,7 @@ void tabulate_ratecoefficients_gsl()
   T_step_log = (log(MAXTEMP)-log(MINTEMP)) / (TABLESIZE-1.);
 
   /// Then readin the precalculated rate coefficients from file
+  FILE *ratecoeff_file;
   if ((ratecoeff_file = fopen("ratecoeff.dat", "r")) != NULL)
   {
     /// Check whether current temperature range and atomic data match
@@ -122,143 +108,169 @@ void tabulate_ratecoefficients_gsl()
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   if (calculate == 1)
   {
-    /// Calculate the rate coefficients for each level of each ion of each element
-    for (int element = 0; element < nelements; element++)
-    {
-      int nions = get_nions(element) - 1;
-      for (int ion = 0; ion < nions; ion++)
-      {
-        //nlevels = get_nlevels(element,ion);
-        int nlevels = get_ionisinglevels(element,ion);
-        /// That's only an option for pure LTE
-        //if (TAKE_N_BFCONTINUA < nlevels) nlevels = TAKE_N_BFCONTINUA;
-        printout("Performing rate integrals for Z = %d, ionstage %d...\n",elements[element].anumber,ion+1);
-
-        w = gsl_integration_workspace_alloc(1000);
-        mastate[tid].element = element;   /// Global variable which passes the current element to all subfunctions of macroatom.c
-        mastate[tid].ion = ion;   /// Global variable which passes the current ion to all subfunctions of macroatom.c
-        for (int level = 0; level < nlevels; level++)
-        {
-          if ((level > 0) && (level % 10 == 0))
-            printout("  completed up to level %d of %d\n",level,nlevels);
-
-          int nphixstargets = get_nphixstargets(element,ion,level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-          {
-            int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
-
-            //printout("element %d, ion %d, level %d, upperlevel %d, epsilon %g, continuum %g, nlevels %d\n",element,ion,level,upperlevel,epsilon(element,ion,level),epsilon(element,ion+1,upperlevel),nlevels);
-
-            mastate[tid].level = level;                   // Global variable which passes the current level to all subfunctions of macroatom.c
-            double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
-            double nu_threshold = E_threshold / H;
-            double nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
-            intparas.nu_edge = nu_threshold;              // Global variable which passes the threshold to the integrator
-                                                          // the threshold of the first target gives nu of the first phixstable point
-            // Loop over the temperature grid
-            for (int iter = 0; iter < TABLESIZE; iter++)
-            {
-              double alpha_sp = 0.0;
-              double gammacorr = 0.0;
-              double bfheating_coeff = 0.0;
-              double bfcooling_coeff = 0.0;
-              double error;
-              double T_e = MINTEMP * exp(iter*T_step_log);
-              //T_e = MINTEMP + iter*T_step;
-              double sfac = calculate_sahafact(element,ion,level,phixstargetindex,T_e,E_threshold);
-              //printout("%d %g\n",iter,T_e);
-
-              intparas.T = T_e;
-              F_alpha_sp.params = &intparas;
-              //F_alpha_sp_E.params = &intparas;
-              //F_gamma.params = &intparas;
-              F_gammacorr.params = &intparas;
-              F_bfcooling.params = &intparas;
-              //F_stimulated_bfcooling.params = &intparas;
-              //F_stimulated_recomb.params = &intparas;
-              F_bfheating.params = &intparas;
-
-              //TODO: These integrals will be zero for photoionization processes with all zero cross sections.
-              //We could speed this up by detecting this case and skipping the integrals,
-              //although the integrator is probably pretty fast in these cases anyway
-
-              /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-              gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &alpha_sp, &error);
-              alpha_sp *= FOURPI * sfac * phixstargetprobability;
-
-              //if (iter == 0)
-              //  printout("alpha_sp: element %d ion %d level %d upper level %d at temperature %g, alpha_sp is %g (integral %g, sahafac %g)\n", element, ion, level, upperlevel, T_e, alpha_sp, alpha_sp/(FOURPI * sfac * phixstargetprobability),sfac);
-
-              gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
-              bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
-
-              gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &gammacorr, &error);
-              gammacorr *= FOURPI * phixstargetprobability;
-
-              gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfheating_coeff, &error);
-              bfheating_coeff *= FOURPI * phixstargetprobability;
-
-              /// Save the calculated coefficients to memory
-              elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
-              elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] = bfcooling_coeff;
-              elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter] = gammacorr;
-              elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter] = bfheating_coeff;
-            }
-          }
-        }
-        gsl_integration_workspace_free(w);
-      }
-    }
-
-    /// And the master process writes them to file in a serial operation
-    if (rank_global == 0)
-    {
-      if ((ratecoeff_file = fopen("ratecoeff.dat", "w")) == NULL)
-      {
-        printout("Cannot open ratecoeff.dat\n");
-        exit(0);
-      }
-      fprintf(ratecoeff_file,"%g %g %d\n",MINTEMP,MAXTEMP,TABLESIZE);
-      for (int element = 0; element < nelements; element++)
-      {
-        int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++)
-        {
-          fprintf(ratecoeff_file,"%d %d %d %d\n",get_element(element), get_ionstage(element,ion), get_nlevels(element,ion),  get_ionisinglevels(element,ion));
-        }
-      }
-
-      for (int element = 0; element < nelements; element++)
-      {
-        int nions = get_nions(element) - 1;
-        for (int ion = 0; ion < nions; ion++)
-        {
-          //nlevels = get_nlevels(element,ion);
-          int nlevels = get_ionisinglevels(element,ion);
-          for (int level = 0; level < nlevels; level++)
-          {
-            /// Loop over the phixs targets
-            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
-            {
-              /// Loop over the temperature grid
-              for (int iter = 0; iter < TABLESIZE; iter++)
-              {
-                double alpha_sp = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter];
-                double bfcooling_coeff = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter];
-                double gammacorr = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter];
-                double bfheating_coeff = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter];
-                //fprintf(ratecoeff_file,"%g %g %g %g %g %g %g %g %g\n", alpha_sp,alpha_sp_E,bfcooling_coeff,gamma_below,gamma_above,gammacorr_below,gammacorr_above,bfheating_coeff_below,bfheating_coeff_above);
-                fprintf(ratecoeff_file,"%g %g %g %g\n", alpha_sp,bfcooling_coeff,gammacorr,bfheating_coeff);
-              }
-            }
-          }
-        }
-      }
-      fclose(ratecoeff_file);
-    }
+    calculate_rate_coefficients();
   }
   calculate_ion_alpha_sp();
+}
+
+void calculate_rate_coefficients()
+{
+  gsl_function F_alpha_sp, F_alpha_sp_E, F_gamma, F_gammacorr;
+  gsl_function F_bfheating,F_bfcooling;//,F_stimulated_bfcooling,F_stimulated_recomb;
+  F_alpha_sp.function = &alpha_sp_integrand_gsl;
+  F_alpha_sp_E.function = &alpha_sp_E_integrand_gsl;
+  F_gamma.function = &gamma_integrand_gsl;
+  F_gammacorr.function = &gammacorr_integrand_gsl;
+  F_bfheating.function = &approx_bfheating_integrand_gsl;
+  F_bfcooling.function = &bfcooling_integrand_gsl;
+  //F_stimulated_bfcooling.function = &stimulated_bfcooling_integrand_gsl;
+  //F_stimulated_recomb.function = &stimulated_recomb_integrand_gsl;
+
+  gsl_integration_workspace *w;
+  gslintegration_paras intparas;
+  double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
+
+  /// Calculate the rate coefficients for each level of each ion of each element
+  for (int element = 0; element < nelements; element++)
+  {
+    int nions = get_nions(element) - 1;
+    for (int ion = 0; ion < nions; ion++)
+    {
+      //nlevels = get_nlevels(element,ion);
+      int nlevels = get_ionisinglevels(element,ion);
+      /// That's only an option for pure LTE
+      //if (TAKE_N_BFCONTINUA < nlevels) nlevels = TAKE_N_BFCONTINUA;
+      printout("Performing rate integrals for Z = %d, ionstage %d...\n",elements[element].anumber,ion+1);
+
+      w = gsl_integration_workspace_alloc(1000);
+      mastate[tid].element = element;   /// Global variable which passes the current element to all subfunctions of macroatom.c
+      mastate[tid].ion = ion;   /// Global variable which passes the current ion to all subfunctions of macroatom.c
+      for (int level = 0; level < nlevels; level++)
+      {
+        if ((level > 0) && (level % 10 == 0))
+          printout("  completed up to level %d of %d\n",level,nlevels);
+
+        int nphixstargets = get_nphixstargets(element,ion,level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+        {
+          int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+          float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
+
+          //printout("element %d, ion %d, level %d, upperlevel %d, epsilon %g, continuum %g, nlevels %d\n",element,ion,level,upperlevel,epsilon(element,ion,level),epsilon(element,ion+1,upperlevel),nlevels);
+
+          mastate[tid].level = level;                   // Global variable which passes the current level to all subfunctions of macroatom.c
+          double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
+          double nu_threshold = E_threshold / H;
+          double nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+          intparas.nu_edge = nu_threshold;              // Global variable which passes the threshold to the integrator
+                                                        // the threshold of the first target gives nu of the first phixstable point
+          // Loop over the temperature grid
+          for (int iter = 0; iter < TABLESIZE; iter++)
+          {
+            double alpha_sp = 0.0;
+            double gammacorr = 0.0;
+            double bfheating_coeff = 0.0;
+            double bfcooling_coeff = 0.0;
+            double error;
+            double T_e = MINTEMP * exp(iter*T_step_log);
+            //T_e = MINTEMP + iter*T_step;
+            double sfac = calculate_sahafact(element,ion,level,phixstargetindex,T_e,E_threshold);
+            //printout("%d %g\n",iter,T_e);
+
+            intparas.T = T_e;
+            F_alpha_sp.params = &intparas;
+            //F_alpha_sp_E.params = &intparas;
+            //F_gamma.params = &intparas;
+            F_gammacorr.params = &intparas;
+            F_bfcooling.params = &intparas;
+            //F_stimulated_bfcooling.params = &intparas;
+            //F_stimulated_recomb.params = &intparas;
+            F_bfheating.params = &intparas;
+
+            //TODO: These integrals will be zero for photoionization processes with all zero cross sections.
+            //We could speed this up by detecting this case and skipping the integrals,
+            //although the integrator is probably pretty fast in these cases anyway
+
+            /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+            gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &alpha_sp, &error);
+            alpha_sp *= FOURPI * sfac * phixstargetprobability;
+
+            //if (iter == 0)
+            //  printout("alpha_sp: element %d ion %d level %d upper level %d at temperature %g, alpha_sp is %g (integral %g, sahafac %g)\n", element, ion, level, upperlevel, T_e, alpha_sp, alpha_sp/(FOURPI * sfac * phixstargetprobability),sfac);
+
+            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
+            bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
+
+            gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &gammacorr, &error);
+            gammacorr *= FOURPI * phixstargetprobability;
+
+            gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfheating_coeff, &error);
+            bfheating_coeff *= FOURPI * phixstargetprobability;
+
+            /// Save the calculated coefficients to memory
+            elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
+            elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] = bfcooling_coeff;
+            elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter] = gammacorr;
+            elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter] = bfheating_coeff;
+          }
+        }
+      }
+      gsl_integration_workspace_free(w);
+    }
+  }
+
+  /// And the master process writes them to file in a serial operation
+  if (rank_global == 0)
+  {
+    write_ratecoeff_dat();
+  }
+}
+
+void write_ratecoeff_dat()
+{
+  FILE *ratecoeff_file;
+  if ((ratecoeff_file = fopen("ratecoeff.dat", "w")) == NULL)
+  {
+    printout("Cannot open ratecoeff.dat\n");
+    exit(0);
+  }
+  fprintf(ratecoeff_file,"%g %g %d\n",MINTEMP,MAXTEMP,TABLESIZE);
+  for (int element = 0; element < nelements; element++)
+  {
+    int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
+    {
+      fprintf(ratecoeff_file,"%d %d %d %d\n",get_element(element), get_ionstage(element,ion), get_nlevels(element,ion),  get_ionisinglevels(element,ion));
+    }
+  }
+
+  for (int element = 0; element < nelements; element++)
+  {
+    int nions = get_nions(element) - 1;
+    for (int ion = 0; ion < nions; ion++)
+    {
+      //nlevels = get_nlevels(element,ion);
+      int nlevels = get_ionisinglevels(element,ion);
+      for (int level = 0; level < nlevels; level++)
+      {
+        /// Loop over the phixs targets
+        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+        {
+          /// Loop over the temperature grid
+          for (int iter = 0; iter < TABLESIZE; iter++)
+          {
+            double alpha_sp = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter];
+            double bfcooling_coeff = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter];
+            double gammacorr = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter];
+            double bfheating_coeff = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter];
+            //fprintf(ratecoeff_file,"%g %g %g %g %g %g %g %g %g\n", alpha_sp,alpha_sp_E,bfcooling_coeff,gamma_below,gamma_above,gammacorr_below,gammacorr_above,bfheating_coeff_below,bfheating_coeff_above);
+            fprintf(ratecoeff_file,"%g %g %g %g\n", alpha_sp,bfcooling_coeff,gammacorr,bfheating_coeff);
+          }
+        }
+      }
+    }
+  }
+  fclose(ratecoeff_file);
 }
 
 //calculate the ion total recombination coefficients
