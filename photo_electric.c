@@ -6,7 +6,6 @@
 double sig_photo_electric(PKT *pkt_ptr, double t_current)
 {
   double sigma_cmf;
-  double sigma_cmf_si, sigma_cmf_cno, sigma_cmf_fe;
   /* Start by working out the x-section in the co-moving frame.*/
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
@@ -15,17 +14,17 @@ double sig_photo_electric(PKT *pkt_ptr, double t_current)
 
   if (gamma_grey < 0)
   {
-    sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
+    //double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
 
-    sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
+    double sigma_cmf_si = 1.16e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.13);
 
-    sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
+    double sigma_cmf_fe = 25.7e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.0);
 
     /* 2.41326e19 = 100keV in frequency. */
 
     /* Now need to multiply by the particle number density. */
 
-    sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
+    //sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
      /* Assumes Z = 7. So mass = 14. */
 
     sigma_cmf_si *= rho / MH / 28;
@@ -35,7 +34,6 @@ double sig_photo_electric(PKT *pkt_ptr, double t_current)
     /* Assumes Z = 28. So mass = 56. */
 
     sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
-
   }
   else
   {
