@@ -963,7 +963,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   double g_ff,g_bf;
   double nnion,nnionlevel,nnlevel,departure_ratio;
   double sigma_bf;
-  int element,ion,level,phixstargetindex;//,samplecell;
+  int element,ion,level;//,samplecell;
   int Z;
   double nu_edge;
   int i,nions;
@@ -1041,8 +1041,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
         level = phixslist[tid].allcont[i].level;
         /// The bf process happens only if the current cell contains
         /// the involved atomic species
-        if ((ionpops_local[element][ion] > 1.e-6) || (level == 0))
-	    ///if (get_abundance(modelgridindex,element) > 0)
+        if ((get_abundance(modelgridindex,element) > 0) && ((ionpops_local[element][ion] > 1.e-6) || (level == 0)))
         {
           nu_edge = phixslist[tid].allcont[i].nu_edge;
           //printout("i %d, nu_edge %g\n",i,nu_edge);
@@ -1059,23 +1058,23 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
             //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);
             //  printout("pkt_ptr->number %d\n",pkt_ptr->number);
             //}
-            nnionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
-
             mastate[tid].element = element;
             mastate[tid].ion = ion;
             mastate[tid].level = level;
             sigma_bf = photoionization_crosssection(nu_edge,nu);
-            sf = 0.0;
-            for (phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            check = 0.0;
+            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
-              sf += get_sahafact(element,ion,level,phixstargetindex,T_e,nu_edge*H) * get_phixsprobability(element,ion,level,phixstargetindex);
+              int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+              nnionlevel = get_levelpop(element,ion+1,upper);
+              sf = get_sahafact(element,ion,level,phixstargetindex,T_e,nu_edge*H);
+              helper = nnlevel * sigma_bf * get_phixsprobability(element,ion,level,phixstargetindex);
+              departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+              if (nnlevel == 0.)
+                check += 0.;
+              else
+                check += helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
             }
-            helper = nnlevel * sigma_bf;
-            departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
-            if (nnlevel == 0.)
-              check = 0.;
-            else
-              check = helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
 
             if (check <= 0)
             {
@@ -1104,20 +1103,10 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
               gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
               //groundphixslist[gphixsindex].photoion_contr = helper;
               corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
-              if (corrfactor < 0) corrfactor = 1;
+              if (corrfactor < 0)
+                corrfactor = 1;
               phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * corrfactor;
 
-              #ifdef DEBUG_ON
-                if (!isfinite(phixslist[tid].groundcont[gphixsindex].gamma_contr))
-                {
-                  printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to gamma_contr ... abort\n");
-                  printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
-                  printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
-                  printout("[fatal] nne %g, nnlevel %g, nnionlevel %g, departure_ratio %g\n",nne,nnlevel,nnionlevel,departure_ratio);
-                  printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g corrfactor %g\n",sigma_bf,T_e,nu,nu_edge,corrfactor);
-                  abort();
-                }
-              #endif
               //phixslist[tid].groundcont[gphixsindex].stimrecomb_contr = sf * sigma_bf;
               //phixslist[tid].groundcont[gphixsindex].bfheating_contr = helper * nu_edge;
             }
@@ -1340,7 +1329,8 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
     grid cell into which we pass.*/
     double sdist = boundary_cross(pkt_ptr, t_current, &snext);
 
-    if (sdist == 0) change_cell(pkt_ptr, snext, &end_packet, t_current);
+    if (sdist == 0)
+      change_cell(pkt_ptr, snext, &end_packet, t_current);
     else
     {
       if (sdist > (rmax * t_current/tmin))
