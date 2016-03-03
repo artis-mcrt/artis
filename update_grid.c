@@ -284,13 +284,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           radial_pos = modelgrid[n].initial_radial_pos*tratmid/assoc_cells;
           if (assoc_cells > 0)
           {
+            int log_this_cell = ((n % 50 == 0) || (npts_model < 50));
             //cellnumber = modelgrid[n].cellnumber;
             if (my_rank % nblock == n) tb_info = 1;
             //if (my_rank % nblock == ncl) tb_info = 1;
             else tb_info = 0;
             /// Update current mass density of cell
             //n = nonemptycells[my_rank+ncl*nprocs];
-            printout("[info] update_grid: working on cell %d ...\n",n);
+            if (log_this_cell)
+              printout("[info] update_grid: working on cell %d ...\n",n);
             //n = nonemptycells[ncl];
             //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
             modelgrid[n].rho = modelgrid[n].rhoinit / pow(tratmid,3);
@@ -339,27 +341,34 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 if (modelgrid[n].thick == 0 && get_W(n) == 1)
                 {
                   modelgrid[n].thick = 1;
-                  printout("force modelgrid cell to be grey at restart\n");
+                  if (log_this_cell)
+                    printout("force modelgrid cell to be grey at restart\n");
                 }
-                printout("initial iteration %d\n",initial_iteration);
-                printout("modelgrid.thick: %d\n",modelgrid[n].thick);
+                if (log_this_cell)
+                {
+                  printout("initial iteration %d\n",initial_iteration);
+                  printout("modelgrid.thick: %d\n",modelgrid[n].thick);
+                }
                 precalculate_partfuncts(n);
                 //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
                 nntot = calculate_populations(n,0);
 
-#ifdef NT_ON
-		//		for (int jjj=0; jjj < 10; jjj++)
-		//  {
-		//    nntot = calculate_populations(n,0);
-		//  }
-#endif
+                #ifdef NT_ON
+                    //    for (int jjj=0; jjj < 10; jjj++)
+                    //  {
+                    //    nntot = calculate_populations(n,0);
+                    //  }
+                #endif
                 nne = get_nne(n);
                 compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
 
                 grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
-                printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
                 grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
-                printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+                if (log_this_cell)
+                {
+                  printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
+                  printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+                }
                 //printout("rmax %g, tratmid %g\n",rmax,tratmid);
                 modelgrid[n].grey_depth = grey_optical_depth;
 
@@ -425,9 +434,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   nne = get_nne(n);
                   compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                   grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
-                  printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
+                  if (log_this_cell)
+                  {
+                    printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
+                    printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+                  }
                   grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
-                  printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                   modelgrid[n].grey_depth = grey_optical_depth;
 
   //                 grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
@@ -495,9 +507,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     nne = get_nne(n);
                     compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                     grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
-                    printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
                     grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
-                    printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+                    if (log_this_cell)
+                    {
+                      printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
+                      printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+                    }
                     modelgrid[n].grey_depth = grey_optical_depth;
 
   //                   grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
@@ -652,7 +667,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     modelgrid[n].W = W;
 
                     #ifdef NLTE_POPS_ON
-                      //		      for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)
+                      //          for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)
 
                       nlte_iter = 0;
                       nlte_test = 2.;
@@ -837,7 +852,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               }
             }
 
-            //	    printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+            //      printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
 
             ///Non-OpenMP output of estimator files
             #ifndef _OPENMP
@@ -890,7 +905,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     fprintf(nlte_file,"nlte_index %d element %d ion_stage %d level %d energy %g nnlevel %g nlte_pop %g nnlevellte %g\n",nlte,element,ion+1,level,E_level-E_ground,nnlevel,modelgrid[n].nlte_pops[nlte],nnlevellte);
                 }
                 fprintf(nlte_file,"\n");
-                //	      printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+                //        printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
 
                       //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
                 for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
@@ -1402,7 +1417,7 @@ void update_abundances(int modelgridindex, double t_current)
       if (get_element(element) == 24)
       {
         crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
-	      modelgrid[modelgridindex].composition[element].abundance = crfrac;
+        modelgrid[modelgridindex].composition[element].abundance = crfrac;
       }
       if (get_element(element) == 23)
       {
@@ -1491,7 +1506,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
             //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
             //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
             #ifdef NT_ON
-	            if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.)) break;
+              if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.)) break;
             #else
               if (gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
             #endif
@@ -1648,14 +1663,14 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
         nntot += nnion;
         nne_check += nnion * (get_ionstage(element,ion)-1);
         modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
-	/*
-	if (element == 21)
-	  {
-	    printout("Setting ion %d to have glp %g in cell %d\n", ion, modelgrid[modelgridindex].composition[element].groundlevelpop[ion], modelgridindex);
-	    printout("ion pop was %g and partfn was %g\n", nnion, modelgrid[modelgridindex].composition[element].partfunct[ion]);
-	    printout("the ion frac was %g, abundance %g and density %g\n",ionfract(element,ion,modelgridindex,nne), abundance, get_rho(modelgridindex));
-	  }
-	*/
+  /*
+  if (element == 21)
+    {
+      printout("Setting ion %d to have glp %g in cell %d\n", ion, modelgrid[modelgridindex].composition[element].groundlevelpop[ion], modelgridindex);
+      printout("ion pop was %g and partfn was %g\n", nnion, modelgrid[modelgridindex].composition[element].partfunct[ion]);
+      printout("the ion frac was %g, abundance %g and density %g\n",ionfract(element,ion,modelgridindex,nne), abundance, get_rho(modelgridindex));
+    }
+  */
 
         if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
