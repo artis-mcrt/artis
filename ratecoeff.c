@@ -258,8 +258,12 @@ void tabulate_ratecoefficients_gsl()
       fclose(ratecoeff_file);
     }
   }
+  calculate_ion_alpha_sp();
+}
 
-  //calculate the ion total recombination coefficients
+//calculate the ion total recombination coefficients
+void calculate_ion_alpha_sp()
+{
   for (int iter = 0; iter < TABLESIZE; iter++)
   {
     double T_e = MINTEMP * exp(iter*T_step_log);
@@ -300,7 +304,6 @@ void tabulate_ratecoefficients_gsl()
     }
   }
 }
-
 
 ///****************************************************************************
 /// The following functions define the integrands for these rate coefficients
