@@ -1,17 +1,17 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-int grid_init();
-int uniform_grid_setup();
-int density_1d_read();
-int density_2d_read();
-int density_3d_read();
+int grid_init(void);
+int uniform_grid_setup(void);
+int density_1d_read(void);
+int density_2d_read(void);
+int density_3d_read(void);
 void allocate_compositiondata(int cellnumber);
 void allocate_cooling(int modelgridindex);
-void abundances_setup();
-void abundances_3d_read();
-void abundances_1d_read();
-void assign_temperature();
+void abundances_setup(void);
+void abundances_3d_read(void);
+void abundances_1d_read(void);
+void assign_temperature(void);
 double vol_init(CELL *grid_ptr);
 float get_rhoinit(int modelgridindex);
 float get_rho(int modelgridindex);
@@ -28,7 +28,7 @@ float get_ffestable(int modelgridindex);
 float get_fmnstable(int modelgridindex);
 float get_fcrstable(int modelgridindex);
 float get_fvstable(int modelgridindex);
-float get_ftirstable(int modelgridindex);
+float get_ftistable(int modelgridindex);
 float get_kappagrey(int modelgridindex);
 float get_Te(int modelgridindex);
 float get_TR(int modelgridindex);
