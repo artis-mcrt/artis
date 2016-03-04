@@ -3,23 +3,177 @@
 
 #include "sn3d.h"
 
-int get_element(int element);
-int get_elementindex(int Z);
-int get_nions(int element);
-int get_ionstage(int element, int ion);
-int get_nlevels(int element, int ion);
-int get_nlevels_nlte(int element, int ion);
-int get_ionisinglevels(int element, int ion);
-int get_bfcontinua(int element, int ion);
-double epsilon(int element, int ion, int level);
-double stat_weight(int element, int ion, int level);
-short is_nlte(int element, int ion, int level);
-int get_continuumindex(int element, int ion, int level);
-int get_nphixstargets(int element, int ion, int level);
-int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-float get_phixsprobability(int element, int ion, int level, int phixstargetindex);
+inline
+int get_element(int element)
+/// Returns the atomic number associated with a given elementindex.
+{
+  return elements[element].anumber;
+}
 
-//inline functions:
+inline
+int get_elementindex(int Z)
+/// Returns the elementindex associated with a given atomic number.
+/// If there is no element with the given atomic number in the atomic data
+/// a negative value is returned to flag this event.
+{
+  for (int i = 0; i < nelements; i++)
+  {
+    //printf("i %d, Z %d, elements[i].anumber %d\n",i,Z,elements[i].anumber);
+    if (Z == elements[i].anumber)
+      return i;
+  }
+
+  //printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections for this element\n",Z);
+  //printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ... abort\n");
+  //exit(0);
+  return -100;
+}
+
+inline
+int get_nions(int element)
+/// Returns the number of ions associated with a specific element given by
+/// its elementindex.
+{
+  return elements[element].nions;
+}
+
+
+inline
+int get_ionstage(int element, int ion)
+/// Returns the ionisation stage of an ion specified by its elementindex and
+/// ionindex.
+{
+  return elements[element].ions[ion].ionstage;
+}
+
+
+inline
+int get_nlevels(int element, int ion)
+/// Returns the number of levels associated with with a specific ion given
+/// ist elementindex and ionindex.
+{
+  return elements[element].ions[ion].nlevels;
+}
+
+inline
+int get_nlevels_nlte(int element, int ion)
+/// Returns the number of levels associated with with a specific ion given
+/// ist elementindex and ionindex.
+{
+  return elements[element].ions[ion].nlevels_nlte;
+}
+
+
+inline
+int get_ionisinglevels(int element, int ion)
+/// Returns the number of levels associated with ion ion of element element which
+/// have energies below the ionisation threshold.
+{
+  return elements[element].ions[ion].ionisinglevels;
+}
+
+
+inline
+double epsilon(int element, int ion, int level)
+/// Returns the energy of (element,ion,level).
+{
+  return elements[element].ions[ion].levels[level].epsilon;
+}
+
+
+inline
+double stat_weight(int element, int ion, int level)
+/// Returns the statistical weight of (element,ion,level).
+{
+  if (level > elements[element].ions[ion].nlevels)
+  {
+    printout("[fatal] stat_weight: level %d greater than nlevels=%d ... abort\n",level,elements[element].ions[ion].nlevels);
+    exit(0);
+  }
+  return elements[element].ions[ion].levels[level].stat_weight;
+}
+
+
+inline
+int get_bfcontinua(int element, int ion)
+/// Returns the number of bf-continua associated with ion ion of element element.
+{
+  int nionisinglevels = get_ionisinglevels(element,ion);
+
+  if (nionisinglevels < max_bf_continua)
+    return nionisinglevels;
+  else
+    return max_bf_continua;
+}
+
+
+inline
+short is_nlte(int element, int ion, int level)
+/// Returns 1 if (element,ion,level) is to be treated in nlte.
+{
+  if (level < 11) //TODO: change back to 201
+    elements[element].ions[ion].levels[level].is_nlte = 1;
+  else
+    elements[element].ions[ion].levels[level].is_nlte = 0;
+
+  return elements[element].ions[ion].levels[level].is_nlte;
+}
+
+
+inline
+int get_continuumindex(int element, int ion, int level)
+/// Returns the index of the continuum associated to the given level.
+{
+  return elements[element].ions[ion].levels[level].cont_index;
+}
+
+
+inline
+int get_nphixstargets(int element, int ion, int level)
+/// Returns the number of target states for photoionization of (element,ion,level).
+{
+  int nions = get_nions(element);
+  int nionisinglevels = get_ionisinglevels(element,ion);
+  if ((ion < nions-1) && (level < nionisinglevels))
+    return elements[element].ions[ion].levels[level].nphixstargets;
+  else
+    return 0;
+}
+
+
+inline
+int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
+/// Returns the level index of a target state for photoionization of (element,ion,level).
+{
+  #ifdef DEBUG_ON
+    if ((phixstargetindex < 0) || (phixstargetindex >= get_nphixstargets(element,ion,level)))
+    {
+      printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex");
+      printout("arguments: element %d, ion %d, level %d phixstargetindex %d, nphixstargets %d\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
+      abort();
+    }
+  #endif
+
+  return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
+}
+
+
+inline
+float get_phixsprobability(int element, int ion, int level, int phixstargetindex)
+/// Returns the probability of a target state for photoionization of (element,ion,level).
+{
+  #ifdef DEBUG_ON
+    if ((phixstargetindex < 0) || (phixstargetindex >= get_nphixstargets(element,ion,level)))
+    {
+      printout("[fatal]   get_phixsprobability called with invalid phixstargetindex");
+      printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
+      abort();
+    }
+  #endif
+
+  return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
+}
+
 
 inline
 int transitioncheck(int upper, int lower)
