@@ -6,11 +6,8 @@
 int update_packets(int nts)
 ///nts the time step we're doing
 {
-  //void copy_populations_to_phixslist();
-  //int compare_packets_bymodelgridposition(const void *p1, const void *p2);
   PKT *pkt_ptr;
   //double n_1;
-  //double boltzmann(PKT *pkt_ptr, int reflevel, double n_reflevel, int targetlevel);
 
   /** At the start, the packets have all either just been initialised or have already been
   processed for one or more timesteps. Those that are pellets will just be sitting in the
