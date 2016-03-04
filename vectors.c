@@ -95,10 +95,10 @@ double doppler (const double *dir1, const double *vel)
 
   return fact1;
 }
+
+
 /************************************************************/
-
 /*Routine for scattering a direction through angle theta.*/
-
 int scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
 {
   /*begin with setting the direction in coordinates where original direction

@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "polarization.h"
 #include "rpkt.h"
 
 /* Material for handing r-packet propagation. */
@@ -483,8 +484,6 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
 ///****************************************************************************
 int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
 {
-  void escat_rpkt(PKT *pkt_ptr, double t_current);
-
   double zrand;
   //double nnionlevel,nnlevel,nne;
   double nu_edge;
