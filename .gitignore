@@ -7,7 +7,6 @@ sn3d
 exspec
 *.o-*
 tags
-hillieratomicdata
-nahar_radiativeatomicdata
-hillier_atomic_data_01jul14.tar.gz
-cmfgen_doc.tar.gz
+atomic_data/*.tar.gz
+atomic_data/*/
+tools/*.txt

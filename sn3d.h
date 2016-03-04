@@ -9,32 +9,6 @@
   #include "mpi.h"
 #endif
 
-#include "atomic.h"
-#include "boundary.h"
-#include "compton.h"
-#include "emissivities.h"
-#include "gamma.h"
-#include "grey_emissivities.h"
-#include "grid_init.h"
-#include "input.h"
-#include "kpkt.h"
-#include "linelist.h"
-#include "ltepop.h"
-#include "macroatom.h"
-#include "move.h"
-#include "nltepop.h"
-#include "packet_init.h"
-#include "packet_prop.h"
-#include "photo_electric.h"
-#include "ratecoeff.h"
-#include "ray_prop.h"
-#include "rpkt.h"
-#include "time_init.h"
-#include "thermalbalance.h"
-#include "update_grid.h"
-#include "update_packets.h"
-#include "vectors.h"
-
 //#define TB_CUTS
 #define DEBUG_ON
 #define SILENT 1
@@ -90,9 +64,9 @@
 //#define MPTS_MODEL 10000
 
 
-#define MXGRID 100     /* Max number of grid cells in x-direction.*/
-#define MYGRID 100     /* Max number of grid cells in y-direction.*/
-#define MZGRID 100     /* Max number of grid cells in z-direction.*/
+#define MXGRID 50     /* Max number of grid cells in x-direction.*/
+#define MYGRID 50     /* Max number of grid cells in y-direction.*/
+#define MZGRID 50     /* Max number of grid cells in z-direction.*/
 //#define MGRID 1000000  /* Max number of grid cells.*/
 #define MTSTEP 200     /* Max number of time steps. */
 #define MLINES 500000  /// Increase linelist by this blocksize
@@ -563,5 +537,29 @@ extern short use_cellhist;
 #ifdef _OPENMP
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
+
+#include "atomic.h"
+#include "boundary.h"
+#include "compton.h"
+#include "emissivities.h"
+#include "gamma.h"
+#include "grey_emissivities.h"
+#include "grid_init.h"
+#include "kpkt.h"
+#include "linelist.h"
+#include "ltepop.h"
+#include "macroatom.h"
+#include "move.h"
+#include "nltepop.h"
+#include "packet_init.h"
+#include "packet_prop.h"
+#include "photo_electric.h"
+#include "ratecoeff.h"
+#include "ray_prop.h"
+#include "rpkt.h"
+#include "thermalbalance.h"
+#include "update_grid.h"
+#include "update_packets.h"
+#include "vectors.h"
 
 #endif // SN3D_H

@@ -25,13 +25,13 @@ int input(int rank)
 
   maxion = MIONS;
   /// Set grid size
-  nxgrid = 4; //pow(MGRID,1./3.); //10;
-  nygrid = 4; //pow(MGRID,1./3.); //10;
-  nzgrid = 4; //pow(MGRID,1./3.); //10;
+  //nxgrid = 4; //pow(MGRID,1./3.); //10;
+  //nygrid = 4; //pow(MGRID,1./3.); //10;
+  //nzgrid = 4; //pow(MGRID,1./3.); //10;
+  nxgrid = 50;
+  nygrid = 50;
+  nzgrid = 50;
   printout("nxgrid %d\n",nxgrid);
-  /*nxgrid = 4;
-  nygrid = 4;
-  nzgrid = 4;*/
   ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
   if (ngrid > MGRID)
   {
@@ -300,7 +300,7 @@ int input(int rank)
 
 ///****************************************************************************
 /// Subroutine to read in input parameters.
-void read_atomicdata()
+static void read_atomicdata()
 {
   ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
   int index_in_groundlevelcontestimator;
@@ -361,7 +361,8 @@ void read_atomicdata()
     int T_preset;
     fscanf(compositiondata,"%d",&T_preset);
     fscanf(compositiondata,"%d",&homogeneous_abundances);
-    if (homogeneous_abundances == 1) printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
+    if (homogeneous_abundances == 1)
+      printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
 
     /// open transition data file
     FILE *transitiondata;
@@ -384,8 +385,7 @@ void read_atomicdata()
       fscanf(compositiondata,"%d %d %d %d %d %lg %lg",&Z,&nions,&lowermost_ionstage,&uppermost_ionstage,&nlevelsmax_readin,&abundance,&mass);
       printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
 
-      /// write this elements data to memory
-
+      /// write this element's data to memory
       elements[element].anumber = Z;
       elements[element].nions = nions;
       elements[element].abundance = abundance;       /// abundances are expected to be given by mass
@@ -486,7 +486,6 @@ void read_atomicdata()
           {
             for (int i = 0; i < tottransitions_all; i++)
             {
-              /* TODO: code here is never excuted, keep? */
               double A, coll_str;
               int transitionindex,lower,upper;
               fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
@@ -1244,7 +1243,7 @@ void read_atomicdata()
 }
 
 
-void read_phixs_data()
+static void read_phixs_data()
 {
   printout("readin phixs data\n");
   FILE *phixsdata = fopen("phixsdata_v2.txt", "r");
@@ -1419,7 +1418,7 @@ void read_phixs_data()
 }
 
 
-void write_processed_modelatom()
+static void write_processed_modelatom()
 {
   FILE *modelatom = fopen("modelatom.dat", "w");
   if (modelatom == NULL)
@@ -1510,7 +1509,7 @@ void write_processed_modelatom()
 }
 
 
-void read_processed_modelatom(FILE *modelatom)
+static void read_processed_modelatom(FILE *modelatom)
 {
   int totaluptrans = 0;
   int totaldowntrans = 0;
@@ -1771,7 +1770,7 @@ void read_processed_modelatom(FILE *modelatom)
 
 ///****************************************************************************
 /// Subroutine to read in input parameters from input.txt.
-void read_parameterfile(int rank)
+static void read_parameterfile(int rank)
 {
   //double z1, z2, x;
   double x;
@@ -2030,7 +2029,7 @@ void read_parameterfile(int rank)
 
 ///****************************************************************************
 /// Subroutine to read in a 1-D model.
-int read_1d_model()
+static int read_1d_model()
 {
   FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
@@ -2116,7 +2115,7 @@ int read_1d_model()
 
 ///****************************************************************************
 /// Subroutine to read in a 2-D model.
-int read_2d_model()
+static int read_2d_model()
 {
   FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
@@ -2204,7 +2203,7 @@ int read_2d_model()
 
 ///****************************************************************************
 /// Subroutine to read in a 3-D model.
-int read_3d_model()
+static int read_3d_model()
 {
   float dum2, dum3, dum4, dum5, dum6;
   float rho_model;
@@ -2250,7 +2249,7 @@ int read_3d_model()
   for (int n = 0; n < npts_model; n++)
   {
     fscanf(model_input, "%d %g %g %g %g", &dum1, &dum3,  &dum4, &dum5, &rho_model);
-    //printout("cell %d, vz %g, vy %g, vx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/tmin), 3.));
+    //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/tmin), 3.));
     if (rho_model < 0)
     {
       printout("negative input density %g %d\n", rho_model, n);
@@ -2395,7 +2394,7 @@ int read_3d_model()
 
 ///****************************************************************************
 /// Helper function to sort the linelist by frequency.
-int compare_linelistentry(const void *p1, const void *p2)
+static int compare_linelistentry(const void *p1, const void *p2)
 {
   linelist_entry *a1, *a2;
   a1 = (linelist_entry *)(p1);
@@ -2462,7 +2461,7 @@ int compare_linelistentry(const void *p1, const void *p2)
 
 
 ///****************************************************************************
-int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
+static int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
