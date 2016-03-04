@@ -2,18 +2,11 @@
 #include <string.h>
 #include "emissivities.h"
 
-int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
-     RAY *ray_ptr;
-     int nray, lindex;
-     double single_t;
-     double *single_pos;
-     double dnuds;
+int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double single_t, int lindex, double dnuds)
 {
-
   double vel_vec[3];
   double emitt_energy;
   struct grid *grid_ptr;
-  double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr);
 
   grid_ptr = &cell[ray_ptr->where];
   double tfact = pow((tmin/single_t), 3);
@@ -21,14 +14,13 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
   if (gam_line_list.type[lindex] == NI_GAM_LINE_ID)
   {
     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
-	* exp(-single_t/TNICKEL) / TNICKEL *
-	nickel_spec.probability[gam_line_list.index[lindex]]
+        * exp(-single_t/TNICKEL) / TNICKEL *
+        nickel_spec.probability[gam_line_list.index[lindex]]
         * nickel_spec.energy[gam_line_list.index[lindex]]
-	*fni(grid_ptr)*tfact;
+         * fni(grid_ptr)*tfact;
   }
   else if (gam_line_list.type[lindex] == CO_GAM_LINE_ID)
   {
-
     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
       * (exp(-single_t/TNICKEL) - exp(-single_t/TCOBALT))
       / (TNICKEL - TCOBALT)
@@ -55,11 +47,11 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
   {
 
       emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
-	* (exp(-single_t/T48CR) - exp(-single_t/T48V))
-	/ (T48CR - T48V)
+  * (exp(-single_t/T48CR) - exp(-single_t/T48V))
+  / (T48CR - T48V)
         *v48_spec.probability[gam_line_list.index[lindex]]
         *v48_spec.energy[gam_line_list.index[lindex]]
-	*f48cr(grid_ptr)*tfact;
+  *f48cr(grid_ptr)*tfact;
   }
   else if (gam_line_list.type[lindex] == FAKE_GAM_LINE_ID)
   {
@@ -86,7 +78,7 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
     get_velocity(single_pos, vel_vec, single_t);
 
     ray_ptr->e_rf[nray]+= emitt_energy / fabs(dnuds)
-	/doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) ;
+  /doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) ;
   }
 
 
@@ -94,18 +86,12 @@ int add_gam_line_emissivity(ray_ptr, nray, single_pos, single_t, lindex, dnuds)
 }
 
 /*******************************************************/
-int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
-     RAY *ray_ptr;
-     int nray, lindex;
-     double ldist, single_t;
-     double *single_pos;
+int continuum_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)
 {
   /* This is called when a ray is about to be moved a distance ldist. */
   /* It should account for the changes in the ray intensity due to
      continuum processes along the path. */
   PKT dummy;
-  double sig_comp(), sig_photo_electric();
-  double sig_pair_prod();
   double vel_vec[3];
 
   /* Make a dummy packet that carries the ray properties. */
@@ -142,12 +128,12 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
     if (tau_cont > 1.e-6)
     {
       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] *
-				  (1. - exp(-1. * tau_cont)) / kap_tot);
+          (1. - exp(-1. * tau_cont)) / kap_tot);
     }
     else
     {
       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] *
-	  			  ldist);
+            ldist);
     }
   }
 
@@ -158,20 +144,13 @@ int continuum_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
 }
 
 /*******************************************************/
-int compton_emiss_cont(pkt_ptr, dist, t_current)
-     PKT *pkt_ptr;
-     double dist, t_current;
+int compton_emiss_cont(PKT *pkt_ptr, double dist, double t_current)
 {
   /* Subroutine to add contriubtion to the MC estimator for the
 compton emissivity. Called with a packet that is about to travel a
 distance dist in the lab frame. Time at start of distance is t_current.*/
 
   double vel_vec[3], cmf_dir[3], cmf_syn_dir[3];
-  double dot();
-  int get_velocity(), angle_ab();
-  double doppler();
-  double vec_len();
-  int get_nul();
 
   /* First we need to know the scattering angle needed from the
 packet's direction of motion to the desired observer. Call this angle
@@ -275,9 +254,7 @@ motion and the local velocity vectors to the cmf.*/
 }
 
 /*******************************************************/
-int pp_emiss_cont(pkt_ptr, dist, t_current)
-     PKT *pkt_ptr;
-     double dist, t_current;
+int pp_emiss_cont(PKT *pkt_ptr, double dist, double t_current)
 {
   /* New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
      emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something
@@ -288,7 +265,6 @@ int pp_emiss_cont(pkt_ptr, dist, t_current)
 
 
   double emiss_cont;
-  double sig_pair_prod();
 
   emiss_cont = sig_pair_prod(pkt_ptr, t_current) * (2.46636e+20 / pkt_ptr->nu_cmf) * pkt_ptr->e_rf * dist;
 
@@ -448,12 +424,12 @@ int write_estimators(int nts)
     for (int n = 0; n < npts_model; n++)
     {
       for (int m = 0; m < emiss_max; m++)
-	    {
+      {
         float dum;
-	      fread(&dum, sizeof(float), 1, est_file);
-	      //fscanf(est_file, "%g", &dum);
-	      compton_emiss[n][m] += dum;
-	    }
+        fread(&dum, sizeof(float), 1, est_file);
+        //fscanf(est_file, "%g", &dum);
+        compton_emiss[n][m] += dum;
+      }
     }
     fclose(est_file);
   }

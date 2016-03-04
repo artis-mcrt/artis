@@ -38,7 +38,7 @@ void vec_norm(double x[3], double z[3])
 /************************************************************/
 /*Routine for taking dot product.*/
 
-double dot(double *x, double *y)
+double dot(const double *x, const double *y)
 {
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
 }
@@ -46,7 +46,7 @@ double dot(double *x, double *y)
 /************************************************************/
 /*Routine for getting velocity vector of the flow at a position.*/
 
-int get_velocity(double *x, double *y, double t)
+int get_velocity(const double *x, double *y, double t)
 {
   /* For homologous expansion. */
 
@@ -60,7 +60,7 @@ int get_velocity(double *x, double *y, double t)
 /************************************************************/
 /*Routine for aberation of angles in SR. Takes one direction and velocity
  as input and gives back another direction.*/
-int angle_ab(double *dir1, double *vel, double *dir2)
+int angle_ab(const double *dir1, const double *vel, double *dir2)
 {
   double vsqr = dot(vel,vel)/CLIGHT2;
   double gamma_rel = 1./(sqrt(1 - vsqr));
@@ -79,7 +79,7 @@ int angle_ab(double *dir1, double *vel, double *dir2)
 /************************************************************/
 /*Routine for Doppler shift in SR. Takes one direction and velocity
  as input and gives back double.*/
-double doppler (double *dir1, double *vel)
+double doppler (const double *dir1, const double *vel)
 {
   //double vsqr = dot(vel,vel)/CLIGHT2;
   //double gamma_rel = 1./(sqrt(1 - vsqr));
@@ -99,7 +99,7 @@ double doppler (double *dir1, double *vel)
 
 /*Routine for scattering a direction through angle theta.*/
 
-int scatter_dir(double *dir_in, double cos_theta, double *dir_out)
+int scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
 {
   /*begin with setting the direction in coordinates where original direction
     is parallel to z-hat.*/
