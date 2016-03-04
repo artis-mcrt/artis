@@ -12,6 +12,8 @@
 
 #include "threadprivate.h"
 #include "sn3d.h"
+#include "input.h"
+#include "time_init.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
 /* Main - top level routine. */
@@ -552,7 +554,7 @@ int main(int argc, char** argv)
                   //MPI_Pack(&cell[nn].samplecell, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
 
-                  for (element = 0; element < nelements; element++)
+                  for (int element = 0; element < nelements; element++)
                   {
                     MPI_Pack(modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                     MPI_Pack(modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
@@ -586,7 +588,7 @@ int main(int argc, char** argv)
                 //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].samplecell, 1, MPI_INT, MPI_COMM_WORLD);
                 MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
 
-                for (element = 0; element < nelements; element++)
+                for (int element = 0; element < nelements; element++)
                 {
                   MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
                   MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);

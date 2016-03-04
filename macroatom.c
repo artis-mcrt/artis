@@ -64,7 +64,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
   //debuglevel = 2;
   #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug] =============entering do_ma\n");
+    if (debuglevel == 2)
+      printout("[debug] =============entering do_ma\n");
     int jumps = 0;
     int jump = -99;
   #endif
@@ -1055,12 +1056,10 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   double C;
   double g_bar,test,Gamma;
 
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int lower = mastate[tid].level;
   double n_l = mastate[tid].nnlevel;
 
   #ifdef DEBUG_ON
+    int lower = mastate[tid].level;
     if (upper <= lower)
     {
       printout("[fatal] col_excitation: tried to calculate downward transition ... abort");
@@ -1110,9 +1109,11 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   }
 
   #ifdef DEBUG_ON
+    //int element = mastate[tid].element;
+    //int ion = mastate[tid].ion
     if (debuglevel == 2)
     {
-      printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
+      //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
     }
     if (debuglevel == 777)
@@ -1120,7 +1121,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
     if (!isfinite(C))
     {
       printout("fatal a5: abort\n");
-      printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
+      //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
       printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
       printout("[debug] col_exc: coll_str(lineindex) %g statw_up(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_up(lineindex),mastate[tid].statweight);
