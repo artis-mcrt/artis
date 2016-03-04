@@ -187,7 +187,7 @@ int gather_spectrum(int depth)
 
 /**********************************************************************/
 /*Routine to add a packet to the outcoming spectrum.*/
-int add_to_spec(EPKT *pkt_ptr)
+int add_to_spec(const EPKT *pkt_ptr)
 {
   /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
   int at,element,ion,nproc;
@@ -272,7 +272,7 @@ int gather_spectrum_res(int current_abin)
 
 /**********************************************************************/
 /**Routine to add a packet to the outcoming spectrum.*/
-int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
+int add_to_spec_res(const EPKT *pkt_ptr, int current_abin)
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 

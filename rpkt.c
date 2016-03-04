@@ -874,7 +874,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
 
 
 ///****************************************************************************
-double closest_transition_empty(PKT *pkt_ptr)
+double closest_transition_empty(const PKT *pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
