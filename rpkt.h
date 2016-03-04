@@ -7,7 +7,7 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current);
 double closest_transition(PKT *pkt_ptr);
 double min(double a, double b);
 void emitt_rpkt(PKT *pkt_ptr, double t_current);
-double closest_transition_empty(PKT *pkt_ptr);
+double closest_transition_empty(const PKT *pkt_ptr);
 void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current);
 int compare_phixslistentry_bynuedge(const void *p1, const void *p2);
 int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2);
