@@ -71,7 +71,6 @@ double sig_pair_prod(PKT *pkt_ptr, double t_current)
       double f_fe = get_ffe(mgi);
       if (pkt_ptr->nu_cmf > 3.61990e+20)
       {
-
         sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
 
         sigma_cmf_si  = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 196.e-27;
