@@ -110,7 +110,7 @@ double stat_weight(int element, int ion, int level)
 short is_nlte(int element, int ion, int level)
 /// Returns 1 if (element,ion,level) is to be treated in nlte.
 {
-  if (level < 201)
+  if (level < 11) //TODO: change back to 201
     elements[element].ions[ion].levels[level].is_nlte = 1;
   else
     elements[element].ions[ion].levels[level].is_nlte = 0;
@@ -172,77 +172,6 @@ float get_phixsprobability(int element, int ion, int level, int phixstargetindex
 
   return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
 }
-
-
-///***************************************************************************/
-int transitioncheck(int upper, int lower)
-/// reads A_ul from levellist which consists of
-/// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
-{
-  int index = (upper - lower) - 1;
-  int flag = transitions[upper].to[index];
-
-  return flag;
-}
-
-
-///***************************************************************************/
-double einstein_spontaneous_emission(int lineindex)
-//double einstein_spontaneous_emission(int element, int ion, int upper, int lower)
-/// reads A_ul from levellist which consists of
-/// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
-{
-/*
-  int index = (upper-lower) - 1;
-  double A_ul = elements[element].ions[ion].levels[upper].transitions[index].einstein_A;
-*/
-  double A_ul = linelist[lineindex].einstein_A;
-
-  return A_ul;
-}
-
-
-///***************************************************************************/
-double osc_strength(int lineindex)
-//double osc_strength(int element, int ion, int upper, int lower)
-/// reads f_lu from levellist which consists of
-/// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
-{
-  return linelist[lineindex].osc_strength;
-}
-
-///***************************************************************************/
-double coll_str(int lineindex)
-{
-  return linelist[lineindex].coll_str;
-}
-
-///***************************************************************************/
-double statw_up(int lineindex)
-{
-  return elements[linelist[lineindex].elementindex].ions[linelist[lineindex].ionindex].levels[linelist[lineindex].upperlevelindex].stat_weight;
-}
-///***************************************************************************/
-double statw_down(int lineindex)
-{
-  return elements[linelist[lineindex].elementindex].ions[linelist[lineindex].ionindex].levels[linelist[lineindex].lowerlevelindex].stat_weight;
-}
-
-
-///***************************************************************************/
-double osc_strength_old(int lineindex)
-//double osc_strength(int element, int ion, int upper, int lower)
-/// reads f_lu from levellist which consists of
-/// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
-{
-/*
-  int index = (upper-lower) - 1;
-  double f_ul = elements[element].ions[ion].levels[upper].transitions[index].oscillator_strength;
-*/
-  double f_ul = linelist[lineindex].osc_strength;
-  return f_ul;
-}
-
 
 ///***************************************************************************/
 /// Alll the following deals with photoionisation cross-sections
