@@ -38,8 +38,8 @@ with open('model.txt', 'r') as fmodelin:
       outcellid += 1
       dict3dcellidto1dcellid[int(cellid)] = outcellid
       vel = math.sqrt(float(posx) ** 2 + float(posy) ** 2 + float(posz) ** 2)
-      vcell = float(vel) / float(t_model) / 86400 / 1e5
-      listout.append("{:6d}  {:8.0f}  {:8.5f}  {:.5f}  {:.5f}  {:.5f}  {:.5f}  {:.5f}".format(outcellid,vcell,math.log10(float(rho)),ffe,fni,fco,f52fe,f48cr))
+      vcell = float(vel) / float(t_model) / 86400. / 1.e5
+      listout.append("{:6d}  {:8.2f}  {:8.5f}  {:.5f}  {:.5f}  {:.5f}  {:.5f}  {:.5f}".format(outcellid,vcell,math.log10(float(rho)),ffe,fni,fco,f52fe,f48cr))
       print("Cell {:4d} input1: {:}".format(outcellid,blockline1.rstrip()))
       print("Cell {:4d} input2: {:}".format(outcellid,blockline2.rstrip()))
       print("Cell {:4d} output: {:}".format(outcellid,listout[-1]))
