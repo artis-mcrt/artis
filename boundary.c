@@ -523,7 +523,7 @@ int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
 
 ///****************************************************************************
 /// Routine to return which grid cell the packet is in.
-int locate(PKT *pkt_ptr, double t_current)
+int locate(const PKT *pkt_ptr, double t_current)
 {
   /* Cheap and nasty version for now - assume a uniform grid. */
   int xx = (pkt_ptr->pos[0] - (cell[0].pos_init[0]*t_current/tmin)) / (wid_init*t_current/tmin);
