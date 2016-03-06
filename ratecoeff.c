@@ -1001,15 +1001,13 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
 ///***************************************************************************/
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  //double nnlevel;
-
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
   double T_R = get_TR(modelgridindex);
   double W = get_W(modelgridindex);
 
-  /*nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
+  /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
   bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);*/
   return W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
 }

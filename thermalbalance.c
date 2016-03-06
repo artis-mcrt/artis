@@ -271,14 +271,6 @@ void calculate_heating_rates(int modelgridindex)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
-  double epsilon_current,epsilon_target,epsilon_trans,nnlevel;
-  double C;
-  double statweight_target;
-
-  int nions,nlevels_currention,nlevels_lowerion,ndowntrans;
-  int element,ion,level,lower;
-  int ii,lineindex;
-
   gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1000);
   //double intaccuracy = 1e-2;
   //double error;
@@ -297,48 +289,48 @@ void calculate_heating_rates(int modelgridindex)
   PKT *pkt_ptr;
   pkt_ptr = &dummypkt;*/
 
-  double T_e = get_Te(modelgridindex);
-  double T_R = get_TR(modelgridindex);
-  double W = get_W(modelgridindex);
+  //double T_e = get_Te(modelgridindex);
+  //double T_R = get_TR(modelgridindex);
+  //double W = get_W(modelgridindex);
 
   double C_deexc = 0.;
-  double C_recomb = 0.;
+  //double C_recomb = 0.;
   double bfheating = 0.;
   double ffheating = 0.;
 
-  nlevels_lowerion = 0;
-  for (element = 0; element < nelements; element++)
+  //int nlevels_lowerion = 0;
+  for (int element = 0; element < nelements; element++)
   {
     mastate[tid].element = element;
-    nions = get_nions(element);
-    for (ion = 0; ion < nions; ion++)
+    int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
     {
       #ifdef DIRECT_COL_HEAT
       {
         mastate[tid].ion = ion;
-        nlevels_currention = get_nlevels(element,ion);
+        int nlevels_currention = get_nlevels(element,ion);
 //      if (ion > 0) nlevels_lowerion = get_nlevels(element,ion-1);
 
-       for (level = 0; level < nlevels_currention; level++)
+       for (int level = 0; level < nlevels_currention; level++)
        {
-         epsilon_current = epsilon(element,ion,level);
+         double epsilon_current = epsilon(element,ion,level);
          mastate[tid].level = level;
-         nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+         double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
          mastate[tid].nnlevel = nnlevel;
          mastate[tid].statweight = stat_weight(element,ion,level);
 //
 //
 //         /// Collisional heating: deexcitation to same ionization stage
 //         /// ----------------------------------------------------------
-         ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-         for (ii = 1; ii <= ndowntrans; ii++)
+         int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+         for (int ii = 1; ii <= ndowntrans; ii++)
          {
-           lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
-           epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
-           statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
-           lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
-           epsilon_trans = epsilon_current - epsilon_target;
-           C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex) * epsilon_trans;
+           int lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
+           double epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
+           double statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
+           int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
+           double epsilon_trans = epsilon_current - epsilon_target;
+           double C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex) * epsilon_trans;
            C_deexc += C;
          }
        }
@@ -416,13 +408,17 @@ void calculate_heating_rates(int modelgridindex)
       {
         //nlevels_currention = get_nlevels(element,ion);
         //nlevels_currention = get_ionisinglevels(element,ion);
-        nlevels_currention = get_bfcontinua(element,ion);
-        for (level = 0; level < nlevels_currention; level++)
+        int nlevels_currention = get_bfcontinua(element,ion);
+        for (int level = 0; level < nlevels_currention; level++)
         {
-          nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+          double epsilon_current = epsilon(element,ion,level);
+          double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            bfheating += nnlevel * get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
+            int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            double epsilon_upper = epsilon(element,ion+1,upper);
+            double epsilon_trans = epsilon_upper - epsilon_current;
+            bfheating += nnlevel * get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex) * epsilon_trans;
           }
         }
       }
@@ -480,15 +476,6 @@ void calculate_cooling_rates(int modelgridindex)
 /// Calculate the cooling rates for a given cell. Results are returned
 /// via the elements of the global coolingrates data structure.
 {
-  double C,C_ff,C_fb,C_exc,C_ion;
-  double nncurrention,nnnextionlevel;
-  double epsilon_current,epsilon_upper,epsilon_trans;
-  int element,ion,level,upper;
-  int nlevels_currention,ionisinglevels;
-  int ii,lineindex;
-  int ioncharge;
-  int nions,nuptrans;
-
   double nne = get_nne(modelgridindex);
   double T_e = get_Te(modelgridindex);
 
@@ -498,29 +485,29 @@ void calculate_cooling_rates(int modelgridindex)
   pkt_ptr = &dummypkt;*/
 
   /// calculate rates for
-  C = 0.;
-  C_ff = 0.;   /// free-free creation of rpkts
-  C_fb = 0.;   /// free-bound creation of rpkt
-  C_exc = 0.;  /// collisional excitation of macroatoms
-  C_ion = 0.;  /// collisional ionisation of macroatoms
-  for (element = 0; element < nelements; element++)
+  double C = 0.;
+  double C_ff = 0.;   /// free-free creation of rpkts
+  double C_fb = 0.;   /// free-bound creation of rpkt
+  double C_exc = 0.;  /// collisional excitation of macroatoms
+  double C_ion = 0.;  /// collisional ionisation of macroatoms
+  for (int element = 0; element < nelements; element++)
   {
     //printout("[debug] do_kpkt: element %d\n",element);
     mastate[tid].element = element;
-    nions = get_nions(element);
-    for (ion = 0; ion < nions; ion++)
+    int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
     {
       //printout("[debug] do_kpkt: ion %d\n",ion);
       mastate[tid].ion = ion;
-      nlevels_currention = get_nlevels(element,ion);
+      int nlevels_currention = get_nlevels(element,ion);
       //ionisinglevels = get_ionisinglevels(element,ion);
-      ionisinglevels = get_bfcontinua(element,ion);
-      nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
-      nncurrention = ionstagepop(modelgridindex,element,ion);
+      int ionisinglevels = get_bfcontinua(element,ion);
+      //double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
+      double nncurrention = ionstagepop(modelgridindex,element,ion);
 
       /// ff creation of rpkt
       /// -------------------
-      ioncharge = get_ionstage(element,ion) - 1;
+      int ioncharge = get_ionstage(element,ion) - 1;
       //printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
       if (ioncharge > 0)
       {
@@ -528,22 +515,22 @@ void calculate_cooling_rates(int modelgridindex)
         C_ff += C;
       }
 
-      for (level = 0; level < nlevels_currention; level++)
+      for (int level = 0; level < nlevels_currention; level++)
       {
         //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
-        epsilon_current = epsilon(element,ion,level);
+        double epsilon_current = epsilon(element,ion,level);
         mastate[tid].level = level;
         mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
 
         /// excitation to same ionization stage
         /// -----------------------------------
-        nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-        for (ii = 1; ii <= nuptrans; ii++)
+        int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        for (int ii = 1; ii <= nuptrans; ii++)
         {
-          upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
-          lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+          int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
+          int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
           //printout("    excitation to level %d possible\n",upper);
-          epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
+          double epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
           C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans) * epsilon_trans;
           C_exc += C;
         }
@@ -556,9 +543,9 @@ void calculate_cooling_rates(int modelgridindex)
           C = 0.0;
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            epsilon_upper = epsilon(element,ion+1,upper);
-            epsilon_trans = epsilon_upper - epsilon_current;
+            int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            double epsilon_upper = epsilon(element,ion+1,upper);
+            double epsilon_trans = epsilon_upper - epsilon_current;
             //printout("cooling list: col_ionization\n");
             C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans) * epsilon_trans;
           }
@@ -575,7 +562,10 @@ void calculate_cooling_rates(int modelgridindex)
           C = 0.0;
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
+            int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            double epsilon_upper = epsilon(element,ion+1,upper);
+            double epsilon_trans = epsilon_upper - epsilon_current;
+            C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex) * epsilon_trans;
           }
           C_fb += C;
         }

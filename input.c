@@ -2042,7 +2042,7 @@ static void read_parameterfile(int rank)
 
 ///****************************************************************************
 /// Subroutine to read in a 1-D model.
-static int read_1d_model()
+static int read_1d_model(void)
 {
   FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
@@ -2128,7 +2128,7 @@ static int read_1d_model()
 
 ///****************************************************************************
 /// Subroutine to read in a 2-D model.
-static int read_2d_model()
+static int read_2d_model(void)
 {
   FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
@@ -2216,7 +2216,7 @@ static int read_2d_model()
 
 ///****************************************************************************
 /// Subroutine to read in a 3-D model.
-static int read_3d_model()
+static int read_3d_model(void)
 {
   float dum2, dum3, dum4, dum5, dum6;
   float rho_model;
