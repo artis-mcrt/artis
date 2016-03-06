@@ -1,7 +1,5 @@
 #include "sn3d.h"
 #include "boundary.h"
-#include "emissivities.h"
-#include "grey_emissivities.h"
 #include "ray_prop.h"
 
 /* Master routine for moving along ray. When it called,
