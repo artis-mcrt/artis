@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "move.h"
 #include "update_grid.h"
+#include "vectors.h"
 
 ///****************************************************************************
 void update_estimators(PKT *pkt_ptr, double distance)

@@ -2,6 +2,7 @@
 #include "boundary.h"
 #include "grid_init.h"
 #include "rpkt.h"
+#include "update_packets.h"
 
 ///****************************************************************************
 /// Basic routine to compute distance to a call boundary.

@@ -1,5 +1,9 @@
 #include "sn3d.h"
 #include "atomic.h"
+#include "gamma.h"
+#include "kpkt.h"
+#include "ltepop.h"
+#include "packet_prop.h"
 #include "update_packets.h"
 #include "rpkt.h"
 

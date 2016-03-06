@@ -538,17 +538,4 @@ extern short use_cellhist;
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
 
-#include "gamma.h"
-#include "kpkt.h"
-#include "ltepop.h"
-#include "move.h"
-#include "nltepop.h"
-#include "packet_init.h"
-#include "packet_prop.h"
-#include "photo_electric.h"
-#include "ratecoeff.h"
-#include "ray_prop.h"
-#include "update_packets.h"
-#include "vectors.h"
-
 #endif // SN3D_H
