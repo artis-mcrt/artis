@@ -1022,42 +1022,33 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 /// or update_grid. Therefore we need to decide whether a cell history is
 /// known or not.
 {
-  double bfcooling;
-
-  double T_e = get_Te(modelgridindex);
-  double nne = get_nne(modelgridindex);
-  //double nnionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
-  double nnion = ionstagepop(modelgridindex,element,ion+1);
+  double bfcooling = -99.;
 
   if (use_cellhist >= 0)
-  {
     bfcooling = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling;
-    /// Interpolate bfcooling out of precalculated values
-    if (bfcooling < 0)
-    {
-      //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel*nne;
-      bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnion * nne;
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = bfcooling;
-    }
-    /// Direct integration
-    /// ...
-  }
-  else
+
+  if (bfcooling < 0)
   {
     /// Interpolate bfcooling out of precalculated values
+    int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+    double T_e = get_Te(modelgridindex);
+    double nnion = ionstagepop(modelgridindex,element,ion+1);
+    double nne = get_nne(modelgridindex);
+    double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
     //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel*nne;
-    bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnion * nne;
-    /// Direct integration
-    /// ...
-  }
+    bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnupperlevel * nne;
 
-  #ifdef DEBUG_ON
-    if (!isfinite(bfcooling))
-    {
-      printout("[fatal] get_bfcooling: bfcooling infinite (%g) for element %d, ion %d, level %d in modelgridcell %d\n",bfcooling,element,ion,level,modelgridindex);
-      printout("[fatal] get_bfcooling: bfcoolingcoeff %g, nnion %g, nne %g, T_e %g\n",interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e),nnion,nne,T_e);
-    }
-  #endif
+    if (use_cellhist >= 0)
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = bfcooling;
+
+    #ifdef DEBUG_ON
+      if (!isfinite(bfcooling))
+      {
+        printout("[fatal] get_bfcooling: bfcooling infinite (%g) for element %d, ion %d, level %d in modelgridcell %d\n",bfcooling,element,ion,level,modelgridindex);
+        printout("[fatal] get_bfcooling: bfcoolingcoeff %g, nnion %g, nne %g, T_e %g\n",interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e),nnion,nne,T_e);
+      }
+    #endif
+  }
 
   return bfcooling;
 }
