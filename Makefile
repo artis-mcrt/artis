@@ -1,15 +1,15 @@
 
-  CC = cc
+  CC = mpicc
 #  CC = gcc-5
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib
 #  CFLAGS = -Wall -O0 -g -I$(INCLUDE)
-#  CFLAGS = -Wextra -Ofast -fopenmp -I$(INCLUDE)
-  CFLAGS = -Wextra -Ofast -I$(INCLUDE)
+  CFLAGS = -Wextra -Wmissing-prototypes -Wmissing-declarations -Ofast -std=c11 -I$(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
+#also -fopenmp
 
-  LDFLAGS = -L$(LIB) -lgsl -lgslcblas -lm
+  LDFLAGS = -L$(LIB) -lgsl -lgslcblas -lm -lprofiler
   exspec: override CFLAGS =  -g -Wextra -Wunused-parameter -O3 -I$(INCLUDE) -DDO_EXSPEC
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 
