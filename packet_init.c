@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "grid_init.h"
 #include "packet_init.h"
+#include "vectors.h"
 
 int packet_init(int middle_iteration, int my_rank)
 {

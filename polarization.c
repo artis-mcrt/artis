@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "polarization.h"
+#include "vectors.h"
 
 ///****************************************************************************
 void escat_rpkt(PKT *pkt_ptr, double t_current)

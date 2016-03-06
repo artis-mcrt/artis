@@ -3,6 +3,8 @@
 #include "grid_init.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "nltepop.h"
+#include "ratecoeff.h"
 #include "update_grid.h"
 
 ///***************************************************************************/

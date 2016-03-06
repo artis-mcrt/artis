@@ -1,4 +1,6 @@
 #include "sn3d.h"
+#include "gamma.h"
+#include "kpkt.h"
 #include "macroatom.h"
 #include "packet_prop.h"
 #include "rpkt.h"

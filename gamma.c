@@ -5,6 +5,9 @@
 #include "gamma.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
+#include "photo_electric.h"
+#include "move.h"
+#include "vectors.h"
 
 /* Material for handing gamma rays - creation and propagation. */
 

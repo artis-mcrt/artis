@@ -3,7 +3,9 @@
 #include "atomic.h"
 #include "grid_init.h"
 #include "kpkt.h"
+#include "ltepop.h"
 #include "macroatom.h"
+#include "ratecoeff.h"
 #include "rpkt.h"
 
 ///****************************************************************************
@@ -422,9 +424,8 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
   pkt_ptr->em_time = t_current;
   pkt_ptr->nscatterings = 0;
 
-  return(t_current);
+  return t_current;
 }
-
 
 
 ///****************************************************************************
@@ -440,10 +441,10 @@ double sample_planck(double T)
 
   double nu;
   int endloop = 0;
-  int i = 0;
+  //int i = 0;
   while (endloop == 0)
   {
-    i += 1;
+    //i += 1;
     double zrand = gsl_rng_uniform(rng);
     double zrand2 = gsl_rng_uniform(rng);
     nu = nu_min_r + zrand * (nu_max_r - nu_min_r);

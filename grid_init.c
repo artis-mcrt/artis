@@ -2,6 +2,7 @@
 #include "atomic.h"
 #include "grid_init.h"
 #include "rpkt.h"
+#include "vectors.h"
 
 ///***************************************************************************
 /// Subroutine that initialises the grid cells. Designed so that grid cells

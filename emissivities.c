@@ -3,6 +3,10 @@
 #include "compton.h"
 #include "grid_init.h"
 #include "emissivities.h"
+#include "packet_init.h"
+#include "photo_electric.h"
+#include "ray_prop.h"
+#include "vectors.h"
 
 int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double single_t, int lindex, double dnuds)
 {
@@ -26,9 +30,9 @@ int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double s
     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
       * (exp(-single_t/TNICKEL) - exp(-single_t/TCOBALT))
       / (TNICKEL - TCOBALT)
-          *cobalt_spec.probability[gam_line_list.index[lindex]]
-          *cobalt_spec.energy[gam_line_list.index[lindex]]
-      *fni(grid_ptr)*tfact;
+      * cobalt_spec.probability[gam_line_list.index[lindex]]
+      * cobalt_spec.energy[gam_line_list.index[lindex]]
+      * fni(grid_ptr) * tfact;
 
     if (gam_line_list.index[lindex] == 0)
     {
