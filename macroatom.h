@@ -1,6 +1,8 @@
 #ifndef MACROATOM_H
 #define MACROATOM_H
 
+#include "grid_init.h"
+
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep);
 
 double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex, double t_current);
@@ -13,11 +15,57 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
 double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, double statweight_target, int lineindex);
 double col_recombination(int modelgridindex, int lower, double epsilon_trans);
 
-double radfield(double nu, int modelgridindex);
-double radfield2(double nu, double T, double W);
 
-double get_individ_rad_deexc(int i);
-double get_individ_internal_down_same(int i);
-double get_individ_internal_up_same(int i);
+inline
+double radfield(double nu, int modelgridindex)
+/// calculates ambient radiation field, which is parameterised as a diluted black body
+{
+  double T_R = get_TR(modelgridindex);
+  double W   = get_W(modelgridindex);
+
+  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T_R) - 1);
+}
+
+
+inline
+double radfield2(double nu, double T, double W)
+/// calculates ambient radiation field, which is parameterised as a diluted black body
+{
+  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T) - 1);
+}
+
+
+inline
+double get_individ_rad_deexc(int i)
+{
+  int element = mastate[tid].element;
+  int ion = mastate[tid].ion;
+  int level = mastate[tid].level;
+
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
+}
+
+
+inline
+double get_individ_internal_down_same(int i)
+{
+  int element = mastate[tid].element;
+  int ion = mastate[tid].ion;
+  int level = mastate[tid].level;
+
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
+}
+
+
+inline
+double get_individ_internal_up_same(int i)
+{
+  int element = mastate[tid].element;
+  int ion = mastate[tid].ion;
+  int level = mastate[tid].level;
+
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
+}
+
 
 #endif //MACROATOM_H
