@@ -2,6 +2,7 @@
 #include <gsl/gsl_integration.h>
 #include "atomic.h"
 #include "grid_init.h"
+#include "ltepop.h"
 #include "macroatom.h"
 #include "rpkt.h"
 
@@ -1329,53 +1330,4 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
     }
   }
   return C;
-}
-
-
-///***************************************************************************/
-double radfield(double nu, int modelgridindex)
-/// calculates ambient radiation field, which is parameterised as a diluted black body
-{
-  double T_R = get_TR(modelgridindex);
-  double W   = get_W(modelgridindex);
-
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T_R) - 1);
-}
-
-///***************************************************************************/
-double radfield2(double nu, double T, double W)
-/// calculates ambient radiation field, which is parameterised as a diluted black body
-{
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T) - 1);
-}
-
-
-///****************************************************************************
-double get_individ_rad_deexc(int i)
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
-
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
-}
-
-///***************************************************************************/
-double get_individ_internal_down_same(int i)
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
-
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
-}
-
-///***************************************************************************/
-double get_individ_internal_up_same(int i)
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
-
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
 }
