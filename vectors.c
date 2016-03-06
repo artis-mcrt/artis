@@ -1,61 +1,6 @@
 #include "sn3d.h"
 #include "vectors.h"
 
-/***********************************************************/
-/*Routine for getting the magnitude of a vector.*/
-double vec_len(double x[3])
-{
-  double ysquared = (x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]);
-  double y = sqrt(ysquared);
-
-  if (y < 0)
-  {
-    printout("Error: vec_len. Abort.\n");
-    exit(0);
-  }
-
-  return y;
-}
-
-/************************************************************/
-/*Routine for normalizing a vector.*/
-void vec_norm(double x[3], double z[3])
-{
-  double ysquared = (x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]);
-  double y = sqrt(ysquared);
-
-  if (y < 0)
-  {
-    printout("Error: vec_len. Abort.\n");
-    exit(0);
-  }
-
-  z[0] = x[0]/y;
-  z[1] = x[1]/y;
-  z[2] = x[2]/y;
-}
-
-/************************************************************/
-/*Routine for taking dot product.*/
-
-double dot(const double *x, const double *y)
-{
-  return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
-}
-
-/************************************************************/
-/*Routine for getting velocity vector of the flow at a position.*/
-
-int get_velocity(const double *x, double *y, double t)
-{
-  /* For homologous expansion. */
-
-  y[0] = x[0] / t;
-  y[1] = x[1] / t;
-  y[2] = x[2] / t;
-
-  return 0;
-}
 
 /************************************************************/
 /*Routine for aberation of angles in SR. Takes one direction and velocity
@@ -75,6 +20,7 @@ int angle_ab(const double *dir1, const double *vel, double *dir2)
 
   return 0;
 }
+
 
 /************************************************************/
 /*Routine for Doppler shift in SR. Takes one direction and velocity
@@ -132,17 +78,6 @@ int scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
   dir_out[0] = (r11 * xprime) + (r21 * yprime) + (r31 * zprime);
   dir_out[1] = (r12 * xprime) + (r22 * yprime) + (r32 * zprime);
   dir_out[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
-
-  return 0;
-}
-
-
-/**********************************************************************/
-int cross_prod(double v1[3], double v2[3], double v3[3])
-{
-  v3[0] = (v1[1]*v2[2]) - (v2[1]*v1[2]);
-  v3[1] = (v1[2]*v2[0]) - (v2[2]*v1[0]);
-  v3[2] = (v1[0]*v2[1]) - (v2[0]*v1[1]);
 
   return 0;
 }

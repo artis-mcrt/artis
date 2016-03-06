@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "boundary.h"
+#include "grey_emissivities.h"
 #include "grid_init.h"
 #include "polarization.h"
 #include "rpkt.h"

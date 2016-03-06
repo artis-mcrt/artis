@@ -13,6 +13,8 @@
 #include "threadprivate.h"
 #include "sn3d.h"
 #include "atomic.h"
+#include "emissivities.h"
+#include "grey_emissivities.h"
 #include "grid_init.h"
 #include "input.h"
 #include "time_init.h"
