@@ -8,5 +8,5 @@ exspec
 *.o-*
 tags
 atomic_data/*.tar.gz
-atomic_data/*/
-tools/*.txt
+atomic_data/hillieratomicdata
+slice3dmodel/*/*.txt
