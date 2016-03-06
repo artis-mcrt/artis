@@ -3,9 +3,12 @@
 #include "boundary.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
+#include "ltepop.h"
+#include "move.h"
 #include "polarization.h"
 #include "rpkt.h"
 #include "update_grid.h"
+#include "vectors.h"
 
 /* Material for handing r-packet propagation. */
 
@@ -783,22 +786,6 @@ double closest_transition(PKT *pkt_ptr)
 
   /// return the transitions frequency
   return nu_trans;
-}
-
-
-
-///****************************************************************************
-double min(double a, double b)
-// returns minimum of a and b
-{
-  if (a >= b)
-  {
-    return(b);
-  }
-  else
-  {
-    return(a);
-  }
 }
 
 
