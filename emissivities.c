@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include <string.h>
+#include "compton.h"
 #include "grid_init.h"
 #include "emissivities.h"
 
