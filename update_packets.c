@@ -50,7 +50,7 @@ int update_packets(int nts)
       for (int n = 0; n < npkts; n++)
       {
         //printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
-        if (n % 10000 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
+        if (n % 20000 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
         //if (n == 5000) exit(0);
 
 	      pkt_ptr = &pkt[n];
@@ -393,7 +393,7 @@ int compare_packets_byposition(const void *p1, const void *p2)
 int compare_packets_bymodelgridposition(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  PKT *a1, *a2;
+  const PKT *a1, *a2;
   a1 = (PKT *)(p1);
   a2 = (PKT *)(p2);
 
@@ -410,7 +410,7 @@ int compare_packets_bymodelgridposition(const void *p1, const void *p2)
 int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by descending cell density.
 {
-  PKT *a1, *a2;
+  const PKT *a1, *a2;
   a1 = (PKT *)(p1);
   a2 = (PKT *)(p2);
 

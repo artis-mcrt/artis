@@ -125,14 +125,11 @@ double phi(int element, int ion, int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
-  double gamma_lte; //zeta;
   double phi;
 
   //double Y_nt, ionpot_in;
   //int element_in, ion_in, nions_in;
   //double rate_use;
-
-  //double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
@@ -633,6 +630,9 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
+  double test;
+
+  int nlte_levels;
 
   //  T_exc = MINTEMP;
 
@@ -657,7 +657,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 #ifdef NLTE_POPS_ON
   else if (is_nlte(element,ion,level) == 1)
   {
-    double test;
     //printout("Using an nlte population!\n");
     if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
     {
@@ -846,7 +845,7 @@ void initialise_photoionestimators()
   //for (n = 0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
-    double T_e = get_Te(n);
+    //double T_e = get_Te(n);
     #ifdef DO_TITER
       J_reduced_save[n] = -1.;
     #endif

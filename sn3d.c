@@ -40,11 +40,8 @@ int main(int argc, char** argv)
     int nblock, numtot, n_leftover;
   #endif
   int nstart, nknown, ndo;
-  double rho_tot, te_tot, tr_tot, w_tot, n_count;
-  int position, nlp, ncl, mgi;
-  double T_R_max,T_R_min,T_R_step;
-  double T_e_max,T_e_min,T_e_step;
-  double rho_max,rho_min,rho_step;
+  double tr_tot;
+  int ncl, mgi;
   char filename[100];
   //int HUGEE2;
   //char *buffer2;
@@ -113,12 +110,12 @@ int main(int argc, char** argv)
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     exit(0);
   }
-  if ((coolingrates = malloc(nthreads*sizeof(coolingrates_t))) == NULL)
+  if ((coolingrates = calloc(nthreads,sizeof(coolingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing coolingrates communication variables ... abort\n");
     exit(0);
   }
-  if ((heatingrates = malloc(nthreads*sizeof(heatingrates_t))) == NULL)
+  if ((heatingrates = calloc(nthreads,sizeof(heatingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing heatingrates communication variables ... abort\n");
     exit(0);
@@ -1301,7 +1298,7 @@ void printout(char *fmt, ...)
   char *p, *sval;
   int ival;
   double dval;
-  char filename[100];
+  //char filename[100];
   //FILE *output_file;
 
   /// To be able to follow the messages interactively the file is continuously
