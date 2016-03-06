@@ -1,7 +1,10 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
+#include "kpkt.h"
+#include "ltepop.h"
 #include "macroatom.h"
+#include "ratecoeff.h"
 #include "thermalbalance.h"
 #include "update_grid.h"
 

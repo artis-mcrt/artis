@@ -17,8 +17,13 @@
 #include "grey_emissivities.h"
 #include "grid_init.h"
 #include "input.h"
+#include "ltepop.h"
+#include "move.h"
+#include "packet_init.h"
+#include "ratecoeff.h"
 #include "time_init.h"
 #include "update_grid.h"
+#include "update_packets.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
 /* Main - top level routine. */

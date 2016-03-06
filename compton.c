@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "grid_init.h"
 #include "compton.h"
+#include "vectors.h"
 
 /* Stuff for compton scattering. */
 

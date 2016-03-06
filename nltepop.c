@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
+#include "ltepop.h"
 #include "macroatom.h"
 #include "nltepop.h"
 #include "update_grid.h"
@@ -517,8 +518,8 @@ double get_oneoverw(int element, int ion, int modelgridindex)
   }
   //printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
 
-  double binding = get_mean_binding_energy(element, ion);
   double Aconst = 1.33e-14 * EV * EV;
+  double binding = get_mean_binding_energy(element, ion);
   double oneoverW = Aconst * binding / Zbar / (2*3.14159*pow(QE,4.0));
   //printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
 

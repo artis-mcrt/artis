@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "atomic.h"
+#include "ltepop.h"
 #include "macroatom.h"
 #include "ratecoeff.h"
 #include "grid_init.h"
@@ -1013,7 +1014,7 @@ double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetin
   return W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
 }
 
-#endif
+#endif /* FORCE_LTE */
 
 
 ///***************************************************************************/

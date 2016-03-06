@@ -2,7 +2,9 @@
 #include <gsl/gsl_integration.h>
 #include "atomic.h"
 #include "grid_init.h"
+#include "ltepop.h"
 #include "macroatom.h"
+#include "ratecoeff.h"
 #include "thermalbalance.h"
 #include "update_grid.h"
 
@@ -454,11 +456,12 @@ void calculate_heating_rates(int modelgridindex)
   */
 
 
+#ifdef DIRECT_COL_HEAT
+  heatingrates[tid].collisional = C_deexc;
+#else
   /// Collisional heating (from estimators)
   /// -------------------------------------
   heatingrates[tid].collisional = colheatingestimator[modelgridindex];//C_deexc + C_recomb;
-#ifdef DIRECT_COL_HEAT
-  heatingrates[tid].collisional = C_deexc;
 #endif
 
 //  heatingrates[tid].collbb = C_deexc;
