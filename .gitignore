@@ -9,4 +9,5 @@ exspec
 tags
 atomic_data/*.tar.gz
 atomic_data/hillieratomicdata
+atomic_data/nahar_radiativeatomicdata
 slice3dmodel/*/*.txt
