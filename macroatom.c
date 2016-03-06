@@ -4,6 +4,7 @@
 #include "grid_init.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "ratecoeff.h"
 #include "rpkt.h"
 
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)

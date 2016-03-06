@@ -2,7 +2,9 @@
 #include "boundary.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
+#include "move.h"
 #include "ray_prop.h"
+#include "vectors.h"
 
 /* Master routine for moving along ray. When it called,
    it is given the time at start of inverval and at end - when it finishes,
@@ -294,7 +296,7 @@ int change_cell_ray(RAY *ray_ptr, int snext, int *end_packet, double t_current)
 }
 
 /**************************************************/
-int copy_ray (RAY *ray1, RAY *ray2)
+int copy_ray (const RAY *ray1, RAY *ray2)
 {
   ray2->last_cross = ray1->last_cross;
   ray2->where = ray1->where;
@@ -385,8 +387,6 @@ int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double
 int get_nul(double freq)
 {
   int too_high, too_low, try;
-  double freq_try;
-  double get_gam_freq();
 
   double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
   double freq_min = get_gam_freq(&gam_line_list, 0);
@@ -406,9 +406,8 @@ int get_nul(double freq)
 
     while (too_high != too_low + 1)
   	{
-
   	  try = (too_high + too_low)/2;
-  	  freq_try = get_gam_freq(&gam_line_list, try);
+  	  double freq_try = get_gam_freq(&gam_line_list, try);
   	  if (freq_try >= freq)
 	    {
 	      too_high = try;

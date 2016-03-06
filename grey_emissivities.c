@@ -1,6 +1,8 @@
 #include "sn3d.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
+#include "photo_electric.h"
+#include "vectors.h"
 #include <string.h>
 
 ///In this file the call to kappa_rpkt does not fit kappa_rpkts definition any loger!!!
