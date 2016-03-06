@@ -1,6 +1,10 @@
 #include "sn3d.h"
+#include "atomic.h"
+#include "boundary.h"
+#include "grid_init.h"
 #include "polarization.h"
 #include "rpkt.h"
+#include "update_grid.h"
 
 /* Material for handing r-packet propagation. */
 

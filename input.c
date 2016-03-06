@@ -2,7 +2,10 @@
 //#include <math.h>
 //#include <stdlib.h>
 #include "sn3d.h"
+#include "atomic.h"
+#include "grid_init.h"
 #include "input.h"
+#include "rpkt.h"
 #ifdef DO_EXSPEC
   #include "exspec.h"
 #endif

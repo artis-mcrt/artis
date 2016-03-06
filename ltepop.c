@@ -1,5 +1,9 @@
 #include "sn3d.h"
+#include "atomic.h"
+#include "grid_init.h"
 #include "ltepop.h"
+#include "macroatom.h"
+#include "update_grid.h"
 
 ///***************************************************************************/
 double nne_solution_f(double x, void *paras)
@@ -286,6 +290,8 @@ double phi(int element, int ion, int modelgridindex)
       {
         printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g, T_R %g ... remove higher or lower ionisation stages\n",phi,element,ion,T_e,T_R);
         printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n",Alpha_sp,Alpha_st,Gamma,modelgrid[modelgridindex].composition[element].partfunct[ion],stat_weight(element,ion,0));
+        printout("[fatal] phi: recomb_total %g, upperionpartfunct %g, upperionstatweight %g\n",recomb_total,modelgrid[modelgridindex].composition[element].partfunct[ion+1],stat_weight(element,ion+1,0));
+        printout("[fatal] phi: Y_nt %g Col_rec %g get_nne(modelgridindex) %g\n",Y_nt,Col_rec,get_nne(modelgridindex));
         //abort();
       }
     }

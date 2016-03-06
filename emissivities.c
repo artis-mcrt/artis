@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include <string.h>
+#include "grid_init.h"
 #include "emissivities.h"
 
 int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double single_t, int lindex, double dnuds)

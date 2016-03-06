@@ -1,5 +1,10 @@
 #include "sn3d.h"
+#include "atomic.h"
+#include "grid_init.h"
+#include "macroatom.h"
 #include "nltepop.h"
+#include "update_grid.h"
+
 //TODO: change to operate on whole element at once
 double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels

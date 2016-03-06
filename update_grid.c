@@ -1,4 +1,8 @@
 #include "sn3d.h"
+#include "atomic.h"
+#include "grid_init.h"
+#include "macroatom.h"
+#include "thermalbalance.h"
 #include "update_grid.h"
 
 /** Subroutine to update the matter quantities in the grid cells at the start
@@ -955,7 +959,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   }
                 }
                 fprintf(estimators_file, "heating/cooling ");
-                fprintf(estimators_file,"%g %g %g %g %g %g %g %g ",heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
+                fprintf(estimators_file,"%g %g %g %g %g %g %g %g ",heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
               #endif
               fprintf(estimators_file,"\n");
             #endif

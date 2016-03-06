@@ -538,17 +538,13 @@ extern short use_cellhist;
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
 
-#include "atomic.h"
-#include "boundary.h"
 #include "compton.h"
 #include "emissivities.h"
 #include "gamma.h"
 #include "grey_emissivities.h"
-#include "grid_init.h"
 #include "kpkt.h"
 #include "linelist.h"
 #include "ltepop.h"
-#include "macroatom.h"
 #include "move.h"
 #include "nltepop.h"
 #include "packet_init.h"
@@ -556,9 +552,6 @@ extern short use_cellhist;
 #include "photo_electric.h"
 #include "ratecoeff.h"
 #include "ray_prop.h"
-#include "rpkt.h"
-#include "thermalbalance.h"
-#include "update_grid.h"
 #include "update_packets.h"
 #include "vectors.h"
 

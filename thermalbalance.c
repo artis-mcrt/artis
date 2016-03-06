@@ -1,6 +1,10 @@
 #include "sn3d.h"
 #include <gsl/gsl_integration.h>
+#include "atomic.h"
+#include "grid_init.h"
+#include "macroatom.h"
 #include "thermalbalance.h"
+#include "update_grid.h"
 
 #ifndef FORCE_LTE
 

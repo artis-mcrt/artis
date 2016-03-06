@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "grid_init.h"
 #include "compton.h"
 
 /* Stuff for compton scattering. */

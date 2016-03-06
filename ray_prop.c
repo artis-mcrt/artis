@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "boundary.h"
 #include "ray_prop.h"
 
 /* Master routine for moving along ray. When it called,
