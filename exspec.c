@@ -14,6 +14,8 @@
 #include "exspec.h"
 #include "sn3d.h"
 #include <stdarg.h>  /// MK: needed for printout()
+#include "input.h"
+#include "time_init.h"
 #include "gamma_light_curve.h"
 #include "light_curve.h"
 #include "spectrum.h"

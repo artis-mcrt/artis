@@ -1,5 +1,7 @@
 #include "sn3d.h"
+#include "boundary.h"
 #include "gamma.h"
+#include "grid_init.h"
 
 /* Material for handing gamma rays - creation and propagation. */
 

@@ -240,7 +240,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
   int i = low;
 
   //printout("[debug] do_kpkt: element %d\n",element);
-  //int nions = get_nions(element);
+  int nions = get_nions(element);
   mastate[tid].element = element;
   mastate[tid].ion = ion;
   //ionisinglevels = get_ionisinglevels(element,ion);

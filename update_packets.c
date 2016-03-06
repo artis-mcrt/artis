@@ -1,5 +1,7 @@
 #include "sn3d.h"
+#include "atomic.h"
 #include "update_packets.h"
+#include "rpkt.h"
 
 /** Subroutine to move the packets and update them during the currect timestep. */
 

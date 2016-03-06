@@ -1,7 +1,6 @@
 #include "sn3d.h"
 #include "atomic.h"
 
-
 ///***************************************************************************/
 /// Alll the following deals with photoionisation cross-sections
 /// Old version with only Kramers-like cross-sections,

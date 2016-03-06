@@ -1,5 +1,7 @@
 #include "sn3d.h"
 #include "boundary.h"
+#include "grid_init.h"
+#include "rpkt.h"
 
 ///****************************************************************************
 /// Basic routine to compute distance to a call boundary.

@@ -12,8 +12,11 @@
 
 #include "threadprivate.h"
 #include "sn3d.h"
+#include "atomic.h"
+#include "grid_init.h"
 #include "input.h"
 #include "time_init.h"
+#include "update_grid.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
 /* Main - top level routine. */

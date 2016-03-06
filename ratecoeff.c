@@ -1,5 +1,8 @@
 #include "sn3d.h"
+#include "atomic.h"
+#include "macroatom.h"
 #include "ratecoeff.h"
+#include "grid_init.h"
 #include <gsl/gsl_integration.h>
 
 ///****************************************************************************
@@ -535,7 +538,7 @@ double bfcooling_integrand_gsl(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  float T  = ((gslintegration_paras *) paras)->T;
+  float T = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
   /// Information about the current level is passed via the global variable

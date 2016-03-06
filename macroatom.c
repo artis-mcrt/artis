@@ -1,6 +1,9 @@
 #include "sn3d.h"
 #include <gsl/gsl_integration.h>
+#include "atomic.h"
+#include "grid_init.h"
 #include "macroatom.h"
+#include "rpkt.h"
 
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.
@@ -340,7 +343,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n",total_transitions,element,ion,level);
           abort();
         }
-        if (debuglevel == 2)printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA deactivation\n");
+        if (debuglevel == 2)
+          printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA deactivation\n");
         //if (tid == 0) ma_stat_deactivation_bb += 1;
         ma_stat_deactivation_bb += 1;
         mastate[tid].lastaction = MA_ACTION_RADDEEXC;
