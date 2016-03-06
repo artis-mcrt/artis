@@ -5,7 +5,6 @@
 #include "atomic.h"
 #include "grid_init.h"
 #include "input.h"
-#include "linelist.h"
 #include "rpkt.h"
 #ifdef DO_EXSPEC
   #include "exspec.h"

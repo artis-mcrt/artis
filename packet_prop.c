@@ -9,6 +9,8 @@
 
 int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
 {
+  double t_change_type;
+
   double t_current = t1;
 
   /* 0 the scatter counter for the packet. */
@@ -17,7 +19,6 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
   int end_packet = 0;  //means "keep working"
   while (end_packet == 0)
   {
-    double t_change_type;
     /* Start by sorting out what sort of packet it is.*/
     //printout("start of packet_prop loop %d\n", pkt_ptr->type );
     if (pkt_ptr->type == TYPE_GAMMA)
@@ -47,7 +48,7 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
     {
       /*It's an r-packet. */
       //printout("r-pkt propagation\n");
-      t_change_type = do_rpkt(pkt_ptr, t_current, t2);
+      t_change_type = do_rpkt( pkt_ptr, t_current, t2);
 //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
 //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
 //       else

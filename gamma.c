@@ -1,9 +1,6 @@
 #include "sn3d.h"
 #include "boundary.h"
-#include "compton.h"
-#include "emissivities.h"
 #include "gamma.h"
-#include "grey_emissivities.h"
 #include "grid_init.h"
 
 /* Material for handing gamma rays - creation and propagation. */
@@ -79,7 +76,7 @@ int pellet_decay(int nts, PKT *pkt_ptr)
   pkt_ptr->type = TYPE_GAMMA;
   pkt_ptr->last_cross = NONE;
 
-  /* initialise polarisation information */
+  /**initialise polarisation information */
   pkt_ptr->stokes_qu[0]=pkt_ptr->stokes_qu[1]=0.0;
   dummy_dir[0]=dummy_dir[1]=0.0;
   dummy_dir[2]=1.0;

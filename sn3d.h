@@ -538,8 +538,12 @@ extern short use_cellhist;
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
 
+#include "compton.h"
+#include "emissivities.h"
 #include "gamma.h"
+#include "grey_emissivities.h"
 #include "kpkt.h"
+#include "linelist.h"
 #include "ltepop.h"
 #include "move.h"
 #include "nltepop.h"
