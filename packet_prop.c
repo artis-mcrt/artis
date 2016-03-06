@@ -99,6 +99,7 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
       else
       {
         printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
+        abort();
         //t_change_type = do_kpkt_ffonly(pkt_ptr, t_current, t2);
       }
 

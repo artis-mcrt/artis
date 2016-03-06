@@ -17,8 +17,8 @@ void calculate_kpkt_rates(int modelgridindex)
 
   double nne = get_nne(modelgridindex);
   double T_e = get_Te(modelgridindex);
-  double T_R = get_TR(modelgridindex);
-  double W = get_W(modelgridindex);
+  //double T_R = get_TR(modelgridindex);
+  //double W = get_W(modelgridindex);
   //if (SILENT == 0) printout("[info] kpkt_cuts: sampling cell %d, T_e %g, T_R %g, W %g, nne %g\n",modelgridindex,T_e,T_R,W,nne);
 
 /*  PKT dummypkt;
@@ -224,9 +224,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  double totalcooling;//partialcoolingsum;
-
-  //double interpolate_stimulated_bfcoolingcoeff(int element, int ion, int level, double T);
+  //double totalcooling;//partialcoolingsum;
 
   double nne = get_nne(modelgridindex);
   double T_e = get_Te(modelgridindex);
@@ -480,7 +478,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   F_bfcooling.function = &alpha_sp_E_integrand_gsl;
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
-  double nu_lower,sf,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
+  double nu_lower,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
   int ilow,low,high;
   double rndcool;
   double oldcoolingsum;
@@ -517,8 +515,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   //printout("[debug] do_kpkt: propagate k-pkt\n");
   //double cut = 0.99; //1.;
 
-
-  double nne = get_nne(modelgridindex);
+  //double nne = get_nne(modelgridindex);
   double T_e = get_Te(modelgridindex);
   double deltat = 0.;
   if (nts < n_kpktdiffusion_timesteps) deltat = kpktdiffusion_timescale * time_step[nts].width;

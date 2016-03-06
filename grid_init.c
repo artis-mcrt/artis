@@ -1652,11 +1652,11 @@ void assign_temperature()
 {
   //double fni(CELL *grid_ptr);
   FILE *gridsave_file;
-  double factor,T_initial,tstart,factor52fe, factor48cr;
+  double factor,T_initial,tstart,factor52fe,factor48cr;
   //float T_R,T_e,W,T_J,T_D,W_D,Gamma,dummy,thick;
   float T_R,T_e,W,T_J;//,thick;
   double Gamma;
-  int element,ion,nions,cellnumber;//,idummy;
+  int element,ion,nions;
   int n,mgi,thick;
 
   /// For a simulation started from scratch we estimate the initial temperatures
