@@ -627,8 +627,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 /// using a modified version of the Boltzmann formula, which fulfills the diluted BB
 /// approximation (or nebular approximation).
 {
-  double nn, test;
-  int nlte_levels;
+  double nn;
 
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
@@ -656,6 +655,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 #ifdef NLTE_POPS_ON
   else if (is_nlte(element,ion,level) == 1)
   {
+    double test;
     //printout("Using an nlte population!\n");
     if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
     {
@@ -776,15 +776,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 
 
 ///***************************************************************************/
-double ionstagepop(int modelgridindex, int element, int ion)
-/// Calculates the given ionstages total population in nebular approximation for modelgridindex
-/// The precalculated ground level population and partition function are used.
-{
-  return get_groundlevelpop(modelgridindex,element,ion) * modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element,ion,0);
-}
-
-
-///***************************************************************************/
 void calculate_levelpops(int modelgridindex)
 /// Calculates the full level populations for a given grid cell
 /// and stores them to the active entry of the cellhistory.
@@ -804,16 +795,6 @@ void calculate_levelpops(int modelgridindex)
       }
     }
   }
-}
-
-
-///***************************************************************************/
-double get_levelpop(int element, int ion, int level)
-/// Returns the given levels occupation number, which are stored in the active
-/// entry of the cellhistory.
-{
-//printout("get_levelpop histindex %d\n",histindex);
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
 }
 
 
