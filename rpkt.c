@@ -502,10 +502,10 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
 
   //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
 
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  //int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
-  double nne = get_nne(modelgridindex);
-  double T_e = get_Te(modelgridindex);
+  //double nne = get_nne(modelgridindex);
+  //double T_e = get_Te(modelgridindex);
   double nu = pkt_ptr->nu_cmf;
 
   double kappa_cont = kappa_rpkt_cont[tid].total;;
@@ -1273,10 +1273,9 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
 {
   double vel_vec[3];
 
-  double zrand, tdist;
+  double tdist;
   double edist;
   int snext;
-  int rpkt_eventtype;
 
   double kappa, kappa_cont, sigma, kappa_ff, kappa_bf;
   double *kappacont_ptr, *sigma_ptr, *kappaff_ptr, *kappabf_ptr;

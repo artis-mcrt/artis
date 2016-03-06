@@ -37,8 +37,8 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
   if (get_nlevels(element,ion) > 1)
   {
-    double nne = get_nne(modelgridindex);
-    double T_e = get_Te(modelgridindex);
+    //double nne = get_nne(modelgridindex);
+    //double T_e = get_Te(modelgridindex);
 
     printout("Solving for NLTE populations in cell %d. Doing element %d, ion %d. I think it's timestep %d\n", modelgridindex, element, ion, timestep);
     //printout("Current Te %g and ne %g\n",T_e, nne);

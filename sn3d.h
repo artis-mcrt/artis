@@ -15,7 +15,7 @@
 //#define DO_TITER
 //#define FORCE_LTE
 #define NT_ON        /// Switch on non-thermal ionisation
-//#define NLTE_POPS_ON
+#define NLTE_POPS_ON
 #define NLTEITER 30
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
