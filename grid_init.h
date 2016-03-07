@@ -14,193 +14,193 @@ void abundances_1d_read(void);
 void assign_temperature(void);
 
 /// Routine for getting the initial cell volume.
-inline
+static inline
 double vol_init(CELL *grid_ptr)
 {
   return (wid_init * wid_init * wid_init);
 }
 
-inline
+static inline
 float get_rhoinit(int modelgridindex)
 {
   return modelgrid[modelgridindex].rhoinit;
 }
 
-inline
+static inline
 float get_rho(int modelgridindex)
 {
   return modelgrid[modelgridindex].rho;
 }
 
-inline
+static inline
 float get_nne(int modelgridindex)
 {
   return modelgrid[modelgridindex].nne;
 }
 
-inline
+static inline
 float get_nnetot(int modelgridindex)
 {
   return modelgrid[modelgridindex].nnetot;
 }
 
-inline
+static inline
 float get_fni(int modelgridindex)
 {
   return modelgrid[modelgridindex].fni;
 }
 
-inline
+static inline
 float get_fco(int modelgridindex)
 {
   return modelgrid[modelgridindex].fco;
 }
 
-inline
+static inline
 float get_f52fe(int modelgridindex)
 {
   return modelgrid[modelgridindex].f52fe;
 }
 
-inline
+static inline
 float get_f48cr(int modelgridindex)
 {
   return modelgrid[modelgridindex].f48cr;
 }
 
-inline
+static inline
 float get_ffe(int modelgridindex)
 {
   return modelgrid[modelgridindex].ffe;
 }
 
-inline
+static inline
 float get_fnistable(int modelgridindex)
 {
   return modelgrid[modelgridindex].fnistable;
 }
 
-inline
+static inline
 float get_fcostable(int modelgridindex)
 {
   return modelgrid[modelgridindex].fcostable;
 }
 
-inline
+static inline
 float get_ffestable(int modelgridindex)
 {
   return modelgrid[modelgridindex].ffestable;
 }
 
-inline
+static inline
 float get_fmnstable(int modelgridindex)
 {
   return modelgrid[modelgridindex].fmnstable;
 }
 
-inline
+static inline
 float get_fcrstable(int modelgridindex)
 {
   return modelgrid[modelgridindex].fcrstable;
 }
 
-inline
+static inline
 float get_fvstable(int modelgridindex)
 {
   return modelgrid[modelgridindex].fvstable;
 }
 
-inline
+static inline
 float get_ftistable(int modelgridindex)
 {
   return modelgrid[modelgridindex].ftistable;
 }
 
-inline
+static inline
 float get_kappagrey(int modelgridindex)
 {
   return modelgrid[modelgridindex].kappagrey;
 }
 
-inline
+static inline
 float get_Te(int modelgridindex)
 {
   return modelgrid[modelgridindex].Te;
 }
 
-inline
+static inline
 float get_TR(int modelgridindex)
 {
   return modelgrid[modelgridindex].TR;
 }
 
-inline
+static inline
 float get_TJ(int modelgridindex)
 {
   return modelgrid[modelgridindex].TJ;
 }
 
-inline
+static inline
 float get_W(int modelgridindex)
 {
   return modelgrid[modelgridindex].W;
 }
 
-inline
+static inline
 void set_rhoinit(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].rhoinit = x;
 }
 
-inline
+static inline
 void set_rho(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].rho = x;
 }
 
-inline
+static inline
 void set_nne(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].nne = x;
 }
 
-inline
+static inline
 void set_nnetot(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].nnetot = x;
 }
 
-inline
+static inline
 void set_fni(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].fni = x;
 }
 
-inline
+static inline
 void set_fco(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].fco = x;
 }
 
-inline
+static inline
 void set_f48cr(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].f48cr = x;
 }
 
-inline
+static inline
 void set_f52fe(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].f52fe = x;
 }
 
-inline
+static inline
 void set_ffe(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].ffe = x;
 }
 
-inline
+static inline
 void set_fnistable(int modelgridindex, float x)
 {
   if (x >= 0)
@@ -214,7 +214,7 @@ void set_fnistable(int modelgridindex, float x)
   }
 }
 
-inline
+static inline
 void set_fcostable(int modelgridindex, float x)
 {
   if (x >= 0)
@@ -228,7 +228,7 @@ void set_fcostable(int modelgridindex, float x)
   }
 }
 
-inline
+static inline
 void set_ffestable(int modelgridindex, float x)
 {
   if (x >= 0)
@@ -242,7 +242,7 @@ void set_ffestable(int modelgridindex, float x)
   }
 }
 
-inline
+static inline
 void set_fmnstable(int modelgridindex, float x)
 {
   if (x >= 0)
@@ -256,7 +256,7 @@ void set_fmnstable(int modelgridindex, float x)
   }
 }
 
-inline
+static inline
 void set_fcrstable(int modelgridindex, float x)
 {
   if (x >= 0)
@@ -270,7 +270,7 @@ void set_fcrstable(int modelgridindex, float x)
   }
 }
 
-inline
+static inline
 void set_fvstable(int modelgridindex, float x)
 {
   if (x >= 0)
@@ -284,7 +284,7 @@ void set_fvstable(int modelgridindex, float x)
   }
 }
 
-inline
+static inline
 void set_ftistable(int modelgridindex, float x)
 {
   if (x >= 0)
@@ -298,31 +298,31 @@ void set_ftistable(int modelgridindex, float x)
   }
 }
 
-inline
+static inline
 void set_kappagrey(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].kappagrey = x;
 }
 
-inline
+static inline
 void set_Te(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].Te = x;
 }
 
-inline
+static inline
 void set_TR(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].TR = x;
 }
 
-inline
+static inline
 void set_TJ(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].TJ = x;
 }
 
-inline
+static inline
 void set_W(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].W = x;

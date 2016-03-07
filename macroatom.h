@@ -16,7 +16,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
 double col_recombination(int modelgridindex, int lower, double epsilon_trans);
 
 
-inline
+static inline
 double radfield(double nu, int modelgridindex)
 /// calculates ambient radiation field, which is parameterised as a diluted black body
 {
@@ -27,7 +27,7 @@ double radfield(double nu, int modelgridindex)
 }
 
 
-inline
+static inline
 double radfield2(double nu, double T, double W)
 /// calculates ambient radiation field, which is parameterised as a diluted black body
 {
@@ -35,7 +35,7 @@ double radfield2(double nu, double T, double W)
 }
 
 
-inline
+static inline
 double get_individ_rad_deexc(int i)
 {
   int element = mastate[tid].element;
@@ -46,7 +46,7 @@ double get_individ_rad_deexc(int i)
 }
 
 
-inline
+static inline
 double get_individ_internal_down_same(int i)
 {
   int element = mastate[tid].element;
@@ -57,7 +57,7 @@ double get_individ_internal_down_same(int i)
 }
 
 
-inline
+static inline
 double get_individ_internal_up_same(int i)
 {
   int element = mastate[tid].element;

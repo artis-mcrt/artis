@@ -12,7 +12,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion);
 double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level);
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 
-inline
+static inline
 double ionstagepop(int modelgridindex, int element, int ion)
 /// Calculates the given ionstages total population in nebular approximation for modelgridindex
 /// The precalculated ground level population and partition function are used.
@@ -22,7 +22,7 @@ double ionstagepop(int modelgridindex, int element, int ion)
 
 void calculate_levelpops(int modelgridindex);
 
-inline
+static inline
 double get_levelpop(int element, int ion, int level)
 /// Returns the given levels occupation number, which are stored in the active
 /// entry of the cellhistory.
