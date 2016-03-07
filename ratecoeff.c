@@ -547,7 +547,7 @@ double bfcooling_integrand_gsl(double nu, void *paras)
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   double sigma_bf = photoionization_crosssection(nu_edge,nu);
 
-  return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED*pow(nu,3) * exp(-HOVERKB*nu/T);
+  return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
 }
 
 double bfcooling_integrand_gsl_2(double nu, void *paras)
@@ -1012,7 +1012,7 @@ double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetin
   return W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
 }
 
-#endif /* FORCE_LTE */
+#endif /* IFNDEF FORCE_LTE */
 
 
 ///***************************************************************************/
@@ -1033,9 +1033,9 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
     double T_e = get_Te(modelgridindex);
     double nnion = ionstagepop(modelgridindex,element,ion+1);
     double nne = get_nne(modelgridindex);
-    double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
+    //double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
     //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel*nne;
-    bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnupperlevel * nne;
+    bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnion * nne;
 
     if (use_cellhist >= 0)
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = bfcooling;
@@ -1044,7 +1044,7 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
       if (!isfinite(bfcooling))
       {
         printout("[fatal] get_bfcooling: bfcooling infinite (%g) for element %d, ion %d, level %d in modelgridcell %d\n",bfcooling,element,ion,level,modelgridindex);
-        printout("[fatal] get_bfcooling: bfcoolingcoeff %g, nnion %g, nne %g, T_e %g\n",interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e),nnion,nne,T_e);
+        //printout("[fatal] get_bfcooling: bfcoolingcoeff %g, nnion %g, nne %g, T_e %g\n",interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e),nnion,nne,T_e);
       }
     #endif
   }
