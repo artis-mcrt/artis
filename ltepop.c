@@ -158,7 +158,7 @@ double phi(int element, int ion, int modelgridindex)
     else
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
-      double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion];
+      double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]; //try setting to zero
       #ifdef NT_ON
         if (Gamma == 0. && rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.)
       #else
@@ -171,7 +171,7 @@ double phi(int element, int ion, int modelgridindex)
 
       //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
       double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
-      double Alpha_sp = 0.;
+      //double Alpha_sp = 0.;
       double Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
       double Col_rec = 0.;
 
@@ -278,6 +278,7 @@ double phi(int element, int ion, int modelgridindex)
       phi = recomb_total *
           (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
             / ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
+            //Y_nt should be higher than the Gamma term for nebular epoch
 
       //phi = (Alpha_sp+Alpha_st)/(Y_nt);
 
