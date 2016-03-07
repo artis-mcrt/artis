@@ -4,12 +4,12 @@
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib
 #  CFLAGS = -Wall -O0 -g -I$(INCLUDE)
-  CFLAGS = -Wall -Wmissing-prototypes -Wmissing-declarations -Ofast -std=c11 -I$(INCLUDE)
+  CFLAGS = -Wall -Wmissing-prototypes -Wmissing-declarations -O1 -std=c11 -I$(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp
 
-  LDFLAGS = -L$(LIB) -lgsl -lgslcblas -lm -lprofiler
+  LDFLAGS = -L$(LIB) -lgsl -lgslcblas -lm
   exspec: override CFLAGS =  -g -Wextra -Wunused-parameter -O3 -I$(INCLUDE) -DDO_EXSPEC
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 

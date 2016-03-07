@@ -6,7 +6,7 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
 int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current);
 double closest_transition(PKT *pkt_ptr);
 
-inline
+static inline
 double min(double a, double b)
 // returns minimum of a and b
 {
