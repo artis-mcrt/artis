@@ -306,7 +306,7 @@ int input(int rank)
 
 ///****************************************************************************
 /// Subroutine to read in input parameters.
-static void read_atomicdata()
+void read_atomicdata()
 {
   ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
   int index_in_groundlevelcontestimator;
@@ -1184,14 +1184,14 @@ static void read_atomicdata()
       int nions = get_nions(element);
       for (int ion = 0; ion < nions-1; ion++)
       {
-        double epsilon_upper = epsilon(element,ion+1,0);
         int nlevels = get_bfcontinua(element,ion);
         //nlevels = get_ionisinglevels(element,ion);
         ///// The following line reduces the number of bf-continua per ion
         //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
         for (int level = 0; level < nlevels; level++)
         {
-          double E_threshold = epsilon_upper - epsilon(element,ion,level);
+          int upperlevel = get_phixsupperlevel(element,ion,level,0);
+          double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           double nu_edge = E_threshold/H;
           phixslist[itid].allcont[i].element = element;
           phixslist[itid].allcont[i].ion = ion;
@@ -1223,7 +1223,7 @@ static void read_atomicdata()
       //includedions += nions;
       for (int ion = 0; ion < nions; ion++)
       {
-        elements[element].ions[ion].first_nlte= total_nlte_levels;
+        elements[element].ions[ion].first_nlte = total_nlte_levels;
         int nlevels = get_nlevels(element,ion);
         int count = 0;
         if (nlevels > 1)
@@ -1256,7 +1256,7 @@ static void read_atomicdata()
 }
 
 
-static void read_phixs_data()
+void read_phixs_data()
 {
   printout("readin phixs data\n");
   FILE *phixsdata = fopen("phixsdata_v2.txt", "r");
@@ -1431,7 +1431,7 @@ static void read_phixs_data()
 }
 
 
-static void write_processed_modelatom()
+void write_processed_modelatom()
 {
   FILE *modelatom = fopen("modelatom.dat", "w");
   if (modelatom == NULL)
@@ -1522,7 +1522,7 @@ static void write_processed_modelatom()
 }
 
 
-static void read_processed_modelatom(FILE *modelatom)
+void read_processed_modelatom(FILE *modelatom)
 {
   int totaluptrans = 0;
   int totaldowntrans = 0;
@@ -1783,7 +1783,7 @@ static void read_processed_modelatom(FILE *modelatom)
 
 ///****************************************************************************
 /// Subroutine to read in input parameters from input.txt.
-static void read_parameterfile(int rank)
+void read_parameterfile(int rank)
 {
   //double z1, z2, x;
   double x;
@@ -2042,7 +2042,7 @@ static void read_parameterfile(int rank)
 
 ///****************************************************************************
 /// Subroutine to read in a 1-D model.
-static int read_1d_model(void)
+int read_1d_model(void)
 {
   FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
@@ -2128,7 +2128,7 @@ static int read_1d_model(void)
 
 ///****************************************************************************
 /// Subroutine to read in a 2-D model.
-static int read_2d_model(void)
+int read_2d_model(void)
 {
   FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
@@ -2216,7 +2216,7 @@ static int read_2d_model(void)
 
 ///****************************************************************************
 /// Subroutine to read in a 3-D model.
-static int read_3d_model(void)
+int read_3d_model(void)
 {
   float dum2, dum3, dum4, dum5, dum6;
   float rho_model;
@@ -2407,7 +2407,7 @@ static int read_3d_model(void)
 
 ///****************************************************************************
 /// Helper function to sort the linelist by frequency.
-static int compare_linelistentry(const void *p1, const void *p2)
+int compare_linelistentry(const void *p1, const void *p2)
 {
   linelist_entry *a1, *a2;
   a1 = (linelist_entry *)(p1);
@@ -2474,7 +2474,7 @@ int compare_linelistentry(const void *p1, const void *p2)
 
 
 ///****************************************************************************
-static int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
+int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator, int el, int in, int ll)
 /// Return the closest ground level continuum index to the given edge
 /// frequency. If the given edge frequency is redder than the reddest
 /// continuum return -1.
@@ -2542,7 +2542,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
         index = i;
       }
     }
-    *index_in_groundlevelcontestimator = element*maxion+ion;
+    *index_in_groundlevelcontestimator = element*maxion + ion;
   }
 
   return index;
