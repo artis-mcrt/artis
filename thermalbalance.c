@@ -415,10 +415,10 @@ void calculate_heating_rates(int modelgridindex)
           double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            double epsilon_upper = epsilon(element,ion+1,upper);
-            double epsilon_trans = epsilon_upper - epsilon_current;
-            bfheating += nnlevel * get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex) * epsilon_trans;
+            //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            //double epsilon_upper = epsilon(element,ion+1,upper);
+            //double epsilon_trans = epsilon_upper - epsilon_current;
+            bfheating += nnlevel * get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
           }
         }
       }
@@ -562,10 +562,10 @@ void calculate_cooling_rates(int modelgridindex)
           C = 0.0;
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            double epsilon_upper = epsilon(element,ion+1,upper);
-            double epsilon_trans = epsilon_upper - epsilon_current;
-            C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex) * epsilon_trans;
+            //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            //double epsilon_upper = epsilon(element,ion+1,upper);
+            //double epsilon_trans = epsilon_upper - epsilon_current;
+            C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
           }
           C_fb += C;
         }
@@ -574,8 +574,8 @@ void calculate_cooling_rates(int modelgridindex)
   }
 
   coolingrates[tid].collisional = C_exc + C_ion;
-  coolingrates[tid].collbb = C_exc;
-  coolingrates[tid].collbf = C_ion;
+  //coolingrates[tid].collbb = C_exc;
+  //coolingrates[tid].collbf = C_ion;
   coolingrates[tid].fb = C_fb;
   coolingrates[tid].ff = C_ff;
 }
