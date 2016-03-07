@@ -852,12 +852,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             #ifndef _OPENMP
               //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
               //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
-              fprintf(estimators_file,"timestep %d modelgridindex %d TR %g Te %g W %g TJ %g grey_depth %g\n",m,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].grey_depth);
+              fprintf(estimators_file,"timestep %d modelgridindex %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",m,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].grey_depth,get_nne(n));
               //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
               //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
               #ifdef NLTE_POPS_ON
-                fprintf(nlte_file,"timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g\n",m,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+                fprintf(nlte_file,"timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",m,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),get_nne(n));
                 for (int nlte = 0; nlte < total_nlte_levels; nlte++)
                 {
                   int element = -1;
@@ -950,8 +950,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     fprintf(estimators_file,"%g ",gammaestimator[n*nelements*maxion+element*maxion+ion]);
                   }
                 }
-                fprintf(estimators_file, "\nheating/cooling ");
-                fprintf(estimators_file,"%g %g %g %g %g %g %g %g\n",heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
+                fprintf(estimators_file, "\nheating: ff %g bf %g coll %g     gamma %g\n",heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional,heatingrates[tid].gamma);
+                fprintf(estimators_file, "cooling: ff %g fb %g coll %g adiabatic %g\n",coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
               #endif
               fprintf(estimators_file,"\n");
             #endif

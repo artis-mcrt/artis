@@ -4,7 +4,7 @@
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib
 #  CFLAGS = -Wall -O0 -g -I$(INCLUDE)
-  CFLAGS = -Wextra -Wmissing-prototypes -Wmissing-declarations -Ofast -std=c11 -I$(INCLUDE)
+  CFLAGS = -Wall -Wmissing-prototypes -Wmissing-declarations -Ofast -std=c11 -I$(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp
