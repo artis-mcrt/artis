@@ -171,6 +171,7 @@ double phi(int element, int ion, int modelgridindex)
 
       //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
       double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
+      double Alpha_sp = 0.;
       double Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
       double Col_rec = 0.;
 
@@ -190,6 +191,7 @@ double phi(int element, int ion, int modelgridindex)
           mastate[tid].level = upper;
           double epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
           Col_rec += col_recombination(modelgridindex,level,epsilon_trans);
+          //Alpha_sp += rad_recombination(modelgridindex,level,epsilon_trans) / get_nne(modelgridindex);
         }
       }
 
