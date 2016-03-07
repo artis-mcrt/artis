@@ -6,7 +6,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2);
 double sample_planck(double T);
 
-inline
+static inline
 double planck(double nu, double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
@@ -16,13 +16,13 @@ double planck(double nu, double T)
 
 double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts);
 
-inline
+static inline
 int get_coolinglistoffset(int element, int ion)
 {
   return elements[element].ions[ion].coolingoffset;
 }
 
-inline
+static inline
 int get_ncoolingterms(int element, int ion)
 {
   return elements[element].ions[ion].ncoolingterms;

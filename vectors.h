@@ -7,7 +7,7 @@ int scatter_dir(const double *dir_in, double cos_theta, double *dir_out);
 
 
 /*Routine for getting the magnitude of a vector.*/
-inline
+static inline
 double vec_len(double x[3])
 {
   return sqrt((x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]));
@@ -15,7 +15,7 @@ double vec_len(double x[3])
 
 
 /*Routine for normalizing a vector.*/
-inline
+static inline
 void vec_norm(double vec_in[3], double vec_out[3])
 {
   double magnitude = vec_len(vec_in);
@@ -27,7 +27,7 @@ void vec_norm(double vec_in[3], double vec_out[3])
 
 
 /*Routine for taking dot product.*/
-inline
+static inline
 double dot(const double *x, const double *y)
 {
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
@@ -35,7 +35,7 @@ double dot(const double *x, const double *y)
 
 
 /*Routine for getting velocity vector of the flow at a position.*/
-inline
+static inline
 void get_velocity(const double *x, double *y, double t)
 {
   /* For homologous expansion. */
@@ -46,7 +46,7 @@ void get_velocity(const double *x, double *y, double t)
 }
 
 
-inline
+static inline
 void cross_prod(double vec1[3], double vec2[3], double vecout[3])
 {
   vecout[0] = (vec1[1]*vec2[2]) - (vec2[1]*vec1[2]);
