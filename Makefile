@@ -1,5 +1,5 @@
 
-  CC = mpicc
+  CC = cc
 #  CC = gcc-5
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib
