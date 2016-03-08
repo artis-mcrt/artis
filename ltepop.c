@@ -275,7 +275,7 @@ double phi(int element, int ion, int modelgridindex)
 
       //changed July14 to include partition function to stat. weight ratio for upper ion
       // recombinations / ionizations
-      printout("[debug-luke] phi for ion %d Gamma-part %g, Y_nt %g\n",ion,(Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]),Y_nt);
+      //printout("[debug-luke] phi for ion %d Gamma-part %g, Y_nt %g\n",ion,(Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]),Y_nt);
       //Gamma = 0.0; //TODO: testing testing no gamma part
       phi = recomb_total *
           (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
