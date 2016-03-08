@@ -933,17 +933,12 @@ void read_atomicdata()
       int add = 0; /// Helper variable to count coolingterms per ion
       elements[element].ions[ion].coolingoffset = ncoolingterms;
       /// Ionised ions add one ff-cooling term
-      if (get_ionstage(element,ion) > 1) add += 1;
+      if (get_ionstage(element,ion) > 1)
+        add += 1;
       /// Ionisinglevels below the closure ion add to bf and col ionisation
       //if (ion < nions - 1) add += 2 * get_ionisinglevels(element,ion);
       if (ion < nions - 1)
-      {
-        int nbfcontinua = get_bfcontinua(element,ion);
-        for (int level = 0; level < nbfcontinua; level++)
-        {
-          add += 2 * get_nphixstargets(element,ion,level);
-        }
-      }
+        add += 2 * get_bfcontinua(element,ion);
       /// All the levels add number of col excitations
       int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
