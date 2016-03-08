@@ -1053,11 +1053,11 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
             mastate[tid].ion = ion;
             mastate[tid].level = level;
             sigma_bf = photoionization_crosssection(nu_edge,nu);
-            check = 0.0;
+            check = 0.0; //corrfactor
             for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
               int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-              nnionlevel = get_levelpop(element,ion+1,upper);
+              nnionlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
               sf = get_sahafact(element,ion,level,phixstargetindex,T_e,nu_edge*H);
               helper = nnlevel * sigma_bf * get_phixsprobability(element,ion,level,phixstargetindex);
               departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
@@ -1065,6 +1065,14 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
                 check += 0.;
               else
                 check += helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
+              if ((level == 0) && (phixstargetindex == 0))
+              {
+                gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+                corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
+                if (corrfactor < 0)
+                  corrfactor = 1;
+                phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * corrfactor * get_phixsprobability(element,ion,level,phixstargetindex);
+              }
             }
 
             if (check <= 0)
@@ -1089,18 +1097,6 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
             //check *= 2;
             phixslist[tid].allcont[i].kappa_bf_contr = check;
             kappa_bf += check;
-            if (level == 0)
-            {
-              gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
-              //groundphixslist[gphixsindex].photoion_contr = helper;
-              corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
-              if (corrfactor < 0)
-                corrfactor = 1;
-              phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * corrfactor;
-
-              //phixslist[tid].groundcont[gphixsindex].stimrecomb_contr = sf * sigma_bf;
-              //phixslist[tid].groundcont[gphixsindex].bfheating_contr = helper * nu_edge;
-            }
             #ifdef DEBUG_ON
               if (!isfinite(check))
               {
