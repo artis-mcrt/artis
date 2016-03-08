@@ -61,8 +61,17 @@ int main(int argc, char** argv)
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
 
+  #ifndef GIT_BRANCH
+    #define GIT_BRANCH "UNKNOWN"
+  #endif
+  #ifndef GIT_HASH
+    #define GIT_HASH "UNKNOWN"
+  #endif
+  printout("ARTIS git branch: '%d', hash of last commit: '%s'\n",GIT_BRANCH,GIT_HASH);
+  printout("Compiled at %s on %s\n",__TIME__,__DATE__);
+
   #ifdef _OPENMP
-    /// Explicitly turn off dynamic threads becaucse we use the threadprivate directive!!!
+    /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
     omp_set_dynamic(0);
     #pragma omp parallel private(filename)
     {

@@ -1,10 +1,13 @@
+#GIT_VERSION := $(shell git describe --abbrev=4 --dirty --always --tags)
+GIT_HASH := $(shell git rev-parse HEAD)
+GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
   CC = cc
 #  CC = gcc-5
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib
 #  CFLAGS = -Wall -O0 -g -I$(INCLUDE)
-  CFLAGS = -Wall -Wmissing-prototypes -Wmissing-declarations -O3 -std=c11 -I$(INCLUDE)
+  CFLAGS = -Wall -Wmissing-prototypes -Wmissing-declarations -O3 -std=c11 -I$(INCLUDE) -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_HASH=\"$(GIT_HASH)\"
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp
