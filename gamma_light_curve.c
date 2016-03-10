@@ -1,6 +1,8 @@
 #include "sn3d.h"
 #include "exspec.h"
 #include "gamma_light_curve.h"
+#include "vectors.h"
+#include "packet_init.h"
 
 /* This is very like "light_curve" except that it now bins in angle. */
 
