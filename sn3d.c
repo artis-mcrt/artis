@@ -107,6 +107,7 @@ int main(int argc, char** argv)
   #endif
   printout("ARTIS git branch %s\n",GIT_BRANCH);
   printout("Last commit hash: %s\n",GIT_HASH);
+  printout("(note: files could have changed since the last commit)\n");
   printout("Compiled at %s on %s\n",__TIME__,__DATE__);
 
   if ((mastate = calloc(nthreads,sizeof(mastate_t))) == NULL)
