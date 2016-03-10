@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "exspec.h"
 #include "spectrum.h"
+#include "vectors.h"
 
 /*int make_spectrum()
 /// Routine to make a MC spectrum from the packets.
