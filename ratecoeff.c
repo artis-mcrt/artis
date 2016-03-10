@@ -1029,12 +1029,12 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
   if (bfcooling < 0)
   {
     /// Interpolate bfcooling out of precalculated values
-    int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+    //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
     double T_e = get_Te(modelgridindex);
     double nnion = ionstagepop(modelgridindex,element,ion+1);
     double nne = get_nne(modelgridindex);
     //double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
-    //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel*nne;
+    //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel * nne;
     bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnion * nne;
 
     if (use_cellhist >= 0)

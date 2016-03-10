@@ -411,7 +411,7 @@ void calculate_heating_rates(int modelgridindex)
         int nlevels_currention = get_bfcontinua(element,ion);
         for (int level = 0; level < nlevels_currention; level++)
         {
-          double epsilon_current = epsilon(element,ion,level);
+          //double epsilon_current = epsilon(element,ion,level);
           double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
