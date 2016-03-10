@@ -723,16 +723,20 @@ int read_binding_energies()
 /*****************************************************************/
 double nt_ionization_rate(int modelgridindex, int element, int ion)
 {
-  double Y_nt = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;
+  double gammadeposition = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;
   // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-  Y_nt += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
-  Y_nt += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
+  double positroncobalt = (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
+  double positron48v = (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
 
-  //this is the energy deposited per unit volume per unit time in the grid cell
-  //to get the non-thermal ionization rate we need to divide this by the total ion number density and the "work per ion pair"
-  Y_nt = Y_nt / get_tot_nion(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
+  //printout("nt_ionization_rate: element: %d, ion %d\n",element,ion);
+  //printout("nt_ionization_rate: gammadep: %g, poscobalt %g pos48v %g\n",
+  //  gammadeposition,positroncobalt,positron48v);
 
-  return Y_nt;
+  // to get the non-thermal ionization rate we need to divide the energy deposited
+  // per unit volume per unit time in the grid cell (sum of terms above)
+  // by the total ion number density and the "work per ion pair"
+  return (gammadeposition + positroncobalt + positron48v) /
+    get_tot_nion(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
 }
 
 
