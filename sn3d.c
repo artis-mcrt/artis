@@ -109,12 +109,12 @@ int main(int argc, char** argv)
   printout("Last commit hash: %s\n",GIT_HASH);
   printout("Compiled at %s on %s\n",__TIME__,__DATE__);
 
-  if ((mastate = malloc(nthreads*sizeof(mastate_t))) == NULL)
+  if ((mastate = calloc(nthreads,sizeof(mastate_t))) == NULL)
   {
     printout("[fatal] input: error initializing macro atom state variables ... abort\n");
     exit(0);
   }
-  if ((kappa_rpkt_cont = malloc(nthreads*sizeof(rpkt_cont_opacity_struct))) == NULL)
+  if ((kappa_rpkt_cont = calloc(nthreads,sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     exit(0);
