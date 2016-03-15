@@ -543,6 +543,7 @@ int main(int argc, char** argv)
 
         /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
         #ifdef MPI_ON
+          int position,nlp;
           for (int n = 0; n < p; n++)
           {
             if (my_rank == n)
