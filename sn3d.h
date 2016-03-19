@@ -21,6 +21,75 @@
 #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 
+// Polarisation for real packets
+//#define DIPOLE
+//#define POL_ON
+
+// Polarisation for virtual packets
+//#define ESTIMATORS_ON
+
+
+
+// ----------------------------------------------------------------
+///Estimators Specpol (virtual packets)
+
+#define MOBS 5
+#define MRANGE 5
+#define VMNUBINS   10000
+#define VMTBINS   111
+
+
+// Input parameters
+double Nobs;
+double nz_obs_vpkt[MOBS] ;
+double phiobs[MOBS] ;
+double tmin_vspec, tmax_vspec;
+double Nrange;
+double lmin_vspec[MRANGE], lmax_vspec[MRANGE];
+double numin_vspec[MRANGE], numax_vspec[MRANGE];
+double cell_is_optically_thick_vpkt;
+double tau_max_vpkt;
+
+struct vspecpol
+{
+    double flux[VMNUBINS];
+    float lower_time;
+    float delta_t;
+} vstokes_i[VMTBINS][MOBS], vstokes_q[VMTBINS][MOBS], vstokes_u[VMTBINS][MOBS];
+
+float lower_freq_vspec[VMNUBINS];
+float delta_freq_vspec[VMNUBINS];
+
+
+int realtype ;
+/* number of virtual packets in a given timestep */
+int nvpkt ;
+/* number of escaped virtual packet in a given timestep (with tau < tau_max) */
+int nvpkt_esc1 ; /* electron scattering event */
+int nvpkt_esc2 ; /* kpkt deactivation */
+int nvpkt_esc3 ; /* macroatom deactivation */
+
+
+
+// vpkt grid
+
+#define MRANGE_GRID 5
+#define NY_VGRID 50
+#define NZ_VGRID 50
+
+struct vgrid
+{
+    double flux[MRANGE_GRID][MOBS];
+    double yvel[MRANGE_GRID][MOBS];
+    double zvel[MRANGE_GRID][MOBS];
+} vgrid_i[NY_VGRID][NZ_VGRID], vgrid_q[NY_VGRID][NZ_VGRID], vgrid_u[NY_VGRID][NZ_VGRID];
+
+double Nrange_grid, tmin_grid, tmax_grid, nu_grid_min[MRANGE_GRID], nu_grid_max[MRANGE_GRID] ;
+int vgrid_flag;
+
+
+// ----------------------------------------------------------------
+
 //#define HUGEE 2000018
 //#define HUGEE 50000
 //double buffer[HUGEE];
@@ -86,6 +155,7 @@ double E48V;
 #define E52FE (0.86*MEV)
 #define E52MN (3.415*MEV)
 
+/* mean lifetimes */
 #define TNICKEL (8.80*DAY)
 #define TCOBALT (113.7*DAY)
 #define T48CR   (1.29602*DAY)

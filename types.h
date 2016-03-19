@@ -167,6 +167,7 @@ struct packet
   int em_time;
   double absorptiondir[3]; /// Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a unit vector.
   //short timestep;
+  double stokes[3]; //I, Q and U Stokes parameters TODO: DELETE AFTER MERGE Polarisation
   double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
 };
@@ -183,6 +184,7 @@ typedef struct
                             /// It holds information about the lower level of the bb-transition.
   int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
   int lastaction;           /// Holds information on last action performed by do_ma
+  double einstein;
 } mastate_t;
 //mastate_t mastate;
 

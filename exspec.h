@@ -45,6 +45,18 @@ struct lc
 double dlogtlc;
 double dlogtlc_angle;
 
+///Specpol
+
+struct specpol
+{
+    float lower_freq[MNUBINS];
+    float delta_freq[MNUBINS];
+    double flux[MNUBINS];
+    float lower_time;
+    float delta_t;
+    emstat_t stat[MNUBINS];
+} stokes_i[MTBINS], stokes_q[MTBINS], stokes_u[MTBINS];
+
 typedef struct
 {
   double dir[3];  /// Direction of propagation. (x,y,z). Always a unit vector.
@@ -58,6 +70,7 @@ typedef struct
   double absorptionfreq;   /// records how the packet was emitted if it is a r-pkt
   double em_pos[3]; /// Position of the packet (x,y,z) at last emission process
   int em_time;
+  double stokes[3];
 } EPKT;
 EPKT *epkts;
 
