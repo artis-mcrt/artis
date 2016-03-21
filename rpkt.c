@@ -1387,7 +1387,7 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
                             //phixslist[tid].groundcont[gphixsindex].bfheating_contr = helper * nu_edge;
                         }
                         #ifdef DEBUG_ON
-                        if (!finite(check))
+                        if (!isfinite(check))
                         {
                             printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",check);
                             printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
@@ -1491,7 +1491,7 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
 
 
     #ifdef DEBUG_ON
-    if (!finite(kappa_rpkt_cont[tid].total))
+    if (!isfinite(kappa_rpkt_cont[tid].total))
     {
         printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
         printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont[tid].es,kappa_rpkt_cont[tid].ff,kappa_rpkt_cont[tid].bf);

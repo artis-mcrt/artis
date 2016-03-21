@@ -397,11 +397,11 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
         if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) rot_angle = (acos(-1.) - acos(fabs(Q0 / p))) / 2. ;
         if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) rot_angle = (acos(-1.) + acos(fabs(Q0 / p))) / 2. ;
         if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) rot_angle = (2. * acos(-1.) - acos(fabs(Q0 / p))) / 2. ;
-        if ((cos2rot_angle == 0)) {
+        if (cos2rot_angle == 0) {
             rot_angle = 0.25 * acos(-1);
             if (U0 < 0) rot_angle = 0.75 * acos(-1);
         }
-        if ((sin2rot_angle == 0)) {
+        if (sin2rot_angle == 0) {
             rot_angle = 0.0;
             if (Q0 < 0) rot_angle = 0.5 * acos(-1);
 
