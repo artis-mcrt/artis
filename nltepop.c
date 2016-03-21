@@ -725,8 +725,12 @@ double nt_ionization_rate(int modelgridindex, int element, int ion)
 {
   double gammadeposition = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;
   // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-  double positroncobalt = (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
-  double positron48v = (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
+  double positroncobalt = (0.610*0.19*MEV) *
+      (exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL)) /
+      (TCOBALT-TNICKEL) * modelgrid[modelgridindex].fni * get_rho(modelgridindex) / MNI56;
+  double positron48v = (0.290*0.499*MEV) *
+      (exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR)) /
+      (T48V-T48CR) * modelgrid[modelgridindex].f48cr * get_rho(modelgridindex) / MCR48;
 
   //printout("nt_ionization_rate: element: %d, ion %d\n",element,ion);
   //printout("nt_ionization_rate: gammadep: %g, poscobalt %g pos48v %g\n",
