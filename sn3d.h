@@ -430,7 +430,7 @@ double J[MMODELGRID+1];
 
 int do_comp_est; /* 1 = compute compton emissivity estimators. 0 = don't */
 int do_r_lc;     /* If not set to 1 then the opacity for r-packets is 0. */
-int do_rlc_est;  /* 1= compute estimators for the r-pkt light curve.
+int do_rlc_est;  /* 1 = compute estimators for the r-pkt light curve.
                     2 = compute estimators with opacity weights
                     3 = compute estimators, but use only for gamma-heating rate */
 

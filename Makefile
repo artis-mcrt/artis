@@ -50,8 +50,8 @@ endif
 ### Settings for mime
 ifeq ($(HOST),mime)
   CC = mpicc
-  CFLAGS = -O3 -m64 -DMPI_ON 
-  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -m64  
+  CFLAGS = -O3 -m64 -DMPI_ON
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -m64
 #-pthread -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
@@ -62,14 +62,14 @@ endif
 ### Settings for vayu
 ifeq ($(USER),sas120)
 
-#needs 
+#needs
 #module load intel-cc/11.1.046
 #module load openmpi/1.4.3
 #module load gsl/1.12
 
   CC = mpicc
   CFLAGS = -O3 -DMPI_ON -DTIMED_RESTARTS
-  LDFLAGS= -lgsl -lgslcblas -lm 
+  LDFLAGS= -lgsl -lgslcblas -lm
   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
 endif
@@ -80,10 +80,10 @@ ifeq ($(USER),lukesignorethis)
   CC = cc
 
   CFLAGS = -O0 -I/usr/local/opt/gsl/include/ -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error -ftrap-function=abort -g
-#-DMPI_ON 
+#-DMPI_ON
   LDFLAGS= -lgsl -lgslcblas -lm -L/usr/local/opt/gsl/lib/
 
-  exspec: override CFLAGS =  -O3  -DDO_EXSPEC 
+  exspec: override CFLAGS =  -O3  -DDO_EXSPEC
   exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
   exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
 
@@ -93,7 +93,7 @@ endif
 
 
 ### Settings for MPA machines
-ifeq ($(DOMAIN),MPA-Garching.MPG.DE) 
+ifeq ($(DOMAIN),MPA-Garching.MPG.DE)
   #CC = gcc
   CC    = /afs/rzg/@sys/bin/icc
   INCLUDE=/afs/mpa/project/artis/code/lib/gsl32/include/
@@ -126,7 +126,7 @@ endif
 ifeq ($(OSTYPE),aix)
   #
   #ifeq ($(HOSTTYPE),rs6000)
-  CC = mpcc_r 
+  CC = mpcc_r
   #INCLUDE=/u/mkromer/lib/regatta64/include
   #LIB=/u/mkromer/lib/regatta64/lib
 #  INCLUDE=/u/mkromer/lib/power6_xlc_32_o3/include
@@ -139,7 +139,7 @@ ifeq ($(OSTYPE),aix)
   CFLAGS = -O3 -g -I$(INCLUDE) -q64 -qstrict -qcpluscmt -DMPI_ON #-DPOWER6
   CFLAGS = -O3 -g -I$(INCLUDE) -qsmp -q64 -qstrict -qcpluscmt -DMPI_ON #-DPOWER6
 #  CFLAGS = -O3 -g -I$(INCLUDE) -qstrict -qcpluscmt -bmaxdata:0x80000000 -DMPI_ON #-DPOWER6
-  #CFLAGS = -O3 -g -I$(INCLUDE) -qsmp -q64 -qstrict -qcpluscmt 
+  #CFLAGS = -O3 -g -I$(INCLUDE) -qsmp -q64 -qstrict -qcpluscmt
   #CFLAGS = -O3 -g -I$(INCLUDE) -q64 -qstrict -qcpluscmt -bmaxdata:0x160000000 -bmaxstack:0x160000000
   LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
   exspec: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt -DMPI_ON -DDO_EXSPEC
@@ -151,7 +151,7 @@ endif
 ### Settings for the OPA cluster
 ifeq ($(DOMAIN),opt.rzg.mpg.de)
   CC    = mpiicc
-  #this requires a 
+  #this requires a
   #  module load intel
   #  module load impi
   #  module load gsl
@@ -220,37 +220,30 @@ endif
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
 
 
-sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o nltepop.o
+sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o nltepop.o specpol.o vpkt.o
 
-sn3d: $(sn3d_objects) 
+sn3d: $(sn3d_objects)
 	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 exspec_objects = exspec.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o
 
-exspec: $(exspec_objects) 
+exspec: $(exspec_objects)
 	$(CC) $(CFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 
 exgamma_objects = exgamma.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o
 
-exgamma: $(exgamma_objects) 
+exgamma: $(exgamma_objects)
 	$(CC) $(CFLAGS) $(exgamma_objects) $(LDFLAGS) -o exgamma
 
 sn3dsyn_objects = sn3dsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o
 
-sn3dsyn: $(sn3dsyn_objects) 
+sn3dsyn: $(sn3dsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dsyn_objects) $(LDFLAGS) -o sn3dsyn
 
 sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o
 
-sn3dlcsyn: $(sn3dlcsyn_objects) 
+sn3dlcsyn: $(sn3dlcsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
 
 clean:
 	rm *.o sn3d exspec exgamma
-
-
-
-
-
-
-

@@ -635,9 +635,11 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
-  double test;
 
+  #ifdef NLTE_POPS_ON
+  double test;
   int nlte_levels;
+  #endif
 
   //  T_exc = MINTEMP;
 
