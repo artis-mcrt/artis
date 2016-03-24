@@ -301,7 +301,7 @@ int add_to_specpol_res(EPKT *pkt_ptr, int current_abin)
   */
 
   double t_arrive,deltai,deltaq,deltau;
-  int i, nt, nnu, na;
+  int nt, nnu, na;
   int thetabin, phibin;
   double vec1[3], vec2[3], vec3[3], xhat[3];
   double costheta, cosphi, testphi;

@@ -636,10 +636,10 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   double T_exc = get_TJ(modelgridindex);
   double W = 1.;
 
-  #ifdef NLTE_POPS_ON
+#ifdef NLTE_POPS_ON
   double test;
   int nlte_levels;
-  #endif
+#endif
 
   //  T_exc = MINTEMP;
 
@@ -680,7 +680,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       nn = test * modelgrid[modelgridindex].rho;
       if (!isfinite(nn))
       {
-
         printout("[fatal] NLTE population failure.\n");
         printout("element %d ion %d level %d\n", element, ion, level);
         printout("nn %g test %g rho %g\n", nn, test, modelgrid[modelgridindex].rho);

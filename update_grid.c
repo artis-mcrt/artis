@@ -899,9 +899,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     fprintf(nlte_file,"nlte_index %d element %d ion_stage %d level %d energy %g nnlevel %g nlte_pop %g nnlevellte %g\n",nlte,element,ion+1,level,E_level-E_ground,nnlevel,modelgrid[n].nlte_pops[nlte],nnlevellte);
                 }
                 fprintf(nlte_file,"\n");
-                //        printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+                //printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
 
-                      //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+                //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
                 for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
                 {
                   int nions = get_nions(dummy_element);

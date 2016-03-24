@@ -2,7 +2,7 @@
 #include "atomic.h"
 
 ///***************************************************************************/
-/// Alll the following deals with photoionisation cross-sections
+/// All the following deals with photoionisation cross-sections
 /// Old version with only Kramers-like cross-sections,
 /// and different versions of readin from a lookup table
 /// The current active version is split into subfunctions for profiling
