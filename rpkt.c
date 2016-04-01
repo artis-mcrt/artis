@@ -1232,7 +1232,8 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
 void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
 {
     double vel_vec[3];
-    double sigma,kappa_bf,kappa_ff,kappa_ffheating;//,kappa_bfheating;
+    double sigma;
+    double kappa_ffheating = 0.;//,kappa_bfheating;
     double nne,T_e,T_R,nu;
     double g_ff,g_bf;
     double nnion,nnionlevel,nnlevel,departure_ratio;
@@ -1250,15 +1251,13 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
 
     double bef;
 
-    kappa_ff = 0.;
-    kappa_bf = 0.;
+    double kappa_ff = 0.;
+    double kappa_bf = 0.;
 
     int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
     if (do_r_lc == 1)
     {
-
-
         if (opacity_case == 4)
         {
             nne = get_nne(modelgridindex);
@@ -1281,10 +1280,10 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
             /// Estimator for bound-free heating
             kappa_ffheating = 0.;
             //kappa_bfheating = 0.;
-            for (element=0; element < nelements; element++)
+            for (element = 0; element < nelements; element++)
             {
                 nions = get_nions(element);
-                for (ion=0; ion < nions; ion++)
+                for (ion = 0; ion < nions; ion++)
                 {
                     ///calculate population of ionstage ...
                     nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
@@ -1445,10 +1444,10 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
 
             /// Second contribution: free-free absorption
             kappa_ff = 0.;
-            for (element=0; element < nelements; element++)
+            for (element = 0; element < nelements; element++)
             {
                 nions = get_nions(element);
-                for (ion=0; ion < nions; ion++)
+                for (ion = 0; ion < nions; ion++)
                 {
                     ///calculate population of ionstage ...
                     nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
