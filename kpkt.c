@@ -755,7 +755,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
         intparas.T = T_e;
         intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
         F_bfcooling.params = &intparas;
-        double deltanu = nu_threshold * NPHIXSNUINCREMENT / 2.0;
+        double deltanu = nu_threshold * NPHIXSNUINCREMENT * 0.9;
         double nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
         gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &total_bfcooling_coeff, &error);
         bfcooling_coeff = total_bfcooling_coeff;

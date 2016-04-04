@@ -50,7 +50,7 @@ int get_ionstage(int element, int ion)
 static inline
 int get_nlevels(int element, int ion)
 /// Returns the number of levels associated with with a specific ion given
-/// ist elementindex and ionindex.
+/// its elementindex and ionindex.
 {
   return elements[element].ions[ion].nlevels;
 }
@@ -58,7 +58,7 @@ int get_nlevels(int element, int ion)
 static inline
 int get_nlevels_nlte(int element, int ion)
 /// Returns the number of levels associated with with a specific ion given
-/// ist elementindex and ionindex.
+/// its elementindex and ionindex.
 {
   return elements[element].ions[ion].nlevels_nlte;
 }
@@ -66,7 +66,7 @@ int get_nlevels_nlte(int element, int ion)
 
 static inline
 int get_ionisinglevels(int element, int ion)
-/// Returns the number of levels associated with ion ion of element element which
+/// Returns the number of levels associated with an ion that
 /// have energies below the ionisation threshold.
 {
   return elements[element].ions[ion].ionisinglevels;
@@ -109,7 +109,7 @@ int get_bfcontinua(int element, int ion)
 
 static inline
 short is_nlte(int element, int ion, int level)
-/// Returns 1 if (element,ion,level) is to be treated in nlte.
+/// Returns 1 if (element,ion,level) is to be treated in nlte. (note this function gives 1 for the ground state)
 {
   if (level < 11) //TODO: change back to 201
     elements[element].ions[ion].levels[level].is_nlte = 1;

@@ -936,14 +936,16 @@ void read_atomicdata()
       if (get_ionstage(element,ion) > 1)
         add += 1;
       /// Ionisinglevels below the closure ion add to bf and col ionisation
-      //if (ion < nions - 1) add += 2 * get_ionisinglevels(element,ion);
       if (ion < nions - 1)
+      //  add += 2 * get_ionisinglevels(element,ion);
         add += 2 * get_bfcontinua(element,ion);
       /// All the levels add number of col excitations
       int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
         add += elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        //if (ion < nions - 1) and (level < get_ionisinglevels(element,ion))
+        //  add += get_nphixstargets(element,ion,level)
       }
       elements[element].ions[ion].ncoolingterms = add;
       ncoolingterms += add;
