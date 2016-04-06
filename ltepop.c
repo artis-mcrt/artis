@@ -156,6 +156,11 @@ double phi(int element, int ion, int modelgridindex)
        phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
     }
     else
+#ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+    {
+      phi = ionstagepop(modelgridindex,element,ion+1) / ionstagepop(modelgridindex,element,ion);
+    }
+#else
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
       double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]; //try setting to zero
@@ -209,9 +214,9 @@ double phi(int element, int ion, int modelgridindex)
       int nlevels = get_nlevels(element,ion);
       double run_tot=0.0;
       for (level = 0; level < nlevels; level++)
-	{
-	  run_tot += calculate_exclevelpop(modelgridindex,element,ion,level);
-	}
+      {
+        run_tot += calculate_exclevelpop(modelgridindex,element,ion,level);
+      }
       Y_nt = Y_nt * run_tot/get_groundlevelpop(modelgridindex, element, ion);
       */
 
@@ -279,7 +284,8 @@ double phi(int element, int ion, int modelgridindex)
       //Gamma = 0.0; //TODO: testing testing no gamma part
       phi = recomb_total *
           (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
-            / ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
+            /// ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
+            / Y_nt;
             //Y_nt should be higher than the Gamma term for nebular epoch
 
       //phi = (Alpha_sp+Alpha_st)/(Y_nt);
@@ -300,6 +306,7 @@ double phi(int element, int ion, int modelgridindex)
       }
     }
   #endif
+#endif //ALL IONS SIMULTANEOUS
 
   return phi;
 }
@@ -613,7 +620,6 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
   }
 
   #ifdef DEBUG_ON
-    double ionstagepop(int modelgridindex, int element, int ion);
     if (!isfinite(nn))
     {
       printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
@@ -625,10 +631,37 @@ double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int l
   return nn;
 }
 
+
+double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
+/// Calculates occupation population of a level assuming LTE excitation
+{
+  double nn;
+
+  double T_exc = get_TJ(modelgridindex);
+  double W = 1.;
+
+  double E_level = epsilon(element,ion,level);
+  double E_ground = epsilon(element,ion,0);
+  nn = get_groundlevelpop(modelgridindex,element,ion) * W *
+       stat_weight(element,ion,level) / stat_weight(element,ion,0) *
+       exp(-(E_level-E_ground)/KB/T_exc);
+
+  if (nn < MINPOP)
+  {
+    if (get_abundance(modelgridindex,element) > 0)
+      nn = MINPOP;
+    else
+      nn = 0.;
+  }
+
+  return nn;
+}
+
+
 ///***************************************************************************/
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
-/// Calculates occupation number of level relative to the ions ground level population
-/// using a modified version of the Boltzmann formula, which fulfills the diluted BB
+/// Calculates the population of a level
+/// (if in LTE mode) using a modified version of the Boltzmann formula, which fulfills the diluted BB
 /// approximation (or nebular approximation).
 {
   double nn;
@@ -697,12 +730,14 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       /* Case for when no NLTE level information is available yet */
       double E_level = epsilon(element,ion,level);
       double E_ground = epsilon(element,ion,0);
-      nn = get_groundlevelpop(modelgridindex,element,ion) * W * stat_weight(element,ion,level)/stat_weight(element,ion,0) * exp(-(E_level-E_ground)/KB/T_exc);
+      nn = get_groundlevelpop(modelgridindex,element,ion) * W *
+           stat_weight(element,ion,level)/stat_weight(element,ion,0) *
+           exp(-(E_level-E_ground)/KB/T_exc);
     }
     else
     {
       //printout("Using a superlevel population!\n");
-      nn = test * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level);
+      nn = test * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level); //TOOD: fix
       if (!isfinite(nn))
       {
         printout("[fatal] NLTE population failure.\n");

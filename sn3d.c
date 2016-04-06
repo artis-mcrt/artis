@@ -236,15 +236,15 @@ int main(int argc, char** argv)
     }
     setvbuf(linestat_file, NULL, _IOLBF, 1);
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
-    fprintf(linestat_file,"\n");
+      fprintf(linestat_file,"\n");
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
-    fprintf(linestat_file,"\n");
+      fprintf(linestat_file,"\n");
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
-    fprintf(linestat_file,"\n");
+      fprintf(linestat_file,"\n");
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
-    fprintf(linestat_file,"\n");
+      fprintf(linestat_file,"\n");
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
-    fprintf(linestat_file,"\n");
+      fprintf(linestat_file,"\n");
   }
 
   printout("time after input %d\n",time(NULL));

@@ -1497,7 +1497,7 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
         printout("[fatal] nbfcontinua %d\n",nbfcontinua);
         printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
         printout("[fatal] pkt_ptr->nu_cmf %g, T_e %g, nne %g\n",pkt_ptr->nu_cmf,T_e,nne);
-        if (finite(kappa_rpkt_cont[tid].es))
+        if (isfinite(kappa_rpkt_cont[tid].es))
         {
             kappa_rpkt_cont[tid].ff = 0.;
             kappa_rpkt_cont[tid].bf = 0.;

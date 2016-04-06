@@ -330,7 +330,6 @@ void read_atomicdata()
   {
     /// No preprocessed model atom available ==> do that now
 
-
     ///open atomic data file
     FILE *compositiondata;
     if ((compositiondata = fopen("compositiondata.txt", "r")) == NULL)
@@ -1244,7 +1243,7 @@ void read_atomicdata()
 
         elements[element].ions[ion].nlevels_nlte = count;
 
-        printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element), get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
+        printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element),get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
       }
     }
   #endif

@@ -218,7 +218,11 @@ double find_T_e(double T_e, void *paras)
   /// Set new T_e guess for the current cell and update populations
   //cell[cellnumber].T_e = T_e;
   set_Te(modelgridindex,T_e);
-  nntot = calculate_populations(modelgridindex,0);
+  #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+    nntot = calculate_electron_densities(modelgridindex);
+  #else
+    nntot = calculate_populations(modelgridindex,0);
+  #endif
 
   /// Then calculate heating and cooling rates
   calculate_cooling_rates(modelgridindex);
@@ -330,7 +334,7 @@ void calculate_heating_rates(int modelgridindex)
            double statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
            int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
            double epsilon_trans = epsilon_current - epsilon_target;
-           double C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex) * epsilon_trans;
+           double C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex) * epsilon_trans;
            C_deexc += C;
          }
        }

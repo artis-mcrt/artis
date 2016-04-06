@@ -315,7 +315,7 @@ void calculate_ion_alpha_sp()
         elements[element].ions[ion].Alpha_sp[iter] = zeta;
 //        zeta = interpolate_spontrecombcoeff(element,ion,0,T_e) / zeta;
 //        elements[element].ions[ion].zeta[iter] = zeta;
-        printout("Alpha result: element %d ion %d temperature %g Alpha %g\n",element,ion,T_e,zeta);
+        //printout("Alpha result: element %d ion %d temperature %g Alpha %g\n",element,ion,T_e,zeta);
       }
     }
   }

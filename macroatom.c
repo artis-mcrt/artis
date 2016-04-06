@@ -149,8 +149,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         epsilon_trans = epsilon_current - epsilon_target;
-        R = rad_deexcitation(pkt_ptr,lower,epsilon_trans,statweight_target,lineindex,t_mid);
-        C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex);
+        R = rad_deexcitation(pkt_ptr,lower,epsilon_trans,lineindex,t_mid);
+        C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
 
         individ_rad_deexc = R * epsilon_trans;
         individ_col_deexc = C * epsilon_trans;
@@ -782,8 +782,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
-          R = rad_deexcitation(pkt_ptr,lower,epsilon_trans,statweight_target,lineindex,t_mid);
-          C = col_deexcitation(modelgridindex,lower,epsilon_trans,statweight_target,lineindex);
+          R = rad_deexcitation(pkt_ptr,lower,epsilon_trans,lineindex,t_mid);
+          C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
           printout("[debug]    deexcitation to level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",lower,epsilon_target,epsilon_trans,R,C);
         }
 
@@ -837,8 +837,9 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
 
 /// Calculation of radiative rates ///////////////////////////////////////////////////////
+
 ///****************************************************************************
-double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double statweight_target, int lineindex, double t_current)
+double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, int lineindex, double t_current)
 ///radiative deexcitation rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
@@ -858,6 +859,8 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
     }
   #endif
 
+  double statweight_target = statw_down(lineindex);
+
   double nu_trans = epsilon_trans/H;
   //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
   double A_ul = einstein_spontaneous_emission(lineindex);
@@ -871,7 +874,7 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
   //n_l = n_u/W / g_ratio * exp(epsilon_trans/KB/T_R);
-  double tau_sobolev = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
+  double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
   #ifdef DEBUG_ON
     if (tau_sobolev <= 0)
@@ -911,7 +914,7 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
 
 
 ///***************************************************************************/
-double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double statweight_target, int lineindex, double t_current)//, double T_R, double W)
+double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, int lineindex, double t_current)//, double T_R, double W)
 ///radiative excitation rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
@@ -931,11 +934,13 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
     }
   #endif
 
+  double statweight_target = statw_up(lineindex);
+
   double nu_trans = epsilon_trans/H;
   //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
   double A_ul = einstein_spontaneous_emission(lineindex);
   double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
-  double B_lu = statweight_target/mastate[tid].statweight * B_ul;
+  double B_lu = statweight_target / mastate[tid].statweight * B_ul;
   //double g_ratio = statweight_target/mastate[tid].statweight;
   //B_lu = g_ratio * B_ul;
 
@@ -944,7 +949,7 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
   //n_u = n_l * W * g_ratio * exp(-epsilon_trans/KB/T_R);
-  double tau_sobolev = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
+  double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
   if (tau_sobolev <= 0)
   {
@@ -1055,8 +1060,94 @@ double photoionization(int modelgridindex, int phixstargetindex, double epsilon_
 
 /// Calculation of collisional rates /////////////////////////////////////////////////////
 ///***************************************************************************/
-double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans)
+double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex)
+/// collisional deexcitation rate: paperII 3.5.1
+{
+  double C;
+  double g_bar,test,Gamma,g_ratio;
+
+  double n_u = mastate[tid].nnlevel;
+
+  #ifdef DEBUG_ON
+    int upper = mastate[tid].level;
+    if (upper <= lower)
+    {
+      printout("[fatal] col_deexcitation: tried to calculate upward transition ... abort");
+      abort();
+    }
+  #endif
+
+  double T_e = get_Te(modelgridindex);
+  double fac1 = epsilon_trans/KB/T_e;
+  double nne = get_nne(modelgridindex);
+  double statweight_target = statw_down(lineindex);
+
+  if (coll_str(lineindex) > 0.0) //positive values are treated as effective collision strengths
+  {
+    //from Osterbrock and Ferland, p51
+    //mastate[tid].statweight is UPPER LEVEL stat weight
+    //statweight_target is LOWER LEVEL stat weight
+    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) / mastate[tid].statweight;
+    // test test
+    //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+  }
+  else if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
+  {
+    ///permitted E1 electric dipole transitions
+    ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
+    ///Rutten script eq. 3.33. p.50
+    //f = osc_strength(element,ion,upper,lower);
+    //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
+
+    ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+    g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+    //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+    /// crude approximation to the already crude Van-Regemorter formula
+    test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+    if (g_bar >= test)
+      Gamma = g_bar;
+    else
+      Gamma = test;
+    g_ratio = statweight_target/mastate[tid].statweight;
+    //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+    C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+    //C = 0.0; //TESTING ONLY DELETE THIS
+  }
+  else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
+  {
+    //forbidden transitions: magnetic dipole, electric quadropole...
+    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+  }
+  else
+  {
+    C = 0.0;
+  }
+
+  #ifdef DEBUG_ON
+    int element = mastate[tid].element;
+    int ion = mastate[tid].ion;
+    if (debuglevel == 2)
+    {
+      printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
+      printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
+    }
+    if (debuglevel == 777)
+    printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
+    //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
+    if (!isfinite(C))
+    {
+      printout("fatal a7: abort\n");
+      abort();
+    }
+  #endif
+
+  return C;
+}
+
+
+///***************************************************************************/
 /// collisional excitation rate: paperII 3.5.1
+double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans)
 {
   //double osc_strength(int element, int ion, int upper, int lower);
   double C;
@@ -1139,140 +1230,6 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 
 
 ///***************************************************************************/
-double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
-/// collisional ionization rate: paperII 3.5.1
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int lower = mastate[tid].level;
-  double n_l = mastate[tid].nnlevel;
-
-  if (phixstargetindex > get_nphixstargets(element,ion,lower))
-  {
-    printout("[fatal] col_ionization called with phixstargetindex %g > nphixstargets %g",phixstargetindex,get_nphixstargets(element,ion,lower));
-    abort();
-  }
-
-  double T_e = get_Te(modelgridindex);
-  double nne = get_nne(modelgridindex);
-
-  double nu_lower = epsilon_trans/H;
-  double fac1 = epsilon_trans/KB/T_e;
-
-  ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
-  ///select gaunt factor according to ionic charge
-  double g;
-  int ionstage = get_ionstage(element,ion);
-  if (ionstage == 1)
-    g = 0.1;
-  else if (ionstage == 2)
-    g = 0.2;
-  else
-    g = 0.3;
-
-  double sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion,lower,phixstargetindex);
-  double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
-
-  #ifdef DEBUG_ON
-    if (debuglevel == 777)
-    printout("[debug] col_ion: n_l %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_l, nne,T_e,g,epsilon_trans,photoionization_crosssection(nu_lower, nu_lower));
-    if (!isfinite(C))
-    {
-      printout("fatal a6: abort\n");
-      abort();
-    }
-  #endif
-
-  return C;
-}
-
-
-///***************************************************************************/
-double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, double statweight_target, int lineindex)
-/// collisional deexcitation rate: paperII 3.5.1
-{
-  double C;
-  double g_bar,test,Gamma,g_ratio;
-
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int upper = mastate[tid].level;
-  double n_u = mastate[tid].nnlevel;
-
-  #ifdef DEBUG_ON
-    if (upper <= lower)
-    {
-      printout("[fatal] col_deexcitation: tried to calculate upward transition ... abort");
-      abort();
-    }
-  #endif
-
-  double T_e = get_Te(modelgridindex);
-  double fac1 = epsilon_trans/KB/T_e;
-  double nne = get_nne(modelgridindex);
-
-  if (coll_str(lineindex) > 0.0) //positive values are treated as effective collision strengths
-  {
-    //from Osterbrock and Ferland, p51
-    //mastate[tid].statweight is UPPER LEVEL stat weight
-    //statweight_target is LOWER LEVEL stat weight
-    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) / mastate[tid].statweight;
-    // test test
-    //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-  }
-  else if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
-  {
-    ///permitted E1 electric dipole transitions
-    ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
-    ///Rutten script eq. 3.33. p.50
-    //f = osc_strength(element,ion,upper,lower);
-    //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-
-    ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-    g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-    //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-    /// crude approximation to the already crude Van-Regemorter formula
-    test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-    if (g_bar >= test)
-      Gamma = g_bar;
-    else
-      Gamma = test;
-    g_ratio = statweight_target/mastate[tid].statweight;
-    //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-    C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-    //C = 0.0; //TESTING ONLY DELETE THIS
-  }
-  else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
-  {
-    //forbidden transitions: magnetic dipole, electric quadropole...
-    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-  }
-  else
-  {
-    C = 0.0;
-  }
-
-  #ifdef DEBUG_ON
-    if (debuglevel == 2)
-    {
-      printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-      printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
-    }
-    if (debuglevel == 777)
-    printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
-    //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
-    if (!isfinite(C))
-    {
-      printout("fatal a7: abort\n");
-      abort();
-    }
-  #endif
-
-  return C;
-}
-
-
-///***************************************************************************/
 /// collisional recombination rate: paperII 3.5.1
 double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 {
@@ -1330,5 +1287,54 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
       break;
     }
   }
+  return C;
+}
+
+
+///***************************************************************************/
+/// collisional ionization rate: paperII 3.5.1
+double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
+{
+  int element = mastate[tid].element;
+  int ion = mastate[tid].ion;
+  int lower = mastate[tid].level;
+  double n_l = mastate[tid].nnlevel;
+
+  if (phixstargetindex > get_nphixstargets(element,ion,lower))
+  {
+    printout("[fatal] col_ionization called with phixstargetindex %g > nphixstargets %g",phixstargetindex,get_nphixstargets(element,ion,lower));
+    abort();
+  }
+
+  double T_e = get_Te(modelgridindex);
+  double nne = get_nne(modelgridindex);
+
+  double nu_lower = epsilon_trans/H;
+  double fac1 = epsilon_trans/KB/T_e;
+
+  ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
+  ///select gaunt factor according to ionic charge
+  double g;
+  int ionstage = get_ionstage(element,ion);
+  if (ionstage == 1)
+    g = 0.1;
+  else if (ionstage == 2)
+    g = 0.2;
+  else
+    g = 0.3;
+
+  double sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion,lower,phixstargetindex);
+  double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
+
+  #ifdef DEBUG_ON
+    if (debuglevel == 777)
+    printout("[debug] col_ion: n_l %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_l, nne,T_e,g,epsilon_trans,photoionization_crosssection(nu_lower, nu_lower));
+    if (!isfinite(C))
+    {
+      printout("fatal a6: abort\n");
+      abort();
+    }
+  #endif
+
   return C;
 }

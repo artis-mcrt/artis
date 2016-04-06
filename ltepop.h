@@ -10,6 +10,7 @@ double calculate_partfunct_old(int element, int ion, int modelgridindex);
 double calculate_partfunct(int element, int ion, int modelgridindex);
 double get_groundlevelpop(int modelgridindex, int element, int ion);
 double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level);
+double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 
 static inline
@@ -17,7 +18,8 @@ double ionstagepop(int modelgridindex, int element, int ion)
 /// Calculates the given ionstages total population in nebular approximation for modelgridindex
 /// The precalculated ground level population and partition function are used.
 {
-  return get_groundlevelpop(modelgridindex,element,ion) * modelgrid[modelgridindex].composition[element].partfunct[ion] / stat_weight(element,ion,0);
+  return get_groundlevelpop(modelgridindex,element,ion) * modelgrid[modelgridindex].composition[element].partfunct[ion]
+          / stat_weight(element,ion,0);
 }
 
 void calculate_levelpops(int modelgridindex);

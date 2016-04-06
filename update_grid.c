@@ -734,32 +734,38 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       }
                       //T_e = T_J;
                       set_Te(n,T_e);
+                      set_Te(n,3000); //TODO: remove
 
-                      /// Store population values to the grid
-                      nntot = calculate_populations(n,0);
-                      //calculate_cooling_rates(n);
-                      //calculate_heating_rates(n);
-                      nne = get_nne(n);
+                      #ifndef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+                        /// Store population values to the grid
+                        nntot = calculate_populations(n);
+                        //calculate_cooling_rates(n);
+                        //calculate_heating_rates(n);
+                      #endif
 
                       #ifdef NLTE_POPS_ON
                           ///NEW NLTE CALL HERE FOR NOW
                           nlte_test = 0.0;
                           for (int element = 0; element < nelements; element++)
                           {
-                            int nions = get_nions(element);
-                            for (int ion = 0; ion < nions-1; ion++)
-                            {
-                              double trial = nlte_pops(element, ion, n, m);
-                              if ((trial < 1.0) && (trial > 0.0))
+                            #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+                              nlte_pops_element(element, n, m);
+                            #else
+                              int nions = get_nions(element);
+                              for (int ion = 0; ion < nions-1; ion++)
                               {
-                                trial = 1./trial;
+                                double trial = nlte_pops(element, ion, n, m);
+                                if ((trial < 1.0) && (trial > 0.0))
+                                {
+                                  trial = 1./trial;
+                                }
+                                if (trial > nlte_test)
+                                {
+                                  nlte_test = trial;
+                                }
+                                //printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
                               }
-                              if (trial > nlte_test)
-                              {
-                                nlte_test = trial;
-                              }
-                              //printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
-                            }
+                            #endif
                           }
                           printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, m, nlte_test);
                           if (nlte_iter > NLTEITER)
@@ -767,9 +773,19 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                             printout("NLTE solver failed to converge after %d iterations. Test %g.\n", NLTEITER, nlte_test);
                             nlte_test = 0.0;
                           }
+                          nne = get_nne(n);
+                          #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+                            precalculate_partfuncts(n);
+                            nntot = calculate_electron_densities(n); //sets nne
+                            nlte_test = get_nne(n) / nne;
+                            if (nlte_test < 1)
+                              nlte_test = 1. / nlte_test;
+                            printout("iterate? old nne is %g, new nne is %g, accuracy is %g",nne,get_nne(n),nlte_test);
+                            set_nne(n, (get_nne(n) + nne) / 2.);
+                          #endif
                           nlte_iter++;
                         }
-                        if (nlte_test  > 0.0)
+                        if (nlte_test > 0.0)
                         {
                           printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test, nlte_iter);
                         }
@@ -887,16 +903,26 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   {
                     //printout("found it in element %d ion %d level %d\n",element,ion,level);
                   }
-                  double nnlevel = modelgrid[n].nlte_pops[nlte] * modelgrid[n].rho;
+                  double nnlevelnlte = modelgrid[n].nlte_pops[nlte] * modelgrid[n].rho;
                   double E_level = epsilon(element,ion,level);
                   double E_ground = epsilon(element,ion,0);
-                  double T_e = get_Te(n);
-                  double W = get_W(n);
+                  double T_e = get_TJ(n);
+                  //double W = get_W(n);
+                  double W = 1.;
                   double nnlevellte = get_groundlevelpop(n,element,ion) * W *
                       stat_weight(element,ion,level)/stat_weight(element,ion,0) *
                       exp(-(E_level-E_ground)/KB/T_e);
-                  if (ion == 1)
-                    fprintf(nlte_file,"nlte_index %d element %d ion_stage %d level %d energy %g nnlevel %g nlte_pop %g nnlevellte %g\n",nlte,element,ion+1,level,E_level-E_ground,nnlevel,modelgrid[n].nlte_pops[nlte],nnlevellte);
+                  //double nnlevellte = calculate_levelpop_lte(n,element,ion,level); this function includes a minpop
+                  //if (ion == 1)
+                  {
+                    if (level == 1)
+                      fprintf(nlte_file,"nlte_index - element %d ion %d level 0 energy 0 nlte_pop - nnlevelnlte - nnlevellte %g\n",
+                            element,ion,get_groundlevelpop(n,element,ion));
+
+                    fprintf(nlte_file,"nlte_index %d element %d ion %d level %d energy %g nlte_pop %g nnlevelnlte %g nnlevellte %g\n",
+                            nlte,element,ion,level,E_level-E_ground,modelgrid[n].nlte_pops[nlte],
+                            nnlevelnlte,nnlevellte);
+                  }
                 }
                 fprintf(nlte_file,"\n");
                 //printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
@@ -1479,7 +1505,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   nne_lo = 0.;  //MINPOP;
   nne_hi = get_rho(modelgridindex)/MH;
 
-  /// The following selection of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
+  /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
   only_neutral_ions = 0;
   nelements_in_cell = 0;
   for (element = 0; element < nelements; element++)
@@ -1504,9 +1530,11 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
             //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
             //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
             #ifdef NT_ON
-              if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.)) break;
+              if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.))
+                break;
             #else
-              if (gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
+              if (gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0)
+                break;
             #endif
           }
           uppermost_ion = ion;
@@ -1529,11 +1557,11 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       //printout("cell %d, element %d, final uppermost_ion is %d, factor %g\n",modelgridindex,element,uppermost_ion,factor);
       //elements[element].uppermost_ion = uppermost_ion;
       elements_uppermost_ion[tid][element] = uppermost_ion;
-      if (uppermost_ion == 0) only_neutral_ions += 1;
+      if (uppermost_ion == 0)
+        only_neutral_ions += 1;
       nelements_in_cell += 1;
     }
   }
-
 
   nne_check = 0.;
   nne_tot = 0.;   /// total number of electrons in grid cell which are possible
@@ -1564,13 +1592,10 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       {
         if (ion == 0)
           nnion = nnelement;
+        else if (abundance > 0.)
+          nnion = MINPOP;
         else
-        {
-          if (abundance > 0.)
-            nnion = MINPOP;
-          else
-            nnion = 0.;
-        }
+          nnion = 0.;
         nntot += nnion;
         nne += nnion * (get_ionstage(element,ion)-1);
         modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
@@ -1660,7 +1685,17 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
           nnion = MINPOP;  /// uppermost_ion is only < nions-1 in cells with nonzero abundance of the given species
         nntot += nnion;
         nne_check += nnion * (get_ionstage(element,ion)-1);
-        modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
+        //if (modelgrid[modelgridindex].composition[element].groundlevelpop[ion] < 0)
+        //if (initial_iteration == 1 || modelgrid[modelgridindex].thick == 1)
+        {
+          modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion *
+                stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
+          //printout("calculate_populations: setting groundlevelpop of ion %d\n",ion);
+        }
+        //else
+        {
+          //printout("calculate_populations: not setting groundlevelpop of ion %d\n",ion);
+        }
   /*
   if (element == 21)
     {
@@ -1678,6 +1713,37 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 
   set_nnetot(modelgridindex, nne_tot);
   return nntot;
+}
+
+
+double calculate_electron_densities(int modelgridindex)
+/// Determines the electron number density for a given cell
+{
+  double nne_tot = 0.; //total electron density
+  double nne = 0.; //free electron density
+
+  for (int element = 0; element < nelements; element++)
+  {
+    double abundance = get_abundance(modelgridindex,element);
+    int nions = get_nions(element);
+    /// calculate number density of the current element (abundances are given by mass)
+    double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
+    nne_tot += nnelement * get_element(element);
+
+    /// Use ionisationfractions to calculate the groundlevel populations
+    for (int ion = 0; ion < nions; ion++)
+    {
+      //if (ion <= elements[element].uppermost_ion)
+      if (abundance > 0)
+      {
+        nne += (get_ionstage(element,ion)-1) * ionstagepop(modelgridindex,element,ion);
+      }
+    }
+  }
+
+  set_nne(modelgridindex, nne);
+  set_nnetot(modelgridindex, nne_tot);
+  return nne_tot;
 }
 
 
