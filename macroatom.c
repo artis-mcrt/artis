@@ -425,7 +425,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       mastate[tid].level = lower;
 
       #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] do_ma:   to level %d\n",lower);
+        if (debuglevel == 2)
+          printout("[debug] do_ma:   to level %d\n",lower);
         if (get_ionstage(element,ion) == 0 && lower == 0)
         {
           printout("internal downward transition to ground level occured ... abort\n");

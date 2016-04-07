@@ -9,7 +9,6 @@
   #include "mpi.h"
 #endif
 
-//#define TB_CUTS
 #define DEBUG_ON
 #define SILENT 1
 //#define DO_TITER
@@ -32,7 +31,7 @@
 
 
 // ----------------------------------------------------------------
-///Estimators Specpol (virtual packets)
+/// Estimators Specpol (virtual packets)
 
 #define MOBS 5
 #define MRANGE 5
@@ -130,22 +129,21 @@ int vgrid_flag;
 #define HCLIGHTOVERFOURPI 1.580764662876770e-17
 #define OSCSTRENGTHCONVERSION 1.3473837e+21
 
-#define isothermal_homogeneous_grid 0
 //#define MPTS_MODEL 10000
 
 
-#define MXGRID 50     /* Max number of grid cells in x-direction.*/
-#define MYGRID 50     /* Max number of grid cells in y-direction.*/
-#define MZGRID 50     /* Max number of grid cells in z-direction.*/
-//#define MGRID 1000000  /* Max number of grid cells.*/
-#define MTSTEP 200     /* Max number of time steps. */
-#define MLINES 500000  /// Increase linelist by this blocksize
+#define MXGRID 50     // Max number of grid cells in x-direction.
+#define MYGRID 50     // Max number of grid cells in y-direction.
+#define MZGRID 50     // Max number of grid cells in z-direction.
+//#define MGRID 1000000  // Max number of grid cells.
+#define MTSTEP 200     // Max number of time steps.
+#define MLINES 500000  // Increase linelist by this blocksize
 
-#define GRID_UNIFORM 1 /* Simple cuboidal cells. */
-#define RHO_UNIFORM 1 /* Constant density. */
-#define RHO_1D_READ 2 /* Read model. */
-#define RHO_2D_READ 4 /* Read model. */
-#define RHO_3D_READ 3 /* Read model. */
+#define GRID_UNIFORM 1 // Simple cuboidal cells.
+#define RHO_UNIFORM 1 // Constant density.
+#define RHO_1D_READ 2 // Read model.
+#define RHO_2D_READ 4 // Read model.
+#define RHO_3D_READ 3 // Read model.
 
 
 double ENICKEL;
@@ -263,9 +261,6 @@ double opcase3_normal;           ///MK: normalisation factor for opacity_case 3
 double rho_crit_para, rho_crit;  ///MK: free parameter for the selection of the critical opacity in opacity_case 3
 double rho_crit;                 ///MK: critical opacity in opacity_case 3 (could now be declared locally)
 
-/// Some often used helper functions are declared globally
-void printout(char *fmt, ...);   ///MK: printout should be used instead of printf throughout the whole code
-                                 ///for output messages. Therefore it must be available globally
 
 /// New variables for the non-grey case
 //FILE *ldist_file;
@@ -322,12 +317,12 @@ CELL cell[MGRID+1];
 
 struct time
 {
-  double start; /*time at start of this timestep.*/
-  double width; /*Width of timestep.*/
-  double mid; /*Mid time in step - computed logarithmically.*/
-  int pellet_decays; /*Number of pellets that decay in this time step. */ ///ATOMIC
-  double gamma_dep; /* cmf gamma ray energy deposition rate */            ///ATOMIC
-  double cmf_lum; /* cmf luminosity light curve */                        ///ATOMIC
+  double start; // time at start of this timestep.
+  double width; // Width of timestep.
+  double mid; // Mid time in step - computed logarithmically.
+  int pellet_decays; // Number of pellets that decay in this time step.  ///ATOMIC
+  double gamma_dep; // cmf gamma ray energy deposition rate             ///ATOMIC
+  double cmf_lum; // cmf luminosity light curve                         ///ATOMIC
 } time_step[MTSTEP];
 
 
@@ -342,9 +337,9 @@ LIST gam_line_list;
 
 #define RED_OF_LIST -956  //must be negative
 
-double syn_dir[3]; /* vector pointing from origin to observer */
+double syn_dir[3]; // vector pointing from origin to observer
 
-#define NRAYS_SYN 1 /* number of rays traced in a syn claculation */
+#define NRAYS_SYN 1 // number of rays traced in a syn claculation
 
 
 RAY rays[NRAYS_SYN];
@@ -358,13 +353,13 @@ RAY rays[NRAYS_SYN];
 int nsyn_time;
 double time_syn[MSYN_TIME];
 
-double DeltaA; /* area used for syn */ ///possible to do this as local variable?
+double DeltaA; // area used for syn ///possible to do this as local variable?
 
-#define EMISS_MAX 2 /* Maxmimum number of frequency points in
-                       grid used to store emissivity estimators. */
-int emiss_offset;   /* the index in the line list of the 1st line for which
-                       an emissivity estimator is recorded*/
-int emiss_max;      /* actual number of frequency points in emissivity grid */
+#define EMISS_MAX 2 // Maxmimum number of frequency points in \
+                       grid used to store emissivity estimators.
+int emiss_offset;   // the index in the line list of the 1st line for which \
+                       an emissivity estimator is recorded
+int emiss_max;      // actual number of frequency points in emissivity grid
 
 
 modelgrid_t modelgrid[MMODELGRID+1];
@@ -429,31 +424,31 @@ double J[MMODELGRID+1];
 #endif
 
 
-int do_comp_est; /* 1 = compute compton emissivity estimators. 0 = don't */
-int do_r_lc;     /* If not set to 1 then the opacity for r-packets is 0. */
-int do_rlc_est;  /* 1 = compute estimators for the r-pkt light curve.
-                    2 = compute estimators with opacity weights
-                    3 = compute estimators, but use only for gamma-heating rate */
+int do_comp_est; // 1 = compute compton emissivity estimators. 0 = don't
+int do_r_lc;     // If not set to 1 then the opacity for r-packets is 0.
+int do_rlc_est;  // 1 = compute estimators for the r-pkt light curve.\
+                    2 = compute estimators with opacity weights\
+                    3 = compute estimators, but use only for gamma-heating rate
 
 
-int n_out_it; /* # of sets of 1,000,000 photons to run. */
+int n_out_it; // # of sets of 1,000,000 photons to run.
 
-int file_set; /* 1 if the output files already exist. 0 otherwise. */
+int file_set; // 1 if the output files already exist. 0 otherwise.
 
-int npts_model; /*number of points in 1-D input model */
+int npts_model; // number of points in 1-D input model
 double vout_model[MMODELGRID], rho_model[MMODELGRID], fni_model[MMODELGRID], fco_model[MMODELGRID], ffegrp_model[MMODELGRID], f48cr_model[MMODELGRID],f52fe_model[MMODELGRID];
 double abund_model[MMODELGRID][30];
-double t_model; /* time at which densities in input model are correct. */
-int ncoord1_model, ncoord2_model; /*For 2d model, the input grid dimensions */
-double dcoord1, dcoord2; /*spacings of a 2d model grid - must be uniform grid */
+double t_model; // time at which densities in input model are correct.
+int ncoord1_model, ncoord2_model; // For 2d model, the input grid dimensions
+double dcoord1, dcoord2; // spacings of a 2d model grid - must be uniform grid
 
 //#define MPTS_MODEL_3D 8000000
 
-double CLIGHT_PROP; /* Speed of light for ray travel. Physically = CLIGHT but
-		can be changed for testing. */
+double CLIGHT_PROP; // Speed of light for ray travel. Physically = CLIGHT but
+                    // can be changed for testing.
 
-double gamma_grey; /* set to -ve for proper treatment. If possitive, then
-		      gamma_rays are treated as grey with this opacity. */
+double gamma_grey; // set to -ve for proper treatment. If possitive, then
+                   // gamma_rays are treated as grey with this opacity.
 
 double min_den;
 
@@ -462,7 +457,7 @@ double min_den;
 float cont[MGRID+1];
 double max_path_step;
 
-int opacity_case; /* 0 normally, 1 for Fe-grp dependence. */
+int opacity_case; // 0 normally, 1 for Fe-grp dependence.
                   ///MK: 2 for Fe-grp dependence and proportional to 1/rho
                   ///MK: 3 combination of 1 & 2 depending on a rho_crit
                   ///MK: 4 non-grey treatment
@@ -515,8 +510,8 @@ double NPHIXSNUINCREMENT;
 ///============================================================================
 
 cellhistory_struct *cellhistory;          /// Global pointer to the beginning of the cellhistory stack.
-//extern int histindex;                            /// Global index variable to acces the cellhistory stack.
-//#define CELLHISTORYSIZE 2                /// Size of the cellhistory stack.
+//extern int histindex;                   /// Global index variable to acces the cellhistory stack.
+//#define CELLHISTORYSIZE 2               /// Size of the cellhistory stack.
 
 
 /// Debug/Analysis Counter
@@ -608,5 +603,8 @@ extern short use_cellhist;
 #ifdef _OPENMP
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
+
+void printout(char *fmt, ...);   ///MK: printout should be used instead of printf throughout the whole code
+                                 ///for output messages. Therefore it must be available globally
 
 #endif // SN3D_H

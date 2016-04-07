@@ -26,7 +26,7 @@
 #include "update_packets.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
-/* Main - top level routine. */
+// Main - top level routine.
 int main(int argc, char** argv)
 {
   FILE *linestat_file;
