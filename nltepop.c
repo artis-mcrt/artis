@@ -218,6 +218,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             double s_renorm = 1.0;
             if ((upper != 0) && (is_nlte(element,ion+1,upper) != 1))
               s_renorm = superlevel_boltzmann(modelgridindex,element,ion+1,upper)/superlevel_partfunc[ion+1];
+              
             rate_matrix[upper_index * nlte_dimension + upper_index] -= (R + C) * s_renorm;
             rate_matrix[lower_index * nlte_dimension + upper_index] += (R + C) * s_renorm;
             if (R + C < 0)
@@ -458,7 +459,7 @@ void filter_nlte_matrix(int element, int nlte_dimension, double *rate_matrix, do
     {
       int ion,level;
       get_ion_level_of_nlte_vector_index(index,element,&ion,&level);
-      printout("Eliminating row and col with index %d (ion %d level %d) row_max %d col_max %g\n",index,ion,level,row_max,col_max);
+      printout("Eliminating row and col with index %d (ion %d level %d) row_max %g col_max %g\n",index,ion,level,row_max,col_max);
       eliminate_nlte_matrix_rowcol(index,nlte_dimension,rate_matrix,balance_vector);
     }
   }
