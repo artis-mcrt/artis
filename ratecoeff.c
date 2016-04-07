@@ -821,7 +821,7 @@ double interpolate_stimulated_recomb(int element, int ion, int level, double T)
   return f_lower + (f_upper-f_lower)/(T_upper-T_lower) * (T-T_lower);
 }*/
 
-/* multiply by ion population and nne electron density to get # recombs/sec */
+/* multiply by LTE ion population and nne electron density to get # recombs/sec */
 double interpolate_ions_spontrecombcoeff(int element, int ion, double T)
 {
   /*  int lowerindex = floor((T-MINTEMP)/T_step);
@@ -917,7 +917,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
       /// Interpolate gammacorr out of precalculated values
       if (gammacorr < 0)
       {
-        gammacorr = W*interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
+        gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
         index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
         if (index_in_groundlevelcontestimor >= 0) gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
@@ -927,7 +927,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     }
     else
     {
-      gammacorr = W*interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
+      gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
       index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
       if (index_in_groundlevelcontestimor >= 0) gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
     }

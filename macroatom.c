@@ -149,7 +149,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         epsilon_trans = epsilon_current - epsilon_target;
-        R = rad_deexcitation(pkt_ptr,lower,epsilon_trans,lineindex,t_mid);
+        R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
         C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
 
         individ_rad_deexc = R * epsilon_trans;
@@ -200,7 +200,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         epsilon_trans = epsilon_target - epsilon_current;
-        R = rad_excitation(pkt_ptr,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
+        R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
         C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
 
         //individ_internal_up_same = (C) * epsilon_current;
@@ -783,7 +783,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
-          R = rad_deexcitation(pkt_ptr,lower,epsilon_trans,lineindex,t_mid);
+          R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
           C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
           printout("[debug]    deexcitation to level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",lower,epsilon_target,epsilon_trans,R,C);
         }
@@ -797,7 +797,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           epsilon_trans = epsilon_target - epsilon_current;
-          R = rad_excitation(pkt_ptr,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
+          R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
           C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
           printout("[debug]    excitation to level %d, epsilon_trans %g, R %g, C %g\n",upper,epsilon_trans,R,C);
         }
@@ -840,22 +840,20 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Calculation of radiative rates ///////////////////////////////////////////////////////
 
 ///****************************************************************************
-double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, int lineindex, double t_current)
+double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex, double t_current)
 ///radiative deexcitation rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  double beta;
-
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int upper = mastate[tid].level;
 
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  //int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   #ifdef DEBUG_ON
     if (upper <= lower)
     {
-      printout("[fatal] rad_deexcitation: pkt %d tried to calculate upward transition ... abort\n",pkt_ptr->number);
+      printout("[fatal] rad_deexcitation: tried to calculate upward transition ... abort\n");
       abort();
     }
   #endif
@@ -877,6 +875,7 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, int linei
   //n_l = n_u/W / g_ratio * exp(epsilon_trans/KB/T_R);
   double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
+  double beta = 1.0;
   #ifdef DEBUG_ON
     if (tau_sobolev <= 0)
     {
@@ -884,7 +883,6 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, int linei
       if (SILENT == 0) printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
       if (SILENT == 0) printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
       if (SILENT == 0) printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell %d\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
-      if (SILENT == 0) printout("[warning] rad_deexcitation: pkt_ptr->number %d, last_event %d\n",pkt_ptr->number,pkt_ptr->last_event);
       beta = 1.0;
       //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
       //abort();
@@ -903,10 +901,12 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, int linei
   #ifdef DEBUG_ON
     if (debuglevel == 2) printout("[debug] rad_rates_down: element, ion, upper, lower %d, %d, %d, %d\n",element,ion,upper,lower);
     //printout("[debug] rad_rates_down: tau_sobolev, beta %g, %g\n",tau_sobolev,beta);
-    //printout("[debug] rad_rates_down: nne %g \n",cell[pkt_ptr->where].nne);
     if (debuglevel == 2) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
     if (debuglevel == 777) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
-    if (!isfinite(R)) {printout("fatal a1: abort\n"); abort();}
+    if (!isfinite(R)) {
+      printout("fatal a1: abort\n");
+      abort();
+    }
   #endif
 
   return R;
@@ -915,22 +915,20 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, int linei
 
 
 ///***************************************************************************/
-double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, int lineindex, double t_current)//, double T_R, double W)
+double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int lineindex, double t_current)//, double T_R, double W)
 ///radiative excitation rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  double beta,R;
-
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int lower = mastate[tid].level;
 
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  //int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   #ifdef DEBUG_ON
     if (upper <= lower)
     {
-      printout("[fatal] rad_rates_up: tried to calculate downward transition ... abort");
+      printout("[fatal] rad_excitation: tried to calculate downward transition ... abort\n");
       abort();
     }
   #endif
@@ -952,13 +950,14 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, int lineind
   //n_u = n_l * W * g_ratio * exp(-epsilon_trans/KB/T_R);
   double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
+  double beta = 1.0;
+  double R = 0.0;
   if (tau_sobolev <= 0)
   {
     if (SILENT == 0) printout("[warning] rad_excitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
     if (SILENT == 0) printout("[warning] rad_excitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
     if (SILENT == 0) printout("[warning] rad_excitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
     if (SILENT == 0) printout("[warning] rad_excitation: T_e %g, T_R %g, W %g\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
-    if (SILENT == 0) printout("[warning] rad_excitation: pkt_ptr->number %d\n",pkt_ptr->number);
     beta = 1.0;
     R = 0.;
 

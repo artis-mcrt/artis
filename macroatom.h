@@ -5,8 +5,8 @@
 
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep);
 
-double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, int lineindex, double t_current);
-double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, int lineindex, double t_current);//, double T_R, double W);
+double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex, double t_current);
+double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int lineindex, double t_current);//, double T_R, double W);
 double rad_recombination(int modelgridindex, int lower, double epsilon_trans);
 double photoionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
 

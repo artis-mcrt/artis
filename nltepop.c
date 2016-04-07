@@ -16,9 +16,6 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
   int nions = get_nions(element);
   //int nions = 3; //TODO: remove, testing
 
-  PKT dummy;
-  dummy.where = modelgridindex;
-
   int nlte_dimension = 0;
   double *superlevel_partfunc = calloc(nions,sizeof(double));
   for (int ion = 0; ion < nions; ion++)
@@ -92,8 +89,8 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          double R = rad_deexcitation(&dummy,lower,epsilon_trans,lineindex,t_mid);
           R = 0.0; //TODO: remove, testing only
+          double R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
           double C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
 
           int upper_index = get_nlte_vector_index(element,ion,level);
@@ -125,7 +122,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          double R = rad_excitation(&dummy,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
+          double R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
           R = 0.0; //TODO: remove, testing only
           double C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
 
@@ -594,7 +591,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          R = rad_deexcitation(&dummy,lower,epsilon_trans,lineindex,t_mid);
+          R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
           C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
 
           s_renorm = 1.0;
@@ -638,7 +635,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          R = rad_excitation(&dummy,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
+          R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
           C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
 
           if ((level == 0) || (is_nlte(element, ion, level) == 1))
@@ -977,9 +974,9 @@ double get_oneoverw(int element, int ion, int modelgridindex)
 {
   // Routine to compute the work per ion pair for doing the NT ionization calculation. Makes use of EXTREMELY SIMPLE approximations - high energy limits only */
 
-  // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec). \
-     We are going to start by taking all the high energy limits and ignoring Lelec, so that the \
-     denominator is extremely simplified. Need to get the mean Z value.
+  // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
+  // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
+  // denominator is extremely simplified. Need to get the mean Z value.
 
   double Zbar = 0.0;
   for (int ielement = 0; ielement < nelements; ielement++)
