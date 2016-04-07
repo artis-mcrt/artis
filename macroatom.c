@@ -200,7 +200,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         epsilon_trans = epsilon_target - epsilon_current;
-        R = rad_excitation(pkt_ptr,upper,epsilon_trans,statweight_target,lineindex,t_mid);//,T_R,W);
+        R = rad_excitation(pkt_ptr,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
         C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
 
         //individ_internal_up_same = (C) * epsilon_current;
@@ -796,7 +796,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           epsilon_trans = epsilon_target - epsilon_current;
-          R = rad_excitation(pkt_ptr,upper,epsilon_trans,statweight_target,lineindex,t_mid);//,T_R,W);
+          R = rad_excitation(pkt_ptr,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
           C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
           printout("[debug]    excitation to level %d, epsilon_trans %g, R %g, C %g\n",upper,epsilon_trans,R,C);
         }

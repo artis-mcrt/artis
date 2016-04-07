@@ -115,7 +115,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         {
           int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
           double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
-          double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
+          //double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           double epsilon_trans = epsilon_target - epsilon_current;
 
@@ -125,7 +125,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          double R = rad_excitation(&dummy,upper,epsilon_trans,statweight_target,lineindex,t_mid);//,T_R,W);
+          double R = rad_excitation(&dummy,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
           R = 0.0; //TODO: remove, testing only
           double C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
 
@@ -630,7 +630,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          R = rad_excitation(&dummy,upper,epsilon_trans,statweight_target,lineindex,t_mid);//,T_R,W);
+          R = rad_excitation(&dummy,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
           C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
 
           if ((level == 0) || (is_nlte(element, ion, level) == 1))
