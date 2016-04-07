@@ -355,10 +355,10 @@ double time_syn[MSYN_TIME];
 
 double DeltaA; // area used for syn ///possible to do this as local variable?
 
-#define EMISS_MAX 2 // Maxmimum number of frequency points in \
-                       grid used to store emissivity estimators.
-int emiss_offset;   // the index in the line list of the 1st line for which \
-                       an emissivity estimator is recorded
+#define EMISS_MAX 2 // Maxmimum number of frequency points in
+                    // grid used to store emissivity estimators.
+int emiss_offset;   // the index in the line list of the 1st line for which
+                    // an emissivity estimator is recorded
 int emiss_max;      // actual number of frequency points in emissivity grid
 
 
@@ -426,9 +426,9 @@ double J[MMODELGRID+1];
 
 int do_comp_est; // 1 = compute compton emissivity estimators. 0 = don't
 int do_r_lc;     // If not set to 1 then the opacity for r-packets is 0.
-int do_rlc_est;  // 1 = compute estimators for the r-pkt light curve.\
-                    2 = compute estimators with opacity weights\
-                    3 = compute estimators, but use only for gamma-heating rate
+int do_rlc_est;  // 1 = compute estimators for the r-pkt light curve.
+                 // 2 = compute estimators with opacity weights
+                 // 3 = compute estimators, but use only for gamma-heating rate
 
 
 int n_out_it; // # of sets of 1,000,000 photons to run.
