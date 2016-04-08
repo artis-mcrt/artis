@@ -15,7 +15,7 @@ void calculate_kpkt_rates(int modelgridindex)
 /// cooling list by the strength of the individual process contribution.
 {
   double C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
-  double E_threshold;//,nu_threshold;
+  //double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
   double nncurrention,nnnextionlevel;
   double epsilon_current,epsilon_upper,epsilon_trans;
@@ -24,7 +24,7 @@ void calculate_kpkt_rates(int modelgridindex)
   int ioncharge;
   //double sf;
   int nions,nuptrans;
-  double totalcooling;//partialcoolingsum;
+  //double totalcooling;//partialcoolingsum;
 
   //double interpolate_stimulated_bfcoolingcoeff(int element, int ion, int level, double T);
 
@@ -93,7 +93,7 @@ void calculate_kpkt_rates(int modelgridindex)
           mastate[tid].level = level;
           ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-          //mastate[tid].nnlevel = get_levelpop(element,ion,level);
+          //mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,level);
 
           /// excitation to same ionization stage
           /// -----------------------------------
@@ -309,7 +309,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
     mastate[tid].level = level;
     ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-    mastate[tid].nnlevel = get_levelpop(element,ion,level);
+    mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,level);
 
     /// excitation to same ionization stage
     /// -----------------------------------
@@ -522,7 +522,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   F_bfcooling.function = &alpha_sp_E_integrand_gsl;
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
-  double nu_lower,sf,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
+  double nu_lower,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
   int ilow,low,high;
   double rndcool;
   double oldcoolingsum;
@@ -847,7 +847,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       mastate[tid].element = element;
       mastate[tid].ion = ion;
       mastate[tid].level = upper;
-      mastate[tid].nnlevel = get_levelpop(element,ion,upper);
+      mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,upper);
       mastate[tid].activatingline = -99;
       pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collexc += 1;
@@ -871,7 +871,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       mastate[tid].element = element;
       mastate[tid].ion = ion;
       mastate[tid].level = upper;
-      mastate[tid].nnlevel = get_levelpop(element,ion,upper);
+      mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,upper);
       mastate[tid].activatingline = -99;
       pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collion += 1;

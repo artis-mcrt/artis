@@ -146,7 +146,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
       else
       {
         /// get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(pkt_ptr, &rpkt_eventtype, t_current, tau_next, min(tdist,sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = get_event(mgi,pkt_ptr, &rpkt_eventtype, t_current, tau_next, min(tdist,sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu);
         #endif
@@ -273,7 +273,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 
 
 ///****************************************************************************
-double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist)
+double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist)
 ///     PKT *pkt_ptr;      //pointer to packet object
 ///     double t_current;  //current time
 ///     double tau_rnd;    //random optical depth until which the packet travels
@@ -335,8 +335,8 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
       double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
       double B_lu = stat_weight(element,ion,upper)/stat_weight(element,ion,lower) * B_ul;
 
-      double n_u = get_levelpop(element,ion,upper);
-      double n_l = get_levelpop(element,ion,lower);
+      double n_u = get_levelpop(modelgridindex,element,ion,upper);
+      double n_l = get_levelpop(modelgridindex,element,ion,lower);
 
       double tau_line = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
       //if (element == 7) fprintf(tau_file,"%g %g %d\n",nu_trans,tau_line,ion);
@@ -502,7 +502,7 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
 
   //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
 
-  //int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   //double nne = get_nne(modelgridindex);
   //double T_e = get_Te(modelgridindex);
@@ -648,7 +648,7 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
             mastate[tid].element = element;
             mastate[tid].ion     = ion+1;
             mastate[tid].level   = upper;
-            mastate[tid].nnlevel = get_levelpop(element,ion+1,upper);
+            mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
             mastate[tid].activatingline = -99;
             //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
           }
@@ -1043,7 +1043,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
             //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
             //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
 
-            nnlevel = get_levelpop(element,ion,level);
+            nnlevel = get_levelpop(modelgridindex,element,ion,level);
             //if (fabs(nnlevel - phixslist[tid].allcont[i].nnlevel) > 0)
             //{
             //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);
@@ -1241,7 +1241,7 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
     int element,ion,level;//,samplecell;
     int Z;
     double nu_edge;
-    int i,ii,nions;
+    int i,nions;
     double sf,check;
     double helper;
     int gphixsindex;
@@ -1404,7 +1404,7 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
                     //  {
                     //  /// Set photoion_contr to zero for continua with nu < nu_edge
                     //  /// to get the correct estimators for the photoionisation rate coefficients
-                    //  for (ii = i; ii < importantbfcontinua; ii++) phixslist[tid].allcont[ii].photoion_contr = 0;
+                    //  for (int ii = i; ii < importantbfcontinua; ii++) phixslist[tid].allcont[ii].photoion_contr = 0;
                     //  break;
                     //}
                 }

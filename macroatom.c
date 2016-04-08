@@ -90,7 +90,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
     /// originating levels population cancels out in the macroatom transition probabilities
     /// which are based on detailed balance.
     mastate[tid].nnlevel = 1.;
-    //mastate[tid].nnlevel = get_levelpop(element,ion,level);
+    //mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,level);
 
     #ifdef DEBUG_ON
       //if (element == 1 && ion == 1 && level == 149) debuglevel = 2;
@@ -868,8 +868,8 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
   //double g_ratio = mastate[tid].statweight/statweight_target;
   //B_lu = g_ratio * B_ul;
 
-  double n_u = get_levelpop(element,ion,upper);
-  double n_l = get_levelpop(element,ion,lower);
+  double n_u = get_levelpop(modelgridindex,element,ion,upper);
+  double n_l = get_levelpop(modelgridindex,element,ion,lower);
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
   //n_l = n_u/W / g_ratio * exp(epsilon_trans/KB/T_R);
@@ -943,8 +943,8 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
   //double g_ratio = statweight_target/mastate[tid].statweight;
   //B_lu = g_ratio * B_ul;
 
-  double n_u = get_levelpop(element,ion,upper);
-  double n_l = get_levelpop(element,ion,lower);
+  double n_u = get_levelpop(modelgridindex,element,ion,upper);
+  double n_l = get_levelpop(modelgridindex,element,ion,lower);
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
   //n_u = n_l * W * g_ratio * exp(-epsilon_trans/KB/T_R);

@@ -134,7 +134,7 @@ double phi(int element, int ion, int modelgridindex)
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
   float T_e = get_Te(modelgridindex);
-  float T_R = get_TR(modelgridindex);
+  //float T_R = get_TR(modelgridindex);
 
   //float W = cell[cellnumber].W;
 
@@ -725,7 +725,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   else if ((nlte_levels = get_nlevels_nlte(element,ion)) > 0)
   {
     //Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
-    if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels]) < -0.9)
+    if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels]) < -0.9) //TODO: should change this to less than zero?
     {
       /* Case for when no NLTE level information is available yet */
       double E_level = epsilon(element,ion,level);
@@ -818,7 +818,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 
 
 ///***************************************************************************/
-void calculate_levelpops(int modelgridindex)
+/*void calculate_levelpops(int modelgridindex)
 /// Calculates the full level populations for a given grid cell
 /// and stores them to the active entry of the cellhistory.
 {
@@ -837,7 +837,7 @@ void calculate_levelpops(int modelgridindex)
       }
     }
   }
-}
+}*/
 
 
 ///***************************************************************************/

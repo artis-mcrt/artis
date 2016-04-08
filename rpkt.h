@@ -2,7 +2,7 @@
 #define RPKT_H
 
 double do_rpkt(PKT *pkt_ptr, double t1, double t2);
-double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist);
+double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist);
 int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current);
 double closest_transition(PKT *pkt_ptr);
 

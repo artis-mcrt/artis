@@ -22,15 +22,37 @@ double ionstagepop(int modelgridindex, int element, int ion)
           / stat_weight(element,ion,0);
 }
 
-void calculate_levelpops(int modelgridindex);
+//void calculate_levelpops(int modelgridindex);
 
 static inline
-double get_levelpop(int element, int ion, int level)
+double get_levelpop(int modelgridindex, int element, int ion, int level)
 /// Returns the given levels occupation number, which are stored in the active
 /// entry of the cellhistory.
 {
 //printout("get_levelpop histindex %d\n",histindex);
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
+  if (use_cellhist >= 0)
+  {
+    double pop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
+    if (pop > -1)
+      return pop;
+    else
+    {
+      printout("Abort: get_levelpop called, but no population in cellhistory for element %d ion %d level %d",element,ion,level);
+      abort();
+    }
+    int cellmgi = cell[cellhistory[tid].cellnumber].modelgridindex;
+
+    if (cellmgi != modelgridindex)
+    {
+      printout("Abort: get_levelpop called, but cellhistory mgi %d != argument modelgridindex %d",
+               cellmgi,modelgridindex);
+      abort();
+    }
+  }
+  else
+  {
+    return calculate_exclevelpop(modelgridindex,element,ion,level);
+  }
 }
 
 double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
