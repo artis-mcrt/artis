@@ -112,7 +112,7 @@ short is_nlte(int element, int ion, int level)
 // Returns 1 if (element,ion,level) is to be treated in nlte.
 // (note this function gives 1 for the ground state)
 {
-  if (level <= 100) //TODO: change back to 200
+  if (level < 100) //TODO: change back to 200
     elements[element].ions[ion].levels[level].is_nlte = 1;
   else
     elements[element].ions[ion].levels[level].is_nlte = 0;
