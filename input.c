@@ -325,20 +325,21 @@ void read_atomicdata()
   int *nuparr,*ndownarr;
 
   //printout("start input.c\n");
-  FILE *modelatom;
-  if ((modelatom = fopen("modelatom.dat", "r")) == NULL)
+  FILE *modelatom = fopen("modelatom.dat", "r");
+  if (modelatom == NULL)
   {
     /// No preprocessed model atom available ==> do that now
 
     ///open atomic data file
-    FILE *compositiondata;
-    if ((compositiondata = fopen("compositiondata.txt", "r")) == NULL)
+    FILE *compositiondata = fopen("compositiondata.txt", "r");
+    if (compositiondata == NULL)
     {
       printout("Cannot open compositiondata.txt.\n");
       exit(0);
     }
-    FILE *adata;
-    if ((adata = fopen("adata.txt", "r")) == NULL)
+
+    FILE *adata = fopen("adata.txt", "r");
+    if (adata == NULL)
     {
       printout("Cannot open adata.txt.\n");
       exit(0);
@@ -731,7 +732,6 @@ void read_atomicdata()
           //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
           //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
 
-
           free(nuparr);
           free(ndownarr);
 
@@ -743,7 +743,6 @@ void read_atomicdata()
           }
           free(transitiontable);
           free(transitions);
-
 
           /// Also the phixslist
           if (ion < nions-1)
@@ -830,7 +829,6 @@ void read_atomicdata()
     }
 
 
-
     ///Establish connection between transitions and sorted linelist
     //printout("[debug] init line counter list\n");
     printout("establish connection between transitions and sorted linelist\n");
@@ -869,18 +867,14 @@ void read_atomicdata()
       write_processed_modelatom();
     }
   }
-
-  /// Preprocessed model atom available read that in
-  else
+  else /// Preprocessed model atom available read that in
   {
     read_processed_modelatom(modelatom);
     fclose(modelatom);
   }
 
 
-
   printout("included ions %d\n",includedions);
-
 
 
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS

@@ -26,13 +26,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   /// only needed if all level populations should be printed to the output-file
   //double pop, excitedlevelpops;
 
-  int n;
+  //int n;
   //int samplecell;
-  double deltarho;
+  //double deltarho;
   double trat, tratmid;
   double cell_len_scale;
   double check1, check2; //MK
-  int element,ion,level;
   double t_current,t_previous;
   double rho,T_R,T_e,T_J,W;//,W_D;
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
@@ -733,8 +732,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         if (T_e < MINTEMP) T_e = MINTEMP;
                       }
                       //T_e = T_J;
-                      set_Te(n,T_e);
-                      set_Te(n,3000); //TODO: remove
+                      //set_Te(n,T_e);
+                      set_Te(n,40000); //TODO: remove
 
                       #ifndef NLTE_POPS_ALL_IONS_SIMULTANEOUS
                         /// Store population values to the grid
@@ -992,10 +991,10 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             set_W(n,0.);
 
             #ifndef FORCE_LTE
-              for (element = 0; element < nelements; element++)
+              for (int element = 0; element < nelements; element++)
               {
                 int nions = get_nions(element);
-                for (ion = 0; ion < nions; ion++)
+                for (int ion = 0; ion < nions; ion++)
                 {
                   corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 0.;
                   gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
@@ -1525,6 +1524,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
         }
         else
         {
+          int ion;
           for (ion = 0; ion < nions-1; ion++)
           {
             //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
@@ -1588,7 +1588,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       nne_tot += nnelement * get_element(element);
 
       /// Assign the species population to the neutral ion and set higher ions to MINPOP
-      for (ion = 0; ion < nions; ion++)
+      for (int ion = 0; ion < nions; ion++)
       {
         if (ion == 0)
           nnion = nnelement;

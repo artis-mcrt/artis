@@ -14,7 +14,8 @@ void calculate_kpkt_rates(int modelgridindex)
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  double C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
+  //double C_ff,C_fb,C_exc,C_col; //,total_k_destruct;
+  double C_ion;
   //double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
   double nncurrention,nnnextionlevel;
@@ -30,8 +31,8 @@ void calculate_kpkt_rates(int modelgridindex)
 
   double nne = get_nne(modelgridindex);
   double T_e = get_Te(modelgridindex);
-  double T_R = get_TR(modelgridindex);
-  double W = get_W(modelgridindex);
+  //double T_R = get_TR(modelgridindex);
+  //double W = get_W(modelgridindex);
   //if (SILENT == 0) printout("[info] kpkt_cuts: sampling cell %d, T_e %g, T_R %g, W %g, nne %g\n",modelgridindex,T_e,T_R,W,nne);
 
 /*  PKT dummypkt;
@@ -249,18 +250,15 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
 {
-  double C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
-  double E_threshold;//,nu_threshold;
+  //double C_ff,C_fb,C_exc,C_ion,C_col; //,total_k_destruct;
+  //double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
-  double totalcooling;//partialcoolingsum;
-
-  //double interpolate_stimulated_bfcoolingcoeff(int element, int ion, int level, double T);
+  //double totalcooling;//partialcoolingsum;
 
   double nne = get_nne(modelgridindex);
   double T_e = get_Te(modelgridindex);
-  double T_R = get_TR(modelgridindex);
-  double W = get_W(modelgridindex);
-
+  //double T_R = get_TR(modelgridindex);
+  //double W = get_W(modelgridindex);
 
   /// calculate rates for
   double C = 0.;
@@ -278,7 +276,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
   int nlevels_currention = get_nlevels(element,ion);
   //ionisinglevels = get_ionisinglevels(element,ion);
   int ionisinglevels = get_bfcontinua(element,ion);
-  double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
+  //double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
   double nncurrention = ionstagepop(modelgridindex,element,ion);
 
   /// ff creation of rpkt
@@ -560,7 +558,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   //double cut = 0.99; //1.;
 
 
-  double nne = get_nne(modelgridindex);
+  //double nne = get_nne(modelgridindex);
   double T_e = get_Te(modelgridindex);
   double deltat = 0.;
   if (nts < n_kpktdiffusion_timesteps) deltat = kpktdiffusion_timescale * time_step[nts].width;

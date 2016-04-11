@@ -39,9 +39,7 @@ int main(int argc, char** argv)
     int aa, bb;
     int nblock, numtot, n_leftover;
   #endif
-  int nstart, nknown, ndo;
-  double tr_tot;
-  int ncl, mgi;
+  int nstart, ndo;
   char filename[100];
   //int HUGEE2;
   //char *buffer2;
@@ -222,7 +220,7 @@ int main(int argc, char** argv)
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
-  int real_time_start = time(NULL);
+  //int real_time_start = time(NULL);
   printout("time before input %d\n",time(NULL));
   input(my_rank);
 
