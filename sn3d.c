@@ -29,14 +29,10 @@
 // Main - top level routine.
 int main(int argc, char** argv)
 {
-  FILE *linestat_file;
   FILE *packets_file;
   //FILE *temperature_file;
-  int my_rank;
-  int p;
   #ifdef MPI_ON
     double a, b;
-    int aa, bb;
     int nblock, numtot, n_leftover;
   #endif
   int nstart, ndo;
@@ -48,12 +44,13 @@ int main(int argc, char** argv)
 //  int HUGEE;
 
   #ifdef MPI_ON
+    int my_rank,p;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &p);
   #else
-    my_rank = 0;
-    p = 1;
+    int my_rank = 0;
+    int p = 1;
   #endif
 
   nprocs = p;              /// Global variable which holds the number of MPI processes
@@ -225,6 +222,7 @@ int main(int argc, char** argv)
   input(my_rank);
 
   /// Initialise linestat file
+  FILE *linestat_file;
   if (my_rank == 0)
   {
     if ((linestat_file = fopen("linestat.out", "w")) == NULL)
@@ -233,14 +231,19 @@ int main(int argc, char** argv)
       exit(0);
     }
     setvbuf(linestat_file, NULL, _IOLBF, 1);
+
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
       fprintf(linestat_file,"\n");
+
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
       fprintf(linestat_file,"\n");
+
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
       fprintf(linestat_file,"\n");
+
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
       fprintf(linestat_file,"\n");
+
     for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
       fprintf(linestat_file,"\n");
   }
