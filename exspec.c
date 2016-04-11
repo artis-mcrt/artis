@@ -19,6 +19,7 @@
 #include "gamma_light_curve.h"
 #include "light_curve.h"
 #include "spectrum.h"
+#include "vectors.h"
 
 /* Main - top level routine. */
 int main(int argc, char** argv)

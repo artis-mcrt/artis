@@ -1,4 +1,4 @@
-#GIT_VERSION := $(shell git describe --abbrev=4 --dirty --always --tags)
+GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
@@ -6,9 +6,8 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  CC = gcc-5
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib
-  VER = -DGIT_BRANCH='"$(GIT_BRANCH)"' -DGIT_HASH='"$(GIT_HASH)"'
 #  CFLAGS = -Wall -O0 -g -std=c11 -I$(INCLUDE) $(VER)
-  CFLAGS = -Wall -Wmissing-prototypes -Wmissing-declarations -O3 -std=c11 -I$(INCLUDE) $(VER)
+  CFLAGS = -Wall -Wmissing-prototypes -Wmissing-declarations -O3 -std=c11 -I$(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp
@@ -222,7 +221,7 @@ endif
 
 sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o nltepop.o specpol.o vpkt.o
 
-sn3d: $(sn3d_objects)
+sn3d: version.h $(sn3d_objects)
 	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 exspec_objects = exspec.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o
@@ -244,6 +243,12 @@ sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time
 
 sn3dlcsyn: $(sn3dlcsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
+
+version.h:
+	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.h
+	@echo "#define GIT_HASH \"$(GIT_HASH)\"" >> version.h
+	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
+	@echo "#define COMPILETIME \"`date`\"" >> version.h
 
 clean:
 	rm *.o sn3d exspec exgamma

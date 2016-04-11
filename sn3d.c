@@ -24,6 +24,7 @@
 #include "time_init.h"
 #include "update_grid.h"
 #include "update_packets.h"
+#include "version.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
 // Main - top level routine.
@@ -37,9 +38,16 @@ int main(int argc, char** argv)
   #endif
   int nstart, ndo;
   char filename[100];
-  //int HUGEE2;
-  //char *buffer2;
+
   int do_this_full_loop;
+
+
+  nvpkt = 0;
+  nvpkt_esc1 = 0;
+  nvpkt_esc2 = 0;
+  nvpkt_esc3 = 0;
+
+
 
 //  int HUGEE;
 
@@ -101,8 +109,10 @@ int main(int argc, char** argv)
     #define GIT_HASH "UNKNOWN"
   #endif
   printout("ARTIS git branch %s\n",GIT_BRANCH);
-  printout("Last commit hash: %s\n",GIT_HASH);
-  printout("(note: files could have changed since the last commit)\n");
+  #ifdef GIT_VERSION
+    printout("Current version: %s\n",GIT_VERSION);
+  #endif
+  //printout("Most recent commit hash: %s\n",GIT_HASH);
   printout("Compiled at %s on %s\n",__TIME__,__DATE__);
 
   if ((mastate = calloc(nthreads,sizeof(mastate_t))) == NULL)
@@ -389,6 +399,69 @@ int main(int argc, char** argv)
     int last_loop = ftstep;
     do_this_full_loop = 1;
     int nts = itstep;
+
+    // Initialise virtual packets file and vspecpol
+    #ifdef ESTIMATORS_ON
+      sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
+      if ((vspecpol_file = fopen(filename, "w")) == NULL)
+      {
+          printout("Cannot open %s.\n",filename);
+          exit(0);
+      }
+
+      if (vgrid_flag==1) {
+
+          sprintf(filename,"vpkt_grid_%d-%d.out",my_rank,tid);
+          if ((vpkt_grid_file = fopen(filename, "w")) == NULL)
+          {
+              printout("Cannot open %s.\n",filename);
+              exit(0);
+          }
+
+      }
+
+
+
+      // New simulation
+      if (continue_simulation==0) {
+
+          init_vspecpol();
+
+          if (vgrid_flag==1) init_vpkt_grid();
+
+      }
+
+      // Continue simulation: read into temporary files
+      else {
+
+          if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+          else sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+          if ((packets_file = fopen(filename, "rb")) == NULL)
+          {
+              printout("Cannot read temporary packets file %s\n",filename);
+              exit(0);
+          }
+
+          read_vspecpol(packets_file);
+
+
+          if (vgrid_flag==1) {
+
+              if (nts % 2 == 0) sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
+              else sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
+              if ((packets_file = fopen(filename, "rb")) == NULL)
+              {
+                  printout("Cannot read temporary vpkt_grid file %s\n",filename);
+                  exit(0);
+              }
+
+              read_vpkt_grid(packets_file);
+
+          }
+
+      }
+    #endif
+
     while (nts < last_loop)
     {
       nts_global = nts;
@@ -402,7 +475,7 @@ int main(int argc, char** argv)
           do_this_full_loop = 0; //This flag will make it do a write out then quit, hopefully
           printout("Going to terminate since remaining time is too short. %d\n", time(NULL) - real_time_start);
         }
-  else
+        else
         {
           printout("Going to continue. Total time spent so far: %d.\n", time(NULL) - real_time_start);
         }
@@ -656,6 +729,7 @@ int main(int argc, char** argv)
           #ifndef FORCE_LTE
             if (continue_simulation && nts-itstep == 0 && titer == 0)
             {
+              ;
             }
             else
             {
@@ -839,6 +913,7 @@ int main(int argc, char** argv)
                 J[i] = redhelper[i];
               }
             }
+	    MPI_Barrier(MPI_COMM_WORLD);
             #ifndef FORCE_LTE
               MPI_Reduce(&nuJ, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
@@ -848,6 +923,7 @@ int main(int argc, char** argv)
                   nuJ[i] = redhelper[i];
                 }
               }
+	      MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&ffheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -856,6 +932,7 @@ int main(int argc, char** argv)
                   ffheatingestimator[i] = redhelper[i];
                 }
               }
+	      MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&colheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -1085,6 +1162,19 @@ int main(int argc, char** argv)
           printout("time after estimators have been communicated %d\n",time(NULL));
           printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %g)\n",outer_iteration,nts,my_rank,time_step[nts].pellet_decays,nesc,time_step[nts].mid/DAY);
 
+          #ifdef ESTIMATORS_ON
+
+            printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",outer_iteration,nts,my_rank,nvpkt,nvpkt_esc1+nvpkt_esc2+nvpkt_esc3);
+            printout("%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a macroatom deactivation. \n",nvpkt_esc1,nvpkt_esc2,nvpkt_esc3);
+
+            nvpkt = 0 ;
+            nvpkt_esc1 = 0 ;
+            nvpkt_esc2 = 0 ;
+            nvpkt_esc3 = 0 ;
+
+          #endif
+
+
           #ifdef RECORD_LINESTAT
             if (my_rank == 0)
             {
@@ -1104,15 +1194,53 @@ int main(int argc, char** argv)
           #endif
 
           printout("time before write temporary packets file %d\n",time(NULL));
+
           if (nts % 2 == 0) sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
           else sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
+
           if ((packets_file = fopen(filename, "wb")) == NULL)
           {
             printout("Cannot write to temporary packets file %s\n",filename);
             exit(0);
           }
+
           fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
           fclose(packets_file);
+
+          #ifdef ESTIMATORS_ON
+          if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+          else sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+
+          if ((packets_file = fopen(filename, "wb")) == NULL)
+          {
+            printout("Cannot write to temporary packets file %s\n",filename);
+            exit(0);
+          }
+
+          write_vspecpol(packets_file);
+          fclose(packets_file);
+
+          // Write temporary files for vpkt_grid
+
+          if (vgrid_flag==1) {
+
+              if (nts % 2 == 0) sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
+              else sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
+
+              if ((packets_file = fopen(filename, "wb")) == NULL)
+              {
+                  printout("Cannot write to vpkt_grid file %s\n",filename);
+                  exit(0);
+              }
+
+              write_vpkt_grid(packets_file);
+              fclose(packets_file);
+
+          }
+
+          #endif
+
+
           printout("time after write temporary packets file %d\n",time(NULL));
 
           if (nts == ftstep-1)
@@ -1126,6 +1254,21 @@ int main(int argc, char** argv)
             }
             write_packets(packets_file);
             fclose(packets_file);
+
+            // write specpol of the virtual packets
+            #ifdef ESTIMATORS_ON
+              write_vspecpol(vspecpol_file);
+              fclose(vspecpol_file);
+
+              if (vgrid_flag==1) {
+
+                  write_vpkt_grid(vpkt_grid_file);
+                  fclose(vpkt_grid_file);
+
+              }
+
+            #endif
+
             printout("time after write final packets file %d\n",time(NULL));
           }
           /*if (nts % 6 == 0 || nts == 49)
@@ -1149,6 +1292,7 @@ int main(int argc, char** argv)
       {
         nts += last_loop + 1; ///this will break the loop and terminate the code
       }
+
     }
 
 
@@ -1277,6 +1421,37 @@ int main(int argc, char** argv)
   {
     printout("No need for restart\n");
   }
+
+
+
+  #ifdef MPI_ON
+    /// Communicate gamma and positron deposition and write to file
+    for (i=0; i < ntstep; i++)
+    {
+      MPI_Reduce(&time_step[i].gamma_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].gamma_dep = depvalue/nprocs;
+      MPI_Reduce(&time_step[i].positron_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].positron_dep = depvalue/nprocs;
+      MPI_Reduce(&time_step[i].dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].dep = depvalue/nprocs;
+    }
+  #endif
+  if (my_rank == 0)
+  {
+    FILE *dep_file;
+    if ((dep_file = fopen("deposition.out", "w")) == NULL)
+    {
+      printf("Cannot open deposition.out\n");
+      abort();
+    }
+    for (int i = 0; i < ntstep; i++)
+    {
+      fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid/DAY, time_step[i].gamma_dep/time_step[i].width/LSUN, time_step[i].positron_dep/time_step[i].width/LSUN, time_step[i].dep/time_step[i].width/LSUN);
+    }
+    fclose(dep_file);
+  }
+
+
   printout("simulation finished at %d\n",time(NULL));
   //fclose(tb_file);
   fclose(estimators_file);
@@ -1366,12 +1541,6 @@ void printout(char *fmt, ...)
 
       //fclose(output_file);
 }
-
-
-
-
-
-
 
 
 
