@@ -365,29 +365,6 @@ int emiss_max;      // actual number of frequency points in emissivity grid
 
 
 modelgrid_t modelgrid[MMODELGRID+1];
-/*
-float modelgrid_rhoinit[MMODELGRID];
-float modelgrid_rho[MMODELGRID];
-//modelgrid nn_tot
-float modelgrid_nne[MMODELGRID];
-float modelgrid_nnetot[MMODELGRID];
-float modelgrid_fni[MMODELGRID];
-float modelgrid_fco[MMODELGRID];
-float modelgrid_ffe[MMODELGRID];
-float modelgrid_fnistable[MMODELGRID];
-float modelgrid_fcostable[MMODELGRID];
-float modelgrid_kappagrey[MMODELGRID];
-float modelgrid_Te[MMODELGRID];
-float modelgrid_TR[MMODELGRID];
-float modelgrid_TJ[MMODELGRID];
-float modelgrid_W[MMODELGRID];
-float modelgrid_composition[MMODELGRID];
-
-float modelgrid_abundance[MMODELGRID*MELEMENTS];         /// Abundance of the element (by mass!).
-float modelgrid_groundlevelpop[MMODELGRID*MELEMENTS*MIONS];   /// Pointer to an array of floats which contains the groundlevel populations
-                          /// of all included ionisation stages for the element.
-float modelgrid_partfunct[MMODELGRID*MELEMENTS*MIONS];        /// Pointer to an array of floats which contains the partition functions
-*/
 
 /// THESE ARE THE GRID BASED ESTIMATORS
 float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity                     ///ATOMIC
