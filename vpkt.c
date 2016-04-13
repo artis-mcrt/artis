@@ -2,6 +2,10 @@
 #include "exspec.h"
 #include <string.h>
 #include "atomic.h"
+#include "boundary.h"
+#include "ltepop.h"
+#include "move.h"
+#include "rpkt.h"
 #include "vectors.h"
 #include "vpkt.h"
 
@@ -10,21 +14,6 @@
 int
 rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype)
 {
-  int angle_ab(const double *dir1, const double *vel,double *dir2);
-  double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
-  int add_to_specpol(PKT *pkt_ptr, int bin, double t_arrive);
-  int add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, double *obs);
-  int move_pkt(PKT *pkt_ptr, double distance, double time);
-  double closest_transition(PKT *pkt_ptr);
-  double stat_weight(int element, int ion, int level);
-  double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-  void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current);
-  double boundary_cross();
-  int change_cell_vpkt();
-  void meridian(double *n, double *ref1, double *ref2);
-  void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
-  void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
-
   double vel_vec[3],old_dir_cmf[3],obs_cmf[3],vel_rev[3];
   double sdist;
   double kap_cont;
@@ -75,13 +64,12 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
-  if (realtype==1) {
-
+  if (realtype==1)
+  {
 
       // Transform Stokes Parameters from the RF to the CMF
 
       frame_transform(pkt_ptr->dir,&Qi,&Ui,vel_vec,old_dir_cmf);
-
 
       // Need to rotate Stokes Parameters in the scattering plane
 
@@ -311,8 +299,6 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
 /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
 /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
 
-    void vec_norm();
-    double dot();
     double ref1_sc[3],cos_stokes_rot_1, cos_stokes_rot_2, i;
 
     // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
@@ -366,12 +352,8 @@ void meridian(double *n, double *ref1, double *ref2){
 
 /* ----------------------- Routine to transform the Stokes Parameters from RF to CMF ----------------------------------------*/
 
-void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf) {
-
-    double dot();
-    void meridian(double *n, double *ref1, double *ref2);
-    int angle_ab (const double *dir1, const double *vel, double *dir2);
-    void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
+void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf)
+{
     double rot_angle,cos2rot_angle,sin2rot_angle,p,Q0,U0;
     double ref1[3],ref2[3],e_rf[3],e_cmf[3];
     double e_cmf_ref1, e_cmf_ref2, theta_rot;
@@ -446,10 +428,8 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
 
 /* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
 
-void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf) {
-
-    double dot();
-    void vec_norm();
+void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf)
+{
     double beta[3],e_par[3], e_perp[3], b_rf[3], b_par[3], b_perp[3], vsqr, gamma_rel, v_cr_b[3], v_cr_e[3], b_cmf[3];
 
     beta[0] = v[0] / CLIGHT ;
@@ -517,7 +497,6 @@ int add_to_vspecpol(PKT *pkt_ptr, int bin, double t_arrive)
 {
     /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
-    double dot();
     double deltai,deltaq,deltau;
     int nt, nnu;
 
@@ -553,7 +532,6 @@ int add_to_vspecpol(PKT *pkt_ptr, int bin, double t_arrive)
 void init_vspecpol(void)
 {
     int n,m,bin;
-
 
     for (bin=0;bin<MOBS;bin++) {
 
@@ -593,10 +571,9 @@ void init_vspecpol(void)
 /*******************************************************/
 int write_vspecpol(FILE *specpol_file)
 {
-    int m,p,l,bin;
+    int m,p,l;
 
-
-    for (bin=0;bin<Nobs;bin++) {
+    for (int bin = 0; bin < Nobs; bin++) {
 
 
         fprintf(specpol_file, "%g ", 0.0);
@@ -645,8 +622,7 @@ int read_vspecpol(FILE *specpol_file)
     int n,m,j,p,l,bin;
     float a,b,c;
 
-
-    for (bin=0;bin<Nobs;bin++) {
+    for (bin = 0; bin < Nobs; bin++) {
 
         // Initialise times and frequencies
         dlogt = (log(tmax) - log(tmin))/VMTBINS;
@@ -853,7 +829,6 @@ int read_vpkt_grid(FILE *vpkt_grid_file)
 {
     int n,m,bin_range,bin;
 
-
     for (bin=0;bin<Nobs;bin++) {
 
         for (bin_range=0;bin_range<Nrange_grid;bin_range++) {
@@ -862,14 +837,14 @@ int read_vpkt_grid(FILE *vpkt_grid_file)
 
                 for (m = 0; m < NZ_VGRID; m++) {
 
-                    fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel[bin_range][bin]);
-                    fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel[bin_range][bin]);
+                  fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].yvel[bin_range][bin]);
+                  fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].zvel[bin_range][bin]);
 
-                    fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[bin_range][bin]);
-                    fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[bin_range][bin]);
-                    fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[bin_range][bin]);
+                  fscanf(vpkt_grid_file, "%lg ", &vgrid_i[n][m].flux[bin_range][bin]);
+                  fscanf(vpkt_grid_file, "%lg ", &vgrid_q[n][m].flux[bin_range][bin]);
+                  fscanf(vpkt_grid_file, "%lg ", &vgrid_u[n][m].flux[bin_range][bin]);
 
-                    fscanf(vpkt_grid_file, "\n");
+                  fscanf(vpkt_grid_file, "\n");
                 }
             }
         }

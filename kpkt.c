@@ -514,7 +514,6 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 
   gsl_integration_workspace *wsp;
   gslintegration_paras intparas;
-  double bfcooling_integrand_gsl_2(double nu, void *paras);
   gsl_function F_bfcooling;
   //F_bfcooling.function = &bfcooling_integrand_gsl_2;
   F_bfcooling.function = &alpha_sp_E_integrand_gsl;

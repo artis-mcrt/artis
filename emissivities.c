@@ -150,7 +150,7 @@ int continuum_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, doubl
 }
 
 /*******************************************************/
-int compton_emiss_cont(PKT *pkt_ptr, double dist, double t_current)
+int compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 {
   /* Subroutine to add contriubtion to the MC estimator for the
 compton emissivity. Called with a packet that is about to travel a
@@ -260,7 +260,7 @@ motion and the local velocity vectors to the cmf.*/
 }
 
 /*******************************************************/
-int pp_emiss_cont(PKT *pkt_ptr, double dist, double t_current)
+int pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 {
   /* New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
      emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something

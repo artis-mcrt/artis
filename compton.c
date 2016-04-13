@@ -227,7 +227,7 @@ double choose_f(double xx, double zrand)
 
 
 /******************************************************************/
-double thomson_angle()
+double thomson_angle(void)
 {
   /*For Thomson scattering we can get the new angle from a random number very easily. */
 

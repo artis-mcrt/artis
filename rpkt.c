@@ -946,7 +946,7 @@ double closest_transition_empty(PKT *pkt_ptr)
 
 
 ///****************************************************************************
-void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
+void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
 {
   double vel_vec[3];
   double sigma;//,kappa_bfheating;
@@ -1229,7 +1229,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
 
 
 ///****************************************************************************
-void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
+void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
 {
     double vel_vec[3];
     double sigma;

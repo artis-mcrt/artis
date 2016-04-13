@@ -1,8 +1,8 @@
 #ifndef GREY_EMISSIVITIES_H
 #define GREY_EMISSIVITIES_H
 
-int rlc_emiss_gamma(PKT *pkt_ptr, double dist, double t_current);
-int rlc_emiss_rpkt(PKT *pkt_ptr, double dist, double t_current);
+int rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current);
+int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current);
 int normalise_grey(int nts);
 int write_grey(int nts);
 double meanf_sigma(double x);

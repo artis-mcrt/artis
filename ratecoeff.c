@@ -7,7 +7,7 @@
 #include <gsl/gsl_integration.h>
 
 ///****************************************************************************
-void tabulate_ratecoefficients_gsl()
+void tabulate_ratecoefficients_gsl(void)
 /// Precalculates the rate coefficients for stimulated and spontaneous
 /// recombination and photoionisation on a given temperature grid using
 /// libgsl integrators.
@@ -15,9 +15,6 @@ void tabulate_ratecoefficients_gsl()
 /// W is easily factored out. For stimulated recombination we must assume
 /// T_e = T_R for this precalculation.
 {
-  //double stimulated_bfcooling_integrand_gsl(double nu, void *paras);
-  //double stimulated_recomb_integrand_gsl(double nu, void *paras);
-
   //size_t neval;   /// for qng integrator
   int check,calculate;
 
@@ -117,7 +114,7 @@ void tabulate_ratecoefficients_gsl()
   calculate_ion_alpha_sp();
 }
 
-void calculate_rate_coefficients()
+void calculate_rate_coefficients(void)
 {
   gsl_function F_alpha_sp, F_alpha_sp_E, F_gamma, F_gammacorr;
   gsl_function F_bfheating,F_bfcooling;//,F_stimulated_bfcooling,F_stimulated_recomb;
@@ -230,7 +227,7 @@ void calculate_rate_coefficients()
   }
 }
 
-void write_ratecoeff_dat()
+void write_ratecoeff_dat(void)
 {
   FILE *ratecoeff_file;
   if ((ratecoeff_file = fopen("ratecoeff.dat", "w")) == NULL)
@@ -278,7 +275,7 @@ void write_ratecoeff_dat()
 }
 
 //calculate the ion total recombination coefficients
-void calculate_ion_alpha_sp()
+void calculate_ion_alpha_sp(void)
 {
   for (int iter = 0; iter < TABLESIZE; iter++)
   {

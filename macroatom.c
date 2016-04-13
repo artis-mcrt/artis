@@ -943,8 +943,10 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
   //double g_ratio = statweight_target/mastate[tid].statweight;
   //B_lu = g_ratio * B_ul;
 
-  double n_u = get_levelpop(modelgridindex,element,ion,upper);
-  double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  //double n_u = get_levelpop(modelgridindex,element,ion,upper);
+  //double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
+  double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower); //TODO: do these two ways of calculating level pops give different results?
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
   //n_u = n_l * W * g_ratio * exp(-epsilon_trans/KB/T_R);

@@ -4,7 +4,7 @@
 #include "vectors.h"
 
 ///****************************************************************************
-void update_estimators(PKT *pkt_ptr, double distance)
+void update_estimators(const PKT *pkt_ptr, double distance)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.

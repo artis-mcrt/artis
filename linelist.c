@@ -3,7 +3,7 @@
 
 /* To construct an energy ordered gamma ray line list. */
 
-int get_gam_ll()
+int get_gam_ll(void)
 {
   /* Start by setting up the grid of fake lines and their energies. */
   fakeg_spec.nlines = nfake_gam;

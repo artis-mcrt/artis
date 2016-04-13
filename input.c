@@ -306,7 +306,7 @@ int input(int rank)
 
 ///****************************************************************************
 /// Subroutine to read in input parameters.
-void read_atomicdata()
+void read_atomicdata(void)
 {
   ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
   int index_in_groundlevelcontestimator;
@@ -1246,7 +1246,7 @@ void read_atomicdata()
 }
 
 
-void read_phixs_data()
+void read_phixs_data(void)
 {
   printout("readin phixs data\n");
   FILE *phixsdata = fopen("phixsdata_v2.txt", "r");
@@ -1421,7 +1421,7 @@ void read_phixs_data()
 }
 
 
-void write_processed_modelatom()
+void write_processed_modelatom(void)
 {
   FILE *modelatom = fopen("modelatom.dat", "w");
   if (modelatom == NULL)

@@ -6,61 +6,75 @@
 /*******************************************************/
 int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file)
 {
-  int i,m,p,l;
-
   fprintf(specpol_file, "%g ", 0.0);
 
-  for (l=0;l<3;l++) {
-    for (p = 0; p < ntbins; p++) fprintf(specpol_file, "%g ", (stokes_i[p].lower_time + (stokes_i[p].delta_t/2))/DAY);
+  for (int l = 0; l < 3; l++)
+  {
+    for (int p = 0; p < ntbins; p++)
+      fprintf(specpol_file, "%g ", (stokes_i[p].lower_time + (stokes_i[p].delta_t/2))/DAY);
   }
 
   fprintf(specpol_file, "\n");
 
-  for (m=0; m < nnubins; m++)
+  for (int m = 0; m < nnubins; m++)
   {
-
     fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m]+(stokes_i[0].delta_freq[m]/2))));
 
     // Stokes I
-    for (p = 0; p < ntbins; p++)
+    for (int p = 0; p < ntbins; p++)
     {
       fprintf(specpol_file, "%g ", stokes_i[p].flux[m]);
 
       if (do_emission_res == 1)
       {
-        for (i = 0; i < 2*nelements*maxion+1; i++) fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
+        for (int i = 0; i < 2*nelements*maxion+1; i++)
+          fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
+
         fprintf(emissionpol_file, "\n");
-        for (i = 0; i < nelements*maxion; i++) fprintf(absorptionpol_file, "%g ", stokes_i[p].stat[m].absorption[i]);
+
+        for (int i = 0; i < nelements*maxion; i++)
+          fprintf(absorptionpol_file, "%g ", stokes_i[p].stat[m].absorption[i]);
+
         fprintf(absorptionpol_file, "\n");
       }
     }
 
 
     // Stokes Q
-    for (p = 0; p < ntbins; p++)
+    for (int p = 0; p < ntbins; p++)
     {
         fprintf(specpol_file, "%g ", stokes_q[p].flux[m]);
 
         if (do_emission_res == 1)
         {
-            for (i = 0; i < 2*nelements*maxion+1; i++) fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
+            for (int i = 0; i < 2*nelements*maxion+1; i++)
+              fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
+
             fprintf(emissionpol_file, "\n");
-            for (i = 0; i < nelements*maxion; i++) fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
+
+            for (int i = 0; i < nelements*maxion; i++)
+              fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
+
             fprintf(absorptionpol_file, "\n");
         }
     }
 
 
     // Stokes U
-    for (p = 0; p < ntbins; p++)
+    for (int p = 0; p < ntbins; p++)
     {
         fprintf(specpol_file, "%g ", stokes_u[p].flux[m]);
 
         if (do_emission_res == 1)
         {
-            for (i = 0; i < 2*nelements*maxion+1; i++) fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
+            for (int i = 0; i < 2*nelements*maxion+1; i++)
+              fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
+
             fprintf(emissionpol_file, "\n");
-            for (i = 0; i < nelements*maxion; i++) fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
+
+            for (int i = 0; i < nelements*maxion; i++)
+              fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
+
             fprintf(absorptionpol_file, "\n");
         }
     }
@@ -72,7 +86,7 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
   fclose(specpol_file);
   fclose(emissionpol_file);
   */
-  return(0);
+  return 0;
 }
 
 
@@ -182,12 +196,10 @@ int gather_specpol(int depth)
 
 /**********************************************************************/
 /*Routine to add a packet to the outcoming spectrum.*/
-int add_to_specpol(EPKT *pkt_ptr)
+int add_to_specpol(const EPKT *pkt_ptr)
 {
   /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
-
-  double dot();
   double t_arrive,deltai,deltaq,deltau;
   int nt, nnu;
   int at,et,element,ion,nproc;
@@ -267,8 +279,6 @@ int gather_specpol_res(int current_abin)
 {
   //void read_packets(FILE *packets_file);
   //int i,n,m,nn,p;
-  int add_to_specpol_res(EPKT *pkt_ptr, int current_abin);
-  void init_specpol(void);
   EPKT *pkt_ptr;
   int p;
 
@@ -291,7 +301,7 @@ int gather_specpol_res(int current_abin)
 
 /**********************************************************************/
 /**Routine to add a packet to the outcoming spectrum.*/
-int add_to_specpol_res(EPKT *pkt_ptr, int current_abin)
+int add_to_specpol_res(const EPKT *pkt_ptr, int current_abin)
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 

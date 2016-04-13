@@ -7,7 +7,7 @@
 ///***************************************************************************
 /// Subroutine that initialises the grid cells. Designed so that grid cells
 /// don't need to be uniform but for the moment they are.
-int grid_init()
+int grid_init(void)
 {
   /// Start by checking that the number of grid cells is okay */
   //ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
@@ -92,7 +92,7 @@ int grid_init()
 
 
 ///***************************************************************************/
-int uniform_grid_setup()
+int uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
   int nx = 0;
@@ -311,7 +311,7 @@ int uniform_grid_setup()
 
 ///****************************************************************************
 /// Routine for doing a density grid read from a 1-D model.
-int density_1d_read ()
+int density_1d_read(void)
 {
   double radial_pos;
   double dcen[3];
@@ -847,7 +847,7 @@ int density_1d_read ()
 
 ///****************************************************************************
 /// Routine for doing a density grid read from a 2-D model.
-int density_2d_read()
+int density_2d_read(void)
 {
   int n, m;
   double radial_pos;
@@ -881,7 +881,7 @@ int density_2d_read()
   empty_cells = 0;
 
 
-  for (n=0;n < ngrid; n++)
+  for (n = 0; n < ngrid; n++)
   {
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
@@ -1535,7 +1535,7 @@ void allocate_cooling(int modelgridindex)
 }*/
 
 
-void abundances_3d_read()
+void abundances_3d_read(void)
 {
   FILE *abundance_file;
   /// Open the abundances file
@@ -1603,13 +1603,10 @@ void abundances_3d_read()
 
 
 ///***************************************************************************/
-void abundances_1d_read()
+void abundances_1d_read(void)
 {
-  FILE *abundance_file;
-  float norm,dum[30];
-  int n, nn, cellnumber;
-
   /// Open the abundances file
+  FILE *abundance_file;
   if ((abundance_file = fopen("abundances.txt", "r")) == NULL)
   {
     printout("Cannot open abundances.txt.\n");
@@ -1621,12 +1618,14 @@ void abundances_1d_read()
   /// cells. Its format must be cellnumber (integer), abundance for
   /// element Z=1 (float) up to abundance for element Z=30 (float)
   /// i.e. in total one integer and 30 floats.
-  for (n = 0; n < npts_model; n++)
+  for (int n = 0; n < npts_model; n++)
   {
+    int cellnumber;
+    float dum[30];
     fscanf(abundance_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
 
-    norm = 0.;
-    for (nn = 0; nn < 30; nn++)
+    float norm = 0.;
+    for (int nn = 0; nn < 30; nn++)
     {
       abund_model[n][nn] = dum[nn];
       norm += dum[nn];
@@ -1634,7 +1633,7 @@ void abundances_1d_read()
 
     if (norm > 0)
     {
-      for (nn = 0; nn < 30; nn++)
+      for (int nn = 0; nn < 30; nn++)
       {
         abund_model[n][nn] *= 1./norm;
       }
@@ -1646,19 +1645,10 @@ void abundances_1d_read()
 
 
 ///***************************************************************************/
-void assign_temperature()
+void assign_temperature(void)
 /// Routine for assigning temperatures to the grid cells at the start of the
 /// simulation.
 {
-  //double fni(CELL *grid_ptr);
-  FILE *gridsave_file;
-  double factor,T_initial,tstart,factor52fe,factor48cr;
-  //float T_R,T_e,W,T_J,T_D,W_D,Gamma,dummy,thick;
-  float T_R,T_e,W,T_J;//,thick;
-  double Gamma;
-  int element,ion,nions;
-  int n,mgi,thick;
-
   /// For a simulation started from scratch we estimate the initial temperatures
   if (!continue_simulation)
   {
@@ -1668,16 +1658,16 @@ void assign_temperature()
     /// according to the local energy density resulting from the 56Ni decay.
     /// The dilution factor is W=1 in LTE.
 
-    tstart = time_step[0].mid;
-    factor = CLIGHT/4/STEBO * 1./56/MH * pow(tmin/tstart,3);
+    double tstart = time_step[0].mid;
+    double factor = CLIGHT/4/STEBO * 1./56/MH * pow(tmin/tstart,3);
     factor *= -1./(tstart*(-TCOBALT+TNICKEL));
     factor *= (-ENICKEL*exp(-tstart/TNICKEL)*tstart*TCOBALT - ENICKEL*exp(-tstart/TNICKEL)*TNICKEL*TCOBALT + ENICKEL*exp(-tstart/TNICKEL)*tstart*TNICKEL + pow(TNICKEL,2)*ENICKEL*exp(-tstart/TNICKEL) - TCOBALT*tstart*ECOBALT*exp(-tstart/TCOBALT) - pow(TCOBALT,2)*ECOBALT*exp(-tstart/TCOBALT) + ECOBALT*tstart*TNICKEL*exp(-tstart/TNICKEL) + pow(TNICKEL,2)*ECOBALT*exp(-tstart/TNICKEL) + ENICKEL*TCOBALT*TNICKEL - ENICKEL*pow(TNICKEL,2) - pow(TNICKEL,2)*ECOBALT + ECOBALT*pow(TCOBALT,2));
 
-    factor52fe = CLIGHT/4/STEBO * 1./52/MH * pow(tmin/tstart,3);
+    double factor52fe = CLIGHT/4/STEBO * 1./52/MH * pow(tmin/tstart,3);
     factor52fe *= -1./(tstart*(-T52MN+T52FE));
     factor52fe *= (-E52FE*exp(-tstart/T52FE)*tstart*T52MN - E52FE*exp(-tstart/T52FE)*T52FE*T52MN + E52FE*exp(-tstart/T52FE)*tstart*T52FE + pow(T52FE,2)*E52FE*exp(-tstart/T52FE) - T52MN*tstart*E52MN*exp(-tstart/T52MN) - pow(T52MN,2)*E52MN*exp(-tstart/T52MN) + E52MN*tstart*T52FE*exp(-tstart/T52FE) + pow(T52FE,2)*E52MN*exp(-tstart/T52FE) + E52FE*T52MN*T52FE - E52FE*pow(T52FE,2) - pow(T52FE,2)*E52MN + E52MN*pow(T52MN,2));
 
-    factor48cr = CLIGHT/4/STEBO * 1./48/MH * pow(tmin/tstart,3);
+    double factor48cr = CLIGHT/4/STEBO * 1./48/MH * pow(tmin/tstart,3);
     factor48cr *= -1./(tstart*(-T48V+T48CR));
     factor48cr *= (-E48CR*exp(-tstart/T48CR)*tstart*T48V - E48CR*exp(-tstart/T48CR)*T48CR*T48V + E48CR*exp(-tstart/T48CR)*tstart*T48CR + pow(T48CR,2)*E48CR*exp(-tstart/T48CR) - T48V*tstart*E48V*exp(-tstart/T48V) - pow(T48V,2)*E48V*exp(-tstart/T48V) + E48V*tstart*T48CR*exp(-tstart/T48CR) + pow(T48CR,2)*E48V*exp(-tstart/T48CR) + E48CR*T48V*T48CR - E48CR*pow(T48CR,2) - pow(T48CR,2)*E48V + E48V*pow(T48V,2));
 
@@ -1685,10 +1675,10 @@ void assign_temperature()
     /// This works only for the inbuilt Lucy model
     //factor = CLIGHT/4/STEBO * 3*mtot/4/PI * ENICKEL/56/MH  / pow(vmax,3);
     //for (n = 0; n < ngrid; n++)
-    for (n = 0; n < npts_model; n++)
+    for (int n = 0; n < npts_model; n++)
     {
       //mgi = cell[n].modelgridindex;
-      T_initial = pow(((factor * get_fni(n) * get_rhoinit(n))
+      double T_initial = pow(((factor * get_fni(n) * get_rhoinit(n))
            + (factor52fe * get_f52fe(n) * get_rhoinit(n))
            + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1./4.);
       //T_initial = pow(factor * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
@@ -1719,6 +1709,7 @@ void assign_temperature()
   /// at the end of the simulation and write them to the grid.
   else
   {
+    FILE *gridsave_file;
     printout("READIN GRID SNAPSHOT\n");
     if ((gridsave_file = fopen("gridsave.dat", "r")) == NULL)
     {
@@ -1726,10 +1717,12 @@ void assign_temperature()
       exit(0);
     }
 
-    for (n = 0; n < npts_model; n++)
+    for (int n = 0; n < npts_model; n++)
     {
       //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
       //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g %g %d\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy,&dummy,&idummy);
+      float T_R,T_e,W,T_J;
+      int mgi,thick;
       fscanf(gridsave_file,"%d %g %g %g %g %d",&mgi,&T_R,&T_e,&W,&T_J,&thick);
       if (n == mgi)
       {
@@ -1740,21 +1733,23 @@ void assign_temperature()
         modelgrid[mgi].thick = thick;
 
         #ifndef FORCE_LTE
-          for (element = 0; element < nelements; element++)
+          for (int element = 0; element < nelements; element++)
           {
-            nions = get_nions(element);
-            for (ion = 0; ion < nions; ion++)
+            int nions = get_nions(element);
+            for (int ion = 0; ion < nions; ion++)
             {
+              double Gamma;
               fscanf(gridsave_file,"%lg ",&Gamma);
               corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = Gamma;
             }
           }
 
-          for (element = 0; element < nelements; element++)
+          for (int element = 0; element < nelements; element++)
           {
-            nions = get_nions(element);
-            for (ion = 0; ion < nions; ion++)
+            int nions = get_nions(element);
+            for (int ion = 0; ion < nions; ion++)
             {
+              double Gamma;
               fscanf(gridsave_file,"%lg ",&Gamma);
               gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
             }

@@ -22,7 +22,7 @@ int ray_prop(RAY *ray_ptr, double t1, double t2, int nts)
     {
       /*It's a gamma-ray ray.*/
       /* Call do_gamma_ray. */
-      double t_change_type = do_gamma_ray( ray_ptr, t_current, t2);
+      double t_change_type = do_gamma_ray(ray_ptr, t_current, t2);
       /* This returns a flag if the packet gets to t2 without
          changing to something else. If the packet does change it
          returns the time of change and sets everything for the
@@ -268,7 +268,6 @@ double boundary_cross_ray(RAY *ray_ptr, double tstart, int *snext)
 int change_cell_ray(RAY *ray_ptr, int snext, int *end_packet, double t_current)
 {
   PKT dummy;
-  int change_cell();
 
   /* Similar to above. */
 
@@ -386,8 +385,6 @@ int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double
 /**************************************************************/
 int get_nul(double freq)
 {
-  int too_high, too_low, try;
-
   double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
   double freq_min = get_gam_freq(&gam_line_list, 0);
 
@@ -401,12 +398,12 @@ int get_nul(double freq)
   }
   else
   {
-    too_high = gam_line_list.total - 1;
-    too_low = 0;
+    int too_high = gam_line_list.total - 1;
+    int too_low = 0;
 
     while (too_high != too_low + 1)
   	{
-  	  try = (too_high + too_low)/2;
+  	  int try = (too_high + too_low)/2;
   	  double freq_try = get_gam_freq(&gam_line_list, try);
   	  if (freq_try >= freq)
 	    {
@@ -418,12 +415,12 @@ int get_nul(double freq)
 	    }
   	}
 
-    return(too_low);
+    return too_low;
   }
 }
 
 /**************************************************************/
-double get_gam_freq(LIST *line_list, int n)
+double get_gam_freq(const LIST *line_list, int n)
 {
   double freq;
 

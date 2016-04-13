@@ -153,7 +153,7 @@ int gather_light_curve(void)
 /**********************************************************************/
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
-int add_to_lc(EPKT *pkt_ptr)
+int add_to_lc(const EPKT *pkt_ptr)
 {
   /// Put this into the time grid
   double t_arrive = pkt_ptr->arrive_time;
@@ -201,7 +201,7 @@ int gather_light_curve_res(int current_abin)
 /**********************************************************************/
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
-int add_to_lc_res(EPKT *pkt_ptr, int current_abin)
+int add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
 {
   double vec1[3], vec2[3], xhat[3], vec3[3];
 

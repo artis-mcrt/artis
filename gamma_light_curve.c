@@ -8,7 +8,7 @@
 
 /* Routine to make a MC angle-dependent light curve for the gamma-packets. */
 
-int make_gamma_light_curve()
+int make_gamma_light_curve(void)
 {
   gather_gamma_light_curve(0);
   write_gamma_light_curve();
@@ -84,7 +84,7 @@ int gather_gamma_light_curve(int my_rank)
 }
 
 /***********************************************************************************/
-int write_gamma_light_curve()
+int write_gamma_light_curve(void)
 {
   double save[MTLCBINS][MANGLCBINS];
 

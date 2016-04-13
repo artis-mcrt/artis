@@ -18,6 +18,7 @@
 #include "time_init.h"
 #include "gamma_light_curve.h"
 #include "light_curve.h"
+#include "packet_init.h"
 #include "spectrum.h"
 #include "vectors.h"
 

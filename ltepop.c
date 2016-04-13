@@ -646,13 +646,13 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
        stat_weight(element,ion,level) / stat_weight(element,ion,0) *
        exp(-(E_level - E_ground)/KB/T_exc);
 
-  if (nn < MINPOP)
+  /*if (nn < MINPOP)
   {
     if (get_abundance(modelgridindex,element) > 0)
       nn = MINPOP;
     else
       nn = 0.;
-  }
+  }*/
 
   return nn;
 }
@@ -881,7 +881,7 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 
 /// Initialise estimator arrays which hold the last time steps values (used to damp out
 /// fluctuations over timestep iterations if DO_TITER is defined) to -1.
-void initialise_photoionestimators()
+void initialise_photoionestimators(void)
 {
   //for (n = 0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)

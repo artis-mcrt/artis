@@ -5,7 +5,7 @@
 
 /* Stuff for photo electric effect scattering. */
 
-double sig_photo_electric(PKT *pkt_ptr, double t_current)
+double sig_photo_electric(const PKT *pkt_ptr, double t_current)
 {
   double sigma_cmf;
   /* Start by working out the x-section in the co-moving frame.*/
@@ -53,7 +53,7 @@ double sig_photo_electric(PKT *pkt_ptr, double t_current)
 
 /* Cross section for pair production. */
 
-double sig_pair_prod(PKT *pkt_ptr, double t_current)
+double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 {
   double sigma_cmf;
 

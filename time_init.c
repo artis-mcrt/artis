@@ -3,7 +3,7 @@
 
 /* Subroutine to define the time steps.*/
 
-int time_init()
+int time_init(void)
 {
   /// t=tmin is the start of the calcualtion. t=tmax is the end of the calculation.
   /// ntstep is the number of time steps wanted. For now the time steps

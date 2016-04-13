@@ -9,6 +9,6 @@ int copy_ray (const RAY *ray1, RAY *ray2);
 int move_ray(RAY *ray_ptr, double dist, double time);
 int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double single_t);
 int get_nul(double freq);
-double get_gam_freq(LIST *line_list, int n);
+double get_gam_freq(const LIST *line_list, int n);
 
 #endif //RAY_PROP_H

@@ -319,7 +319,7 @@ double f48cr(const CELL *grid_ptr)
 
 
 ///***************************************************************************/
-int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset)
+int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
   double prob_chain[3];
@@ -338,11 +338,11 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 
 
   /*first choose which of the decay chains to sample*/
-  prob_chain[0] = fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56;
-  prob_chain[1] = f52fe(grid_ptr)*(E52FE + E52MN)/MFE52;
-  prob_chain[2] = f48cr(grid_ptr)*(E48V + E48CR)/MCR48;
+  prob_chain[0] = fni(grid_ptr) * (ENICKEL + ECOBALT)/MNI56;
+  prob_chain[1] = f52fe(grid_ptr) * (E52FE + E52MN)/MFE52;
+  prob_chain[2] = f48cr(grid_ptr) * (E48V + E48CR)/MCR48;
 
-  double zrand3 = gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]);
+  double zrand3 = gsl_rng_uniform(rng) * (prob_chain[0] + prob_chain[1] + prob_chain[2]);
   if (zrand3 <= prob_chain[0])
   {
     /// Now choose whether it's going to be a nickel or cobalt pellet and

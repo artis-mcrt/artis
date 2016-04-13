@@ -11,7 +11,7 @@
 ///grey case.
 
 /*******************************************************/
-int rlc_emiss_gamma(PKT *pkt_ptr, double dist, double t_current)
+int rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current)
 {
   /* Subroutine to record the heating rate in a cell due to gamma rays.
 By heating rate I mean, for now, really the rate at which the code is making
@@ -68,7 +68,7 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
 }
 
 /*******************************************************/
-int rlc_emiss_rpkt(PKT *pkt_ptr, double dist, double t_current)
+int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 {
   /* Subroutine to record the rate of destruction (and re-creation) of
      r-packets by the grey opacity. */
@@ -199,11 +199,10 @@ int write_grey(int nts)
   fclose(est_file);
   return 0;
 }
+
 /***********************************************/
-
-/* Routine to compute the mean energy converted to non-thermal electrons times
-the Klein-Nishina cross section. */
-
+// Routine to compute the mean energy converted to non-thermal electrons times
+// the Klein-Nishina cross section.
 double meanf_sigma(double x)
 {
   double f = 1+(2*x);
@@ -222,7 +221,7 @@ double meanf_sigma(double x)
 /**************************************************************/
 int emiss_rlc_load(int nts)
 {
-  /* Routine to read in the stored estimators for the time step that is about to begin. */
+  // Routine to read in the stored estimators for the time step that is about to begin.
   FILE *est_file, *dummy;
   char chch;
   char filename[100] = "grey_est_";
