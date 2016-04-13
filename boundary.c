@@ -6,7 +6,7 @@
 
 ///****************************************************************************
 /// Basic routine to compute distance to a call boundary.
-double boundary_cross (PKT *pkt_ptr, double tstart, int *snext)
+double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
 {
   //double close, close_try;
 

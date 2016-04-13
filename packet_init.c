@@ -199,7 +199,7 @@ int setup_packets (int pktnumberoffset)
 
 
 ///***************************************************************************/
-double fni(CELL *grid_ptr)
+double fni(const CELL *grid_ptr)
 /// Subroutine that gives the Ni56 mass fraction.
 {
   if (model_type == RHO_UNIFORM)
@@ -263,7 +263,7 @@ double fni(CELL *grid_ptr)
 
 
 ///***************************************************************************/
-double f52fe(CELL *grid_ptr)
+double f52fe(const CELL *grid_ptr)
 /// Subroutine that gives the Fe52 mass fraction.
 {
   if (model_type == RHO_UNIFORM)
@@ -290,7 +290,7 @@ double f52fe(CELL *grid_ptr)
 }
 
 ///***************************************************************************/
-double f48cr(CELL *grid_ptr)
+double f48cr(const CELL *grid_ptr)
 /// Subroutine that gives the Cr48 mass fraction.
 {
   if (model_type == RHO_UNIFORM)

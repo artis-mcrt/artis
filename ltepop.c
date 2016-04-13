@@ -644,7 +644,7 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
   double E_ground = epsilon(element,ion,0);
   nn = get_groundlevelpop(modelgridindex,element,ion) * W *
        stat_weight(element,ion,level) / stat_weight(element,ion,0) *
-       exp(-(E_level-E_ground)/KB/T_exc);
+       exp(-(E_level - E_ground)/KB/T_exc);
 
   if (nn < MINPOP)
   {

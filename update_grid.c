@@ -791,7 +791,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                             nlte_test = get_nne(n) / nne;
                             if (nlte_test < 1)
                               nlte_test = 1. / nlte_test;
-                            printout("iterate? old nne is %g, new nne is %g, accuracy is %g",nne,get_nne(n),nlte_test);
+                            printout("iterate? old nne is %g, new nne is %g, accuracy is %g\n",nne,get_nne(n),nlte_test);
                             set_nne(n, (get_nne(n) + nne) / 2.);
                           #endif
                           nlte_iter++;

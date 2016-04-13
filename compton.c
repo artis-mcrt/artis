@@ -5,7 +5,7 @@
 
 /* Stuff for compton scattering. */
 
-double sig_comp(PKT *pkt_ptr, double t_current)
+double sig_comp(const PKT *pkt_ptr, double t_current)
 {
   double sigma_cmf;
   /* Start by working out the compton x-section in the co-moving frame.*/
