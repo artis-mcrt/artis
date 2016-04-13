@@ -1473,13 +1473,24 @@ int main(int argc, char** argv)
   return 0;
 }
 
+///MK: printout should be used instead of printf throughout the whole code for output messages
+void printout(const char *restrict format, ...)
+{
+   int ret_status = 0;
+   //printf ("Called my version of fprintf\n");
+
+   va_list args;
+   va_start(args,format);
+   ret_status = vfprintf(output_file,format,args);
+   va_end(args);
+}
 
 /// Generalized output routine
 /// following section 7.3 of "C. Programming Language."
 /// by Brian W. Kernighan and Dennis Ritchie
 /// As it stands it is only capable to printout floating point variables as %g
 /// specifiers which determine the number of digits don't work!
-void printout(char *fmt, ...)
+/*void printout(char *fmt, ...)
 {
   va_list ap;
   char *p, *sval;
@@ -1491,17 +1502,17 @@ void printout(char *fmt, ...)
   /// To be able to follow the messages interactively the file is continuously
   /// opened and closed. As this happens always with the "a" argument the file
   /// is so far never really initialized: a existing output.txt will be continued!
-/*      sprintf(filename,"output_%d-%d.txt",rank_global,tid);
-      if (output_file_open == 0)
-      {
-        if ((output_file = fopen(filename, "a")) == NULL)
-        {
-          printf("Cannot open %s.\n",filename);
-          abort();
-  //    exit(0);
-        }
-        output_file_open = 1;
-      }*/
+//      sprintf(filename,"output_%d-%d.txt",rank_global,tid);
+//      if (output_file_open == 0)
+//      {
+//        if ((output_file = fopen(filename, "a")) == NULL)
+//        {
+//          printf("Cannot open %s.\n",filename);
+//          abort();
+//  //    exit(0);
+//        }
+//        output_file_open = 1;
+//      }
 
       va_start(ap, fmt);
       for (p = fmt; *p; p++)
@@ -1540,7 +1551,7 @@ void printout(char *fmt, ...)
 
 
       //fclose(output_file);
-}
+}*/
 
 
 

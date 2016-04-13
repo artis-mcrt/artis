@@ -606,7 +606,6 @@ extern short use_cellhist;
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
 
-void printout(char *fmt, ...);   ///MK: printout should be used instead of printf throughout the whole code
-                                 ///for output messages. Therefore it must be available globally
+void printout(const char *restrict format, ...);
 
 #endif // SN3D_H
