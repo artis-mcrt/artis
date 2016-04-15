@@ -8,3 +8,5 @@ exspec
 *.o-*
 tags
 atomicdata/
+
+browse.VC.db

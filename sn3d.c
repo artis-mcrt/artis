@@ -41,18 +41,15 @@ int main(int argc, char** argv)
 
   int do_this_full_loop;
 
-
   nvpkt = 0;
   nvpkt_esc1 = 0;
   nvpkt_esc2 = 0;
   nvpkt_esc3 = 0;
 
-
-
 //  int HUGEE;
 
   #ifdef MPI_ON
-    int my_rank,p;
+    int my_rank, p;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &p);
@@ -112,7 +109,7 @@ int main(int argc, char** argv)
   #ifdef GIT_VERSION
     printout("Current version: %s\n",GIT_VERSION);
   #endif
-  //printout("Most recent commit hash: %s\n",GIT_HASH);
+  //printout("Hash of most recent commit: %s\n",GIT_HASH);
   printout("Compiled at %s on %s\n",__TIME__,__DATE__);
 
   if ((mastate = calloc(nthreads,sizeof(mastate_t))) == NULL)

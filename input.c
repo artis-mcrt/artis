@@ -1776,7 +1776,6 @@ void read_processed_modelatom(FILE *modelatom)
 void read_parameterfile(int rank)
 {
   //double z1, z2, x;
-  double x;
   unsigned long int zseed; /* rnum generator seed */
   unsigned long int xseed,pre_zseed;
 
@@ -1821,13 +1820,14 @@ void read_parameterfile(int rank)
       zseed = pre_zseed + (13 * rank) + (17*tid);
       printout("rank %d: thread %d has zseed %d\n",rank,tid,zseed);
       /// start by setting up the randon number generator
-      rng = gsl_rng_alloc (gsl_rng_ran3);
-      gsl_rng_set (rng, zseed);
+      rng = gsl_rng_alloc(gsl_rng_ran3);
+      gsl_rng_set(rng, zseed);
       /// call it a few times to get it in motion.
       for (int n = 0; n < 100; n++)
       {
-        x = gsl_rng_uniform(rng);
+        //double x = gsl_rng_uniform(rng);
         //printout("zrand %g\n", x);
+        gsl_rng_uniform(rng);
       }
   #ifdef _OPENMP
     }
@@ -1866,11 +1866,11 @@ void read_parameterfile(int rank)
   {
     model_type = RHO_1D_READ;
   }
-  if (dum1 == 2)
+  else if (dum1 == 2)
   {
     model_type = RHO_2D_READ;
   }
-  if (dum1 == 3)
+  else if (dum1 == 3)
   {
     model_type = RHO_3D_READ;
   }
