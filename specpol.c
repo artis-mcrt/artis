@@ -145,7 +145,6 @@ void init_specpol(void)
 
 int gather_specpol(int depth)
 {
-  void init_specpol();
   int add_to_spec(EPKT *pkt_ptr);
   //void read_packets(FILE *packets_file);
   int p;
