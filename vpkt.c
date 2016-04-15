@@ -294,7 +294,8 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
 
 ///****************************************************************************
-double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
+double rot_angle(double *n1, double *n2, double *ref1, double *ref2)
+{
 /* ------------- Rotation angle from the scattering plane --------------------------------------------- */
 /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
 /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
@@ -320,10 +321,9 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
     if (cos_stokes_rot_1 == 0) i = acos(-1.)/2.;
     if (cos_stokes_rot_2 == 0) i = 0.0 ;
 
-    if (i!=i ) printf("Warning NaN: %3.6f \t %3.6f \t %3.6f \n",cos_stokes_rot_1,cos_stokes_rot_2,acos(cos_stokes_rot_1));
+    if (!isfinite(i)) printf("Warning NaN: %3.6f \t %3.6f \t %3.6f \n",cos_stokes_rot_1,cos_stokes_rot_2,acos(cos_stokes_rot_1));
 
     return i;
-
 }
 
 
@@ -332,8 +332,8 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
 
 /* ----------------------- Routine to compute the meridian frame axes ref1 and ref2 ----------------------------------------*/
 
-void meridian(double *n, double *ref1, double *ref2){
-
+void meridian(double *n, double *ref1, double *ref2)
+{
     // for ref_1 use (from triple product rule)
 
     ref1[0] = -1. * n[0] * n[2]/ sqrt(n[0]*n[0] + n[1]*n[1]);
@@ -531,39 +531,31 @@ int add_to_vspecpol(PKT *pkt_ptr, int bin, double t_arrive)
 /**********************************************************************/
 void init_vspecpol(void)
 {
-    int n,m,bin;
+  for (int bin = 0;bin < MOBS; bin++)
+  {
+    /** start by setting up the time and frequency bins. */
+    /** it is all done in terms of a logarithmic spacing in both t and nu - get the
+     step sizes first. */
 
-    for (bin=0;bin<MOBS;bin++) {
+    dlogt = (log(tmax) - log(tmin))/VMTBINS;
+    dlognu = (log(nu_max_r) - log(nu_min_r))/VMNUBINS;
 
-        /** start by setting up the time and frequency bins. */
-        /** it is all done interms of a logarithmic spacing in both t and nu - get the
-         step sizes first. */
+    for (int n = 0; n < VMTBINS; n++)
+    {
+      vstokes_i[n][bin].lower_time = exp( log(tmin) + (n * (dlogt)));
+      vstokes_i[n][bin].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - vstokes_i[n][bin].lower_time;
 
-        dlogt = (log(tmax) - log(tmin))/VMTBINS;
-        dlognu = (log(nu_max_r) - log(nu_min_r))/VMNUBINS;
+      for (int m = 0; m < VMNUBINS; m++)
+      {
+        lower_freq_vspec[m] = exp( log(nu_min_r) + (m * (dlognu)));
+        delta_freq_vspec[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - lower_freq_vspec[m];
 
-        for (n = 0; n < VMTBINS; n++)
-        {
-            vstokes_i[n][bin].lower_time = exp( log(tmin) + (n * (dlogt)));
-            vstokes_i[n][bin].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - vstokes_i[n][bin].lower_time;
-
-            for (m=0; m < VMNUBINS; m++)
-            {
-                lower_freq_vspec[m] = exp( log(nu_min_r) + (m * (dlognu)));
-                delta_freq_vspec[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - lower_freq_vspec[m];
-
-                vstokes_i[n][bin].flux[m] = 0.0;
-                vstokes_q[n][bin].flux[m] = 0.0;
-                vstokes_u[n][bin].flux[m] = 0.0;
-
-            }
-        }
-
-
+        vstokes_i[n][bin].flux[m] = 0.0;
+        vstokes_q[n][bin].flux[m] = 0.0;
+        vstokes_u[n][bin].flux[m] = 0.0;
+      }
     }
-
-
-
+  }
 }
 
 
@@ -571,32 +563,34 @@ void init_vspecpol(void)
 /*******************************************************/
 int write_vspecpol(FILE *specpol_file)
 {
-    int m,p,l;
-
-    for (int bin = 0; bin < Nobs; bin++) {
-
+    for (int bin = 0; bin < Nobs; bin++)
+    {
 
         fprintf(specpol_file, "%g ", 0.0);
 
-        for (l=0;l<3;l++) {
-            for (p = 0; p < VMTBINS; p++) fprintf(specpol_file, "%g ", (vstokes_i[p][bin].lower_time + (vstokes_i[p][bin].delta_t/2))/DAY);
+        for (int l = 0; l < 3;l++) {
+            for (int p = 0; p < VMTBINS; p++)
+              fprintf(specpol_file, "%g ", (vstokes_i[p][bin].lower_time + (vstokes_i[p][bin].delta_t/2))/DAY);
         }
 
         fprintf(specpol_file, "\n");
 
-        for (m=0; m < VMNUBINS; m++)
+        for (int m = 0; m < VMNUBINS; m++)
         {
 
             fprintf(specpol_file, "%g ", (lower_freq_vspec[m]+(delta_freq_vspec[m]/2)));
 
             // Stokes I
-            for (p = 0; p < VMTBINS; p++) fprintf(specpol_file, "%g ", vstokes_i[p][bin].flux[m]);
+            for (int p = 0; p < VMTBINS; p++)
+              fprintf(specpol_file, "%g ", vstokes_i[p][bin].flux[m]);
 
             // Stokes Q
-            for (p = 0; p < VMTBINS; p++) fprintf(specpol_file, "%g ", vstokes_q[p][bin].flux[m]);
+            for (int p = 0; p < VMTBINS; p++)
+              fprintf(specpol_file, "%g ", vstokes_q[p][bin].flux[m]);
 
             // Stokes U
-            for (p = 0; p < VMTBINS; p++) fprintf(specpol_file, "%g ", vstokes_u[p][bin].flux[m]);
+            for (int p = 0; p < VMTBINS; p++)
+              fprintf(specpol_file, "%g ", vstokes_u[p][bin].flux[m]);
 
             fprintf(specpol_file, "\n");
 
@@ -610,8 +604,7 @@ int write_vspecpol(FILE *specpol_file)
 
     }
 
-
-    return(0);
+    return 0;
 }
 
 
