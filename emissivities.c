@@ -350,7 +350,6 @@ int zero_estimators()
 int normalise_estimators(int nts)
 {
   double dfreq[EMISS_MAX];
-  double get_gam_freq();
 
   double time_factor = 1. / pow(time_step[nts].mid / tmin, 3.0) / time_step[nts].width;
 
