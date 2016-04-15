@@ -1470,92 +1470,17 @@ int main(int argc, char** argv)
   return 0;
 }
 
-///MK: printout should be used instead of printf throughout the whole code for output messages
-void printout(const char *restrict format, ...)
+// printout should be used instead of printf throughout the whole code for output messages
+int printout(const char *restrict format, ...)
 {
    int ret_status = 0;
-   //printf ("Called my version of fprintf\n");
 
    va_list args;
    va_start(args,format);
    ret_status = vfprintf(output_file,format,args);
    va_end(args);
+   return ret_status;
 }
-
-/// Generalized output routine
-/// following section 7.3 of "C. Programming Language."
-/// by Brian W. Kernighan and Dennis Ritchie
-/// As it stands it is only capable to printout floating point variables as %g
-/// specifiers which determine the number of digits don't work!
-/*void printout(char *fmt, ...)
-{
-  va_list ap;
-  char *p, *sval;
-  int ival;
-  double dval;
-  //char filename[100];
-  //FILE *output_file;
-
-  /// To be able to follow the messages interactively the file is continuously
-  /// opened and closed. As this happens always with the "a" argument the file
-  /// is so far never really initialized: a existing output.txt will be continued!
-//      sprintf(filename,"output_%d-%d.txt",rank_global,tid);
-//      if (output_file_open == 0)
-//      {
-//        if ((output_file = fopen(filename, "a")) == NULL)
-//        {
-//          printf("Cannot open %s.\n",filename);
-//          abort();
-//  //    exit(0);
-//        }
-//        output_file_open = 1;
-//      }
-
-      va_start(ap, fmt);
-      for (p = fmt; *p; p++)
-      {
-        if (*p != '%')
-        {
-      //putchar(*p); ///for output on the screen
-          fputc(*p,output_file);
-          continue;
-        }
-        switch (*++p)
-        {
-          case 'd':
-            ival = va_arg(ap, int);
-        //printf(output_file,"%d", ival);  ///for output on the screen
-            fprintf(output_file,"%d", ival);
-            break;
-          case 'f':
-            dval = va_arg(ap, double);
-            fprintf(output_file,"%f", dval);
-            break;
-          case 'g':
-            dval = va_arg(ap, double);
-            fprintf(output_file,"%g", dval);
-            break;
-          case 's':
-            for (sval = va_arg(ap, char *); *sval; sval++)
-              fputc(*sval,output_file);
-            break;
-          default:
-            fputc(*p,output_file);
-            break;
-        }
-      }
-      va_end(ap);
-
-
-      //fclose(output_file);
-}*/
-
-
-
-
-
-
-
 
 
 

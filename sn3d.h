@@ -583,6 +583,6 @@ extern short use_cellhist;
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
 
-void printout(const char *restrict format, ...);
+int printout(const char *restrict format, ...);
 
 #endif // SN3D_H
