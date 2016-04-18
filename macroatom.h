@@ -2,6 +2,8 @@
 #define MACROATOM_H
 
 #include "grid_init.h"
+#include "types.h"
+#include "sn3d.h"
 
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep);
 

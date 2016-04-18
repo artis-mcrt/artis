@@ -1,6 +1,8 @@
 #ifndef RAY_PROP_H
 #define RAY_PROP_H
 
+#include "types.h"
+
 int ray_prop(RAY *ray_ptr, double t1, double t2, int nts);
 double do_gamma_ray(RAY *ray_ptr, double t1, double t2);
 double boundary_cross_ray(RAY *ray_ptr, double tstart, int *snext);

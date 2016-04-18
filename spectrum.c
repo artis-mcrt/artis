@@ -283,7 +283,7 @@ int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
   */
 
   double t_arrive,deltaE;
-  int i, nt, nnu;
+  int nt, nnu;
   int phibin;
   double vec1[3], vec2[3], vec3[3], xhat[3];
   int at,et,element,ion,nproc;

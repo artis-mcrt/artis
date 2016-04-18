@@ -1,6 +1,8 @@
 #ifndef GREY_EMISSIVITIES_H
 #define GREY_EMISSIVITIES_H
 
+#include "types.h"
+
 int rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current);
 int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current);
 int normalise_grey(int nts);

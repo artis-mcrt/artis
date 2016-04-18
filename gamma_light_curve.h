@@ -1,6 +1,8 @@
 #ifndef GAMMA_LIGHT_CURVE_H
 #define GAMMA_LIGHT_CURVE_H
 
+#include "types.h"
+
 int make_gamma_light_curve(void);
 int gather_gamma_light_curve(int my_rank);
 int write_gamma_light_curve(void);

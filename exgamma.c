@@ -13,7 +13,6 @@
 #include "threadprivate.h"
 #include "exspec.h"
 #include "sn3d.h"
-#include <stdarg.h>  /// MK: needed for printout()
 #include "gamma_light_curve.h"
 #include "light_curve.h"
 #include "spectrum.h"
@@ -279,73 +278,6 @@ int main(int argc, char** argv)
   return 0;
 }
 
-
-/// Generalized output routine
-/// following section 7.3 of "C. Programming Language."
-/// by Brian W. Kernighan and Dennis Ritchie
-/// As it stands it is only capable to printout floating point variables as %g
-/// specifiers which determine the number of digits don't work!
-void printout(char *fmt, ...)
-{
-  va_list ap;
-  char *p, *sval;
-  int ival;
-  double dval;
-  char filename[100];
-  //FILE *output_file;
-
-  /// To be able to follow the messages interactively the file is continuously
-  /// opened and closed. As this happens always with the "a" argument the file
-  /// is so far never really initialized: a existing output.txt will be continued!
-/*      sprintf(filename,"output_%d-%d.txt",rank_global,tid);
-      if (output_file_open == 0)
-      {
-        if ((output_file = fopen(filename, "a")) == NULL)
-        {
-          printf("Cannot open %s.\n",filename);
-          abort();
-  //    exit(0);
-        }
-        output_file_open = 1;
-      }*/
-
-      va_start(ap, fmt);
-      for (p = fmt; *p; p++)
-      {
-        if (*p != '%')
-        {
-      //putchar(*p); ///for output on the screen
-          fputc(*p,output_file);
-          continue;
-        }
-        switch (*++p)
-        {
-          case 'd':
-            ival = va_arg(ap, int);
-        //printf(output_file,"%d", ival);  ///for output on the screen
-            fprintf(output_file,"%d", ival);
-            break;
-          case 'f':
-            dval = va_arg(ap, double);
-            fprintf(output_file,"%f", dval);
-            break;
-          case 'g':
-            dval = va_arg(ap, double);
-            fprintf(output_file,"%g", dval);
-            break;
-          case 's':
-            for (sval = va_arg(ap, char *); *sval; sval++)
-              fputc(*sval,output_file);
-            break;
-          default:
-            fputc(*p,output_file);
-            break;
-        }
-      }
-      va_end(ap);
-
-      //fclose(output_file);
-}
 
 
 

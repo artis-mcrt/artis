@@ -1,6 +1,8 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include <stdio.h>
+
 int input(int rank);
 void read_atomicdata(void);
 void read_phixs_data(void);

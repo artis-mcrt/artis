@@ -1,6 +1,8 @@
 #ifndef VECTORS_H
 #define VECTORS_H
 
+#include <math.h>
+
 int angle_ab(const double *dir1, const double *vel, double *dir2);
 double doppler(const double *dir1, const double *vel);
 int scatter_dir(const double *dir_in, double cos_theta, double *dir_out);

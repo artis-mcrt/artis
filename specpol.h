@@ -1,6 +1,8 @@
 #ifndef SPECPOL_H
 #define SPECPOL_H
 
+#include <stdio.h>
+
 int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file);
 void init_specpol(void);
 int gather_specpol(int depth);

@@ -2,6 +2,7 @@
 #define SPECTRUM_H
 
 #include "exspec.h"
+#include <stdio.h>
 
 int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file);
 void init_spectrum(void);

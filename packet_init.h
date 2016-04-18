@@ -1,6 +1,8 @@
 #ifndef PACKET_INIT_H
 #define PACKET_INIT_H
 
+#include "types.h"
+
 int packet_init(int middle_iteration, int my_rank);
 int setup_packets(int pktnumberoffset);
 double fni(const CELL *grid_ptr);

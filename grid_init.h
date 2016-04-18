@@ -1,6 +1,8 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
+#include "sn3d.h"
+
 int grid_init(void);
 int uniform_grid_setup(void);
 int density_1d_read(void);

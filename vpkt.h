@@ -1,6 +1,9 @@
 #ifndef VPKT_H
 #define VPKT_H
 
+#include <stdio.h>
+#include <types.h>
+
 int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(double *n, double *ref1, double *ref2);
