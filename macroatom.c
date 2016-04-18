@@ -842,7 +842,6 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 ///****************************************************************************
 double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex, double t_current)
 ///radiative deexcitation rate: paperII 3.5.2
-/// n_1 - occupation number of ground state
 {
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -865,45 +864,46 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
   double A_ul = einstein_spontaneous_emission(lineindex);
   double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
   double B_lu = mastate[tid].statweight/statweight_target * B_ul;
-  //double g_ratio = mastate[tid].statweight/statweight_target;
-  //B_lu = g_ratio * B_ul;
 
-  double n_u = get_levelpop(modelgridindex,element,ion,upper);
-  double n_l = get_levelpop(modelgridindex,element,ion,lower);
-  //double T_R = cell[pkt_ptr->where].T_R;
-  //double W = cell[pkt_ptr->where].W;
-  //n_l = n_u/W / g_ratio * exp(epsilon_trans/KB/T_R);
+  //double n_u = get_levelpop(modelgridindex,element,ion,upper);
+  //double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
+  double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower); //TODO: do these two ways of calculating level pops give different results?
   double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
   double beta = 1.0;
-  #ifdef DEBUG_ON
-    if (tau_sobolev <= 0)
-    {
-      if (SILENT == 0) printout("[warning] rad_deexcitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
-      if (SILENT == 0) printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-      if (SILENT == 0) printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
-      if (SILENT == 0) printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell %d\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
-      beta = 1.0;
-      //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
-      //abort();
-    }
-    else
-    {
-      beta = 1.0/tau_sobolev * (1 - exp(-tau_sobolev));
-    }
-  #else
-    //beta = 1.0; ///FOR DEBUGGING ONLY
-    beta = 1.0/tau_sobolev * (1 - exp(-tau_sobolev));
-  #endif
+  double R = 0.0;
 
-  double R = A_ul * beta * mastate[tid].nnlevel;
+  if ((n_l < 1.1 * MINPOP) || (n_u < 1.1 * MINPOP))
+  {
+    beta = 1.0;
+    R = 0.0;
+  }
+  else
+  {
+    beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
+    R = A_ul * beta * mastate[tid].nnlevel;
+  }
+
+  if (tau_sobolev <= 0)
+  {
+    //printout("[warning] rad_deexcitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
+    //printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
+    //printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
+    //printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell %d\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
+    beta = 1.0;
+    R = 0.0;
+    //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
+    //abort();
+  }
 
   #ifdef DEBUG_ON
     if (debuglevel == 2) printout("[debug] rad_rates_down: element, ion, upper, lower %d, %d, %d, %d\n",element,ion,upper,lower);
     //printout("[debug] rad_rates_down: tau_sobolev, beta %g, %g\n",tau_sobolev,beta);
     if (debuglevel == 2) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
     if (debuglevel == 777) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
-    if (!isfinite(R)) {
+    if (!isfinite(R))
+    {
       printout("fatal a1: abort\n");
       abort();
     }
@@ -940,39 +940,53 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
   double A_ul = einstein_spontaneous_emission(lineindex);
   double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
   double B_lu = statweight_target / mastate[tid].statweight * B_ul;
-  //double g_ratio = statweight_target/mastate[tid].statweight;
-  //B_lu = g_ratio * B_ul;
 
   //double n_u = get_levelpop(modelgridindex,element,ion,upper);
   //double n_l = get_levelpop(modelgridindex,element,ion,lower);
   double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
   double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower); //TODO: do these two ways of calculating level pops give different results?
-  //double T_R = cell[pkt_ptr->where].T_R;
-  //double W = cell[pkt_ptr->where].W;
-  //n_u = n_l * W * g_ratio * exp(-epsilon_trans/KB/T_R);
   double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
   double beta = 1.0;
   double R = 0.0;
+  if ((n_l < 1.1 * MINPOP) || (n_u < 1.1 * MINPOP))
+  {
+    beta = 1.0;
+    R = 0.0;
+  }
+  else
+  {
+    beta = 1.0 / tau_sobolev * (1. - exp(-tau_sobolev));
+    //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
+    //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
+    //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
+    R = mastate[tid].nnlevel * (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans,modelgridindex);
+  }
+
   if (tau_sobolev <= 0)
   {
-    if (SILENT == 0) printout("[warning] rad_excitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
-    if (SILENT == 0) printout("[warning] rad_excitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-    if (SILENT == 0) printout("[warning] rad_excitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
-    if (SILENT == 0) printout("[warning] rad_excitation: T_e %g, T_R %g, W %g\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
+    //printout("[warning] rad_excitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
+    //printout("[warning] rad_excitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
+    //printout("[warning] rad_excitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
+    //printout("[warning] rad_excitation: T_e %g, T_R %g, W %g\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
     beta = 1.0;
     R = 0.;
 
     //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
     //abort();
   }
-  else
+
+  if (R < 0)
   {
-    beta = 1.0/tau_sobolev * (1. - exp(-tau_sobolev));
-    //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
-    //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
-    //R = (B_lu*mastate[tid].nnlevel - B_ul*n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
-    R = mastate[tid].nnlevel * (B_lu - B_ul*n_u/n_l) * beta * radfield(nu_trans,modelgridindex);
+    double g_u = statw_up(lineindex);
+    double g_u2 = stat_weight(element,ion,upper);
+    double g_l = mastate[tid].statweight;
+    double g_l2 = stat_weight(element,ion,lower);
+    printout("Negative excitation rate from level %d to %d\n",lower,upper);
+    printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n",n_l,n_u,g_l,g_l2,g_u,g_u2);
+    printout("n_u/n_l %g, g_u/g_l %g\n",n_u/n_l,g_u/g_l);
+    printout("radfield(nutrans=%g) = %g\n",nu_trans,radfield(nu_trans,modelgridindex));
+    abort();
   }
 
   #ifdef DEBUG_ON
@@ -1030,7 +1044,6 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
 ///***************************************************************************/
 double photoionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
 ///photoionization rate: paperII 3.5.2
-/// n_1 - occupation number of ground state
 {
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -1151,7 +1164,6 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 /// collisional excitation rate: paperII 3.5.1
 double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans)
 {
-  //double osc_strength(int element, int ion, int upper, int lower);
   double C;
   double g_bar,test,Gamma;
 

@@ -642,17 +642,27 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
 
   double E_level = epsilon(element,ion,level);
   double E_ground = epsilon(element,ion,0);
-  nn = get_groundlevelpop(modelgridindex,element,ion) * W *
+  double nnground = get_groundlevelpop(modelgridindex,element,ion);
+
+  /*if (nnground < MINPOP)
+  {
+    if (get_abundance(modelgridindex,element) > 0)
+      nnground = MINPOP;
+    else
+      nnground = 0.;
+  }*/
+
+  nn = nnground * W *
        stat_weight(element,ion,level) / stat_weight(element,ion,0) *
        exp(-(E_level - E_ground)/KB/T_exc);
 
-  /*if (nn < MINPOP)
+  if (nn < MINPOP)
   {
     if (get_abundance(modelgridindex,element) > 0)
       nn = MINPOP;
     else
       nn = 0.;
-  }*/
+  }
 
   return nn;
 }

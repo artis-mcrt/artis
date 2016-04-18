@@ -258,7 +258,7 @@ int nfake_gam; //# of fake gamma ray lines for syn
 
 /// New variables for other opacity cases, still grey.
 double opcase3_normal;           ///MK: normalisation factor for opacity_case 3
-double rho_crit_para, rho_crit;  ///MK: free parameter for the selection of the critical opacity in opacity_case 3
+double rho_crit_para;            ///MK: free parameter for the selection of the critical opacity in opacity_case 3
 double rho_crit;                 ///MK: critical opacity in opacity_case 3 (could now be declared locally)
 
 

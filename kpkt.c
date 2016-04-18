@@ -18,7 +18,7 @@ void calculate_kpkt_rates(int modelgridindex)
   double C_ion;
   //double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
-  double nncurrention,nnnextionlevel;
+  double nncurrention;
   double epsilon_current,epsilon_upper,epsilon_trans;
   int nlevels_currention,ionisinglevels;
   int i,ii,lineindex;
@@ -64,7 +64,7 @@ void calculate_kpkt_rates(int modelgridindex)
         nlevels_currention = get_nlevels(element,ion);
         //ionisinglevels = get_ionisinglevels(element,ion);
         ionisinglevels = get_bfcontinua(element,ion);
-        nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
+        double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
         nncurrention = ionstagepop(modelgridindex,element,ion);
 
         /// ff creation of rpkt
@@ -509,7 +509,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   double coolingsum;
   int element,ion,level,upper;
   double nu_threshold;
-  int i;
+  int i = -1;
   int nions;
 
   gsl_integration_workspace *wsp;
