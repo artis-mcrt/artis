@@ -140,7 +140,7 @@ int main(int argc, char** argv)
       //grid_init();
       time_init();
 
-      if ((epkts = (EPKT*) malloc((nprocs*npkts)*sizeof(EPKT))) == NULL)
+      if ((epkts = (EPKT *) malloc((nprocs*npkts)*sizeof(EPKT))) == NULL)
       {
         printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
         exit(0);
