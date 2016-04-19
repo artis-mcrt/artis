@@ -1380,13 +1380,13 @@ int density_3d_read ()
 /// Initialise composition dependent cell data for the given cell
 void allocate_compositiondata(int modelgridindex)
 {
-  if ((modelgrid[modelgridindex].composition = malloc(nelements*sizeof(compositionlist_entry))) == NULL)
+  if ((modelgrid[modelgridindex].composition = (compositionlist_entry*) malloc(nelements*sizeof(compositionlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
     exit(0);
   }
 
-  if ((modelgrid[modelgridindex].nlte_pops = malloc(total_nlte_levels*sizeof(double))) == NULL)
+  if ((modelgrid[modelgridindex].nlte_pops = (double*) malloc(total_nlte_levels*sizeof(double))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
     exit(0);
@@ -1406,7 +1406,7 @@ void allocate_compositiondata(int modelgridindex)
     modelgrid[modelgridindex].composition[element].abundance = 0.;
 
     /// and allocate memory to store the ground level populations for each ionisation stage
-    if ((modelgrid[modelgridindex].composition[element].groundlevelpop = malloc(get_nions(element)*sizeof(float))) == NULL)
+    if ((modelgrid[modelgridindex].composition[element].groundlevelpop = (float*) malloc(get_nions(element)*sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
       exit(0);
@@ -1416,7 +1416,7 @@ void allocate_compositiondata(int modelgridindex)
       modelgrid[modelgridindex].composition[element].groundlevelpop[ion_index]=0.0;
     }
 
-    if ((modelgrid[modelgridindex].composition[element].partfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
+    if ((modelgrid[modelgridindex].composition[element].partfunct = (float*) malloc(get_nions(element)*sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
       exit(0);
@@ -1436,7 +1436,7 @@ void allocate_compositiondata(int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 void allocate_cooling(int modelgridindex)
 {
-  if ((modelgrid[modelgridindex].cooling = malloc(nelements*sizeof(mgicooling_t))) == NULL)
+  if ((modelgrid[modelgridindex].cooling = (mgicooling_t*) malloc(nelements*sizeof(mgicooling_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
     exit(0);
@@ -1445,7 +1445,7 @@ void allocate_cooling(int modelgridindex)
   for (int element = 0; element < nelements; element++)
   {
     /// and allocate memory to store the ground level populations for each ionisation stage
-    if ((modelgrid[modelgridindex].cooling[element].contrib = malloc(get_nions(element)*sizeof(double))) == NULL)
+    if ((modelgrid[modelgridindex].cooling[element].contrib = (double*) malloc(get_nions(element)*sizeof(double))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize coolinglist for element %d in cell %d... abort\n",element,modelgridindex);
       exit(0);
