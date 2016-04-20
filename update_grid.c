@@ -15,10 +15,7 @@
 int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     /// m timestep
 {
-  double epsilon_trans;
   int ionisinglevels;
-
-  double Col_ion;
 
   //double gamma_lte,zeta;
 
@@ -29,18 +26,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //int samplecell;
   //double deltarho;
   double trat, tratmid;
-  double cell_len_scale;
-  double check1, check2; //MK
   double t_current,t_previous;
-  double rho,T_R,T_e,T_J,W;//,W_D;
+  double T_R,T_e,T_J,W;//,W_D;
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
                          /// assigned to max_path_step after the parallel update_grid finished.
 
-  double nne,nntot;
+  double nne;
   double compton_optical_depth;
   double grey_optical_depth,grey_optical_deptha;
 
-  double dt_elapsed,dt_forward;
   double Gamma;
 
   //int first_nonempty_cell = -1000;
@@ -69,7 +63,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   int tb_info = 0;
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
-  check1 = check2 = 0.0; /// MK
   trat = time_step[m].start / tmin;
   tratmid = time_step[m].mid / tmin;
 
@@ -111,6 +104,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //printf("time %ld\n",time(NULL));
 
   /// Needed to update abundances of radioactive isotopes.
+  //double dt_elapsed,dt_forward;
   t_current = time_step[m].start;
   if (m == 0)
   {
@@ -121,7 +115,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   {
     t_previous = time_step[m-1].start;
     deltaV = pow(wid_init * time_step[m-1].mid/tmin,3);  /// volume of grid cell: current or previous cell size???????????????????
-    if (m == 1)
+    /*if (m == 1)
     {
       dt_elapsed = (log(time_step[m-1].mid) - log(time_step[m-1].start));
       dt_forward = (log(time_step[m].mid) - log(time_step[m-1].mid));
@@ -130,7 +124,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     {
       dt_elapsed = (log(time_step[m-1].mid) - log(time_step[m-2].mid));
       dt_forward = (log(time_step[m].mid) - log(time_step[m-1].mid));
-    }
+    }*/
   }
 
   /// and for the volume estimators
@@ -259,14 +253,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
       /// Updating cell information
       #ifdef _OPENMP
-        #pragma omp for private(assoc_cells,radial_pos,tb_info,rho,nntot,nne,compton_optical_depth,grey_optical_deptha,grey_optical_depth,T_R,T_J,T_e,W,nlevels,Gamma,T_e_old,cell_len_scale) reduction(+:check1,check2) schedule(dynamic)
+        #pragma omp for private(assoc_cells,radial_pos,tb_info,nne,compton_optical_depth,grey_optical_deptha,grey_optical_depth,T_R,T_J,T_e,W,nlevels,Gamma,T_e_old) schedule(dynamic)
+        //#add reduction(+:check1,check2)?
         //T_D,W_D,nne,deltarho_old,deltaT_R_old,deltaT_e_old, deltarho,deltaT_R,deltaT_e,i,rhoindex,T_Rindex,T_eindex,ncl)
       #endif
-      for (int n = 0; n < npts_model; n++)
       //for (n = nstart; n < nstart+nblock; n++)
       //for (ncl = 0; ncl < nblock; ncl++)
       //for (ncl = nstart; ncl < nstart+nblock; ncl++)
       //for (n = nstart; n < nstart+nblock; n++)
+      for (int n = 0; n < npts_model; n++)
       {
         if (n >= nstart && n < nstart+nblock)
         {
@@ -288,7 +283,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             //n = nonemptycells[ncl];
             //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
             modelgrid[n].rho = modelgrid[n].rhoinit / pow(tratmid,3);
-            rho = modelgrid[n].rho;
             //cell[n].rho = cell[n].rho_init / pow(tratmid,3);
             //rho = cell[n].rho;
             /// This is done outside update grid now
@@ -343,7 +337,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 }
                 precalculate_partfuncts(n);
                 //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
-                nntot = calculate_populations(n,0);
+                calculate_populations(n,0);
 
                 #ifdef NT_ON
                     //    for (int jjj=0; jjj < 10; jjj++)
@@ -426,7 +420,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                   /// These don't depend on T_e, therefore take them out of the T_e iteration
                   precalculate_partfuncts(n);
-                  nntot = calculate_populations(n,0);
+                  calculate_populations(n,0);
                   nne = get_nne(n);
                   compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                   grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
@@ -503,7 +497,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       }
                     }
                     precalculate_partfuncts(n);
-                    nntot = calculate_populations(n,0);
+                    calculate_populations(n,0);
                     nne = get_nne(n);
                     compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
                     grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
@@ -595,7 +589,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       /// in frequency space which can lead to zero contributions to the total photoionsation rate!
                       }
                     }
-
                     /// Then reopen the same loops again.
                     for (int element = 0; element < nelements; element++)
                     {
@@ -609,7 +602,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         //nlevels = get_ionisinglevels(element,ion);
                         nlevels = get_bfcontinua(element,ion);
                         Gamma = 0.;
-                        Col_ion = 0.;
+                        double Col_ion = 0.;
                         if (ion < nions-1)
                         {
                           ionisinglevels = get_bfcontinua(element,ion);
@@ -628,7 +621,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                               {
                                 mastate[tid].level = level;
 
-                                epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
+                                double epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
                                 //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
                                 Col_ion += calculate_exclevelpop(n,element,ion,level) * col_ionization(n,phixstargetindex,epsilon_trans);
                               }
@@ -687,7 +680,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                             {
                               int nlevels = get_bfcontinua(element,ion);
                               Gamma = 0.;
-                              Col_ion = 0.;
+                              double Col_ion = 0.;
 
                               if (ion < nions-1)
                               {
@@ -705,7 +698,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                                     {
                                       mastate[tid].level = level;
 
-                                      epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
+                                      double epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
                                       //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
                                       Col_ion += calculate_exclevelpop(n,element,ion,level) * col_ionization(n,phixstargetindex,epsilon_trans);
                                     }
@@ -748,7 +741,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                       #ifndef NLTE_POPS_ALL_IONS_SIMULTANEOUS
                         /// Store population values to the grid
-                        nntot = calculate_populations(n);
+                        calculate_populations(n);
                         //calculate_cooling_rates(n);
                         //calculate_heating_rates(n);
                       #endif
@@ -786,7 +779,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                           nne = get_nne(n);
                           #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
                             precalculate_partfuncts(n);
-                            nntot = calculate_electron_densities(n); //sets nne
+                            calculate_electron_densities(n); //sets nne
                             nlte_test = get_nne(n) / nne;
                             if (nlte_test < 1)
                               nlte_test = 1. / nlte_test;
@@ -863,7 +856,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             {
               if (get_nne(n) > 0)
               {
-                cell_len_scale = 0.1 / get_nne(n) / SIGMA_T;
+                double cell_len_scale = 0.1 / get_nne(n) / SIGMA_T;
                 if (cell_len_scale < mps[tid])
                 {
                   mps[tid] = cell_len_scale;
@@ -1386,9 +1379,6 @@ void update_abundances(int modelgridindex, double t_current)
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
 ///             - t_current: current time (here mid of current timestep)
 {
-  double nifrac,cofrac,fefrac,mnfrac,crfrac,vfrac,tifrac;
-  double ni_in,co_in,fe_in,fe52_in,cr48_in;
-
   t_current -= t_model;
   double lambdani = 1./TNICKEL;
   double lambdaco = 1./TCOBALT;
@@ -1399,72 +1389,72 @@ void update_abundances(int modelgridindex, double t_current)
 
   if (homogeneous_abundances == 1)
   {
-    ni_in = elements[get_elementindex(28)].abundance;
-    co_in = elements[get_elementindex(27)].abundance;
-    fe_in = elements[get_elementindex(26)].abundance;
+    double ni_in = elements[get_elementindex(28)].abundance;
+    double co_in = elements[get_elementindex(27)].abundance;
+    double fe_in = elements[get_elementindex(26)].abundance;
     //fe_in = cell[modelgridindex].f_fe_init;
     for (int element = nelements-1; element >= 0; element--)
     {
       if (get_element(element) == 28)
       {
-        nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
+        double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
       if (get_element(element) == 27)
       {
-        cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
+        double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
       if (get_element(element) == 26)
       {
-        fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
+        double fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
     }
   }
   else
   {
-    ni_in = modelgrid[modelgridindex].fni;
-    co_in = modelgrid[modelgridindex].fco;
-    fe52_in = modelgrid[modelgridindex].f52fe;
-    cr48_in = modelgrid[modelgridindex].f48cr;
+    double ni_in = modelgrid[modelgridindex].fni;
+    double co_in = modelgrid[modelgridindex].fco;
+    double fe52_in = modelgrid[modelgridindex].f52fe;
+    double cr48_in = modelgrid[modelgridindex].f48cr;
     //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe_in);
     for (int element = nelements-1; element >= 0; element--)
     {
       if (get_element(element) == 28)
       {
-        nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
+        double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
         //cell[modelgridindex].composition[element].abundance = nifrac;
       }
       if (get_element(element) == 27)
       {
-        cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
+        double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
       if (get_element(element) == 26)
       {
-        fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + modelgrid[modelgridindex].ffestable + (fe52_in* exp(-lambdafe*t_current));
+        double fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + modelgrid[modelgridindex].ffestable + (fe52_in* exp(-lambdafe*t_current));
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
       if (get_element(element) == 25)
       {
-        mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + modelgrid[modelgridindex].fmnstable;
+        double mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + modelgrid[modelgridindex].fmnstable;
         modelgrid[modelgridindex].composition[element].abundance = mnfrac;
       }
       if (get_element(element) == 24)
       {
-        crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
+        double crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
         modelgrid[modelgridindex].composition[element].abundance = crfrac;
       }
       if (get_element(element) == 23)
       {
-        vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + modelgrid[modelgridindex].fvstable;
+        double vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + modelgrid[modelgridindex].fvstable;
         modelgrid[modelgridindex].composition[element].abundance = vfrac;
       }
       if (get_element(element) == 22)
       {
-        tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
+        double tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
         modelgrid[modelgridindex].composition[element].abundance = tifrac;
       }
     }
