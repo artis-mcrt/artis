@@ -10,46 +10,44 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels in all ions of an element
 {
   double t_mid = time_step[timestep].mid;
-
-  printout("Solving for NLTE populations in cell %d at timestep %d for element %d\n",modelgridindex,timestep,element);
-  printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
-  set_TR(modelgridindex,3000);
-
   int nions = get_nions(element);
-  //int nions = 3; //TODO: remove, testing
-
-  int nlte_dimension = 0;
-  double *superlevel_partfunc = calloc(nions,sizeof(double)); //space is allocated for every ion, whether or not it has a superlevel
-  for (int ion = 0; ion < nions; ion++)
-  {
-    int nlevels_nlte = get_nlevels_nlte(element,ion);
-
-    //this is the total number of nlte_levels (i.e. the size of the
-    //storage). Our rate matrix will need to be of this dimension +2: the
-    //ground state, the "super level".
-    //If there's no super level needed then we only need +1
-    nlte_dimension += nlevels_nlte + 1;
-    printout("NLTE: setting up ion %d, which contributes %d to the vector dimension ",ion,nlevels_nlte+1);
-    if (nlevels_nlte == (get_nlevels(element, ion) - 1))
-    {
-      printout("(no super level)\n");
-      superlevel_partfunc[ion] = 0.0;
-    }
-    else
-    {
-      nlte_dimension += 1;
-      superlevel_partfunc[ion] = 0.0;
-      for (int level = 1; level < get_nlevels(element,ion); level++)
-      {
-        if (is_nlte(element, ion, level) == 0)
-          superlevel_partfunc[ion] += superlevel_boltzmann(modelgridindex,element,ion,level);
-      }
-      printout("(plus a superlevel with partfunc %g)\n",superlevel_partfunc[ion]);
-    }
-  }
 
   if (get_abundance(modelgridindex, element) > 0.0)
   {
+    printout("Solving for NLTE populations in cell %d at timestep %d for element %d\n",modelgridindex,timestep,element);
+    printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
+    set_TR(modelgridindex,3000);
+
+    int nlte_dimension = 0;
+    double *superlevel_partfunc = calloc(nions,sizeof(double)); //space is allocated for every ion, whether or not it has a superlevel
+    for (int ion = 0; ion < nions; ion++)
+    {
+      int nlevels_nlte = get_nlevels_nlte(element,ion);
+
+      //this is the total number of nlte_levels (i.e. the size of the
+      //storage). Our rate matrix will need to be of this dimension +2: the
+      //ground state, the "super level".
+      //If there's no super level needed then we only need +1
+      nlte_dimension += nlevels_nlte + 1;
+      printout("NLTE: setting up ion %d, which contributes %d to the vector dimension ",ion,nlevels_nlte+1);
+      if (nlevels_nlte == (get_nlevels(element, ion) - 1))
+      {
+        printout("(no super level)\n");
+        superlevel_partfunc[ion] = 0.0;
+      }
+      else
+      {
+        nlte_dimension += 1;
+        superlevel_partfunc[ion] = 0.0;
+        for (int level = 1; level < get_nlevels(element,ion); level++)
+        {
+          if (is_nlte(element, ion, level) == 0)
+            superlevel_partfunc[ion] += superlevel_boltzmann(modelgridindex,element,ion,level);
+        }
+        printout("(plus a superlevel with partfunc %g)\n",superlevel_partfunc[ion]);
+      }
+    }
+
     double *rate_matrix = calloc(nlte_dimension*nlte_dimension,sizeof(double));
     double *balance_vector = calloc(nlte_dimension,sizeof(double));
 
@@ -127,7 +125,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          double R = nlte_matrix_rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid); //CAUSES massive departures from LTE, probably broken
+          double R = nlte_matrix_rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);
           double C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
           //double C = 0.0; //TODO: remove, testing only
 
@@ -320,7 +318,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
       int ion, level;
       get_ion_level_of_nlte_vector_index(row,element,&ion,&level);
 
-      printout("row %4d (ion %d level%4d): Recovered balance: %+.2e, Pop vector: value %+.2e pop %.2e depature ratio %.2e\n",
+      printout("row %4d (ion %d level%4d): recovered balance: %+.2e, normed pop %+.2e pop %.2e depature ratio %.4f\n",
                row,ion,level,sum,gsl_vector_get(x,row),gsl_vector_get(x,row)*pop_norm_factors[row],gsl_vector_get(x,row)/gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
       if (gsl_vector_get(x,row)*pop_norm_factors[row] < 0.0)
       {
@@ -408,6 +406,8 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
   else
   {
     //abundance of this element is zero, so do not store any NLTE populations
+    printout("Not solving for NLTE populations in cell %d at timestep %d for element %d due to zero abundance\n",
+             modelgridindex,timestep,element);
     for (int ion = 0; ion < nions; ion++)
     {
       int nlte_start = elements[element].ions[ion].first_nlte;
@@ -483,22 +483,24 @@ void filter_nlte_matrix(int element, int nlte_dimension, double *rate_matrix, do
       if (element_value > col_max)
         col_max = element_value;
     }
+    int ion = -1;
+    int level = -1;
+    get_ion_level_of_nlte_vector_index(index,element,&ion,&level);
+    printout("index %d (ion %d level %d) row_max %g col_max %g ",index,ion,level,row_max,col_max);
     if ((row_max < MINPOP) || (col_max < MINPOP))
     {
-      int ion = -1;
-      int level = -1;
-      get_ion_level_of_nlte_vector_index(index,element,&ion,&level);
-      printout("Eliminating row and col with index %d (ion %d level %d) row_max %g col_max %g\n",index,ion,level,row_max,col_max);
       if (level == 0)
       {
-        printout("(Except that it's a ground state, so leaving as is.)\n");
+        printout("(Would eliminate but it's a ground state, so leaving as is)");
       }
       else
       {
+        printout("(forcing LTE population)");
         double gs_index = get_nlte_vector_index(element,ion,0);
         eliminate_nlte_matrix_rowcol(index,gs_index,nlte_dimension,rate_matrix,balance_vector);
       }
     }
+    printout("\n");
   }
 }
 
@@ -518,7 +520,7 @@ void eliminate_nlte_matrix_rowcol(int index, int gs_index, int nlte_dimension, d
 
 
 // this does single ion solving and will be deprecated at some point
-double nlte_pops(int element, int ion, int modelgridindex, int timestep)
+/*double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
 {
   int lower, level_use, lower_use, upper_use;
@@ -605,7 +607,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
         }
       }
 
-      /*
+
       if (superlevel_partition > 0.0)
       {
         printout("I found a superlevel and have computed a partition function for its substates of %g.\n", superlevel_partition);
@@ -614,7 +616,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
       {
         printout("I don't know about any super level for this case.\n");
       }
-      */
+
 
       for (int level = 0; level < get_nlevels(element,ion); level++)
       {
@@ -805,22 +807,6 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
       }
       rate_matrix[nlte_size-1] = 0.0;
 
-      /*printout("Rate matrix | balance vector:\n");
-      for (int row = 0; row < nlte_size; row++)
-      {
-        for (int column = 0; column < nlte_size; column++)
-        {
-          char str[15];
-          sprintf(str, "%+.2e ", rate_matrix[row * nlte_size + column]);
-          printout(str);
-        }
-        printout("| ");
-        char str[15];
-        sprintf(str, "%+.3e\n", balance_vector[row]);
-        printout(str);
-      }
-      printout("\n");*/
-
       for (int level = 0; level < nlte_size; level++)
       {
         for (level_use = 0; level_use < nlte_size; level_use++)
@@ -996,7 +982,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
   {
     return 0; //Case for ion with only one level
   }
-}
+}*/
 
 
 //*****************************************************************
@@ -1053,7 +1039,7 @@ double get_mean_binding_energy(int element, int ion)
 
   if (nbound > 0)
   {
-    double use1, use2, use3;
+    double use2, use3;
     for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
     {
       q[electron_loop] = 0;
@@ -1153,7 +1139,8 @@ double get_mean_binding_energy(int element, int ion)
     total = 0.0;
     for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
     {
-      if ((use1 = q[electron_loop]) > 0)
+      double use1 = q[electron_loop];
+      if ((use1) > 0)
       {
         if ((use2 = electron_binding[elements[element].anumber-1][electron_loop]) > 0)
         {

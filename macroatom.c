@@ -10,27 +10,21 @@
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.
 {
-  double zrand;
-
   double rad_deexc,rad_recomb,col_deexc,col_recomb;
   double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
   double individ_rad_deexc,individ_col_deexc,individ_internal_down_same,individ_internal_up_same;
   double R,C;
-  double total_transitions;
   double rate;
   double oldnucmf;
 
   double nu_threshold, nu_max_phixs;
-  double epsilon_current;
   double epsilon_target;
   double epsilon_trans;
-  double statweight_target;
 
   int i,lineindex;
   int linelistindex = -99;
-  int element,ion,level,upper,lower;
-  int ndowntrans,nuptrans;
-  int nlevels,ionisinglevels;
+  int element,upper,lower;
+  int nlevels;
 
   int end_packet = 0; ///means "keep working"
   double t_current = t1; ///this will keep track of time in the calculation
@@ -79,10 +73,10 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   //debuglevel = 2;
   while (end_packet == 0)
   {
-    ion = mastate[tid].ion;
-    level = mastate[tid].level;
+    int ion = mastate[tid].ion;
+    int level = mastate[tid].level;
     mastate[tid].statweight = stat_weight(element,ion,level);
-    ionisinglevels = get_bfcontinua(element,ion);
+    int ionisinglevels = get_bfcontinua(element,ion);
     //ionisinglevels = get_ionisinglevels(element,ion);
 
     /// Set this here to 1 to overcome problems in cells which have zero population
@@ -111,9 +105,9 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       if (debuglevel == 2) printout("[debug] do_ma: jumps = %d\n",jumps);
     #endif
 
-    epsilon_current = epsilon(element,ion,level);
-    ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-    nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    double epsilon_current = epsilon(element,ion,level);
+    int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+    int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
     //nlevels_nextion  ///not needed as long we only ionise to the ground state
     //nlevels_lowerion ///only needed if level = 0, this won't happen too often
 
@@ -146,7 +140,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       {
         lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
         epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
-        statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
+        //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         epsilon_trans = epsilon_current - epsilon_target;
         R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
@@ -197,7 +191,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       {
         upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
         epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
-        statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
+        //double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         epsilon_trans = epsilon_target - epsilon_current;
         R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
@@ -241,11 +235,11 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
     }
 
     /// select transition according to probabilities /////////////////////////////////////
-    zrand = gsl_rng_uniform(rng);
+    double zrand = gsl_rng_uniform(rng);
     //printout("zrand %g\n",zrand);
 
     //internal_down_same = internal_down_lower = internal_up_same = internal_up_higher = 0.; ///DEBUG ONLY
-    total_transitions = rad_deexc + col_deexc + internal_down_same + rad_recomb + col_recomb + internal_down_lower + internal_up_same + internal_up_higher;
+    double total_transitions = rad_deexc + col_deexc + internal_down_same + rad_recomb + col_recomb + internal_down_lower + internal_up_same + internal_up_higher;
     #ifdef DEBUG_ON
       if (debuglevel == 2) printout("[debug] do_ma: element %d, ion %d, level %d\n",element,ion,level);
       if (debuglevel == 2) printout("[debug] do_ma:   rad_deexc %g, col_deexc %g, internal_down_same %g, rad_recomb %g, col_recomb %g, internal_down_lower %g, internal_up_same %g, internal_up_higher %g\n",rad_deexc,col_deexc,internal_down_same,rad_recomb,col_recomb, internal_down_lower, internal_up_same,internal_up_higher);
@@ -780,7 +774,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
           epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
-          statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
+          //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
           R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
@@ -794,7 +788,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         {
           upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
           epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
-          statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
+          //statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           epsilon_trans = epsilon_target - epsilon_current;
           R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
@@ -891,7 +885,7 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
     //printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
     //printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
     //printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell %d\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
-    beta = 1.0;
+    //beta = 1.0;
     R = 0.0;
     //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
     //abort();

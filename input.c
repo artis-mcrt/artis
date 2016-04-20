@@ -316,11 +316,8 @@ void read_atomicdata(void)
   //FILE *database_file,*interpol_file;
   //char filename1[100],filename2[100];
 
-  int totaluptrans = 0;
-  int totaldowntrans = 0;
   nbfcontinua = 0;
   includedions = 0;
-  int cont_index = -1;
 
   int *nuparr,*ndownarr;
 
@@ -329,6 +326,10 @@ void read_atomicdata(void)
   if (modelatom == NULL)
   {
     /// No preprocessed model atom available ==> do that now
+
+    int totaluptrans = 0;
+    int totaldowntrans = 0;
+    int cont_index = -1;
 
     ///open atomic data file
     FILE *compositiondata = fopen("compositiondata.txt", "r");
@@ -1775,8 +1776,7 @@ void read_processed_modelatom(FILE *modelatom)
 void read_parameterfile(int rank)
 {
   //double z1, z2, x;
-  unsigned long int zseed; /* rnum generator seed */
-  unsigned long int xseed,pre_zseed;
+  unsigned long int pre_zseed;
 
   FILE *input_file = fopen("input.txt", "r");
   if (input_file == NULL)
@@ -1793,13 +1793,12 @@ void read_parameterfile(int rank)
   }
   else
   {
-    xseed = time(NULL);
-    pre_zseed = xseed;
+    pre_zseed = time(NULL);
     printout("[debug] random number seed was %d\n",pre_zseed);
   }
 
   #ifdef _OPENMP
-    #pragma omp parallel private(zseed)
+    #pragma omp parallel
     {
 /*      tid = omp_get_thread_num();
       nthreads = omp_get_num_threads();
@@ -1813,6 +1812,7 @@ void read_parameterfile(int rank)
       tid = 0;
       nthreads = 1;*/
   #endif
+      unsigned long int zseed; /* rnum generator seed */
       /// For MPI parallelisation, the random seed is changed based on the rank of the process
       /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
       /// to the thread-ID tid.
@@ -2209,7 +2209,7 @@ int read_3d_model(void)
 {
   float dum2, dum3, dum4, dum5, dum6;
   float rho_model;
-  double mass_in_shell, helper;
+  double helper;
 
   FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
@@ -2337,7 +2337,7 @@ int read_3d_model(void)
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
     //mgi = cell[n].modelgridindex;
-    mass_in_shell = get_rhoinit(mgi);
+    double mass_in_shell = get_rhoinit(mgi);
     //printout("n %d, mgi %d, rho_init %g\n",n,mgi,mass_in_shell);
     mtot += mass_in_shell;
     mni56 += mass_in_shell * get_fni(mgi);
@@ -2469,7 +2469,7 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
 /// continuum return -1.
 /// NB: groundphixslist must be in ascending order.
 {
-  int index,element,ion,level;
+  int index;
 
   if (nu_edge < phixslist[tid].groundcont[0].nu_edge)
   {
@@ -2478,7 +2478,7 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
   }
   else
   {
-    int i;
+    int i,element,ion;
     for (i = 1; i < nbfcontinua_ground; i++)
     {
       if (nu_edge < phixslist[tid].groundcont[i].nu_edge) break;
@@ -2494,7 +2494,7 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
     {
       element = phixslist[tid].groundcont[i-1].element;
       ion = phixslist[tid].groundcont[i-1].ion;
-      level = phixslist[tid].groundcont[i-1].level;
+      int level = phixslist[tid].groundcont[i-1].level;
       if (element == el && ion == in && level == ll)
       {
         index = i - 1;
