@@ -399,7 +399,7 @@ void read_atomicdata(void)
       includedions += nions;
 
       /// Initialize the elements ionlist
-      if ((elements[element].ions = calloc(nions, sizeof(ionlist_entry))) == NULL)
+      if ((elements[element].ions = (ionlist_entry *) calloc(nions, sizeof(ionlist_entry))) == NULL)
       {
           printout("[fatal] input: not enough memory to initialize ionlist ... abort\n");
           exit(0);
@@ -432,7 +432,7 @@ void read_atomicdata(void)
           {
             double levelenergy,statweight;
             int levelindex,ntransitions;
-            fscanf(adata,"%d %lg %lg %d\n",&levelindex,&levelenergy,&statweight,&ntransitions);
+            fscanf(adata,"%d %lg %lg %d%*[^\n]\n",&levelindex,&levelenergy,&statweight,&ntransitions);
           }
           fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
           printout("proceed through adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
@@ -465,7 +465,7 @@ void read_atomicdata(void)
             int transitionindex,lower,upper;
             fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
           }
-          fscanf(transitiondata,"%d %d %d\n",&Zcheck,&ionstagecheck,&tottransitions);
+          fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
           printout("proceed through transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
         }
 
@@ -555,9 +555,9 @@ void read_atomicdata(void)
           }
           for (int level = 0; level < nlevels; level++)
           {
-            double levelenergy, statweight;
-            int levelindex, ntransitions;
-            fscanf(adata,"%d %lg %lg %d\n",&levelindex,&levelenergy,&statweight,&ntransitions);
+            double levelenergy,statweight;
+            int levelindex,ntransitions;
+            fscanf(adata,"%d %lg %lg %d%*[^\n]\n",&levelindex,&levelenergy,&statweight,&ntransitions);
             //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
             if (level < nlevelsmax)
             {
