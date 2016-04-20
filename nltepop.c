@@ -1303,7 +1303,7 @@ double nlte_matrix_rad_deexcitation(int modelgridindex, int lower, double epsilo
   else
   {
     //beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
-    R = A_ul  + B_ul * W * TWOHOVERCLIGHTSQUARED * pow(nu_trans,3) * 1.0/(exp(HOVERKB*nu_trans/T_R) - 1);
+    R = A_ul  + B_ul * W * TWOHOVERCLIGHTSQUARED * pow(nu_trans,3) * 1.0/(expm1(HOVERKB*nu_trans/T_R));
   }
 
 
@@ -1370,7 +1370,7 @@ double nlte_matrix_rad_excitation(int modelgridindex, int upper, double epsilon_
     //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
     //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
     //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
-    R = B_lu * W * TWOHOVERCLIGHTSQUARED * pow(nu_trans,3) * 1.0/(exp(HOVERKB*nu_trans/T_R) - 1);
+    R = B_lu * W * TWOHOVERCLIGHTSQUARED * pow(nu_trans,3) * 1.0/(expm1(HOVERKB*nu_trans/T_R));
   }
 
 

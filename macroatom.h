@@ -25,7 +25,7 @@ double radfield(double nu, int modelgridindex)
   float T_R = get_TR(modelgridindex);
   float W   = get_W(modelgridindex);
 
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T_R) - 1);
+  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(expm1(HOVERKB*nu/T_R));
 }
 
 
@@ -33,7 +33,7 @@ static inline
 double radfield2(double nu, double T, double W)
 /// calculates ambient radiation field, which is parameterised as a diluted black body
 {
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(exp(HOVERKB*nu/T) - 1);
+  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(expm1(HOVERKB*nu/T));
 }
 
 
