@@ -2,13 +2,14 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-  CC = cc
+#  CC = cc
 #  CC = gcc-5
 #  CC = gcc-6
+  CC = clang-omp
   INCLUDE = /usr/local/opt/gsl/include
-  LIB = /usr/local/opt/gsl/lib
+  LIB = /usr/local/opt/gsl/lib 
 #  CFLAGS = -Wall -O0 -g -std=c11 -I$(INCLUDE) $(VER)
-  CFLAGS = -W -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-unused-parameter -O3 -std=c11 -I$(INCLUDE)
+  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -O3 -std=c11 -I$(INCLUDE) -fopenmp
 
 #in GCC6, -Wmisleading-indentation will be useful
 #  CFLAGS = -Wmisleading-indentation -O3 -std=c11 -I$(INCLUDE)

@@ -23,7 +23,7 @@
 #define MPKTS 20000 //TODO: remove
 #define MELEMENTS 26 //26 //27 //9
 #define MIONS 5 //9
-#define MTHREADS 4    /// Max number of OpenMP threads
+#define MTHREADS 8    /// Max number of OpenMP threads
 
 
 /// Coolinglist
