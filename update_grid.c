@@ -15,7 +15,6 @@
 int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     /// m timestep
 {
-  int dummy_level;
   double epsilon_trans;
   int ionisinglevels;
 
@@ -217,7 +216,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 //   #endif
 
   #ifdef _OPENMP
-    #pragma omp parallel private(element,nions,ion,nlevels,level)
+    #pragma omp parallel private(nlevels)
     //copyin(nuJ,J,rhosum,T_Rsum,T_esum,Wsum,associatedcells)
     {
   #endif
@@ -260,7 +259,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
       /// Updating cell information
       #ifdef _OPENMP
-        #pragma omp for private(n,assoc_cells,radial_pos,tb_info,rho,element,nions,ion,nntot,nne,compton_optical_depth,grey_optical_deptha,grey_optical_depth,T_R,T_J,T_e,W,nlevels,Gamma,level,T_e_old,cell_len_scale) reduction(+:check1,check2) schedule(dynamic)
+        #pragma omp for private(assoc_cells,radial_pos,tb_info,rho,nntot,nne,compton_optical_depth,grey_optical_deptha,grey_optical_depth,T_R,T_J,T_e,W,nlevels,Gamma,T_e_old,cell_len_scale) reduction(+:check1,check2) schedule(dynamic)
         //T_D,W_D,nne,deltarho_old,deltaT_R_old,deltaT_e_old, deltarho,deltaT_R,deltaT_e,i,rhoindex,T_Rindex,T_eindex,ncl)
       #endif
       for (int n = 0; n < npts_model; n++)
@@ -951,7 +950,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     int nlte = get_nlevels_nlte(dummy_element, dummy_ion);
                     if (nlte > 0)
                     {
-                      for (dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+                      for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
                       {
                         //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
                       }
@@ -1128,13 +1127,13 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
           for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
           {
-            nions = get_nions(dummy_element);
+            int nions = get_nions(dummy_element);
             for (int dummy_ion = 0; dummy_ion < nions; dummy_ion++)
             {
               int nlte = nlte = get_nlevels_nlte(dummy_element, dummy_ion);
               if (nlte > 0)
               {
-                for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+                //for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
                   //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
               }
             }
@@ -1181,7 +1180,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
         //fprintf(estimators_file,"%d %g %g %g %g %g %g %g ",n,0.,0.,0.,0.,0.,0.,0.);
 
         #ifdef NLTE_POPS_ON
-          fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.,0.);
+          fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.);
           for (int nlte = 0; nlte < total_nlte_levels; nlte++)
           {
             fprintf(nlte_file,"%g ", 0.);
@@ -1196,7 +1195,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               int nlte = get_nlevels_nlte(dummy_element, dummy_ion);
               if (nlte > 0)
               {
-                for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+                //for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
                   //fprintf(nlte_file,"%g ", 0.0);
               }
             }

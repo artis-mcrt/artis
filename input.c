@@ -968,8 +968,7 @@ void read_atomicdata(void)
     exit(0);
   }
   #ifdef _OPENMP
-    int element,ion,level,nions,nlevels,ndowntrans,nuptrans;
-    #pragma omp parallel private(element,ion,level,nions,nlevels,ndowntrans,nuptrans)
+    #pragma omp parallel
     {
   #endif
       printout("[info] input: initializing cellhistory for thread %d ...\n",tid);
@@ -1800,7 +1799,7 @@ void read_parameterfile(int rank)
   }
 
   #ifdef _OPENMP
-    #pragma omp parallel private(x,zseed)
+    #pragma omp parallel private(zseed)
     {
 /*      tid = omp_get_thread_num();
       nthreads = omp_get_num_threads();

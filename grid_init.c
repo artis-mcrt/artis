@@ -313,17 +313,8 @@ int uniform_grid_setup(void)
 /// Routine for doing a density grid read from a 1-D model.
 int density_1d_read(void)
 {
-  double radial_pos;
-  double dcen[3];
-  int mkeep;
   //int renorm[MMODELGRID];
   //double den_norm[MMODELGRID];
-  double opcase2_normal,opcase3_sum;
-  int empty_cells;
-  int element, anumber;
-  float abundance;
-
-  double helper;
 
   //Calculate the critical opacity at which opacity_case 3 switches from a
   //regime proportional to the density to a regime independent of the density
@@ -332,8 +323,6 @@ int density_1d_read(void)
   rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
   printout("grid_init: rho_crit = %g\n", rho_crit);
 
-  double check1 = 0.0;
-  double check2 = 0.0;
   /*for (n=0;n<MMODELGRID;n++)
   {
     renorm[n]=0;
@@ -342,8 +331,8 @@ int density_1d_read(void)
 
   rho_sum = 0.0;
   fe_sum = 0.0;
-  opcase3_sum = 0.0;
-  empty_cells = 0;
+  double opcase3_sum = 0.0;
+  int empty_cells = 0;
 
   /*
     for (n=0;n < ngrid; n++)
@@ -458,21 +447,22 @@ int density_1d_read(void)
 
   for (int n = 0; n < ngrid; n++)
   {
+    double dcen[3];
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
 
-    radial_pos = vec_len(dcen);
+    double radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
-      mkeep = 0;
+      //int mkeep = 0;
       cell[n].modelgridindex = 0;
 
       for (int m = 0; m < (npts_model-1); m++)
       {
         if (radial_pos > (vout_model[m] * tmin))
         {
-          mkeep = m + 1;
+          //mkeep = m + 1;
           cell[n].modelgridindex = m + 1;
         }
       }
@@ -505,7 +495,7 @@ int density_1d_read(void)
   {
     if (modelgrid[mgi].associated_cells > 0)
     {
-      helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
+      double helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
       set_rhoinit(mgi,helper);
       set_rho(mgi,helper);
       set_ffe(mgi,ffegrp_model[mgi]);
@@ -515,12 +505,12 @@ int density_1d_read(void)
       set_f48cr(mgi,f48cr_model[mgi]);
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
-      for (element = 0; element < nelements; element++)
+      for (int element = 0; element < nelements; element++)
       {
         ///now set the abundances (by mass) of included elements, i.e.
         ///read out the abundances specified in the atomic data file
-        anumber = get_element(element);
-        abundance = abund_model[mgi][anumber-1];
+        int anumber = get_element(element);
+        float abundance = abund_model[mgi][anumber-1];
         //cell[n].composition[element].abundance = abundance;
         modelgrid[mgi].composition[element].abundance = abundance;
         //if (anumber == 8)
@@ -563,7 +553,6 @@ int density_1d_read(void)
     }
   }
 
-
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
   set_rhoinit(MMODELGRID,0.);
@@ -579,7 +568,6 @@ int density_1d_read(void)
   set_TR(MMODELGRID,MINTEMP);
   allocate_compositiondata(MMODELGRID);
 
-
   /// First pass through to get normalisation coefficients
   for (int n = 0; n < ngrid; n++)
   {
@@ -593,7 +581,7 @@ int density_1d_read(void)
       {
         if (get_rhoinit(mgi) > rho_crit)
         {
-          set_kappagrey(mgi, (0.9 * get_ffe(mgi) + 0.1) * rho_crit/get_rhoinit(mgi));
+          set_kappagrey(mgi, (0.9 * get_ffe(mgi) + 0.1) * rho_crit / get_rhoinit(mgi));
         }
         else
         {
@@ -623,6 +611,8 @@ int density_1d_read(void)
     }
   }
 
+  double check1 = 0.0;
+  double check2 = 0.0;
   /// Second pass through allows calculation of normalized kappa_grey
   for (int n = 0; n < ngrid; n++)
   {
@@ -640,12 +630,12 @@ int density_1d_read(void)
       }
       else if (opacity_case == 2)
       {
-        opcase2_normal = GREY_OP * rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
+        double opcase2_normal = GREY_OP * rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
         set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffe(mgi)) + 0.1));
       }
       else if (opacity_case == 3)
       {
-        opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
+        double opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
         set_kappagrey(mgi, get_kappagrey(mgi) * opcase3_normal);
       }
       else if (opacity_case == 4)
@@ -849,21 +839,14 @@ int density_1d_read(void)
 /// Routine for doing a density grid read from a 2-D model.
 int density_2d_read(void)
 {
-  int n, m;
   double radial_pos;
-  double dcen[3];
-  double check1, check2;
   int mkeep1, mkeep2;
   //int renorm[MMODELGRID];
   //double den_norm[MMODELGRID];
-  double opcase2_normal,opcase3_sum;
-  int empty_cells;
+  double opcase2_normal;
   int element, anumber;
   float abundance;
   double zcylindrical, rcylindrical;
-
-  double helper;
-  int mgi;
 
   //Calculate the critical opacity at which opacity_case 3 switches from a
   //regime proportional to the density to a regime independent of the density
@@ -872,17 +855,17 @@ int density_2d_read(void)
   rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
   printout("grid_init: rho_crit = %g\n", rho_crit);
 
-  check1=0.0;
-  check2=0.0;
+  double check1 = 0.0;
+  double check2 = 0.0;
 
   rho_sum = 0.0;
   fe_sum = 0.0;
-  opcase3_sum = 0.0;
-  empty_cells = 0;
+  double opcase3_sum = 0.0;
+  int empty_cells = 0;
 
-
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
+    double dcen[3];
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
@@ -899,7 +882,7 @@ int density_2d_read(void)
 
       /*Grid is uniform so only need to search in 1d to get r and z positions */
 
-      for (m = 0; m < ncoord1_model; m++)
+      for (int m = 0; m < ncoord1_model; m++)
       {
         if (rcylindrical > (m * dcoord1 * tmin/t_model))
         {
@@ -907,7 +890,7 @@ int density_2d_read(void)
           //cell[n].modelgridindex = m+1;
         }
       }
-      for (m = 0; m < ncoord2_model; m++)
+      for (int m = 0; m < ncoord2_model; m++)
       {
         if (zcylindrical > (((m * dcoord2) * tmin/t_model) - rmax))
         {
@@ -926,12 +909,11 @@ int density_2d_read(void)
     }
   }
 
-  /// Determine the number of simualtion cells associated with the model cells
-  int i,ii,count;
-  for (i = 0; i < npts_model; i++)
+  /// Determine the number of simulation cells associated with the model cells
+  for (int i = 0; i < npts_model; i++)
   {
-    count = 0;
-    for (ii = 0; ii < ngrid; ii++)
+    int count = 0;
+    for (int ii = 0; ii < ngrid; ii++)
     {
       if (cell[ii].modelgridindex == i) count++;
     }
@@ -941,11 +923,11 @@ int density_2d_read(void)
 //  for (n=0;n < ngrid; n++)
 //  {
 //    mgi = cell[n].modelgridindex;
-  for (mgi = 0; mgi < npts_model; mgi++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
     if (modelgrid[mgi].associated_cells > 0)
     {
-      helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
+      double helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
       set_rhoinit(mgi,helper);
       set_rho(mgi,helper);
       set_ffe(mgi,ffegrp_model[mgi]);
@@ -1018,9 +1000,9 @@ int density_2d_read(void)
 
 
   /// First pass through to get normalisation coefficients
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
-    mgi = cell[n].modelgridindex;
+    int mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffe(mgi);
 
@@ -1062,9 +1044,9 @@ int density_2d_read(void)
   }
 
   /// Second pass through allows calculation of normalized kappa_grey
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
-    mgi = cell[n].modelgridindex;
+    int mgi = cell[n].modelgridindex;
     if (rank_global == 0 && mgi != MMODELGRID) fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
     if (get_rhoinit(mgi) > 0)
     {
@@ -1126,17 +1108,9 @@ int density_2d_read(void)
 /// Routine for doing a density grid read from a 3-D model.
 int density_3d_read ()
 {
-  int n;
-  double radial_pos;
-  double dcen[3];
-  double check1, check2;
-  double opcase2_normal;
-  int empty_cells, mgi;
-
-  check1 = check2 = 0.0;
   rho_sum = 0.0;
   fe_sum = 0.0;
-  empty_cells = 0;
+  int empty_cells = 0;
   double opcase3_sum = 0;
 
   //Calculate the critical opacity at which opacity_case 3 switches from a
@@ -1146,16 +1120,16 @@ int density_3d_read ()
   rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
   printout("grid_init: rho_crit = %g\n", rho_crit);
 
-
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
     //printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d\n", n,grid_type,cell[n].modelgridindex,ngrid);
+    double dcen[3];
     dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
     //printout("grid_init2: n = %d\n", n);
 
-    radial_pos = vec_len(dcen);
+    double radial_pos = vec_len(dcen);
     modelgrid[cell[n].modelgridindex].initial_radial_pos = radial_pos;
 //     printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d, r %g, sum %g\n", n,grid_type,cell[n].modelgridindex,ngrid,radial_pos,modelgrid[cell[n].modelgridindex].initial_radial_pos);
 //     modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
@@ -1186,9 +1160,9 @@ int density_3d_read ()
 
   /*Remainder of routine copied from the 1D case. Previous version removed (but still given below */
 
-  for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < ngrid; n++)
   {
-    mgi = cell[n].modelgridindex;
+    int mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffe(mgi);
 
@@ -1229,9 +1203,11 @@ int density_3d_read ()
   }
 
   /// Second pass through allows calculation of normalized kappa_grey
-  for (n = 0; n < ngrid; n++)
+  double check1 = 0.0;
+  double check2 = 0.0;
+  for (int n = 0; n < ngrid; n++)
   {
-    mgi = cell[n].modelgridindex;
+    int mgi = cell[n].modelgridindex;
     if (rank_global == 0 && mgi != MMODELGRID) fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
     if (get_rhoinit(mgi) > 0)
     {
@@ -1245,7 +1221,7 @@ int density_3d_read ()
       }
       else if (opacity_case == 2)
       {
-        opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
+        double opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
         set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffe(mgi)) + 0.1));
       }
       else if (opacity_case == 3)
