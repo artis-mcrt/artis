@@ -16,7 +16,7 @@ void tabulate_ratecoefficients_gsl(void)
 /// T_e = T_R for this precalculation.
 {
   //size_t neval;   /// for qng integrator
-  int check,calculate;
+  int calculate;
 
   /// Determine the temperture grids gridsize
   T_step = (1.*MAXTEMP-MINTEMP) / (TABLESIZE-1.);               /// global variables
@@ -28,6 +28,7 @@ void tabulate_ratecoefficients_gsl(void)
   {
     /// Check whether current temperature range and atomic data match
     /// the precalculated rate coefficients
+    int check;
     float T_min,T_max;
     int dum1;
     fscanf(ratecoeff_file,"%g %g %d",&T_min,&T_max,&dum1);
@@ -116,27 +117,15 @@ void tabulate_ratecoefficients_gsl(void)
 
 void calculate_rate_coefficients(void)
 {
-  //gsl_function F_gamma;
-  //gsl_function F_alpha_sp_E;
-  gsl_function F_alpha_sp;
-  F_alpha_sp.function = &alpha_sp_integrand_gsl;
-  //F_alpha_sp_E.function = &alpha_sp_E_integrand_gsl;
-  //F_gamma.function = &gamma_integrand_gsl;
-  gsl_function F_gammacorr;
-  F_gammacorr.function = &gammacorr_integrand_gsl;
-  gsl_function F_bfheating;
-  F_bfheating.function = &approx_bfheating_integrand_gsl;
-  gsl_function F_bfcooling;
-  F_bfcooling.function = &bfcooling_integrand_gsl;
-  //F_stimulated_bfcooling.function = &stimulated_bfcooling_integrand_gsl;
-  //F_stimulated_recomb.function = &stimulated_recomb_integrand_gsl;
-
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
 
   /// Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < nelements; element++)
   {
     int nions = get_nions(element) - 1;
+    #ifdef _OPENMP
+      #pragma omp parallel for
+    #endif
     for (int ion = 0; ion < nions; ion++)
     {
       //nlevels = get_nlevels(element,ion);
@@ -179,14 +168,30 @@ void calculate_rate_coefficients(void)
             //printout("%d %g\n",iter,T_e);
 
             intparas.T = T_e;
-            F_alpha_sp.params = &intparas;
-            //F_alpha_sp_E.params = &intparas;
+
+            //gsl_function F_gamma;
+            //F_gamma.function = &gamma_integrand_gsl;
+            //gsl_function F_alpha_sp_E;
+            //F_alpha_sp_E.function = &alpha_sp_E_integrand_gsl;
+            gsl_function F_alpha_sp;
+            F_alpha_sp.function = &alpha_sp_integrand_gsl;
+            gsl_function F_gammacorr;
+            F_gammacorr.function = &gammacorr_integrand_gsl;
+            gsl_function F_bfheating;
+            F_bfheating.function = &approx_bfheating_integrand_gsl;
+            gsl_function F_bfcooling;
+            F_bfcooling.function = &bfcooling_integrand_gsl;
+            //F_stimulated_bfcooling.function = &stimulated_bfcooling_integrand_gsl;
+            //F_stimulated_recomb.function = &stimulated_recomb_integrand_gsl;
+
             //F_gamma.params = &intparas;
+            //F_alpha_sp_E.params = &intparas;
+            F_alpha_sp.params = &intparas;
             F_gammacorr.params = &intparas;
+            F_bfheating.params = &intparas;
             F_bfcooling.params = &intparas;
             //F_stimulated_bfcooling.params = &intparas;
             //F_stimulated_recomb.params = &intparas;
-            F_bfheating.params = &intparas;
 
             //TODO: These integrals will be zero for photoionization processes with all zero cross sections.
             //We could speed this up by detecting this case and skipping the integrals,
@@ -200,10 +205,6 @@ void calculate_rate_coefficients(void)
             //if (iter == 0)
             //  printout("alpha_sp: element %d ion %d level %d upper level %d at temperature %g, alpha_sp is %g (integral %g, sahafac %g)\n", element, ion, level, upperlevel, T_e, alpha_sp, alpha_sp/(FOURPI * sfac * phixstargetprobability),sfac);
 
-            double bfcooling_coeff = 0.0;
-            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
-            bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
-
             double gammacorr = 0.0;
             gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &gammacorr, &error);
             gammacorr *= FOURPI * phixstargetprobability;
@@ -211,6 +212,10 @@ void calculate_rate_coefficients(void)
             double bfheating_coeff = 0.0;
             gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfheating_coeff, &error);
             bfheating_coeff *= FOURPI * phixstargetprobability;
+
+            double bfcooling_coeff = 0.0;
+            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
+            bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
 
             /// Save the calculated coefficients to memory
             elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
