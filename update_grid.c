@@ -726,8 +726,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         if (T_e < MINTEMP) T_e = MINTEMP;
                       }
                       //T_e = T_J;
-                      set_Te(n,T_e);
-                      //set_Te(n,3000); //TODO: remove
+                      //set_Te(n,T_e);
+                      set_Te(n,3000); //TODO: remove
 
                       #ifndef NLTE_POPS_ALL_IONS_SIMULTANEOUS
                         /// Store population values to the grid
@@ -760,10 +760,14 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                               }
                             #endif
                           }
+                          #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+                          printout("Solving for NLTE populations in cell %d for timestep %d.", n, m);
+                          #else
                           printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, m, nlte_test);
+                          #endif
                           if (nlte_iter > NLTEITER)
                           {
-                            printout("NLTE solver failed to converge after %d iterations. Test %g.\n", NLTEITER, nlte_test);
+                            printout("NLTE solver failed to converge after %d iterations. Test ratio %g.\n", NLTEITER, nlte_test);
                             nlte_test = 0.0;
                           }
                           nne = get_nne(n);

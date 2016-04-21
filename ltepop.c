@@ -284,8 +284,8 @@ double phi(int element, int ion, int modelgridindex)
       //Gamma = 0.0; //TODO: testing testing no gamma part
       phi = recomb_total *
           (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
-            /// ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
-            / Y_nt;
+            / ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
+            /// Y_nt;
             //Y_nt should be higher than the Gamma term for nebular epoch
 
       //phi = (Alpha_sp+Alpha_st)/(Y_nt);
@@ -298,7 +298,7 @@ double phi(int element, int ion, int modelgridindex)
 
       if (!isfinite(phi) || phi == 0.0)
       {
-        printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g, T_R %g ... remove higher or lower ionisation stages\n",phi,element,ion,T_e,T_R);
+        printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or lower ionisation stages\n",phi,element,ion,T_e);
         printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n",Alpha_sp,Alpha_st,Gamma,modelgrid[modelgridindex].composition[element].partfunct[ion],stat_weight(element,ion,0));
         printout("[fatal] phi: recomb_total %g, upperionpartfunct %g, upperionstatweight %g\n",recomb_total,modelgrid[modelgridindex].composition[element].partfunct[ion+1],stat_weight(element,ion+1,0));
         printout("[fatal] phi: Y_nt %g Col_rec %g get_nne(modelgridindex) %g\n",Y_nt,Col_rec,get_nne(modelgridindex));
@@ -656,13 +656,13 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
        stat_weight(element,ion,level) / stat_weight(element,ion,0) *
        exp(-(E_level - E_ground)/KB/T_exc);
 
-  if (nn < MINPOP)
+  /*if (nn < MINPOP)
   {
     if (get_abundance(modelgridindex,element) > 0)
       nn = MINPOP;
     else
       nn = 0.;
-  }
+  }*/
 
   return nn;
 }

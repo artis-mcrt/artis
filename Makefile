@@ -2,18 +2,17 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-#  CC = cc
+  CC = cc
 #  CC = gcc-5
 #  CC = gcc-6
-  CC = clang-omp
+#  CC = clang-omp
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib 
 #  CFLAGS = -Wall -O0 -g -std=c11 -I$(INCLUDE) $(VER)
-  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -O3 -std=c11 -I$(INCLUDE) -fopenmp
+  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -O3 -std=c11 -I$(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
-#  CFLAGS = -Wmisleading-indentation -O3 -std=c11 -I$(INCLUDE)
-#also -fopenmp
+#also -fopenmp after -I$(INCLUDE)
 
   LDFLAGS = -L$(LIB) -lgsl -lgslcblas -lm
   exspec: override CFLAGS =  -g -Wextra -Wunused-parameter -O3 -I$(INCLUDE) -DDO_EXSPEC
