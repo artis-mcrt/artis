@@ -42,9 +42,7 @@ double sig_comp(const PKT *pkt_ptr, double t_current)
 int com_sca(PKT *pkt_ptr, double t_current)
 {
   double f;
-  double vel_vec[3];
-  double cmf_dir[3], new_dir[3], final_dir[3];
-  double cos_theta;
+  double final_dir[3];
   double prob_gamma;
 
   //  printout("Compton scattering.\n");
@@ -92,19 +90,22 @@ int com_sca(PKT *pkt_ptr, double t_current)
   if (zrand < prob_gamma)
   {
     /* It stays as a gamma ray. Change frequency and direction in
-	 co-moving frame then transfer back to rest frame.*/
+       co-moving frame then transfer back to rest frame.*/
 
     pkt_ptr->nu_cmf = pkt_ptr->nu_cmf / f; //reduce frequency
 
 
     /* The packet has stored the direction in the rest frame.
-	 Use aberation of angles to get this into the co-moving frame.*/
+       Use aberation of angles to get this into the co-moving frame.*/
 
+    double vel_vec[3];
+    double cmf_dir[3];
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
     angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
 
     /* Now change the direction through the scattering angle.*/
 
+    double cos_theta;
     if (xx <  THOMSON_LIMIT)
     {
       cos_theta = thomson_angle();
@@ -114,7 +115,8 @@ int com_sca(PKT *pkt_ptr, double t_current)
       cos_theta = 1. - ((f - 1)/xx);
     }
 
-    scatter_dir (cmf_dir,cos_theta,new_dir);
+    double new_dir[3];
+    scatter_dir(cmf_dir,cos_theta,new_dir);
 
     double test = dot(new_dir,new_dir);
     if (fabs(1. - test) > 1.e-8)

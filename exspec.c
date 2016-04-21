@@ -20,6 +20,7 @@
 #include "packet_init.h"
 #include "spectrum.h"
 #include "vectors.h"
+#include <stdarg.h>  // needed for printout()
 
 /* Main - top level routine. */
 int main(int argc, char** argv)

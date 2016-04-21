@@ -15,7 +15,6 @@
 int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     /// m timestep
 {
-  int ionisinglevels;
 
   //double gamma_lte,zeta;
 
@@ -27,15 +26,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //double deltarho;
   double trat, tratmid;
   double t_current,t_previous;
-  double T_R,T_e,T_J,W;//,W_D;
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
                          /// assigned to max_path_step after the parallel update_grid finished.
 
-  double nne;
   double compton_optical_depth;
   double grey_optical_depth,grey_optical_deptha;
-
-  double Gamma;
 
   //int first_nonempty_cell = -1000;
   int assoc_cells;
@@ -44,16 +39,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //temprange_paras paras2;
   //int status;
   //double x_0,x_lo,x_hi;
-  double T_e_old;
   //int kpkt_cuts_determined = 0;
   double deltat,deltaV;
-  int nlevels;
   double radial_pos;
   //char tempfilename[100],ionfractfilename[100],Gammafilename[100],Alphaspfilename[100];
   //FILE *temperature_file,*ionfract_file,*corrphotoion_file,*thermal_file,*Gamma_file,*Alpha_file,*bfcount_file;
   //FILE *gammaest_file,*gammaana_file;
-  int nlte_iter;
-  double nlte_test;
 
   /*if (&modelgrid[96].composition[0] == NULL)
   {
@@ -210,13 +201,15 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 //   #endif
 
   #ifdef _OPENMP
-    #pragma omp parallel private(nlevels)
+    #pragma omp parallel
     //copyin(nuJ,J,rhosum,T_Rsum,T_esum,Wsum,associatedcells)
     {
   #endif
       /// Do not use values which are saved in the cellhistory within update_grid
       /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
       use_cellhist = -1;
+
+      double T_R,T_e,T_J,W;//,W_D;
 
       /// All entries of the cellhistory stack must be flagged as empty at the
       /// onset of the new timestep.
@@ -253,8 +246,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
       /// Updating cell information
       #ifdef _OPENMP
-        #pragma omp for private(assoc_cells,radial_pos,tb_info,nne,compton_optical_depth,grey_optical_deptha,grey_optical_depth,T_R,T_J,T_e,W,nlevels,Gamma,T_e_old) schedule(dynamic)
-        //#add reduction(+:check1,check2)?
+        #pragma omp for private(assoc_cells,radial_pos,tb_info,compton_optical_depth,grey_optical_deptha,grey_optical_depth,T_R,T_J,T_e,W) schedule(dynamic)
         //T_D,W_D,nne,deltarho_old,deltaT_R_old,deltaT_e_old, deltarho,deltaT_R,deltaT_e,i,rhoindex,T_Rindex,T_eindex,ncl)
       #endif
       //for (n = nstart; n < nstart+nblock; n++)
@@ -288,7 +280,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             /// This is done outside update grid now
             //modelgrid[n].totalcooling = COOLING_UNDEFINED;
 
-
+            double nne;
             if (opacity_case == 4)
             {
               /// Initialise shortcuts to previous values.
@@ -600,16 +592,16 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         /// the next timesteps gamma estimators.
                         //nlevels = get_nlevels(element,ion);
                         //nlevels = get_ionisinglevels(element,ion);
-                        nlevels = get_bfcontinua(element,ion);
-                        Gamma = 0.;
-                        double Col_ion = 0.;
+                        int nlevels = get_bfcontinua(element,ion);
+                        double Gamma = 0.;
                         if (ion < nions-1)
                         {
-                          ionisinglevels = get_bfcontinua(element,ion);
+                          int ionisinglevels = get_bfcontinua(element,ion);
                           mastate[tid].element = element;
                           mastate[tid].ion = ion;
                           mastate[tid].nnlevel = 1.0;
 
+                          double Col_ion = 0.;
                           for (int level = 0; level < nlevels; level++)
                           {
                             for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
@@ -666,8 +658,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     #ifdef NLTE_POPS_ON
                       //          for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)
 
-                      nlte_iter = 0;
-                      nlte_test = 2.;
+                      int nlte_iter = 0;
+                      double nlte_test = 2.;
                       while (nlte_test > 1.05)
                       {
                         //recalculate the Gammas using the current population estimates
@@ -678,30 +670,28 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                             int nions = get_nions(element);
                             for (int ion = 0; ion < nions-1; ion++)
                             {
-                              int nlevels = get_bfcontinua(element,ion);
-                              Gamma = 0.;
-                              double Col_ion = 0.;
+                              double Gamma = 0.;
 
                               if (ion < nions-1)
                               {
+                                int ionisinglevels = get_bfcontinua(element,ion); //TODO: this was previously incorrect! makes a difference?
                                 mastate[tid].element = element;
                                 mastate[tid].ion = ion;
                                 mastate[tid].nnlevel = 1.0;
-                                for (int level = 0; level < nlevels; level++)
+                                double Col_ion = 0.;
+                                for (int level = 0; level < ionisinglevels; level++)
                                 {
+                                  double nnlevel = calculate_exclevelpop(n,element,ion,level);
                                   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
                                   {
                                     int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-                                    //TODO: replace calls to calculate_exclevelpop with nnlevel variable for speed
-                                    Gamma += calculate_exclevelpop(n,element,ion,level) * get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
-                                    if (level < ionisinglevels)
-                                    {
-                                      mastate[tid].level = level;
 
-                                      double epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
-                                      //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-                                      Col_ion += calculate_exclevelpop(n,element,ion,level) * col_ionization(n,phixstargetindex,epsilon_trans);
-                                    }
+                                    Gamma += nnlevel * get_corrphotoioncoeff(element,ion,level,phixstargetindex,n);
+                                    mastate[tid].level = level;
+
+                                    double epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
+                                    //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
+                                    Col_ion += nnlevel * col_ionization(n,phixstargetindex,epsilon_trans);
                                   }
                                 }
                                 //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
@@ -718,30 +708,30 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       precalculate_partfuncts(n);
 
                       /// Find T_e as solution for thermal balance
-                      T_e_old = get_Te(n);
+                      double T_e_old = get_Te(n);
                       if (titer == 0)
                         T_e = call_T_e_finder(n,time_step[m-1].mid,tb_info,MINTEMP,MAXTEMP);
                       else
                         T_e = call_T_e_finder(n,time_step[m].mid,tb_info,MINTEMP,MAXTEMP);
-                      if (T_e > 2.*T_e_old)
+                      if (T_e > 2. * T_e_old)
                       {
-                        T_e = 2.*T_e_old;
+                        T_e = 2. * T_e_old;
                         printout("use T_e damping in cell %d\n",n);
                         if (T_e > MAXTEMP) T_e = MAXTEMP;
                       }
-                      else if (T_e < 0.5*T_e_old)
+                      else if (T_e < 0.5 * T_e_old)
                       {
-                        T_e = 0.5*T_e_old;
+                        T_e = 0.5 * T_e_old;
                         printout("use T_e damping in cell %d\n",n);
                         if (T_e < MINTEMP) T_e = MINTEMP;
                       }
                       //T_e = T_J;
-                      //set_Te(n,T_e);
-                      set_Te(n,3000); //TODO: remove
+                      set_Te(n,T_e);
+                      //set_Te(n,3000); //TODO: remove
 
                       #ifndef NLTE_POPS_ALL_IONS_SIMULTANEOUS
                         /// Store population values to the grid
-                        calculate_populations(n);
+                        calculate_populations(n,0);
                         //calculate_cooling_rates(n);
                         //calculate_heating_rates(n);
                       #endif
@@ -794,7 +784,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         }
                       #endif
 
-                    compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
+                    nne = get_nne(n);
+                    compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
                     grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
                     printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
                     grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
@@ -935,7 +926,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 //printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
 
                 //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-                for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
+                for (int dummy_element = 0; dummy_element < nelements; dummy_element++)
                 {
                   int nions = get_nions(dummy_element);
                   for (int dummy_ion = 0; dummy_ion < nions; dummy_ion++)
@@ -1473,7 +1464,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 {
   double nne_lo,nne_hi,nne_check,nne_tot;
   double nnelement,nnion;
-  int element,ion;
+  int element;
   int nions;
   int iter;
   double nntot;
@@ -1630,7 +1621,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
           //printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements[element].uppermost_ion);
           printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements_uppermost_ion[tid][element]);
           //for (ion=0; ion <= elements[element].uppermost_ion; ion++)
-          for (ion = 0; ion <= elements_uppermost_ion[tid][element]; ion++)
+          for (int ion = 0; ion <= elements_uppermost_ion[tid][element]; ion++)
           {
             //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
             printout("element %d, ion %d, photoionest %g\n",element,ion,gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
@@ -1674,7 +1665,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       nne_tot += nnelement * get_element(element);
 
       /// Use ionisationfractions to calculate the groundlevel populations
-      for (ion = 0; ion < nions; ion++)
+      for (int ion = 0; ion < nions; ion++)
       {
         //if (ion <= elements[element].uppermost_ion)
         if (ion <= elements_uppermost_ion[tid][element])
