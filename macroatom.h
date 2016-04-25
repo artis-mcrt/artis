@@ -17,17 +17,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 double col_recombination(int modelgridindex, int lower, double epsilon_trans);
 double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
 
-
-static inline
-double radfield(double nu, int modelgridindex)
-/// calculates ambient radiation field, which is parameterised as a diluted black body
-{
-  float T_R = get_TR(modelgridindex);
-  float W   = get_W(modelgridindex);
-
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1.0/(expm1(HOVERKB*nu/T_R));
-}
-
+double radfield(double nu, int modelgridindex);
 
 static inline
 double radfield2(double nu, double T, double W)
