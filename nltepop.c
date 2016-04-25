@@ -14,9 +14,11 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
   if (get_abundance(modelgridindex, element) > 0.0)
   {
+    set_TR(modelgridindex,3000); //TODO: remove after testing complete
+    //set_W(modelgridindex,1.0); //TODO: remove after testing complete
+
     printout("Solving for NLTE populations in cell %d at timestep %d for element %d\n",modelgridindex,timestep,element);
     printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
-    set_TR(modelgridindex,3000); //TODO: remove after testing complete
 
     int nlte_dimension = 0;
     double *superlevel_partfunc = calloc(nions,sizeof(double)); //space is allocated for every ion, whether or not it has a superlevel
@@ -89,7 +91,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          double R = nlte_matrix_rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
+          double R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
           //double R = 0.0; //TODO: remove, testing only
           double C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
           //double C = 0.0; //TODO: remove, testing only
@@ -126,7 +128,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          double R = nlte_matrix_rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);
+          double R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);
           //double R = 0.0; //TODO: remove, testing only
           double C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
           //double C = 0.0; //TODO: remove, testing only
