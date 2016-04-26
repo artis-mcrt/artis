@@ -5,6 +5,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nltepop.h"
+#include "radfield.h"
 #include "ratecoeff.h"
 #include "thermalbalance.h"
 #include "update_grid.h"
@@ -448,6 +449,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       abort();
                     }
                     J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+                    radfield_set_J_normfactor(n,ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells);
 
                     #ifdef DO_TITER
                       if (J_reduced_save[n] >= 0)
@@ -654,6 +656,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     modelgrid[n].TJ = T_J;
                     modelgrid[n].TR = T_R;
                     modelgrid[n].W = W;
+                    // NEW T_R SOLVER HERE
+                    fit_radfield_parameters(n);
 
                     #ifdef NLTE_POPS_ON
                       //          for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)

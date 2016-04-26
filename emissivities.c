@@ -5,6 +5,7 @@
 #include "emissivities.h"
 #include "packet_init.h"
 #include "photo_electric.h"
+#include "radfield.h"
 #include "ray_prop.h"
 #include "vectors.h"
 
@@ -303,6 +304,7 @@ int zero_estimators()
     J[n] = 0.;
     #ifndef FORCE_LTE
       nuJ[n] = 0.;
+      zero_radfield_estimators(n);
       ffheatingestimator[n] = 0.;
       colheatingestimator[n] = 0.;
       /*

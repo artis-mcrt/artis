@@ -221,7 +221,7 @@ endif
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
 
 
-sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o nltepop.o specpol.o vpkt.o
+sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o nltepop.o specpol.o vpkt.o radfield.o
 
 sn3d: version.h $(sn3d_objects)
 	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
