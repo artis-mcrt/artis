@@ -7,6 +7,10 @@
 #include "ratecoeff.h"
 #include "update_grid.h"
 
+
+double calculate_partfunct_old(int element, int ion, int modelgridindex);
+
+
 ///***************************************************************************/
 double nne_solution_f(double x, void *paras)
 /// For libgsl bracketing type solver

@@ -10,13 +10,18 @@
 #include "thermalbalance.h"
 #include "update_grid.h"
 
-/** Subroutine to update the matter quantities in the grid cells at the start
-   of the new timestep. */
+//private functions
+int get_cell(double x, double y, double z, double t);
+void update_abundances(int modelgridindex, double t_current);
+void precalculate_partfuncts(int modelgridindex);
+void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
 
+
+// Subroutine to update the matter quantities in the grid cells at the start
+//   of the new timestep.
 int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     /// m timestep
 {
-
   //double gamma_lte,zeta;
 
   /// only needed if all level populations should be printed to the output-file
@@ -1721,7 +1726,8 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 
 
 double calculate_electron_densities(int modelgridindex)
-/// Determines the electron number density for a given cell
+// Determines the free and total electron number densities
+// for a given cell and saves them
 {
   double nne_tot = 0.; //total electron density
   double nne = 0.; //free electron density

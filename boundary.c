@@ -4,6 +4,8 @@
 #include "rpkt.h"
 #include "update_packets.h"
 
+int locate(const PKT *pkt_ptr, double t_current);
+
 ///****************************************************************************
 /// Basic routine to compute distance to a call boundary.
 double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)

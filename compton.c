@@ -3,7 +3,13 @@
 #include "compton.h"
 #include "vectors.h"
 
-/* Stuff for compton scattering. */
+
+double choose_f(double xx, double zrand);
+double sigma_compton_partial(double x, double f);
+double thomson_angle(void);
+
+
+// Stuff for compton scattering.
 
 double sig_comp(const PKT *pkt_ptr, double t_current)
 {

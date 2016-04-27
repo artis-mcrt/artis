@@ -8,6 +8,12 @@
 #include "ratecoeff.h"
 #include "rpkt.h"
 
+
+// private functions
+void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum, int high);
+double sample_planck(double T);
+
+
 ///****************************************************************************
 void calculate_kpkt_rates(int modelgridindex)
 /// Set up the global cooling list and determine the important entries
@@ -481,7 +487,7 @@ double planck(double nu, double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
 {
-  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / (exp(HOVERKB*nu/T) - 1);
+  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / (expm1(HOVERKB*nu/T));
 }
 
 

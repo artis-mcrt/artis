@@ -6,6 +6,14 @@
 #include "nltepop.h"
 #include "update_grid.h"
 
+
+// private functions
+int get_nlte_vector_index(int element_in, int ion_in, int level_in);
+void get_ion_level_of_nlte_vector_index(int index, int element, int *ion, int *level);
+void filter_nlte_matrix(int element, int nlte_dimension, double *rate_matrix, double *balance_vector, const double *pop_norm_factors);
+void eliminate_nlte_matrix_rowcol(int index, int gs_index, int nlte_dimension, double *rate_matrix, double *balance_vector);
+
+
 void nlte_pops_element(int element, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels in all ions of an element
 {

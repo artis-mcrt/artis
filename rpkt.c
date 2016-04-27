@@ -10,8 +10,14 @@
 #include "update_grid.h"
 #include "vectors.h"
 
-/* Material for handing r-packet propagation. */
 
+// private functions
+double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist);
+int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current);
+void rpkt_event_thickcell(PKT *pkt_ptr, double t_current);
+
+
+// Material for handing r-packet propagation.
 ///****************************************************************************
 double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
@@ -1247,7 +1253,6 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
     int gphixsindex;
     double corrfactor;
     double ionpops_local[MELEMENTS][MIONS];
-    float get_nnetot(int modelgridindex);
 
     double bef;
 

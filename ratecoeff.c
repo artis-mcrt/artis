@@ -6,6 +6,19 @@
 #include "grid_init.h"
 #include <gsl/gsl_integration.h>
 
+//private functions
+void calculate_rate_coefficients(void);
+void write_ratecoeff_dat(void);
+void calculate_ion_alpha_sp(void);
+double gamma_integrand_gsl(double nu, void *paras);
+double gammacorr_integrand_gsl(double nu, void *paras);
+double approx_bfheating_integrand_gsl(double nu, void *paras);
+double bfcooling_integrand_gsl(double nu, void *paras);
+double bfcooling_integrand_gsl_2(double nu, void *paras);
+double stimulated_bfcooling_integrand_gsl(double nu, void *paras);
+double stimulated_recomb_integrand_gsl(double nu, void *paras);
+
+
 ///****************************************************************************
 void tabulate_ratecoefficients_gsl(void)
 /// Precalculates the rate coefficients for stimulated and spontaneous

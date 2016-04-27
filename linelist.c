@@ -1,8 +1,9 @@
 #include "sn3d.h"
 #include "linelist.h"
 
-/* To construct an energy ordered gamma ray line list. */
+int identify_gam_line(int ele_type, int ele_index, double *eret, double *pret);
 
+// To construct an energy ordered gamma ray line list.
 int get_gam_ll(void)
 {
   /* Start by setting up the grid of fake lines and their energies. */

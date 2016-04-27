@@ -3,7 +3,12 @@
 #include "light_curve.h"
 #include "vectors.h"
 
-/* Routine to make a MC light curve from the r-packets. */
+// private functions
+int add_to_lc(const EPKT *pkt_ptr);
+int add_to_lc_res(const EPKT *pkt_ptr, int current_abin);
+
+
+// Routine to make a MC light curve from the r-packets.
 
 /*int make_light_curve()
 {

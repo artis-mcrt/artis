@@ -7,6 +7,13 @@
 #include "update_packets.h"
 #include "rpkt.h"
 
+
+//private functions
+int compare_packets_byposition(const void *p1, const void *p2);
+int compare_packets_bymodelgridposition(const void *p1, const void *p2);
+int compare_packets_bymodelgriddensity(const void *p1, const void *p2);
+
+
 /** Subroutine to move the packets and update them during the currect timestep. */
 
 int update_packets(int nts)

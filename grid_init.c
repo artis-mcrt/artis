@@ -4,6 +4,17 @@
 #include "rpkt.h"
 #include "vectors.h"
 
+// private functions
+int uniform_grid_setup(void);
+int density_1d_read(void);
+int density_2d_read(void);
+int density_3d_read(void);
+void abundances_3d_read(void);
+void abundances_1d_read(void);
+void assign_temperature(void);
+//void abundances_setup(void);
+
+
 ///***************************************************************************
 /// Subroutine that initialises the grid cells. Designed so that grid cells
 /// don't need to be uniform but for the moment they are.

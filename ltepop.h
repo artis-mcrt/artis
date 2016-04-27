@@ -6,7 +6,6 @@
 double nne_solution_f(double x, void *paras);
 double ionfract(int element, int ion, int modelgridindex, double nne);
 double phi(int element, int ion, int modelgridindex);
-double calculate_partfunct_old(int element, int ion, int modelgridindex);
 double calculate_partfunct(int element, int ion, int modelgridindex);
 double get_groundlevelpop(int modelgridindex, int element, int ion);
 double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level);

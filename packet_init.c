@@ -3,6 +3,12 @@
 #include "packet_init.h"
 #include "vectors.h"
 
+
+// private functions
+int setup_packets(int pktnumberoffset);
+int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset);
+
+
 int packet_init(int middle_iteration, int my_rank)
 {
   if (!continue_simulation)

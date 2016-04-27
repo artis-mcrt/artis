@@ -2,20 +2,11 @@
 #define RATECOEFF_H
 
 void tabulate_ratecoefficients_gsl(void);
-void calculate_rate_coefficients(void);
-void write_ratecoeff_dat(void);
-void calculate_ion_alpha_sp(void);
+
 double alpha_sp_integrand_gsl(double nu, void *paras);
 double alpha_sp_E_integrand_gsl(double nu, void *paras);
-double gamma_integrand_gsl(double nu, void *paras);
-double gammacorr_integrand_gsl(double nu, void *paras);
-double approx_bfheating_integrand_gsl(double nu, void *paras);
-double bfcooling_integrand_gsl(double nu, void *paras);
-double bfcooling_integrand_gsl_2(double nu, void *paras);
-double stimulated_bfcooling_integrand_gsl(double nu, void *paras);
-double stimulated_recomb_integrand_gsl(double nu, void *paras);
-double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
 
+double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
 double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
 double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, double T);
 double interpolate_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, double T);
