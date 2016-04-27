@@ -20,6 +20,13 @@ typedef struct
 
 radfieldbin radfieldbins[MMODELGRID + 1][RADFIELDBINCOUNT];
 
+typedef enum
+{
+  ONE = 0,
+  TIMES_NU = 1,
+  TIMES_E = 2
+} enum_prefactor;
+
 typedef struct
 {
   double T_R;
@@ -31,6 +38,13 @@ typedef struct
   int modelgridindex;
   int binindex;
 } gsl_T_R_solver_paras;
+
+// private functions
+double find_T_R(int modelgridindex, int binindex);
+double delta_nu_bar(double T_R, void *paras);
+double calculate_planck_integral(double T_R, double nu_lower, double nu_upper,
+                                 enum_prefactor prefactor);
+double gsl_integrand_planck(double nu, void *paras);
 
 void zero_radfield_estimators(int modelgridindex)
 {
@@ -55,37 +69,18 @@ void zero_radfield_estimators(int modelgridindex)
 void update_radfield(int modelgridindex, double distance, double e_cmf,
                      double nu_cmf)
 {
-  //printout("update_radfield: distance %g e_cmf %g nu_cmf %g\n",distance,
-  //         e_cmf,nu_cmf);
-
-  int binindex = -1;
-  for (int dbinindex = 0; dbinindex < RADFIELDBINCOUNT; dbinindex++)
-    if (binindex == -1 &&
-        radfieldbins[modelgridindex][dbinindex].nu_upper > nu_cmf)
-    {
-      binindex = dbinindex;
-      break;
-    }
+  int binindex = get_frequency_bin(modelgridindex,nu_cmf);
 
   if (binindex >= 0)
   {
-    double nu_lower = nu_lower_first;
-    if (binindex > 0)
-      nu_lower = radfieldbins[modelgridindex][binindex - 1].nu_upper;
-
-    //printout("update_radfield: bin %d nu_lower %g\n",binindex,
-    //           nu_lower);
-    if (nu_cmf >= nu_lower)
-    {
-      //printout("before: J %g, nuJ %g\n",
-      //         radfieldbins[modelgridindex][binindex].J,
-      //         radfieldbins[modelgridindex][binindex].nuJ);
-      radfieldbins[modelgridindex][binindex].J += distance * e_cmf;
-      radfieldbins[modelgridindex][binindex].nuJ += distance * e_cmf * nu_cmf;
-      //printout("after: J %g, nuJ %g\n",
-      //         radfieldbins[modelgridindex][binindex].J,
-      //         radfieldbins[modelgridindex][binindex].nuJ);
-    }
+    //printout("before: J %g, nuJ %g\n",
+    //         radfieldbins[modelgridindex][binindex].J,
+    //         radfieldbins[modelgridindex][binindex].nuJ);
+    radfieldbins[modelgridindex][binindex].J += distance * e_cmf;
+    radfieldbins[modelgridindex][binindex].nuJ += distance * e_cmf * nu_cmf;
+    //printout("after: J %g, nuJ %g\n",
+    //         radfieldbins[modelgridindex][binindex].J,
+    //         radfieldbins[modelgridindex][binindex].nuJ);
   }
   //else, dropping the contribution of this packet
 }
@@ -111,15 +106,12 @@ void fit_radfield_parameters(int modelgridindex)
 
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
   {
-    double nu_lower = nu_lower_first;
-    if (binindex > 0)
-      nu_lower = radfieldbins[modelgridindex][binindex - 1].nu_upper;
-
+    double nu_lower = get_bin_nu_lower(modelgridindex, binindex);
     double nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
 
     double J_bin = radfieldbins[modelgridindex][binindex].J * J_normfactor[modelgridindex];
 
-    double T_R_bin = call_T_R_finder(modelgridindex, binindex);
+    double T_R_bin = find_T_R(modelgridindex, binindex);
 
     radfieldbins[modelgridindex][binindex].T_R = T_R_bin;
 
@@ -145,7 +137,7 @@ void fit_radfield_parameters(int modelgridindex)
 }
 
 
-double call_T_R_finder(int modelgridindex, int binindex)
+double find_T_R(int modelgridindex, int binindex)
 {
   double fractional_accuracy = 1e-4;
   int maxit = 100;
@@ -174,7 +166,6 @@ double call_T_R_finder(int modelgridindex, int binindex)
   ///onedimensional gsl root solver, bracketing type
   const gsl_root_fsolver_type *solvertype;
   gsl_root_fsolver *T_R_solver;
-
   solvertype = gsl_root_fsolver_brent;
 
   gsl_T_R_solver_paras paras;
@@ -189,7 +180,9 @@ double call_T_R_finder(int modelgridindex, int binindex)
   double delta_nu_bar_min = delta_nu_bar(T_R_min,find_T_R_f.params);
   double delta_nu_bar_max = delta_nu_bar(T_R_max,find_T_R_f.params);
 
-  printout("call_T_R_finder: delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",delta_nu_bar_min,delta_nu_bar_max);
+  printout(
+    "call_T_R_finder: delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
+    delta_nu_bar_min,delta_nu_bar_max);
 
   if (!isfinite(delta_nu_bar_min) || !isfinite(delta_nu_bar_max))
     delta_nu_bar_max = delta_nu_bar_min = -1;
@@ -321,4 +314,31 @@ double gsl_integrand_planck(double nu, void *paras)
 void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 {
   J_normfactor[modelgridindex] = normfactor;
+}
+
+
+int get_frequency_bin(int modelgridindex, double nu)
+{
+  int binindex = -1;
+
+  for (int dbinindex = 0; dbinindex < RADFIELDBINCOUNT; dbinindex++)
+  {
+    if (get_bin_nu_lower(modelgridindex,dbinindex) <= nu &&
+        radfieldbins[modelgridindex][dbinindex].nu_upper >= nu)
+    {
+      binindex = dbinindex;
+      break;
+    }
+  }
+
+  return binindex;
+}
+
+
+double get_bin_nu_lower(int modelgridindex, int binindex)
+{
+  if (binindex > 0)
+    return radfieldbins[modelgridindex][binindex-1].nu_upper;
+  else
+    return nu_lower_first;
 }
