@@ -255,14 +255,14 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         }
         //NOTE: above calulation is not always the sum of LTE populations,
         //since calculate_levelpop_lte imposes MINPOP minimum
-        printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*SL_levelpop %g\n",
+        printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*levelpop(SL)/g(SL) %g\n",
                  column,pop_norm_factors[column],superlevel_partfunc[ion],
                  superlevel_partfunc[ion]*calculate_levelpop_lte(modelgridindex,element,ion,level)/stat_weight(element,ion,level));
       }
 
       // normalisation row
       rate_matrix[column] = 1.0;
-      
+
       // zero the balance
       balance_vector[column] = 0.0;
 
