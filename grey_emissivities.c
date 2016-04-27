@@ -5,6 +5,11 @@
 #include "vectors.h"
 #include <string.h>
 
+// private functions
+double meanf_sigma(double x);
+//int emiss_rlc_load(int nts);
+
+
 ///In this file the call to kappa_rpkt does not fit kappa_rpkts definition any loger!!!
 ///This MUST BE CHANGED. But it's not only the the call of kappa_rpkt. The dummy packet
 ///pointer needs more information (e.g. frequency) to calculate kappa_rpkt for the non
@@ -219,7 +224,7 @@ double meanf_sigma(double x)
 }
 
 /**************************************************************/
-int emiss_rlc_load(int nts)
+/*int emiss_rlc_load(int nts)
 {
   // Routine to read in the stored estimators for the time step that is about to begin.
   FILE *est_file, *dummy;
@@ -266,7 +271,7 @@ int emiss_rlc_load(int nts)
   }
   fclose(est_file);
   return 0;
-}
+}*/
 
 /***********************************************/
 int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)

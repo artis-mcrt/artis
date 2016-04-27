@@ -341,7 +341,7 @@ LIST gam_line_list;
 
 double syn_dir[3]; // vector pointing from origin to observer
 
-#define NRAYS_SYN 1 // number of rays traced in a syn claculation
+#define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
 
 RAY rays[NRAYS_SYN];

@@ -145,13 +145,10 @@ void init_specpol(void)
 
 int gather_specpol(int depth)
 {
-  int add_to_spec(EPKT *pkt_ptr);
-  //void read_packets(FILE *packets_file);
   int p;
   EPKT *pkt_ptr;
   //int i,n,m,p;
   //PKT *pkt_ptr;
-  //int add_to_spec();
   double vcut,vem;
 
   /// Set up the spectrum grid and initialise the bins to zero.

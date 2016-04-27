@@ -3,6 +3,12 @@
 #include "spectrum.h"
 #include "vectors.h"
 
+// private functions
+void init_spectrum(void);
+int add_to_spec(const EPKT *pkt_ptr);
+int add_to_spec_res(EPKT *pkt_ptr, int current_abin);
+
+
 /*int make_spectrum()
 /// Routine to make a MC spectrum from the packets.
 {

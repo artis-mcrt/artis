@@ -16,6 +16,20 @@ double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t
 int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current);
 void rpkt_event_thickcell(PKT *pkt_ptr, double t_current);
 
+static inline
+double min(double a, double b)
+// returns minimum of a and b
+{
+  if (a >= b)
+  {
+    return(b);
+  }
+  else
+  {
+    return(a);
+  }
+}
+
 
 // Material for handing r-packet propagation.
 ///****************************************************************************
