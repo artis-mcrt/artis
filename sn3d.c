@@ -1257,11 +1257,10 @@ int main(int argc, char** argv)
               write_vspecpol(vspecpol_file);
               fclose(vspecpol_file);
 
-              if (vgrid_flag==1) {
-
-                  write_vpkt_grid(vpkt_grid_file);
-                  fclose(vpkt_grid_file);
-
+              if (vgrid_flag == 1)
+              {
+                write_vpkt_grid(vpkt_grid_file);
+                fclose(vpkt_grid_file);
               }
 
             #endif
@@ -1423,27 +1422,30 @@ int main(int argc, char** argv)
 
   #ifdef MPI_ON
     /// Communicate gamma and positron deposition and write to file
-    for (i=0; i < ntstep; i++)
+    for (i = 0; i < ntstep; i++)
     {
-      MPI_Reduce(&time_step[i].gamma_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].gamma_dep = depvalue/nprocs;
-      MPI_Reduce(&time_step[i].positron_dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].positron_dep = depvalue/nprocs;
-      MPI_Reduce(&time_step[i].dep, &depvalue ,1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].dep = depvalue/nprocs;
+      MPI_Reduce(&time_step[i].gamma_dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].gamma_dep = depvalue / nprocs;
+      MPI_Reduce(&time_step[i].positron_dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].positron_dep = depvalue / nprocs;
+      MPI_Reduce(&time_step[i].dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0) time_step[i].dep = depvalue / nprocs;
     }
   #endif
   if (my_rank == 0)
   {
-    FILE *dep_file;
-    if ((dep_file = fopen("deposition.out", "w")) == NULL)
+    FILE *dep_file = fopen("deposition.out", "w");
+    if (dep_file == NULL)
     {
       printf("Cannot open deposition.out\n");
       abort();
     }
     for (int i = 0; i < ntstep; i++)
     {
-      fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid/DAY, time_step[i].gamma_dep/time_step[i].width/LSUN, time_step[i].positron_dep/time_step[i].width/LSUN, time_step[i].dep/time_step[i].width/LSUN);
+      fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid/DAY,
+              time_step[i].gamma_dep/time_step[i].width/LSUN,
+              time_step[i].positron_dep/time_step[i].width/LSUN,
+              time_step[i].dep/time_step[i].width/LSUN);
     }
     fclose(dep_file);
   }
