@@ -7,7 +7,7 @@
  as input and gives back another direction.*/
 int angle_ab(const double *dir1, const double *vel, double *dir2)
 {
-  double vsqr = dot(vel,vel)/CLIGHT2;
+  double vsqr = dot(vel,vel)/CLIGHTSQUARED;
   double gamma_rel = 1./(sqrt(1 - vsqr));
 
   double ndotv = dot(dir1,vel);
@@ -27,7 +27,7 @@ int angle_ab(const double *dir1, const double *vel, double *dir2)
  as input and gives back double.*/
 double doppler (const double *dir1, const double *vel)
 {
-  //double vsqr = dot(vel,vel)/CLIGHT2;
+  //double vsqr = dot(vel,vel)/CLIGHTSQUARED;
   //double gamma_rel = 1./(sqrt(1 - vsqr));
   double gamma_rel = 1.;
   double ndotv = dot(dir1,vel);

@@ -181,7 +181,7 @@ int main(int argc, char** argv)
             epkts[j].arrive_time = t_arrive;
 
             /// Now do the cmf time.
-            t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHT2));
+            t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
             epkts[j].arrive_time_cmf = t_arrive;
 
             epkts[j].dir[0] = pkt_ptr->dir[0];

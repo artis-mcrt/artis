@@ -95,55 +95,57 @@ int vgrid_flag;
 //double buffer[HUGEE];
 //float *buffer;
 
-///fundamental constants
-#define CLIGHT 2.99792458e10    /// Speed of light
-#define CLIGHT2 8.9875518e20    /// Speed of light squared
-#define H 6.6260755e-27         /// Planck constant
-#define MSUN 1.989e33           /// Solar mass
-#define LSUN 3.826e33           /// Solar luminosity
-#define MH 1.67352e-24          /// Mass of hydrogen atom
-#define ME 9.1093897e-28        /// Mass of free electron
-#define QE 4.80325E-10          /// elementary charge in cgs units
-#define MNI56 (56*MH)           /// Mass of ni56
-#define MFE52 (52*MH)           /// Mass of fe52
-#define MCR48 (48*MH)           /// Mass of cr48
-#define PI   3.141592654
-#define MEV  1.6021772e-6       /// MeV to ergs
-#define DAY  86400.0            /// day to seconds
-#define SIGMA_T 6.6524e-25      /// Thomson cross-section
-#define THOMSON_LIMIT 1e-2      /// Limit below which e-scattering is Thomson
-#define PARSEC 3.086e18         /// 1 pc
-#define EV  1.6021772e-12       /// eV to ergs
-#define KB 1.38065e-16          /// Boltzmann constant
-#define STEBO 5.670400e-5       /// Stefan-Boltzmann constant (data taken from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
-#define SAHACONST 2.0706659e-16 /// Saha constant
+/// fundamental constants
+#define CLIGHT        2.99792458e10     /// Speed of light [cm/s]
+#define H             6.6260755e-27     /// Planck constant [erg s]
+#define MSUN          1.98855e33        /// Solar mass [g]
+#define LSUN          3.826e33          /// Solar luminosity [erg s]
+#define MH            1.67352e-24       /// Mass of hydrogen atom [g]
+#define ME            9.1093897e-28     /// Mass of free electron [g]
+#define QE            4.80325E-10       /// elementary charge in cgs units [statcoulomb]
+#define PI            3.1415926535987
+#define MEV           1.6021772e-6      /// MeV to ergs [MeV/erg]
+#define DAY           86400.0           /// day to seconds [s/day]
+#define SIGMA_T       6.6524e-25        /// Thomson cross-section
+#define THOMSON_LIMIT 1e-2              /// Limit below which e-scattering is Thomson
+#define PARSEC        3.0857e18         /// pc to cm [pc/cm]
+#define EV            1.6021772e-12     /// eV to ergs [eV/erg]
+#define KB            1.38064852e-16    /// Boltzmann constant [erg/K]
+#define STEBO         5.670400e-5       /// Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
+                                        /// (data taken from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
+#define SAHACONST     2.0706659e-16     /// Saha constant
 
-///numerical constants
-#define CLIGHTSQUARED 8.9875518e20
+/// numerical constants
+#define CLIGHTSQUARED 8.9875518e20               /// Speed of light squared [cm^2/s^2]
 #define TWOOVERCLIGHTSQUARED 2.2253001e-21
 #define TWOHOVERCLIGHTSQUARED 1.4745007e-47
 #define CLIGHTSQUAREDOVERTWOH 6.7819570e46
-#define HOVERKB 4.799243681748932e-11
-#define FOURPI 1.256637061600000e+01
-#define ONEOVER4PI 7.957747153555701e-02
-#define HCLIGHTOVERFOURPI 1.580764662876770e-17
+
+#define HOVERKB               4.799243681748932e-11
+#define FOURPI                1.256637061600000e+01
+#define ONEOVER4PI            7.957747153555701e-02
+#define HCLIGHTOVERFOURPI     1.580764662876770e-17
 #define OSCSTRENGTHCONVERSION 1.3473837e+21
+
+#define MNI56 (56*MH)                            /// Mass of Ni56
+#define MFE52 (52*MH)                            /// Mass of Fe52
+#define MCR48 (48*MH)                            /// Mass of Cr48
 
 //#define MPTS_MODEL 10000
 
 
-#define MXGRID 50     // Max number of grid cells in x-direction.
-#define MYGRID 50     // Max number of grid cells in y-direction.
-#define MZGRID 50     // Max number of grid cells in z-direction.
+#define MXGRID 50        // Max number of grid cells in x-direction.
+#define MYGRID 50        // Max number of grid cells in y-direction.
+#define MZGRID 50        // Max number of grid cells in z-direction.
 //#define MGRID 1000000  // Max number of grid cells.
-#define MTSTEP 200     // Max number of time steps.
-#define MLINES 500000  // Increase linelist by this blocksize
+#define MTSTEP 200       // Max number of time steps.
+#define MLINES 500000    // Increase linelist by this blocksize
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
-#define RHO_UNIFORM 1 // Constant density.
-#define RHO_1D_READ 2 // Read model.
-#define RHO_2D_READ 4 // Read model.
-#define RHO_3D_READ 3 // Read model.
+#define RHO_UNIFORM 1  // Constant density.
+#define RHO_1D_READ 2  // Read model.
+#define RHO_2D_READ 4  // Read model.
+#define RHO_3D_READ 3  // Read model.
 
 
 double ENICKEL;

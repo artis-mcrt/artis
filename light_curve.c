@@ -169,12 +169,12 @@ int add_to_lc(const EPKT *pkt_ptr)
   }
 
   /// Now do the cmf light curve.
-  //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHT2));
+  //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
   t_arrive = pkt_ptr->arrive_time_cmf;
   if (t_arrive > tmin && t_arrive < tmax)
   {
     int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
-    light_curve_cmf[nt].lum += pkt_ptr->e_cmf / light_curve[nt].delta_t / nprocs / sqrt(1. - (vmax*vmax/CLIGHT2));
+    light_curve_cmf[nt].lum += pkt_ptr->e_cmf / light_curve[nt].delta_t / nprocs / sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
   }
 
   return 0;
