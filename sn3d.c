@@ -20,6 +20,7 @@
 #include "ltepop.h"
 #include "move.h"
 #include "packet_init.h"
+#include "radfield.h"
 #include "ratecoeff.h"
 #include "time_init.h"
 #include "update_grid.h"
@@ -397,6 +398,7 @@ int main(int argc, char** argv)
     do_this_full_loop = 1;
     int nts = itstep;
 
+    init_radfield_file();
     // Initialise virtual packets file and vspecpol
     #ifdef ESTIMATORS_ON
       sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
@@ -1455,6 +1457,7 @@ int main(int argc, char** argv)
   //fclose(tb_file);
   fclose(estimators_file);
   fclose(nlte_file);
+  close_radfield_file();
 
   #ifdef _OPENMP
     #pragma omp parallel

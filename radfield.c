@@ -7,13 +7,16 @@
 #define RADFIELDBINCOUNT 10
 
 double nu_lower_first = KB * MINTEMP / H / 2;
+double nu_upper_last = KB * MAXTEMP / H;
+
 double J_normfactor[MMODELGRID + 1];
 
 typedef struct
 {
   double nu_upper; //lower wavelength boundary of this bin
-  double J;
-  double nuJ;
+  double J_raw;        //value needs to be multipled by J_normfactor
+                   //to get the true value
+  double nuJ_raw;
   double W;
   double T_R;
 } radfieldbin;
@@ -39,6 +42,8 @@ typedef struct
   int binindex;
 } gsl_T_R_solver_paras;
 
+FILE *radfieldfile = NULL;
+
 // private functions
 double find_T_R(int modelgridindex, int binindex);
 double delta_nu_bar(double T_R, void *paras);
@@ -46,10 +51,54 @@ double calculate_planck_integral(double T_R, double nu_lower, double nu_upper,
                                  enum_prefactor prefactor);
 double gsl_integrand_planck(double nu, void *paras);
 
+
+void init_radfield_file(void)
+{
+  char filename[100] = "radfield.out";
+  radfieldfile = fopen(filename, "w");
+  if (radfieldfile == NULL)
+  {
+    printout("Cannot open %s.\n",filename);
+    exit(0);
+  }
+  fprintf(radfieldfile,"%8s %15s %8s %9s %9s %9s %9s %9s %9s \n",
+          "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
+          "nuJ","J","T_R","W");
+  fflush(radfieldfile);
+}
+
+
+void write_to_radfield_file(int modelgridindex, int timestep)
+{
+  if (radfieldfile == NULL)
+  {
+    printout("Call to write_to_radfield_file before init_radfield_file");
+    abort();
+  }
+  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  {
+    double nu_lower = get_bin_nu_lower(modelgridindex, binindex);
+    double nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
+    double nuJ = radfieldbins[modelgridindex][binindex].nuJ_raw * J_normfactor[modelgridindex];
+    double J = radfieldbins[modelgridindex][binindex].J_raw * J_normfactor[modelgridindex];
+    double T_R = radfieldbins[modelgridindex][binindex].T_R;
+    double W = radfieldbins[modelgridindex][binindex].W;
+
+    fprintf(radfieldfile,"%8d %15d %8d %9.3e %9.3e %9.3e %9.3e %9.1f %9.3e \n",
+            timestep,modelgridindex,binindex,nu_lower,nu_upper,nuJ,J,T_R,W);
+  }
+  fflush(radfieldfile);
+}
+
+
+void close_radfield_file(void)
+{
+  fclose(radfieldfile);
+}
+
+
 void zero_radfield_estimators(int modelgridindex)
 {
-  double nu_upper_last = KB * MAXTEMP / H;
-  //double nu_upper_last = KB * MINTEMP / H * 4;
   double delta_nu = (nu_upper_last - nu_lower_first) / RADFIELDBINCOUNT;
 
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -58,11 +107,13 @@ void zero_radfield_estimators(int modelgridindex)
                                                       delta_nu +
                                                       (delta_nu * binindex);
 
-    radfieldbins[modelgridindex][binindex].J = 0.0;
-    radfieldbins[modelgridindex][binindex].nuJ = 0.0;
+    radfieldbins[modelgridindex][binindex].J_raw = 0.0;
+    radfieldbins[modelgridindex][binindex].nuJ_raw = 0.0;
     radfieldbins[modelgridindex][binindex].W = 0.0;
     radfieldbins[modelgridindex][binindex].T_R = 0.0;
   }
+
+  J_normfactor[modelgridindex] = -1.0;
 }
 
 
@@ -73,14 +124,8 @@ void update_radfield(int modelgridindex, double distance, double e_cmf,
 
   if (binindex >= 0)
   {
-    //printout("before: J %g, nuJ %g\n",
-    //         radfieldbins[modelgridindex][binindex].J,
-    //         radfieldbins[modelgridindex][binindex].nuJ);
-    radfieldbins[modelgridindex][binindex].J += distance * e_cmf;
-    radfieldbins[modelgridindex][binindex].nuJ += distance * e_cmf * nu_cmf;
-    //printout("after: J %g, nuJ %g\n",
-    //         radfieldbins[modelgridindex][binindex].J,
-    //         radfieldbins[modelgridindex][binindex].nuJ);
+    radfieldbins[modelgridindex][binindex].J_raw += distance * e_cmf;
+    radfieldbins[modelgridindex][binindex].nuJ_raw += distance * e_cmf * nu_cmf;
   }
   //else, dropping the contribution of this packet
 }
@@ -96,7 +141,7 @@ double radfield(double nu, int modelgridindex)
 }
 
 
-void fit_radfield_parameters(int modelgridindex)
+void radfield_fit_parameters(int modelgridindex)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
 {
@@ -109,7 +154,7 @@ void fit_radfield_parameters(int modelgridindex)
     double nu_lower = get_bin_nu_lower(modelgridindex, binindex);
     double nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
 
-    double J_bin = radfieldbins[modelgridindex][binindex].J * J_normfactor[modelgridindex];
+    double J_bin = radfieldbins[modelgridindex][binindex].J_raw * J_normfactor[modelgridindex];
 
     double T_R_bin = find_T_R(modelgridindex, binindex);
 
@@ -128,7 +173,7 @@ void fit_radfield_parameters(int modelgridindex)
            J_old, T_R_old, get_W(modelgridindex));
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
   {
-    double J_bin = radfieldbins[modelgridindex][binindex].J * J_normfactor[modelgridindex];
+    double J_bin = radfield_get_bin_J(modelgridindex,binindex);
     double T_R_bin = radfieldbins[modelgridindex][binindex].T_R;
     double W_bin = radfieldbins[modelgridindex][binindex].W;
     printout("bin %d: J %g, T_R %g, W %g\n",
@@ -246,8 +291,8 @@ double delta_nu_bar(double T_R, void *paras)
 
   double nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
 
-  double nuJ_bin_raw = radfieldbins[modelgridindex][binindex].nuJ;
-  double J_bin_raw = radfieldbins[modelgridindex][binindex].J;
+  double nuJ_bin_raw = radfieldbins[modelgridindex][binindex].nuJ_raw;
+  double J_bin_raw = radfieldbins[modelgridindex][binindex].J_raw;
   double nu_bar = nuJ_bin_raw / J_bin_raw;
 
   double nu_times_plank_integral = calculate_planck_integral(T_R, nu_lower,
@@ -314,6 +359,18 @@ double gsl_integrand_planck(double nu, void *paras)
 void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 {
   J_normfactor[modelgridindex] = normfactor;
+}
+
+
+double radfield_get_bin_J(int modelgridindex, int binindex)
+{
+  if (J_normfactor[modelgridindex] < 0.0)
+  {
+    printout("Error: radfield_get_bin_J called before J_normfactor set for modelgridindex %d",
+             modelgridindex);
+    abort();
+  }
+  return radfieldbins[modelgridindex][binindex].J_raw * J_normfactor[modelgridindex];
 }
 
 

@@ -454,7 +454,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       abort();
                     }
                     J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
-                    radfield_set_J_normfactor(n,ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells);
 
                     #ifdef DO_TITER
                       if (J_reduced_save[n] >= 0)
@@ -662,7 +661,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     modelgrid[n].TR = T_R;
                     modelgrid[n].W = W;
                     // NEW T_R SOLVER HERE
-                    fit_radfield_parameters(n);
+                    radfield_set_J_normfactor(n,ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells);
+                    radfield_fit_parameters(n);
+                    write_to_radfield_file(n,m);
 
                     #ifdef NLTE_POPS_ON
                       //          for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)
