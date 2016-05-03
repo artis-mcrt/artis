@@ -1119,10 +1119,10 @@ void read_atomicdata(void)
   /// SET UP THE PHIXSLIST
   ///======================================================
   printout("[info] read_atomicdata: number of bfcontinua %d\n",nbfcontinua);
-  nbfcontinua_ground = includedions-nelements;
+  nbfcontinua_ground = includedions - nelements;
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n",nbfcontinua_ground);
 
-  phixslist = (phixslist_t *) malloc(nthreads*sizeof(phixslist_t));
+  phixslist = (phixslist_t *) malloc(nthreads * sizeof(phixslist_t));
   if (phixslist == NULL)
   {
     printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
@@ -2498,7 +2498,7 @@ int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimato
     }
 /*    if (i == nbfcontinua_ground)
     {
-      printout("[fatal] search_groundphixslist: i %d, nu_edge %g, phixslist[tid].groundcont[i-1].nu_egde %g ... abort\n",i,nu_edge,phixslist[tid].groundcont[i-1].nu_edge);
+      printout("[fatal] search_groundphixslist: i %d, nu_edge %g, phixslist[tid].groundcont[i-1].nu_edge %g ... abort\n",i,nu_edge,phixslist[tid].groundcont[i-1].nu_edge);
       printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",el,in,ll);
       //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",phixslist[tid].groundcont[i-1].element,phixslist[tid].groundcont[i-1].ion,groundphixslist[i-1].level);
       abort();

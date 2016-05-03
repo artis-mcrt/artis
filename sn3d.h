@@ -96,30 +96,30 @@ int vgrid_flag;
 //float *buffer;
 
 /// fundamental constants
-#define CLIGHT        2.99792458e10     /// Speed of light [cm/s]
+#define CLIGHT        2.99792458e+10    /// Speed of light [cm/s]
 #define H             6.6260755e-27     /// Planck constant [erg s]
-#define MSUN          1.98855e33        /// Solar mass [g]
-#define LSUN          3.826e33          /// Solar luminosity [erg s]
+#define MSUN          1.98855e+33       /// Solar mass [g]
+#define LSUN          3.826e+33         /// Solar luminosity [erg s]
 #define MH            1.67352e-24       /// Mass of hydrogen atom [g]
 #define ME            9.1093897e-28     /// Mass of free electron [g]
 #define QE            4.80325E-10       /// elementary charge in cgs units [statcoulomb]
 #define PI            3.1415926535987
+#define EV            1.6021772e-12     /// eV to ergs [eV/erg]
 #define MEV           1.6021772e-6      /// MeV to ergs [MeV/erg]
 #define DAY           86400.0           /// day to seconds [s/day]
 #define SIGMA_T       6.6524e-25        /// Thomson cross-section
 #define THOMSON_LIMIT 1e-2              /// Limit below which e-scattering is Thomson
-#define PARSEC        3.0857e18         /// pc to cm [pc/cm]
-#define EV            1.6021772e-12     /// eV to ergs [eV/erg]
+#define PARSEC        3.0857e+18        /// pc to cm [pc/cm]
 #define KB            1.38064852e-16    /// Boltzmann constant [erg/K]
 #define STEBO         5.670400e-5       /// Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
                                         /// (data taken from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 #define SAHACONST     2.0706659e-16     /// Saha constant
 
 /// numerical constants
-#define CLIGHTSQUARED 8.9875518e20               /// Speed of light squared [cm^2/s^2]
-#define TWOOVERCLIGHTSQUARED 2.2253001e-21
+#define CLIGHTSQUARED         8.9875518e+20   /// Speed of light squared [cm^2/s^2]
+#define TWOOVERCLIGHTSQUARED  2.2253001e-21
 #define TWOHOVERCLIGHTSQUARED 1.4745007e-47
-#define CLIGHTSQUAREDOVERTWOH 6.7819570e46
+#define CLIGHTSQUAREDOVERTWOH 6.7819570e+46
 
 #define HOVERKB               4.799243681748932e-11
 #define FOURPI                1.256637061600000e+01
@@ -417,11 +417,17 @@ int n_out_it; // # of sets of 1,000,000 photons to run.
 int file_set; // 1 if the output files already exist. 0 otherwise.
 
 int npts_model; // number of points in 1-D input model
-double vout_model[MMODELGRID], rho_model[MMODELGRID], fni_model[MMODELGRID], fco_model[MMODELGRID], ffegrp_model[MMODELGRID], f48cr_model[MMODELGRID],f52fe_model[MMODELGRID];
+double vout_model[MMODELGRID];
+double rho_model[MMODELGRID];
+double fni_model[MMODELGRID];
+double fco_model[MMODELGRID];
+double ffegrp_model[MMODELGRID];
+double f48cr_model[MMODELGRID];
+double f52fe_model[MMODELGRID];
 double abund_model[MMODELGRID][30];
 double t_model; // time at which densities in input model are correct.
-int ncoord1_model, ncoord2_model; // For 2d model, the input grid dimensions
-double dcoord1, dcoord2; // spacings of a 2d model grid - must be uniform grid
+int ncoord1_model, ncoord2_model; // For 2D model, the input grid dimensions
+double dcoord1, dcoord2; // spacings of a 2D model grid - must be uniform grid
 
 //#define MPTS_MODEL_3D 8000000
 
