@@ -663,7 +663,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     // NEW T_R SOLVER HERE
                     radfield_set_J_normfactor(n,ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells);
                     radfield_fit_parameters(n);
-                    write_to_radfield_file(n,m);
+                    radfield_write_to_file(n,m);
 
                     #ifdef NLTE_POPS_ON
                       //          for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)

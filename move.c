@@ -30,7 +30,7 @@ void update_estimators(const PKT *pkt_ptr, double distance)
         #pragma omp atomic
       #endif
       nuJ[modelgridindex] += helper * nu;
-      update_radfield(modelgridindex,distance,pkt_ptr->e_cmf,nu);
+      radfield_update_estimators(modelgridindex,distance,pkt_ptr->e_cmf,nu);
 
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
       ///quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
