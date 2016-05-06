@@ -223,7 +223,7 @@ endif
 
 sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o nltepop.o vpkt.o radfield.o
 
-sn3d: version.h $(sn3d_objects)
+sn3d: version $(sn3d_objects)
 	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 exspec_objects = exspec.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o radfield.o
@@ -246,11 +246,11 @@ sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time
 sn3dlcsyn: $(sn3dlcsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
 
-version.h:
+version:
 	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.h
 	@echo "#define GIT_HASH \"$(GIT_HASH)\"" >> version.h
 	@echo "#define GIT_BRANCH \"$(GIT_BRANCH)\"" >> version.h
 	@echo "#define COMPILETIME \"`date`\"" >> version.h
 
 clean:
-	rm *.o sn3d exspec exgamma
+	rm *.o sn3d exspec exgamma version.h
