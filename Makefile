@@ -246,6 +246,8 @@ sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time
 sn3dlcsyn: $(sn3dlcsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
 
+.PHONY: clean version
+
 version:
 	@echo "#define GIT_VERSION \"$(GIT_VERSION)\"" > version.h
 	@echo "#define GIT_HASH \"$(GIT_HASH)\"" >> version.h
