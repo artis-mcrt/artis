@@ -420,7 +420,7 @@ double gamma_integrand_gsl(double nu, void *paras)
 
 double gammacorr_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for photoionization
-/// using gsl integrators.
+/// using gsl integrators. Corrected for stimulated recombination.
 {
   double T = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
@@ -908,7 +908,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
   double T_R = get_TR(modelgridindex);
-#ifdef FORCE_LTE
+  #ifdef FORCE_LTE
     if (use_cellhist >= 0)
     {
       gammacorr = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
@@ -926,7 +926,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
       gammacorr = interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
     }
   #else
-    int index_in_groundlevelcontestimor;
+    int index_in_groundlevelcontestimator;
     double W = get_W(modelgridindex);
 
     if (use_cellhist >= 0)
@@ -936,8 +936,9 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
       if (gammacorr < 0)
       {
         gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
-        index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-        if (index_in_groundlevelcontestimor >= 0) gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
+        index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+        if (index_in_groundlevelcontestimator >= 0)
+          gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator];
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
       }
       /// Integrate gammacorr directly. SLOW!!!
@@ -946,11 +947,11 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     else
     {
       gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
-      index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-      if (index_in_groundlevelcontestimor >= 0) gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
+      index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+      if (index_in_groundlevelcontestimator >= 0) gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator];
     }
 
-    //if (gammacorr == 0) printout("histindex %d, element %d, ion %d, level %d, interpol %g, W %g, renorm %g, gammacorr %g\n",histindex,element,ion,level,interpolate_corrphotoioncoeff(element,ion,level,T_R),W,corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor],gammacorr);
+    //if (gammacorr == 0) printout("histindex %d, element %d, ion %d, level %d, interpol %g, W %g, renorm %g, gammacorr %g\n",histindex,element,ion,level,interpolate_corrphotoioncoeff(element,ion,level,T_R),W,corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator],gammacorr);
 
     ////TEST TEST TEST
     /*
@@ -996,8 +997,8 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
 
   /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
   bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);
-  index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-  if (index_in_groundlevelcontestimor >= 0) bfheating *= bfheatingestimator[cellnumber*nelements*maxion+index_in_groundlevelcontestimor];*/
+  index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+  if (index_in_groundlevelcontestimator >= 0) bfheating *= bfheatingestimator[cellnumber*nelements*maxion+index_in_groundlevelcontestimator];*/
   double bfheating = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
   int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
   if (index_in_groundlevelcontestimator >= 0)
