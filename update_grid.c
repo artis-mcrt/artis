@@ -736,8 +736,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         if (T_e < MINTEMP) T_e = MINTEMP;
                       }
                       //T_e = T_J;
-                      //set_Te(n,T_e);
-                      set_Te(n,3000); //TODO: remove
+                      set_Te(n,T_e);
+                      //set_Te(n,3000); //TODO: remove
 
                       #ifndef NLTE_POPS_ALL_IONS_SIMULTANEOUS
                         /// Store population values to the grid
