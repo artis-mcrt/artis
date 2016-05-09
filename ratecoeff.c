@@ -2,6 +2,7 @@
 #include "atomic.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "radfield.h"
 #include "ratecoeff.h"
 #include "grid_init.h"
 #include <gsl/gsl_integration.h>
@@ -948,7 +949,8 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     {
       gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
       index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-      if (index_in_groundlevelcontestimator >= 0) gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator];
+      if (index_in_groundlevelcontestimator >= 0)
+        gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator];
     }
 
     //if (gammacorr == 0) printout("histindex %d, element %d, ion %d, level %d, interpol %g, W %g, renorm %g, gammacorr %g\n",histindex,element,ion,level,interpolate_corrphotoioncoeff(element,ion,level,T_R),W,corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator],gammacorr);

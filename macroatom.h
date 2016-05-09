@@ -24,14 +24,6 @@ double col_ionization(int modelgridindex, int phixstargetindex,
                       double epsilon_trans);
 
 static inline
-double radfield2(double nu, double T, double W)
-// calculates ambient radiation field, which is parameterised as a diluted black body
-{
-  return W * TWOHOVERCLIGHTSQUARED *
-         pow(nu,3) * 1.0 / (expm1(HOVERKB * nu / T));
-}
-
-static inline
 double get_individ_rad_deexc(int i)
 {
   int element = mastate[tid].element;
