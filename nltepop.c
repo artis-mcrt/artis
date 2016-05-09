@@ -158,8 +158,8 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         #ifdef NT_ON
           if (ion < nions-1)
           {
-            //double Y = nt_ionization_rate(modelgridindex,element,ion);
-            double Y = 0.0; // TODO: remove, testing only
+            double Y = nt_ionization_rate(modelgridindex,element,ion);
+            //double Y = 0.0; // TODO: remove, testing only
 
             int lower_index = get_nlte_vector_index(element,ion,level);
             int upper_index = get_nlte_vector_index(element,ion+1,0);
