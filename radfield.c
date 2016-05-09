@@ -176,12 +176,12 @@ double radfield(double nu, int modelgridindex)
   float T_R = get_TR(modelgridindex);
   float W   = get_W(modelgridindex);
 
-  /*int binindex = get_frequency_bin(modelgridindex,nu);
-     if (binindex >= 0)
-     {
-     T_R = radfieldbins[modelgridindex][binindex].T_R;
-     W = radfieldbins[modelgridindex][binindex].W;
-     }*/
+  int binindex = radfield_select_bin(modelgridindex,nu);
+  if (binindex >= 0)
+  {
+    T_R = radfieldbins[modelgridindex][binindex].T_R;
+    W = radfieldbins[modelgridindex][binindex].W;
+  }
 
   return W * TWOHOVERCLIGHTSQUARED *
          pow(nu,3) * 1.0 / (expm1(HOVERKB * nu / T_R));
