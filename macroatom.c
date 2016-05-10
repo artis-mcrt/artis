@@ -1045,7 +1045,7 @@ double photoionization(int modelgridindex, int phixstargetindex, double epsilon_
   int lower = mastate[tid].level;
 
   #ifdef DEBUG_ON
-    if (phixstargetindex > get_nphixstargets(element,ion,lower))
+    if (phixstargetindex >= get_nphixstargets(element,ion,lower))
     {
       printout("[fatal] photoionization called with phixstargetindex %g > nphixstargets %g",phixstargetindex,get_nphixstargets(element,ion,lower));
       abort();
