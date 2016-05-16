@@ -513,7 +513,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
                       modelgrid[n].thick = 1;
                     }
-                    else if (grey_optical_depth > cell_is_optically_thick_vpkt )
+                    else if (grey_optical_depth > cell_is_optically_thick_vpkt)
                     {
                         modelgrid[n].thick = 2;
                     }
