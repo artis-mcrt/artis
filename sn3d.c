@@ -461,8 +461,8 @@ int main(int argc, char** argv)
       // Continue simulation: read into temporary files
       else {
           
-          if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
-          else sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+          if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_odd.tmp",my_rank,0);
+          else sprintf(filename,"vspecpol_%d_%d_even.tmp",my_rank,0);
           if ((packets_file = fopen(filename, "rb")) == NULL)
           {
               printout("Cannot read temporary packets file %s\n",filename);
@@ -474,8 +474,8 @@ int main(int argc, char** argv)
           
           if (vgrid_flag==1) {
           
-              if (nts % 2 == 0) sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
-              else sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
+              if (nts % 2 == 0) sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",my_rank,0);
+              else sprintf(filename,"vpkt_grid_%d_%d_even.tmp",my_rank,0);
               if ((packets_file = fopen(filename, "rb")) == NULL)
               {
                   printout("Cannot read temporary vpkt_grid file %s\n",filename);
@@ -548,9 +548,9 @@ int main(int argc, char** argv)
       
         
         /// Read the packets file for each iteration on the timestep
-        if (nts % 2 == 0) sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
-        else sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
-        //sprintf(filename,"packets%d_%d.tmp",0,my_rank);
+        if (nts % 2 == 0) sprintf(filename,"packets%d_%d_odd.tmp",my_rank,0);
+        else sprintf(filename,"packets%d_%d_even.tmp",my_rank,0);
+        //sprintf(filename,"packets%d_%d.tmp",my_rank,0);
         if ((packets_file = fopen(filename, "rb")) == NULL)
         {
           printout("Cannot read temporary packets file %s\n",filename);
@@ -1190,8 +1190,8 @@ int main(int argc, char** argv)
           
           printout("time before write temporary packets file %d\n",time(NULL));
           
-          if (nts % 2 == 0) sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
-          else sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
+          if (nts % 2 == 0) sprintf(filename,"packets%d_%d_even.tmp",my_rank,0);
+          else sprintf(filename,"packets%d_%d_odd.tmp",my_rank,0);
             
           if ((packets_file = fopen(filename, "wb")) == NULL)
           {
@@ -1203,8 +1203,8 @@ int main(int argc, char** argv)
           fclose(packets_file);
             
           #ifdef ESTIMATORS_ON
-          if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
-          else sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+          if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_even.tmp",my_rank,0);
+          else sprintf(filename,"vspecpol_%d_%d_odd.tmp",my_rank,0);
             
           if ((packets_file = fopen(filename, "wb")) == NULL)
           {
@@ -1219,8 +1219,8 @@ int main(int argc, char** argv)
        
           if (vgrid_flag==1) {
               
-              if (nts % 2 == 0) sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
-              else sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
+              if (nts % 2 == 0) sprintf(filename,"vpkt_grid_%d_%d_even.tmp",my_rank,0);
+              else sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",my_rank,0);
               
               if ((packets_file = fopen(filename, "wb")) == NULL)
               {
