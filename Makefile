@@ -8,8 +8,8 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  CC = clang-omp
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib 
-#  CFLAGS = -Wall -O0 -g -std=c11 -I$(INCLUDE) $(VER)
-  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -O3 -std=c11 -I$(INCLUDE)
+#  CFLAGS = -Wall -O0g -g -std=c11 -I$(INCLUDE) $(VER)
+  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -O3 -march=native -flto -std=c11 -I$(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)
