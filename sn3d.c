@@ -398,7 +398,7 @@ int main(int argc, char** argv)
     do_this_full_loop = 1;
     int nts = itstep;
 
-    radfield_init_file();
+    radfield_init();
     // Initialise virtual packets file and vspecpol
     #ifdef ESTIMATORS_ON
       sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
@@ -605,7 +605,7 @@ int main(int argc, char** argv)
         update_grid(nts,my_rank,nstart,ndo,titer);
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
-          if (nts==0) titer = n_titer+1;
+          if (nts==0) titer = n_titer + 1;
         #endif
         #ifdef MPI_ON
           MPI_Barrier(MPI_COMM_WORLD);

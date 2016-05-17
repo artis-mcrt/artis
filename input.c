@@ -1992,6 +1992,16 @@ void read_parameterfile(int rank)
     printout("input: No non-thermal ionisation is used in this run.\n");
   #endif
 
+  #ifdef NO_LUT_PHOTOION
+    printout("Corrphotoioncoeff is calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
+  #endif
+  #ifdef NO_LUT_BFHEATING
+    printout("bfheating coefficients are calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
+  #endif
+  #ifdef USE_MULTIBIN_RADFIELD_MODEL
+    printout("The multibin radiation field model is being used instead of the whole-spectrum fit.\n");
+  #endif
+
   /// Set up initial grey approximation?
   fscanf(input_file, "%lg %d", &cell_is_optically_thick, &n_grey_timesteps);
   printout("input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",cell_is_optically_thick,n_grey_timesteps);

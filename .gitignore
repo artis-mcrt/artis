@@ -7,7 +7,4 @@ sn3d
 exspec
 *.o-*
 tags
-atomicdata/
-
 browse.VC.db
-atomic_data/

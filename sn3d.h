@@ -14,8 +14,17 @@
 //#define DO_TITER
 //#define FORCE_LTE
 #define NT_ON        /// Switch on non-thermal ionisation
-#define NLTE_POPS_ON
-#define NLTE_POPS_ALL_IONS_SIMULTANEOUS #solve the population matrix equation simultaneously for levels in all ions
+//#define NLTE_POPS_ON
+//#define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
+                                          // equation simultaneously for levels
+                                          // in all ions
+#define NO_LUT_PHOTOION  // dynamically calculate photoionization
+                         // rates for the current radiation field
+                         // instead of interpolating precalculated
+                         // values
+//#define NO_LUT_BFHEATING
+#define USE_MULTIBIN_RADFIELD_MODEL
+
 #define NLTEITER 30
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS

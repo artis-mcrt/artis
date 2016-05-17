@@ -502,10 +502,8 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   double zrand;
 
   double coolingsum;
-  int element,ion,level,upper;
   double nu_threshold;
   int i = -1;
-  int nions;
 
   gsl_integration_workspace *wsp;
   gslintegration_paras intparas;
@@ -515,7 +513,6 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_lower,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
-  int ilow,low,high;
   double rndcool;
   double oldcoolingsum;
 
@@ -583,9 +580,10 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 
     rndcool = zrand * modelgrid[modelgridindex].totalcooling;
     //printout("rndcool %g\n",rndcool);
+    int element,ion;
     for (element = 0; element < nelements; element++)
     {
-      nions = get_nions(element);
+      int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++)
       {
         oldcoolingsum = coolingsum;
@@ -605,7 +603,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
         printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n",modelgridindex,pkt_ptr->where,get_nne(modelgridindex));
         for (element = 0; element < nelements; element++)
         {
-          nions = get_nions(element);
+          int nions = get_nions(element);
           for (ion = 0; ion < nions; ion++)
           {
             printout("do_kpkt: element %d, ion %d, coolingcontr %g\n",element,ion,modelgrid[modelgridindex].cooling[element].contrib[ion]);
@@ -617,9 +615,9 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 
     //debuglevel = 2;
     //printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
-    ilow = get_coolinglistoffset(element,ion);
-    low = ilow;
-    high = low+get_ncoolingterms(element,ion)-1;
+    int ilow = get_coolinglistoffset(element,ion);
+    int low = ilow;
+    int high = low + get_ncoolingterms(element,ion)-1;
     //printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
     if (cellhistory[tid].coolinglist[low].contribution == COOLING_UNDEFINED)
     {
@@ -717,8 +715,8 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       /// co-moving frame.
       element = cellhistory[tid].coolinglist[i].element;
       ion = cellhistory[tid].coolinglist[i].ion;
-      level = cellhistory[tid].coolinglist[i].level;
-      upper = cellhistory[tid].coolinglist[i].upperlevel;
+      int level = cellhistory[tid].coolinglist[i].level;
+      int upper = cellhistory[tid].coolinglist[i].upperlevel;
       nu_threshold = (epsilon(element,ion+1,upper) - epsilon(element,ion,level)) / H;
 
       #ifdef DEBUG_ON
@@ -835,7 +833,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
       element = cellhistory[tid].coolinglist[i].element;
       ion = cellhistory[tid].coolinglist[i].ion;
-      upper = cellhistory[tid].coolinglist[i].upperlevel;
+      int upper = cellhistory[tid].coolinglist[i].upperlevel;
       mastate[tid].element = element;
       mastate[tid].ion = ion;
       mastate[tid].level = upper;
@@ -859,7 +857,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
       element = cellhistory[tid].coolinglist[i].element;
       ion = cellhistory[tid].coolinglist[i].ion+1;
-      upper = cellhistory[tid].coolinglist[i].upperlevel;
+      int upper = cellhistory[tid].coolinglist[i].upperlevel;
       mastate[tid].element = element;
       mastate[tid].ion = ion;
       mastate[tid].level = upper;

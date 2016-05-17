@@ -237,6 +237,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = -99.;
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = -99.;
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = -99.;
+                cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheating = -99.;
                 cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
             }
             /// This is the only flag needed for all of the following MA stuff!
@@ -497,9 +498,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     precalculate_partfuncts(n);
                     calculate_populations(n,0);
                     nne = get_nne(n);
-                    compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                    grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
-                    grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
+                    compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
+                    grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init*tratmid;
+                    grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
                     if (log_this_cell)
                     {
                       printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
@@ -529,30 +530,33 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       abort();
                     }
 
-                    J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
-                    nuJ[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
-                    ffheatingestimator[n] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
-                    colheatingestimator[n] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
+                    double estimator_normfactor = 1. / (deltaV * deltat) / nprocs / assoc_cells;
+                    double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
+                    J[n] *= estimator_normfactor_over4pi;
+                    nuJ[n] *= estimator_normfactor_over4pi;
+                    ffheatingestimator[n] *= estimator_normfactor;
+                    colheatingestimator[n] *= estimator_normfactor;
+                    radfield_set_J_normfactor(n,estimator_normfactor_over4pi);
 
                     #ifdef DO_TITER
                       if (J_reduced_save[n] >= 0)
                       {
-                        J[n] = (J[n]+J_reduced_save[n])/2.;
+                        J[n] = (J[n] + J_reduced_save[n])/2.;
                       }
                       J_reduced_save[n] = J[n];
                       if (nuJ_reduced_save[n] >= 0)
                       {
-                        nuJ[n] = (nuJ[n]+nuJ_reduced_save[n])/2.;
+                        nuJ[n] = (nuJ[n] + nuJ_reduced_save[n])/2.;
                       }
                       nuJ_reduced_save[n] = nuJ[n];
                       if (ffheatingestimator_save[n] >= 0)
                       {
-                        ffheatingestimator[n] = (ffheatingestimator[n]+ffheatingestimator_save[n])/2.;
+                        ffheatingestimator[n] = (ffheatingestimator[n] + ffheatingestimator_save[n])/2.;
                       }
-                      ffheatingestimator_save[n] = ffheatingestimator[n] ;
+                      ffheatingestimator_save[n] = ffheatingestimator[n];
                       if (colheatingestimator_save[n] >= 0)
                       {
-                        colheatingestimator[n] = (colheatingestimator[n]+colheatingestimator_save[n])/2.;
+                        colheatingestimator[n] = (colheatingestimator[n] + colheatingestimator_save[n])/2.;
                       }
                       colheatingestimator_save[n] = colheatingestimator[n];
                     #endif
@@ -563,7 +567,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       for (int ion = 0; ion < nions-1; ion++)
                       {
                         //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[n*nelements*maxion+element*maxion+ion]);
-                        gammaestimator[n*nelements*maxion+element*maxion+ion] *= 1/(deltaV*deltat)/H/nprocs/assoc_cells;
+                        gammaestimator[n*nelements*maxion+element*maxion+ion] *= estimator_normfactor/H;
                         //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[n*nelements*maxion+element*maxion+ion]);
                         #ifdef DO_TITER
                           if (gammaestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
@@ -573,7 +577,8 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                           gammaestimator_save[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion];
                         #endif
 
-                        corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion]/get_corrphotoioncoeff_ana(element,ion,0,0,n);
+                        corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion] /
+                                                                                      get_corrphotoioncoeff_ana(element,ion,0,0,n);
 
                         if (!isfinite(corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]))
                         {
@@ -661,7 +666,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     modelgrid[n].TR = T_R;
                     modelgrid[n].W = W;
                     // NEW T_R SOLVER HERE
-                    radfield_set_J_normfactor(n,ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells);
                     radfield_fit_parameters(n);
                     radfield_write_to_file(n,m);
 
