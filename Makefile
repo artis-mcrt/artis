@@ -1,25 +1,32 @@
 SHELL = /bin/sh
 
+INCLUDE=/usr/local/opt/gsl/include
+LIB=/usr/local/opt/gsl/lib
 
-### Settings for SS MACBOOK
-ifeq ($(USER),mattia)
+
+### Settings for MACBOOK
+#ifeq ($(USER),mattia)
 
 #needs
 #module load intel-cc/11.1.046
 #module load openmpi/1.4.3
 #module load gsl/1.12                                       
 
-  CC = mpicc
-  CFLAGS = -O3 -DMPI_ON
-  LDFLAGS= -lgsl -lgslcblas -lm
+#  CC = mpicc
+#  CFLAGS = -O3 -march=native -DMPI_ON -I$(INCLUDE)
+#  CC = cc
+#  CFLAGS = -O3 -march=native -flto -I$(INCLUDE)
+  CC = clang-omp
+  CFLAGS = -O3 -march=native -flto -I$(INCLUDE) -fopenmp
 
-  exspec: override CFLAGS =  -O3  -DDO_EXSPEC
-  exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
-  exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
+  LDFLAGS=  -L$(LIB) -lgsl -lgslcblas -lm
 
-endif
+  exspec: override CFLAGS =  -O3  -DDO_EXSPEC -I$(INCLUDE)
+  exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC -I$(INCLUDE)
+  exgamma: override CFLAGS =  -O3  -DDO_EXSPEC -I$(INCLUDE)
 
 
+#endif
 
 ### Settings for STARBASE                                                                                          
 ifeq ($(USER),mb)
@@ -28,10 +35,7 @@ ifeq ($(USER),mb)
 #module load intel_comp/c4                                                                                       
 #module load platform_mpi/8.2.1                                                                                
 #module load gsl    
-         
-  INCLUDE=/home/mb/gsl/include/
-  LIB=/home/mb/gsl/lib/
-                                                                                       
+                                                                                                
   CC = mpicc
   CFLAGS = -O3 -DMPI_ON -I$(INCLUDE)
   LDFLAGS= -lgsl -lgslcblas -lm -L$(LIB)
@@ -108,32 +112,32 @@ endif
 sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o vpkt.o
 
 sn3d: version $(sn3d_objects) 
-	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d.exe
+	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 exspec_objects = exspec.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o specpol.o vpkt.o
 
 exspec: version $(exspec_objects) 
-	$(CC) $(CFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec.exe
+	$(CC) $(CFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
 
 exspec_dd_objects = exspec_dd.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o specpol.o vpkt.o
 
 exspec_dd: version $(exspec_dd_objects) 
-	$(CC) $(CFLAGS) $(exspec_dd_objects) $(LDFLAGS) -o exspec_dd.exe
+	$(CC) $(CFLAGS) $(exspec_dd_objects) $(LDFLAGS) -o exspec_dd
 
 exgamma_objects = exgamma.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o grey_emissivities.o syn_lc.o  ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o specpol.o vpkt.o
 
 exgamma: version $(exgamma_objects) 
-	$(CC) $(CFLAGS) $(exgamma_objects) $(LDFLAGS) -o exgamma.exe
+	$(CC) $(CFLAGS) $(exgamma_objects) $(LDFLAGS) -o exgamma
 
 sn3dsyn_objects = sn3dsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o specpol.o vpkt.o
 
 sn3dsyn: version $(sn3dsyn_objects) 
-	$(CC) $(CFLAGS) $(sn3dsyn_objects) $(LDFLAGS) -o sn3dsyn.exe
+	$(CC) $(CFLAGS) $(sn3dsyn_objects) $(LDFLAGS) -o sn3dsyn
 
 sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o specpol.o vpkt.o
 
 sn3dlcsyn: version $(sn3dlcsyn_objects) 
-	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn.exe
+	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
 
 version:
 	@echo "#define GIT_HASH \"`cat .git/refs/heads/polarization`\"" > version.h
