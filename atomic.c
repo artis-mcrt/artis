@@ -152,7 +152,7 @@ double photoionization_crosssection(double nu_edge, double nu)
       /// use a parameterization of sigma_bf by the Kramers formula
       /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       /// so far the highest grid point, otherwise the cross-section is not continuous
-      double nu_max_phixs = nu_edge * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+      double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs/nu, 3);
     }
   }
@@ -211,7 +211,7 @@ double photoionization_crosssection(double nu_edge, double nu)
       /// use a parameterization of sigma_bf by the Kramers formula
       /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       /// so far the highest grid point, otherwise the cross-section is not continuous
-      double nu_max_phixs = nu_edge * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+      double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs/nu, 3);
     }
   }

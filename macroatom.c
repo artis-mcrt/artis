@@ -485,7 +485,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
       F_alpha_sp.params = &intparas;
       double deltanu = nu_threshold * NPHIXSNUINCREMENT;
-      nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+      nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       double error;
       double total_alpha_sp;
       gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &total_alpha_sp, &error);
@@ -561,7 +561,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       if (ii==NPHIXSPOINTS)
       {
         printout("kpkt emitts bf-photon at upper limit\n");
-        nu_lower = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); // + ii*deltanu;
+        nu_lower = nu_threshold * last_phixs_nuovernuedge; // + ii*deltanu;
       }
       else if (ii > 0)
       {

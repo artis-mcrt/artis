@@ -182,7 +182,7 @@ void calculate_rate_coefficients(void)
           mastate[tid].level = level;                   // Global variable which passes the current level to all subfunctions of macroatom.c
           double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           double nu_threshold = E_threshold / H;
-          double nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+          double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
           gslintegration_paras intparas;
           intparas.nu_edge = nu_threshold;              // Global variable which passes the threshold to the integrator
                                                         // the threshold of the first target gives nu of the first phixstable point
@@ -190,7 +190,7 @@ void calculate_rate_coefficients(void)
           for (int iter = 0; iter < TABLESIZE; iter++)
           {
             double error;
-            double T_e = MINTEMP * exp(iter*T_step_log);
+            double T_e = MINTEMP * exp(iter * T_step_log);
             //T_e = MINTEMP + iter*T_step;
             double sfac = calculate_sahafact(element,ion,level,phixstargetindex,T_e,E_threshold);
             //printout("%d %g\n",iter,T_e);
@@ -1112,7 +1112,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level,
 
   double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
   double nu_threshold = E_threshold / H;
-  double nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+  double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
   gsl_integral_paras_gammacorr intparas;
   intparas.nu_edge = nu_threshold;
@@ -1169,7 +1169,7 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
 
   double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
   double nu_threshold = E_threshold / H;
-  double nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+  double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
   gsl_integral_paras_gammacorr intparas;
   intparas.nu_edge = nu_threshold;
@@ -1301,7 +1301,7 @@ void check_interpolation(double T_min, double T_max)
       modified_gamma = interpolate_modified_gamma(0,0,level,T_e);
 
       /// calculate with gsl integrators
-      nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+      nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       intparas.T = T_e;
       F1.params = &intparas;
       F2.params = &intparas;

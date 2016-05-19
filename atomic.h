@@ -3,6 +3,8 @@
 
 #include "sn3d.h"
 
+double last_phixs_nuovernuedge; // last photion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+
 static inline
 int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.

@@ -886,6 +886,7 @@ void read_atomicdata(void)
     read_processed_modelatom(modelatom);
     fclose(modelatom);
   }
+  last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
 
 
   printout("included ions %d\n",includedions);
