@@ -221,13 +221,17 @@ void radfield_update_estimators(int modelgridindex, double distance,
   int binindex = 0;
   if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
   {
+    #ifdef DEBUG_ON
     printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
+    #endif
     nu_lower_first = nu_cmf;
   }
   else if (nu_cmf > radfieldbins[modelgridindex][RADFIELDBINCOUNT - 1].nu_upper)
   {
     binindex = RADFIELDBINCOUNT - 1;
+    #ifdef DEBUG_ON
     printout("radfield: Extending nu_upper_last from %g up to %g\n",radfield_get_bin_nu_upper(modelgridindex,binindex),nu_cmf);
+    #endif
     radfieldbins[modelgridindex][binindex].nu_upper = nu_cmf;
   }
   else
