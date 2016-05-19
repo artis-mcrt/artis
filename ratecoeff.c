@@ -26,11 +26,9 @@ double bfcooling_integrand_gsl(double nu, void *paras);
 double bfcooling_integrand_gsl_2(double nu, void *paras);
 double stimulated_bfcooling_integrand_gsl(double nu, void *paras);
 double stimulated_recomb_integrand_gsl(double nu, void *paras);
-double calculate_corrphotoioncoeff(int element, int ion, int level,
-                                   int phixstargetindex, int modelgridindex);
+double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 double gammacorr_integrand_gsl_radfield(double nu, void *paras);
-double calculate_bfheatingcoeff(int element, int ion, int level,
-                                int phixstargetindex, int modelgridindex);
+double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 double bfheating_integrand_gsl_radfield(double nu, void *paras);
 
 
@@ -636,7 +634,7 @@ double stimulated_recomb_integrand_gsl(double nu, void *paras)
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   double sigma_bf = photoionization_crosssection(nu_edge,nu);
-  double x = sigma_bf/H/nu * radfield2(nu,T,1) * exp(-HOVERKB*nu/T);
+  double x = sigma_bf / H / nu * radfield2(nu,T,1) * exp(-HOVERKB*nu/T);
   ///in formula this looks like
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
@@ -657,8 +655,8 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
   int upperindex = lowerindex + 1;
   double T_upper =  MINTEMP + upperindex*T_step;
   double T_lower =  MINTEMP + lowerindex*T_step;*/
-  int lowerindex = floor(log(T/MINTEMP)/T_step_log);
-  if (lowerindex < TABLESIZE-1)
+  int lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  if (lowerindex < TABLESIZE - 1)
   {
     int upperindex = lowerindex + 1;
     double T_lower =  MINTEMP * exp(lowerindex*T_step_log);

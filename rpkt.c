@@ -1152,7 +1152,7 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
       /// in the other cases kappa_grey is an mass absorption coefficient
       /// therefore use the mass density
       //sigma = cell[pkt_ptr->where].kappa_grey * cell[pkt_ptr->where].rho;
-      sigma = SIGMA_T*nne;
+      sigma = SIGMA_T * nne;
 
       sigma = 0.;
       /*
@@ -1178,20 +1178,21 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
           }
         }
       }
-      kappa_ff *= 1e5*3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
+      kappa_ff *= 1e5 * 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
       kappa_bf = 0.;
     }
 
     /// Now need to convert between frames.
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
-    sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
-    kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
-    kappa_bf = kappa_bf * doppler(pkt_ptr->dir, vel_vec);
+    double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
+    sigma = sigma * dopplerfac;
+    kappa_ff = kappa_ff * dopplerfac;
+    kappa_bf = kappa_bf * dopplerfac;
   }
   else
   {
-    sigma = 0.0;
+    sigma = 0.;
     kappa_ff = 0.;
     kappa_bf = 0.;
     //kappa_ffheating = 0.;

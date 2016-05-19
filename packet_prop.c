@@ -29,7 +29,7 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
       /* Call do_gamma. */
       //printout("gamma propagation\n");
       t_change_type = do_gamma(pkt_ptr, t_current, t2);
-	  /* This returns a flag if the packet gets to t2 without
+	    /* This returns a flag if the packet gets to t2 without
       changing to something else. If the packet does change it
       returns the time of change and sets everything for the
       new packet.*/

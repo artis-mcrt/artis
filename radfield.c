@@ -60,8 +60,7 @@ FILE *radfieldfile = NULL;
 // private functions
 double find_T_R(int modelgridindex, int binindex);
 double delta_nu_bar(double T_R, void *paras);
-double integrate_planck(double T_R, double nu_lower, double nu_upper,
-                                 enum_prefactor prefactor, double *error);
+double integrate_planck(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor, double *error);
 double gsl_integrand_planck(double nu, void *paras);
 double radfield_get_bin_J(int modelgridindex, int binindex);
 int radfield_get_bin_contribcount(int modelgridindex, int binindex);
@@ -532,8 +531,7 @@ double delta_nu_bar(double T_R, void *paras)
 }
 
 
-double integrate_planck(double T_R, double nu_lower, double nu_upper,
-                                 enum_prefactor prefactor, double *error)
+double integrate_planck(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor, double *error)
 {
   //double error = 0.0;
   double integratoraccuracy = 1e-10;

@@ -132,18 +132,20 @@ double photoionization_crosssection(double nu_edge, double nu)
   {
     int i = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
 
+    #ifdef DEBUG_ON
     if (i < 0)
     {
       sigma_bf = 0.0;
-      #ifdef DEBUG_ON
         printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
         printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
         printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
         printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
         //abort();
-      #endif
     }
     else if (i < NPHIXSPOINTS)
+    #else
+    if (i < NPHIXSPOINTS)
+    #endif
     {
       sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
     }
