@@ -1100,7 +1100,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level,
   double error = 0.0;
   double integratorrelaccuracy = 1e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(100000);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -1157,7 +1157,7 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
   double error = 0.0;
   double integratoraccuracy = 1e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(100000);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
