@@ -155,7 +155,7 @@ double phi(int element, int ion, int modelgridindex)
   #ifdef FORCE_LTE
     phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
   #else
-    if  (initial_iteration == 1 || modelgrid[modelgridindex].thick == 1)
+    if  (initial_iteration == true || modelgrid[modelgridindex].thick == 1)
     {
        phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
     }

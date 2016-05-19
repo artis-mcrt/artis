@@ -439,7 +439,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                 #else
                   /// non-LTE version of the code
-                  if (initial_iteration == 1 || modelgrid[n].thick == 1)
+                  if (initial_iteration || modelgrid[n].thick == 1)
                   {
                     /// LTE version of the code
                     if (!isfinite(J[n]))
@@ -1528,7 +1528,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       #ifdef FORCE_LTE
         uppermost_ion = get_nions(element)-1;
       #else
-        if (initial_iteration == 1 || modelgrid[modelgridindex].thick == 1)
+        if (initial_iteration || modelgrid[modelgridindex].thick == 1)
         {
           uppermost_ion = get_nions(element)-1;
         }
@@ -1696,7 +1696,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
         nntot += nnion;
         nne_check += nnion * (get_ionstage(element,ion)-1);
         //if (modelgrid[modelgridindex].composition[element].groundlevelpop[ion] < 0)
-        //if (initial_iteration == 1 || modelgrid[modelgridindex].thick == 1)
+        //if (initial_iteration || modelgrid[modelgridindex].thick == 1)
         {
           modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion *
                 stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];

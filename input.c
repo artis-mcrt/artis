@@ -68,7 +68,7 @@ int input(int rank)
     n_titer = 6;
   #endif*/
   n_titer = 1;
-  initial_iteration = 0;
+  initial_iteration = false;
 
   printout("[info] input: do n_titer %d iterations per timestep\n",n_titer);
   if (n_titer > 1)

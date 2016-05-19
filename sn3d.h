@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include <unistd.h>
+#include <stdbool.h>
 
 //#define MPI_ON
 #ifdef MPI_ON
@@ -49,7 +50,7 @@
 
 
 // Input parameters
-double Nobs;
+int Nobs;
 double nz_obs_vpkt[MOBS] ;
 double phiobs[MOBS] ;
 double tmin_vspec, tmax_vspec;
@@ -571,7 +572,7 @@ int n_lte_timesteps;
 double cell_is_optically_thick;
 int n_grey_timesteps;
 int n_titer;
-short initial_iteration;
+bool initial_iteration;
 int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;

@@ -28,6 +28,11 @@
 #include "version.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
+// private functions
+FILE *initialise_linestat_file(void);
+void pkt_action_counters_reset(void);
+void pkt_action_counters_printout(void);
+
 // Main - top level routine.
 int main(int argc, char** argv)
 {
@@ -230,31 +235,13 @@ int main(int argc, char** argv)
   input(my_rank);
 
   /// Initialise linestat file
+  #ifdef RECORD_LINESTAT
   FILE *linestat_file;
   if (my_rank == 0)
   {
-    if ((linestat_file = fopen("linestat.out", "w")) == NULL)
-    {
-      printout("Cannot open line_stat.out.\n");
-      exit(0);
-    }
-    setvbuf(linestat_file, NULL, _IOLBF, 1);
-
-    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
-      fprintf(linestat_file,"\n");
-
-    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
-      fprintf(linestat_file,"\n");
-
-    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
-      fprintf(linestat_file,"\n");
-
-    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
-      fprintf(linestat_file,"\n");
-
-    for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
-      fprintf(linestat_file,"\n");
+    linestat_file = initialise_linestat_file();
   }
+  #endif
 
   printout("time after input %d\n",time(NULL));
   printout("simulation propagates %d packets through a %d x %d x %d grid\n",npkts,nxgrid,nygrid,nzgrid);
@@ -404,60 +391,63 @@ int main(int argc, char** argv)
       sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
       if ((vspecpol_file = fopen(filename, "w")) == NULL)
       {
-          printout("Cannot open %s.\n",filename);
-          exit(0);
+        printout("Cannot open %s.\n",filename);
+        exit(0);
       }
 
-      if (vgrid_flag==1) {
-
-          sprintf(filename,"vpkt_grid_%d-%d.out",my_rank,tid);
-          if ((vpkt_grid_file = fopen(filename, "w")) == NULL)
-          {
-              printout("Cannot open %s.\n",filename);
-              exit(0);
-          }
-
+      if (vgrid_flag==1)
+      {
+        sprintf(filename,"vpkt_grid_%d-%d.out",my_rank,tid);
+        if ((vpkt_grid_file = fopen(filename, "w")) == NULL)
+        {
+          printout("Cannot open %s.\n",filename);
+          exit(0);
+        }
       }
 
 
 
       // New simulation
-      if (continue_simulation==0) {
+      if (continue_simulation==0)
+      {
+        init_vspecpol();
 
-          init_vspecpol();
-
-          if (vgrid_flag==1) init_vpkt_grid();
-
+        if (vgrid_flag==1)
+          init_vpkt_grid();
       }
 
       // Continue simulation: read into temporary files
-      else {
+      else
+      {
 
-          if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
-          else sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+          if (nts % 2 == 0)
+            sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+          else
+            sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+
           if ((packets_file = fopen(filename, "rb")) == NULL)
           {
-              printout("Cannot read temporary packets file %s\n",filename);
-              exit(0);
+            printout("Cannot read temporary packets file %s\n",filename);
+            exit(0);
           }
 
           read_vspecpol(packets_file);
 
+          if (vgrid_flag==1)
+          {
+            if (nts % 2 == 0)
+              sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
+            else
+              sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
 
-          if (vgrid_flag==1) {
+            if ((packets_file = fopen(filename, "rb")) == NULL)
+            {
+              printout("Cannot read temporary vpkt_grid file %s\n",filename);
+              exit(0);
+            }
 
-              if (nts % 2 == 0) sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
-              else sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
-              if ((packets_file = fopen(filename, "rb")) == NULL)
-              {
-                  printout("Cannot read temporary vpkt_grid file %s\n",filename);
-                  exit(0);
-              }
-
-              read_vpkt_grid(packets_file);
-
+            read_vpkt_grid(packets_file);
           }
-
       }
     #endif
 
@@ -484,43 +474,48 @@ int main(int argc, char** argv)
       #endif
 
       /// The first time step must solve the ionisation balance in LTE
-      if (nts == 0) initial_iteration = 1;
-      else initial_iteration = 0;
+      if (nts == 0)
+        initial_iteration = true;
+      else
+        initial_iteration = false;
 
       #ifndef DO_TITER
         /// Do 3 iterations on timestep 0-9
         /*if (nts == 0)
         {
           n_titer = 3;
-          initial_iteration = 1;
+          initial_iteration = true;
         }
         else if (nts < 6)
         {
           n_titer = 3;
-          initial_iteration = 0;
+          initial_iteration = false;
         }
         else
         {
           n_titer = 1;
-          initial_iteration = 0;
+          initial_iteration = false;
         }*/
         if (nts < n_lte_timesteps)
         {
           n_titer = 1;
-          initial_iteration = 1;
+          initial_iteration = true;
         }
         else
         {
           n_titer = 1;
-          initial_iteration = 0;
+          initial_iteration = false;
         }
       #endif
 
       for (int titer = 0; titer < n_titer; titer++)
       {
         /// Read the packets file for each iteration on the timestep
-        if (nts % 2 == 0) sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
-        else sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
+        if (nts % 2 == 0)
+          sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
+        else
+          sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
+
         //sprintf(filename,"packets%d_%d.tmp",0,my_rank);
         if ((packets_file = fopen(filename, "rb")) == NULL)
         {
@@ -532,31 +527,8 @@ int main(int argc, char** argv)
         fclose(packets_file);
 
         /// Some counters on pkt-actions need to be reset to do statistics
-        ma_stat_activation_collexc = 0;
-        ma_stat_activation_collion = 0;
-        ma_stat_activation_bb = 0;
-        ma_stat_activation_bf = 0;
-        ma_stat_deactivation_colldeexc = 0;
-        ma_stat_deactivation_collrecomb = 0;
-        ma_stat_deactivation_bb = 0;
-        ma_stat_deactivation_fb = 0;
-        k_stat_to_ma_collexc = 0;
-        k_stat_to_ma_collion = 0;
-        k_stat_to_r_ff = 0;
-        k_stat_to_r_fb = 0;
-        k_stat_to_r_bb = 0;
-        k_stat_from_ff = 0;
-        k_stat_from_bf = 0;
-        k_stat_from_gamma = 0;
-        k_stat_from_eminus = 0;
-        k_stat_from_earlierdecay = 0;
-        escounter = 0;
-        cellcrossings = 0;
-        updatecellcounter = 0;
-        coolingratecalccounter = 0;
-        resonancescatterings = 0;
-        upscatter = 0;
-        downscatter = 0;
+        pkt_action_counters_reset();
+
         if (nts == 0) initialise_photoionestimators();
         //if (nts > 0) debuglevel = 2000;
 
@@ -594,7 +566,7 @@ int main(int argc, char** argv)
           else
           {
             printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-            for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
+            for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
             {
               corrphotoionrenorm[i] = 0.;
             }
@@ -605,7 +577,8 @@ int main(int argc, char** argv)
         update_grid(nts,my_rank,nstart,ndo,titer);
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
-          if (nts==0) titer = n_titer + 1;
+          if (nts==0)
+            titer = n_titer + 1;
         #endif
         #ifdef MPI_ON
           MPI_Barrier(MPI_COMM_WORLD);
@@ -851,44 +824,7 @@ int main(int argc, char** argv)
           }
           */
 
-          /// Calculate mean interaction per packet
-          int interactions = 0;
-          for (int i = 0; i < npkts; i++)
-          {
-            interactions += pkt[i].interactions;
-          }
-          double meaninteractions = interactions / npkts;
-          printout("mean number of interactions per packet = %g\n",meaninteractions);
-
-          /// Printout packet statistics
-          printout("ma_stat_activation_collexc = %d\n",ma_stat_activation_collexc);
-          printout("ma_stat_activation_collion = %d\n",ma_stat_activation_collion);
-          printout("ma_stat_activation_bb = %d\n",ma_stat_activation_bb);
-          printout("ma_stat_activation_bf = %d\n",ma_stat_activation_bf);
-          printout("ma_stat_deactivation_colldeexc = %d\n",ma_stat_deactivation_colldeexc);
-          printout("ma_stat_deactivation_collrecomb = %d\n",ma_stat_deactivation_collrecomb);
-          printout("ma_stat_deactivation_bb = %d\n",ma_stat_deactivation_bb);
-          printout("ma_stat_deactivation_fb = %d\n",ma_stat_deactivation_fb);
-
-          printout("k_stat_to_ma_collexc = %d\n",k_stat_to_ma_collexc);
-          printout("k_stat_to_ma_collion = %d\n",k_stat_to_ma_collion);
-          printout("k_stat_to_r_ff = %d\n",k_stat_to_r_ff);
-          printout("k_stat_to_r_fb = %d\n",k_stat_to_r_fb);
-          printout("k_stat_to_r_bb = %d\n",k_stat_to_r_bb);
-          printout("k_stat_from_ff = %d\n",k_stat_from_ff);
-          printout("k_stat_from_bf = %d\n",k_stat_from_bf);
-          printout("k_stat_from_gamma = %d\n",k_stat_from_gamma);
-          printout("k_stat_from_eminus = %d\n",k_stat_from_eminus);
-          printout("k_stat_from_earlierdecay = %d\n",k_stat_from_earlierdecay);
-
-          printout("escounter = %d\n",escounter);
-          printout("cellcrossing  = %d\n",cellcrossings);
-          printout("updatecellcounter  = %d\n",updatecellcounter);
-          printout("coolingratecalccounter = %d\n",coolingratecalccounter);
-          printout("resonancescatterings  = %d\n",resonancescatterings);
-
-          printout("upscatterings  = %d\n",upscatter);
-          printout("downscatterings  = %d\n",downscatter);
+          pkt_action_counters_printout();
 
 
           #ifdef MPI_ON
@@ -912,7 +848,7 @@ int main(int argc, char** argv)
                 J[i] = redhelper[i];
               }
             }
-	    MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Barrier(MPI_COMM_WORLD);
             #ifndef FORCE_LTE
               MPI_Reduce(&nuJ, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
@@ -922,7 +858,7 @@ int main(int argc, char** argv)
                   nuJ[i] = redhelper[i];
                 }
               }
-	      MPI_Barrier(MPI_COMM_WORLD);
+              MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&ffheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -931,7 +867,7 @@ int main(int argc, char** argv)
                   ffheatingestimator[i] = redhelper[i];
                 }
               }
-	      MPI_Barrier(MPI_COMM_WORLD);
+              MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&colheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
@@ -1221,20 +1157,21 @@ int main(int argc, char** argv)
 
           // Write temporary files for vpkt_grid
 
-          if (vgrid_flag==1) {
+          if (vgrid_flag==1)
+          {
+            if (nts % 2 == 0)
+              sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
+            else
+              sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
 
-              if (nts % 2 == 0) sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
-              else sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
+            if ((packets_file = fopen(filename, "wb")) == NULL)
+            {
+              printout("Cannot write to vpkt_grid file %s\n",filename);
+              exit(0);
+            }
 
-              if ((packets_file = fopen(filename, "wb")) == NULL)
-              {
-                  printout("Cannot write to vpkt_grid file %s\n",filename);
-                  exit(0);
-              }
-
-              write_vpkt_grid(packets_file);
-              fclose(packets_file);
-
+            write_vpkt_grid(packets_file);
+            fclose(packets_file);
           }
 
           #endif
@@ -1475,6 +1412,7 @@ int main(int argc, char** argv)
   return 0;
 }
 
+
 // printout should be used instead of printf throughout the whole code for output messages
 int printout(const char *restrict format, ...)
 {
@@ -1488,7 +1426,104 @@ int printout(const char *restrict format, ...)
 }
 
 
+FILE *initialise_linestat_file(void)
+{
+  FILE *linestat_file;
+  if ((linestat_file = fopen("linestat.out", "w")) == NULL)
+  {
+    printout("Cannot open line_stat.out.\n");
+    exit(0);
+  }
+  setvbuf(linestat_file, NULL, _IOLBF, 1);
 
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
+    fprintf(linestat_file,"\n");
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
+    fprintf(linestat_file,"\n");
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
+    fprintf(linestat_file,"\n");
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
+    fprintf(linestat_file,"\n");
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
+    fprintf(linestat_file,"\n");
+
+  return linestat_file;
+}
+
+void pkt_action_counters_reset(void)
+{
+  ma_stat_activation_collexc = 0;
+  ma_stat_activation_collion = 0;
+  ma_stat_activation_bb = 0;
+  ma_stat_activation_bf = 0;
+  ma_stat_deactivation_colldeexc = 0;
+  ma_stat_deactivation_collrecomb = 0;
+  ma_stat_deactivation_bb = 0;
+  ma_stat_deactivation_fb = 0;
+  k_stat_to_ma_collexc = 0;
+  k_stat_to_ma_collion = 0;
+  k_stat_to_r_ff = 0;
+  k_stat_to_r_fb = 0;
+  k_stat_to_r_bb = 0;
+  k_stat_from_ff = 0;
+  k_stat_from_bf = 0;
+  k_stat_from_gamma = 0;
+  k_stat_from_eminus = 0;
+  k_stat_from_earlierdecay = 0;
+  escounter = 0;
+  cellcrossings = 0;
+  updatecellcounter = 0;
+  coolingratecalccounter = 0;
+  resonancescatterings = 0;
+  upscatter = 0;
+  downscatter = 0;
+}
+
+
+void pkt_action_counters_printout(void)
+{
+  int allpktinteractions = 0;
+  for (int i = 0; i < npkts; i++)
+  {
+    allpktinteractions += pkt[i].interactions;
+  }
+  double meaninteractions = allpktinteractions / npkts;
+  printout("mean number of interactions per packet = %g\n",meaninteractions);
+
+  /// Printout packet statistics
+  printout("ma_stat_activation_collexc = %d\n",ma_stat_activation_collexc);
+  printout("ma_stat_activation_collion = %d\n",ma_stat_activation_collion);
+  printout("ma_stat_activation_bb = %d\n",ma_stat_activation_bb);
+  printout("ma_stat_activation_bf = %d\n",ma_stat_activation_bf);
+  printout("ma_stat_deactivation_colldeexc = %d\n",ma_stat_deactivation_colldeexc);
+  printout("ma_stat_deactivation_collrecomb = %d\n",ma_stat_deactivation_collrecomb);
+  printout("ma_stat_deactivation_bb = %d\n",ma_stat_deactivation_bb);
+  printout("ma_stat_deactivation_fb = %d\n",ma_stat_deactivation_fb);
+
+  printout("k_stat_to_ma_collexc = %d\n",k_stat_to_ma_collexc);
+  printout("k_stat_to_ma_collion = %d\n",k_stat_to_ma_collion);
+  printout("k_stat_to_r_ff = %d\n",k_stat_to_r_ff);
+  printout("k_stat_to_r_fb = %d\n",k_stat_to_r_fb);
+  printout("k_stat_to_r_bb = %d\n",k_stat_to_r_bb);
+  printout("k_stat_from_ff = %d\n",k_stat_from_ff);
+  printout("k_stat_from_bf = %d\n",k_stat_from_bf);
+  printout("k_stat_from_gamma = %d\n",k_stat_from_gamma);
+  printout("k_stat_from_eminus = %d\n",k_stat_from_eminus);
+  printout("k_stat_from_earlierdecay = %d\n",k_stat_from_earlierdecay);
+
+  printout("escounter = %d\n",escounter);
+  printout("cellcrossing  = %d\n",cellcrossings);
+  printout("updatecellcounter  = %d\n",updatecellcounter);
+  printout("coolingratecalccounter = %d\n",coolingratecalccounter);
+  printout("resonancescatterings  = %d\n",resonancescatterings);
+
+  printout("upscatterings  = %d\n",upscatter);
+  printout("downscatterings  = %d\n",downscatter);
+}
 
 ///****************************************************************************
 /*void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element)
