@@ -22,7 +22,8 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
     double t_change_type;
     /* Start by sorting out what sort of packet it is.*/
     //printout("start of packet_prop loop %d\n", pkt_ptr->type );
-    if (pkt_ptr->type == TYPE_GAMMA)
+    int pkt_prev_type = pkt_ptr->type; // avoid dereferencing multiple timnes
+    if (pkt_prev_type == TYPE_GAMMA)
     {
       /*It's a gamma-ray packet.*/
       /* Call do_gamma. */
@@ -55,7 +56,7 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
 //       else
 //         t_change_type = do_rpkt( pkt_ptr, t_current, t2);
 
-      if (pkt_ptr->type == TYPE_ESCAPE)
+      if (pkt_prev_type == TYPE_ESCAPE)
       {
         #ifdef _OPENMP
           #pragma omp atomic
@@ -72,7 +73,7 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
         t_current = t_change_type;
       }
     }
-    else if (pkt_ptr->type == TYPE_EMINUS)
+    else if (pkt_prev_type == TYPE_EMINUS)
     {
       /*It's an electron - convert to k-packet*/
       //printout("e-minus propagation\n");
@@ -85,16 +86,16 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
       //if (tid == 0) k_stat_from_eminus += 1;
       k_stat_from_eminus += 1;
     }
-    else if (pkt_ptr->type == TYPE_KPKT || pkt_ptr->type == TYPE_PRE_KPKT || pkt_ptr->type == TYPE_GAMMA_KPKT)
+    else if (pkt_prev_type == TYPE_KPKT || pkt_prev_type == TYPE_PRE_KPKT || pkt_prev_type == TYPE_GAMMA_KPKT)
     {
       /*It's a k-packet - convert to r-packet (low freq).*/
       //printout("k-packet propagation\n");
 
       //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
 
-      if (pkt_ptr->type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
+      if (pkt_prev_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
         t_change_type = do_kpkt_bb(pkt_ptr, t_current, t2);
-      else if (pkt_ptr->type == TYPE_KPKT)
+      else if (pkt_prev_type == TYPE_KPKT)
         t_change_type = do_kpkt(pkt_ptr, t_current, t2, nts);
       else
       {
@@ -112,7 +113,7 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
         t_current = t_change_type;
       }
     }
-    else if (pkt_ptr->type == TYPE_MA)
+    else if (pkt_prev_type == TYPE_MA)
     {
       /*It's an active macroatom - apply transition probabilities*/
       //printout("MA-packet handling\n");
