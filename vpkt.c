@@ -236,14 +236,18 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
 
   /* increment the number of escaped virtual packet in the given timestep */
-  if (realtype==1) nvpkt_esc1++ ;
-  else if (realtype==2) nvpkt_esc2++ ;
-  else if (realtype==3) nvpkt_esc3++ ;
-
+  #ifdef _OPENMP
+  #pragma omp critical
+  #endif
+  {
+    if (realtype==1) nvpkt_esc1++;
+    else if (realtype==2) nvpkt_esc2++;
+    else if (realtype==3) nvpkt_esc3++;
+  }
 
   // -------------- final stokes vector ---------------
 
-  prob = pn * exp( - tau ) ;
+  prob = pn * exp( - tau );
 
   I = I * prob ;
   Q = Q * prob ;
@@ -257,7 +261,7 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
   /* bin on fly and produce file with spectrum */
 
-  t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/CLIGHT_PROP) ;
+  t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/CLIGHT_PROP);
 
   add_to_vspecpol(dummy_ptr,bin,t_arrive);
 
