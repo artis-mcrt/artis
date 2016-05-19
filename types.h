@@ -385,7 +385,7 @@ typedef struct
 
 typedef struct
 {
-  short ionstage;                            /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  int ionstage;                            /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels;                               /// Number of levels for this ionisation stage
   int nlevels_nlte;                          /// number of nlte levels for this ion
   int first_nlte;                            /// reference index for counting of nlte levels
@@ -402,9 +402,9 @@ typedef struct
 
 typedef struct
 {
-  short anumber;                             /// Atomic number
-  short nions;                               /// Number of ions for the current element
-//  short uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given cell
+  int anumber;                             /// Atomic number
+  int nions;                               /// Number of ions for the current element
+//  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given cell
 //                                             /// Be aware that this must not be used outside of the update_grid routine
 //                                             /// and their daughters. Neither it will work with OpenMP threads.
   float abundance;                           ///
