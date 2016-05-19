@@ -46,7 +46,7 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
         t_current = t_change_type;
       }
     }
-    else if (pkt_ptr->type == TYPE_RPKT)
+    else if (pkt_prev_type == TYPE_RPKT)
     {
       /*It's an r-packet. */
       //printout("r-pkt propagation\n");
