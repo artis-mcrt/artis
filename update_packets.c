@@ -138,31 +138,30 @@ int update_packets(int nts)
               pkt_ptr->absorptiontype = -6;
               packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
             }
-    	    else
-  	      {
-        		pellet_decay(nts,pkt_ptr);
-        		//printout("pellet to photon packet and propagation by packet_prop\n");
-        		packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
-  	      }
+            else
+            {
+              pellet_decay(nts,pkt_ptr);
+              //printout("pellet to photon packet and propagation by packet_prop\n");
+              packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
+            }
+          }
+          else if ((pkt_ptr->tdecay > 0) && (nts == 0))
+          {
+            /** These are pellets whose decay times were before the first time step
+            They will be made into r-packets with energy reduced for doing work on the
+            ejects following Lucy 2004. */
+            /** The position is already set at tmin so don't need to move it. Assume
+            that it is fixed in place from decay to tmin - i.e. short mfp. */
 
-        }
-        else if ((pkt_ptr->tdecay > 0) && (nts == 0))
-        {
-          /** These are pellets whose decay times were before the first time step
-          They will be made into r-packets with energy reduced for doing work on the
-          ejects following Lucy 2004. */
-          /** The position is already set at tmin so don't need to move it. Assume
-          that it is fixed in place from decay to tmin - i.e. short mfp. */
+            pkt_ptr->e_cmf = pkt_ptr->e_cmf *pkt_ptr->tdecay/tmin;
+            //pkt_ptr->type = TYPE_KPKT;
+            pkt_ptr->type = TYPE_PRE_KPKT;
+            pkt_ptr->absorptiontype = -7;
+            //if (tid == 0) k_stat_from_earlierdecay += 1;
+            k_stat_from_earlierdecay += 1;
 
-          pkt_ptr->e_cmf = pkt_ptr->e_cmf *pkt_ptr->tdecay/tmin;
-          //pkt_ptr->type = TYPE_KPKT;
-          pkt_ptr->type = TYPE_PRE_KPKT;
-          pkt_ptr->absorptiontype = -7;
-          //if (tid == 0) k_stat_from_earlierdecay += 1;
-          k_stat_from_earlierdecay += 1;
-
-          //printout("already decayed packets and propagation by packet_prop\n");
-          packet_prop(pkt_ptr, tmin, ts+tw, nts);
+            //printout("already decayed packets and propagation by packet_prop\n");
+            packet_prop(pkt_ptr, tmin, ts+tw, nts);
           }
           else
           {
