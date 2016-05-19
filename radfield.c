@@ -14,7 +14,7 @@ double nu_lower_first = nu_lower_first_initial;
 
 double J_normfactor[MMODELGRID + 1];
 
-int radfield_initialized = 0;
+bool radfield_initialized = false;
 
 typedef enum
 {
@@ -73,7 +73,7 @@ double radfield_get_bin_nu_upper(int modelgridindex, int binindex);
 
 void radfield_init(void)
 {
-  if (radfield_initialized == 0)
+  if (radfield_initialized == false)
   {
     char filename[100] = "radfield.out";
     radfieldfile = fopen(filename, "w");
@@ -130,14 +130,14 @@ void radfield_init(void)
         radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTED_BLACKBODY;
       }
     }
-    radfield_initialized = 1;
+    radfield_initialized = true;
   }
 }
 
 
 void radfield_write_to_file(int modelgridindex, int timestep)
 {
-  if (radfield_initialized == 0)
+  if (!radfield_initialized)
   {
     printout("Call to write_to_radfield_file before init_radfield");
     abort();
@@ -200,7 +200,7 @@ void radfield_close_file(void)
 // for a timestep
 void radfield_zero_estimators(int modelgridindex)
 {
-  if (radfield_initialized == 0)
+  if (!radfield_initialized)
     radfield_init();
 
   printout("radfield: zeroing estimators in %d bins in cell %d...",RADFIELDBINCOUNT,modelgridindex);
@@ -265,7 +265,7 @@ double radfield(double nu, int modelgridindex)
   double W_fullspec   = get_W(modelgridindex);
 
   #ifdef USE_MULTIBIN_RADFIELD_MODEL
-  if (radfield_initialized == 1) // && radfieldbins[modelgridindex] != NULL
+  if (radfield_initialized) // && radfieldbins[modelgridindex] != NULL
   {
     int binindex = radfield_select_bin(modelgridindex,nu);
     if (binindex >= 0)
