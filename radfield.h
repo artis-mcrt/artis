@@ -12,11 +12,6 @@ void radfield_update_estimators(int modelgridindex, double distance,
 double radfield(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex);
 void radfield_set_J_normfactor(int modelgridindex, double normfactor);
-double radfield_get_bin_W(int modelgridindex, int binindex);
-double radfield_get_bin_T_R(int modelgridindex, int binindex);
-int radfield_select_bin(int modelgridindex, double nu);
-double radfield_get_bin_nu_lower(int modelgridindex, int binindex);
-double radfield_get_bin_nu_upper(int modelgridindex, int binindex);
 
 static inline
 double radfield2(double nu, double T, double W)

@@ -65,6 +65,11 @@ double integrate_planck(double T_R, double nu_lower, double nu_upper,
 double gsl_integrand_planck(double nu, void *paras);
 double radfield_get_bin_J(int modelgridindex, int binindex);
 int radfield_get_bin_contribcount(int modelgridindex, int binindex);
+double radfield_get_bin_W(int modelgridindex, int binindex);
+double radfield_get_bin_T_R(int modelgridindex, int binindex);
+int radfield_select_bin(int modelgridindex, double nu);
+double radfield_get_bin_nu_lower(int modelgridindex, int binindex);
+double radfield_get_bin_nu_upper(int modelgridindex, int binindex);
 
 void radfield_init(void)
 {
@@ -233,10 +238,15 @@ void radfield_update_estimators(int modelgridindex, double distance,
 
   if (binindex >= 0)
   {
-    radfieldbins[modelgridindex][binindex].J_raw += distance * e_cmf;
-    radfieldbins[modelgridindex][binindex].nuJ_raw += distance * e_cmf *
-                                                      nu_cmf;
-    radfieldbins[modelgridindex][binindex].contribcount += 1;
+    #ifdef _OPENMP
+      #pragma omp critical
+    #endif
+    {
+      radfieldbins[modelgridindex][binindex].J_raw += distance * e_cmf;
+      radfieldbins[modelgridindex][binindex].nuJ_raw += distance * e_cmf *
+                                                        nu_cmf;
+      radfieldbins[modelgridindex][binindex].contribcount += 1;
+    }
   }
   else
   {
