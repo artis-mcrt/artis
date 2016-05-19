@@ -230,8 +230,8 @@ int main(int argc, char** argv)
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
-  //int real_time_start = time(NULL);
-  printout("time before input %d\n",time(NULL));
+  int real_time_start = time(NULL);
+  printout("time before input %d\n",real_time_start);
   input(my_rank);
 
   /// Initialise linestat file
@@ -255,7 +255,6 @@ int main(int argc, char** argv)
   printout("time before tabulation of rate coefficients %d\n",time(NULL));
   tabulate_ratecoefficients_gsl();
   printout("time after tabulation of rate coefficients %d\n",time(NULL));
-  printout("time after tabulation of radfield helpers %d\n",time(NULL));
   //abort();
 
   /// As a precaution, explicitly zero all the estimators here
@@ -553,7 +552,7 @@ int main(int argc, char** argv)
         nesc = 0;
 
         /// Update the matter quantities in the grid for the new timestep. */
-        printout("time before update grid %d\n",time(NULL));
+        printout("time before update grid %d (tstart + %d)\n",time(NULL),time(NULL)-real_time_start);
 
         #ifndef FORCE_LTE
           /// Initialise corrphotoionrenorm[i] to zero before update_grid is called
