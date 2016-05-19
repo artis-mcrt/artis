@@ -1245,7 +1245,6 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
     double nne,T_e,T_R,nu;
     double g_ff,g_bf;
     double nnion,nnionlevel,nnlevel,departure_ratio;
-    double sigma_bf;
     int element,ion,level;//,samplecell;
     int Z;
     double nu_edge;
@@ -1349,9 +1348,9 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
                         mastate[tid].element = element;
                         mastate[tid].ion = ion;
                         mastate[tid].level = level;
-                        sigma_bf = photoionization_crosssection(nu_edge,nu);
+                        double sigma_bf = photoionization_crosssection(nu_edge,nu);
 
-                        bef=cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact;
+                        bef = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact;
 
                         sf = calculate_sahafact(element,ion,level,0,T_e,nu_edge*H);
                         helper = nnlevel * sigma_bf;

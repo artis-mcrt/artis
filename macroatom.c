@@ -354,7 +354,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         resonancescatterings += 1;
       }
       else calculate_kappa_rpkt_cont(pkt_ptr,t_current);
-      
+
       /// NB: the r-pkt can only interact with lines redder than the current one
       pkt_ptr->next_trans = linelistindex + 1;
       pkt_ptr->emissiontype = linelistindex;
@@ -1321,8 +1321,6 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   double T_e = get_Te(modelgridindex);
   double nne = get_nne(modelgridindex);
 
-  double nu_lower = epsilon_trans/H;
-  double fac1 = epsilon_trans/KB/T_e;
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge
@@ -1335,6 +1333,8 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   else
     g = 0.3;
 
+  double nu_lower = epsilon_trans/H;
+  double fac1 = epsilon_trans/KB/T_e;
   double sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion,lower,phixstargetindex);
   double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
