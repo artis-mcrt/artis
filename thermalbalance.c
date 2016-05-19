@@ -205,7 +205,7 @@ double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double
 
   //fprintf(heating_file,"%d %g %g %g %g %g %g %g %g\n",modelgridindex,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
 
-  if (neutral_flag == 1) printout("[info] call_T_e_finder: cell %d contains only neutral ions\n",modelgridindex);
+  if (neutral_flag) printout("[info] call_T_e_finder: cell %d contains only neutral ions\n",modelgridindex);
   return T_e;
 }
 

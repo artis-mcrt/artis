@@ -589,7 +589,7 @@ FILE *estimators_file;
 FILE *nlte_file;
 
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
-extern short neutral_flag;
+extern bool neutral_flag;
 
 short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid

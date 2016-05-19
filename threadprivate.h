@@ -1,9 +1,10 @@
 #include "types.h"
+#include <stdbool.h>
 
 int tid;
 short use_cellhist;
 //int histindex;
-short neutral_flag;
+bool neutral_flag;
 gsl_rng *rng;
 
 //int debuglevel;

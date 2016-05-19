@@ -356,7 +356,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
                   modelgrid[n].thick = 1;
                 }
-                else if (grey_optical_depth > cell_is_optically_thick_vpkt )
+                else if (grey_optical_depth > cell_is_optically_thick_vpkt)
                 {
                     modelgrid[n].thick = 2;
                 }
@@ -1502,7 +1502,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   f.function = &nne_solution_f;
   f.params = &paras;
 
-  neutral_flag = 0;
+  neutral_flag = false;
 
   /// Get temperatures
   double T_R = get_TR(modelgridindex);
@@ -1584,7 +1584,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     /// Introduce a flag variable which is sent to the T_e solver so that
     /// we get this info only once when T_e is converged and not for each
     /// iteration step.
-    neutral_flag = 1;
+    neutral_flag = true;
     //printout("[warning] calculate_poulations: only neutral ions in cell %d modelgridindex\n",modelgridindex);
     //exit(0);
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
