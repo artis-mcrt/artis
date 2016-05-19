@@ -33,7 +33,7 @@ double doppler (const double *dir1, const double *vel)
   double ndotv = dot(dir1,vel);
   double fact1 = gamma_rel * (1. - (ndotv/CLIGHT));
 
-  if (fabs(fact1-1) > 0.5)
+  if (fabs(fact1 - 1) > 0.5)
   {
     printout("Dopper factor > 1.05?? Abort.\n");
     exit(0);

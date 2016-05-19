@@ -3,7 +3,6 @@ GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
   CC = cc
-#  CC = gcc-5
 #  CC = gcc-6
 #  CC = clang-omp
   INCLUDE = /usr/local/opt/gsl/include

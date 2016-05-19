@@ -19,7 +19,6 @@ int compare_packets_bymodelgriddensity(const void *p1, const void *p2);
 int update_packets(int nts)
 ///nts the time step we're doing
 {
-  PKT *pkt_ptr;
   //double n_1;
 
   /** At the start, the packets have all either just been initialised or have already been
@@ -49,7 +48,7 @@ int update_packets(int nts)
   printout("start of parallel update_packets loop %d\n",time(NULL));
   /// Initialise the OpenMP reduction target to zero
   #ifdef _OPENMP
-    #pragma omp parallel private(pkt_ptr)
+    #pragma omp parallel
     //copyin(debuglevel,nuJ,J)
     {
       #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
@@ -60,7 +59,7 @@ int update_packets(int nts)
         if (n % 20000 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
         //if (n == 5000) exit(0);
 
-	      pkt_ptr = &pkt[n];
+        PKT *pkt_ptr = &pkt[n];
         pkt_ptr->interactions = 0;
         //pkt_ptr->timestep = nts;
 

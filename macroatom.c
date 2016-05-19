@@ -16,30 +16,24 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   double individ_rad_deexc,individ_col_deexc,individ_internal_down_same,individ_internal_up_same;
   double R,C;
   double rate;
-  double oldnucmf;
 
   double nu_threshold, nu_max_phixs;
   double epsilon_target;
-  double epsilon_trans;
 
   int i,lineindex;
   int linelistindex = -99;
-  int element,upper,lower;
   int nlevels;
 
   int end_packet = 0; ///means "keep working"
   double t_current = t1; ///this will keep track of time in the calculation
   double t_mid = time_step[timestep].mid;
 
-  gsl_integration_workspace *wsp;
   gslintegration_paras intparas;
   gsl_function F_alpha_sp;
   //F_alpha_sp.function = &alpha_sp_integrand_gsl;
   F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-  double error;
-  double nu_lower,deltanu,alpha_sp,total_alpha_sp,alpha_sp_old,nuoffset;
-  wsp = gsl_integration_workspace_alloc(1000);
+  gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1000);
 
   //printout("[debug] do MA\n");
 
@@ -54,13 +48,13 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   double T_e = get_Te(modelgridindex);
   //double T_R = cell[pkt_ptr->where].T_R;
   //double W = cell[pkt_ptr->where].W;
-  element = mastate[tid].element;
+  int element = mastate[tid].element;
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
   /// initialization we should see errors
-  epsilon_trans = -100.;
-  upper = -100;
-  lower = -100;
+  double epsilon_trans = -100.;
+  int upper = -100;
+  int lower = -100;
 
   //debuglevel = 2;
   #ifdef DEBUG_ON
@@ -316,16 +310,20 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           break;
         }
       }
-      if (pkt_ptr->last_event == 1) oldnucmf = pkt_ptr->nu_cmf;
+      double oldnucmf;
+      if (pkt_ptr->last_event == 1)
+        oldnucmf = pkt_ptr->nu_cmf;
       pkt_ptr->nu_cmf = epsilon_trans/H;
       //pkt_ptr->nu_cmf = 3.7474058e+14;
       //if (tid == 0)
       //{
-        if (pkt_ptr->last_event == 1)
-        {
-          if (oldnucmf < pkt_ptr->nu_cmf) upscatter += 1;
-          else downscatter += 1;
-        }
+      if (pkt_ptr->last_event == 1)
+      {
+        if (oldnucmf < pkt_ptr->nu_cmf)
+          upscatter += 1;
+        else
+          downscatter += 1;
+      }
       //}
 
       #ifdef DEBUG_ON
@@ -356,6 +354,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         resonancescatterings += 1;
       }
       else calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      
       /// NB: the r-pkt can only interact with lines redder than the current one
       pkt_ptr->next_trans = linelistindex + 1;
       pkt_ptr->emissiontype = linelistindex;
@@ -485,10 +484,14 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       intparas.T = T_e;
       intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
       F_alpha_sp.params = &intparas;
-      deltanu = nu_threshold * NPHIXSNUINCREMENT;
+      double deltanu = nu_threshold * NPHIXSNUINCREMENT;
       nu_max_phixs = nu_threshold * (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1)); //nu of the uppermost point in the phixs table
+      double error;
+      double total_alpha_sp;
       gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &total_alpha_sp, &error);
-      alpha_sp = total_alpha_sp;
+      double alpha_sp = total_alpha_sp;
+      double alpha_sp_old;
+      double nu_lower;
       for (i = 0; i < NPHIXSPOINTS; i++)
       // LJS: this loop could probably be made a bit faster
       // use the overlap with the previous integral and add on a piece each time instead of recalculating the
@@ -514,8 +517,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       }
       else if (i > 0)
       {
-        nuoffset = (total_alpha_sp*zrand - alpha_sp_old) / (alpha_sp-alpha_sp_old) * deltanu;
-        nu_lower = nu_threshold + (i-1)*deltanu + nuoffset;
+        double nuoffset = (total_alpha_sp*zrand - alpha_sp_old) / (alpha_sp-alpha_sp_old) * deltanu;
+        nu_lower = nu_threshold + (i-1) * deltanu + nuoffset;
       }
       else
         nu_lower = nu_threshold;

@@ -1100,7 +1100,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level,
                                    int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  double integratoraccuracy = 1e-2;
+  double integratorrelaccuracy = 1e-2;
 
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(100000);
 
@@ -1123,7 +1123,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level,
   F_gammacorr.function = &gammacorr_integrand_gsl_radfield;
   F_gammacorr.params = &intparas;
   gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
-                      integratoraccuracy, 1000, 6, w, &gammacorr, &error);
+                      integratorrelaccuracy, 1000, 6, w, &gammacorr, &error);
   gammacorr *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);

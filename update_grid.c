@@ -30,24 +30,14 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //int n;
   //int samplecell;
   //double deltarho;
-  double trat, tratmid;
-  double t_current,t_previous;
-  double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
-                         /// assigned to max_path_step after the parallel update_grid finished.
-
-  double compton_optical_depth;
-  double grey_optical_depth,grey_optical_deptha;
 
   //int first_nonempty_cell = -1000;
-  int assoc_cells;
   //int lastelement = nelements-1;
 
   //temprange_paras paras2;
   //int status;
   //double x_0,x_lo,x_hi;
   //int kpkt_cuts_determined = 0;
-  double deltat,deltaV;
-  double radial_pos;
   //char tempfilename[100],ionfractfilename[100],Gammafilename[100],Alphaspfilename[100];
   //FILE *temperature_file,*ionfract_file,*corrphotoion_file,*thermal_file,*Gamma_file,*Alpha_file,*bfcount_file;
   //FILE *gammaest_file,*gammaana_file;
@@ -58,11 +48,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
    abort();
   }*/
 
-  int tb_info = 0;
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
-  trat = time_step[m].start / tmin;
-  tratmid = time_step[m].mid / tmin;
+  double trat = time_step[m].start / tmin;
+  double tratmid = time_step[m].mid / tmin;
 
+  double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
+                         /// assigned to max_path_step after the parallel update_grid finished.
   for (int i = 0; i < nthreads; i++)
   {
     mps[i] = 1.e35;
@@ -102,7 +93,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   /// Needed to update abundances of radioactive isotopes.
   //double dt_elapsed,dt_forward;
-  t_current = time_step[m].start;
+  double t_current = time_step[m].start;
+  double t_previous;
+  double deltaV;
   if (m == 0)
   {
     t_previous = 0.;
@@ -125,7 +118,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   }
 
   /// and for the volume estimators
-  deltat = t_current-t_previous;  /// length of previous timestep
+  double deltat = t_current - t_previous;  /// length of previous timestep
 
   if (titer == 0)
   {
@@ -215,7 +208,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
       /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
       use_cellhist = -1;
 
-      double T_R,T_e,T_J,W;//,W_D;
+      //double T_R,T_e,T_J,W;//,W_D;
 
       /// All entries of the cellhistory stack must be flagged as empty at the
       /// onset of the new timestep.
@@ -253,7 +246,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
       /// Updating cell information
       #ifdef _OPENMP
-        #pragma omp for private(assoc_cells,radial_pos,tb_info,compton_optical_depth,grey_optical_deptha,grey_optical_depth,T_R,T_J,T_e,W) schedule(dynamic)
+        #pragma omp for schedule(dynamic)
         //T_D,W_D,nne,deltarho_old,deltaT_R_old,deltaT_e_old, deltarho,deltaT_R,deltaT_e,i,rhoindex,T_Rindex,T_eindex,ncl)
       #endif
       //for (n = nstart; n < nstart+nblock; n++)
@@ -266,12 +259,13 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
         {
           /// Check if this task should work on the current model grid cell.
           /// If yes, do update grid
-          assoc_cells = modelgrid[n].associated_cells;
-          radial_pos = modelgrid[n].initial_radial_pos*tratmid/assoc_cells;
+          int assoc_cells = modelgrid[n].associated_cells;
+          double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
           if (assoc_cells > 0)
           {
             int log_this_cell = ((n % 50 == 0) || (npts_model < 50));
             //cellnumber = modelgrid[n].cellnumber;
+            int tb_info = 0;
             if (my_rank % nblock == n) tb_info = 1;
             //if (my_rank % nblock == ncl) tb_info = 1;
             else tb_info = 0;
@@ -287,7 +281,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             /// This is done outside update grid now
             //modelgrid[n].totalcooling = COOLING_UNDEFINED;
 
-            double nne;
             if (opacity_case == 4)
             {
               /// Initialise shortcuts to previous values.
@@ -344,11 +337,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     //    nntot = calculate_populations(n,0);
                     //  }
                 #endif
-                nne = get_nne(n);
-                compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
+                double nne = get_nne(n);
+                double compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
 
-                grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
-                grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
+                double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
+                double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                 if (log_this_cell)
                 {
                   printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
@@ -464,7 +457,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       J_reduced_save[n] = J[n];
                     #endif
 
-                    T_R = pow(PI/STEBO*(J[n]),1./4.);
+                    double T_R = pow(PI/STEBO*(J[n]),1./4.);
                     if (isfinite(T_R))
                     {
                       /// Make sure that T is in the allowed temperature range.
@@ -477,9 +470,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",n);
                       T_R = modelgrid[n].TR;
                     }
-                    T_J = T_R;
-                    T_e = T_R;
-                    W = 1.;
+                    double T_J = T_R;
+                    double T_e = T_R;
+                    double W = 1.;
 
                     modelgrid[n].TR = T_R;
                     modelgrid[n].Te = T_e;
@@ -497,10 +490,10 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     }
                     precalculate_partfuncts(n);
                     calculate_populations(n,0);
-                    nne = get_nne(n);
-                    compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
-                    grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init*tratmid;
-                    grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
+                    double nne = get_nne(n);
+                    double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
+                    double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init*tratmid;
+                    double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
                     if (log_this_cell)
                     {
                       printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
@@ -661,6 +654,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     }
 
                     /// Get radiation field parameters out of the estimators
+                    double T_J, T_R, W;
                     get_radfield_params(J[n],nuJ[n],n,&T_J,&T_R,&W);
                     modelgrid[n].TJ = T_J;
                     modelgrid[n].TR = T_R;
@@ -723,10 +717,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                       /// Find T_e as solution for thermal balance
                       double T_e_old = get_Te(n);
+                      double T_e;
                       if (titer == 0)
                         T_e = call_T_e_finder(n,time_step[m-1].mid,tb_info,MINTEMP,MAXTEMP);
                       else
                         T_e = call_T_e_finder(n,time_step[m].mid,tb_info,MINTEMP,MAXTEMP);
+
                       if (T_e > 2. * T_e_old)
                       {
                         T_e = 2. * T_e_old;
@@ -802,11 +798,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         }
                       #endif
 
-                    nne = get_nne(n);
-                    compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
-                    grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
+                    double nne = get_nne(n);
+                    double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
+                    double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
                     printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
-                    grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
+                    double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                     printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                     modelgrid[n].grey_depth = grey_optical_depth;
 
