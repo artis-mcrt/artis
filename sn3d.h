@@ -137,6 +137,8 @@ int vgrid_flag;
 #define HCLIGHTOVERFOURPI     1.580764662876770e-17
 #define OSCSTRENGTHCONVERSION 1.3473837e+21
 
+#define H_ionpot (13.5979996*EV)
+
 #define MNI56 (56*MH)                            /// Mass of Ni56
 #define MFE52 (52*MH)                            /// Mass of Fe52
 #define MCR48 (48*MH)                            /// Mass of Cr48
@@ -562,7 +564,6 @@ int homogeneous_abundances;
 
 ///Constants for van-Regmorter approximation. Defined in input.c
 double C_0;
-double H_ionpot;
 
 int continue_simulation;
 extern int tid;

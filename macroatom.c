@@ -1123,7 +1123,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
       Gamma = test;
     g_ratio = statweight_target/mastate[tid].statweight;
     //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-    C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+    C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
     //C = 0.0; //TESTING ONLY DELETE THIS
   }
   else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
@@ -1203,8 +1203,9 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       Gamma = g_bar;
     else
       Gamma = test;
+
     //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
-    C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+    C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5 * osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
     //C = 0.0; //TESTING ONLY DELETE THIS
   }
   else if (coll_str(lineindex) > -3.5) //to catch -2 or -3

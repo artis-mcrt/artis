@@ -36,7 +36,6 @@ int input(int rank)
 
   /// Constants for van-Regemorter approximation
   C_0 = 5.465e-11;
-  H_ionpot = 13.5979996*EV;
 
   /// Select grid type
   grid_type = GRID_UNIFORM;
@@ -1658,13 +1657,10 @@ void read_processed_modelatom(FILE *modelatom)
         int nphixstargets;
         fscanf(modelatom,"%d\n",&nphixstargets);
         elements[element].ions[ion].levels[level].nphixstargets = nphixstargets;
-        if (nphixstargets > 0)
+        if ((elements[element].ions[ion].levels[level].phixstargets = (phixstarget_entry *) malloc(nphixstargets*sizeof(phixstarget_entry))) == NULL)
         {
-          if ((elements[element].ions[ion].levels[level].phixstargets = (phixstarget_entry *) malloc(nphixstargets*sizeof(phixstarget_entry))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
-            exit(0);
-          }
+          printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
+          exit(0);
         }
 
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)

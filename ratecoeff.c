@@ -1146,8 +1146,8 @@ double gammacorr_integrand_gsl_radfield(double nu, void *paras)
 
   //TODO: MK thesis page 41, use population ratios and Te
   return sigma_bf / H / nu * radfield(nu,modelgridindex) *
-         (1 - exp(-H * nu / KB / T_R));
-//         (- expm1(-H * nu / KB / T_R));
+         (1 - exp(-HOVERKB * nu / T_R));
+//         (- expm1(-H * nu / KB / T_R));??
 }
 
 
