@@ -46,6 +46,7 @@ int update_packets(int nts)
   //printout("before update packets\n");
 
   printout("start of parallel update_packets loop %d\n",time(NULL));
+  int time_of_last_packet_printout = 0;
   /// Initialise the OpenMP reduction target to zero
   #ifdef _OPENMP
     #pragma omp parallel
@@ -56,7 +57,11 @@ int update_packets(int nts)
       for (int n = 0; n < npkts; n++)
       {
         //printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
-        if (n % 25000 == 0) printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
+        if (time(NULL) - time_of_last_packet_printout > 2)
+        {
+          time_of_last_packet_printout = time(NULL);
+          printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
+        }
         //if (n == 5000) exit(0);
 
         PKT *pkt_ptr = &pkt[n];
