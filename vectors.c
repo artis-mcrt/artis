@@ -5,7 +5,7 @@
 /************************************************************/
 /*Routine for aberation of angles in SR. Takes one direction and velocity
  as input and gives back another direction.*/
-int angle_ab(const double *dir1, const double *vel, double *dir2)
+void angle_ab(const double *dir1, const double *vel, double *dir2)
 {
   double vsqr = dot(vel,vel)/CLIGHTSQUARED;
   double gamma_rel = 1./(sqrt(1 - vsqr));
@@ -17,8 +17,6 @@ int angle_ab(const double *dir1, const double *vel, double *dir2)
   dir2[0] = (dir1[0] - (vel[0] * fact2))/fact1;
   dir2[1] = (dir1[1] - (vel[1] * fact2))/fact1;
   dir2[2] = (dir1[2] - (vel[2] * fact2))/fact1;
-
-  return 0;
 }
 
 
@@ -47,7 +45,7 @@ double doppler (const double *dir1, const double *vel)
 
 /************************************************************/
 /*Routine for scattering a direction through angle theta.*/
-int scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
+void scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
 {
   /*begin with setting the direction in coordinates where original direction
     is parallel to z-hat.*/
@@ -55,7 +53,7 @@ int scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
   double zrand = gsl_rng_uniform(rng);
   double phi = zrand * 2 * PI;
 
-  double sin_theta_sq = 1. - (cos_theta*cos_theta);
+  double sin_theta_sq = 1. - (cos_theta * cos_theta);
   double sin_theta = sqrt(sin_theta_sq);
   double zprime = cos_theta;
   double xprime = sin_theta * cos(phi);
@@ -64,8 +62,8 @@ int scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
   /* Now need to derotate the coordinates back to real x,y,z. */
   /* Rotation matrix is determined by dir_in. */
 
-  double norm1 = 1./(sqrt( (dir_in[0]*dir_in[0]) + (dir_in[1]*dir_in[1])));
-  double norm2 = 1./(sqrt( (dir_in[0]*dir_in[0]) + (dir_in[1]*dir_in[1]) + (dir_in[2]*dir_in[2])));
+  double norm1 = 1./( sqrt( (dir_in[0]*dir_in[0]) + (dir_in[1]*dir_in[1]))) ;
+  double norm2 = 1./( sqrt( (dir_in[0]*dir_in[0]) + (dir_in[1]*dir_in[1]) + (dir_in[2]*dir_in[2])) );
 
   double r11 = dir_in[1] * norm1;
   double r12 = -1 * dir_in[0] * norm1;
@@ -80,6 +78,4 @@ int scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
   dir_out[0] = (r11 * xprime) + (r21 * yprime) + (r31 * zprime);
   dir_out[1] = (r12 * xprime) + (r22 * yprime) + (r32 * zprime);
   dir_out[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
-
-  return 0;
 }

@@ -1024,7 +1024,7 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
           }
         }
       }
-      kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
+      kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB*nu/T_e));
       //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
       kappa_ffheating = kappa_ff;
       //kappa_ff *= 1e5;
@@ -1231,7 +1231,6 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
     }
   #endif
 
-  return;
 }
 
 
