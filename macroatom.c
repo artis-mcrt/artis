@@ -1250,22 +1250,17 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
   int upper = mastate[tid].level;
   double n_u = mastate[tid].nnlevel;
 
-  double nu_lower = epsilon_trans/H;
-  double T_e = get_Te(modelgridindex);
-  double fac1 = epsilon_trans/KB/T_e;
-  double nne = get_nne(modelgridindex);
-
-  double C = 0.0;
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
     {
       ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
       ///select gaunt factor according to ionic charge
+      double T_e = get_Te(modelgridindex);
+      double fac1 = epsilon_trans/KB/T_e;
+      double nne = get_nne(modelgridindex);
       int ionstage = get_ionstage(element,ion);
-      #ifdef DEBUG_ON
-        if (debuglevel == 777) printout("ionstage %d\n",ionstage);
-      #endif
+
       double g;
       if (ionstage-1 == 1)
         g = 0.1;
@@ -1273,15 +1268,11 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
         g = 0.2;
       else
         g = 0.3;
-      mastate[tid].ion = ion-1;      ///the same for mastate[tid].ion
-      mastate[tid].level = lower;    ///set mastate[tid].level the lower level for photoionization_crosssection
-      double sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion-1,lower,phixstargetindex);
-      #ifdef DEBUG_ON
-        if (debuglevel == 777) printout("sigma_bf %g\n",sigma_bf);
-      #endif
-      mastate[tid].ion = ion;
-      mastate[tid].level = upper;    ///restore the old values of pkt_ptr
-      C = n_u * nne * nne * get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans) * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
+
+      double sigma_bf = elements[element].ions[ion-1].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion-1,lower,phixstargetindex);
+
+      double C = n_u * nne * nne * get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans) *
+                 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
       #ifdef DEBUG_ON
         if (debuglevel == 777)
@@ -1296,10 +1287,12 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
           abort();
         }
       #endif
-      break;
+
+      return C;
     }
   }
-  return C;
+
+  return 0.0;
 }
 
 
@@ -1321,7 +1314,6 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   double T_e = get_Te(modelgridindex);
   double nne = get_nne(modelgridindex);
 
-
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge
   double g;
@@ -1333,14 +1325,14 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   else
     g = 0.3;
 
-  double nu_lower = epsilon_trans/H;
   double fac1 = epsilon_trans/KB/T_e;
-  double sigma_bf = photoionization_crosssection(nu_lower, nu_lower) * get_phixsprobability(element,ion,lower,phixstargetindex);
+
+  double sigma_bf = elements[element].ions[ion].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion,lower,phixstargetindex);
   double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
   #ifdef DEBUG_ON
     if (debuglevel == 777)
-    printout("[debug] col_ion: n_l %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_l, nne,T_e,g,epsilon_trans,photoionization_crosssection(nu_lower, nu_lower));
+    printout("[debug] col_ion: n_l %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_l, nne,T_e,g,epsilon_trans,sigma_bf);
     if (!isfinite(C))
     {
       printout("fatal a6: abort\n");
