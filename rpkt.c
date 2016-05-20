@@ -1524,13 +1524,13 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
 int compare_phixslistentry_bynuedge(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  fullphixslist_t *a1, *a2;
-  a1 = (fullphixslist_t *)(p1);
-  a2 = (fullphixslist_t *)(p2);
+  const fullphixslist_t *a1 = (fullphixslist_t *)(p1);
+  const fullphixslist_t *a2 = (fullphixslist_t *)(p2);
 
-  if (a1->nu_edge - a2->nu_edge < 0)
+  double edge_diff = a1->nu_edge - a2->nu_edge;
+  if (edge_diff < 0)
     return -1;
-  else if (a1->nu_edge - a2->nu_edge > 0)
+  else if (edge_diff > 0)
     return 1;
   else
     return 0;
@@ -1542,13 +1542,13 @@ int compare_phixslistentry_bynuedge(const void *p1, const void *p2)
 int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2)
 /// Helper function to sort the groundphixslist by ascending threshold frequency.
 {
-  groundphixslist_t *a1, *a2;
-  a1 = (groundphixslist_t *)(p1);
-  a2 = (groundphixslist_t *)(p2);
+  const groundphixslist_t *a1 = (groundphixslist_t *)(p1);
+  const groundphixslist_t *a2 = (groundphixslist_t *)(p2);
 
-  if (a1->nu_edge - a2->nu_edge < 0)
+  double edge_diff = a1->nu_edge - a2->nu_edge;
+  if (edge_diff < 0)
     return -1;
-  else if (a1->nu_edge - a2->nu_edge > 0)
+  else if (edge_diff > 0)
     return 1;
   else
     return 0;

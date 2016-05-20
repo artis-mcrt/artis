@@ -2422,9 +2422,8 @@ int read_3d_model(void)
 /// Helper function to sort the linelist by frequency.
 int compare_linelistentry(const void *p1, const void *p2)
 {
-  linelist_entry *a1, *a2;
-  a1 = (linelist_entry *)(p1);
-  a2 = (linelist_entry *)(p2);
+  linelist_entry *a1 = (linelist_entry *)(p1);
+  linelist_entry *a2 = (linelist_entry *)(p2);
   //printf("%d %d %d %d %g\n",a1->elementindex,a1->ionindex,a1->lowerlevelindex,a1->upperlevelindex,a1->nu);
   //printf("%d %d %d %d %g\n",a2->elementindex,a2->ionindex,a2->lowerlevelindex,a2->upperlevelindex,a2->nu);
   //printf("%g\n",a2->nu - a1->nu);

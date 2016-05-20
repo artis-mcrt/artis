@@ -387,13 +387,13 @@ void update_cell(int cellnumber)
 int compare_packets_byposition(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  PKT *a1, *a2;
-  a1 = (PKT *)(p1);
-  a2 = (PKT *)(p2);
+  const PKT *a1 = (PKT *)(p1);
+  const PKT *a2 = (PKT *)(p2);
 
-  if (a1->where - a2->where < 0)
+  int cell_diff = a1->where - a2->where;
+  if (cell_diff < 0)
     return -1;
-  else if (a1->where - a2->where > 0)
+  else if (cell_diff > 0)
     return 1;
   else
     return 0;
@@ -404,13 +404,13 @@ int compare_packets_byposition(const void *p1, const void *p2)
 int compare_packets_bymodelgridposition(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  const PKT *a1, *a2;
-  a1 = (PKT *)(p1);
-  a2 = (PKT *)(p2);
+  const PKT *a1 = (PKT *)(p1);
+  const PKT *a2 = (PKT *)(p2);
 
-  if (cell[a1->where].modelgridindex - cell[a2->where].modelgridindex < 0)
+  int mgi_diff = cell[a1->where].modelgridindex - cell[a2->where].modelgridindex;
+  if (mgi_diff < 0)
     return -1;
-  else if (cell[a1->where].modelgridindex - cell[a2->where].modelgridindex > 0)
+  else if (mgi_diff > 0)
     return 1;
   else
     return 0;
@@ -421,13 +421,13 @@ int compare_packets_bymodelgridposition(const void *p1, const void *p2)
 int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by descending cell density.
 {
-  const PKT *a1, *a2;
-  a1 = (PKT *)(p1);
-  a2 = (PKT *)(p2);
+  const PKT *a1 = (PKT *)(p1);
+  const PKT *a2 = (PKT *)(p2);
 
-  if (modelgrid[cell[a1->where].modelgridindex].rho - modelgrid[cell[a2->where].modelgridindex].rho < 0)
+  double rho_diff = modelgrid[cell[a1->where].modelgridindex].rho - modelgrid[cell[a2->where].modelgridindex].rho;
+  if (rho_diff < 0)
     return 1;
-  else if (modelgrid[cell[a1->where].modelgridindex].rho - modelgrid[cell[a2->where].modelgridindex].rho > 0)
+  else if (rho_diff > 0)
     return -1;
   else
     return 0;

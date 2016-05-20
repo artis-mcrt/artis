@@ -395,9 +395,9 @@ typedef struct
   double ionpot;                             /// Ionisation threshold to the next ionstage
   //int nbfcontinua;
   //ionsphixslist_t *phixslist;
-  float *Alpha_sp;
 //  float *zeta;
   levellist_entry *levels;                   /// Carries information for each level: 0,1,...,nlevels-1
+  float *Alpha_sp;
 } ionlist_entry;
 
 typedef struct
@@ -455,7 +455,7 @@ typedef struct
 typedef struct
 {
   float T;
-  float T2;
+//  float T2;
   double nu_edge;
 } gslintegration_paras;
 
