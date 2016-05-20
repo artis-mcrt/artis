@@ -35,28 +35,29 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   double vz = pkt_ptr->dir[2] * CLIGHT_PROP;
   //printout("boundary.c: vx %g, vy %g, vz %g\n",vx,vy,vz);
 
-  double cellxmin = cell[pkt_ptr->where].pos_init[0];
-  double cellymin = cell[pkt_ptr->where].pos_init[1];
-  double cellzmin = cell[pkt_ptr->where].pos_init[2];
+  int pkt_mgi = pkt_ptr->where;
+  double cellxmin = cell[pkt_mgi].pos_init[0];
+  double cellymin = cell[pkt_mgi].pos_init[1];
+  double cellzmin = cell[pkt_mgi].pos_init[2];
   //printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",cellxmin,cellymin,cellzmin);
 
-  double cellxmax = cell[pkt_ptr->where].pos_init[0] + wid_init;
-  double cellymax = cell[pkt_ptr->where].pos_init[1] + wid_init;
-  double cellzmax = cell[pkt_ptr->where].pos_init[2] + wid_init;
+  double cellxmax = cell[pkt_mgi].pos_init[0] + wid_init;
+  double cellymax = cell[pkt_mgi].pos_init[1] + wid_init;
+  double cellzmax = cell[pkt_mgi].pos_init[2] + wid_init;
   //printout("boundary.c: cellxmax %g, cellymax %g, cellzmax %g\n",cellxmax,cellymax,cellzmax);
 
   int not_allowed = pkt_ptr->last_cross;
   if ((((x0 * tmin) - (tstart * cellxmax)) > (-10.*tmin)) && (not_allowed != NEG_X))
   {
-    printout("[warning] outside x boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_ptr->where, x0 * tmin/tstart, cellxmin, cellxmax);
-    printout("[warning] outside x boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_ptr->where, y0 * tmin/tstart, cellymin, cellymax);
-    printout("[warning] outside x boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_ptr->where, z0 * tmin/tstart, cellzmin, cellzmax);
+    printout("[warning] outside x boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_mgi, x0 * tmin/tstart, cellxmin, cellxmax);
+    printout("[warning] outside x boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_mgi, y0 * tmin/tstart, cellymin, cellymax);
+    printout("[warning] outside x boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_mgi, z0 * tmin/tstart, cellzmin, cellzmax);
     printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
     printout("[warning] delta %g\n", cellxmax - (x0 * tmin/tstart));
     printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
     if (((pkt_ptr->dir[0] * CLIGHT) - (x0/tstart)) > 0)
     {
-      *snext = pkt_ptr->where + 1;
+      *snext = pkt_mgi + 1;
       pkt_ptr->last_cross = POS_X;
       return 0;
     }
@@ -68,15 +69,15 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   }
   if ((((x0 * tmin) - (tstart * cellxmin)) < (10.*tmin)) && (not_allowed != POS_X))
   {
-    printout("[warning] outside x boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_ptr->where, x0 * tmin/tstart, cellxmin, cellxmax);
-    printout("[warning] outside x boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_ptr->where, y0 * tmin/tstart, cellymin, cellymax);
-    printout("[warning] outside x boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_ptr->where, z0 * tmin/tstart, cellzmin, cellzmax);
+    printout("[warning] outside x boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_mgi, x0 * tmin/tstart, cellxmin, cellxmax);
+    printout("[warning] outside x boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_mgi, y0 * tmin/tstart, cellymin, cellymax);
+    printout("[warning] outside x boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_mgi, z0 * tmin/tstart, cellzmin, cellzmax);
     printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
     printout("[warning] delta %g\n",  (x0 * tmin/tstart)-cellxmin);
     printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
     if (((pkt_ptr->dir[0] * CLIGHT) - (x0/tstart)) < 0)
     {
-      *snext = pkt_ptr->where - 1;
+      *snext = pkt_mgi - 1;
       pkt_ptr->last_cross = NEG_X;
       return 0;
     }
@@ -88,15 +89,15 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   }
   if ((((y0 * tmin) - (tstart * cellymax)) > (-10.*tmin)) && (not_allowed != NEG_Y))
   {
-    printout("[warning] outside y boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_ptr->where, x0 * tmin/tstart, cellxmin, cellxmax);
-    printout("[warning] outside y boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_ptr->where, y0 * tmin/tstart, cellymin, cellymax);
-    printout("[warning] outside y boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_ptr->where, z0 * tmin/tstart, cellzmin, cellzmax);
+    printout("[warning] outside y boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_mgi, x0 * tmin/tstart, cellxmin, cellxmax);
+    printout("[warning] outside y boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_mgi, y0 * tmin/tstart, cellymin, cellymax);
+    printout("[warning] outside y boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_mgi, z0 * tmin/tstart, cellzmin, cellzmax);
     printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
     printout("[warning] delta %g\n",cellymax - (y0 * tmin/tstart));
     printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
     if (((pkt_ptr->dir[1] * CLIGHT)  - (y0/tstart)) > 0)
     {
-      *snext = pkt_ptr->where + nxgrid;
+      *snext = pkt_mgi + nxgrid;
       pkt_ptr->last_cross = POS_Y;
       return 0;
     }
@@ -108,15 +109,15 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   }
   if ((((y0 * tmin) - (tstart * cellymin)) < (10.*tmin)) && (not_allowed != POS_Y))
   {
-    printout("[warning] outside y boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_ptr->where, x0 * tmin/tstart, cellxmin, cellxmax);
-    printout("[warning] outside y boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_ptr->where, y0 * tmin/tstart, cellymin, cellymax);
-    printout("[warning] outside y boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_ptr->where, z0 * tmin/tstart, cellzmin, cellzmax);
+    printout("[warning] outside y boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_mgi, x0 * tmin/tstart, cellxmin, cellxmax);
+    printout("[warning] outside y boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_mgi, y0 * tmin/tstart, cellymin, cellymax);
+    printout("[warning] outside y boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_mgi, z0 * tmin/tstart, cellzmin, cellzmax);
     printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
     printout("[warning] delta %g\n",  (y0 * tmin/tstart)-cellymin);
     printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
     if (((pkt_ptr->dir[1] * CLIGHT)  - (y0/tstart)) < 0)
     {
-      *snext = pkt_ptr->where - nxgrid;
+      *snext = pkt_mgi - nxgrid;
       pkt_ptr->last_cross = NEG_Y;
       return 0;
     }
@@ -128,15 +129,15 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   }
   if ((((z0 * tmin) - (tstart * cellzmax)) > (-10.*tmin)) && (not_allowed != NEG_Z))
   {
-    printout("[warning] outside z boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_ptr->where, x0 * tmin/tstart, cellxmin, cellxmax);
-    printout("[warning] outside z boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_ptr->where, y0 * tmin/tstart, cellymin, cellymax);
-    printout("[warning] outside z boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_ptr->where, z0 * tmin/tstart, cellzmin, cellzmax);
+    printout("[warning] outside z boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_mgi, x0 * tmin/tstart, cellxmin, cellxmax);
+    printout("[warning] outside z boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_mgi, y0 * tmin/tstart, cellymin, cellymax);
+    printout("[warning] outside z boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_mgi, z0 * tmin/tstart, cellzmin, cellzmax);
     printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
     printout("[warning] delta %g\n",  cellzmax - (z0 * tmin/tstart));
     printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
     if (((pkt_ptr->dir[2] * CLIGHT)  - (z0/tstart)) > 0)
     {
-      *snext = pkt_ptr->where + (nxgrid*nygrid);
+      *snext = pkt_mgi + (nxgrid*nygrid);
       pkt_ptr->last_cross = POS_Z;
       return 0;
     }
@@ -148,15 +149,15 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   }
   if ((((z0 * tmin) - (tstart * cellzmin)) < (10.*tmin)) && (not_allowed != POS_Z))
   {
-    printout("[warning] outside z boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_ptr->where, x0 * tmin/tstart, cellxmin, cellxmax);
-    printout("[warning] outside z boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_ptr->where, y0 * tmin/tstart, cellymin, cellymax);
-    printout("[warning] outside z boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_ptr->where, z0 * tmin/tstart, cellzmin, cellzmax);
+    printout("[warning] outside z boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", pkt_mgi, x0 * tmin/tstart, cellxmin, cellxmax);
+    printout("[warning] outside z boundary of cell %d. y0 %g, cellymin %g, cellymax %g. Abort?\n", pkt_mgi, y0 * tmin/tstart, cellymin, cellymax);
+    printout("[warning] outside z boundary of cell %d. z0 %g, cellzmin %g, cellzmax %g. Abort?\n", pkt_mgi, z0 * tmin/tstart, cellzmin, cellzmax);
     printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
     printout("[warning] delta %g\n",  (z0 * tmin/tstart)-cellzmin);
     printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
     if (((pkt_ptr->dir[2] * CLIGHT)  - (z0/tstart)) < 0)
     {
-      *snext = pkt_ptr->where - (nxgrid*nygrid);
+      *snext = pkt_mgi - (nxgrid*nygrid);
       pkt_ptr->last_cross = NEG_Z;
       return 0;
     }
@@ -196,13 +197,13 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   {
     choice = 1;
     time = tx_plus;
-    if (cell[pkt_ptr->where].xyz[0] == (nxgrid - 1))
+    if (cell[pkt_mgi].xyz[0] == (nxgrid - 1))
     {
       *snext = -99;
     }
     else
     {
-      *snext = pkt_ptr->where + 1;
+      *snext = pkt_mgi + 1;
       pkt_ptr->last_cross = POS_X;
     }
   }
@@ -217,13 +218,13 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   {
     choice = 2;
     time = tx_minus;
-    if (cell[pkt_ptr->where].xyz[0] == 0)
+    if (cell[pkt_mgi].xyz[0] == 0)
     {
       *snext = -99;
     }
     else
     {
-      *snext = pkt_ptr->where - 1;
+      *snext = pkt_mgi - 1;
       pkt_ptr->last_cross = NEG_X;
     }
   }
@@ -238,13 +239,13 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   {
     choice = 3;
     time = ty_plus;
-    if (cell[pkt_ptr->where].xyz[1] == (nygrid - 1))
+    if (cell[pkt_mgi].xyz[1] == (nygrid - 1))
     {
       *snext = -99;
     }
     else
     {
-      *snext = pkt_ptr->where + nxgrid;
+      *snext = pkt_mgi + nxgrid;
       pkt_ptr->last_cross = POS_Y;
     }
   }
@@ -259,13 +260,13 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   {
     choice = 4;
     time = ty_minus;
-    if (cell[pkt_ptr->where].xyz[1] == 0)
+    if (cell[pkt_mgi].xyz[1] == 0)
     {
       *snext = -99;
     }
     else
     {
-      *snext = pkt_ptr->where - nxgrid;
+      *snext = pkt_mgi - nxgrid;
       pkt_ptr->last_cross = NEG_Y;
     }
   }
@@ -280,13 +281,13 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   {
     choice = 5;
     time = tz_plus;
-    if (cell[pkt_ptr->where].xyz[2] == (nzgrid - 1))
+    if (cell[pkt_mgi].xyz[2] == (nzgrid - 1))
     {
       *snext = -99;
     }
     else
     {
-      *snext = pkt_ptr->where + (nxgrid*nygrid);
+      *snext = pkt_mgi + (nxgrid*nygrid);
       pkt_ptr->last_cross = POS_Z;
     }
   }
@@ -301,13 +302,13 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
   {
     choice = 6;
     time = tz_minus;
-    if (cell[pkt_ptr->where].xyz[2] == 0)
+    if (cell[pkt_mgi].xyz[2] == 0)
     {
       *snext = -99;
     }
     else
     {
-      *snext = pkt_ptr->where - (nxgrid*nygrid);
+      *snext = pkt_mgi - (nxgrid*nygrid);
       pkt_ptr->last_cross = NEG_Z;
     }
   }
@@ -347,12 +348,11 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
 
 ///****************************************************************************
 /// Routine to take a packet across a boundary.
-int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
+void change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
 {
   //void copy_populations_to_phixslist();
   //void calculate_kpkt_rates(int cellnumber);
   //int element, ion, level;
-  int oldpos,mgi,old_mgi;
 
   #ifdef DEBUG_ON
     if (debuglevel == 2)
@@ -371,15 +371,14 @@ int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
     pkt_ptr->type = TYPE_ESCAPE;
     nesc += 1;
     *end_packet = 1;
-    return 0;
   }
   else
   {
     /** Just need to update "where".*/
-    oldpos = pkt_ptr->where;
-    old_mgi = cell[pkt_ptr->where].modelgridindex;
+    //int oldpos = pkt_ptr->where;
+    int old_mgi = cell[pkt_ptr->where].modelgridindex;
     pkt_ptr->where = snext;
-    mgi = cell[pkt_ptr->where].modelgridindex;
+    int mgi = cell[pkt_ptr->where].modelgridindex;
     /*
     double cellwidth = t_current/tmin * wid_init;
     if (pkt_ptr->last_cross == POS_X)
@@ -521,7 +520,6 @@ int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
   }
     */
 
-    return 0;
   }
 }
 
@@ -532,7 +530,6 @@ int change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
 int change_cell_vpkt(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
 {
   //int element, ion, level;
-  int oldpos,mgi,old_mgi;
 
   #ifdef DEBUG_ON
     if (debuglevel == 2)
@@ -555,10 +552,9 @@ int change_cell_vpkt(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
   else
   {
       /** Just need to update "where".*/
-      oldpos = pkt_ptr->where;
-      old_mgi = cell[pkt_ptr->where].modelgridindex;
+      //int oldpos = pkt_ptr->where;
+      //int old_mgi = cell[pkt_ptr->where].modelgridindex;
       pkt_ptr->where = snext;
-      mgi = cell[pkt_ptr->where].modelgridindex;
 
       cellcrossings += 1;
 
