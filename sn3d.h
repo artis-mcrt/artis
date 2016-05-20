@@ -51,8 +51,8 @@
 
 // Input parameters
 int Nobs;
-double nz_obs_vpkt[MOBS] ;
-double phiobs[MOBS] ;
+double nz_obs_vpkt[MOBS];
+double phiobs[MOBS];
 double tmin_vspec, tmax_vspec;
 double Nrange;
 double lmin_vspec[MRANGE], lmax_vspec[MRANGE];
@@ -71,13 +71,13 @@ float lower_freq_vspec[VMNUBINS];
 float delta_freq_vspec[VMNUBINS];
 
 
-int realtype ;
+int realtype;
 /* number of virtual packets in a given timestep */
-int nvpkt ;
+int nvpkt;
 /* number of escaped virtual packet in a given timestep (with tau < tau_max) */
-int nvpkt_esc1 ; /* electron scattering event */
-int nvpkt_esc2 ; /* kpkt deactivation */
-int nvpkt_esc3 ; /* macroatom deactivation */
+int nvpkt_esc1; /* electron scattering event */
+int nvpkt_esc2; /* kpkt deactivation */
+int nvpkt_esc3; /* macroatom deactivation */
 
 
 
@@ -94,7 +94,7 @@ struct vgrid
     double zvel[MRANGE_GRID][MOBS];
 } vgrid_i[NY_VGRID][NZ_VGRID], vgrid_q[NY_VGRID][NZ_VGRID], vgrid_u[NY_VGRID][NZ_VGRID];
 
-double Nrange_grid, tmin_grid, tmax_grid, nu_grid_min[MRANGE_GRID], nu_grid_max[MRANGE_GRID] ;
+double Nrange_grid, tmin_grid, tmax_grid, nu_grid_min[MRANGE_GRID], nu_grid_max[MRANGE_GRID];
 int vgrid_flag;
 
 

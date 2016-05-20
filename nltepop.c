@@ -51,7 +51,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         superlevel_partfunc[ion] = 0.0;
         for (int level = 1; level < get_nlevels(element,ion); level++)
         {
-          if (is_nlte(element, ion, level) == 0)
+          if (is_nlte(element, ion, level) == false)
             superlevel_partfunc[ion] += superlevel_boltzmann(modelgridindex,element,ion,level);
         }
         printout("(plus a superlevel with partfunc %g)\n",superlevel_partfunc[ion]);
@@ -113,7 +113,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
           double s_renorm = 1.0;
 
-          if ((level != 0) && (is_nlte(element,ion,level) != 1))
+          if ((level != 0) && (is_nlte(element,ion,level) == false))
             s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level)/superlevel_partfunc[ion];
 
           rate_matrix[upper_index * nlte_dimension + upper_index] -= (R + C) * s_renorm;
@@ -146,7 +146,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
           double s_renorm = 1.0;
 
-          if ((level != 0) && (is_nlte(element,ion,level) != 1))
+          if ((level != 0) && (is_nlte(element,ion,level) == false))
             s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level)/superlevel_partfunc[ion];
 
           rate_matrix[lower_index * nlte_dimension + lower_index] -= (R + C) * s_renorm;
@@ -166,7 +166,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
             double s_renorm = 1.0;
 
-            if ((level != 0) && (is_nlte(element,ion,level) != 1))
+            if ((level != 0) && (is_nlte(element,ion,level) == false))
             {
               s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level) / superlevel_partfunc[ion];
             }
@@ -201,7 +201,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             //double C = 0.0; //TODO: remove, testing only
 
             double s_renorm = 1.0;
-            if ((level != 0) && (is_nlte(element,ion,level) != 1))
+            if ((level != 0) && (is_nlte(element,ion,level) == false))
               s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level)/superlevel_partfunc[ion];
 
             rate_matrix[lower_index * nlte_dimension + lower_index] -= (R + C) * s_renorm;
@@ -230,7 +230,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             //printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
 
             double s_renorm = 1.0;
-            if ((upper != 0) && (is_nlte(element,ion+1,upper) != 1))
+            if ((upper != 0) && (is_nlte(element,ion+1,upper) == false))
               s_renorm = superlevel_boltzmann(modelgridindex,element,ion+1,upper)/superlevel_partfunc[ion+1];
 
             rate_matrix[upper_index * nlte_dimension + upper_index] -= (R + C) * s_renorm;
@@ -254,11 +254,11 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
       pop_norm_factors[column] = calculate_levelpop_lte(modelgridindex,element,ion,level);
 
-      if ((level != 0) && (is_nlte(element,ion,level) != 1))
+      if ((level != 0) && (is_nlte(element,ion,level) == false))
       { //level is a superlevel, so add populations of higher levels to the norm factor
         for (int dummylevel = level+1; dummylevel < get_nlevels(element,ion); dummylevel++)
         {
-          if (is_nlte(element,ion,dummylevel) != 1)
+          if (is_nlte(element,ion,dummylevel) == false)
             pop_norm_factors[column] += calculate_levelpop_lte(modelgridindex,element,ion,dummylevel);
         }
         //NOTE: above calulation is not always the sum of LTE populations,
@@ -457,7 +457,7 @@ int get_nlte_vector_index(int element_in, int ion_in, int level_in)
       index += 1; // there's a superlevel here
   }
   int nlevels_nlte = get_nlevels_nlte(element_in,ion_in);
-  if (is_nlte(element_in, ion_in, level_in) == 1)
+  if (is_nlte(element_in, ion_in, level_in) == true)
     index += level_in;
   else
     index += nlevels_nlte + 1; //the index of the superlevel

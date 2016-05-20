@@ -3,7 +3,8 @@
 
 #include "sn3d.h"
 
-double last_phixs_nuovernuedge; // last photion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+
 
 static inline
 int get_element(int element)
@@ -11,6 +12,7 @@ int get_element(int element)
 {
   return elements[element].anumber;
 }
+
 
 static inline
 int get_elementindex(int Z)
@@ -30,6 +32,7 @@ int get_elementindex(int Z)
   //exit(0);
   return -100;
 }
+
 
 static inline
 int get_nions(int element)
@@ -56,6 +59,7 @@ int get_nlevels(int element, int ion)
 {
   return elements[element].ions[ion].nlevels;
 }
+
 
 static inline
 int get_nlevels_nlte(int element, int ion)
@@ -87,11 +91,13 @@ static inline
 double stat_weight(int element, int ion, int level)
 /// Returns the statistical weight of (element,ion,level).
 {
+  #ifdef DEBUG_ON
   if (level > elements[element].ions[ion].nlevels)
   {
     printout("[fatal] stat_weight: level %d greater than nlevels=%d ... abort\n",level,elements[element].ions[ion].nlevels);
     exit(0);
   }
+  #endif
   return elements[element].ions[ion].levels[level].stat_weight;
 }
 
@@ -110,14 +116,14 @@ int get_bfcontinua(int element, int ion)
 
 
 static inline
-short is_nlte(int element, int ion, int level)
+bool is_nlte(int element, int ion, int level)
 // Returns 1 if (element,ion,level) is to be treated in nlte.
 // (note this function gives 1 for the ground state)
 {
   if (level < 100) //TODO: change back to 200
-    elements[element].ions[ion].levels[level].is_nlte = 1;
+    elements[element].ions[ion].levels[level].is_nlte = true;
   else
-    elements[element].ions[ion].levels[level].is_nlte = 0;
+    elements[element].ions[ion].levels[level].is_nlte = false;
 
   return elements[element].ions[ion].levels[level].is_nlte;
 }
@@ -140,7 +146,9 @@ int get_nphixstargets(int element, int ion, int level)
   if ((ion < nions-1) && (level < nionisinglevels))
     return elements[element].ions[ion].levels[level].nphixstargets;
   else
+  {
     return 0;
+  }
 }
 
 
@@ -149,7 +157,7 @@ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
   #ifdef DEBUG_ON
-    if ((phixstargetindex < 0) || (phixstargetindex >= get_nphixstargets(element,ion,level)))
+    if ((phixstargetindex < 0) || (phixstargetindex > get_nphixstargets(element,ion,level)-1))
     {
       printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex");
       printout("arguments: element %d, ion %d, level %d phixstargetindex %d, nphixstargets %d\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
@@ -200,9 +208,7 @@ double einstein_spontaneous_emission(int lineindex)
   int index = (upper-lower) - 1;
   double A_ul = elements[element].ions[ion].levels[upper].transitions[index].einstein_A;
 */
-  double A_ul = linelist[lineindex].einstein_A;
-
-  return A_ul;
+  return linelist[lineindex].einstein_A;
 }
 
 

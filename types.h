@@ -1,6 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -168,7 +169,7 @@ struct packet
   int em_time;
   double absorptiondir[3]; /// Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a unit vector.
   //short timestep;
-  double stokes[3]; //I, Q and U Stokes parameters TODO: DELETE AFTER MERGE Polarisation
+  double stokes[3]; //I, Q and U Stokes parameters
   double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
 };
@@ -316,7 +317,7 @@ typedef struct
   double epsilon;
   short stat_weight;
   int lineindex;
-} permittedtransitionlist_entry; // this now includes forbidden transitions, so consider renaming?
+} permittedtransitionlist_entry; // TODO: this now includes forbidden transitions, so consider renaming?
 
 /*
 typedef struct
@@ -344,7 +345,7 @@ typedef struct
   short stat_weight;                         /// Statistical weight of this level.
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   short metastable;                          /// 1 if the level is metastable, else 0
-  short is_nlte;                             /// 1 if the level is to
+  bool is_nlte;                             /// 1 if the level is to
                                              /// be treated in nlte
 
 //  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.

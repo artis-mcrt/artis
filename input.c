@@ -1234,7 +1234,7 @@ void read_atomicdata(void)
         {
           for (int level = 1; level < nlevels; level++)
           {
-            if (is_nlte(element,ion,level) == 1)
+            if (is_nlte(element,ion,level))
             {
               count++;
               total_nlte_levels++;
@@ -1274,7 +1274,7 @@ void read_phixs_data(void)
   int Z,upperion,upperlevel,lowerion,lowerlevel;
   while (fscanf(phixsdata,"%d %d %d %d %d\n",&Z,&upperion,&upperlevel,&lowerion,&lowerlevel) != EOF)
   {
-    int skip_this_phixs_table = 0;
+    bool skip_this_phixs_table = false;
     //printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel, %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
     /// translate readin anumber to element index
     int element = get_elementindex(Z);
@@ -1343,6 +1343,7 @@ void read_phixs_data(void)
                 printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
                 exit(0);
               }
+              // send it to the ground state of the top ion
               elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
               elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
               elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
@@ -1401,18 +1402,18 @@ void read_phixs_data(void)
 
           //nbfcontinua += 1;
           //printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
-          skip_this_phixs_table = 0;
+          skip_this_phixs_table = false;
       }
       else
       {
-        skip_this_phixs_table = 1;
+        skip_this_phixs_table = true;
       }
     }
     else
     {
-      skip_this_phixs_table = 1;
+      skip_this_phixs_table = true;
     }
-    if (skip_this_phixs_table == 1) // for ions or elements that are not part of the current model atom, proceed through the lines and throw away the data
+    if (skip_this_phixs_table) // for ions or elements that are not part of the current model atom, proceed through the lines and throw away the data
     {
       if (upperlevel < 0) // a table of target states and probabilities exists, so read through those lines
       {
@@ -1657,10 +1658,13 @@ void read_processed_modelatom(FILE *modelatom)
         int nphixstargets;
         fscanf(modelatom,"%d\n",&nphixstargets);
         elements[element].ions[ion].levels[level].nphixstargets = nphixstargets;
-        if ((elements[element].ions[ion].levels[level].phixstargets = (phixstarget_entry *) malloc(nphixstargets*sizeof(phixstarget_entry))) == NULL)
+        if (nphixstargets > 0)
         {
-          printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
-          exit(0);
+          if ((elements[element].ions[ion].levels[level].phixstargets = (phixstarget_entry *) malloc(nphixstargets*sizeof(phixstarget_entry))) == NULL)
+          {
+            printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
+            exit(0);
+          }
         }
 
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)

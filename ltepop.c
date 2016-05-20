@@ -709,7 +709,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     nn = get_groundlevelpop(modelgridindex,element,ion);
   }
 #ifdef NLTE_POPS_ON
-  else if (is_nlte(element,ion,level) == 1)
+  else if (is_nlte(element,ion,level))
   {
     //printout("Using an nlte population!\n");
     if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
