@@ -51,11 +51,11 @@ typedef struct
 typedef struct
 {
   double contribution;
-  short type;
-  short element;
-  short ion;
-  short level;
-  short upperlevel;
+  int type;
+  int element;
+  int ion;
+  int level;
+  int upperlevel;
   int lineindex;
 } cellhistorycoolinglist_t;
 
@@ -100,15 +100,14 @@ typedef struct
 
 typedef struct
 {
+  int element;
+  int ion;
+  int level;          ///limited to 32767 levels
+  int index_in_groundphixslist;
   double nu_edge;
   double kappa_bf_contr;
-  short element;
-  short ion;
-  short level;          ///limited to 32767 levels
-  int index_in_groundphixslist;
   //double nnlevel;
 } fullphixslist_t;
-
 
 typedef struct
 {
@@ -117,9 +116,9 @@ typedef struct
   double gamma_contr;
   //double stimrecomb_contr;
   //double bfheating_contr;
-  short element;
-  short ion;
-  short level;          ///limited to 32767 levels
+  int element;
+  int ion;
+  int level;          ///limited to 32767 levels
 } groundphixslist_t;
 
 
@@ -313,9 +312,9 @@ typedef struct syn_ray RAY;
 
 typedef struct
 {
-  short targetlevel;
+  int targetlevel;
   double epsilon;
-  short stat_weight;
+  int stat_weight;
   int lineindex;
 } permittedtransitionlist_entry; // TODO: this now includes forbidden transitions, so consider renaming?
 
@@ -330,7 +329,7 @@ typedef struct
 
 typedef struct
 {
-  short levelindex;         // index of upper ion level after photoionisation
+  int levelindex;         // index of upper ion level after photoionisation
   float probability;        // fraction of phixs cross section leading to this final level
 
   double *spontrecombcoeff;
@@ -342,9 +341,9 @@ typedef struct
 typedef struct
 {
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
-  short stat_weight;                         /// Statistical weight of this level.
+  int stat_weight;                         /// Statistical weight of this level.
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
-  short metastable;                          /// 1 if the level is metastable, else 0
+  int metastable;                          /// 1 if the level is metastable, else 0
   bool is_nlte;                             /// 1 if the level is to
                                              /// be treated in nlte
 
@@ -419,24 +418,24 @@ typedef struct
   float einstein_A;
   float osc_strength;
   float coll_str;
-  short elementindex;                        /// It's a transition of element (not its atomic number,
+  int elementindex;                        /// It's a transition of element (not its atomic number,
                                              /// but the (x-1)th element included in the simulation.
-  short ionindex;                            /// The same for the elements ion
-  short upperlevelindex;                     /// And the participating upper
-  short lowerlevelindex;                     /// and lower levels
+  int ionindex;                            /// The same for the elements ion
+  int upperlevelindex;                     /// And the participating upper
+  int lowerlevelindex;                     /// and lower levels
 } linelist_entry;
 
 typedef struct
 {
-  short elementindex;
-  short ionindex;
-  short levelindex;
+  int elementindex;
+  int ionindex;
+  int levelindex;
 } bflist_t;
 
 typedef struct
 {
-  short lower;
-  short upper;
+  int lower;
+  int upper;
   double A;
   double coll_str;
 } transitiontable_entry;  /// only used temporarily during input

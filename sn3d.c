@@ -115,6 +115,7 @@ int main(int argc, char** argv)
   #ifdef GIT_VERSION
     printout("Current version: %s\n",GIT_VERSION);
   #endif
+
   //printout("Hash of most recent commit: %s\n",GIT_HASH);
   printout("Compiled at %s on %s\n",__TIME__,__DATE__);
 
