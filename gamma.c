@@ -237,12 +237,14 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       printout("Negative distance (sdist). Abort?\n");
       sdist = 0;
     }
+
     if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
     {
       printout("Heading for inappropriate grid cell. Abort.\n");
       printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
       exit(0);
     }
+    
     if (sdist > max_path_step)
     {
       sdist = max_path_step;

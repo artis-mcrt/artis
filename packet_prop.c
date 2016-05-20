@@ -22,7 +22,8 @@ int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
     double t_change_type;
     /* Start by sorting out what sort of packet it is.*/
     //printout("start of packet_prop loop %d\n", pkt_ptr->type );
-    int pkt_prev_type = pkt_ptr->type; // avoid dereferencing multiple timnes
+    int pkt_prev_type = pkt_ptr->type; // avoid dereferencing multiple times
+
     if (pkt_prev_type == TYPE_GAMMA)
     {
       /*It's a gamma-ray packet.*/
