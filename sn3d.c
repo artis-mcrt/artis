@@ -1122,6 +1122,7 @@ int main(int argc, char** argv)
               for (int i = 0; i < nlines; i++)
                 fprintf(linestat_file,"%d ", acounter[i]);
               fprintf(linestat_file,"\n");
+              fflush(linestat_file);
 
               ///Old style
               //for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g %d %d %d %d %d %d\n", CLIGHT/linelist[i].nu, get_element(linelist[i].elementindex), get_ionstage(linelist[i].elementindex,linelist[i].ionindex), linelist[i].upperlevelindex+1, linelist[i].lowerlevelindex+1,ecounter_reduced[i],acounter_reduced[i]);
@@ -1428,13 +1429,13 @@ int printout(const char *restrict format, ...)
 
 FILE *initialise_linestat_file(void)
 {
+  printout("Initialising linestat file...");
   FILE *linestat_file;
   if ((linestat_file = fopen("linestat.out", "w")) == NULL)
   {
     printout("Cannot open line_stat.out.\n");
     exit(0);
   }
-  setvbuf(linestat_file, NULL, _IOLBF, 1);
 
   for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
     fprintf(linestat_file,"\n");
@@ -1451,6 +1452,10 @@ FILE *initialise_linestat_file(void)
   for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
     fprintf(linestat_file,"\n");
 
+  fflush(linestat_file);
+  //setvbuf(linestat_file, NULL, _IOLBF, 1); //flush after every line makes it slow!
+
+  printout("done.\n");
   return linestat_file;
 }
 
