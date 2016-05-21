@@ -1429,7 +1429,6 @@ int printout(const char *restrict format, ...)
 
 FILE *initialise_linestat_file(void)
 {
-  printout("Initialising linestat file...");
   FILE *linestat_file;
   if ((linestat_file = fopen("linestat.out", "w")) == NULL)
   {
@@ -1455,7 +1454,6 @@ FILE *initialise_linestat_file(void)
   fflush(linestat_file);
   //setvbuf(linestat_file, NULL, _IOLBF, 1); //flush after every line makes it slow!
 
-  printout("done.\n");
   return linestat_file;
 }
 
