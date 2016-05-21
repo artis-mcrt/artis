@@ -281,8 +281,8 @@ typedef struct
 #define MGAM_LINES 30 /* Max gamma ray lines per nucleus.*/
 struct gamma_ll
 {
-  int type[3*MGAM_LINES]; /* is it a Ni, Co or fake line */
-  int index[3*MGAM_LINES]; /* which of the lines of that element is it */
+  int type[3 * MGAM_LINES]; /* is it a Ni, Co or fake line */
+  int index[3 * MGAM_LINES]; /* which of the lines of that element is it */
   int total;         /* the total number of lines in the list */
 };
 typedef struct gamma_ll LIST;
