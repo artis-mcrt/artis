@@ -36,9 +36,6 @@ double min(double a, double b)
 double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  double edist;
-  int rpkt_eventtype;
-
   int mgi = cell[pkt_ptr->where].modelgridindex;
 
   double t_current = t1; ///this will keep track of time in the calculation
@@ -48,7 +45,6 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
   int end_packet = 0; ///means "keep working"
   while (end_packet == 0)
   {
-    int find_nextline = 0;
 
     /*
     int i;
@@ -70,7 +66,6 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
     optical depth for this path.*/
     double zrand = gsl_rng_uniform(rng);
     double tau_next = -1. * log(zrand);
-    double tau_current = 0.0;
 
     /** Start by finding the distance to the crossing of the grid cell
     boundaries. sdist is the boundary distance and snext is the
@@ -130,6 +125,9 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 
       //if (cell[pkt_ptr->where].nne < 1e-40)
       //if (get_nne(cell[pkt_ptr->where].modelgridindex) < 1e-40)
+      double edist;
+      int rpkt_eventtype;
+      int find_nextline = 0;
       if (mgi == MMODELGRID)
       {
         /// for empty cells no physical event occurs. The packets just propagate.
@@ -148,6 +146,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         double vel_vec[3];
         get_velocity(pkt_ptr->pos, vel_vec, t_current);
         kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
+        double tau_current = 0.0;
         edist = (tau_next - tau_current) / kappa;
         find_nextline = 1;
         #ifdef DEBUG_ON
@@ -236,7 +235,8 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         #endif
         /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
         /// find the next possible line interaction.
-        if (find_nextline == 1) closest_transition_empty(pkt_ptr);
+        if (find_nextline == 1)
+          closest_transition_empty(pkt_ptr);
         end_packet = 1;
       }
       else if ((edist < sdist) && (edist < tdist))
@@ -263,6 +263,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
           rpkt_event_thickcell(pkt_ptr,t_current);
         else
           rpkt_event(pkt_ptr,rpkt_eventtype,t_current);
+
         if (pkt_ptr->type != TYPE_RPKT)
         {
           /** It's not an r-packet any more - return.*/
@@ -484,7 +485,7 @@ double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t
 
   pkt_ptr->next_trans = dummypkt_ptr->next_trans;
   #ifdef DEBUG_ON
-    if (edist >= 0 || edist < 0)
+    if (isfinite(edist))
       return edist;
     else
     {
@@ -503,13 +504,10 @@ double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t
 ///****************************************************************************
 int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
 {
-  double zrand;
   //double nnionlevel,nnlevel,nne;
-  double nu_edge;
   //double ma_prob,p_maactivate,p_bf,prob;
   //double departure_ratio,corr_photoion;
   //double sigma_bf;
-  double kappa_bf_sum;
 
   //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
 
@@ -519,13 +517,10 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
   //double T_e = get_Te(modelgridindex);
   double nu = pkt_ptr->nu_cmf;
 
-  double kappa_cont = kappa_rpkt_cont[tid].total;;
+  double kappa_cont = kappa_rpkt_cont[tid].total;
   double sigma = kappa_rpkt_cont[tid].es;
   double kappa_ff = kappa_rpkt_cont[tid].ff;
   double kappa_bf = kappa_rpkt_cont[tid].bf;
-
-  int element,ion,upper,level;
-  int i;
 
   if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
   {
@@ -562,7 +557,7 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
   else
   {
     /// else: continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
-    zrand = gsl_rng_uniform(rng);
+    double zrand = gsl_rng_uniform(rng);
     #ifdef DEBUG_ON
       if (debuglevel == 2) printout("[debug] rpkt_event: r-pkt undergoes a continuum transition\n");
       if (debuglevel == 2) printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand*kappa_cont,sigma,kappa_ff,kappa_bf);
@@ -624,18 +619,18 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
 
       /// Determine in which continuum the bf-absorption occurs
       zrand = gsl_rng_uniform(rng);
-      kappa_bf_sum = 0.;
+      double kappa_bf_sum = 0.;
+      int i;
       for (i = 0; i < nbfcontinua; i++)
       {
         kappa_bf_sum += phixslist[tid].allcont[i].kappa_bf_contr;
         if (kappa_bf_sum > zrand*kappa_bf_inrest)
         {
-          nu_edge = phixslist[tid].allcont[i].nu_edge;
+          double nu_edge = phixslist[tid].allcont[i].nu_edge;
           //if (nu < nu_edge) printout("does this ever happen?\n");
-          element = phixslist[tid].allcont[i].element;
-          ion = phixslist[tid].allcont[i].ion;
-          level = phixslist[tid].allcont[i].level;
-          upper = 0;
+          int element = phixslist[tid].allcont[i].element;
+          int ion = phixslist[tid].allcont[i].ion;
+          int level = phixslist[tid].allcont[i].level;
 
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n",element,ion+1,0,ion,level);
@@ -658,6 +653,7 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
             #endif
             mastate[tid].element = element;
             mastate[tid].ion     = ion+1;
+            int upper = 0; //TODO: this should come from phixsupperlevel;
             mastate[tid].level   = upper;
             mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
             mastate[tid].activatingline = -99;
@@ -880,12 +876,10 @@ double closest_transition_empty(PKT *pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
-  int match;
   //int left = 0;
   int left = pkt_ptr->next_trans;
   //printout("[debug] closest_transition: initial left %d\n",left);
-  int right = nlines-1;
-  int middle = 1;
+  int right = nlines - 1;
 
   //printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,pkt_ptr->nu_cmf);
   //printout("[debug] ___closest_transition___: nu_left %g, nu_right%g\n",linelist[left].nu,linelist[right].nu);
@@ -903,6 +897,7 @@ double closest_transition_empty(PKT *pkt_ptr)
     return -1;
   }
 
+  int match;
   /// no check for left > 0 in the empty case as it is possible that the packet is moved over
   /// several lines through the empty cell
   if (pkt_ptr->nu_cmf >= linelist[left].nu)
@@ -917,6 +912,7 @@ double closest_transition_empty(PKT *pkt_ptr)
     /// entries in the line list and get the index of the closest line
     /// to lower frequencies
 
+    int middle = 1;
     while (left <= right)  ///must be a "<=" to obtain proper search results!!!
                           ///access to negative array indices is prevented by the upper check
     {
@@ -1231,13 +1227,11 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
 ///****************************************************************************
 void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
 {
-    double vel_vec[3];
     double sigma;
     double kappa_ffheating = 0.;//,kappa_bfheating;
     double g_ff;
     double nnion,nnionlevel,nnlevel,departure_ratio;
     int element,ion,level;//,samplecell;
-    int Z;
     double nu_edge;
     int i,nions;
     double sf,check;
@@ -1288,7 +1282,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
                     //Z = get_element(element);  ///atomic number
                     //if (get_ionstage(element,ion) > 1)
                     /// Z is ionic charge in the following formula
-                    Z = get_ionstage(element,ion)-1;
+                    int Z = get_ionstage(element,ion)-1;
                     if (Z > 0)
                     {
                         //kappa_ff += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
@@ -1430,7 +1424,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
             /// in the other cases kappa_grey is an mass absorption coefficient
             /// therefore use the mass density
             //sigma = cell[pkt_ptr->where].kappa_grey * cell[pkt_ptr->where].rho;
-            sigma = SIGMA_T*nne;
+            //sigma = SIGMA_T*nne;
 
             sigma = 0.;
             /*
@@ -1449,7 +1443,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
                     ///calculate population of ionstage ...
                     nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
                     /// Z is ionic charge in the following formula
-                    Z = get_ionstage(element,ion)-1;
+                    int Z = get_ionstage(element,ion)-1;
                     if (Z > 0)
                     {
                         kappa_ff += pow(Z,2) * g_ff * nnion;
@@ -1461,6 +1455,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
         }
 
         /// Now need to convert between frames.
+        double vel_vec[3];
         get_velocity(pkt_ptr->pos, vel_vec, t_current);
         sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
         kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
@@ -1583,7 +1578,6 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
     optical depth for this path.*/
     double zrand = gsl_rng_uniform(rng);
     double tau_next = -1. * log(zrand);
-    double tau_current = 0.0;
 
     /** Start by finding the distance to the crossing of the grid cell
     boundaries. sdist is the boundary distance and snext is the
@@ -1637,6 +1631,7 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
       double vel_vec[3];
       get_velocity(pkt_ptr->pos, vel_vec, t_current);
       kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
+      double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
       if (edist < 0)
       {
