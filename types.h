@@ -340,6 +340,10 @@ typedef struct
 
 typedef struct
 {
+  float *photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int nphixstargets;                       /// length of phixstargets array:
+  phixstarget_entry *phixstargets;         /// pointer to table of target states and probabilities
+
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
   int stat_weight;                         /// Statistical weight of this level.
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
@@ -348,9 +352,6 @@ typedef struct
                                              /// be treated in nlte
 
 //  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.
-  float *photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
-  int nphixstargets;                       /// length of phixstargets array:
-  phixstarget_entry *phixstargets;         /// pointer to table of target states and probabilities
 
 //   double *spontrecombcoeff_E;
 //   double *photoioncoeff_below;

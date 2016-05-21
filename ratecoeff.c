@@ -12,6 +12,7 @@ typedef struct
 {
   int modelgridindex;
   double nu_edge;
+  float *photoion_xs;
 } gsl_integral_paras_gammacorr;
 
 
@@ -1104,9 +1105,6 @@ double calculate_corrphotoioncoeff(int element, int ion, int level,
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
-  mastate[tid].level = element;  //passed to photoionization_crosssection
-  mastate[tid].level = ion;
-  mastate[tid].level = level;
 
   double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
   double nu_threshold = E_threshold / H;
@@ -1115,6 +1113,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level,
   gsl_integral_paras_gammacorr intparas;
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
+  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
 
   double gammacorr = 0.0;
   gsl_function F_gammacorr;
@@ -1136,16 +1135,26 @@ double gammacorr_integrand_gsl_radfield(double nu, void *paras)
 {
   int modelgridindex = ((gsl_integral_paras_gammacorr *) paras)->modelgridindex;
   double nu_edge = ((gsl_integral_paras_gammacorr *) paras)->nu_edge;
+  float *photoion_xs = ((gsl_integral_paras_gammacorr *) paras)->photoion_xs;
 
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection(nu_edge, nu);
 
   double T_R = get_TR(modelgridindex);
 
+  int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
+
+  #ifdef DEBUG_ON
+  /*if (i > NPHIXSPOINTS-1)
+  {
+    printout("gammacorr_integrand_gsl_radfield called with nu > nu_edge * %g",last_phixs_nuovernuedge);
+    abort();
+  }*/
+  #endif
+
   //TODO: MK thesis page 41, use population ratios and Te
-  return sigma_bf / H / nu * radfield(nu,modelgridindex) *
+  return ONEOVERH * photoion_xs[i] / nu * radfield(nu,modelgridindex) *
          (1 - exp(-HOVERKB * nu / T_R));
 }
 

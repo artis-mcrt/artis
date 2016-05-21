@@ -131,6 +131,7 @@ int vgrid_flag;
 #define TWOHOVERCLIGHTSQUARED 1.4745007e-47
 #define CLIGHTSQUAREDOVERTWOH 6.7819570e+46
 
+#define ONEOVERH              1.509188961e+26
 #define HOVERKB               4.799243681748932e-11
 #define FOURPI                1.256637061600000e+01
 #define ONEOVER4PI            7.957747153555701e-02
