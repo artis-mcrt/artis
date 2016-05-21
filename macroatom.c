@@ -212,7 +212,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         {
           upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-          R = photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+          R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
           C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
           internal_up_higher += (R + C) * epsilon_current;
         }
@@ -256,7 +256,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         {
           upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-          R += photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+          R += get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
           C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
           printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g, saved_internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current,cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher);
         }
@@ -731,7 +731,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       {
         upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
         epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-        R = photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+        R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
         C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
         rate += (R + C) * epsilon_current;
         if (zrand*internal_up_higher < rate) break;
@@ -809,7 +809,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           {
             upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            R = photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+            R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
             C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
             printout("[debug]    ionisation to ion %d, level %d, epsilon_trans %g, R %g, C %g\n",ion+1,upper,epsilon_trans,R,C);
             break;
@@ -1306,11 +1306,13 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   int lower = mastate[tid].level;
   double n_l = mastate[tid].nnlevel;
 
+  #ifdef DEBUG_ON
   if (phixstargetindex > get_nphixstargets(element,ion,lower))
   {
     printout("[fatal] col_ionization called with phixstargetindex %g > nphixstargets %g",phixstargetindex,get_nphixstargets(element,ion,lower));
     abort();
   }
+  #endif
 
   double T_e = get_Te(modelgridindex);
   double nne = get_nne(modelgridindex);
