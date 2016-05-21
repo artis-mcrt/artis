@@ -36,20 +36,8 @@ double min(double a, double b)
 double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  double vel_vec[3];
-
-  double zrand, tau_next, tau_current, tdist;
-  double sdist, edist;
-  int snext;
-  int find_nextline;
+  double edist;
   int rpkt_eventtype;
-
-  double kappa, kappa_cont, sigma, kappa_ff, kappa_bf;
-  double *kappacont_ptr, *sigma_ptr, *kappaff_ptr, *kappabf_ptr;
-  kappacont_ptr = &kappa_cont;
-  sigma_ptr = &sigma;
-  kappaff_ptr = &kappa_ff;
-  kappabf_ptr = &kappa_bf;
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
 
@@ -60,7 +48,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
   int end_packet = 0; ///means "keep working"
   while (end_packet == 0)
   {
-    find_nextline = 0;
+    int find_nextline = 0;
 
     /*
     int i;
@@ -80,14 +68,15 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
     //it += 1;
     /** Assign optical depth to next physical event. And start counter of
     optical depth for this path.*/
-    zrand = gsl_rng_uniform(rng);
-    tau_next = -1. * log(zrand);
-    tau_current = 0.0;
+    double zrand = gsl_rng_uniform(rng);
+    double tau_next = -1. * log(zrand);
+    double tau_current = 0.0;
 
     /** Start by finding the distance to the crossing of the grid cell
     boundaries. sdist is the boundary distance and snext is the
     grid cell into which we pass.*/
-    sdist = boundary_cross(pkt_ptr, t_current, &snext);
+    int snext;
+    double sdist = boundary_cross(pkt_ptr, t_current, &snext);
 
     if (sdist == 0)
     {
@@ -118,6 +107,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
         abort();
       }
+
       if (sdist > max_path_step)
       {
         sdist = max_path_step;
@@ -130,7 +120,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
 
       /** Find how far it can travel during the time inverval. */
 
-      tdist = (t2 - t_current) * CLIGHT_PROP;
+      double tdist = (t2 - t_current) * CLIGHT_PROP;
 
       if (tdist < 0)
       {
@@ -154,7 +144,8 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
         /// Get distance to the next physical event in this case only electron scattering
         //kappa = SIGMA_T*get_nne(mgi);
-        kappa = get_kappagrey(mgi)*get_rho(mgi);
+        double kappa = get_kappagrey(mgi) * get_rho(mgi);
+        double vel_vec[3];
         get_velocity(pkt_ptr->pos, vel_vec, t_current);
         kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
         edist = (tau_next - tau_current) / kappa;
@@ -1011,7 +1002,7 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
           //Z = get_element(element);  ///atomic number
           //if (get_ionstage(element,ion) > 1)
           /// Z is ionic charge in the following formula
-          int Z = get_ionstage(element,ion)-1;
+          int Z = get_ionstage(element,ion) - 1;
           if (Z > 0)
           {
             //kappa_ff += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
@@ -1071,6 +1062,7 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
                 check += 0.;
               else
                 check += helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
+
               if ((level == 0) && (phixstargetindex == 0))
               {
                 int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
@@ -1152,7 +1144,7 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
       /// in the other cases kappa_grey is an mass absorption coefficient
       /// therefore use the mass density
       //sigma = cell[pkt_ptr->where].kappa_grey * cell[pkt_ptr->where].rho;
-      sigma = SIGMA_T * nne;
+      //sigma = SIGMA_T * nne;
 
       sigma = 0.;
       /*
@@ -1199,6 +1191,7 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
     //kappa_bfheating = 0.;
   }
 
+
   kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_ff;
   #ifdef DEBUG_ON
     if (debuglevel == 2) printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
@@ -1241,8 +1234,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
     double vel_vec[3];
     double sigma;
     double kappa_ffheating = 0.;//,kappa_bfheating;
-    double nne,T_e,T_R,nu;
-    double g_ff,g_bf;
+    double g_ff;
     double nnion,nnionlevel,nnlevel,departure_ratio;
     int element,ion,level;//,samplecell;
     int Z;
@@ -1264,12 +1256,12 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
     {
         if (opacity_case == 4)
         {
-            nne = get_nne(modelgridindex);
-            T_e = get_Te(modelgridindex);
-            T_R = get_TR(modelgridindex);
-            nu = pkt_ptr->nu_cmf;
+            double nne = get_nne(modelgridindex);
+            double T_e = get_Te(modelgridindex);
+            //double T_R = get_TR(modelgridindex);
+            double nu = pkt_ptr->nu_cmf;
             g_ff = 1;
-            g_bf = 1;
+            //double g_bf = 1;
 
             /// First contribution: Thomson scattering on free electrons
             sigma = SIGMA_T * nne;
@@ -1353,7 +1345,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
 
                         sf = calculate_sahafact(element,ion,level,0,T_e,nu_edge*H);
                         helper = nnlevel * sigma_bf;
-                        departure_ratio = nnionlevel/nnlevel * nne*sf; ///put that to phixslist
+                        departure_ratio = nnionlevel / nnlevel * nne * sf; ///put that to phixslist
                         if (nnlevel == 0.) check = 0.;
                         else check = helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
 
@@ -1430,11 +1422,11 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
         }
         else
         {
-            nne = get_nne(modelgridindex);
-            T_e = get_Te(modelgridindex);
-            T_R = get_TR(modelgridindex);
+            double nne = get_nne(modelgridindex);
+            double T_e = get_Te(modelgridindex);
+            //double T_R = get_TR(modelgridindex);
             g_ff = 1;
-            nu = pkt_ptr->nu_cmf;
+            double nu = pkt_ptr->nu_cmf;
             /// in the other cases kappa_grey is an mass absorption coefficient
             /// therefore use the mass density
             //sigma = cell[pkt_ptr->where].kappa_grey * cell[pkt_ptr->where].rho;
@@ -1501,7 +1493,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
         printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont[tid].es,kappa_rpkt_cont[tid].ff,kappa_rpkt_cont[tid].bf);
         printout("[fatal] nbfcontinua %d\n",nbfcontinua);
         printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
-        printout("[fatal] pkt_ptr->nu_cmf %g, T_e %g, nne %g\n",pkt_ptr->nu_cmf,T_e,nne);
+        printout("[fatal] pkt_ptr->nu_cmf %g, T_e %g, nne %g\n",pkt_ptr->nu_cmf,get_Te(modelgridindex),get_nne(modelgridindex));
         if (isfinite(kappa_rpkt_cont[tid].es))
         {
             kappa_rpkt_cont[tid].ff = 0.;
@@ -1559,18 +1551,9 @@ int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2)
 double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  double vel_vec[3];
-
   double tdist;
   double edist;
   int snext;
-
-  double kappa, kappa_cont, sigma, kappa_ff, kappa_bf;
-  double *kappacont_ptr, *sigma_ptr, *kappaff_ptr, *kappabf_ptr;
-  kappacont_ptr = &kappa_cont;
-  sigma_ptr = &sigma;
-  kappaff_ptr = &kappa_ff;
-  kappabf_ptr = &kappa_bf;
 
   double t_current = t1; ///this will keep track of time in the calculation
   //printout("[debug] r-pkt propagation init\n");
@@ -1650,7 +1633,8 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
 
       /// Get distance to the next physical event in this case only electron scattering
       //kappa = SIGMA_T*get_nne(cell[pkt_ptr->where].modelgridindex);
-      kappa = get_kappagrey(cell[pkt_ptr->where].modelgridindex) * get_rho(cell[pkt_ptr->where].modelgridindex);
+      double kappa = get_kappagrey(cell[pkt_ptr->where].modelgridindex) * get_rho(cell[pkt_ptr->where].modelgridindex);
+      double vel_vec[3];
       get_velocity(pkt_ptr->pos, vel_vec, t_current);
       kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
       edist = (tau_next - tau_current) / kappa;
