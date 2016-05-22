@@ -1051,10 +1051,8 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
               double sf = get_sahafact(element,ion,level,phixstargetindex,T_e,nu_edge*H);
               double helper = nnlevel * sigma_bf * get_phixsprobability(element,ion,level,phixstargetindex);
               double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
-              if (nnlevel == 0.)
-                check += 0.;
-              else
-                check += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
+
+              check += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
 
               if ((level == 0) && (phixstargetindex == 0))
               {
