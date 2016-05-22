@@ -6,7 +6,7 @@
 
 // private functions
 int setup_packets(int pktnumberoffset);
-int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset);
+void place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset);
 
 
 int packet_init(int middle_iteration, int my_rank)
@@ -73,7 +73,7 @@ int packet_init(int middle_iteration, int my_rank)
 }
 
 
-int setup_packets (int pktnumberoffset)
+int setup_packets(int pktnumberoffset)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
   CELL *grid_ptr;
@@ -118,39 +118,41 @@ int setup_packets (int pktnumberoffset)
 
   int n = 0;
   int packet_reset = 0;
+  printout("starting loop over npkts\n");
   while (n < npkts)
   {
     /// Get random number.
     int mabove = ngrid;
     int mbelow = 0;
     double zrand = gsl_rng_uniform(rng);
-    int m;
 
-    while (mabove != (mbelow+1))
+    while (mabove != (mbelow + 1))
     {
-      if (mabove == (mbelow + 2))
-        m = mbelow + 1;
-      else
-        m = (mabove + mbelow)/2;
+      int m;
 
-      if (cont[m] > (zrand*norm))
+      if (mabove != (mbelow + 2))
+        m = (mabove + mbelow) / 2;
+      else
+        m = mbelow + 1;
+
+      if (cont[m] > (zrand * norm))
         mabove = m;
       else
         mbelow = m;
     }
 
-    if (cont[mbelow] > (zrand*norm))
+    if (cont[mbelow] > (zrand * norm))
     {
       printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand*norm);
       exit(0);
     }
-    if ((cont[mabove] < (zrand*norm)) && (mabove != ngrid))
+    if ((cont[mabove] < (zrand * norm)) && (mabove != ngrid))
     {
       printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand*norm);
       exit(0);
     }
 
-    m = mbelow;
+    int m = mbelow;
     //printout("chosen cell %d (%d, %g, %g)\n", m, ngrid, zrand, norm);
     //exit(0);
     /*
@@ -189,7 +191,7 @@ int setup_packets (int pktnumberoffset)
     #endif
   }
 
-  /// Some fraction of the packets we reasigned because they were not going
+  /// Some fraction of the packets we reassigned because they were not going
   /// to activate in the time of interest so need to renormalise energies
   /// to account for this.
   for (int n = 0; n < npkts; n++)
@@ -325,11 +327,9 @@ double f48cr(const CELL *grid_ptr)
 
 
 ///***************************************************************************/
-int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset)
+void place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
-  double prob_chain[3];
-
   /// First choose a position for the pellet. In the cell.
   /// n is the index of the packet. m is the index for the grid cell.
   pkt[n].where = m;
@@ -344,16 +344,17 @@ int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnu
 
 
   /*first choose which of the decay chains to sample*/
-  prob_chain[0] = fni(grid_ptr) * (ENICKEL + ECOBALT)/MNI56;
-  prob_chain[1] = f52fe(grid_ptr) * (E52FE + E52MN)/MFE52;
-  prob_chain[2] = f48cr(grid_ptr) * (E48V + E48CR)/MCR48;
+  double prob_chain[3];
+  prob_chain[0] = fni(grid_ptr) * (ENICKEL + ECOBALT) / MNI56;
+  prob_chain[1] = f52fe(grid_ptr) * (E52FE + E52MN) / MFE52;
+  prob_chain[2] = f48cr(grid_ptr) * (E48V + E48CR) / MCR48;
 
   double zrand3 = gsl_rng_uniform(rng) * (prob_chain[0] + prob_chain[1] + prob_chain[2]);
+  zrand = gsl_rng_uniform(rng);
   if (zrand3 <= prob_chain[0])
   {
     /// Now choose whether it's going to be a nickel or cobalt pellet and
     /// mark it as such.
-    zrand = gsl_rng_uniform(rng);
     if (zrand < (ENICKEL / (ENICKEL + ECOBALT)))
     {
       pkt[n].type = TYPE_NICKEL_PELLET;
@@ -362,14 +363,10 @@ int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnu
     {
       zrand = gsl_rng_uniform(rng);
 
-      if (zrand < ECOBALT_GAMMA/ECOBALT)
-      {
+      if (zrand < ECOBALT_GAMMA / ECOBALT)
         pkt[n].type = TYPE_COBALT_PELLET;
-      }
       else
-      {
         pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
-      }
     }
 
     /// Now choose the decay time.
@@ -385,19 +382,14 @@ int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnu
       pkt[n].tdecay = (-TNICKEL * log(zrand)) + (-TCOBALT * log(zrand2));
     }
   }
-  else if (zrand3 <= (prob_chain[0]+prob_chain[1]))
+  else if (zrand3 <= (prob_chain[0] + prob_chain[1]))
   {
     /// Now choose whether it's going to be a 52Fe or 52Mn pellet and
     /// mark it as such.
-    zrand = gsl_rng_uniform(rng);
     if (zrand < (E52FE / (E52FE + E52MN)))
-    {
       pkt[n].type = TYPE_52FE_PELLET;
-    }
     else
-    {
       pkt[n].type = TYPE_52MN_PELLET;
-    }
 
     /// Now choose the decay time.
     if (pkt[n].type == TYPE_52FE_PELLET)
@@ -418,13 +410,10 @@ int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnu
     /// mark it as such.
     zrand = gsl_rng_uniform(rng);
     if (zrand < (E48CR / (E48CR + E48V)))
-    {
       pkt[n].type = TYPE_48CR_PELLET;
-    }
     else
-    {
       pkt[n].type = TYPE_48V_PELLET;
-    }
+
     /// Now choose the decay time.
     if (pkt[n].type == TYPE_48CR_PELLET)
     {
@@ -438,11 +427,10 @@ int place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnu
       pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
     }
   }
-
   /// Now assign the energy to the pellet.
   pkt[n].e_cmf = e0;
 
-  return 0;
+  return;
 }
 
 
