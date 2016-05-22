@@ -16,7 +16,7 @@ double find_T_e(double T_e, void *paras);
 
 
 ///****************************************************************************
-double call_T_e_finder(int modelgridindex, double t_current, int tb_info, double T_min, double T_max)
+double call_T_e_finder(int modelgridindex, double t_current, double T_min, double T_max)
 {
   double fractional_accuracy = 1e-2;
   int maxit = 100;

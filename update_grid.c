@@ -265,10 +265,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           {
             int log_this_cell = ((n % 50 == 0) || (npts_model < 50));
             //cellnumber = modelgrid[n].cellnumber;
-            int tb_info = 0;
-            if (my_rank % nblock == n) tb_info = 1;
+            //int tb_info;
+            //if (my_rank % nblock == n)
+            //  tb_info = 1;
             //if (my_rank % nblock == ncl) tb_info = 1;
-            else tb_info = 0;
+            //else
+            //  tb_info = 0;
             /// Update current mass density of cell
             //n = nonemptycells[my_rank+ncl*nprocs];
             if (log_this_cell)
@@ -719,9 +721,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       double T_e_old = get_Te(n);
                       double T_e;
                       if (titer == 0)
-                        T_e = call_T_e_finder(n,time_step[m-1].mid,tb_info,MINTEMP,MAXTEMP);
+                        T_e = call_T_e_finder(n,time_step[m-1].mid,MINTEMP,MAXTEMP);
                       else
-                        T_e = call_T_e_finder(n,time_step[m].mid,tb_info,MINTEMP,MAXTEMP);
+                        T_e = call_T_e_finder(n,time_step[m].mid,MINTEMP,MAXTEMP);
 
                       if (T_e > 2. * T_e_old)
                       {
@@ -1478,9 +1480,6 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 {
   double nne_lo,nne_hi,nne_check,nne_tot;
   double nnelement,nnion;
-  int element;
-  int nions;
-  int iter;
   double nntot;
   double nne = 0.;
 
@@ -1491,7 +1490,6 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   solver = gsl_root_fsolver_alloc(solvertype);
   double fractional_accuracy = 1e-3;
   int maxit = 100;
-  int status;
   int uppermost_ion,only_neutral_ions,i,nelements_in_cell;
   double factor,abundance;
 
@@ -1517,9 +1515,9 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
   only_neutral_ions = 0;
   nelements_in_cell = 0;
-  for (element = 0; element < nelements; element++)
+  for (int element = 0; element < nelements; element++)
   {
-    nions = get_nions(element);
+    int nions = get_nions(element);
     //elements[element].uppermost_ion = nions-1;
     elements_uppermost_ion[tid][element] = nions-1;
     abundance = get_abundance(modelgridindex,element);
@@ -1589,10 +1587,10 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     //exit(0);
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
 
-    for (element = 0; element < nelements; element++)
+    for (int element = 0; element < nelements; element++)
     {
       abundance = get_abundance(modelgridindex,element);
-      nions = get_nions(element);
+      int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
@@ -1630,7 +1628,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
       printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
       #ifndef FORCE_LTE
-        for (element = 0; element < nelements; element++)
+        for (int element = 0; element < nelements; element++)
         {
           //printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements[element].uppermost_ion);
           printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements_uppermost_ion[tid][element]);
@@ -1644,7 +1642,8 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       #endif
     }
     gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
-    iter = 0;
+    int iter = 0;
+    int status;
     do
     {
       iter++;
@@ -1670,10 +1669,10 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
                     /// targets for compton scattering of gamma rays
 
     nntot = nne;
-    for (element = 0; element < nelements; element++)
+    for (int element = 0; element < nelements; element++)
     {
       abundance = get_abundance(modelgridindex,element);
-      nions = get_nions(element);
+      int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
