@@ -5,11 +5,11 @@
 
 
 // private functions
-int setup_packets(int pktnumberoffset);
+void setup_packets(int pktnumberoffset);
 void place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset);
 
 
-int packet_init(int middle_iteration, int my_rank)
+void packet_init(int middle_iteration, int my_rank)
 {
   if (!continue_simulation)
   {
@@ -68,12 +68,10 @@ int packet_init(int middle_iteration, int my_rank)
   }
     */
   }
-
-  return 0;
 }
 
 
-int setup_packets(int pktnumberoffset)
+void setup_packets(int pktnumberoffset)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
   CELL *grid_ptr;
@@ -200,8 +198,6 @@ int setup_packets(int pktnumberoffset)
     pkt[n].interactions = 0;
   }
   printout("radioactive energy which will be freed during simulation time %g\n", etot*npkts/(npkts+packet_reset));
-
-  return 0;
 }
 
 
@@ -429,8 +425,6 @@ void place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktn
   }
   /// Now assign the energy to the pellet.
   pkt[n].e_cmf = e0;
-
-  return;
 }
 
 

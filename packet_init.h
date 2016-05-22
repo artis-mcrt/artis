@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-int packet_init(int middle_iteration, int my_rank);
+void packet_init(int middle_iteration, int my_rank);
 double fni(const CELL *grid_ptr);
 double f52fe(const CELL *grid_ptr);
 double f48cr(const CELL *grid_ptr);
