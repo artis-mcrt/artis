@@ -964,15 +964,12 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
   double sigma = 0.0;
   if (do_r_lc == 1)
   {
+    double nne = get_nne(modelgridindex);
+    double T_e = get_Te(modelgridindex);
+    double nu = pkt_ptr->nu_cmf;
+    double g_ff = 1;
     if (opacity_case == 4)
     {
-      double nne = get_nne(modelgridindex);
-      double T_e = get_Te(modelgridindex);
-      //double T_R = get_TR(modelgridindex);
-      double nu = pkt_ptr->nu_cmf;
-      double g_ff = 1;
-      //double g_bf = 1;
-
       /// First contribution: Thomson scattering on free electrons
       sigma = SIGMA_T * nne;
       //reduced e/s for debugging
@@ -1062,7 +1059,6 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
               if ((level == 0) && (phixstargetindex == 0))
               {
                 int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
-                double corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
                 double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
                 if (corrfactor < 0)
                   corrfactor = 1;
@@ -1133,11 +1129,6 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
     }
     else
     {
-      double nne = get_nne(modelgridindex);
-      double T_e = get_Te(modelgridindex);
-      //double T_R = get_TR(modelgridindex);
-      double g_ff = 1;
-      double nu = pkt_ptr->nu_cmf;
       /// in the other cases kappa_grey is an mass absorption coefficient
       /// therefore use the mass density
       //sigma = cell[pkt_ptr->where].kappa_grey * cell[pkt_ptr->where].rho;
