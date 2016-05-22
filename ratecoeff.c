@@ -1095,10 +1095,8 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 }*/
 
 
-double calculate_corrphotoioncoeff(int element, int ion, int level,
-                                   int phixstargetindex, int modelgridindex)
+double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  double error = 0.0;
   double integratorrelaccuracy = 1e-2;
 
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
@@ -1119,6 +1117,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level,
   gsl_function F_gammacorr;
   F_gammacorr.function = &gammacorr_integrand_gsl_radfield;
   F_gammacorr.params = &intparas;
+  double error = 0.0;
   gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
                       integratorrelaccuracy, 1000, 4, w, &gammacorr, &error);
   gammacorr *= FOURPI * phixstargetprobability;
@@ -1133,9 +1132,10 @@ double gammacorr_integrand_gsl_radfield(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  int modelgridindex = ((gsl_integral_paras_gammacorr *) paras)->modelgridindex;
-  double nu_edge = ((gsl_integral_paras_gammacorr *) paras)->nu_edge;
-  float *photoion_xs = ((gsl_integral_paras_gammacorr *) paras)->photoion_xs;
+  gsl_integral_paras_gammacorr localparas = *((gsl_integral_paras_gammacorr*) paras);
+  int modelgridindex = localparas.modelgridindex;
+  double nu_edge = localparas.nu_edge;
+  float *photoion_xs = localparas.photoion_xs;
 
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
