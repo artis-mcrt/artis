@@ -1011,7 +1011,7 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
           }
         }
       }
-      kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB*nu/T_e));
+      kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
       //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
       kappa_ffheating = kappa_ff;
       //kappa_ff *= 1e5;
@@ -1057,12 +1057,13 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
               if (nnlevel == 0.)
                 check += 0.;
               else
-                check += helper * (1 - departure_ratio * exp(-HOVERKB*nu/T_e));
+                check += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
 
               if ((level == 0) && (phixstargetindex == 0))
               {
                 int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
                 double corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
+                double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
                 if (corrfactor < 0)
                   corrfactor = 1;
                 phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * corrfactor * get_phixsprobability(element,ion,level,phixstargetindex);
@@ -1166,7 +1167,7 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
           }
         }
       }
-      kappa_ff *= 1e5 * 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
+      kappa_ff *= 1e5 * 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
       kappa_bf = 0.;
     }
 
