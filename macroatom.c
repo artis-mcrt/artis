@@ -1040,6 +1040,7 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
 
 
 ///***************************************************************************/
+// this should go soon! replace with direct calls to get_corrphotoioncoeff instead.
 double photoionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
 ///photoionization rate: paperII 3.5.2
 {
