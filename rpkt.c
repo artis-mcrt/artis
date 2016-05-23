@@ -1044,7 +1044,28 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
             mastate[tid].level = level;
             double sigma_bf = photoionization_crosssection(nu_edge,nu);
             double check = 0.0; //corrfactor
-            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+            int nphixstargets = get_nphixstargets(element,ion,level);
+            if (nphixstargets > 0)
+            {
+              int upper = get_phixsupperlevel(element,ion,level,0);
+              double nnionlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
+              double sf = get_sahafact(element,ion,level,0,T_e,nu_edge*H);
+              float probability = get_phixsprobability(element,ion,level,0);
+              double helper = nnlevel * sigma_bf * probability;
+              double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+
+              check = helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
+
+              if (level == 0)
+              {
+                int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+                double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
+                if (corrfactor < 0)
+                  corrfactor = 1;
+                phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * probability * corrfactor;
+              }
+            }
+            for (int phixstargetindex = 1; phixstargetindex < nphixstargets; phixstargetindex++)
             {
               int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
               double nnionlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
@@ -1053,15 +1074,6 @@ void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
               double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
               check += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
-
-              if ((level == 0) && (phixstargetindex == 0))
-              {
-                int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
-                double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
-                if (corrfactor < 0)
-                  corrfactor = 1;
-                phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * corrfactor * get_phixsprobability(element,ion,level,phixstargetindex);
-              }
             }
 
             if (check <= 0)
