@@ -132,7 +132,6 @@ typedef struct
 
 struct packet
 {
-  int number;     /// A unique number to identify which packet caused potential troubles.
   int where;      /// The grid cell that the packet is in.
   int type;       /// Identifies the type of packet (k-, r-, etc.)
   double pos[3];  /// Position of the packet (x,y,z).
@@ -171,6 +170,7 @@ struct packet
   double stokes[3]; //I, Q and U Stokes parameters
   double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
+  int number;     /// A unique number to identify which packet caused potential troubles.
 };
 typedef struct packet PKT;
 
@@ -341,15 +341,13 @@ typedef struct
 typedef struct
 {
   float *restrict photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
-  int nphixstargets;                       /// length of phixstargets array:
   phixstarget_entry *restrict phixstargets;         /// pointer to table of target states and probabilities
+  int nphixstargets;                       /// length of phixstargets array:
 
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
-  int stat_weight;                         /// Statistical weight of this level.
+  int stat_weight;                           /// Statistical weight of this level.
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
-  int metastable;                          /// 1 if the level is metastable, else 0
-  bool is_nlte;                             /// 1 if the level is to
-                                             /// be treated in nlte
+  int metastable;                            /// 1 if the level is metastable, else 0
 
 //  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.
 
@@ -382,10 +380,13 @@ typedef struct
   permittedtransitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
   permittedtransitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
   int closestgroundlevelcont;
+  bool is_nlte;                              /// 1 if the level is to
+                                             /// be treated in nlte
 } levellist_entry;
 
 typedef struct
 {
+  levellist_entry *restrict levels;                   /// Carries information for each level: 0,1,...,nlevels-1
   int ionstage;                            /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels;                               /// Number of levels for this ionisation stage
   int nlevels_nlte;                          /// number of nlte levels for this ion
@@ -397,20 +398,19 @@ typedef struct
   //int nbfcontinua;
   //ionsphixslist_t *phixslist;
 //  float *zeta;
-  levellist_entry *restrict levels;                   /// Carries information for each level: 0,1,...,nlevels-1
   float *Alpha_sp;
 } ionlist_entry;
 
 typedef struct
 {
-  int anumber;                             /// Atomic number
+  ionlist_entry *restrict ions;                       /// Carries information for each ion: 0,1,...,nions-1
   int nions;                               /// Number of ions for the current element
+  int anumber;                             /// Atomic number
 //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given cell
 //                                             /// Be aware that this must not be used outside of the update_grid routine
 //                                             /// and their daughters. Neither it will work with OpenMP threads.
   float abundance;                           ///
   float mass;                                /// Atomic mass number in multiple of MH
-  ionlist_entry *restrict ions;                       /// Carries information for each ion: 0,1,...,nions-1
 } elementlist_entry;
 
 typedef struct
@@ -420,7 +420,7 @@ typedef struct
   float osc_strength;
   float coll_str;
   int elementindex;                        /// It's a transition of element (not its atomic number,
-                                             /// but the (x-1)th element included in the simulation.
+                                           /// but the (x-1)th element included in the simulation.
   int ionindex;                            /// The same for the elements ion
   int upperlevelindex;                     /// And the participating upper
   int lowerlevelindex;                     /// and lower levels
