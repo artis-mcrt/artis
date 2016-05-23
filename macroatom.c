@@ -1075,9 +1075,11 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 /// collisional deexcitation rate: paperII 3.5.1
 {
   double C;
-  double g_bar,test,Gamma,g_ratio;
 
   double n_u = mastate[tid].nnlevel;
+  double T_e = get_Te(modelgridindex);
+  double nne = get_nne(modelgridindex);
+  double coll_str_thisline = coll_str(lineindex);
 
   #ifdef DEBUG_ON
     int upper = mastate[tid].level;
@@ -1088,62 +1090,58 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
     }
   #endif
 
-  double T_e = get_Te(modelgridindex);
-  double fac1 = epsilon_trans/KB/T_e;
-  double nne = get_nne(modelgridindex);
-  double statweight_target = statw_down(lineindex);
+  if (coll_str_thisline < 0)
+  {
+    double statweight_target = statw_down(lineindex);
+    if (coll_str_thisline > -1.5) //i.e. to catch -1
+    {
+      ///permitted E1 electric dipole transitions
+      ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
+      ///Rutten script eq. 3.33. p.50
+      //f = osc_strength(element,ion,upper,lower);
+      //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
 
-  if (coll_str(lineindex) > 0.0) //positive values are treated as effective collision strengths
+      double fac1 = epsilon_trans/KB/T_e;
+      ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+      //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+      /// crude approximation to the already crude Van-Regemorter formula
+      double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      double Gamma = fmax(g_bar, test);
+
+      double g_ratio = statweight_target / mastate[tid].statweight;
+      //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+      C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+      //C = 0.0; //TESTING ONLY DELETE THIS
+    }
+    else if (coll_str_thisline > -3.5) //to catch -2 or -3
+    {
+      //forbidden transitions: magnetic dipole, electric quadropole...
+      C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+    }
+    else
+    {
+      C = 0.0;
+    }
+  }
+  else //positive values are treated as effective collision strengths
   {
     //from Osterbrock and Ferland, p51
     //mastate[tid].statweight is UPPER LEVEL stat weight
     //statweight_target is LOWER LEVEL stat weight
-    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) / mastate[tid].statweight;
+    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str_thisline / mastate[tid].statweight;
     // test test
     //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
   }
-  else if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
-  {
-    ///permitted E1 electric dipole transitions
-    ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
-    ///Rutten script eq. 3.33. p.50
-    //f = osc_strength(element,ion,upper,lower);
-    //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
-
-    ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-    g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-    //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-    /// crude approximation to the already crude Van-Regemorter formula
-    test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-    if (g_bar >= test)
-      Gamma = g_bar;
-    else
-      Gamma = test;
-    g_ratio = statweight_target/mastate[tid].statweight;
-    //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-    C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-    //C = 0.0; //TESTING ONLY DELETE THIS
-  }
-  else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
-  {
-    //forbidden transitions: magnetic dipole, electric quadropole...
-    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-  }
-  else
-  {
-    C = 0.0;
-  }
 
   #ifdef DEBUG_ON
-    int element = mastate[tid].element;
-    int ion = mastate[tid].ion;
-    if (debuglevel == 2)
+    //int element = mastate[tid].element;
+    //int ion = mastate[tid].ion;
+    /*if (debuglevel == 2)
     {
-      printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
+      //printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
       printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
-    }
-    if (debuglevel == 777)
-    printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
+    }*/
     //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
     if (!isfinite(C))
     {
@@ -1161,9 +1159,12 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans)
 {
   double C;
-  double g_bar,test,Gamma;
-
+  double coll_str_thisline = coll_str(lineindex);
   double n_l = mastate[tid].nnlevel;
+
+  double T_e = get_Te(modelgridindex);
+  double fac1 = epsilon_trans/KB/T_e;
+  double nne = get_nne(modelgridindex);
 
   #ifdef DEBUG_ON
     int lower = mastate[tid].level;
@@ -1174,46 +1175,42 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
     }
   #endif
 
-  double T_e = get_Te(modelgridindex);
-  double fac1 = epsilon_trans/KB/T_e;
-  double nne = get_nne(modelgridindex);
-
-  if (coll_str(lineindex) > 0.0) //positive values are treated as effective collision strengths
+  if (coll_str_thisline < 0)
   {
-    //from Osterbrock and Ferland, p51
-    C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str(lineindex) * exp(-fac1) / statw_down(lineindex);
-    //test test
-    //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
-  }
-  else if ((coll_str(lineindex) < 0) && (coll_str(lineindex) > -1.5)) //i.e. to catch -1
-  {
-    ///permitted E1 electric dipole transitions
-    ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
-    ///Rutten script eq. 3.32. p.50
-    //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
+    if (coll_str_thisline > -1.5) //i.e. to catch -1
+    {
+      ///permitted E1 electric dipole transitions
+      ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
+      ///Rutten script eq. 3.32. p.50
+      //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
 
-    ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-    g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-    //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-    /// crude approximation to the already crude Van-Regemorter formula
-    test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-    if (g_bar >= test)
-      Gamma = g_bar;
+      ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+      //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+      /// crude approximation to the already crude Van-Regemorter formula
+      double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+
+      double Gamma = fmax(g_bar, test);
+
+      //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+      C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+    }
+    else if (coll_str_thisline > -3.5) //to catch -2 or -3
+    {
+      //forbidden transitions: magnetic dipole, electric quadropole...
+      C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
+    }
     else
-      Gamma = test;
-
-    //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
-    C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5 * osc_strength(lineindex)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
-    //C = 0.0; //TESTING ONLY DELETE THIS
-  }
-  else if (coll_str(lineindex) > -3.5) //to catch -2 or -3
-  {
-    //forbidden transitions: magnetic dipole, electric quadropole...
-    C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
+    {
+      C = 0.0;
+    }
   }
   else
   {
-    C = 0.0;
+    //from Osterbrock and Ferland, p51
+    C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str_thisline * exp(-fac1) / statw_down(lineindex);
+    //test test
+    //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
   }
 
   #ifdef DEBUG_ON
@@ -1222,20 +1219,20 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
     if (debuglevel == 2)
     {
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
-      printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
+      //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
     }
-    if (debuglevel == 777)
-      printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
+
     if (!isfinite(C))
     {
       printout("fatal a5: abort\n");
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
-      printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-      printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
+      //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
+      //printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
       printout("[debug] col_exc: coll_str(lineindex) %g statw_up(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_up(lineindex),mastate[tid].statweight);
       abort();
     }
   #endif
+
   return C;
 }
 
@@ -1249,14 +1246,15 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
   int upper = mastate[tid].level;
   double n_u = mastate[tid].nnlevel;
 
-  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
+  int nphixstargets = get_nphixstargets(element,ion-1,lower);
+  for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
     {
       ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
       ///select gaunt factor according to ionic charge
       double T_e = get_Te(modelgridindex);
-      double fac1 = epsilon_trans/KB/T_e;
+      double fac1 = epsilon_trans / KB / T_e;
       double nne = get_nne(modelgridindex);
       int ionstage = get_ionstage(element,ion);
 
@@ -1326,7 +1324,7 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   else
     g = 0.3;
 
-  double fac1 = epsilon_trans/KB/T_e;
+  double fac1 = epsilon_trans / KB / T_e;
 
   double sigma_bf = elements[element].ions[ion].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion,lower,phixstargetindex);
   double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
