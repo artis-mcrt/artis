@@ -294,7 +294,7 @@ PKT pkt[MPKTS];
 int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;
 
-mastate_t *mastate;
+mastate_t *restrict mastate;
 
 #define MA_ACTION_NONE 0
 #define MA_ACTION_RADDEEXC 1
