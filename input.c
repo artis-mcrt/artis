@@ -43,9 +43,6 @@ int input(int rank)
   homogeneous_abundances = 0;
   t_model = 0.0;
 
-  /// Constants for van-Regemorter approximation
-  C_0 = 5.465e-11;
-
   /// Select grid type
   grid_type = GRID_UNIFORM;
   model_type = RHO_UNIFORM;
@@ -1851,6 +1848,7 @@ void read_parameterfile(int rank)
         //printout("zrand %g\n", x);
         gsl_rng_uniform(rng);
       }
+      printout("rng is a '%s' generator\n",gsl_rng_name(rng));
   #ifdef _OPENMP
     }
   #endif
