@@ -8,7 +8,7 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib 
 #  CFLAGS = -Wall -O0g -g -std=c11 -I$(INCLUDE) $(VER)
-  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wvector-operation-performance -ftree-vectorize -Ofast -march=native -flto -fstrict-aliasing -Wstrict-aliasing -std=c11 -I$(INCLUDE)
+  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wvector-operation-performance -ftree-vectorize -O3 -march=native -flto -fstrict-aliasing -Wstrict-aliasing -std=c11 -I$(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)
