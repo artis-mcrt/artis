@@ -597,7 +597,7 @@ short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage 
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid
                                                    /// routine and their doughters.
 
-extern short use_cellhist;
+bool use_cellhist;
 
 #ifdef _OPENMP
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)

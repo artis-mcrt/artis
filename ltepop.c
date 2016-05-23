@@ -875,18 +875,18 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 /// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
   double sf;
-
-  if (use_cellhist >= 0)
-  {
+  if (use_cellhist)
     sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
-    if (sf < 0)
-    {
-      sf = calculate_sahafact(element,ion,level,phixstargetindex,T,E_threshold);
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
-    }
-  }
   else
-    sf = calculate_sahafact(element,ion,level,phixstargetindex,T,E_threshold);
+    sf = -1;
+
+  if (sf < 0)
+  {
+    int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+    sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
+    if (use_cellhist)
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
+  }
 
   //printout("get_sahafact: sf= %g\n",sf);
   return sf;

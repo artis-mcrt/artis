@@ -29,7 +29,7 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
 /// entry of the cellhistory.
 {
 //printout("get_levelpop histindex %d\n",histindex);
-  if (use_cellhist >= 0)
+  if (use_cellhist)
   {
     double pop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
     if (pop > -1)

@@ -887,18 +887,18 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
 {
   double alpha_sp = -1.0;
 
-  if (use_cellhist >= 0.)
+  if (use_cellhist)
   {
     alpha_sp = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate;
     /// Interpolate alpha_sp out of precalculated values
   }
 
-  if (alpha_sp < 0. || use_cellhist < 0.)
+  if (alpha_sp < 0. || !use_cellhist)
   {
     double T_e = get_Te(modelgridindex);
     alpha_sp = interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e);
 
-    if (use_cellhist >= 0)
+    if (use_cellhist)
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = alpha_sp;
   }
 
@@ -917,12 +917,12 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
-  if (use_cellhist >= 0)
+  if (use_cellhist)
   {
     gammacorr = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
   }
 
-  if (gammacorr < 0 || use_cellhist < 0)
+  if (gammacorr < 0 || !use_cellhist)
   {
   #ifdef FORCE_LTE
     /// Interpolate gammacorr out of precalculated values
@@ -946,7 +946,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 
   # endif
   #endif
-    if (use_cellhist >= 0)
+    if (use_cellhist)
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
   }
 
@@ -981,12 +981,12 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
   /// correction may be evaluated at T_R!
   double bfheating = -1.;
 
-  if (use_cellhist >= 0)
+  if (use_cellhist)
   {
     bfheating = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheating;
   }
 
-  if (bfheating < 0 || use_cellhist < 0)
+  if (bfheating < 0 || !use_cellhist)
   {
 
     /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
@@ -1012,7 +1012,7 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
     }
   #endif
 
-    if (use_cellhist >= 0)
+    if (use_cellhist)
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheating = bfheating;
   }
 
@@ -1046,7 +1046,7 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 {
   double bfcooling = -99.;
 
-  if (use_cellhist >= 0)
+  if (use_cellhist)
     bfcooling = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling;
 
   if (bfcooling < 0)
@@ -1060,7 +1060,7 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
     //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel * nne;
     bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnion * nne;
 
-    if (use_cellhist >= 0)
+    if (use_cellhist)
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = bfcooling;
 
     #ifdef DEBUG_ON

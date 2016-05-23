@@ -206,7 +206,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   #endif
       /// Do not use values which are saved in the cellhistory within update_grid
       /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
-      use_cellhist = -1;
+      use_cellhist = false;
 
       //double T_R,T_e,T_J,W;//,W_D;
 
@@ -1093,7 +1093,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
       } ///end parallel for loop over all modelgrid cells
       /// Now atfer all the relevant taks of update_grid have been finished activate
       /// the use of the cellhistory for all OpenMP tasks, in what follows (update_packets)
-      use_cellhist = 1;
+      use_cellhist = true;
     #ifdef _OPENMP
     } /// end OpenMP parallel section
     #endif

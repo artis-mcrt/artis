@@ -2,7 +2,6 @@
 #include <stdbool.h>
 
 int tid;
-short use_cellhist;
 //int histindex;
 bool neutral_flag;
 gsl_rng *rng;
