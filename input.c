@@ -16,6 +16,15 @@
 #include <gsl/gsl_spline.h>
 
 
+typedef struct
+{
+  int lower;
+  int upper;
+  double A;
+  double coll_str;
+} transitiontable_entry;  /// only used temporarily during input
+
+
 //private functions
 int read_1d_model(void);
 int read_2d_model(void);

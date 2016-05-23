@@ -435,14 +435,6 @@ typedef struct
 
 typedef struct
 {
-  int lower;
-  int upper;
-  double A;
-  double coll_str;
-} transitiontable_entry;  /// only used temporarily during input
-
-typedef struct
-{
   int cellnumber;
 } nne_solution_paras;
 
