@@ -136,6 +136,8 @@ struct packet
   int type;       /// Identifies the type of packet (k-, r-, etc.)
   int last_cross; /// To avoid rounding errors on cell crossing.
   int interactions;/// debug: number of interactions the packet undergone
+  int nscatterings;   /// records number of electron scatterings a r-pkt undergone since it was emitted
+  int last_event;  /// debug: stores information about the packets history
   double pos[3];  /// Position of the packet (x,y,z).
   double dir[3];  /// Direction of propagation. (x,y,z). Always a unit vector.
   double tdecay;  /// Time at which pellet decays.
@@ -143,13 +145,8 @@ struct packet
   double e_rf;    /// The energy the packet carries in the rest frame.
   double nu_cmf;  /// The frequency in the co-moving frame.
   double nu_rf;   /// The frequency in the rest frame.
-
-  int scat_count;  /// WHAT'S THAT???
-
   int next_trans;  /// This keeps track of the next possible line interaction of a rpkt by storing
                    /// its linelist index (to overcome numerical problems in propagating the rpkts).
-  int last_event;  /// debug: stores information about the packets history
-
   int emissiontype;   /// records how the packet was emitted if it is a r-pkt
   int absorptiontype;     /// records linelistindex of the last absorption
                           /// negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
@@ -167,8 +164,8 @@ struct packet
   int escape_time; /// Time at which is passes out of the grid.
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
   int number;     /// A unique number to identify which packet caused potential troubles.
-  int nscatterings;   /// records number of electron scatterings a r-pkt undergone since it was emitted
   int em_time;
+  int scat_count;  /// WHAT'S THAT???
 };
 typedef struct packet PKT;
 
