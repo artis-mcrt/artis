@@ -1110,9 +1110,8 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
       double Gamma = fmax(g_bar, test);
 
       double g_ratio = statweight_target / mastate[tid].statweight;
-      //C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-      C = n_u * C_0 * nne * pow(T_e,0.5) * 14.5 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
-      //C = 0.0; //TESTING ONLY DELETE THIS
+
+      C = C_0 * 14.5 * n_u * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {
@@ -1192,13 +1191,12 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 
       double Gamma = fmax(g_bar, test);
 
-      //C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5*osc_strength(element,ion,upper,lower)*pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
-      C = n_l * C_0 * nne * pow(T_e,0.5) * 14.5 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+      C = C_0 * 14.5 * n_l * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {
       //forbidden transitions: magnetic dipole, electric quadropole...
-      C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
+      C = n_l * nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-fac1) * statw_up(lineindex);
     }
     else
     {
