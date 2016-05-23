@@ -10,7 +10,7 @@
 
 
 // private functions
-void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum, int high);
+void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum);
 double sample_planck(double T);
 
 
@@ -240,7 +240,7 @@ void calculate_kpkt_rates(int modelgridindex)
 
 
 ///****************************************************************************
-void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum, int high)
+void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum)
 /// Set up the global cooling list and determine the important entries
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
@@ -343,7 +343,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
       /// for speed issues (reduced number of calls to epsilon) it is now done also
       /// here explicitly
       C = 0.0;
-      int upper;
+      int upper = 0;
       for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
         upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
@@ -622,7 +622,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
     if (cellhistory[tid].coolinglist[low].contribution == COOLING_UNDEFINED)
     {
       //printout("calculate kpkt rates on demand\n");
-      calculate_kpkt_rates_ion(modelgridindex,element,ion,low,oldcoolingsum,high);
+      calculate_kpkt_rates_ion(modelgridindex,element,ion,low,oldcoolingsum);
     }
     //if (cellhistory[tid].coolinglist[high].contribution != coolingsum);
     //{
