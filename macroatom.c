@@ -863,10 +863,9 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
   double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
   double B_lu = mastate[tid].statweight/statweight_target * B_ul;
 
-  //double n_u = get_levelpop(modelgridindex,element,ion,upper);
-  //double n_l = get_levelpop(modelgridindex,element,ion,lower);
-  double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
-  double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower); //TODO: do these two ways of calculating level pops give different results?
+  double n_u = get_levelpop(modelgridindex,element,ion,upper);
+  double n_l = get_levelpop(modelgridindex,element,ion,lower);
+
   double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
   double beta = 1.0;
@@ -939,10 +938,8 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
   double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
   double B_lu = statweight_target / mastate[tid].statweight * B_ul;
 
-  //double n_u = get_levelpop(modelgridindex,element,ion,upper);
-  //double n_l = get_levelpop(modelgridindex,element,ion,lower);
-  double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
-  double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower); //TODO: do these two ways of calculating level pops give different results?
+  double n_u = get_levelpop(modelgridindex,element,ion,upper);
+  double n_l = get_levelpop(modelgridindex,element,ion,lower);
   double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
   double beta = 1.0;
