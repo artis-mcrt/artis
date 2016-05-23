@@ -28,7 +28,7 @@ double bfcooling_integrand_gsl_2(double nu, void *paras);
 double stimulated_bfcooling_integrand_gsl(double nu, void *paras);
 double stimulated_recomb_integrand_gsl(double nu, void *paras);
 double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-double gammacorr_integrand_gsl_radfield(double nu, void *paras);
+double gammacorr_integrand_gsl_radfield(double nu, void *restrict paras);
 double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 double bfheating_integrand_gsl_radfield(double nu, void *paras);
 
@@ -356,7 +356,7 @@ void calculate_ion_alpha_sp(void)
 ///****************************************************************************
 /// The following functions define the integrands for these rate coefficients
 /// for use with libgsl integrators.
-double alpha_sp_integrand_gsl(double nu, void *paras)
+double alpha_sp_integrand_gsl(double nu, void *restrict paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -382,7 +382,7 @@ double alpha_sp_integrand_gsl(double nu, void *paras)
   return x;
 }
 
-double alpha_sp_E_integrand_gsl(double nu, void *paras)
+double alpha_sp_E_integrand_gsl(double nu, void *restrict paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -885,13 +885,11 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
 /// cell history if known.
 /// For ionisation to other levels than the ground level this must be adapted.
 {
-  double alpha_sp = -1.0;
-
+  double alpha_sp;
   if (use_cellhist)
-  {
     alpha_sp = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate;
-    /// Interpolate alpha_sp out of precalculated values
-  }
+  else
+    alpha_sp = -1.0;
 
   if (alpha_sp < 0. || !use_cellhist)
   {
@@ -913,14 +911,14 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 /// Only needed during packet propagation, therefore the value is taken from the
 /// cell history if known.
 {
-  double gammacorr = -1.0;
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
+  double gammacorr;
   if (use_cellhist)
-  {
     gammacorr = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
-  }
+  else
+    gammacorr = -1.0;
 
   if (gammacorr < 0 || !use_cellhist)
   {
@@ -930,8 +928,8 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     gammacorr = interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
   #else
   # ifdef NO_LUT_PHOTOION
-    //double W = get_W(modelgridindex);
     gammacorr = calculate_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
+    //double W = get_W(modelgridindex);
     //double oldgammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
     //if (fabs(gammacorr/oldgammacorr - 1.0) > 0.5)
     //  printout("LUKETEST: New corrphotoion coeff: %g, old value: %g\n",gammacorr,oldgammacorr);
@@ -979,12 +977,11 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
-  double bfheating = -1.;
-
+  double bfheating;
   if (use_cellhist)
-  {
     bfheating = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheating;
-  }
+  else
+    bfheating = -1.;
 
   if (bfheating < 0 || !use_cellhist)
   {
@@ -1099,7 +1096,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstar
 {
   double integratorrelaccuracy = 1e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(512);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -1119,7 +1116,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstar
   F_gammacorr.params = &intparas;
   double error = 0.0;
   gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
-                      integratorrelaccuracy, 1000, 4, w, &gammacorr, &error);
+                      integratorrelaccuracy, 512, 4, w, &gammacorr, &error);
   gammacorr *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);
@@ -1128,11 +1125,11 @@ double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstar
 }
 
 
-double gammacorr_integrand_gsl_radfield(double nu, void *paras)
+double gammacorr_integrand_gsl_radfield(double nu, void *restrict paras)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  gsl_integral_paras_gammacorr localparas = *((gsl_integral_paras_gammacorr*) paras);
+  gsl_integral_paras_gammacorr localparas = *((gsl_integral_paras_gammacorr *) paras);
   int modelgridindex = localparas.modelgridindex;
   double nu_edge = localparas.nu_edge;
   float *photoion_xs = localparas.photoion_xs;
@@ -1165,7 +1162,7 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
   double error = 0.0;
   double integratoraccuracy = 1e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(512);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -1186,7 +1183,7 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
   F_bfheating.function = &bfheating_integrand_gsl_radfield;
   F_bfheating.params = &intparas;
   gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0,
-                      integratoraccuracy, 1000, 6, w, &bfheating, &error);
+                      integratoraccuracy, 512, 4, w, &bfheating, &error);
   bfheating *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);
@@ -1195,7 +1192,7 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
 }
 
 
-double bfheating_integrand_gsl_radfield(double nu, void *paras)
+double bfheating_integrand_gsl_radfield(double nu, void *restrict paras)
 /// Integrand to calculate the rate coefficient for bfheating
 /// using gsl integrators.
 {

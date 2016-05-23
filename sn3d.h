@@ -418,6 +418,8 @@ double J[MMODELGRID+1];
 #endif
 
 
+bool file_set; // 1 if the output files already exist. 0 otherwise.
+
 bool do_comp_est; // 1 = compute compton emissivity estimators. 0 = don't
 bool do_r_lc;     // If not set to 1 then the opacity for r-packets is 0.
 int do_rlc_est;  // 1 = compute estimators for the r-pkt light curve.
@@ -426,8 +428,6 @@ int do_rlc_est;  // 1 = compute estimators for the r-pkt light curve.
 
 
 int n_out_it; // # of sets of 1,000,000 photons to run.
-
-bool file_set; // 1 if the output files already exist. 0 otherwise.
 
 int npts_model; // number of points in 1-D input model
 double vout_model[MMODELGRID];
