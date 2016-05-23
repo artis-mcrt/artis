@@ -1048,8 +1048,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
             if (nphixstargets > 0)
             {
               int upper = get_phixsupperlevel(element,ion,level,0);
-              double nnionlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
-              double sf = get_sahafact(element,ion,level,0,T_e,nu_edge*H);
+              double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+              double sf = get_sahafact(element,ion,level,0,T_e,H*nu_edge);
               float probability = get_phixsprobability(element,ion,level,0);
               double helper = nnlevel * sigma_bf * probability;
               double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
@@ -1068,8 +1068,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
             for (int phixstargetindex = 1; phixstargetindex < nphixstargets; phixstargetindex++)
             {
               int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-              double nnionlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
-              double sf = get_sahafact(element,ion,level,phixstargetindex,T_e,nu_edge*H);
+              double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+              double sf = get_sahafact(element,ion,level,phixstargetindex,T_e,H*nu_edge);
               double helper = nnlevel * sigma_bf * get_phixsprobability(element,ion,level,phixstargetindex);
               double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
