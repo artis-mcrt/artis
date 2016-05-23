@@ -129,7 +129,7 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 }
 
 /* Routine to deal with pair production. */
-int pair_prod(PKT *pkt_ptr, double t_current)
+void pair_prod(PKT *restrict pkt_ptr, double t_current)
 {
   /* In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
      gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
@@ -196,13 +196,12 @@ up a cmf direction in cos(theta) and phi. */
     }
 
     get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
-    pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
-    pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
+    double oneoverdopplerfac = 1 / doppler(pkt_ptr->dir, vel_vec);
+    pkt_ptr->nu_rf = pkt_ptr->nu_cmf * oneoverdopplerfac;
+    pkt_ptr->e_rf = pkt_ptr->e_cmf * oneoverdopplerfac;
 
     pkt_ptr->type = TYPE_GAMMA;
     pkt_ptr->last_cross = NONE;
 
   }
-
-  return 0;
 }

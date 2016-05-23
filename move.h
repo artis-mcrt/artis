@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-void update_estimators(const PKT *pkt_ptr, double distance);
-int move_pkt(PKT *pkt_ptr, double distance, double time);
+void update_estimators(const PKT *restrict pkt_ptr, double distance);
+void move_pkt(PKT *restrict pkt_ptr, double distance, double time);
 
 #endif //MOVE_H

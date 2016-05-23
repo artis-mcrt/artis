@@ -100,7 +100,7 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
 
 
 ///****************************************************************************
-int move_pkt(PKT *pkt_ptr, double distance, double time)
+void move_pkt(PKT *restrict pkt_ptr, double distance, double time)
 /// Subroutine to move a packet along a straight line (specified by currect
 /// dir vector). The distance moved is in the rest frame. Time must be the
 /// time at the end of distance travelled.
@@ -121,8 +121,9 @@ int move_pkt(PKT *pkt_ptr, double distance, double time)
   /// But need to update the co-moving ones.
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, time);
-  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * doppler(pkt_ptr->dir, vel_vec);
-  pkt_ptr->e_cmf = pkt_ptr->e_rf * pkt_ptr->nu_cmf / pkt_ptr->nu_rf;
+  double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
+  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfac;
+  pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfac;
 
   /*
   if (pkt_ptr->e_rf * pkt_ptr->nu_cmf /pkt_ptr->nu_rf > 1e46)
@@ -130,6 +131,4 @@ int move_pkt(PKT *pkt_ptr, double distance, double time)
       printout("here2 %g %g \n", pkt_ptr->e_rf, pkt_ptr->nu_cmf /pkt_ptr->nu_rf);
     }
   */
-
-  return 0;
 }

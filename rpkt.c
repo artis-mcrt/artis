@@ -502,7 +502,7 @@ double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t
 
 
 ///****************************************************************************
-int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
+int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
 {
   //double nnionlevel,nnlevel,nne;
   //double ma_prob,p_maactivate,p_bf,prob;
@@ -981,8 +981,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
       /// Second contribution: free-free absorption
       kappa_ff = 0.;
       /// Estimator for bound-free heating
-      kappa_ffheating = 0.;
-      //kappa_bfheating = 0.;
+      //kappa_ffheating = 0.;
+
       double ionpops_local[MELEMENTS][MIONS];
       for (int element = 0; element < nelements; element++)
       {
@@ -1028,12 +1028,10 @@ void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
           //printout("i %d, nu_edge %g\n",i,nu_edge);
           if (nu >= nu_edge)
           {
-            //ion = phixslist[tid].allcont[i].ion;
-            //level = phixslist[tid].allcont[i].level;
-            //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
-            //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
-
             double nnlevel = get_levelpop(modelgridindex,element,ion,level);
+            //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
+
+            //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
             //if (fabs(nnlevel - phixslist[tid].allcont[i].nnlevel) > 0)
             //{
             //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);

@@ -381,7 +381,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
         if (pkt_ptr->type != TYPE_GAMMA)
         {
           /* It's not a gamma ray any more - return.*/
-          return(t_current);
+          return t_current;
         }
       }
       else if ((kap_compton + kap_photo_electric) > (zrand*kap_tot))
@@ -396,7 +396,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
         //pkt_ptr->type = TYPE_GAMMA_KPKT;
         //if (tid == 0) k_stat_from_gamma += 1;
         k_stat_from_gamma += 1;
-        return(t_current);
+        return t_current;
       }
       else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand*kap_tot))
       {
@@ -405,7 +405,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
         if (pkt_ptr->type != TYPE_GAMMA)
         {
           /* It's not a gamma ray any more - return.*/
-          return(t_current);
+          return t_current;
         }
       }
       else

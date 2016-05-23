@@ -335,11 +335,11 @@ struct time
   double start; // time at start of this timestep.
   double width; // Width of timestep.
   double mid; // Mid time in step - computed logarithmically.
-  int pellet_decays; // Number of pellets that decay in this time step. ///ATOMIC
   double gamma_dep; // cmf gamma ray energy deposition rate             ///ATOMIC
   double positron_dep; // cmf positron energy deposition rate           ///ATOMIC
-  double dep; // instantaenous energy deposition rate in all decays     ///ATOMIC
+  double dep; // instantaneous energy deposition rate in all decays     ///ATOMIC
   double cmf_lum; // cmf luminosity light curve                         ///ATOMIC
+  int pellet_decays; // Number of pellets that decay in this time step. ///ATOMIC
 } time_step[MTSTEP];
 
 
@@ -369,8 +369,6 @@ RAY rays[NRAYS_SYN];
 #define MSYN_TIME 100
 int nsyn_time;
 double time_syn[MSYN_TIME];
-
-double DeltaA; // area used for syn ///possible to do this as local variable?
 
 #define EMISS_MAX 2 // Maxmimum number of frequency points in
                     // grid used to store emissivity estimators.
@@ -479,7 +477,7 @@ bflist_t *bflist;
 
 
 
-rpkt_cont_opacity_struct *kappa_rpkt_cont;
+rpkt_cont_opacity_struct *restrict kappa_rpkt_cont;
 
 
 
@@ -509,7 +507,7 @@ double NPHIXSNUINCREMENT;
 /// Cell history
 ///============================================================================
 
-cellhistory_struct *cellhistory;          /// Global pointer to the beginning of the cellhistory stack.
+cellhistory_struct *restrict cellhistory;          /// Global pointer to the beginning of the cellhistory stack.
 //extern int histindex;                   /// Global index variable to acces the cellhistory stack.
 //#define CELLHISTORYSIZE 2               /// Size of the cellhistory stack.
 

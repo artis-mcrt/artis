@@ -3,6 +3,6 @@
 
 #include "types.h"
 
-int packet_prop(PKT *restrict pkt_ptr, double t1, double t2, int nts);
+void packet_prop(PKT *restrict pkt_ptr, double t1, double t2, int nts);
 
 #endif //PACKET_PROP_H
