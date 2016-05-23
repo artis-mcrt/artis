@@ -11,19 +11,6 @@
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.
 {
-  double rad_deexc,rad_recomb,col_deexc,col_recomb;
-  double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
-  double individ_rad_deexc,individ_col_deexc,individ_internal_down_same,individ_internal_up_same;
-  double R,C;
-  double rate;
-
-  double nu_threshold, nu_max_phixs;
-  double epsilon_target;
-
-  int i,lineindex;
-  int linelistindex = -99;
-  int nlevels;
-
   bool end_packet = false; ///means "keep working"
   double t_current = t1; ///this will keep track of time in the calculation
   double t_mid = time_step[timestep].mid;
@@ -68,6 +55,16 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   //debuglevel = 2;
   while (!end_packet)
   {
+    double rad_deexc,rad_recomb,col_deexc,col_recomb;
+    double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
+    double individ_rad_deexc,individ_col_deexc,individ_internal_down_same,individ_internal_up_same;
+
+    double R,C;
+    double rate;
+
+    int lineindex;
+    int nlevels;
+
     int ion = mastate[tid].ion;
     int level = mastate[tid].level;
     mastate[tid].statweight = stat_weight(element,ion,level);
@@ -131,10 +128,10 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       rad_deexc = 0.;
       col_deexc = 0.;
       internal_down_same = 0.;
-      for (i = 1; i <= ndowntrans; i++)
+      for (int i = 1; i <= ndowntrans; i++)
       {
         lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-        epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+        double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
         //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         epsilon_trans = epsilon_current - epsilon_target;
@@ -168,7 +165,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         //nlevels = get_ionisinglevels(element,ion-1);
         for (lower = 0; lower < nlevels; lower++)
         {
-          epsilon_target = epsilon(element,ion-1,lower);
+          double epsilon_target = epsilon(element,ion-1,lower);
           epsilon_trans = epsilon_current - epsilon_target;
           R = rad_recombination(modelgridindex,lower,epsilon_trans);
           //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
@@ -182,10 +179,10 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       /// Calculate sum for upward internal transitions
       /// transitions within the current ionisation stage
       internal_up_same = 0.;
-      for (i = 1; i <= nuptrans; i++)
+      for (int i = 1; i <= nuptrans; i++)
       {
         upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-        epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
+        double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
         //double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         epsilon_trans = epsilon_target - epsilon_current;
@@ -288,6 +285,8 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       zrand = gsl_rng_uniform(rng);
       //zrand = 1. - 1e-14; /// ONLY FOR DEBUG!!!
       rate = 0.;
+      int linelistindex = -99;
+      int i;
       for (i = 1; i <= ndowntrans; i++)
       {
         rate += get_individ_rad_deexc(i);
@@ -297,7 +296,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
             if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n",lower);
           #endif
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+          double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
           linelistindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
           //linelistindex = elements[element].ions[ion].levels[level].transitions[level-lower-1].linelistindex;
@@ -405,7 +404,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       zrand = gsl_rng_uniform(rng);
       lower = -99;
       rate = 0.;
-      for (i = 1; i <= ndowntrans; i++)
+      for (int i = 1; i <= ndowntrans; i++)
       {
         rate += get_individ_internal_down_same(i);
         if (zrand*internal_down_same < rate)
@@ -463,7 +462,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         if (zrand*rad_recomb < rate) break;
       }
       /// and set its threshold frequency
-      nu_threshold = epsilon_trans/H;
+      double nu_threshold = epsilon_trans/H;
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   going to level %d of ion %d of element %d\n",lower,ion-1,element);
       #endif
@@ -485,14 +484,14 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
       F_alpha_sp.params = &intparas;
       double deltanu = nu_threshold * NPHIXSNUINCREMENT;
-      nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+      double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       double error;
       double total_alpha_sp;
       gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &total_alpha_sp, &error);
       double alpha_sp = total_alpha_sp;
       double alpha_sp_old;
-      double nu_lower;
-      for (i = 0; i < NPHIXSPOINTS; i++)
+      double nu_lower = -1;
+      for (int i = 0; i < NPHIXSPOINTS; i++)
       // LJS: this loop could probably be made a bit faster
       // use the overlap with the previous integral and add on a piece each time instead of recalculating the
       // integral over the entire region
@@ -500,28 +499,31 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         // the reason the lower limit of integration is incremented is that most of the probability distribution is at the low
         // frequency end, so this minimizes the number of iterations needed
         alpha_sp_old = alpha_sp;
-        if (i > 0)
-        {
-          nu_lower = nu_threshold + i*deltanu;
-          /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-          gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &alpha_sp, &error);
-          //alpha_sp *= FOURPI * sf;
-          //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
-        }
+        nu_lower = nu_threshold + i*deltanu;
+        /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+        gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &alpha_sp, &error);
+        //alpha_sp *= FOURPI * sf;
+        //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
+
         //printout("[debug] macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
-        if (zrand >= alpha_sp/total_alpha_sp) break;
+        if (zrand >= alpha_sp/total_alpha_sp)
+        {
+          if (i > 0)
+          {
+            double nuoffset = (total_alpha_sp*zrand - alpha_sp_old) / (alpha_sp-alpha_sp_old) * deltanu;
+            nu_lower = nu_threshold + (i-1) * deltanu + nuoffset;
+          }
+          else
+            nu_lower = nu_threshold;
+
+          break;
+        }
       }
-      if (i == NPHIXSPOINTS)
+      if (nu_lower < 0.)
       {
         nu_lower = nu_max_phixs;
       }
-      else if (i > 0)
-      {
-        double nuoffset = (total_alpha_sp*zrand - alpha_sp_old) / (alpha_sp-alpha_sp_old) * deltanu;
-        nu_lower = nu_threshold + (i-1) * deltanu + nuoffset;
-      }
-      else
-        nu_lower = nu_threshold;
+
       pkt_ptr->nu_cmf = nu_lower;
       //printout("nu_lower %g, nu_threshold %g, nu_left %g, nu_right %g\n",nu_lower,nu_threshold,nu_threshold+(i-1)*deltanu,nu_threshold+(i)*deltanu);
 
@@ -654,7 +656,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       //nlevels = get_ionisinglevels(element,ion-1);
       for (lower = 0; lower < nlevels; lower++)
       {
-        epsilon_target = epsilon(element,ion-1,lower);
+        double epsilon_target = epsilon(element,ion-1,lower);
         epsilon_trans = epsilon_current - epsilon_target;
         R = rad_recombination(modelgridindex,lower,epsilon_trans);
         C = col_recombination(modelgridindex,lower,epsilon_trans);
@@ -697,7 +699,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       zrand = gsl_rng_uniform(rng);
       upper = -99;
       rate = 0.;
-      for (i = 1; i <= nuptrans; i++)
+      for (int i = 1; i <= nuptrans; i++)
       {
         rate += get_individ_internal_up_same(i);
         if (zrand*internal_up_same < rate)
@@ -764,7 +766,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           //nlevels = get_ionisinglevels(element,ion-1);
           for (lower = 0; lower < nlevels; lower++)
           {
-            epsilon_target = epsilon(element,ion-1,lower);
+            double epsilon_target = epsilon(element,ion-1,lower);
             epsilon_trans = epsilon_current - epsilon_target;
             R = rad_recombination(modelgridindex,lower,epsilon_trans);
             C = col_recombination(modelgridindex,lower,epsilon_trans);
@@ -774,10 +776,10 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
         printout("[debug]    check deexcitation\n");
         printout("[debug]    ndowntrans %d %d\n",ndowntrans,elements[element].ions[ion].levels[level].downtrans[0].targetlevel);
-        for (i = 1; i <= ndowntrans; i++)
+        for (int i = 1; i <= ndowntrans; i++)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+          double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
           //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
@@ -788,10 +790,10 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
         printout("[debug]    check excitation\n");
         printout("[debug]    nuptrans %d %d\n",nuptrans,elements[element].ions[ion].levels[level].uptrans[0].targetlevel);
-        for (i = 1; i <= nuptrans; i++)
+        for (int i = 1; i <= nuptrans; i++)
         {
           upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-          epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
+          double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
           //statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           epsilon_trans = epsilon_target - epsilon_current;
