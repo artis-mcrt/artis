@@ -536,23 +536,17 @@ int density_1d_read(void)
           set_fnistable(mgi,abundance - get_fni(mgi));
           //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_fni(mgi),abundance - get_fni(mgi));
         }
-
-        if (anumber == 27)
+        else if (anumber == 27)
           set_fcostable(mgi,abundance - get_fco(mgi));
-
-        if (anumber == 26)
+        else if (anumber == 26)
           set_ffestable(mgi,abundance - get_f52fe(mgi));
-
-        if (anumber == 25)
+        else if (anumber == 25)
           set_fmnstable(mgi,abundance);
-
-        if (anumber == 24)
+        else if (anumber == 24)
           set_fcrstable(mgi,abundance - get_f48cr(mgi));
-
-        if (anumber == 23)
+        else if (anumber == 23)
           set_fvstable(mgi,abundance);
-
-        if (anumber == 22)
+        else if (anumber == 22)
           set_ftistable(mgi,abundance);
       }
 
@@ -855,7 +849,7 @@ int density_2d_read(void)
   //int renorm[MMODELGRID];
   //double den_norm[MMODELGRID];
   double opcase2_normal;
-  int element, anumber;
+  int anumber;
   float abundance;
   double zcylindrical, rcylindrical;
 
@@ -948,7 +942,7 @@ int density_2d_read(void)
       set_f48cr(mgi,f48cr_model[mgi]);
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
-      for (element = 0; element < nelements; element++)
+      for (int element = 0; element < nelements; element++)
       {
         ///now set the abundances (by mass) of included elements, i.e.
         ///read out the abundances specified in the atomic data file

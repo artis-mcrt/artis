@@ -18,40 +18,7 @@ double find_T_e(double T_e, void *paras);
 ///****************************************************************************
 double call_T_e_finder(int modelgridindex, double t_current, double T_min, double T_max)
 {
-  double fractional_accuracy = 1e-2;
-  int maxit = 100;
-  int iter2,status;
-  double T_e,T_e_min,T_e_max;
-
-  //gsl_root_fsolver *solver;
-  //solver = gsl_root_fsolver_alloc(solvertype);
-  //mintemp_f.function = &mintemp_solution_f;
-  //maxtemp_f.function = &maxtemp_solution_f;
-
-  ///onedimensional gsl root solver, derivative type
-  /*const gsl_root_fdfsolver_type *solvertype;
-  solvertype = gsl_root_fdfsolver_newton;
-  gsl_root_fdfsolver *solver;
-  solver = gsl_root_fdfsolver_alloc(solvertype);
-
-  gsl_function_fdf fdf;
-  fdf.f = &nne_solution_f;
-  fdf.df = &nne_solution_deriv;
-  fdf.fdf = &nne_solution_fdf;*/
-
-
-  ///onedimensional gsl root solver, bracketing type
-  const gsl_root_fsolver_type *solvertype;
-  gsl_root_fsolver *T_e_solver;
-  solvertype = gsl_root_fsolver_brent;
-
-  Te_solution_paras paras;
-  paras.cellnumber = modelgridindex;
-  paras.t_current = t_current;
-
-  gsl_function find_T_e_f;
-  find_T_e_f.function = &find_T_e;
-  find_T_e_f.params = &paras;
+  double T_e;
 
   //double deltat = (T_max - T_min) / 100;
 
@@ -67,6 +34,19 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
   //tb_info = 1;
 
   /// Check whether the thermal balance equation has a root in [T_min,T_max]
+  //gsl_root_fsolver *solver;
+  //solver = gsl_root_fsolver_alloc(solvertype);
+  //mintemp_f.function = &mintemp_solution_f;
+  //maxtemp_f.function = &maxtemp_solution_f;
+
+  Te_solution_paras paras;
+  paras.cellnumber = modelgridindex;
+  paras.t_current = t_current;
+
+  gsl_function find_T_e_f;
+  find_T_e_f.function = &find_T_e;
+  find_T_e_f.params = &paras;
+
   double thermalmin = find_T_e(T_min,find_T_e_f.params);
   double thermalmax = find_T_e(T_max,find_T_e_f.params);
   if (!isfinite(thermalmin) || !isfinite(thermalmax))
@@ -93,9 +73,29 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
       }
     }*/
     /// now start so iterate on T_e solution
+    ///onedimensional gsl root solver, derivative type
+    /*const gsl_root_fdfsolver_type *solvertype;
+    solvertype = gsl_root_fdfsolver_newton;
+    gsl_root_fdfsolver *solver;
+    solver = gsl_root_fdfsolver_alloc(solvertype);
+
+    gsl_function_fdf fdf;
+    fdf.f = &nne_solution_f;
+    fdf.df = &nne_solution_deriv;
+    fdf.fdf = &nne_solution_fdf;*/
+
+
+    ///onedimensional gsl root solver, bracketing type
+    const gsl_root_fsolver_type *solvertype;
+    gsl_root_fsolver *T_e_solver;
+    solvertype = gsl_root_fsolver_brent;
+
     T_e_solver = gsl_root_fsolver_alloc(solvertype);
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-    iter2 = 0;
+    int iter2 = 0;
+    double fractional_accuracy = 1e-2;
+    int maxit = 100;
+    int status;
     do
     {
       iter2++;
@@ -103,8 +103,8 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
       T_e = gsl_root_fsolver_root(T_e_solver);
       //cell[cellnumber].T_e = T_e;
       set_Te(modelgridindex,T_e);
-      T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
-      T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
+      double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
+      double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
       status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
       printout("[debug] find T_e:   iter %d, interval [%g, %g], guess %g, status %d\n",iter2,T_e_min,T_e_max,T_e,status);
     }

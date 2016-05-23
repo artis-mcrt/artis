@@ -5,6 +5,7 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
   CC = cc
 #  CC = gcc-6
 #  CC = clang-omp
+#  CC = mpicc
   INCLUDE = /usr/local/opt/gsl/include
   LIB = /usr/local/opt/gsl/lib 
 #  CFLAGS = -Wall -O0g -g -std=c11 -I$(INCLUDE) $(VER)

@@ -11,7 +11,6 @@
 
 int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double single_t, int lindex, double dnuds)
 {
-  double vel_vec[3];
   double emitt_energy;
   struct grid *grid_ptr;
 
@@ -82,6 +81,7 @@ int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double s
   */
   if (emitt_energy != 0)
   {
+    double vel_vec[3];
     get_velocity(single_pos, vel_vec, single_t);
 
     ray_ptr->e_rf[nray]+= emitt_energy / fabs(dnuds)
@@ -99,7 +99,6 @@ int continuum_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, doubl
   /* It should account for the changes in the ray intensity due to
      continuum processes along the path. */
   PKT dummy;
-  double vel_vec[3];
 
   /* Make a dummy packet that carries the ray properties. */
 
@@ -129,6 +128,7 @@ int continuum_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, doubl
 
   if (lindex != RED_OF_LIST)
   {
+    double vel_vec[3];
     get_velocity(single_pos, vel_vec, single_t);
     double dop_fac = 1./doppler(syn_dir, vel_vec);
 

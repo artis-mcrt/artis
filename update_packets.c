@@ -46,7 +46,6 @@ int update_packets(int nts)
   //printout("before update packets\n");
 
   printout("start of parallel update_packets loop %d\n",time(NULL));
-  int time_of_last_packet_printout = 0;
   /// Initialise the OpenMP reduction target to zero
   #ifdef _OPENMP
     #pragma omp parallel
@@ -54,6 +53,7 @@ int update_packets(int nts)
     {
       #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
   #endif
+      int time_of_last_packet_printout = 0;
       for (int n = 0; n < npkts; n++)
       {
         //printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);

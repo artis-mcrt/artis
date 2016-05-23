@@ -16,14 +16,13 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
   if (modelgridindex != MMODELGRID)
   {
     double helper = distance * pkt_ptr->e_cmf;
-    double nu = pkt_ptr->nu_cmf;
-
     #ifdef _OPENMP
       #pragma omp atomic
     #endif
     J[modelgridindex] += helper;
 
     #ifndef FORCE_LTE
+      double nu = pkt_ptr->nu_cmf;
       double helper2 = helper / nu;
       //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
       #ifdef _OPENMP

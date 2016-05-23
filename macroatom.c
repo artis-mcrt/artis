@@ -11,7 +11,7 @@
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.
 {
-  bool end_packet = false; ///means "keep working"
+  bool end_packet = false;
   double t_current = t1; ///this will keep track of time in the calculation
   double t_mid = time_step[timestep].mid;
 
@@ -32,9 +32,6 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   /// not sure whether this reduces the number of calculations, as number of grid cells
   /// is much larger than number of pellets (next question: connection to number of
   /// photons)
-  double T_e = get_Te(modelgridindex);
-  //double T_R = cell[pkt_ptr->where].T_R;
-  //double W = cell[pkt_ptr->where].W;
   int element = mastate[tid].element;
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
@@ -258,6 +255,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g, saved_internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current,cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher);
         }
 
+        double T_e = get_Te(modelgridindex);
         double T_R = get_TR(modelgridindex);
         double W = get_W(modelgridindex);
         printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,T_e,W,get_TJ(modelgridindex));
@@ -480,7 +478,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       mastate[tid].element = element;
       mastate[tid].ion = ion-1;
       mastate[tid].level = lower;
-      intparas.T = T_e;
+      intparas.T = get_Te(modelgridindex);
       intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
       F_alpha_sp.params = &intparas;
       double deltanu = nu_threshold * NPHIXSNUINCREMENT;

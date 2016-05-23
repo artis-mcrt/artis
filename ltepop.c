@@ -8,7 +8,9 @@
 #include "update_grid.h"
 
 
-double calculate_partfunct_old(int element, int ion, int modelgridindex);
+// private functions
+//double calculate_partfunct_old(int element, int ion, int modelgridindex);
+double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level);
 
 
 ///***************************************************************************/
@@ -366,66 +368,6 @@ double calculate_ltepartfunct(int element, int ion, double T)
 }
 */
 
-
-///***************************************************************************
-double calculate_partfunct_old(int element, int ion, int modelgridindex)
-/// Calculates the partition function for ion=ion of element=element in
-/// cell modelgridindex
-{
-  double T_exc = get_TJ(modelgridindex);
-  double W = 1.;
-
-  //  T_exc = MINTEMP;
-
-/*  if (T_exc <= MINTEMP)
-  {
-    T_exc = get_TR(modelgridindex);
-    W = get_W(modelgridindex);
-  }*/
-  //double T_R = modelgrid[modelgridindex].T_R;
-  //double W = modelgrid[modelgridindex].W;
-  //double T_J = pow(W,1./4.)*T_R;
-  double oneoverkbtexc = 1/KB/T_exc;
-  double epsilon_groundlevel = epsilon(element,ion,0);
-
-  double U = stat_weight(element,ion,0);
-  int nlevels = get_nlevels(element,ion);
-/*  if (T_exc <= MINTEMP)
-  {
-    for (int level = 1; level < nlevels; level++)
-    {
-      if (elements[element].ions[ion].levels[level].metastable == 1)
-      {
-        T_exc = get_TJ(modelgridindex);
-        W = 1.;
-      }
-      else
-      {
-        T_exc = get_TR(modelgridindex);
-        W = get_W(modelgridindex);
-      }
-      U += W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
-    }
-  }
-  else
-  {*/
-    for (int level = 1; level < nlevels; level++)
-    {
-      U += W * stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
-      if (!isfinite(U))
-      {
-        printout("element %d ion %d\n",element,ion);
-        printout("modelgridindex %d\n",modelgridindex);
-        printout("level %d, nlevels %d\n",level,nlevels);
-        printout("sw %g\n",stat_weight(element,ion,0));
-        printout("T_exc %g \n",T_exc);
-        abort();
-      }
-    }
-//   }
-
-  return U;
-}
 
 ///***************************************************************************/
 
@@ -939,4 +881,64 @@ void initialise_photoionestimators(void)
       }
     #endif
   }
+}
+
+///***************************************************************************
+double calculate_partfunct_old(int element, int ion, int modelgridindex)
+/// Calculates the partition function for ion=ion of element=element in
+/// cell modelgridindex
+{
+  double T_exc = get_TJ(modelgridindex);
+  double W = 1.;
+
+  //  T_exc = MINTEMP;
+
+/*  if (T_exc <= MINTEMP)
+  {
+    T_exc = get_TR(modelgridindex);
+    W = get_W(modelgridindex);
+  }*/
+  //double T_R = modelgrid[modelgridindex].T_R;
+  //double W = modelgrid[modelgridindex].W;
+  //double T_J = pow(W,1./4.)*T_R;
+  double oneoverkbtexc = 1/KB/T_exc;
+  double epsilon_groundlevel = epsilon(element,ion,0);
+
+  double U = stat_weight(element,ion,0);
+  int nlevels = get_nlevels(element,ion);
+/*  if (T_exc <= MINTEMP)
+  {
+    for (int level = 1; level < nlevels; level++)
+    {
+      if (elements[element].ions[ion].levels[level].metastable == 1)
+      {
+        T_exc = get_TJ(modelgridindex);
+        W = 1.;
+      }
+      else
+      {
+        T_exc = get_TR(modelgridindex);
+        W = get_W(modelgridindex);
+      }
+      U += W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
+    }
+  }
+  else
+  {*/
+    for (int level = 1; level < nlevels; level++)
+    {
+      U += W * stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
+      if (!isfinite(U))
+      {
+        printout("element %d ion %d\n",element,ion);
+        printout("modelgridindex %d\n",modelgridindex);
+        printout("level %d, nlevels %d\n",level,nlevels);
+        printout("sw %g\n",stat_weight(element,ion,0));
+        printout("T_exc %g \n",T_exc);
+        abort();
+      }
+    }
+//   }
+
+  return U;
 }

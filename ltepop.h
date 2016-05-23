@@ -8,7 +8,6 @@ double ionfract(int element, int ion, int modelgridindex, double nne);
 double phi(int element, int ion, int modelgridindex);
 double calculate_partfunct(int element, int ion, int modelgridindex);
 double get_groundlevelpop(int modelgridindex, int element, int ion);
-double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level);
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 

@@ -1482,8 +1482,6 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   solvertype = gsl_root_fsolver_brent;
   gsl_root_fsolver *solver;
   solver = gsl_root_fsolver_alloc(solvertype);
-  double fractional_accuracy = 1e-3;
-  int maxit = 100;
   int uppermost_ion,only_neutral_ions,i,nelements_in_cell;
   double factor,abundance;
 
@@ -1637,6 +1635,8 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     }
     gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
     int iter = 0;
+    int maxit = 100;
+    double fractional_accuracy = 1e-3;
     int status;
     do
     {

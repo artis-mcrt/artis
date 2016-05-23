@@ -12,7 +12,7 @@
 // private functions
 void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum);
 double sample_planck(double T);
-
+double planck(double nu, double T);
 
 ///****************************************************************************
 void calculate_kpkt_rates(int modelgridindex)
@@ -418,7 +418,7 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 
 
 ///****************************************************************************
-double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
+double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   //double nne = cell[pkt_ptr->where].nne ;
@@ -492,7 +492,7 @@ double planck(double nu, double T)
 
 
 ///****************************************************************************
-double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
+double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 //{
 //  double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2);
@@ -681,7 +681,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       //zrand = gsl_rng_uniform(rng);   /// delivers zrand in [0,1[
       //zrand = 1. - zrand;             /// make sure that log gets a zrand in ]0,1]
       zrand = gsl_rng_uniform_pos(rng);   /// delivers zrand in ]0,1[
-      pkt_ptr->nu_cmf = -KB*T_e/H * log(zrand);
+      pkt_ptr->nu_cmf = -KB * T_e / H * log(zrand);
       //pkt_ptr->nu_cmf = 3.7474058e+14;
 
       if (!isfinite(pkt_ptr->nu_cmf))

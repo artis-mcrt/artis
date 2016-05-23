@@ -274,11 +274,8 @@ double meanf_sigma(double x)
 }*/
 
 /***********************************************/
-int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)
+/*int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)
 {
-  printout("grey_rt was called");
-  abort();
-}/*
   // This is called when a grey ray is about to be moved a distance ldist.
   // It should account for the changes in the ray intensity due to
   //   grey processes along the path.

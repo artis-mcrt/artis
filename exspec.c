@@ -25,47 +25,8 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  int nts;
-
-  FILE *emission_file,*lc_file,*spec_file,*absorption_file;
-  int j,t_arrive;
-  PKT *pkt_ptr;
-
-  int outer_iteration;
-  //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
-  //int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
-  //int gather_gamma_light_curve(), write_gamma_light_curve();
-  int i,ii,iii,interactions;
-  double meaninteractions;
-  FILE *syn_file;
-  FILE *linestat_file;
-  FILE *packets_file;
-  FILE *temperature_file;
-  int middle_iteration;
   int my_rank;
   int p;
-  int nnn, nn, n;
-  int element;
-  #ifdef MPI_ON
-    double a, b;
-    int aa, bb;
-    int nblock, numtot, n_leftover;
-  #endif
-  int nstart, nknown, ndo;
-  double rho_tot, te_tot, tr_tot, w_tot, n_count;
-  int position, nlp, ncl, nncl, mgi;
-  double T_R_max,T_R_min,T_R_step;
-  double T_e_max,T_e_min,T_e_step;
-  double rho_max,rho_min,rho_step;
-  char filename[100];
-  int HUGEE2;
-  double nntot;
-  int titer;
-
-  double deltaV,deltat;
-  int assoc_cells;
-
-//  int HUGEE;
 
   #ifdef MPI_ON
     MPI_Init(&argc, &argv);
@@ -82,6 +43,7 @@ int main(int argc, char** argv)
   {
     tid = 0;
     nthreads = 1;
+    char filename[100];
     sprintf(filename,"exspec_%d-%d.txt",my_rank,tid);
     if ((output_file = fopen(filename, "w")) == NULL)
     {
@@ -135,7 +97,7 @@ int main(int argc, char** argv)
     exit(0);
     */
 
-    for (outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
+    for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
     {
       /// Initialise the grid. Call routine that sets up the initial positions
       /// and sizes of the grid cells.
@@ -151,14 +113,15 @@ int main(int argc, char** argv)
       /// Loop over all packets in all the packets files of the simulation and check if
       /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
       /// epkts array, which is then used for the binning.
-      j = 0;
-      for (i = 0; i < nprocs; i++)
+      int j = 0;
+      for (int i = 0; i < nprocs; i++)
       {
         /// Read in the next bunch of packets to work on
         //sprintf(filename,"packets%d_%d.tmp",0,i);
         sprintf(filename,"packets%.2d_%.4d.out",0,i);
         printout("%s, %d %d\n",filename,i,nprocs);
         //if ((packets_file = fopen(filename, "rb")) == NULL)
+        FILE *packets_file;
         if ((packets_file = fopen(filename, "r")) == NULL)
         {
           printf("Cannot open packets file %s\n",filename);
@@ -168,16 +131,16 @@ int main(int argc, char** argv)
         read_packets(packets_file);
         fclose(packets_file);
 
-        for (ii = 0; ii < npkts; ii++)
+        for (int ii = 0; ii < npkts; ii++)
         {
-          pkt_ptr = &pkt[ii];
+          PKT *pkt_ptr = &pkt[ii];
           if (pkt_ptr->type == TYPE_ESCAPE && pkt_ptr->escape_type == TYPE_RPKT)
           {
             //printout("add packet %d\n",j);
             /// We know that a packet escaped at "escape_time". However, we have
             /// to allow for travel time. Use the formula in Leon's paper. The extra
             /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-            t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
+            int t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
             epkts[j].arrive_time = t_arrive;
 
             /// Now do the cmf time.
@@ -201,6 +164,7 @@ int main(int argc, char** argv)
 
 
       /// Extract angle-averaged spectra and light curves
+      FILE *emission_file,*lc_file,*spec_file,*absorption_file;
       if ((lc_file = fopen("light_curve.out", "w")) == NULL)
       {
         printout("Cannot open light_curve.out\n");
@@ -248,7 +212,7 @@ int main(int argc, char** argv)
           printout("Cannot open spec_res.out\n");
           exit(0);
         }
-        for (i = 0; i < MABINS; i++)
+        for (int i = 0; i < MABINS; i++)
         {
           if (do_emission_res == 1)
           {

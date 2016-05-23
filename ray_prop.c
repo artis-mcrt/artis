@@ -195,7 +195,9 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
           single_t = single_t + ((stop_dist - trav_dist) / CLIGHT_PROP);
           if (do_rlc_est != 0)
           {
-            grey_rt(ray_ptr, nray, stop_dist - trav_dist, single_pos, single_t, lindex);
+            //grey_rt(ray_ptr, nray, stop_dist - trav_dist, single_pos, single_t, lindex);
+            printout("grey_rt was called");
+            abort();
           }
           else
           {
