@@ -265,12 +265,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           {
             int log_this_cell = ((n % 50 == 0) || (npts_model < 50));
             //cellnumber = modelgrid[n].cellnumber;
-            //int tb_info;
-            //if (my_rank % nblock == n)
-            //  tb_info = 1;
-            //if (my_rank % nblock == ncl) tb_info = 1;
-            //else
-            //  tb_info = 0;
             /// Update current mass density of cell
             //n = nonemptycells[my_rank+ncl*nprocs];
             if (log_this_cell)

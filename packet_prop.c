@@ -8,7 +8,7 @@
 /* Master routine for moving packets around. When it called,
    it is given the time at start of inverval and at end - when it finishes,
    everything the packet does during this time should be sorted out. */
-int packet_prop(PKT *pkt_ptr, double t1, double t2, int nts)
+int packet_prop(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 {
   double t_current = t1;
 

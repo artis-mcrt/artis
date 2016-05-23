@@ -124,8 +124,8 @@ typedef struct
 
 typedef struct
 {
-  fullphixslist_t *allcont;
-  groundphixslist_t *groundcont;
+  fullphixslist_t *restrict allcont;
+  groundphixslist_t *restrict groundcont;
 } phixslist_t;
 
 
@@ -332,17 +332,17 @@ typedef struct
   int levelindex;         // index of upper ion level after photoionisation
   float probability;        // fraction of phixs cross section leading to this final level
 
-  double *spontrecombcoeff;
-  double *corrphotoioncoeff;
-  double *bfheating_coeff;
-  double *bfcooling_coeff;
+  double *restrict spontrecombcoeff;
+  double *restrict corrphotoioncoeff;
+  double *restrict bfheating_coeff;
+  double *restrict bfcooling_coeff;
 } phixstarget_entry;
 
 typedef struct
 {
-  float *photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  float *restrict photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets;                       /// length of phixstargets array:
-  phixstarget_entry *phixstargets;         /// pointer to table of target states and probabilities
+  phixstarget_entry *restrict phixstargets;         /// pointer to table of target states and probabilities
 
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
   int stat_weight;                         /// Statistical weight of this level.
@@ -379,8 +379,8 @@ typedef struct
   //double internal_up_same;                   /// Rate for internal upward transitions within the same ionisation stage.
 
   //transitionlist_entry *transitions;
-  permittedtransitionlist_entry *uptrans;    /// Allowed upward transitions from this level
-  permittedtransitionlist_entry *downtrans;  /// Allowed downward transitions from this level
+  permittedtransitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
+  permittedtransitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
   int closestgroundlevelcont;
 } levellist_entry;
 
@@ -397,7 +397,7 @@ typedef struct
   //int nbfcontinua;
   //ionsphixslist_t *phixslist;
 //  float *zeta;
-  levellist_entry *levels;                   /// Carries information for each level: 0,1,...,nlevels-1
+  levellist_entry *restrict levels;                   /// Carries information for each level: 0,1,...,nlevels-1
   float *Alpha_sp;
 } ionlist_entry;
 
@@ -410,7 +410,7 @@ typedef struct
 //                                             /// and their daughters. Neither it will work with OpenMP threads.
   float abundance;                           ///
   float mass;                                /// Atomic mass number in multiple of MH
-  ionlist_entry *ions;                       /// Carries information for each ion: 0,1,...,nions-1
+  ionlist_entry *restrict ions;                       /// Carries information for each ion: 0,1,...,nions-1
 } elementlist_entry;
 
 typedef struct
@@ -517,21 +517,21 @@ typedef struct
   double internal_down_lower;             /// Rate for internal downward transitions to lower ionisation stage.
   double internal_up_higher;              /// Rate for internal upward transitions to higher ionisation stage.
 
-  double *individ_rad_deexc;
-  double *individ_internal_down_same;
-  double *individ_internal_up_same;
+  double *restrict individ_rad_deexc;
+  double *restrict individ_internal_down_same;
+  double *restrict individ_internal_up_same;
 
   chphixstargets_struct *chphixstargets;
 } chlevels_struct;
 
 typedef struct
 {
-  chlevels_struct *chlevels;              /// Pointer to the ions levellist.
+  chlevels_struct *restrict chlevels;              /// Pointer to the ions levellist.
 } chions_struct;
 
 typedef struct
 {
-  chions_struct *chions;                  /// Pointer to the elements ionlist.
+  chions_struct *restrict chions;                  /// Pointer to the elements ionlist.
 } chelements_struct;
 
 typedef struct
@@ -540,15 +540,15 @@ typedef struct
 //  double totalcooling;                    /// Total cooling rate in this cell.
 //  double bfcooling;                       /// Total cooling rate in this cell.
 //  coolinglist_contributions *coolinglist; /// Cooling contributions by the different processes.
-  cellhistorycoolinglist_t *coolinglist;    /// Cooling contributions by the different processes.
-  chelements_struct *chelements;            /// Pointer to a nested list which helds compositional
+  cellhistorycoolinglist_t *restrict coolinglist;    /// Cooling contributions by the different processes.
+  chelements_struct *restrict chelements;            /// Pointer to a nested list which helds compositional
                                             /// information for all the elements=0,1,...,nelements-1
 } cellhistory_struct;
 
 
 typedef struct
 {
-  int *to;
+  int *restrict to;
 } transitions_t;
 
 #endif //TYPES_H

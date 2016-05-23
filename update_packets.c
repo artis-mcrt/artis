@@ -64,7 +64,7 @@ int update_packets(int nts)
         }
         //if (n == 5000) exit(0);
 
-        PKT *pkt_ptr = &pkt[n];
+        PKT *restrict pkt_ptr = &pkt[n];
         pkt_ptr->interactions = 0;
         //pkt_ptr->timestep = nts;
 

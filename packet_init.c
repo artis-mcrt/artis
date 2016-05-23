@@ -6,7 +6,7 @@
 
 // private functions
 void setup_packets(int pktnumberoffset);
-void place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset);
+void place_pellet(const struct grid *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset);
 
 
 void packet_init(int middle_iteration, int my_rank)
@@ -323,7 +323,7 @@ double f48cr(const CELL *grid_ptr)
 
 
 ///***************************************************************************/
-void place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktnumberoffset)
+void place_pellet(const struct grid *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
   /// First choose a position for the pellet. In the cell.
@@ -337,7 +337,6 @@ void place_pellet(const struct grid *grid_ptr, double e0, int m, int n, int pktn
   pkt[n].pos[1] = grid_ptr->pos_init[1] + (zrand * wid_init);
   zrand = gsl_rng_uniform_pos(rng);
   pkt[n].pos[2] = grid_ptr->pos_init[2] + (zrand * wid_init);
-
 
   /*first choose which of the decay chains to sample*/
   double prob_chain[3];

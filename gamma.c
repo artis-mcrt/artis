@@ -206,7 +206,7 @@ int choose_gamma_ray(PKT *pkt_ptr)
 /* Now routine for moving a gamma packet. Idea is that we have as input
 a gamma packet with known properties at time t1 and we want to follow it
 until time t2. */
-double do_gamma(PKT *pkt_ptr, double t1, double t2)
+double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
 {
   double t_current = t1; //this will keep track of time in the calculation
 
@@ -244,7 +244,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
       exit(0);
     }
-    
+
     if (sdist > max_path_step)
     {
       sdist = max_path_step;

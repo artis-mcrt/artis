@@ -33,7 +33,7 @@ double min(double a, double b)
 
 // Material for handing r-packet propagation.
 ///****************************************************************************
-double do_rpkt(PKT *pkt_ptr, double t1, double t2)
+double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
   int mgi = cell[pkt_ptr->where].modelgridindex;
@@ -692,7 +692,7 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
 
 
 ///****************************************************************************
-double closest_transition(PKT *pkt_ptr)
+double closest_transition(PKT *restrict pkt_ptr)
 /// for the propagation through non empty cells
 {
   double nu_trans;
@@ -872,7 +872,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
 
 
 ///****************************************************************************
-double closest_transition_empty(PKT *pkt_ptr)
+double closest_transition_empty(PKT *restrict pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
@@ -953,7 +953,7 @@ double closest_transition_empty(PKT *pkt_ptr)
 
 
 ///****************************************************************************
-void calculate_kappa_rpkt_cont(const PKT *pkt_ptr, double t_current)
+void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
 {
   double kappa_ffheating = 0.;
   double kappa_ff = 0.;

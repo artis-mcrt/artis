@@ -471,9 +471,9 @@ double dlogt;
 int nelements,nlines,includedions;
 /// Global pointer to beginning of atomic data. This is used as the starting point to fill up
 /// the atomic data in input.c after it was read in from the database.
-elementlist_entry *elements;
+elementlist_entry *restrict elements;
 /// Global pointer to beginning of linelist
-linelist_entry *linelist;
+linelist_entry *restrict linelist;
 /// Global pointer to beginning of the bound-free list
 bflist_t *bflist;
 
@@ -491,15 +491,15 @@ rpkt_cont_opacity_struct *kappa_rpkt_cont;
 int ncoolingterms;
 int importantcoolingterms;                /// Number of important cooling terms
 
-coolingrates_t *coolingrates;
-heatingrates_t *heatingrates;
+coolingrates_t *restrict coolingrates;
+heatingrates_t *restrict heatingrates;
 //double heating_col;
 
 
 /// PHIXSLIST
 ///============================================================================
 
-phixslist_t *phixslist;
+phixslist_t *restrict phixslist;
 //extern groundphixslist_t *groundphixslist;
 int nbfcontinua,nbfcontinua_ground; ///number of bf-continua
 //int importantbfcontinua;
