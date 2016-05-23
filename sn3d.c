@@ -273,7 +273,7 @@ int main(int argc, char** argv)
   fclose(syn_file);
   printout("time read syn file %d\n",time(NULL));
 
-  file_set = 0;
+  file_set = false;
   debuglevel = 4;  /// Selects detail level of debug output, needs still some work.
   for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
   {
@@ -541,13 +541,13 @@ int main(int argc, char** argv)
           }
         #endif
 
-        if (do_r_lc == 0)
+        if (do_r_lc)
         {
-          do_comp_est = estim_switch(nts);
+          do_comp_est = false;
         }
         else
         {
-          do_comp_est = 0;
+          do_comp_est = estim_switch(nts);
         }
 
         nesc = 0;
@@ -1017,7 +1017,7 @@ int main(int argc, char** argv)
                 }
               }
             }
-            if (do_comp_est == 1)
+            if (do_comp_est)
             {
               MPI_Reduce(&compton_emiss, &redhelper, MMODELGRID*EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
@@ -1040,7 +1040,7 @@ int main(int argc, char** argv)
           Then the new values can be sent out to all threads again */
           if (my_rank == 0)
           {
-            if (do_comp_est == 1)
+            if (do_comp_est)
             {
               normalise_estimators(nts);
               write_estimators(nts);
@@ -1086,7 +1086,7 @@ int main(int argc, char** argv)
             {
               MPI_Bcast(&rpkt_emiss, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
             }
-            if (do_comp_est == 1)
+            if (do_comp_est)
             {
               MPI_Bcast(&compton_emiss, MMODELGRID*EMISS_MAX, MPI_FLOAT, 0, MPI_COMM_WORLD);
             }

@@ -54,7 +54,7 @@ int write_light_curve(FILE *lc_file, int current_abin)
 
   /// Light curve is done - write it out.
   /// If needed, start by reading in existing file and storing old numbers.
-  if (file_set == 1)
+  if (file_set)
   {
     if ((lc_file = fopen("light_curve.out", "r")) == NULL)
     {

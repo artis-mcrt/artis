@@ -94,7 +94,7 @@ int write_gamma_light_curve(void)
 
   FILE *lc_gamma_file;
 
-  if (file_set == 1)
+  if (file_set)
   {
     if ((lc_gamma_file = fopen("gamma_light_curve.out", "r")) == NULL)
     {

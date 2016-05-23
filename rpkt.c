@@ -962,7 +962,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
   int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   double sigma = 0.0;
-  if (do_r_lc == 1)
+  if (do_r_lc)
   {
     double nne = get_nne(modelgridindex);
     double T_e = get_Te(modelgridindex);
@@ -1248,7 +1248,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
 
     int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
-    if (do_r_lc == 1)
+    if (do_r_lc)
     {
         if (opacity_case == 4)
         {

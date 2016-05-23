@@ -419,7 +419,7 @@ int write_estimators(int nts)
   strcat(filename, junk);
   strcat(filename, ".out");
 
-  if (file_set == 1)
+  if (file_set)
   {
     if ((est_file = fopen(filename, "rb")) == NULL)
     {
@@ -461,9 +461,9 @@ int write_estimators(int nts)
 }
 
 /***********************************************/
-int estim_switch(int nts)
+bool estim_switch(int nts)
 {
-  int on_or_off = 1; //on
+  int on_or_off = true; //on
 
   double tstart = time_step[nts].start;
   double tend = time_step[nts].start + time_step[nts].width;
@@ -473,12 +473,12 @@ int estim_switch(int nts)
 
   if (tstart > te_want)
   {
-    on_or_off = 0;
+    on_or_off = false;
   }
 
   if (tend < ts_want)
   {
-    on_or_off = 0;
+    on_or_off = false;
   }
 
   return on_or_off;

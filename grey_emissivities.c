@@ -172,7 +172,7 @@ int write_grey(int nts)
   strcat(filename, junk);
   strcat(filename, ".out");
 
-  if (file_set == 1)
+  if (file_set)
   {
     if ((est_file = fopen(filename, "r")) == NULL)
     {

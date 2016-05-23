@@ -296,7 +296,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       /* Move it into the new cell. */
       if (kap_tot > 0)
       {
-        if (do_comp_est == 1)
+        if (do_comp_est)
         {
           sdist = sdist * 2.;
           compton_emiss_cont(pkt_ptr, sdist, t_current);
@@ -328,7 +328,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
 
       if (kap_tot > 0)
       {
-        if (do_comp_est == 1)
+        if (do_comp_est)
         {
           tdist = tdist * 2.;
           compton_emiss_cont(pkt_ptr, tdist, t_current);
@@ -354,7 +354,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       move_pkt(pkt_ptr,edist,t_current);
       if (kap_tot > 0)
       {
-        if (do_comp_est == 1)
+        if (do_comp_est)
         {
           edist = edist * 2.;
           compton_emiss_cont(pkt_ptr, edist, t_current);

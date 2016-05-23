@@ -27,7 +27,7 @@ int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
   /*
   float dum1, dum2;
   /// The spectra are now done - just need to print them out.
-  if (file_set == 1)
+  if (file_set)
   {
     if ((spec_file = fopen("spec.out", "r")) == NULL)
     {

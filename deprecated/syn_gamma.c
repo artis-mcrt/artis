@@ -35,7 +35,7 @@ double syn_gamma()
     for (int nts = 0; nts < ntstep; nts++)
     {
       do_comp_est = estim_switch(nts);
-      if (do_comp_est == 1)
+      if (do_comp_est)
         {
           //  printout("hello!\n");
           emiss_load(nts);

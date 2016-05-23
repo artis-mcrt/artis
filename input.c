@@ -109,7 +109,7 @@ int input(int rank)
   #endif
 
   /// Lightcurve setting
-  do_r_lc = 0;    /// default to no lc = gamma-ray spectrum
+  do_r_lc = false;    /// default to no lc = gamma-ray spectrum
   do_rlc_est = 0; /// ^^
 
 
@@ -1900,22 +1900,22 @@ void read_parameterfile(int rank)
   fscanf(input_file, "%d", &dum1); ///compute the r-light curve?
   if (dum1 == 1) ///lc no estimators
   {
-    do_r_lc = 1;
+    do_r_lc = true;
     do_rlc_est = 0;
   }
   else if (dum1 == 2)/// lc case with thin cells
   {
-    do_r_lc = 1;
+    do_r_lc = true;
     do_rlc_est = 1;
   }
   else if (dum1 == 3)/// lc case with thick cells
   {
-    do_r_lc = 1;
+    do_r_lc = true;
     do_rlc_est = 2;
   }
   else if (dum1 == 4) /// gamma-ray heating case
   {
-    do_r_lc = 1;
+    do_r_lc = true;
     do_rlc_est = 3;
   }
   else if (dum1 != 0)
