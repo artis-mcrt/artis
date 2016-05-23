@@ -196,9 +196,9 @@ up a cmf direction in cos(theta) and phi. */
     }
 
     get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
-    double oneoverdopplerfac = 1 / doppler(pkt_ptr->dir, vel_vec);
-    pkt_ptr->nu_rf = pkt_ptr->nu_cmf * oneoverdopplerfac;
-    pkt_ptr->e_rf = pkt_ptr->e_cmf * oneoverdopplerfac;
+    double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
+    pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfac;
+    pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfac;
 
     pkt_ptr->type = TYPE_GAMMA;
     pkt_ptr->last_cross = NONE;
