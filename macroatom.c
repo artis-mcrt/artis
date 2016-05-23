@@ -488,38 +488,31 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       double error;
       double total_alpha_sp;
       gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &total_alpha_sp, &error);
-      double alpha_sp = total_alpha_sp;
-      double alpha_sp_old;
-      double nu_lower = -1;
-      for (int i = 0; i < NPHIXSPOINTS; i++)
+      double alpha_sp_old = total_alpha_sp;
+      double nu_lower = nu_threshold;
+      for (int i = 1; i < NPHIXSPOINTS; i++)
       // LJS: this loop could probably be made a bit faster
       // use the overlap with the previous integral and add on a piece each time instead of recalculating the
       // integral over the entire region
       {
         // the reason the lower limit of integration is incremented is that most of the probability distribution is at the low
         // frequency end, so this minimizes the number of iterations needed
-        alpha_sp_old = alpha_sp;
-        nu_lower = nu_threshold + i*deltanu;
+        double alpha_sp;
+        nu_lower += deltanu;
         /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
         gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &alpha_sp, &error);
         //alpha_sp *= FOURPI * sf;
         //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
-
-        //printout("[debug] macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
-        if (zrand >= alpha_sp/total_alpha_sp)
+        if (zrand >= alpha_sp / total_alpha_sp)
         {
-          if (i > 0)
-          {
-            double nuoffset = (total_alpha_sp*zrand - alpha_sp_old) / (alpha_sp-alpha_sp_old) * deltanu;
-            nu_lower = nu_threshold + (i-1) * deltanu + nuoffset;
-          }
-          else
-            nu_lower = nu_threshold;
-
+          double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
+          nu_lower = nu_threshold + (i-1) * deltanu + nuoffset;
           break;
         }
+        //printout("[debug] macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
+        alpha_sp_old = alpha_sp;
       }
-      if (nu_lower < 0.)
+      if (nu_lower == nu_threshold)
       {
         nu_lower = nu_max_phixs;
       }
