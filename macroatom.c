@@ -24,7 +24,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   int linelistindex = -99;
   int nlevels;
 
-  int end_packet = 0; ///means "keep working"
+  bool end_packet = false; ///means "keep working"
   double t_current = t1; ///this will keep track of time in the calculation
   double t_mid = time_step[timestep].mid;
 
@@ -66,7 +66,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
 
   //debuglevel = 2;
-  while (end_packet == 0)
+  while (!end_packet)
   {
     int ion = mastate[tid].ion;
     int level = mastate[tid].level;
@@ -364,7 +364,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
       //printout("next possible line encounter %d\n",pkt_ptr->next_trans);
-      end_packet = 1;
+      end_packet = true;
       #ifndef FORCE_LTE
         //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
@@ -382,7 +382,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         pkt_ptr->last_event = 10;
       #endif
       pkt_ptr->type = TYPE_KPKT;
-      end_packet = 1;
+      end_packet = true;
       #ifndef FORCE_LTE
         //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
         #ifdef _OPENMP
@@ -611,7 +611,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
-      end_packet = 1;
+      end_packet = true;
     }
     else if (zrand*total_transitions < rad_deexc + col_deexc + internal_down_same + rad_recomb + col_recomb)
     {
@@ -626,7 +626,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         pkt_ptr->last_event = 11;
       #endif
       pkt_ptr->type = TYPE_KPKT;
-      end_packet = 1;
+      end_packet = true;
       #ifndef FORCE_LTE
         //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
         #ifdef _OPENMP
@@ -1101,7 +1101,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
       //f = osc_strength(element,ion,upper,lower);
       //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
 
-      double fac1 = epsilon_trans/KB/T_e;
+      double fac1 = epsilon_trans / KB / T_e;
       ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
       double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
       //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
