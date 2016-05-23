@@ -238,7 +238,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       sdist = 0;
     }
 
-    if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
+    if (((snext < 0) && (snext != -99)) || (snext >= ngrid))
     {
       printout("Heading for inappropriate grid cell. Abort.\n");
       printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
