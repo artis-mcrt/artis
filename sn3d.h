@@ -489,8 +489,8 @@ rpkt_cont_opacity_struct *restrict kappa_rpkt_cont;
 int ncoolingterms;
 int importantcoolingterms;                /// Number of important cooling terms
 
-coolingrates_t *restrict coolingrates;
-heatingrates_t *restrict heatingrates;
+coolingrates_t *coolingrates;
+heatingrates_t *heatingrates;
 //double heating_col;
 
 

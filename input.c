@@ -623,14 +623,14 @@ void read_atomicdata(void)
               {
                 transitions[level].to[i] = -99.;
               }
-              if ((elements[element].ions[ion].levels[level].downtrans = (permittedtransitionlist_entry *) malloc(sizeof(permittedtransitionlist_entry))) == NULL)
+              if ((elements[element].ions[ion].levels[level].downtrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize downtranslist ... abort\n");
                 exit(0);
               }
               /// initialize number of downward transitions to zero
               elements[element].ions[ion].levels[level].downtrans[0].targetlevel = 0;
-              if ((elements[element].ions[ion].levels[level].uptrans = (permittedtransitionlist_entry *) malloc(sizeof(permittedtransitionlist_entry))) == NULL)
+              if ((elements[element].ions[ion].levels[level].uptrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize uptranslist ... abort\n");
                 exit(0);
@@ -692,7 +692,7 @@ void read_atomicdata(void)
 
                 elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
                 if ((elements[element].ions[ion].levels[level].downtrans
-                    = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level]+1)*sizeof(permittedtransitionlist_entry))) == NULL)
+                    = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level]+1)*sizeof(transitionlist_entry))) == NULL)
                 {
                   printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
                   exit(0);
@@ -706,7 +706,7 @@ void read_atomicdata(void)
 
                 elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
                 if ((elements[element].ions[ion].levels[targetlevel].uptrans
-                    = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel]+1)*sizeof(permittedtransitionlist_entry))) == NULL)
+                    = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel]+1)*sizeof(transitionlist_entry))) == NULL)
                 {
                   printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
                   exit(0);
@@ -1623,7 +1623,7 @@ void read_processed_modelatom(FILE *modelatom)
         fscanf(modelatom,"%d\n",&ndowntrans);
         //printout("ndowntrans %d\n",ndowntrans);
         totaldowntrans += ndowntrans;
-        if ((elements[element].ions[ion].levels[level].downtrans = (permittedtransitionlist_entry *) malloc((ndowntrans+1)*sizeof(permittedtransitionlist_entry))) == NULL)
+        if ((elements[element].ions[ion].levels[level].downtrans = (transitionlist_entry *) malloc((ndowntrans+1)*sizeof(transitionlist_entry))) == NULL)
         {
           printout("[fatal] input: not enough memory to initialize downtrans list ... abort\n");
           exit(0);
@@ -1644,7 +1644,7 @@ void read_processed_modelatom(FILE *modelatom)
         fscanf(modelatom,"%d\n",&nuptrans);
         //printout("nuptrans %d\n",nuptrans);
         totaluptrans += nuptrans;
-        if ((elements[element].ions[ion].levels[level].uptrans = (permittedtransitionlist_entry *) malloc((nuptrans+1)*sizeof(permittedtransitionlist_entry))) == NULL)
+        if ((elements[element].ions[ion].levels[level].uptrans = (transitionlist_entry *) malloc((nuptrans+1)*sizeof(transitionlist_entry))) == NULL)
         {
           printout("[fatal] input: not enough memory to initialize uptrans list ... abort\n");
           exit(0);

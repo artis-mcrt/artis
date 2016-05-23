@@ -335,46 +335,19 @@ typedef struct
 
 typedef struct
 {
+  double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
   float *restrict photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   phixstarget_entry *restrict phixstargets;         /// pointer to table of target states and probabilities
   int nphixstargets;                       /// length of phixstargets array:
 
-  double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
   int stat_weight;                           /// Statistical weight of this level.
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   int metastable;                            /// 1 if the level is metastable, else 0
-
-//  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.
-
-//   double *spontrecombcoeff_E;
-//   double *photoioncoeff_below;
-//   double *photoioncoeff_above;
-//  double *corrphotoioncoeff_above;
-//  double *bfheating_coeff_above;
-  //double *stimulated_bfcooling_coeff;
-  //double *stimulated_recomb_coeff;
-
-  //float *modified_spontrecombcoeff;
-  //float *stimrecombcoeff;
-  //float *modified_stimrecombcoeff;
-
-  ///float population;
-  ///float sahafact;
-  ///float spontaneousrecomb_ratecoeff;
-  ///float modifiedspontaneousrecomb_ratecoeff;
-  ///float corrphotoion_ratecoeff;
-  ///float modifiedcorrphotoion_ratecoeff;
-  ///marates_struct marates;
-
-  /// time dependent macroatom event rates
-  //double rad_deexc;                          /// Radiative deexcitation rate from this level.
-  //double internal_down_same;                 /// Rate for internal downward transitions within the same ionisation stage.
-  //double internal_up_same;                   /// Rate for internal upward transitions within the same ionisation stage.
+  int closestgroundlevelcont;
 
   //transitionlist_entry *transitions;
-  permittedtransitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
-  permittedtransitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
-  int closestgroundlevelcont;
+  transitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
+  transitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
   bool is_nlte;                              /// 1 if the level is to
                                              /// be treated in nlte
 } levellist_entry;
