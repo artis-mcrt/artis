@@ -3,8 +3,8 @@
 
 #include <math.h>
 
-void angle_ab(const double *dir1, const double *vel, double *dir2);
-double doppler(const double *dir1, const double *vel);
+void angle_ab(const double *dir1, const double *restrict vel, double *restrict dir2);
+double doppler(const double *dir1, const double *restrict vel);
 void scatter_dir(const double *dir_in, double cos_theta, double *dir_out);
 
 /*Routine for getting the magnitude of a vector.*/
@@ -37,7 +37,7 @@ double dot(const double *x, const double *y)
 
 /*Routine for getting velocity vector of the flow at a position.*/
 static inline
-void get_velocity(const double *x, double *y, const double t)
+void get_velocity(const double *restrict x, double *restrict y, const double t)
 {
   /* For homologous expansion. */
 
@@ -50,9 +50,15 @@ void get_velocity(const double *x, double *y, const double t)
 static inline
 void cross_prod(const double vec1[3], const double vec2[3], double vecout[3])
 {
-  vecout[0] = (vec1[1]*vec2[2]) - (vec2[1]*vec1[2]);
-  vecout[1] = (vec1[2]*vec2[0]) - (vec2[2]*vec1[0]);
-  vecout[2] = (vec1[0]*vec2[1]) - (vec2[0]*vec1[1]);
+  double vec1x = vec1[0];
+  double vec1y = vec1[1];
+  double vec1z = vec1[2];
+  double vec2x = vec2[0];
+  double vec2y = vec2[1];
+  double vec2z = vec2[2];
+  vecout[0] = (vec1y*vec2z) - (vec2y*vec1z);
+  vecout[1] = (vec1z*vec2x) - (vec2z*vec1x);
+  vecout[2] = (vec1x*vec2y) - (vec2x*vec1y);
 }
 
 #endif //VECTORS_H

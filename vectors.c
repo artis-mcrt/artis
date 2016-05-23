@@ -5,7 +5,7 @@
 /************************************************************/
 /*Routine for aberation of angles in SR. Takes one direction and velocity
  as input and gives back another direction.*/
-void angle_ab(const double *dir1, const double *vel, double *dir2)
+void angle_ab(const double *restrict dir1, const double *restrict vel, double *restrict dir2)
 {
   double vsqr = dot(vel,vel)/CLIGHTSQUARED;
   double gamma_rel = 1./(sqrt(1 - vsqr));
@@ -23,7 +23,7 @@ void angle_ab(const double *dir1, const double *vel, double *dir2)
 /************************************************************/
 /*Routine for Doppler shift in SR. Takes one direction and velocity
  as input and gives back double.*/
-double doppler (const double *dir1, const double *vel)
+double doppler (const double *restrict dir1, const double *restrict vel)
 {
   //double vsqr = dot(vel,vel)/CLIGHTSQUARED;
   //double gamma_rel = 1./(sqrt(1 - vsqr));
