@@ -784,7 +784,7 @@ void eliminate_nlte_matrix_rowcol(int index, int gs_index, int nlte_dimension, d
           {
             int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            R = photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+            R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
             C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
 
             upper_use = nlte_size - 1; //ion above

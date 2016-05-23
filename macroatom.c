@@ -506,7 +506,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         if (zrand >= alpha_sp / total_alpha_sp)
         {
           double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
-          nu_lower = nu_threshold + (i-1) * deltanu + nuoffset;
+          nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
           break;
         }
         //printout("[debug] macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
@@ -840,8 +840,6 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
   int ion = mastate[tid].ion;
   int upper = mastate[tid].level;
 
-  //int modelgridindex = cell[pkt_ptr->where].modelgridindex;
-
   #ifdef DEBUG_ON
     if (upper <= lower)
     {
@@ -852,54 +850,56 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 
   double statweight_target = statw_down(lineindex);
 
-  double nu_trans = epsilon_trans/H;
-  //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
-  double A_ul = einstein_spontaneous_emission(lineindex);
-  double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
-  double B_lu = mastate[tid].statweight/statweight_target * B_ul;
-
   double n_u = get_levelpop(modelgridindex,element,ion,upper);
   double n_l = get_levelpop(modelgridindex,element,ion,lower);
 
-  double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-
-  double beta = 1.0;
   double R = 0.0;
 
-  if ((n_l < 1.1 * MINPOP) || (n_u < 1.1 * MINPOP))
+  if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
   {
-    beta = 1.0;
-    R = 0.0;
+    double nu_trans = epsilon_trans/H;
+
+    double A_ul = einstein_spontaneous_emission(lineindex);
+    double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
+    double B_lu = mastate[tid].statweight/statweight_target * B_ul;
+
+    double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+
+    if (tau_sobolev > 0)
+    {
+      double beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
+      R = A_ul * beta * mastate[tid].nnlevel;
+    }
+    else
+    {
+      //printout("[warning] rad_deexcitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
+      //printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
+      //printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
+      //printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell %d\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
+      R = 0.0;
+      //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
+      //abort();
+    }
+
+    #ifdef DEBUG_ON
+      if (debuglevel == 2)
+      {
+        printout("[debug] rad_rates_down: element, ion, upper, lower %d, %d, %d, %d\n",element,ion,upper,lower);
+        printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
+      }
+      if (debuglevel == 777)
+        printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
+      if (!isfinite(R))
+      {
+        printout("fatal a1: abort\n");
+        abort();
+      }
+    #endif
   }
   else
   {
-    beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
-    R = A_ul * beta * mastate[tid].nnlevel;
-  }
-
-  if (tau_sobolev <= 0)
-  {
-    //printout("[warning] rad_deexcitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
-    //printout("[warning] rad_deexcitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-    //printout("[warning] rad_deexcitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
-    //printout("[warning] rad_deexcitation: T_e %g, T_R %g, W %g in model cell %d\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex),modelgridindex);
-    //beta = 1.0;
     R = 0.0;
-    //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
-    //abort();
   }
-
-  #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug] rad_rates_down: element, ion, upper, lower %d, %d, %d, %d\n",element,ion,upper,lower);
-    //printout("[debug] rad_rates_down: tau_sobolev, beta %g, %g\n",tau_sobolev,beta);
-    if (debuglevel == 2) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
-    if (debuglevel == 777) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
-    if (!isfinite(R))
-    {
-      printout("fatal a1: abort\n");
-      abort();
-    }
-  #endif
 
   return R;
 }
@@ -909,13 +909,10 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 ///***************************************************************************/
 double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int lineindex, double t_current)//, double T_R, double W)
 ///radiative excitation rate: paperII 3.5.2
-/// n_1 - occupation number of ground state
 {
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int lower = mastate[tid].level;
-
-  //int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   #ifdef DEBUG_ON
     if (upper <= lower)
@@ -927,71 +924,71 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
 
   double statweight_target = statw_up(lineindex);
 
-  double nu_trans = epsilon_trans/H;
-  //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
-  double A_ul = einstein_spontaneous_emission(lineindex);
-  double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
-  double B_lu = statweight_target / mastate[tid].statweight * B_ul;
-
   double n_u = get_levelpop(modelgridindex,element,ion,upper);
   double n_l = get_levelpop(modelgridindex,element,ion,lower);
-  double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-
-  double beta = 1.0;
   double R = 0.0;
-  if ((n_l < 1.1 * MINPOP) || (n_u < 1.1 * MINPOP))
+  if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
-    beta = 1.0;
-    R = 0.0;
-  }
-  else
-  {
-    beta = 1.0 / tau_sobolev * (1. - exp(-tau_sobolev));
-    //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
-    //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
-    //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
-    R = mastate[tid].nnlevel * (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans,modelgridindex);
-  }
+    double nu_trans = epsilon_trans/H;
+    double A_ul = einstein_spontaneous_emission(lineindex);
+    double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
+    double B_lu = statweight_target / mastate[tid].statweight * B_ul;
 
-  if (tau_sobolev <= 0)
-  {
-    //printout("[warning] rad_excitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
-    //printout("[warning] rad_excitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
-    //printout("[warning] rad_excitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
-    //printout("[warning] rad_excitation: T_e %g, T_R %g, W %g\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
-    beta = 1.0;
-    R = 0.;
+    double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
-    //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
-    //abort();
-  }
+    if (tau_sobolev > 0)
+    {
+      double beta = 1.0 / tau_sobolev * (1. - exp(-tau_sobolev));
+      //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
+      //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
+      //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
+      R = mastate[tid].nnlevel * (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans,modelgridindex);
+    }
+    else
+    {
+      //printout("[warning] rad_excitation: tau_sobolev %g <= 0, set beta=1\n",tau_sobolev);
+      //printout("[warning] rad_excitation: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
+      //printout("[warning] rad_excitation: n_l %g, n_u %g, B_lu %g, B_ul %g\n",n_l,n_u,B_lu,B_ul);
+      //printout("[warning] rad_excitation: T_e %g, T_R %g, W %g\n",get_Te(modelgridindex),get_TR(modelgridindex),get_W(modelgridindex));
+      R = 0.;
 
-  if (R < 0)
-  {
-    double g_u = statw_up(lineindex);
-    double g_u2 = stat_weight(element,ion,upper);
-    double g_l = mastate[tid].statweight;
-    double g_l2 = stat_weight(element,ion,lower);
-    printout("Negative excitation rate from level %d to %d\n",lower,upper);
-    printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n",n_l,n_u,g_l,g_l2,g_u,g_u2);
-    printout("n_u/n_l %g, g_u/g_l %g\n",n_u/n_l,g_u/g_l);
-    printout("radfield(nutrans=%g) = %g\n",nu_trans,radfield(nu_trans,modelgridindex));
-    abort();
-  }
+      //printout("[fatal] rad_excitation: tau_sobolev <= 0 ... %g abort",tau_sobolev);
+      //abort();
+    }
 
-  #ifdef DEBUG_ON
-    //printout("tau_sobolev, beta: %g, %g\n",tau_sobolev,beta);
-    if (debuglevel == 2) printout("[debug] rad_rates_up: element, ion, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",element,ion,upper,lower,A_ul,n_l);
-    if (debuglevel == 2) printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",A_ul,tau_sobolev,n_u,n_l,radfield(nu_trans,modelgridindex));
-    if (debuglevel == 777) printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",A_ul,tau_sobolev,n_u,n_l,radfield(nu_trans,modelgridindex));
+    #ifdef DEBUG_ON
+    if (R < 0)
+    {
+      double g_u = statw_up(lineindex);
+      double g_u2 = stat_weight(element,ion,upper);
+      double g_l = mastate[tid].statweight;
+      double g_l2 = stat_weight(element,ion,lower);
+      printout("Negative excitation rate from level %d to %d\n",lower,upper);
+      printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n",n_l,n_u,g_l,g_l2,g_u,g_u2);
+      printout("n_u/n_l %g, g_u/g_l %g\n",n_u/n_l,g_u/g_l);
+      printout("radfield(nutrans=%g) = %g\n",nu_trans,radfield(nu_trans,modelgridindex));
+      abort();
+    }
+    if (debuglevel == 2)
+    {
+      printout("[debug] rad_rates_up: element, ion, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",element,ion,upper,lower,A_ul,n_l);
+      printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",A_ul,tau_sobolev,n_u,n_l,radfield(nu_trans,modelgridindex));
+    }
+    if (debuglevel == 777)
+      printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",A_ul,tau_sobolev,n_u,n_l,radfield(nu_trans,modelgridindex));
     if (!isfinite(R))
     {
       printout("[fatal] rad_excitation: abort\n");
-      printout("[fatal] rad_excitation: R %g, mastate[tid].nnlevel %g, B_lu %g, B_ul %g, n_u %g, n_l %g, beta %g, radfield %g,tau_sobolev %g, t_current %g\n",R,mastate[tid].nnlevel,B_lu,B_ul,n_u,n_l,beta,radfield(nu_trans,modelgridindex),tau_sobolev,t_current);
+      printout("[fatal] rad_excitation: R %g, mastate[tid].nnlevel %g, B_lu %g, B_ul %g, n_u %g, n_l %g, radfield %g,tau_sobolev %g, t_current %g\n",R,mastate[tid].nnlevel,B_lu,B_ul,n_u,n_l,radfield(nu_trans,modelgridindex),tau_sobolev,t_current);
       printout("[fatal] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
       abort();
     }
-  #endif
+    #endif
+  }
+  else
+  {
+    R = 0.0;
+  }
 
   return R;
 }
@@ -1004,14 +1001,14 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
   int upper = mastate[tid].level;
-  double nnlevel = mastate[tid].nnlevel;
-  double nne = get_nne(modelgridindex);
 
   double R = 0.0;
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion-1,lower); phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
     {
+      double nnlevel = mastate[tid].nnlevel;
+      double nne = get_nne(modelgridindex);
       R = nnlevel * nne * get_spontrecombcoeff(element,ion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
       //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
       break;
@@ -1023,39 +1020,6 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
     if (!isfinite(R))
     {
       printout("fatal a2: abort\n");
-      abort();
-    }
-  #endif
-
-  return R;
-}
-
-
-///***************************************************************************/
-// this should go soon! replace with direct calls to get_corrphotoioncoeff instead.
-double photoionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
-///photoionization rate: paperII 3.5.2
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int lower = mastate[tid].level;
-
-  #ifdef DEBUG_ON
-    if (phixstargetindex >= get_nphixstargets(element,ion,lower))
-    {
-      printout("[fatal] photoionization called with phixstargetindex %g > nphixstargets %g",phixstargetindex,get_nphixstargets(element,ion,lower));
-      abort();
-    }
-  #endif
-
-  double R = mastate[tid].nnlevel * get_corrphotoioncoeff(element,ion,lower,phixstargetindex,modelgridindex);
-  //double R = get_corrphotoionrate(element,ion,lower,pkt_ptr->where);
-
-  #ifdef DEBUG_ON
-    //printout("[photoionization] R %g\n",R);
-    if (!isfinite(R))
-    {
-      printout("fatal a4: abort\n");
       abort();
     }
   #endif
