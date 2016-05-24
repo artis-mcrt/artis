@@ -64,35 +64,35 @@ bool read_precalculated_ratecoeff(void)
   {
     /// Check whether current temperature range and atomic data match
     /// the precalculated rate coefficients
-    int check;
+    bool fileisamatch = true;
     float T_min,T_max;
-    int dum1;
-    fscanf(ratecoeff_file,"%g %g %d",&T_min,&T_max,&dum1);
-    printout("Tmin %g Tmax %g TABLESIZE %d \n",T_min,T_max,dum1);
-    if (T_min == MINTEMP && T_max == MAXTEMP && dum1 == TABLESIZE)
+    int in_tablesize;
+    fscanf(ratecoeff_file,"%g %g %d",&T_min,&T_max,&in_tablesize);
+    printout("Tmin %g Tmax %g TABLESIZE %d \n",T_min,T_max,in_tablesize);
+
+    if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE)
     {
-      check = 1;
       for (int element = 0; element < nelements; element++)
       {
         int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++)
         {
-          int dum2,dum3,dum4;
-          fscanf(ratecoeff_file,"%d %d %d %d",&dum1,&dum2,&dum3,&dum4);
+          int in_element,in_ionstage,in_levels,in_ionisinglevels;
+          fscanf(ratecoeff_file,"%d %d %d %d",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
           int nlevels = get_nlevels(element,ion);
           int ionisinglevels = get_ionisinglevels(element,ion);
-          if (get_element(element) == dum1 && get_ionstage(element,ion) == dum2 && nlevels == dum3 && ionisinglevels == dum4)
-            check = 1;
-          else
+          if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
           {
-            check += 1;
+            fileisamatch = false;
+            break;
           }
         }
       }
     }
-    else check = 100;
+    else
+      fileisamatch = false;
 
-    if (check == 1)
+    if (fileisamatch)
     {
       printout("[info] ratecoefficients_init:  Matching ratecoeff.dat file found. Readin this file ...\n");
       for (int element = 0; element < nelements; element++)
@@ -132,14 +132,14 @@ bool read_precalculated_ratecoeff(void)
     }
     else
     {
-      printout("[info] ratecoefficients_init:  No matching ratecoeff.dat file found. Calculate ...\n");
+      printout("[info] ratecoefficients_init: ratecoeff.dat does not match current simulation. Recalculating...\n");
       fclose(ratecoeff_file);
       return false;
     }
   }
   else
   {
-    printout("[info] ratecoefficients_init:  No ratecoeff.dat file available. Create new one ...\n");
+    printout("[info] ratecoefficients_init:  No ratecoeff.dat file available. Creating a new one...\n");
     return false;
   }
 }
