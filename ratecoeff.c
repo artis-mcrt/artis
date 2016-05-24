@@ -718,41 +718,6 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
 // }
 
 
-double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
-{
-/*  int lowerindex = floor((T-MINTEMP)/T_step);
-  int upperindex = lowerindex + 1;
-  double T_upper =  MINTEMP + upperindex*T_step;
-  double T_lower =  MINTEMP + lowerindex*T_step;*/
-  int lowerindex = floor(log(T/MINTEMP)/T_step_log);
-  if (lowerindex < TABLESIZE-1)
-  {
-    int upperindex = lowerindex + 1;
-    double T_lower =  MINTEMP * exp(lowerindex*T_step_log);
-    double T_upper =  MINTEMP * exp(upperindex*T_step_log);
-
-    double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[upperindex];
-    double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[lowerindex];
-
-    return f_lower + (f_upper-f_lower)/(T_upper-T_lower) * (T-T_lower);
-  }
-  else
-    return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[TABLESIZE-1];
-}
-
-// double interpolate_corrphotoioncoeff_above(int element, int ion, int level, double T)
-// {
-//   int lowerindex = floor(log(T/MINTEMP)/T_step_log);
-//   int upperindex = lowerindex + 1;
-//   double T_lower =  MINTEMP * exp(lowerindex*T_step_log);
-//   double T_upper =  MINTEMP * exp(upperindex*T_step_log);
-//
-//   double f_upper = elements[element].ions[ion].levels[level].corrphotoioncoeff_above[upperindex];
-//   double f_lower = elements[element].ions[ion].levels[level].corrphotoioncoeff_above[lowerindex];
-//
-//   return f_lower + (f_upper-f_lower)/(T_upper-T_lower) * (T-T_lower);
-// }
-
 
 double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, double T) // double T_e, double T_R)
 {
@@ -971,6 +936,93 @@ double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstarge
 }
 
 
+double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
+{
+/*  int lowerindex = floor((T-MINTEMP)/T_step);
+  int upperindex = lowerindex + 1;
+  double T_upper =  MINTEMP + upperindex*T_step;
+  double T_lower =  MINTEMP + lowerindex*T_step;*/
+  int lowerindex = floor(log(T/MINTEMP)/T_step_log);
+  if (lowerindex < TABLESIZE-1)
+  {
+    int upperindex = lowerindex + 1;
+    double T_lower =  MINTEMP * exp(lowerindex*T_step_log);
+    double T_upper =  MINTEMP * exp(upperindex*T_step_log);
+
+    double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[upperindex];
+    double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[lowerindex];
+
+    return f_lower + (f_upper-f_lower)/(T_upper-T_lower) * (T-T_lower);
+  }
+  else
+    return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[TABLESIZE-1];
+}
+
+
+double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+{
+  double integratorrelaccuracy = 1e-2;
+
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
+
+  int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+  float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
+
+  double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
+  double nu_threshold = E_threshold / H;
+  double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+
+  gsl_integral_paras_gammacorr intparas;
+  intparas.nu_edge = nu_threshold;
+  intparas.modelgridindex = modelgridindex;
+  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
+
+  double gammacorr = 0.0;
+  gsl_function F_gammacorr;
+  F_gammacorr.function = &gammacorr_integrand_gsl_radfield;
+  F_gammacorr.params = &intparas;
+  double error = 0.0;
+  gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
+                      integratorrelaccuracy, 1000, 6, w, &gammacorr, &error);
+  gammacorr *= FOURPI * phixstargetprobability;
+
+  gsl_integration_workspace_free(w);
+
+  return gammacorr;
+}
+
+
+double gammacorr_integrand_gsl_radfield(double nu, void *restrict paras)
+/// Integrand to calculate the rate coefficient for photoionization
+/// using gsl integrators. Corrected for stimulated recombination.
+{
+  gsl_integral_paras_gammacorr localparas = *((gsl_integral_paras_gammacorr *) paras);
+  int modelgridindex = localparas.modelgridindex;
+  double nu_edge = localparas.nu_edge;
+  float *photoion_xs = localparas.photoion_xs;
+
+  /// Information about the current level is passed via the global variable
+  /// mastate[tid] and its child values element, ion, level
+  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
+
+  double T_R = get_TR(modelgridindex);
+
+  int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
+
+  #ifdef DEBUG_ON
+  /*if (i > NPHIXSPOINTS-1)
+  {
+    printout("gammacorr_integrand_gsl_radfield called with nu > nu_edge * %g",last_phixs_nuovernuedge);
+    abort();
+  }*/
+  #endif
+
+  //TODO: MK thesis page 41, use population ratios and Te
+  return ONEOVERH * photoion_xs[i] / nu * radfield(nu,modelgridindex) *
+         (1 - exp(-HOVERKB * nu / T_R));
+}
+
+
 ///***************************************************************************/
 double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
@@ -1090,70 +1142,6 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 
   return alpha_sp;
 }*/
-
-
-double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-{
-  double integratorrelaccuracy = 1e-2;
-
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
-
-  int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-  float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
-
-  double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
-  double nu_threshold = E_threshold / H;
-  double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-
-  gsl_integral_paras_gammacorr intparas;
-  intparas.nu_edge = nu_threshold;
-  intparas.modelgridindex = modelgridindex;
-  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
-
-  double gammacorr = 0.0;
-  gsl_function F_gammacorr;
-  F_gammacorr.function = &gammacorr_integrand_gsl_radfield;
-  F_gammacorr.params = &intparas;
-  double error = 0.0;
-  gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
-                      integratorrelaccuracy, 1000, 6, w, &gammacorr, &error);
-  gammacorr *= FOURPI * phixstargetprobability;
-
-  gsl_integration_workspace_free(w);
-
-  return gammacorr;
-}
-
-
-double gammacorr_integrand_gsl_radfield(double nu, void *restrict paras)
-/// Integrand to calculate the rate coefficient for photoionization
-/// using gsl integrators. Corrected for stimulated recombination.
-{
-  gsl_integral_paras_gammacorr localparas = *((gsl_integral_paras_gammacorr *) paras);
-  int modelgridindex = localparas.modelgridindex;
-  double nu_edge = localparas.nu_edge;
-  float *photoion_xs = localparas.photoion_xs;
-
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-
-  double T_R = get_TR(modelgridindex);
-
-  int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
-
-  #ifdef DEBUG_ON
-  /*if (i > NPHIXSPOINTS-1)
-  {
-    printout("gammacorr_integrand_gsl_radfield called with nu > nu_edge * %g",last_phixs_nuovernuedge);
-    abort();
-  }*/
-  #endif
-
-  //TODO: MK thesis page 41, use population ratios and Te
-  return ONEOVERH * photoion_xs[i] / nu * radfield(nu,modelgridindex) *
-         (1 - exp(-HOVERKB * nu / T_R));
-}
 
 
 double calculate_bfheatingcoeff(int element, int ion, int level,
