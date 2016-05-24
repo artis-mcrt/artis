@@ -6,18 +6,19 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  CC = gcc-6
 #  CC = clang-omp
 #  CC = mpicc
-  INCLUDE = /usr/local/opt/gsl/include
-  LIB = /usr/local/opt/gsl/lib 
-#  CFLAGS = -Wall -O0g -g -std=c11 -I$(INCLUDE) $(VER)
-  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wvector-operation-performance -ftree-vectorize -O3 -march=native -flto -fstrict-aliasing -Wstrict-aliasing -std=c11 -I$(INCLUDE)
+  INCLUDE = -I/usr/local/opt/gperftools/include
+  LIB = -L/usr/local/opt/gperftools/lib
+#  CFLAGS = -Wall -O0 -std=c11 $(INCLUDE)
+  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -ftree-vectorize -O3 -march=native -flto -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)
 #maybe  -fopt-info-vec-missed
+#add -lprofiler for gperftools
 
-  LDFLAGS = -L$(LIB) -lgsl -lgslcblas -lm
-  exspec: override CFLAGS =  -g -Wextra -Wunused-parameter -O3 -I$(INCLUDE) -DDO_EXSPEC
-  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  LDFLAGS = $(LIB) -lgsl -lgslcblas -lm
+  exspec: override CFLAGS =  -g -Wextra -Wunused-parameter -O3 $(INCLUDE) -DDO_EXSPEC
+  exgamma: override CFLAGS =  -g -O3 $(INCLUDE) -DDO_EXSPEC
 
 ### Settings for the miner
 ifeq ($(OSTYPE),linux)
