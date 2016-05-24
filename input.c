@@ -1109,7 +1109,7 @@ void read_unprocessed_atomicdata(void)
 
               double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
               double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
-              double f_ul = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+              double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI,2)) * A_ul;
               //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
               //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
@@ -1224,10 +1224,13 @@ void read_unprocessed_atomicdata(void)
     fprintf(linelist_file,"%d\n",nlines);
     for (int i = 0; i < nlines; i++)
     {
-      fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",i,linelist[i].elementindex, linelist[i].ionindex, linelist[i].upperlevelindex, linelist[i].lowerlevelindex, linelist[i].nu, linelist[i].einstein_A, linelist[i].osc_strength, linelist[i].coll_str);
+      fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",
+              i, linelist[i].elementindex, linelist[i].ionindex,
+              linelist[i].upperlevelindex, linelist[i].lowerlevelindex,
+              linelist[i].nu, linelist[i].einstein_A, linelist[i].osc_strength,
+              linelist[i].coll_str);
     }
     fclose(linelist_file);
-    //exit(0);
   }
 
 

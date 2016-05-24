@@ -41,23 +41,21 @@ int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double s
   }
   else if (gam_line_list.type[lindex] == CR48_GAM_LINE_ID)
   {
-
     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
-    * exp(-single_t/T48CR) / T48CR *
-    cr48_spec.probability[gam_line_list.index[lindex]]
-    * cr48_spec.energy[gam_line_list.index[lindex]]
-    *f48cr(grid_ptr)*tfact;
-
+        * exp(-single_t/T48CR) / T48CR
+        * cr48_spec.probability[gam_line_list.index[lindex]]
+        * cr48_spec.energy[gam_line_list.index[lindex]]
+        * f48cr(grid_ptr)*tfact;
   }
   else if (gam_line_list.type[lindex] == V48_GAM_LINE_ID)
   {
 
       emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
-  * (exp(-single_t/T48CR) - exp(-single_t/T48V))
-  / (T48CR - T48V)
-        *v48_spec.probability[gam_line_list.index[lindex]]
-        *v48_spec.energy[gam_line_list.index[lindex]]
-  *f48cr(grid_ptr)*tfact;
+          * (exp(-single_t/T48CR) - exp(-single_t/T48V))
+          / (T48CR - T48V)
+          * v48_spec.probability[gam_line_list.index[lindex]]
+          * v48_spec.energy[gam_line_list.index[lindex]]
+          * f48cr(grid_ptr)*tfact;
   }
   else if (gam_line_list.type[lindex] == FAKE_GAM_LINE_ID)
   {
@@ -85,7 +83,7 @@ int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double s
     get_velocity(single_pos, vel_vec, single_t);
 
     ray_ptr->e_rf[nray]+= emitt_energy / fabs(dnuds)
-  /doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) ;
+        / doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec);
   }
 
 
@@ -215,7 +213,7 @@ motion and the local velocity vectors to the cmf.*/
     /* Coeff is 3 / 16 / PI */
 
     double dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f *
-      (f + (1./f) + (mu_cmf*mu_cmf) - 1.);
+        (f + (1./f) + (mu_cmf*mu_cmf) - 1.);
 
     //speed = vec_len(vel_vec);
     //solid_angle_factor =  doppler(pkt_ptr->dir, vel_vec) * doppler(pkt_ptr->dir, vel_vec);
