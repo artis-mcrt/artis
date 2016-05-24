@@ -1096,7 +1096,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstar
 {
   double integratorrelaccuracy = 1e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(512);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -1116,7 +1116,7 @@ double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstar
   F_gammacorr.params = &intparas;
   double error = 0.0;
   gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
-                      integratorrelaccuracy, 512, 4, w, &gammacorr, &error);
+                      integratorrelaccuracy, 1000, 6, w, &gammacorr, &error);
   gammacorr *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);
@@ -1162,7 +1162,7 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
   double error = 0.0;
   double integratoraccuracy = 1e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(512);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -1183,7 +1183,7 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
   F_bfheating.function = &bfheating_integrand_gsl_radfield;
   F_bfheating.params = &intparas;
   gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0,
-                      integratoraccuracy, 512, 4, w, &bfheating, &error);
+                      integratoraccuracy, 1000, 6, w, &bfheating, &error);
   bfheating *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);
