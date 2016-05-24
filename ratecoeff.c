@@ -938,10 +938,6 @@ double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstarge
 
 double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
 {
-/*  int lowerindex = floor((T-MINTEMP)/T_step);
-  int upperindex = lowerindex + 1;
-  double T_upper =  MINTEMP + upperindex*T_step;
-  double T_lower =  MINTEMP + lowerindex*T_step;*/
   int lowerindex = floor(log(T/MINTEMP)/T_step_log);
   if (lowerindex < TABLESIZE-1)
   {

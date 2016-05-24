@@ -199,6 +199,8 @@ void radfield_close_file(void)
 // for a timestep
 void radfield_zero_estimators(int modelgridindex)
 {
+  nuJ[modelgridindex] = 0.;
+
   if (!radfield_initialized)
     radfield_init();
 
@@ -328,6 +330,12 @@ void radfield_fit_parameters(int modelgridindex)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
 {
+  double T_J, T_R, W;
+  get_radfield_params_fullspec(J[modelgridindex],nuJ[modelgridindex],modelgridindex,&T_J,&T_R,&W);
+  modelgrid[modelgridindex].TJ = T_J;
+  modelgrid[modelgridindex].TR = T_R;
+  modelgrid[modelgridindex].W = W;
+
   if (J_normfactor[modelgridindex] <= 0)
   {
     printout("radfield: FATAL J_normfactor = %g in cell %d at call to radfield_fit_parameters",J_normfactor[modelgridindex],modelgridindex);
@@ -396,6 +404,48 @@ void radfield_fit_parameters(int modelgridindex)
     double W_bin = radfield_get_bin_W(modelgridindex,binindex);
     printout("bin %d: J %g, T_R %g, W %g\n",
            binindex, J_bin, T_R_bin, W_bin);
+  }
+}
+
+
+void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W)
+{
+  double nubar = nuJ/J;
+  if (!isfinite(nubar) || nubar == 0.)
+  {
+    /// Return old T_R
+    printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",modelgridindex);
+    *T_J = modelgrid[modelgridindex].TJ;
+    *T_R = modelgrid[modelgridindex].TR;
+    *W = modelgrid[modelgridindex].W;
+  }
+  else
+  {
+    *T_J = pow(PI/STEBO*J,1./4.);
+    if (*T_J > MAXTEMP)
+    {
+      printout("[warning] update_grid: temperature estimator T_J=%g exceeds T_max=%g in cell %d. Set T_J = T_max!\n",*T_J,MAXTEMP,modelgridindex);
+      *T_J = MAXTEMP;
+    }
+    if (*T_J < MINTEMP)
+    {
+      printout("[warning] update_grid: temperature estimator T_J=%g below T_min %g in cell %d. Set T_J = T_min!\n",*T_J,MINTEMP,modelgridindex);
+      *T_J = MINTEMP;
+    }
+
+    *T_R = H*nubar/KB/3.832229494;
+    if (*T_R > MAXTEMP)
+    {
+      printout("[warning] update_grid: temperature estimator T_R=%g exceeds T_max=%g in cell %d. Set T_R = T_max!\n",*T_R,MAXTEMP,modelgridindex);
+      *T_R = MAXTEMP;
+    }
+    if (*T_R < MINTEMP)
+    {
+      printout("[warning] update_grid: temperature estimator T_R=%g below T_min %g in cell %d. Set T_R = T_min!\n",*T_R,MINTEMP,modelgridindex);
+      *T_R = MINTEMP;
+    }
+
+    *W = PI*J/STEBO/pow(*T_R,4);
   }
 }
 

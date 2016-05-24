@@ -303,7 +303,6 @@ int zero_estimators()
   {
     J[n] = 0.;
     #ifndef FORCE_LTE
-      nuJ[n] = 0.;
       radfield_zero_estimators(n);
       ffheatingestimator[n] = 0.;
       colheatingestimator[n] = 0.;

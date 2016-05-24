@@ -10,6 +10,7 @@ void radfield_close_file(void);
 void radfield_update_estimators(int modelgridindex, double distance, double e_cmf, double nu_cmf);
 double radfield(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex);
+void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
 void radfield_set_J_normfactor(int modelgridindex, double normfactor);
 
 static inline

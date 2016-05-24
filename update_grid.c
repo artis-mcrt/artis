@@ -14,7 +14,6 @@
 int get_cell(double x, double y, double z, double t);
 void update_abundances(int modelgridindex, double t_current);
 void precalculate_partfuncts(int modelgridindex);
-void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
 
 
 // Subroutine to update the matter quantities in the grid cells at the start
@@ -650,12 +649,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     }
 
                     /// Get radiation field parameters out of the estimators
-                    double T_J, T_R, W;
-                    get_radfield_params(J[n],nuJ[n],n,&T_J,&T_R,&W);
-                    modelgrid[n].TJ = T_J;
-                    modelgrid[n].TR = T_R;
-                    modelgrid[n].W = W;
-                    // NEW T_R SOLVER HERE
                     radfield_fit_parameters(n);
                     radfield_write_to_file(n,m);
 
@@ -1772,49 +1765,6 @@ void precalculate_partfuncts(int modelgridindex)
 }
 
 
-void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W)
-{
-  double nubar = nuJ/J;
-  if (!isfinite(nubar) || nubar == 0.)
-  {
-    /// Return old T_R
-    printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",modelgridindex);
-    *T_J = modelgrid[modelgridindex].TJ;
-    *T_R = modelgrid[modelgridindex].TR;
-    *W = modelgrid[modelgridindex].W;
-  }
-  else
-  {
-    *T_J = pow(PI/STEBO*J,1./4.);
-    if (*T_J > MAXTEMP)
-    {
-      printout("[warning] update_grid: temperature estimator T_J=%g exceeds T_max=%g in cell %d. Set T_J = T_max!\n",*T_J,MAXTEMP,modelgridindex);
-      *T_J = MAXTEMP;
-    }
-    if (*T_J < MINTEMP)
-    {
-      printout("[warning] update_grid: temperature estimator T_J=%g below T_min %g in cell %d. Set T_J = T_min!\n",*T_J,MINTEMP,modelgridindex);
-      *T_J = MINTEMP;
-    }
-
-    *T_R = H*nubar/KB/3.832229494;
-    if (*T_R > MAXTEMP)
-    {
-      printout("[warning] update_grid: temperature estimator T_R=%g exceeds T_max=%g in cell %d. Set T_R = T_max!\n",*T_R,MAXTEMP,modelgridindex);
-      *T_R = MAXTEMP;
-    }
-    if (*T_R < MINTEMP)
-    {
-      printout("[warning] update_grid: temperature estimator T_R=%g below T_min %g in cell %d. Set T_R = T_min!\n",*T_R,MINTEMP,modelgridindex);
-      *T_R = MINTEMP;
-    }
-
-    *W = PI*J/STEBO/pow(*T_R,4);
-  }
-}
-
-
-
 /*
 // ****************************************************************************
 double nuB_nu_integrand(double nu, void *paras)
@@ -1914,16 +1864,13 @@ double get_Gamma(int cellnumber, int element, int ion)
 ///photoionization rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  double get_corrphotoioncoeff(int element, int ion, int level, int cellnumber);
-  double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-
   int i,level;
   int nlevels = get_nlevels(element,ion);
   double Gamma = 0.;
 
   for (i = 0; i < nlevels; i++)
   {
-    Gamma += calculate_exclevelpop(cellnumber,element,ion,level)*get_corrphotoioncoeff(element,ion,level,cellnumber);
+    Gamma += calculate_exclevelpop(cellnumber,element,ion,level) * get_corrphotoioncoeff(element,ion,level,cellnumber);
   }
   Gamma /= calculate_exclevelpop(cellnumber,element,ion,0);
 
@@ -1935,10 +1882,6 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 ///photoionization rate: paperII 3.5.2
 /// n_1 - occupation number of ground state
 {
-  double get_corrphotoioncoeff_ana(int element, int ion, int level, int cellnumber);
-  double get_corrphotoioncoeff(int element, int ion, int level, int cellnumber);
-  double calculate_exclevelpop(int cellnumber, int element, int ion, int level);
-
   int i,level;
   int nlevels = get_nlevels(element,ion);
   double Gamma = 0.;
