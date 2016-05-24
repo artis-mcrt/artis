@@ -209,9 +209,9 @@ double fni(const CELL *grid_ptr)
   if (model_type == RHO_UNIFORM)
   {
     double dcen[3];
-    dcen[0] = grid_ptr->pos_init[0] + (0.5*wid_init);
-    dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
-    dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
+    dcen[0] = grid_ptr->pos_init[0] + (0.5 * wid_init);
+    dcen[1] = grid_ptr->pos_init[1] + (0.5 * wid_init);
+    dcen[2] = grid_ptr->pos_init[2] + (0.5 * wid_init);
 
     double r_on_rmax = vec_len(dcen) / rmax;
     double m_r = pow(r_on_rmax,3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
