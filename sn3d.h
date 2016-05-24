@@ -473,7 +473,7 @@ elementlist_entry *restrict elements;
 /// Global pointer to beginning of linelist
 linelist_entry *restrict linelist;
 /// Global pointer to beginning of the bound-free list
-bflist_t *bflist;
+bflist_t *restrict bflist;
 
 
 
