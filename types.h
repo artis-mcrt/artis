@@ -307,11 +307,11 @@ typedef struct syn_ray RAY;
 
 typedef struct
 {
-  int targetlevel;
   double epsilon;
-  int stat_weight;
+  int targetlevel;
   int lineindex;
-} permittedtransitionlist_entry; // TODO: this now includes forbidden transitions, so consider renaming?
+  short stat_weight;
+} transitionlist_entry;
 
 /*
 typedef struct
@@ -340,7 +340,6 @@ typedef struct
   phixstarget_entry *restrict phixstargets;         /// pointer to table of target states and probabilities
   int nphixstargets;                       /// length of phixstargets array:
 
-  int stat_weight;                           /// Statistical weight of this level.
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   int metastable;                            /// 1 if the level is metastable, else 0
   int closestgroundlevelcont;
@@ -348,8 +347,36 @@ typedef struct
   //transitionlist_entry *transitions;
   transitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
   transitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
+  short stat_weight;                           /// Statistical weight of this level.
   bool is_nlte;                              /// 1 if the level is to
                                              /// be treated in nlte
+
+//  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.
+
+//double *spontrecombcoeff_E;
+//double *photoioncoeff_below;
+//double *photoioncoeff_above;
+//double *corrphotoioncoeff_above;
+//double *bfheating_coeff_above;
+//double *stimulated_bfcooling_coeff;
+//double *stimulated_recomb_coeff;
+
+//float *modified_spontrecombcoeff;
+//float *stimrecombcoeff;
+//float *modified_stimrecombcoeff;
+
+///float population;
+///float sahafact;
+///float spontaneousrecomb_ratecoeff;
+///float modifiedspontaneousrecomb_ratecoeff;
+///float corrphotoion_ratecoeff;
+///float modifiedcorrphotoion_ratecoeff;
+
+/// time dependent macroatom event rates
+//double rad_deexc;                          /// Radiative deexcitation rate from this level.
+//double internal_down_same;                 /// Rate for internal downward transitions within the same ionisation stage.
+//double internal_up_same;                   /// Rate for internal upward transitions within the same ionisation stage.
+
 } levellist_entry;
 
 typedef struct
@@ -363,10 +390,9 @@ typedef struct
   int coolingoffset;
   int ncoolingterms;
   double ionpot;                             /// Ionisation threshold to the next ionstage
+  float *Alpha_sp;
   //int nbfcontinua;
   //ionsphixslist_t *phixslist;
-//  float *zeta;
-  float *Alpha_sp;
 } ionlist_entry;
 
 typedef struct
@@ -408,16 +434,15 @@ typedef struct
 
 typedef struct
 {
-  int cellnumber;
   double t_current;
+  int cellnumber;
 } Te_solution_paras;
 
 
 typedef struct
 {
-  float T;
-//  float T2;
   double nu_edge;
+  float T;
 } gslintegration_paras;
 
 typedef struct
@@ -481,7 +506,7 @@ typedef struct
   double *restrict individ_internal_down_same;
   double *restrict individ_internal_up_same;
 
-  chphixstargets_struct *chphixstargets;
+  chphixstargets_struct *restrict chphixstargets;
 } chlevels_struct;
 
 typedef struct
@@ -496,13 +521,13 @@ typedef struct
 
 typedef struct
 {
-  int cellnumber;                           /// Identifies the cell the data is valid for.
 //  double totalcooling;                    /// Total cooling rate in this cell.
 //  double bfcooling;                       /// Total cooling rate in this cell.
 //  coolinglist_contributions *coolinglist; /// Cooling contributions by the different processes.
   cellhistorycoolinglist_t *restrict coolinglist;    /// Cooling contributions by the different processes.
   chelements_struct *restrict chelements;            /// Pointer to a nested list which helds compositional
                                             /// information for all the elements=0,1,...,nelements-1
+  int cellnumber;                           /// Identifies the cell the data is valid for.
 } cellhistory_struct;
 
 
