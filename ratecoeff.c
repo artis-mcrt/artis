@@ -17,6 +17,7 @@ typedef struct
 
 
 // private functions
+bool read_precalculated_ratecoeff(void);
 void calculate_rate_coefficients(void);
 void write_ratecoeff_dat(void);
 void calculate_ion_alpha_sp(void);
@@ -34,7 +35,7 @@ double bfheating_integrand_gsl_radfield(double nu, void *paras);
 
 
 ///****************************************************************************
-void tabulate_ratecoefficients_gsl(void)
+void ratecoefficients_init(void)
 /// Precalculates the rate coefficients for stimulated and spontaneous
 /// recombination and photoionisation on a given temperature grid using
 /// libgsl integrators.
@@ -42,14 +43,22 @@ void tabulate_ratecoefficients_gsl(void)
 /// W is easily factored out. For stimulated recombination we must assume
 /// T_e = T_R for this precalculation.
 {
-  //size_t neval;   /// for qng integrator
-  int calculate;
-
   /// Determine the temperture grids gridsize
   T_step = (1.*MAXTEMP-MINTEMP) / (TABLESIZE-1.);               /// global variables
   T_step_log = (log(MAXTEMP)-log(MINTEMP)) / (TABLESIZE-1.);
 
-  /// Then readin the precalculated rate coefficients from file
+  /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
+  if (!read_precalculated_ratecoeff())
+    calculate_rate_coefficients();
+
+  calculate_ion_alpha_sp();
+}
+
+
+bool read_precalculated_ratecoeff(void)
+/// Try to readin the precalculated rate coefficients from file
+/// returns true if successful or false otherwise
+{
   FILE *ratecoeff_file;
   if ((ratecoeff_file = fopen("ratecoeff.dat", "r")) != NULL)
   {
@@ -85,7 +94,7 @@ void tabulate_ratecoefficients_gsl(void)
 
     if (check == 1)
     {
-      printout("[info] tabulate_ratecoefficients_gsl:  Matching ratecoeff.dat file found. Readin this file ...\n");
+      printout("[info] ratecoefficients_init:  Matching ratecoeff.dat file found. Readin this file ...\n");
       for (int element = 0; element < nelements; element++)
       {
         int nions = get_nions(element) - 1;
@@ -119,28 +128,22 @@ void tabulate_ratecoefficients_gsl(void)
         }
       }
       fclose(ratecoeff_file);
-      calculate = 0;
+      return true;
     }
     else
     {
-      printout("[info] tabulate_ratecoefficients_gsl:  No matching ratecoeff.dat file found. Calculate ...\n");
+      printout("[info] ratecoefficients_init:  No matching ratecoeff.dat file found. Calculate ...\n");
       fclose(ratecoeff_file);
-      calculate = 1;
+      return false;
     }
   }
   else
   {
-    printout("[info] tabulate_ratecoefficients_gsl:  No ratecoeff.dat file available. Create new one ...\n");
-    calculate = 1;
+    printout("[info] ratecoefficients_init:  No ratecoeff.dat file available. Create new one ...\n");
+    return false;
   }
-
-  /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
-  if (calculate == 1)
-  {
-    calculate_rate_coefficients();
-  }
-  calculate_ion_alpha_sp();
 }
+
 
 void calculate_rate_coefficients(void)
 {

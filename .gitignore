@@ -8,3 +8,5 @@ exspec
 *.o-*
 tags
 browse.VC.db
+
+sn3d.dSYM

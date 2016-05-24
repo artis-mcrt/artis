@@ -32,9 +32,11 @@ int read_3d_model(void);
 int compare_linelistentry(const void *p1, const void *p2);
 int search_groundphixslist(double nu_edge, int *index_in_groundlevelcontestimator,int element, int ion, int level);
 void read_atomicdata(void);
+void read_unprocessed_atomicdata(void);
 void read_phixs_data(void);
 void write_processed_modelatom(void);
 void read_processed_modelatom(FILE *modelatom);
+void read_processed_linelist(void);
 
 
 /// To govern the input. For now hardwire everything.
@@ -329,567 +331,21 @@ void read_atomicdata(void)
   ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
   int index_in_groundlevelcontestimator;
 
-  transitiontable_entry *transitiontable;
-
-  //FILE *database_file,*interpol_file;
-  //char filename1[100],filename2[100];
-
   nbfcontinua = 0;
   includedions = 0;
 
-  int *nuparr,*ndownarr;
 
   //printout("start input.c\n");
   FILE *modelatom = fopen("modelatom.dat", "r");
   if (modelatom == NULL)
   {
-    /// No preprocessed model atom available ==> do that now
-
-    int totaluptrans = 0;
-    int totaldowntrans = 0;
-    int cont_index = -1;
-
-    ///open atomic data file
-    FILE *compositiondata = fopen("compositiondata.txt", "r");
-    if (compositiondata == NULL)
-    {
-      printout("Cannot open compositiondata.txt.\n");
-      exit(0);
-    }
-
-    FILE *adata = fopen("adata.txt", "r");
-    if (adata == NULL)
-    {
-      printout("Cannot open adata.txt.\n");
-      exit(0);
-    }
-    //printout("adata open\n");
-
-
-    /// initialize atomic data structure to number of elements
-    fscanf(compositiondata,"%d",&nelements);
-    if ((elements = calloc(nelements, sizeof(elementlist_entry))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
-      exit(0);
-    }
-    //printout("elements initialized\n");
-
-    /// Initialize the linelist
-    if ((linelist = calloc(MLINES, sizeof(linelist_entry))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize linelist ... abort\n");
-      exit(0);
-    }
-
-    /// temperature to determine relevant ionstages
-    int T_preset;
-    fscanf(compositiondata,"%d",&T_preset);
-    fscanf(compositiondata,"%d",&homogeneous_abundances);
-    if (homogeneous_abundances == 1)
-      printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
-
-    /// open transition data file
-    FILE *transitiondata;
-    if ((transitiondata = fopen("transitiondata.txt", "r")) == NULL)
-    {
-      printout("Cannot open transitiondata.txt.\n");
-      exit(0);
-    }
-    int lineindex = 0;  ///counter to determine the total number of lines, initialisation
-
-    /// readin
-    int nbfcheck = 0;
-    int heatingcheck = 0;
-    int coolingcheck = 0;
-    for (int element = 0; element < nelements; element++)
-    {
-      /// read information about the next element which should be stored to memory
-      int Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin;
-      double abundance,mass;
-      fscanf(compositiondata,"%d %d %d %d %d %lg %lg",&Z,&nions,&lowermost_ionstage,&uppermost_ionstage,&nlevelsmax_readin,&abundance,&mass);
-      printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
-
-      /// write this element's data to memory
-      elements[element].anumber = Z;
-      elements[element].nions = nions;
-      elements[element].abundance = abundance;       /// abundances are expected to be given by mass
-      elements[element].mass = mass*MH;
-      includedions += nions;
-
-      /// Initialize the elements ionlist
-      if ((elements[element].ions = (ionlist_entry *) calloc(nions, sizeof(ionlist_entry))) == NULL)
-      {
-          printout("[fatal] input: not enough memory to initialize ionlist ... abort\n");
-          exit(0);
-      }
-
-      /// now read in data for all ions of the current element. before doing so initialize
-      /// energy scale for the current element (all level energies are stored relative to
-      /// the ground level of the neutral ion)
-      double energyoffset = 0.;
-      double ionpot = 0.;
-      for (int ion = 0; ion < nions; ion++)
-      {
-        int nlevelsmax = nlevelsmax_readin;
-        printout("ion %d\n",ion);
-        /// calculate the current levels ground level energy
-        energyoffset += ionpot;
-
-        /// read information for the elements next ionstage
-        int Zcheck2,ionstage,nlevels;
-        fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
-        printout("readin level information for adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
-        while (Zcheck2 != Z || ionstage != lowermost_ionstage + ion)
-        {
-          if (Zcheck2 == Z)
-          {
-            printout("increasing energyoffset by ionpot %g\n",ionpot);
-            energyoffset += ionpot;
-          }
-          for (int i = 0; i < nlevels; i++)
-          {
-            double levelenergy,statweight;
-            int levelindex,ntransitions;
-            fscanf(adata,"%d %lg %lg %d%*[^\n]\n",&levelindex,&levelenergy,&statweight,&ntransitions);
-          }
-          fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
-          printout("proceed through adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
-        }
-        if (nlevelsmax < 0)
-        {
-          nlevelsmax = nlevels;
-        }
-        else if (nlevels >= nlevelsmax)
-        {
-          printout("[info] read_atomicdata: reduce number of levels from %d to %d for ion %d of element %d\n",nlevels,nlevelsmax,ion,element);
-        }
-        else
-        {
-          printout("[warning] read_atomicdata: requested nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduced nlevelsmax to nlevels\n",nlevelsmax,nlevels,ion,element);
-          nlevelsmax = nlevels;
-          //printout("[fatal] read_atomicdata: nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduce nlevelsmax or extend atomic data \n",nlevelsmax,nlevels,ion,element);
-        }
-
-
-        /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
-        int Zcheck,ionstagecheck,tottransitions;
-        fscanf(transitiondata,"%d %d %d\n",&Zcheck,&ionstagecheck,&tottransitions);
-        printout("readin transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
-        while (Zcheck != Z || ionstagecheck != ionstage)
-        {
-          for (int i = 0; i < tottransitions; i++)
-          {
-            double A,coll_str;
-            int transitionindex,lower,upper;
-            fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
-          }
-          fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
-          printout("proceed through transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
-        }
-
-        int tottransitions_all = tottransitions;
-        if (ion == nions-1)
-        {
-          nlevelsmax = 1;
-          tottransitions = 0;
-        }
-
-        /// then read in its level and transition data
-        if (Zcheck == Z && ionstagecheck == ionstage)
-        {
-          /// load transition table for the CURRENT ion to temporary memory
-          if ((transitiontable = calloc(tottransitions, sizeof(transitiontable_entry))) == NULL)
-          {
-            if (tottransitions > 0)
-              {
-                printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
-                exit(0);
-              }
-          }
-          if (tottransitions == 0)
-          {
-            for (int i = 0; i < tottransitions_all; i++)
-            {
-              double A, coll_str;
-              int transitionindex,lower,upper;
-              fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
-              //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
-            }
-          }
-          else
-          {
-            for (int i = 0; i < tottransitions; i++)
-            {
-              double A,coll_str;
-              int transitionindex,lower,upper;
-              fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
-              transitiontable[i].lower = lower-1;
-              transitiontable[i].upper = upper-1;
-              transitiontable[i].A = A;
-              transitiontable[i].coll_str = coll_str;
-              //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
-            }
-          }
-
-
-          /// store the ions data to memory and set up the ions zeta and levellist
-          elements[element].ions[ion].ionstage = ionstage;
-          elements[element].ions[ion].nlevels = nlevelsmax;
-          elements[element].ions[ion].ionisinglevels = 0;
-          elements[element].ions[ion].ionpot = ionpot*EV;
-//           if ((elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
-//           {
-//             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
-//             exit(0);
-//           }
-          if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
-            exit(0);
-          }
-          if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to initialize levelist of element %d, ion %d ... abort\n",element,ion);
-            exit(0);
-          }
-
-
-          /// now we need to readout the data for all those levels, write them to memory
-          /// and set up the list of possible transitions for each level
-          if ((nuparr = calloc(nlevelsmax, sizeof(int))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to allocate nuparr ... abort\n");
-            exit(0);
-          }
-          if ((ndownarr = calloc(nlevelsmax, sizeof(int))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to allocate ndownarr... abort\n");
-            exit(0);
-          }
-          if ((transitions = calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
-            exit(0);
-          }
-          for (int level = 0; level < nlevels; level++)
-          {
-            double levelenergy,statweight;
-            int levelindex,ntransitions;
-            fscanf(adata,"%d %lg %lg %d%*[^\n]\n",&levelindex,&levelenergy,&statweight,&ntransitions);
-            //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
-            if (level < nlevelsmax)
-            {
-              ndownarr[level] = 1;
-              nuparr[level] = 1;
-              //elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
-              double currentlevelenergy = (energyoffset + levelenergy) * EV;
-              //if (element == 1 && ion == 0) printf("%d %16.10e\n",levelindex,currentlevelenergy);
-              //printout("energy for level %d of ionstage %d of element %d is %g\n",level,ionstage,element,currentlevelenergy/EV);
-              elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
-              //printout("epsilon(%d,%d,%d)=%g",element,ion,level,elements[element].ions[ion].levels[level].epsilon);
-
-              //if (level == 0 && ion == 0) energyoffset = levelenergy;
-              elements[element].ions[ion].levels[level].stat_weight = statweight;
-              ///Moved to the section with ionising levels below
-              //elements[element].ions[ion].levels[level].cont_index = cont_index;
-              //cont_index -= 1;
-              /// Initialise the metastable flag to true. Set it to false (0) if downward transition exists.
-              elements[element].ions[ion].levels[level].metastable = 1;
-              //elements[element].ions[ion].levels[level].main_qn = mainqn;
-
-              /// The level contributes to the ionisinglevels if its energy
-              /// is below the ionisiation potential and the level doesn't
-              /// belong to the topmost ion included.
-              /// Rate coefficients are only available for ionising levels.
-              if (levelenergy < ionpot && ion < nions-1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
-              {
-                elements[element].ions[ion].ionisinglevels += 1;
-
-                elements[element].ions[ion].levels[level].cont_index = cont_index;
-                cont_index -= 1;
-              }
-
-
-              /// store the possible downward transitions from the current level in following order to memory
-              ///     A_level,level-1; A_level,level-2; ... A_level,1
-              /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-              if ((transitions[level].to = calloc(level, sizeof(int))) == NULL)
-              {
-                printout("[fatal] input: not enough memory to initialize transitionlist ... abort\n");
-                exit(0);
-              }
-              for (int i = 0; i < level; i++)
-              {
-                transitions[level].to[i] = -99.;
-              }
-              if ((elements[element].ions[ion].levels[level].downtrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
-              {
-                printout("[fatal] input: not enough memory to initialize downtranslist ... abort\n");
-                exit(0);
-              }
-              /// initialize number of downward transitions to zero
-              elements[element].ions[ion].levels[level].downtrans[0].targetlevel = 0;
-              if ((elements[element].ions[ion].levels[level].uptrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
-              {
-                printout("[fatal] input: not enough memory to initialize uptranslist ... abort\n");
-                exit(0);
-              }
-              /// initialize number of upward transitions to zero
-              elements[element].ions[ion].levels[level].uptrans[0].targetlevel = 0;
-            }
-          }
-
-          for (int ii = 0; ii < tottransitions; ii++)
-          {
-            int level = transitiontable[ii].upper;
-            int targetlevel = transitiontable[ii].lower;
-
-            if (level < nlevelsmax)
-            {
-
-              //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
-              //{
-              //printout("ii %d\n",ii);
-              //printout("transtable upper %d, lower %d, A %g, iii %d\n",transitiontable[ii].upper,transitiontable[ii].lower, transitiontable[ii].A,iii);
-              /// Make sure that we don't allow duplicate. In that case take only the lines
-              /// first occurrence
-              if (transitioncheck(level,targetlevel) == -99)
-              {
-                transitions[level].to[level-targetlevel-1] = lineindex;
-                double A_ul = transitiontable[ii].A;
-                double coll_str = transitiontable[ii].coll_str;
-                //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
-
-                double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
-                double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
-                double f_ul = g * ME * pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
-                //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-                //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
-
-                //printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu %g\n",lineindex,element,ion,level-i-1,level,nu_trans);
-                linelist[lineindex].elementindex = element;
-                linelist[lineindex].ionindex = ion;
-                linelist[lineindex].lowerlevelindex = targetlevel;
-                linelist[lineindex].upperlevelindex = level;
-                linelist[lineindex].nu = nu_trans;
-                linelist[lineindex].einstein_A = A_ul;
-                linelist[lineindex].osc_strength = f_ul;
-                linelist[lineindex].coll_str = coll_str;
-                lineindex += 1;
-                if (lineindex % MLINES == 0)
-                {
-                  printout("[info] read_atomicdata: increase linelistsize from %d to %d\n",lineindex,lineindex+MLINES);
-                  if ((linelist = realloc(linelist, (lineindex+MLINES)*sizeof(linelist_entry))) == NULL)
-                  {
-                    printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-                    exit(0);
-                  }
-                }
-
-                /// This is not a metastable level.
-                elements[element].ions[ion].levels[level].metastable = 0;
-
-                elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
-                if ((elements[element].ions[ion].levels[level].downtrans
-                    = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level]+1)*sizeof(transitionlist_entry))) == NULL)
-                {
-                  printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
-                  exit(0);
-                }
-                elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
-                elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon = epsilon(element,ion,targetlevel);
-                elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].stat_weight = stat_weight(element,ion,targetlevel);
-                //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
-                //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
-                ndownarr[level] += 1;
-
-                elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
-                if ((elements[element].ions[ion].levels[targetlevel].uptrans
-                    = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel]+1)*sizeof(transitionlist_entry))) == NULL)
-                {
-                  printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
-                  exit(0);
-                }
-                elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
-                elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon = epsilon(element,ion,level);
-                elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element,ion,level);
-                nuparr[targetlevel] += 1;
-              }
-              else
-              {
-                /** This is a new brach to deal with lines that have different types of transition. It should trip after a transition is already known. */
-                int linelistindex = transitions[level].to[level-targetlevel-1];
-                double A_ul = transitiontable[ii].A;
-                double coll_str = transitiontable[ii].coll_str;
-                //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
-
-                double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
-                double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
-                double f_ul = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
-                //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-                //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
-
-                if ((linelist[linelistindex].elementindex != element) || (linelist[linelistindex].ionindex != ion) || (linelist[linelistindex].upperlevelindex != level) || (linelist[linelistindex].lowerlevelindex != targetlevel))
-                {
-                  printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
-                  printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
-                  printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n", transitions[level].to[level-targetlevel-1]);
-                  printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
-                  printout("[input.c]   linelist[linelistindex].elementindex %d, linelist[linelistindex].ionindex %d, linelist[linelistindex].upperlevelindex %d, linelist[linelistindex].lowerlevelindex %d\n", linelist[linelistindex].elementindex, linelist[linelistindex].ionindex, linelist[linelistindex].upperlevelindex,linelist[linelistindex].lowerlevelindex);
-                  abort();
-                }
-                linelist[linelistindex].einstein_A += A_ul;
-                linelist[linelistindex].osc_strength += f_ul;
-                if (coll_str > linelist[linelistindex].coll_str)
-                {
-                  linelist[linelistindex].coll_str = coll_str;
-                }
-              }
-            }
-          }
-          //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-          //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-
-          free(nuparr);
-          free(ndownarr);
-
-          for (int level = 0; level < nlevelsmax; level++)
-          {
-            totaldowntrans += elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-            totaluptrans += elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-            free(transitions[level].to);
-          }
-          free(transitiontable);
-          free(transitions);
-
-          /// Also the phixslist
-          if (ion < nions-1)
-          {
-//            elements[element].ions[ion].nbfcontinua = elements[element].ions[ion].ionisinglevels;//nlevelsmax;
-            nbfcheck += elements[element].ions[ion].ionisinglevels; //nlevelsmax;
-/*            if ((elements[element].ions[ion].phixslist = calloc(nlevelsmax, sizeof(ionsphixslist_t))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
-              exit(0);
-            }*/
-            nbfcontinua += get_bfcontinua(element,ion);//elements[element].ions[ion].ionisinglevels;//nlevelsmax;
-          }
-        }
-        else
-        {
-          printout("corrupted atomic data\n");
-          exit(0);
-        }
-      }
-    }
-    fclose(adata);
-    fclose(transitiondata);
-    fclose(compositiondata);
-    printout("nbfcheck %d\n",nbfcheck);
-    printout("heatingcheck %d\n",heatingcheck);
-
-    /// Save the linecounters value to the global variable containing the number of lines
-    nlines = lineindex;
-    printout("nlines %d\n",nlines);
-    if (nlines > 0)
-    {
-      /// and release empty memory from the linelist
-      if ((linelist = realloc(linelist, nlines*sizeof(linelist_entry))) == NULL)
-      {
-        printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-        exit(0);
-      }
-    }
-
-    if (T_preset > 0) exit(0);
-
-
-    /// Set up the list of allowed upward transitions for each level
-    printout("total uptrans %d\n",totaluptrans);
-    printout("total downtrans %d\n",totaldowntrans);
-    printout("coolingcheck %d\n",coolingcheck);
-
-
-
-    ///debug output
-    /*
-    FILE *linelist_file;
-    if ((linelist_file = fopen("linelist_unsorted.out", "w")) == NULL){
-      printout("Cannot open linelist.out.\n");
-      exit(0);
-    }
-    for (i = 0; i < nlines; i++)
-      fprintf(linelist_file,"element %d, ion %d, ionstage %d, upperindex %d, lowerindex %d, nu %g\n",linelist[i].elementindex, linelist[i].ionindex, elements[linelist[i].elementindex].ions[linelist[i].ionindex].ionstage, linelist[i].upperlevelindex, linelist[i].lowerlevelindex, linelist[i].nu);
-    fclose(linelist_file);
-    //exit(0);
-    */
-
-    ///then sort the linelist by decreasing frequency
-    qsort(linelist,nlines,sizeof(linelist_entry),compare_linelistentry);
-
-
-    /// Save sorted linelist into a file
-    if (rank_global == 0)
-    {
-      FILE *linelist_file;
-      if ((linelist_file = fopen("linelist.dat", "w")) == NULL)
-      {
-        printout("Cannot open linelist.out.\n");
-        exit(0);
-      }
-      fprintf(linelist_file,"%d\n",nlines);
-      for (int i = 0; i < nlines; i++)
-      {
-        fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",i,linelist[i].elementindex, linelist[i].ionindex, linelist[i].upperlevelindex, linelist[i].lowerlevelindex, linelist[i].nu, linelist[i].einstein_A, linelist[i].osc_strength, linelist[i].coll_str);
-      }
-      fclose(linelist_file);
-      //exit(0);
-    }
-
-
-    ///Establish connection between transitions and sorted linelist
-    //printout("[debug] init line counter list\n");
-    printout("establish connection between transitions and sorted linelist\n");
-    for (int i = 0; i < nlines; i++)
-    {
-      int element = linelist[i].elementindex;
-      int ion = linelist[i].ionindex;
-      int lowerlevel = linelist[i].lowerlevelindex;
-      int upperlevel = linelist[i].upperlevelindex;
-      for (int ii = 1; ii <= elements[element].ions[ion].levels[upperlevel].downtrans[0].targetlevel; ii++)
-      {
-        if (elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevel == lowerlevel)
-        {
-          elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = i;
-        }
-      }
-      for (int ii = 1; ii <= elements[element].ions[ion].levels[lowerlevel].uptrans[0].targetlevel; ii++)
-      {
-        if (elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevel == upperlevel)
-        {
-          elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = i;
-        }
-      }
-    }
-
-
-    /// Photoionisation cross-sections
-    ///======================================================
-    ///finally read in photoionisation cross sections and store them to the atomic data structure
-    read_phixs_data();
-
-    printout("cont_index %d\n",cont_index);
-    /// Now write the model atom to file for reuse
-    if (rank_global == 0)
-    {
-      write_processed_modelatom();
-    }
+    read_unprocessed_atomicdata();
   }
   else /// Preprocessed model atom available read that in
   {
     read_processed_modelatom(modelatom);
     fclose(modelatom);
+    read_processed_linelist();
   }
   last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
 
@@ -1265,6 +721,557 @@ void read_atomicdata(void)
 }
 
 
+void read_unprocessed_atomicdata(void)
+{
+  /// No preprocessed model atom available ==> do that now
+
+  int totaluptrans = 0;
+  int totaldowntrans = 0;
+  int cont_index = -1;
+
+  ///open atomic data file
+  FILE *compositiondata = fopen("compositiondata.txt", "r");
+  if (compositiondata == NULL)
+  {
+    printout("Cannot open compositiondata.txt.\n");
+    exit(0);
+  }
+
+  FILE *adata = fopen("adata.txt", "r");
+  if (adata == NULL)
+  {
+    printout("Cannot open adata.txt.\n");
+    exit(0);
+  }
+  //printout("adata open\n");
+
+
+  /// initialize atomic data structure to number of elements
+  fscanf(compositiondata,"%d",&nelements);
+  if ((elements = calloc(nelements, sizeof(elementlist_entry))) == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
+    exit(0);
+  }
+  //printout("elements initialized\n");
+
+  /// Initialize the linelist
+  if ((linelist = calloc(MLINES, sizeof(linelist_entry))) == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize linelist ... abort\n");
+    exit(0);
+  }
+
+  /// temperature to determine relevant ionstages
+  int T_preset;
+  fscanf(compositiondata,"%d",&T_preset);
+  fscanf(compositiondata,"%d",&homogeneous_abundances);
+  if (homogeneous_abundances == 1)
+    printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
+
+  /// open transition data file
+  FILE *transitiondata;
+  if ((transitiondata = fopen("transitiondata.txt", "r")) == NULL)
+  {
+    printout("Cannot open transitiondata.txt.\n");
+    exit(0);
+  }
+  int lineindex = 0;  ///counter to determine the total number of lines, initialisation
+
+  /// readin
+  int nbfcheck = 0;
+  int heatingcheck = 0;
+  int coolingcheck = 0;
+  for (int element = 0; element < nelements; element++)
+  {
+    /// read information about the next element which should be stored to memory
+    int Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin;
+    double abundance,mass;
+    fscanf(compositiondata,"%d %d %d %d %d %lg %lg",&Z,&nions,&lowermost_ionstage,&uppermost_ionstage,&nlevelsmax_readin,&abundance,&mass);
+    printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
+
+    /// write this element's data to memory
+    elements[element].anumber = Z;
+    elements[element].nions = nions;
+    elements[element].abundance = abundance;       /// abundances are expected to be given by mass
+    elements[element].mass = mass*MH;
+    includedions += nions;
+
+    /// Initialize the elements ionlist
+    if ((elements[element].ions = (ionlist_entry *) calloc(nions, sizeof(ionlist_entry))) == NULL)
+    {
+        printout("[fatal] input: not enough memory to initialize ionlist ... abort\n");
+        exit(0);
+    }
+
+    /// now read in data for all ions of the current element. before doing so initialize
+    /// energy scale for the current element (all level energies are stored relative to
+    /// the ground level of the neutral ion)
+    double energyoffset = 0.;
+    double ionpot = 0.;
+    for (int ion = 0; ion < nions; ion++)
+    {
+      int nlevelsmax = nlevelsmax_readin;
+      printout("ion %d\n",ion);
+      /// calculate the current levels ground level energy
+      energyoffset += ionpot;
+
+      /// read information for the elements next ionstage
+      int Zcheck2,ionstage,nlevels;
+      fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
+      printout("readin level information for adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
+      while (Zcheck2 != Z || ionstage != lowermost_ionstage + ion)
+      {
+        if (Zcheck2 == Z)
+        {
+          printout("increasing energyoffset by ionpot %g\n",ionpot);
+          energyoffset += ionpot;
+        }
+        for (int i = 0; i < nlevels; i++)
+        {
+          double levelenergy,statweight;
+          int levelindex,ntransitions;
+          fscanf(adata,"%d %lg %lg %d%*[^\n]\n",&levelindex,&levelenergy,&statweight,&ntransitions);
+        }
+        fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
+        printout("proceed through adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
+      }
+      if (nlevelsmax < 0)
+      {
+        nlevelsmax = nlevels;
+      }
+      else if (nlevels >= nlevelsmax)
+      {
+        printout("[info] read_atomicdata: reduce number of levels from %d to %d for ion %d of element %d\n",nlevels,nlevelsmax,ion,element);
+      }
+      else
+      {
+        printout("[warning] read_atomicdata: requested nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduced nlevelsmax to nlevels\n",nlevelsmax,nlevels,ion,element);
+        nlevelsmax = nlevels;
+        //printout("[fatal] read_atomicdata: nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduce nlevelsmax or extend atomic data \n",nlevelsmax,nlevels,ion,element);
+      }
+
+
+      /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
+      int Zcheck,ionstagecheck,tottransitions;
+      fscanf(transitiondata,"%d %d %d\n",&Zcheck,&ionstagecheck,&tottransitions);
+      printout("readin transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
+      while (Zcheck != Z || ionstagecheck != ionstage)
+      {
+        for (int i = 0; i < tottransitions; i++)
+        {
+          double A,coll_str;
+          int transitionindex,lower,upper;
+          fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
+        }
+        fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
+        printout("proceed through transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
+      }
+
+      int tottransitions_all = tottransitions;
+      if (ion == nions-1)
+      {
+        nlevelsmax = 1;
+        tottransitions = 0;
+      }
+
+      /// then read in its level and transition data
+      if (Zcheck == Z && ionstagecheck == ionstage)
+      {
+        transitiontable_entry *transitiontable;
+
+        /// load transition table for the CURRENT ion to temporary memory
+        if ((transitiontable = calloc(tottransitions, sizeof(transitiontable_entry))) == NULL)
+        {
+          if (tottransitions > 0)
+            {
+              printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
+              exit(0);
+            }
+        }
+        if (tottransitions == 0)
+        {
+          for (int i = 0; i < tottransitions_all; i++)
+          {
+            double A, coll_str;
+            int transitionindex,lower,upper;
+            fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
+            //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
+          }
+        }
+        else
+        {
+          for (int i = 0; i < tottransitions; i++)
+          {
+            double A,coll_str;
+            int transitionindex,lower,upper;
+            fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
+            transitiontable[i].lower = lower-1;
+            transitiontable[i].upper = upper-1;
+            transitiontable[i].A = A;
+            transitiontable[i].coll_str = coll_str;
+            //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
+          }
+        }
+
+
+        /// store the ions data to memory and set up the ions zeta and levellist
+        elements[element].ions[ion].ionstage = ionstage;
+        elements[element].ions[ion].nlevels = nlevelsmax;
+        elements[element].ions[ion].ionisinglevels = 0;
+        elements[element].ions[ion].ionpot = ionpot*EV;
+//           if ((elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
+//           {
+//             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
+//             exit(0);
+//           }
+        if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
+        {
+          printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
+          exit(0);
+        }
+        if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
+        {
+          printout("[fatal] input: not enough memory to initialize levelist of element %d, ion %d ... abort\n",element,ion);
+          exit(0);
+        }
+
+
+        /// now we need to readout the data for all those levels, write them to memory
+        /// and set up the list of possible transitions for each level
+        int *nuparr = calloc(nlevelsmax, sizeof(int));
+        if (nuparr == NULL)
+        {
+          printout("[fatal] input: not enough memory to allocate nuparr ... abort\n");
+          exit(0);
+        }
+        int *ndownarr = calloc(nlevelsmax, sizeof(int));
+        if (ndownarr == NULL)
+        {
+          printout("[fatal] input: not enough memory to allocate ndownarr... abort\n");
+          exit(0);
+        }
+        if ((transitions = calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
+        {
+          printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
+          exit(0);
+        }
+        for (int level = 0; level < nlevels; level++)
+        {
+          double levelenergy,statweight;
+          int levelindex,ntransitions;
+          fscanf(adata,"%d %lg %lg %d%*[^\n]\n",&levelindex,&levelenergy,&statweight,&ntransitions);
+          //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
+          if (level < nlevelsmax)
+          {
+            ndownarr[level] = 1;
+            nuparr[level] = 1;
+            //elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
+            double currentlevelenergy = (energyoffset + levelenergy) * EV;
+            //if (element == 1 && ion == 0) printf("%d %16.10e\n",levelindex,currentlevelenergy);
+            //printout("energy for level %d of ionstage %d of element %d is %g\n",level,ionstage,element,currentlevelenergy/EV);
+            elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
+            //printout("epsilon(%d,%d,%d)=%g",element,ion,level,elements[element].ions[ion].levels[level].epsilon);
+
+            //if (level == 0 && ion == 0) energyoffset = levelenergy;
+            elements[element].ions[ion].levels[level].stat_weight = statweight;
+            ///Moved to the section with ionising levels below
+            //elements[element].ions[ion].levels[level].cont_index = cont_index;
+            //cont_index -= 1;
+            /// Initialise the metastable flag to true. Set it to false (0) if downward transition exists.
+            elements[element].ions[ion].levels[level].metastable = 1;
+            //elements[element].ions[ion].levels[level].main_qn = mainqn;
+
+            /// The level contributes to the ionisinglevels if its energy
+            /// is below the ionisiation potential and the level doesn't
+            /// belong to the topmost ion included.
+            /// Rate coefficients are only available for ionising levels.
+            if (levelenergy < ionpot && ion < nions-1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
+            {
+              elements[element].ions[ion].ionisinglevels += 1;
+
+              elements[element].ions[ion].levels[level].cont_index = cont_index;
+              cont_index -= 1;
+            }
+
+
+            /// store the possible downward transitions from the current level in following order to memory
+            ///     A_level,level-1; A_level,level-2; ... A_level,1
+            /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
+            if ((transitions[level].to = calloc(level, sizeof(int))) == NULL)
+            {
+              printout("[fatal] input: not enough memory to initialize transitionlist ... abort\n");
+              exit(0);
+            }
+            for (int i = 0; i < level; i++)
+            {
+              transitions[level].to[i] = -99.;
+            }
+            if ((elements[element].ions[ion].levels[level].downtrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
+            {
+              printout("[fatal] input: not enough memory to initialize downtranslist ... abort\n");
+              exit(0);
+            }
+            /// initialize number of downward transitions to zero
+            elements[element].ions[ion].levels[level].downtrans[0].targetlevel = 0;
+            if ((elements[element].ions[ion].levels[level].uptrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
+            {
+              printout("[fatal] input: not enough memory to initialize uptranslist ... abort\n");
+              exit(0);
+            }
+            /// initialize number of upward transitions to zero
+            elements[element].ions[ion].levels[level].uptrans[0].targetlevel = 0;
+          }
+        }
+
+        for (int ii = 0; ii < tottransitions; ii++)
+        {
+          int level = transitiontable[ii].upper;
+          int targetlevel = transitiontable[ii].lower;
+
+          if (level < nlevelsmax)
+          {
+
+            //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
+            //{
+            //printout("ii %d\n",ii);
+            //printout("transtable upper %d, lower %d, A %g, iii %d\n",transitiontable[ii].upper,transitiontable[ii].lower, transitiontable[ii].A,iii);
+            /// Make sure that we don't allow duplicate. In that case take only the lines
+            /// first occurrence
+            if (transitioncheck(level,targetlevel) == -99)
+            {
+              transitions[level].to[level-targetlevel-1] = lineindex;
+              double A_ul = transitiontable[ii].A;
+              double coll_str = transitiontable[ii].coll_str;
+              //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
+
+              double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
+              double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
+              double f_ul = g * ME * pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+              //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
+              //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+
+              //printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu %g\n",lineindex,element,ion,level-i-1,level,nu_trans);
+              linelist[lineindex].elementindex = element;
+              linelist[lineindex].ionindex = ion;
+              linelist[lineindex].lowerlevelindex = targetlevel;
+              linelist[lineindex].upperlevelindex = level;
+              linelist[lineindex].nu = nu_trans;
+              linelist[lineindex].einstein_A = A_ul;
+              linelist[lineindex].osc_strength = f_ul;
+              linelist[lineindex].coll_str = coll_str;
+              lineindex += 1;
+              if (lineindex % MLINES == 0)
+              {
+                printout("[info] read_atomicdata: increase linelistsize from %d to %d\n",lineindex,lineindex+MLINES);
+                if ((linelist = realloc(linelist, (lineindex+MLINES)*sizeof(linelist_entry))) == NULL)
+                {
+                  printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
+                  exit(0);
+                }
+              }
+
+              /// This is not a metastable level.
+              elements[element].ions[ion].levels[level].metastable = 0;
+
+              elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
+              if ((elements[element].ions[ion].levels[level].downtrans
+                  = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level]+1)*sizeof(transitionlist_entry))) == NULL)
+              {
+                printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
+                exit(0);
+              }
+              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
+              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon = epsilon(element,ion,targetlevel);
+              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].stat_weight = stat_weight(element,ion,targetlevel);
+              //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
+              //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
+              ndownarr[level] += 1;
+
+              elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
+              if ((elements[element].ions[ion].levels[targetlevel].uptrans
+                  = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel]+1)*sizeof(transitionlist_entry))) == NULL)
+              {
+                printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
+                exit(0);
+              }
+              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
+              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon = epsilon(element,ion,level);
+              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element,ion,level);
+              nuparr[targetlevel] += 1;
+            }
+            else
+            {
+              /** This is a new brach to deal with lines that have different types of transition. It should trip after a transition is already known. */
+              int linelistindex = transitions[level].to[level-targetlevel-1];
+              double A_ul = transitiontable[ii].A;
+              double coll_str = transitiontable[ii].coll_str;
+              //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
+
+              double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
+              double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
+              double f_ul = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+              //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
+              //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+
+              if ((linelist[linelistindex].elementindex != element) || (linelist[linelistindex].ionindex != ion) || (linelist[linelistindex].upperlevelindex != level) || (linelist[linelistindex].lowerlevelindex != targetlevel))
+              {
+                printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
+                printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
+                printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n", transitions[level].to[level-targetlevel-1]);
+                printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
+                printout("[input.c]   linelist[linelistindex].elementindex %d, linelist[linelistindex].ionindex %d, linelist[linelistindex].upperlevelindex %d, linelist[linelistindex].lowerlevelindex %d\n", linelist[linelistindex].elementindex, linelist[linelistindex].ionindex, linelist[linelistindex].upperlevelindex,linelist[linelistindex].lowerlevelindex);
+                abort();
+              }
+              linelist[linelistindex].einstein_A += A_ul;
+              linelist[linelistindex].osc_strength += f_ul;
+              if (coll_str > linelist[linelistindex].coll_str)
+              {
+                linelist[linelistindex].coll_str = coll_str;
+              }
+            }
+          }
+        }
+        //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
+        //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
+
+        free(nuparr);
+        free(ndownarr);
+
+        for (int level = 0; level < nlevelsmax; level++)
+        {
+          totaldowntrans += elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+          totaluptrans += elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+          free(transitions[level].to);
+        }
+        free(transitiontable);
+        free(transitions);
+
+        /// Also the phixslist
+        if (ion < nions-1)
+        {
+//            elements[element].ions[ion].nbfcontinua = elements[element].ions[ion].ionisinglevels;//nlevelsmax;
+          nbfcheck += elements[element].ions[ion].ionisinglevels; //nlevelsmax;
+/*            if ((elements[element].ions[ion].phixslist = calloc(nlevelsmax, sizeof(ionsphixslist_t))) == NULL)
+          {
+            printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
+            exit(0);
+          }*/
+          nbfcontinua += get_bfcontinua(element,ion);//elements[element].ions[ion].ionisinglevels;//nlevelsmax;
+        }
+      }
+      else
+      {
+        printout("corrupted atomic data\n");
+        exit(0);
+      }
+    }
+  }
+  fclose(adata);
+  fclose(transitiondata);
+  fclose(compositiondata);
+  printout("nbfcheck %d\n",nbfcheck);
+  printout("heatingcheck %d\n",heatingcheck);
+
+  /// Save the linecounters value to the global variable containing the number of lines
+  nlines = lineindex;
+  printout("nlines %d\n",nlines);
+  if (nlines > 0)
+  {
+    /// and release empty memory from the linelist
+    if ((linelist = realloc(linelist, nlines*sizeof(linelist_entry))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
+      exit(0);
+    }
+  }
+
+  if (T_preset > 0) exit(0);
+
+
+  /// Set up the list of allowed upward transitions for each level
+  printout("total uptrans %d\n",totaluptrans);
+  printout("total downtrans %d\n",totaldowntrans);
+  printout("coolingcheck %d\n",coolingcheck);
+
+
+
+  ///debug output
+  /*
+  FILE *linelist_file;
+  if ((linelist_file = fopen("linelist_unsorted.out", "w")) == NULL){
+    printout("Cannot open linelist.out.\n");
+    exit(0);
+  }
+  for (i = 0; i < nlines; i++)
+    fprintf(linelist_file,"element %d, ion %d, ionstage %d, upperindex %d, lowerindex %d, nu %g\n",linelist[i].elementindex, linelist[i].ionindex, elements[linelist[i].elementindex].ions[linelist[i].ionindex].ionstage, linelist[i].upperlevelindex, linelist[i].lowerlevelindex, linelist[i].nu);
+  fclose(linelist_file);
+  //exit(0);
+  */
+
+  ///then sort the linelist by decreasing frequency
+  qsort(linelist,nlines,sizeof(linelist_entry),compare_linelistentry);
+
+
+  /// Save sorted linelist into a file
+  if (rank_global == 0)
+  {
+    FILE *linelist_file;
+    if ((linelist_file = fopen("linelist.dat", "w")) == NULL)
+    {
+      printout("Cannot open linelist.out.\n");
+      exit(0);
+    }
+    fprintf(linelist_file,"%d\n",nlines);
+    for (int i = 0; i < nlines; i++)
+    {
+      fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",i,linelist[i].elementindex, linelist[i].ionindex, linelist[i].upperlevelindex, linelist[i].lowerlevelindex, linelist[i].nu, linelist[i].einstein_A, linelist[i].osc_strength, linelist[i].coll_str);
+    }
+    fclose(linelist_file);
+    //exit(0);
+  }
+
+
+  ///Establish connection between transitions and sorted linelist
+  //printout("[debug] init line counter list\n");
+  printout("establish connection between transitions and sorted linelist\n");
+  for (int i = 0; i < nlines; i++)
+  {
+    int element = linelist[i].elementindex;
+    int ion = linelist[i].ionindex;
+    int lowerlevel = linelist[i].lowerlevelindex;
+    int upperlevel = linelist[i].upperlevelindex;
+    for (int ii = 1; ii <= elements[element].ions[ion].levels[upperlevel].downtrans[0].targetlevel; ii++)
+    {
+      if (elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevel == lowerlevel)
+      {
+        elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = i;
+      }
+    }
+    for (int ii = 1; ii <= elements[element].ions[ion].levels[lowerlevel].uptrans[0].targetlevel; ii++)
+    {
+      if (elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevel == upperlevel)
+      {
+        elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = i;
+      }
+    }
+  }
+
+
+  /// Photoionisation cross-sections
+  ///======================================================
+  ///finally read in photoionisation cross sections and store them to the atomic data structure
+  read_phixs_data();
+
+  printout("cont_index %d\n",cont_index);
+  /// Now write the model atom to file for reuse
+  if (rank_global == 0)
+  {
+    write_processed_modelatom();
+  }
+}
+
+
 void read_phixs_data(void)
 {
   printout("readin phixs data\n");
@@ -1539,7 +1546,7 @@ void read_processed_modelatom(FILE *modelatom)
 
   printout("[read_atomicdata] Load preprocessed model atom and linelist ...\n");
   printout("[read_atomicdata] Be aware that no consistency checks are done!!!\n");
-  int dum,anumber;
+  int anumber;
   float abundance,mass;
 
   fscanf(modelatom,"%d",&NPHIXSPOINTS);
@@ -1758,11 +1765,15 @@ void read_processed_modelatom(FILE *modelatom)
       }
     }
   }
+}
 
+
+void read_processed_linelist(void)
+{
   FILE *linelist_file;
   if ((linelist_file = fopen("linelist.dat", "r")) == NULL)
   {
-    printout("Cannot open linelist.out.\n");
+    printout("Cannot open linelist.dat.\n");
     exit(0);
   }
   fscanf(linelist_file,"%d\n",&nlines);
@@ -1773,7 +1784,7 @@ void read_processed_modelatom(FILE *modelatom)
   }
   for (int i = 0; i < nlines; i++)
   {
-    int element,ion,upperlevel,lowerlevel;
+    int dum,element,ion,upperlevel,lowerlevel;
     double nu,A_ul,f_ul,coll_str;
     fscanf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",&dum,&element,&ion,&upperlevel,&lowerlevel,&nu,&A_ul,&f_ul,&coll_str);
     linelist[i].elementindex = element;

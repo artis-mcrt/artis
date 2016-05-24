@@ -1,7 +1,7 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
-void tabulate_ratecoefficients_gsl(void);
+void ratecoefficients_init(void);
 
 double alpha_sp_integrand_gsl(double nu, void *restrict paras);
 double alpha_sp_E_integrand_gsl(double nu, void *restrict paras);

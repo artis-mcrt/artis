@@ -254,7 +254,7 @@ int main(int argc, char** argv)
   /// T_e = T_R for this precalculation.
   /// Make this parallel ?
   printout("time before tabulation of rate coefficients %d\n",time(NULL));
-  tabulate_ratecoefficients_gsl();
+  ratecoefficients_init();
   printout("time after tabulation of rate coefficients %d\n",time(NULL));
   //abort();
 
