@@ -178,15 +178,12 @@ void setup_packets(int pktnumberoffset)
 
     #ifdef NO_INITIAL_PACKETS
     if (pkt[n].tdecay < tmax && pkt[n].tdecay > tmin)
-      n++;
-    else
-      packet_reset++;
     #else
     if (pkt[n].tdecay < tmax)
+    #endif
       n++;
     else
       packet_reset++;
-    #endif
   }
 
   /// Some fraction of the packets we reassigned because they were not going
@@ -217,11 +214,11 @@ double fni(const CELL *grid_ptr)
     double m_r = pow(r_on_rmax,3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
 
     if (m_r < 0.5)
-      return(1.0);
+      return 1.0;
     else if (m_r < 0.75)
-      return(1.0 - ((m_r - 0.5)*4));
+      return (1.0 - ((m_r - 0.5)*4));
     else
-      return(0.0);
+      return 0.0;
   }
   else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
   {

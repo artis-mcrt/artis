@@ -4,7 +4,10 @@
 #include "rpkt.h"
 #include "update_packets.h"
 
+
+// private functions
 int locate(const PKT *pkt_ptr, double t_current);
+
 
 ///****************************************************************************
 /// Basic routine to compute distance to a call boundary.

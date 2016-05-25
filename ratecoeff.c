@@ -15,9 +15,18 @@ typedef struct
   float *photoion_xs;
 } gsl_integral_paras_gammacorr;
 
+typedef struct
+{
+  int modelgridindex;
+  double nu_edge;
+  float *photoion_xs;
+  double sf_Te;
+  double sf_TR;
+} gsl_integral_paras_bfheating;
+
 
 // private functions
-bool read_precalculated_ratecoeff(void);
+bool read_ratecoeff_dat(void);
 void calculate_rate_coefficients(void);
 void write_ratecoeff_dat(void);
 void calculate_ion_alpha_sp(void);
@@ -48,14 +57,14 @@ void ratecoefficients_init(void)
   T_step_log = (log(MAXTEMP)-log(MINTEMP)) / (TABLESIZE-1.);
 
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
-  if (!read_precalculated_ratecoeff())
+  if (!read_ratecoeff_dat())
     calculate_rate_coefficients();
 
   calculate_ion_alpha_sp();
 }
 
 
-bool read_precalculated_ratecoeff(void)
+bool read_ratecoeff_dat(void)
 /// Try to readin the precalculated rate coefficients from file
 /// returns true if successful or false otherwise
 {
@@ -1037,13 +1046,16 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
   if (bfheating < 0 || !use_cellhist)
   {
 
-    /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
-    bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);
-    index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-    if (index_in_groundlevelcontestimator >= 0) bfheating *= bfheatingestimator[cellnumber*nelements*maxion+index_in_groundlevelcontestimator];*/
-
   #ifdef NO_LUT_BFHEATING
     bfheating = calculate_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
+
+    /*double T_R = get_TR(modelgridindex);
+    double W = get_W(modelgridindex);
+    double bfheating_old = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
+    int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+    if (index_in_groundlevelcontestimator >= 0)
+      bfheating_old *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
+    printout("bfheating new %g old %g\n",bfheating,bfheating_old);*/
   #else
     double T_R = get_TR(modelgridindex);
     double W = get_W(modelgridindex);
@@ -1147,30 +1159,32 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
                                 int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  double integratoraccuracy = 1e-2;
+  double integratoraccuracy = 2e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1024);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
-  mastate[tid].level = element;  //passed to photoionization_crosssection
-  mastate[tid].level = ion;
-  mastate[tid].level = level;
 
   double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
   double nu_threshold = E_threshold / H;
   double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
-  gsl_integral_paras_gammacorr intparas;
+  gsl_integral_paras_bfheating intparas;
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
+  double T_R = get_TR(modelgridindex);
+  double T_e = get_Te(modelgridindex);
+  intparas.sf_Te = calculate_sahafact(element,ion,level,phixstargetindex,T_e,E_threshold);
+  intparas.sf_TR = calculate_sahafact(element,ion,level,phixstargetindex,T_R,E_threshold);
+  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
 
   double bfheating = 0.0;
   gsl_function F_bfheating;
   F_bfheating.function = &bfheating_integrand_gsl_radfield;
   F_bfheating.params = &intparas;
   gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0,
-                      integratoraccuracy, 1000, 6, w, &bfheating, &error);
+                      integratoraccuracy, 1024, 6, w, &bfheating, &error);
   bfheating *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);
@@ -1183,18 +1197,22 @@ double bfheating_integrand_gsl_radfield(double nu, void *restrict paras)
 /// Integrand to calculate the rate coefficient for bfheating
 /// using gsl integrators.
 {
-  int modelgridindex = ((gsl_integral_paras_gammacorr *) paras)->modelgridindex;
-  double nu_edge = ((gsl_integral_paras_gammacorr *) paras)->nu_edge;
+  gsl_integral_paras_bfheating p = *((gsl_integral_paras_bfheating *) paras);
 
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection(nu_edge, nu);
+  int modelgridindex = p.modelgridindex;
+  double nu_edge = p.nu_edge;
+  float *photoion_xs = p.photoion_xs;
+  double sf_Te = p.sf_Te;
+  double sf_TR = p.sf_TR;
+  int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
 
+  double T_e = get_Te(modelgridindex);
   double T_R = get_TR(modelgridindex);
 
-  return sigma_bf * (1-nu_edge/nu) * radfield(nu,modelgridindex) *
-         (1 - exp(-HOVERKB*nu/T_R));
+  return photoion_xs[i] * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-HOVERKB * nu / T_e));
+
+  //return photoion_xs[i] * (1-nu_edge/nu) * radfield(nu,modelgridindex) *
+  //       (1 - exp(-HOVERKB*nu/T_R));
 }
 
 ///***************************************************************************/
