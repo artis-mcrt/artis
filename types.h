@@ -483,7 +483,6 @@ typedef struct
 {
   double spontaneousrecombrate;
   double bfcooling;
-  double bfheating;
   double corrphotoioncoeff;
   double sahafact;
 } chphixstargets_struct;
