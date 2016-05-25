@@ -553,7 +553,7 @@ int main(int argc, char** argv)
         nesc = 0;
 
         /// Update the matter quantities in the grid for the new timestep. */
-        printout("time before update grid %d (tstart + %d)\n",time(NULL),time(NULL)-real_time_start);
+        printout("\ntimestep %d: time before update grid %d (tstart + %d)\n",nts,time(NULL),time(NULL)-real_time_start);
 
         #ifndef FORCE_LTE
           /// Initialise corrphotoionrenorm[i] to zero before update_grid is called
