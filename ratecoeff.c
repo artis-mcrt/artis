@@ -174,7 +174,7 @@ void calculate_rate_coefficients(void)
       printout("Performing rate integrals for Z = %d, ionstage %d...\n",elements[element].anumber,ion+1);
 
       gsl_integration_workspace *w;
-      w = gsl_integration_workspace_alloc(1000);
+      w = gsl_integration_workspace_alloc(1024);
       mastate[tid].element = element;   /// Global variable which passes the current element to all subfunctions of macroatom.c
       mastate[tid].ion = ion;   /// Global variable which passes the current ion to all subfunctions of macroatom.c
       for (int level = 0; level < nlevels; level++)
@@ -228,7 +228,7 @@ void calculate_rate_coefficients(void)
             gsl_function F_alpha_sp;
             F_alpha_sp.function = &alpha_sp_integrand_gsl;
             F_alpha_sp.params = &intparas;
-            gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &alpha_sp, &error);
+            gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, w, &alpha_sp, &error);
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
 
             //if (iter == 0)
@@ -238,21 +238,21 @@ void calculate_rate_coefficients(void)
             gsl_function F_gammacorr;
             F_gammacorr.function = &gammacorr_integrand_gsl;
             F_gammacorr.params = &intparas;
-            gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &gammacorr, &error);
+            gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, w, &gammacorr, &error);
             gammacorr *= FOURPI * phixstargetprobability;
 
             double bfheating_coeff = 0.0;
             gsl_function F_bfheating;
             F_bfheating.function = &approx_bfheating_integrand_gsl;
             F_bfheating.params = &intparas;
-            gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfheating_coeff, &error);
+            gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, w, &bfheating_coeff, &error);
             bfheating_coeff *= FOURPI * phixstargetprobability;
 
             double bfcooling_coeff = 0.0;
             gsl_function F_bfcooling;
             F_bfcooling.function = &bfcooling_integrand_gsl;
             F_bfcooling.params = &intparas;
-            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, w, &bfcooling_coeff, &error);
+            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, w, &bfcooling_coeff, &error);
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
 
             /// Save the calculated coefficients to memory
