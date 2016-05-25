@@ -383,11 +383,11 @@ void update_cell(int cellnumber)
 
 
 ///****************************************************************************
-int compare_packets_byposition(const void *p1, const void *p2)
+int compare_packets_byposition(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  const PKT *a1 = (PKT *)(p1);
-  const PKT *a2 = (PKT *)(p2);
+  const PKT *restrict a1 = (PKT *)(p1);
+  const PKT *restrict a2 = (PKT *)(p2);
 
   int cell_diff = a1->where - a2->where;
   if (cell_diff < 0)
@@ -400,11 +400,11 @@ int compare_packets_byposition(const void *p1, const void *p2)
 
 
 ///****************************************************************************
-int compare_packets_bymodelgridposition(const void *p1, const void *p2)
+int compare_packets_bymodelgridposition(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  const PKT *a1 = (PKT *)(p1);
-  const PKT *a2 = (PKT *)(p2);
+  const PKT *restrict a1 = (PKT *)(p1);
+  const PKT *restrict a2 = (PKT *)(p2);
 
   int mgi_diff = cell[a1->where].modelgridindex - cell[a2->where].modelgridindex;
   if (mgi_diff < 0)
@@ -417,11 +417,11 @@ int compare_packets_bymodelgridposition(const void *p1, const void *p2)
 
 
 ///****************************************************************************
-int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
+int compare_packets_bymodelgriddensity(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the phixslist by descending cell density.
 {
-  const PKT *a1 = (PKT *)(p1);
-  const PKT *a2 = (PKT *)(p2);
+  const PKT *restrict a1 = (PKT *)(p1);
+  const PKT *restrict a2 = (PKT *)(p2);
 
   double rho_diff = modelgrid[cell[a1->where].modelgridindex].rho - modelgrid[cell[a2->where].modelgridindex].rho;
   if (rho_diff < 0)
