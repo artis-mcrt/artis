@@ -38,9 +38,9 @@ double bfcooling_integrand_gsl_2(double nu, void *paras);
 double stimulated_bfcooling_integrand_gsl(double nu, void *paras);
 double stimulated_recomb_integrand_gsl(double nu, void *paras);
 double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-double gammacorr_integrand_gsl_radfield(double nu, void *restrict paras);
+double gammacorr_integrand_gsl_radfield(double nu, void *restrict voidparas);
 double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-double bfheating_integrand_gsl_radfield(double nu, void *paras);
+double bfheating_integrand_gsl_radfield(double nu, void *restrict voidparas);
 
 
 ///****************************************************************************
@@ -1000,14 +1000,14 @@ double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstar
 }
 
 
-double gammacorr_integrand_gsl_radfield(double nu, void *restrict paras)
+double gammacorr_integrand_gsl_radfield(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  gsl_integral_paras_gammacorr localparas = *((gsl_integral_paras_gammacorr *) paras);
-  int modelgridindex = localparas.modelgridindex;
-  double nu_edge = localparas.nu_edge;
-  float *photoion_xs = localparas.photoion_xs;
+  gsl_integral_paras_gammacorr *restrict paras = (gsl_integral_paras_gammacorr *) voidparas;
+  int modelgridindex = paras->modelgridindex;
+  double nu_edge = paras->nu_edge;
+  float *photoion_xs = paras->photoion_xs;
 
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
@@ -1181,17 +1181,17 @@ double calculate_bfheatingcoeff(int element, int ion, int level,
 }
 
 
-double bfheating_integrand_gsl_radfield(double nu, void *restrict paras)
+double bfheating_integrand_gsl_radfield(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for bfheating
 /// using gsl integrators.
 {
-  gsl_integral_paras_bfheating p = *((gsl_integral_paras_bfheating *) paras);
+  gsl_integral_paras_bfheating *restrict p = (gsl_integral_paras_bfheating *) voidparas;
 
-  int modelgridindex = p.modelgridindex;
-  double nu_edge = p.nu_edge;
-  float *photoion_xs = p.photoion_xs;
-  double sf_Te = p.sf_Te;
-  double sf_TR = p.sf_TR;
+  int modelgridindex = p->modelgridindex;
+  double nu_edge = p->nu_edge;
+  float *photoion_xs = p->photoion_xs;
+  double sf_Te = p->sf_Te;
+  double sf_TR = p->sf_TR;
   int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
 
   double T_e = get_Te(modelgridindex);
