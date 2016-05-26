@@ -718,7 +718,7 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
 
 
 
-double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, double T) // double T_e, double T_R)
+static double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, double T) // double T_e, double T_R)
 {
 /*  int lowerindex = floor((T-MINTEMP)/T_step);
   int upperindex = lowerindex + 1;
@@ -754,7 +754,7 @@ double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstarg
 // }
 
 
-double interpolate_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, double T)
+static double interpolate_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, double T)
 {
 /*  int lowerindex = floor((T-MINTEMP)/T_step);
   int upperindex = lowerindex + 1;
@@ -980,8 +980,6 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 }
 
 
-#ifndef FORCE_LTE
-///***************************************************************************/
 double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 /// Returns the for stimulated emission corrected photoionisation rate coefficient.
 /// Only needed during packet propagation, therefore the value is taken from the
@@ -1093,10 +1091,6 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
 double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  /// The correction factor for stimulated emission in gammacorr is set to its
-  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  /// correction may be evaluated at T_R!
-
   #ifdef NO_LUT_BFHEATING
   double bfheating = calculate_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
 
@@ -1108,6 +1102,9 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
     bfheating_old *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
   printout("bfheating new %g old %g\n",bfheating,bfheating_old);*/
   #else
+  /// The correction factor for stimulated emission in gammacorr is set to its
+  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+  /// correction may be evaluated at T_R!
   double T_R = get_TR(modelgridindex);
   double W = get_W(modelgridindex);
   double bfheating = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
@@ -1128,12 +1125,8 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
 }
 
 
-#endif /* IFNDEF FORCE_LTE */
-
-
-///***************************************************************************/
 double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-/// Returns the rate for bfheating. This can be called during packet propagation
+/// Returns the rate for bfcooling. This can be called during packet propagation
 /// or update_grid. Therefore we need to decide whether a cell history is
 /// known or not.
 {
