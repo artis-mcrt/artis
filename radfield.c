@@ -427,9 +427,9 @@ static double gsl_integrand_planck(double nu, void *restrict paras)
 static double integrate_planck(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor, double *error)
 {
   //double error = 0.0;
-  double integratoraccuracy = 1e-10;
+  double integratoraccuracy = 1e-8;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(131072);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
 
   gsl_planck_integral_paras intparas;
   intparas.T_R = T_R;
@@ -439,9 +439,15 @@ static double integrate_planck(double T_R, double nu_lower, double nu_upper, enu
   gsl_function F_plank;
   F_plank.function = &gsl_integrand_planck;
   F_plank.params = &intparas;
-  gsl_integration_qag(&F_plank, nu_lower, nu_upper, 0.,
-                      integratoraccuracy, 131072, 6, w, &integral,
-                      error);
+
+  gsl_set_error_handler_off();
+  int status = gsl_integration_qag(&F_plank, nu_lower, nu_upper, 0., integratoraccuracy, 65536, 6, w, &integral, error);
+
+  if (status == GSL_FAILURE)
+  {
+    printout("integrate_planck status = %d, error = %g, errortolerance = %g\n", status, *error, integratoraccuracy);
+    abort();
+  }
 
   gsl_integration_workspace_free(w);
 
