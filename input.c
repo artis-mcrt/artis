@@ -1321,53 +1321,42 @@ static void setup_cellhistory(void)
 }
 
 
-static void read_atomicdata(void)
-/// Subroutine to read in input parameters.
+static void write_bflist_file(int includedionisinglevels)
 {
-  ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
-  int index_in_groundlevelcontestimator;
-
-  nbfcontinua = 0;
-  includedions = 0;
-
-  //printout("start input.c\n");
-  FILE *modelatom = fopen("modelatom.dat", "r");
-  if (modelatom == NULL || true) //changed to always read in unprocessed data files
+  FILE *bflist_file;
+  if (rank_global == 0)
   {
-    read_unprocessed_atomicdata();
+    if ((bflist_file = fopen("bflist.dat", "w")) == NULL){
+      printout("Cannot open bflist.dat.\n");
+      exit(0);
+    }
+    fprintf(bflist_file,"%d\n",includedionisinglevels);
   }
-  else /// Preprocessed model atom available read that in
+  int i = 0;
+  for (int element = 0; element < nelements; element++)
   {
-    read_processed_modelatom(modelatom);
-    fclose(modelatom);
-    read_processed_linelist();
+    int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
+    {
+      int nlevels = get_ionisinglevels(element,ion);
+      for (int level = 0; level < nlevels; level++)
+      {
+        bflist[i].elementindex = element;
+        bflist[i].ionindex = ion;
+        bflist[i].levelindex = level;
+        if (rank_global == 0)
+          fprintf(bflist_file,"%d %d %d %d\n",i,element,ion,level);
+        i++;
+      }
+    }
   }
-  last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
+  if (rank_global == 0) fclose(bflist_file);
+
+}
 
 
-  printout("included ions %d\n",includedions);
-
-
-  /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
-  ///======================================================
-  #ifdef RECORD_LINESTAT
-    if ((ecounter  = (int *) malloc(nlines*sizeof(int))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
-      exit(0);
-    }
-    if ((acounter  = (int *) malloc(nlines*sizeof(int))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
-      exit(0);
-    }
-    if ((linestat_reduced  = (int *) malloc(nlines*sizeof(int))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
-      exit(0);
-    }
-  #endif
-
+static void setup_coolinglist(void)
+{
   /// SET UP THE COOLING LIST
   ///======================================================
   /// Determine number of processes which allow kpkts to convert to something else.
@@ -1426,69 +1415,11 @@ static void read_atomicdata(void)
     exit(0);
   }
   */
+}
 
 
-  setup_cellhistory();
-
-
-  /// Printout some information about the read-in model atom
-  ///======================================================
-  //includedions = 0;
-  int includedlevels = 0;
-  int includedionisinglevels = 0;
-  printout("[input.c] this simulation contains\n");
-  printout("----------------------------------\n");
-  for (int element = 0; element < nelements; element++)
-  {
-    printout("[input.c]   element Z = %d\n",get_element(element));
-    int nions = get_nions(element);
-    //includedions += nions;
-    for (int ion = 0; ion < nions; ion++)
-    {
-      printout("[input.c]     ion %d with %d levels (%d ionising)\n",get_ionstage(element,ion),get_nlevels(element,ion),get_ionisinglevels(element,ion));
-      includedlevels += get_nlevels(element,ion);
-      includedionisinglevels += get_ionisinglevels(element,ion);
-    }
-  }
-  printout("[input.c]   in total %d ions, %d levels (%d ionising) and %d lines\n",includedions,includedlevels,includedionisinglevels,nlines);
-
-
-  if ((bflist = (bflist_t *) malloc(includedionisinglevels*sizeof(bflist_t))) == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize bflist ... abort\n");
-    exit(0);
-  }
-  FILE *bflist_file;
-  if (rank_global == 0)
-  {
-    if ((bflist_file = fopen("bflist.dat", "w")) == NULL){
-      printout("Cannot open bflist.dat.\n");
-      exit(0);
-    }
-    fprintf(bflist_file,"%d\n",includedionisinglevels);
-  }
-  int i = 0;
-  for (int element = 0; element < nelements; element++)
-  {
-    int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++)
-    {
-      int nlevels = get_ionisinglevels(element,ion);
-      for (int level = 0; level < nlevels; level++)
-      {
-        bflist[i].elementindex = element;
-        bflist[i].ionindex = ion;
-        bflist[i].levelindex = level;
-        if (rank_global == 0)
-          fprintf(bflist_file,"%d %d %d %d\n",i,element,ion,level);
-        i++;
-      }
-    }
-  }
-  if (rank_global == 0) fclose(bflist_file);
-
-
-
+static void setup_phixs_list(void)
+{
   /// SET UP THE PHIXSLIST
   ///======================================================
   printout("[info] read_atomicdata: number of bfcontinua %d\n",nbfcontinua);
@@ -1524,7 +1455,7 @@ static void read_atomicdata(void)
       exit(0);
     }
 
-    i = 0;
+    int i = 0;
     for (int element = 0; element < nelements; element++)
     {
       int nions = get_nions(element);
@@ -1569,6 +1500,9 @@ static void read_atomicdata(void)
           int upperlevel = get_phixsupperlevel(element,ion,level,0);
           double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           double nu_edge = E_threshold/H;
+
+          int index_in_groundlevelcontestimator;
+
           phixslist[itid].allcont[i].element = element;
           phixslist[itid].allcont[i].ion = ion;
           phixslist[itid].allcont[i].level = level;
@@ -1586,6 +1520,96 @@ static void read_atomicdata(void)
   //#ifdef _OPENMP
   //  }
   //#endif
+}
+
+
+static void read_atomicdata(void)
+/// Subroutine to read in input parameters.
+{
+  ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
+  nbfcontinua = 0;
+  includedions = 0;
+
+  //printout("start input.c\n");
+  FILE *modelatom = fopen("modelatom.dat", "r");
+  if (modelatom == NULL || true) //changed to always read in unprocessed data files
+  {
+    read_unprocessed_atomicdata();
+  }
+  else /// Preprocessed model atom available read that in
+  {
+    read_processed_modelatom(modelatom);
+    fclose(modelatom);
+    read_processed_linelist();
+  }
+  last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
+
+
+  printout("included ions %d\n",includedions);
+
+
+  /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
+  ///======================================================
+  #ifdef RECORD_LINESTAT
+    if ((ecounter  = (int *) malloc(nlines*sizeof(int))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
+      exit(0);
+    }
+    if ((acounter  = (int *) malloc(nlines*sizeof(int))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
+      exit(0);
+    }
+    if ((linestat_reduced  = (int *) malloc(nlines*sizeof(int))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
+      exit(0);
+    }
+  #endif
+
+  setup_coolinglist();
+
+  setup_cellhistory();
+
+
+  /// Printout some information about the read-in model atom
+  ///======================================================
+  //includedions = 0;
+  int includedlevels = 0;
+  int includedionisinglevels = 0;
+  int includedphotoiontransitions = 0;
+  printout("[input.c] this simulation contains\n");
+  printout("----------------------------------\n");
+  for (int element = 0; element < nelements; element++)
+  {
+    printout("[input.c]   element Z = %d\n",get_element(element));
+    int nions = get_nions(element);
+    //includedions += nions;
+    for (int ion = 0; ion < nions; ion++)
+    {
+      int photoiontransitions = 0;
+      for (int level = 0; level < get_nlevels(element,ion); level++)
+        photoiontransitions += get_nphixstargets(element,ion,level);
+      printout("[input.c]     ion %d with %d levels (%d ionising) with %d photoionisation transitions\n",
+               get_ionstage(element,ion),get_nlevels(element,ion),get_ionisinglevels(element,ion),photoiontransitions);
+      includedlevels += get_nlevels(element,ion);
+      includedionisinglevels += get_ionisinglevels(element,ion);
+      includedphotoiontransitions += photoiontransitions;
+    }
+  }
+  printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
+           includedions,includedlevels,includedionisinglevels,nlines,includedphotoiontransitions);
+
+  if ((bflist = (bflist_t *) malloc(includedionisinglevels*sizeof(bflist_t))) == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize bflist ... abort\n");
+    exit(0);
+  }
+
+  write_bflist_file(includedionisinglevels);
+
+  setup_phixs_list();
 
   ///set-up/gather information for nlte stuff
 

@@ -130,8 +130,8 @@ static void pkt_action_counters_printout(void)
 }
 
 
-// Main - top level routine.
 int main(int argc, char** argv)
+// Main - top level routine.
 {
   FILE *packets_file;
   //FILE *temperature_file;

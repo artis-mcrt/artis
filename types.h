@@ -148,6 +148,8 @@ struct packet
   int next_trans;  /// This keeps track of the next possible line interaction of a rpkt by storing
                    /// its linelist index (to overcome numerical problems in propagating the rpkts).
   int emissiontype;   /// records how the packet was emitted if it is a r-pkt
+  double em_pos[3];   /// Position of the packet (x,y,z).
+  int em_time;
   int absorptiontype;     /// records linelistindex of the last absorption
                           /// negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
                           /// photoelectric effect of gammas (-4), pair production of gammas (-5)
@@ -159,13 +161,11 @@ struct packet
   double stokes[3]; //I, Q and U Stokes parameters
   double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
-  double em_pos[3]; /// Position of the packet (x,y,z).
   int escape_type; /// Flag to tell us in which form it escaped from the grid.
   int escape_time; /// Time at which is passes out of the grid.
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
-  int number;     /// A unique number to identify which packet caused potential troubles.
-  int em_time;
   int scat_count;  /// WHAT'S THAT???
+  int number;     /// A unique number to identify which packet caused potential troubles.
 };
 typedef struct packet PKT;
 

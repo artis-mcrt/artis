@@ -167,7 +167,7 @@ int update_packets(int nts)
             /** The position is already set at tmin so don't need to move it. Assume
             that it is fixed in place from decay to tmin - i.e. short mfp. */
 
-            pkt_ptr->e_cmf = pkt_ptr->e_cmf *pkt_ptr->tdecay/tmin;
+            pkt_ptr->e_cmf = pkt_ptr->e_cmf * pkt_ptr->tdecay / tmin;
             //pkt_ptr->type = TYPE_KPKT;
             pkt_ptr->type = TYPE_PRE_KPKT;
             pkt_ptr->absorptiontype = -7;
