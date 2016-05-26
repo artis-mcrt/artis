@@ -21,7 +21,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
   //F_alpha_sp.function = &alpha_sp_integrand_gsl;
   F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-  gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1000);
+  gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1024);
 
   //printout("[debug] do MA\n");
 
@@ -486,7 +486,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       double error;
       double total_alpha_sp;
-      gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &total_alpha_sp, &error);
+      gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &total_alpha_sp, &error);
       double alpha_sp_old = total_alpha_sp;
       double nu_lower = nu_threshold;
       for (int i = 1; i < NPHIXSPOINTS; i++)
@@ -499,7 +499,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         double alpha_sp;
         nu_lower += deltanu;
         /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-        gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &alpha_sp, &error);
+        gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &alpha_sp, &error);
         //alpha_sp *= FOURPI * sf;
         //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
         if (zrand >= alpha_sp / total_alpha_sp)
@@ -536,7 +536,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
       F_bfcooling.params = &intparas;
       deltanu = nu_threshold * NPHIXSNUINCREMENT;
-      gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &total_bfcooling_coeff, &error);
+      gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &total_bfcooling_coeff, &error);
       bfcooling_coeff = total_bfcooling_coeff;
       for (ii= 0; ii < NPHIXSPOINTS; ii++)
       {
@@ -545,7 +545,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         {
           nu_lower = nu_threshold + ii*deltanu;
           /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-          gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1000, 6, wsp, &bfcooling_coeff, &error);
+          gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling_coeff, &error);
           //bfcooling_coeff *= FOURPI * sf;
           //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
         }

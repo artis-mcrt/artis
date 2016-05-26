@@ -904,7 +904,7 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
 {
   double integratorrelaccuracy = 1e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1024);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -924,7 +924,7 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   F_gammacorr.params = &intparas;
   double error = 0.0;
   gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
-                      integratorrelaccuracy, 1000, 6, w, &gammacorr, &error);
+                      integratorrelaccuracy, 1024, 6, w, &gammacorr, &error);
   gammacorr *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);

@@ -271,7 +271,7 @@ void calculate_heating_rates(int modelgridindex)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
-  //gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1000);
+  //gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1024);
   //double intaccuracy = 1e-2;
   //double error;
   //size_t neval; ///for qng integrator
@@ -386,7 +386,7 @@ void calculate_heating_rates(int modelgridindex)
 //           //bfheatingparas.nu_edge = epsilon_trans/H;
 //           //F_bfheating.params = &bfheatingparas;
 //           /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-//           //gsl_integration_qag(&F_bfheating, bfheatingparas.nu_edge, 10*bfheatingparas.nu_edge, 0, intaccuracy, 1000, 6, wspace, &bfhelper, &error);
+//           //gsl_integration_qag(&F_bfheating, bfheatingparas.nu_edge, 10*bfheatingparas.nu_edge, 0, intaccuracy, 1024, 6, wspace, &bfhelper, &error);
 //           //C = bfhelper * FOURPI * nnlevel;
 //           bfheating += C;
 //         }
@@ -445,7 +445,7 @@ void calculate_heating_rates(int modelgridindex)
   F_ffheating.params = &intparas;
 
   /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-  gsl_integration_qag(&F_ffheating, 0, 1e16, 0, intaccuracy, 1000, 6, wspace, &ffheating, &error);
+  gsl_integration_qag(&F_ffheating, 0, 1e16, 0, intaccuracy, 1024, 6, wspace, &ffheating, &error);
   /// or this integrator
   //gsl_integration_qng(&F_ffheating, 0, 1e16, 0, intaccuracy, &ffheating, &error, &neval);
   ffheating *= FOURPI;
@@ -606,7 +606,7 @@ void calculate_cooling_rates(int modelgridindex)
 //   int element,ion,level,lower;
 //   int ii,lineindex;
 //
-//   gsl_integration_workspace *wspace = gsl_integration_workspace_alloc (1000);
+//   gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1024);
 //   double intaccuracy = 1e-2;
 //   double error;
 //   //size_t neval; ///for qng integrator
@@ -718,7 +718,7 @@ void calculate_cooling_rates(int modelgridindex)
 // //           //bfheatingparas.nu_edge = epsilon_trans/H;
 // //           //F_bfheating.params = &bfheatingparas;
 // //           /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-// //           //gsl_integration_qag(&F_bfheating, bfheatingparas.nu_edge, 10*bfheatingparas.nu_edge, 0, intaccuracy, 1000, 6, wspace, &bfhelper, &error);
+// //           //gsl_integration_qag(&F_bfheating, bfheatingparas.nu_edge, 10*bfheatingparas.nu_edge, 0, intaccuracy, 1024, 6, wspace, &bfhelper, &error);
 // //           //C = bfhelper * FOURPI * nnlevel;
 // //           bfheating += C;
 // //         }
@@ -755,7 +755,7 @@ void calculate_cooling_rates(int modelgridindex)
 //   F_ffheating.params = &intparas;
 //
 //   /// Discuss about the upper frequency limit (here 1e16 Hz) which we should choose
-//   gsl_integration_qag(&F_ffheating, 0, 1e16, 0, intaccuracy, 1000, 6, wspace, &ffheating, &error);
+//   gsl_integration_qag(&F_ffheating, 0, 1e16, 0, intaccuracy, 1024, 6, wspace, &ffheating, &error);
 //   /// or this integrator
 //   //gsl_integration_qng(&F_ffheating, 0, 1e16, 0, intaccuracy, &ffheating, &error, &neval);
 //   ffheating *= FOURPI;
