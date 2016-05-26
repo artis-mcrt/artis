@@ -6,8 +6,8 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  CC = gcc-6
 #  CC = clang-omp
 #  CC = mpicc
-  INCLUDE = -I/usr/local/opt/gperftools/include
-  LIB = -L/usr/local/opt/gperftools/lib
+#  INCLUDE = -I/usr/local/opt/gperftools/include
+#  LIB = -L/usr/local/opt/gperftools/lib
 #  CFLAGS = -Wall -O0 -std=c11 $(INCLUDE)
   CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -ftree-vectorize -O3 -march=native -flto -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
 

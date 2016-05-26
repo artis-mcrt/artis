@@ -5,17 +5,25 @@
 #include "vectors.h"
 #include <string.h>
 
-// private functions
-double meanf_sigma(double x);
-//int emiss_rlc_load(int nts);
+
+static double meanf_sigma(double x)
+// Routine to compute the mean energy converted to non-thermal electrons times
+// the Klein-Nishina cross section.
+{
+  double f = 1+(2*x);
+
+  double term0 = 2/x;
+  double term1 = ( 1 - (2/x) - (3/(x*x)) ) * log(f);
+  double term2 = ( (4 / x) + (3/(x*x)) - 1) * 2 * x / f;
+  double term3 = ( 1 - (2/x) - (1/(x*x))) * 2 * x *(1 + x) / f / f;
+  double term4 =  -2. * x * ((4*x*x) + (6*x) + 3) / 3 / f / f / f;
+
+  double tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
+
+  return tot;
+}
 
 
-///In this file the call to kappa_rpkt does not fit kappa_rpkts definition any loger!!!
-///This MUST BE CHANGED. But it's not only the the call of kappa_rpkt. The dummy packet
-///pointer needs more information (e.g. frequency) to calculate kappa_rpkt for the non
-///grey case.
-
-/*******************************************************/
 int rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current)
 {
   /* Subroutine to record the heating rate in a cell due to gamma rays.
@@ -31,11 +39,10 @@ to be) used for the new light_curve syn-style calculation. */
   /* Called with a packet that is about to travel a
 distance dist in the lab frame. Time at start of distance is t_current.*/
 
-  double vel_vec[3];
-  PKT dummy;
 
   //printout("[debug] Execution of rlc_emiss_gamma\n");
 
+  /*PKT dummy;
   dummy.pos[0] = pkt_ptr->pos[0];
   dummy.pos[1] = pkt_ptr->pos[1];
   dummy.pos[2] = pkt_ptr->pos[2];
@@ -43,12 +50,13 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
   dummy.dir[1] = syn_dir[1];
   dummy.dir[2] = syn_dir[2];
   dummy.where = pkt_ptr->where;
-  dummy.last_cross = NONE;
+  dummy.last_cross = NONE;*/
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
 
   if (dist > 0)
   {
+    double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
     double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
@@ -83,8 +91,7 @@ int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
   /* Called with a packet that is about to travel a
      distance dist in the lab frame. Time at start of distance is t_current.*/
 
-  double vel_vec[3];
-  PKT dummy;
+  /*PKT dummy;
 
   dummy.pos[0] = pkt_ptr->pos[0];
   dummy.pos[1] = pkt_ptr->pos[1];
@@ -93,7 +100,7 @@ int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
   dummy.dir[1] = syn_dir[1];
   dummy.dir[2] = syn_dir[2];
   dummy.where = pkt_ptr->where;
-  dummy.last_cross = NONE;
+  dummy.last_cross = NONE;*/
 
   int mgi = cell[pkt_ptr->where].modelgridindex;
 
@@ -101,6 +108,7 @@ int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
   {
     /* for the weighted estimators version */
 
+    double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
     double cont = (get_kappagrey(mgi) * get_rho(mgi));
@@ -140,7 +148,7 @@ int normalise_grey(int nts)
 }
 
 
-/*************************************************/
+
 int write_grey(int nts)
 {
   FILE *est_file, *dummy;
@@ -205,23 +213,6 @@ int write_grey(int nts)
   return 0;
 }
 
-/***********************************************/
-// Routine to compute the mean energy converted to non-thermal electrons times
-// the Klein-Nishina cross section.
-double meanf_sigma(double x)
-{
-  double f = 1+(2*x);
-
-  double term0 = 2/x;
-  double term1 = ( 1 - (2/x) - (3/(x*x)) ) * log(f);
-  double term2 = ( (4 / x) + (3/(x*x)) - 1) * 2 * x / f;
-  double term3 = ( 1 - (2/x) - (1/(x*x))) * 2 * x *(1 + x) / f / f;
-  double term4 =  -2. * x * ((4*x*x) + (6*x) + 3) / 3 / f / f / f;
-
-  double tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
-
-  return tot;
-}
 
 /**************************************************************/
 /*int emiss_rlc_load(int nts)

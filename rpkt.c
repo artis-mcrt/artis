@@ -10,11 +10,7 @@
 #include "update_grid.h"
 #include "vectors.h"
 
-
-// private functions
-double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist);
-int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current);
-void rpkt_event_thickcell(PKT *pkt_ptr, double t_current);
+// Material for handing r-packet propagation.
 
 static inline
 double min(double a, double b)
@@ -22,17 +18,442 @@ double min(double a, double b)
 {
   if (a >= b)
   {
-    return(b);
+    return b;
   }
   else
   {
-    return(a);
+    return a;
   }
 }
 
 
-// Material for handing r-packet propagation.
-///****************************************************************************
+static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist)
+///     PKT *pkt_ptr;      //pointer to packet object
+///     double t_current;  //current time
+///     double tau_rnd;    //random optical depth until which the packet travels
+///     double abort_dist;      //maximal travel distance before packet leaves cell or time step ends
+/// BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!!
+{
+  /// initialize loop variables
+  double tau = 0.;        ///initial optical depth along path
+  double dist = 0.;       ///initial position on path
+  double edist = 0.;
+
+  PKT dummypkt;
+  dummypkt = *pkt_ptr;
+  PKT *dummypkt_ptr;
+  dummypkt_ptr = &dummypkt;
+  //propagationcounter = 0;
+  int endloop = 0;
+  while (endloop == 0)
+  {
+    /// calculate distance to next line encounter ldist
+    /// first select the closest transition in frequency
+    /// we need its frequency nu_trans, the element/ion and the corresponding levels
+    /// create therefore new variables in packet, which contain next_lowerlevel, ...
+    double nu_trans = closest_transition(dummypkt_ptr);  ///returns negative value if nu_cmf > nu_trans
+    int element = mastate[tid].element;
+    int ion = mastate[tid].ion;
+    int upper = mastate[tid].level;
+    int lower = mastate[tid].activatedfromlevel;
+    #ifdef DEBUG_ON
+      //if (debuglevel == 2) printout("[debug] get_event: propagationcounter %d\n",propagationcounter);
+      if (debuglevel == 2) printout("[debug] get_event:   dummypkt_ptr->nu_cmf %g, dummypkt_ptr->nu_rf %g, dummypkt_ptr->where %d\n", dummypkt_ptr->nu_cmf,dummypkt_ptr->nu_rf,dummypkt_ptr->where);
+      if (debuglevel == 2) printout("[debug] get_event:   closest_transition %g, pkt_ptr->next_trans %d, nu_next_trans %g\n",nu_trans,dummypkt_ptr->next_trans,linelist[dummypkt_ptr->next_trans].nu);
+    #endif
+
+    if (nu_trans > 0)
+    {
+      /// line interaction in principle possible (nu_cmf > nu_trans)
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] get_event:   line interaction possible\n");
+      #endif
+
+      double ldist;
+      if (dummypkt_ptr->nu_cmf < nu_trans)
+      {
+        //printout("dummypkt_ptr->nu_cmf %g < nu_trans %g, next_trans %d, element %d, ion %d, lower%d, upper %d\n",dummypkt_ptr->nu_cmf,nu_trans,dummypkt_ptr->next_trans,element,ion,lower,upper);
+        ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
+      }
+      else
+        ldist = CLIGHT * t_current * (dummypkt_ptr->nu_cmf/nu_trans - 1);
+      //fprintf(ldist_file,"%25.16e %25.16e\n",dummypkt_ptr->nu_cmf,ldist);
+      if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
+
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] get_event:     ldist %g\n",ldist);
+      #endif
+
+      //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
+      double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans-1);
+      double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
+      double B_lu = stat_weight(element,ion,upper)/stat_weight(element,ion,lower) * B_ul;
+
+      double n_u = get_levelpop(modelgridindex,element,ion,upper);
+      double n_l = get_levelpop(modelgridindex,element,ion,lower);
+
+      double tau_line = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
+      //if (element == 7) fprintf(tau_file,"%g %g %d\n",nu_trans,tau_line,ion);
+      if (tau_line < 0)
+      {
+        if (SILENT == 0) printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(cell[pkt_ptr->where].modelgridindex),get_TR(cell[pkt_ptr->where].modelgridindex),element,ion,upper,lower);
+        if (SILENT == 0) printout("[warning] get_event: set tau_line = 0\n");
+        tau_line = 0.;
+        //printout("[fatal] get_event: tau_line < 0 ... abort\n");
+        //abort();
+      }
+
+      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
+      ///restore values which were changed by calculate_kappa_rpkt_cont to those set by closest_transition
+      //mastate[tid].element = element;
+      //mastate[tid].ion = ion;
+      //mastate[tid].level = upper;
+      double kap_cont = kappa_rpkt_cont[tid].total;
+      double tau_cont = kap_cont*ldist;
+
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g, tau_line %g\n",tau_rnd,tau,tau_cont,tau_line);
+      #endif
+      if (tau_rnd - tau > tau_cont)
+      {
+        #ifdef DEBUG_ON
+          if (debuglevel == 2) printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
+        #endif
+        if (tau_rnd - tau > tau_cont + tau_line)
+        {
+          /// total optical depth still below tau_rnd: continue
+          #ifdef DEBUG_ON
+            if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau > tau_cont + tau_line ... proceed this packets propagation\n");
+          #endif
+
+          dist = dist + ldist;
+          #ifdef DEBUG_ON
+            if (debuglevel == 2) printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist, dist-abort_dist);
+          #endif
+          if (dist > abort_dist)
+          {
+            dummypkt_ptr->next_trans -= 1;
+            pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+            #ifdef DEBUG_ON
+              if (debuglevel == 2) printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ... dummypkt_ptr->next_trans %d\n", dist,abort_dist,dummypkt_ptr->next_trans);
+            #endif
+            return abort_dist+1e20;
+          }
+          tau = tau + tau_cont + tau_line;
+          //dummypkt_ptr->next_trans += 1;
+          t_current += ldist / CLIGHT_PROP;
+          move_pkt(dummypkt_ptr,ldist,t_current);
+
+          #ifdef DEBUG_ON
+            if (debuglevel == 2) printout("[debug] get_event:         dummypkt_ptr->nu_cmf %g, nu(dummypkt_ptr->next_trans=%d) %g, nu(dummypkt_ptr->next_trans-1=%d) %g\n", dummypkt_ptr->nu_cmf, dummypkt_ptr->next_trans, linelist[dummypkt_ptr->next_trans].nu, dummypkt_ptr->next_trans-1, linelist[dummypkt_ptr->next_trans-1].nu);
+            if (debuglevel == 2) printout("[debug] get_event:         (dummypkt_ptr->nu_cmf - nu(dummypkt_ptr->next_trans-1))/dummypkt_ptr->nu_cmf %g\n", (dummypkt_ptr->nu_cmf-linelist[dummypkt_ptr->next_trans-1].nu)/dummypkt_ptr->nu_cmf);
+
+            if (debuglevel == 2)
+            {
+              if (dummypkt_ptr->nu_cmf >= linelist[dummypkt_ptr->next_trans].nu && dummypkt_ptr->nu_cmf < linelist[dummypkt_ptr->next_trans-1].nu)
+                printout("[debug] get_event:           nu(next_trans-1) > nu_cmf >= nu(next_trans)\n");
+              else if (dummypkt_ptr->nu_cmf < linelist[dummypkt_ptr->next_trans].nu)
+                printout("[debug] get_event:           nu_cmf < nu(next_trans)\n");
+              else
+                printout("[debug] get_event:           nu_cmf >= nu(next_trans-1)\n");
+            }
+          #endif
+        }
+        else
+        {
+          /// bound-bound process occurs
+          #ifdef DEBUG_ON
+            if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
+          #endif
+          edist = dist+ldist;
+          if (edist > abort_dist) dummypkt_ptr->next_trans -= 1;
+          *rpkt_eventtype = RPKT_EVENTTYPE_BB;
+          /// the line and its parameters were already selected by closest_transition!
+          endloop = 1;
+          #ifdef DEBUG_ON
+            if (debuglevel == 2) printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop   %d\n",edist,abort_dist,edist-abort_dist,endloop);
+          #endif
+        }
+      }
+      else
+      {
+        /// continuum process occurs
+        edist = dist + (tau_rnd-tau)/kap_cont;
+        dummypkt_ptr->next_trans -= 1;
+        #ifdef DEBUG_ON
+          if (debuglevel == 2) printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n",edist, abort_dist);
+        #endif
+        *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
+        endloop = 1;
+      }
+    }
+    else
+    {
+      /// no line interaction possible - check whether continuum process occurs in cell
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] get_event:     line interaction impossible\n");
+      #endif
+      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
+      ///no need to restore values set by closest_transition, as nothing was set in this case
+      double kap_cont = kappa_rpkt_cont[tid].total;
+      double tau_cont = kap_cont*(abort_dist-dist);
+      //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n",tau_rnd,tau,tau_cont);
+      #endif
+
+      if (tau_rnd - tau > tau_cont)
+      {
+        /// travel out of cell or time step
+        #ifdef DEBUG_ON
+          if (debuglevel == 2) printout("[debug] get_event:       travel out of cell or time step\n");
+        #endif
+        edist = abort_dist+1e20;
+        endloop = 1;
+      }
+      else
+      {
+        /// continuum process occurs at edist
+        edist = dist + (tau_rnd-tau)/kap_cont;
+        #ifdef DEBUG_ON
+          if (debuglevel == 2) printout("[debug] get_event:       continuum process occurs at edist %g\n",edist);
+        #endif
+        *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
+        endloop = 1;
+      }
+    }
+    //propagationcounter += 1;
+  }
+
+  pkt_ptr->next_trans = dummypkt_ptr->next_trans;
+  #ifdef DEBUG_ON
+    if (isfinite(edist))
+      return edist;
+    else
+    {
+      printout("edist NaN %g... abort\n",edist);
+      abort();
+    }
+  #else
+    return edist;
+  #endif
+}
+
+
+static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
+{
+  //double nnionlevel,nnlevel,nne;
+  //double ma_prob,p_maactivate,p_bf,prob;
+  //double departure_ratio,corr_photoion;
+  //double sigma_bf;
+
+  //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+
+  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+
+  //double nne = get_nne(modelgridindex);
+  //double T_e = get_Te(modelgridindex);
+  double nu = pkt_ptr->nu_cmf;
+
+  double kappa_cont = kappa_rpkt_cont[tid].total;
+  double sigma = kappa_rpkt_cont[tid].es;
+  double kappa_ff = kappa_rpkt_cont[tid].ff;
+  double kappa_bf = kappa_rpkt_cont[tid].bf;
+
+  if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
+  {
+    /// bound-bound transition occured
+    /// activate macro-atom in corresponding upper-level. Actually all the information
+    /// about the macro atoms state has already been set by closest_transition, so
+    /// we need here just the activation!
+    #ifdef DEBUG_ON
+      if (debuglevel == 2) printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
+      //if (tid == 0) ma_stat_activation_bb += 1;
+      ma_stat_activation_bb += 1;
+      pkt_ptr->interactions += 1;
+      pkt_ptr->last_event = 1;
+    #endif
+    pkt_ptr->absorptiontype = mastate[tid].activatingline;
+    pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
+    pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];//pkt_ptr->nu_cmf;
+    pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];//pkt_ptr->nu_cmf;
+    pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];//pkt_ptr->nu_cmf;
+    pkt_ptr->type = TYPE_MA;
+    #ifndef FORCE_LTE
+      //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+    #endif
+    #ifdef RECORD_LINESTAT
+      if (tid == 0) acounter[pkt_ptr->next_trans-1] += 1;  /// This way we will only record line statistics from OMP-thread 0
+                                                           /// With an atomic pragma or a thread-private structure with subsequent
+                                                           /// reduction this could be extended to all threads. However, I'm not
+                                                           /// sure if this is worth the additional computational expenses.
+    #endif
+    //mastate[tid].element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
+    //mastate[tid].ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
+    //mastate[tid].level   = pkt_ptr->nextrans_uppper;
+  }
+  else
+  {
+    /// else: continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
+    double zrand = gsl_rng_uniform(rng);
+    #ifdef DEBUG_ON
+      if (debuglevel == 2) printout("[debug] rpkt_event: r-pkt undergoes a continuum transition\n");
+      if (debuglevel == 2) printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand*kappa_cont,sigma,kappa_ff,kappa_bf);
+    #endif
+    if (zrand*kappa_cont < sigma)
+    {
+      /// electron scattering occurs
+      /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
+      /// but with different direction
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] rpkt_event:   electron scattering\n");
+        pkt_ptr->interactions += 1;
+        pkt_ptr->nscatterings += 1;
+        pkt_ptr->last_event = 12;
+        escounter += 1;
+      #endif
+
+      //pkt_ptr->nu_cmf = 3.7474058e+14;
+      escat_rpkt(pkt_ptr,t_current);
+      /// Electron scattering does not modify the last emission flag
+      //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
+      /// but it updates the last emission position
+      pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
+      pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
+      pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+      pkt_ptr->em_time = t_current;
+
+      /// Set some flags
+      //pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
+                                   ///don't touch the value of next_trans to save transition history
+    }
+    else if (zrand*kappa_cont < sigma+kappa_ff)
+    {
+      /// ff: transform to k-pkt
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] rpkt_event:   free-free transition\n");
+        //if (tid == 0) k_stat_from_ff += 1;
+        k_stat_from_ff += 1;
+        pkt_ptr->interactions += 1;
+        pkt_ptr->last_event = 5;
+      #endif
+      pkt_ptr->type = TYPE_KPKT;
+      pkt_ptr->absorptiontype = -1;
+      #ifndef FORCE_LTE
+        //kffabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+      #endif
+    }
+    else
+    {
+      /// bf: transform to k-pkt or activate macroatom correspondig to probabilities
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free transition\n");
+      #endif
+      pkt_ptr->absorptiontype = -2;
+
+      /// Update the bf-opacity for the packets current frequency
+      //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+      double kappa_bf_inrest = kappa_rpkt_cont[tid].bf_inrest;
+
+      /// Determine in which continuum the bf-absorption occurs
+      zrand = gsl_rng_uniform(rng);
+      double kappa_bf_sum = 0.;
+      int i;
+      for (i = 0; i < nbfcontinua; i++)
+      {
+        kappa_bf_sum += phixslist[tid].allcont[i].kappa_bf_contr;
+        if (kappa_bf_sum > zrand*kappa_bf_inrest)
+        {
+          double nu_edge = phixslist[tid].allcont[i].nu_edge;
+          //if (nu < nu_edge) printout("does this ever happen?\n");
+          int element = phixslist[tid].allcont[i].element;
+          int ion = phixslist[tid].allcont[i].ion;
+          int level = phixslist[tid].allcont[i].level;
+
+          #ifdef DEBUG_ON
+            if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n",element,ion+1,0,ion,level);
+            if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n",nu_edge,nu);
+          #endif
+
+          /// and decide whether we go to ionisation energy
+          zrand = gsl_rng_uniform(rng);
+          if (zrand < nu_edge/nu)
+          {
+            #ifdef DEBUG_ON
+              //if (tid == 0) ma_stat_activation_bf += 1;
+              ma_stat_activation_bf += 1;
+              pkt_ptr->interactions += 1;
+              pkt_ptr->last_event = 3;
+            #endif
+            pkt_ptr->type = TYPE_MA;
+            #ifndef FORCE_LTE
+              //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+            #endif
+            mastate[tid].element = element;
+            mastate[tid].ion     = ion+1;
+            int upper = 0; //TODO: this should come from phixsupperlevel;
+            mastate[tid].level   = upper;
+            mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+            mastate[tid].activatingline = -99;
+            //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
+          }
+          /// or to the thermal pool
+          else
+          {
+            /// transform to k-pkt
+            #ifdef DEBUG_ON
+              if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
+              //if (tid == 0) k_stat_from_bf += 1;
+              k_stat_from_bf += 1;
+              pkt_ptr->interactions += 1;
+              pkt_ptr->last_event = 4;
+            #endif
+            pkt_ptr->type = TYPE_KPKT;
+            #ifndef FORCE_LTE
+              //kbfabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+            #endif
+            //if (element == 6) cell[pkt_ptr->where].bfabs[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
+          }
+          break;
+        }
+      }
+
+      #ifdef DEBUG_ON
+        if (i >= nbfcontinua) printout("[warning] rpkt_event: problem in selecting bf-continuum zrand %g, kappa_bf_sum %g, kappa_bf_inrest %g\n",zrand,kappa_bf_sum,kappa_bf_inrest);
+      #endif
+    }
+  }
+
+  return 0;
+}
+
+
+static void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
+/// Event handling for optically thick cells. Those cells are treated in a grey
+/// approximation with electron scattering only.
+/// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
+/// but with different direction.
+{
+  #ifdef DEBUG_ON
+    if (debuglevel == 2) printout("[debug] rpkt_event_thickcell:   electron scattering\n");
+    pkt_ptr->interactions += 1;
+    pkt_ptr->nscatterings += 1;
+    pkt_ptr->last_event = 12;
+    escounter += 1;
+  #endif
+
+  //pkt_ptr->nu_cmf = 3.7474058e+14;
+  emitt_rpkt(pkt_ptr,t_current);
+  /// Electron scattering does not modify the last emission flag
+  //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
+  /// but it updates the last emission position
+  pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
+  pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
+  pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+  pkt_ptr->em_time = t_current;
+}
+
+
 double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
@@ -283,415 +704,6 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
 }
 
 
-
-///****************************************************************************
-double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist)
-///     PKT *pkt_ptr;      //pointer to packet object
-///     double t_current;  //current time
-///     double tau_rnd;    //random optical depth until which the packet travels
-///     double abort_dist;      //maximal travel distance before packet leaves cell or time step ends
-/// BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!!
-{
-  /// initialize loop variables
-  double tau = 0.;        ///initial optical depth along path
-  double dist = 0.;       ///initial position on path
-  double edist = 0.;
-
-  PKT dummypkt;
-  dummypkt = *pkt_ptr;
-  PKT *dummypkt_ptr;
-  dummypkt_ptr = &dummypkt;
-  //propagationcounter = 0;
-  int endloop = 0;
-  while (endloop == 0)
-  {
-    /// calculate distance to next line encounter ldist
-    /// first select the closest transition in frequency
-    /// we need its frequency nu_trans, the element/ion and the corresponding levels
-    /// create therefore new variables in packet, which contain next_lowerlevel, ...
-    double nu_trans = closest_transition(dummypkt_ptr);  ///returns negative value if nu_cmf > nu_trans
-    int element = mastate[tid].element;
-    int ion = mastate[tid].ion;
-    int upper = mastate[tid].level;
-    int lower = mastate[tid].activatedfromlevel;
-    #ifdef DEBUG_ON
-      //if (debuglevel == 2) printout("[debug] get_event: propagationcounter %d\n",propagationcounter);
-      if (debuglevel == 2) printout("[debug] get_event:   dummypkt_ptr->nu_cmf %g, dummypkt_ptr->nu_rf %g, dummypkt_ptr->where %d\n", dummypkt_ptr->nu_cmf,dummypkt_ptr->nu_rf,dummypkt_ptr->where);
-      if (debuglevel == 2) printout("[debug] get_event:   closest_transition %g, pkt_ptr->next_trans %d, nu_next_trans %g\n",nu_trans,dummypkt_ptr->next_trans,linelist[dummypkt_ptr->next_trans].nu);
-    #endif
-
-    if (nu_trans > 0)
-    {
-      /// line interaction in principle possible (nu_cmf > nu_trans)
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] get_event:   line interaction possible\n");
-      #endif
-
-      double ldist;
-      if (dummypkt_ptr->nu_cmf < nu_trans)
-      {
-        //printout("dummypkt_ptr->nu_cmf %g < nu_trans %g, next_trans %d, element %d, ion %d, lower%d, upper %d\n",dummypkt_ptr->nu_cmf,nu_trans,dummypkt_ptr->next_trans,element,ion,lower,upper);
-        ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
-      }
-      else
-        ldist = CLIGHT * t_current * (dummypkt_ptr->nu_cmf/nu_trans - 1);
-      //fprintf(ldist_file,"%25.16e %25.16e\n",dummypkt_ptr->nu_cmf,ldist);
-      if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
-
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] get_event:     ldist %g\n",ldist);
-      #endif
-
-      //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
-      double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans-1);
-      double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
-      double B_lu = stat_weight(element,ion,upper)/stat_weight(element,ion,lower) * B_ul;
-
-      double n_u = get_levelpop(modelgridindex,element,ion,upper);
-      double n_l = get_levelpop(modelgridindex,element,ion,lower);
-
-      double tau_line = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
-      //if (element == 7) fprintf(tau_file,"%g %g %d\n",nu_trans,tau_line,ion);
-      if (tau_line < 0)
-      {
-        if (SILENT == 0) printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(cell[pkt_ptr->where].modelgridindex),get_TR(cell[pkt_ptr->where].modelgridindex),element,ion,upper,lower);
-        if (SILENT == 0) printout("[warning] get_event: set tau_line = 0\n");
-        tau_line = 0.;
-        //printout("[fatal] get_event: tau_line < 0 ... abort\n");
-        //abort();
-      }
-
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
-      ///restore values which were changed by calculate_kappa_rpkt_cont to those set by closest_transition
-      //mastate[tid].element = element;
-      //mastate[tid].ion = ion;
-      //mastate[tid].level = upper;
-      double kap_cont = kappa_rpkt_cont[tid].total;
-      double tau_cont = kap_cont*ldist;
-
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g, tau_line %g\n",tau_rnd,tau,tau_cont,tau_line);
-      #endif
-      if (tau_rnd - tau > tau_cont)
-      {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
-        #endif
-        if (tau_rnd - tau > tau_cont + tau_line)
-        {
-          /// total optical depth still below tau_rnd: continue
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau > tau_cont + tau_line ... proceed this packets propagation\n");
-          #endif
-
-          dist = dist + ldist;
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist, dist-abort_dist);
-          #endif
-          if (dist > abort_dist)
-          {
-            dummypkt_ptr->next_trans -= 1;
-            pkt_ptr->next_trans = dummypkt_ptr->next_trans;
-            #ifdef DEBUG_ON
-              if (debuglevel == 2) printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ... dummypkt_ptr->next_trans %d\n", dist,abort_dist,dummypkt_ptr->next_trans);
-            #endif
-            return abort_dist+1e20;
-          }
-          tau = tau + tau_cont + tau_line;
-          //dummypkt_ptr->next_trans += 1;
-          t_current += ldist / CLIGHT_PROP;
-          move_pkt(dummypkt_ptr,ldist,t_current);
-
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] get_event:         dummypkt_ptr->nu_cmf %g, nu(dummypkt_ptr->next_trans=%d) %g, nu(dummypkt_ptr->next_trans-1=%d) %g\n", dummypkt_ptr->nu_cmf, dummypkt_ptr->next_trans, linelist[dummypkt_ptr->next_trans].nu, dummypkt_ptr->next_trans-1, linelist[dummypkt_ptr->next_trans-1].nu);
-            if (debuglevel == 2) printout("[debug] get_event:         (dummypkt_ptr->nu_cmf - nu(dummypkt_ptr->next_trans-1))/dummypkt_ptr->nu_cmf %g\n", (dummypkt_ptr->nu_cmf-linelist[dummypkt_ptr->next_trans-1].nu)/dummypkt_ptr->nu_cmf);
-
-            if (debuglevel == 2)
-            {
-              if (dummypkt_ptr->nu_cmf >= linelist[dummypkt_ptr->next_trans].nu && dummypkt_ptr->nu_cmf < linelist[dummypkt_ptr->next_trans-1].nu)
-                printout("[debug] get_event:           nu(next_trans-1) > nu_cmf >= nu(next_trans)\n");
-              else if (dummypkt_ptr->nu_cmf < linelist[dummypkt_ptr->next_trans].nu)
-                printout("[debug] get_event:           nu_cmf < nu(next_trans)\n");
-              else
-                printout("[debug] get_event:           nu_cmf >= nu(next_trans-1)\n");
-            }
-          #endif
-        }
-        else
-        {
-          /// bound-bound process occurs
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
-          #endif
-          edist = dist+ldist;
-          if (edist > abort_dist) dummypkt_ptr->next_trans -= 1;
-          *rpkt_eventtype = RPKT_EVENTTYPE_BB;
-          /// the line and its parameters were already selected by closest_transition!
-          endloop = 1;
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop   %d\n",edist,abort_dist,edist-abort_dist,endloop);
-          #endif
-        }
-      }
-      else
-      {
-        /// continuum process occurs
-        edist = dist + (tau_rnd-tau)/kap_cont;
-        dummypkt_ptr->next_trans -= 1;
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n",edist, abort_dist);
-        #endif
-        *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
-        endloop = 1;
-      }
-    }
-    else
-    {
-      /// no line interaction possible - check whether continuum process occurs in cell
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] get_event:     line interaction impossible\n");
-      #endif
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
-      ///no need to restore values set by closest_transition, as nothing was set in this case
-      double kap_cont = kappa_rpkt_cont[tid].total;
-      double tau_cont = kap_cont*(abort_dist-dist);
-      //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n",tau_rnd,tau,tau_cont);
-      #endif
-
-      if (tau_rnd - tau > tau_cont)
-      {
-        /// travel out of cell or time step
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] get_event:       travel out of cell or time step\n");
-        #endif
-        edist = abort_dist+1e20;
-        endloop = 1;
-      }
-      else
-      {
-        /// continuum process occurs at edist
-        edist = dist + (tau_rnd-tau)/kap_cont;
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] get_event:       continuum process occurs at edist %g\n",edist);
-        #endif
-        *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
-        endloop = 1;
-      }
-    }
-    //propagationcounter += 1;
-  }
-
-  pkt_ptr->next_trans = dummypkt_ptr->next_trans;
-  #ifdef DEBUG_ON
-    if (isfinite(edist))
-      return edist;
-    else
-    {
-      printout("edist NaN %g... abort\n",edist);
-      abort();
-    }
-  #else
-    return edist;
-  #endif
-}
-
-
-
-
-
-///****************************************************************************
-int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
-{
-  //double nnionlevel,nnlevel,nne;
-  //double ma_prob,p_maactivate,p_bf,prob;
-  //double departure_ratio,corr_photoion;
-  //double sigma_bf;
-
-  //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
-
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
-
-  //double nne = get_nne(modelgridindex);
-  //double T_e = get_Te(modelgridindex);
-  double nu = pkt_ptr->nu_cmf;
-
-  double kappa_cont = kappa_rpkt_cont[tid].total;
-  double sigma = kappa_rpkt_cont[tid].es;
-  double kappa_ff = kappa_rpkt_cont[tid].ff;
-  double kappa_bf = kappa_rpkt_cont[tid].bf;
-
-  if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
-  {
-    /// bound-bound transition occured
-    /// activate macro-atom in corresponding upper-level. Actually all the information
-    /// about the macro atoms state has already been set by closest_transition, so
-    /// we need here just the activation!
-    #ifdef DEBUG_ON
-      if (debuglevel == 2) printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
-      //if (tid == 0) ma_stat_activation_bb += 1;
-      ma_stat_activation_bb += 1;
-      pkt_ptr->interactions += 1;
-      pkt_ptr->last_event = 1;
-    #endif
-    pkt_ptr->absorptiontype = mastate[tid].activatingline;
-    pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
-    pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];//pkt_ptr->nu_cmf;
-    pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];//pkt_ptr->nu_cmf;
-    pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];//pkt_ptr->nu_cmf;
-    pkt_ptr->type = TYPE_MA;
-    #ifndef FORCE_LTE
-      //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-    #endif
-    #ifdef RECORD_LINESTAT
-      if (tid == 0) acounter[pkt_ptr->next_trans-1] += 1;  /// This way we will only record line statistics from OMP-thread 0
-                                                           /// With an atomic pragma or a thread-private structure with subsequent
-                                                           /// reduction this could be extended to all threads. However, I'm not
-                                                           /// sure if this is worth the additional computational expenses.
-    #endif
-    //mastate[tid].element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
-    //mastate[tid].ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
-    //mastate[tid].level   = pkt_ptr->nextrans_uppper;
-  }
-  else
-  {
-    /// else: continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
-    double zrand = gsl_rng_uniform(rng);
-    #ifdef DEBUG_ON
-      if (debuglevel == 2) printout("[debug] rpkt_event: r-pkt undergoes a continuum transition\n");
-      if (debuglevel == 2) printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand*kappa_cont,sigma,kappa_ff,kappa_bf);
-    #endif
-    if (zrand*kappa_cont < sigma)
-    {
-      /// electron scattering occurs
-      /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
-      /// but with different direction
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] rpkt_event:   electron scattering\n");
-        pkt_ptr->interactions += 1;
-        pkt_ptr->nscatterings += 1;
-        pkt_ptr->last_event = 12;
-        escounter += 1;
-      #endif
-
-      //pkt_ptr->nu_cmf = 3.7474058e+14;
-      escat_rpkt(pkt_ptr,t_current);
-      /// Electron scattering does not modify the last emission flag
-      //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
-      /// but it updates the last emission position
-      pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-      pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-      pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
-      pkt_ptr->em_time = t_current;
-
-      /// Set some flags
-      //pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
-                                   ///don't touch the value of next_trans to save transition history
-    }
-    else if (zrand*kappa_cont < sigma+kappa_ff)
-    {
-      /// ff: transform to k-pkt
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] rpkt_event:   free-free transition\n");
-        //if (tid == 0) k_stat_from_ff += 1;
-        k_stat_from_ff += 1;
-        pkt_ptr->interactions += 1;
-        pkt_ptr->last_event = 5;
-      #endif
-      pkt_ptr->type = TYPE_KPKT;
-      pkt_ptr->absorptiontype = -1;
-      #ifndef FORCE_LTE
-        //kffabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-      #endif
-    }
-    else
-    {
-      /// bf: transform to k-pkt or activate macroatom correspondig to probabilities
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free transition\n");
-      #endif
-      pkt_ptr->absorptiontype = -2;
-
-      /// Update the bf-opacity for the packets current frequency
-      //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
-      double kappa_bf_inrest = kappa_rpkt_cont[tid].bf_inrest;
-
-      /// Determine in which continuum the bf-absorption occurs
-      zrand = gsl_rng_uniform(rng);
-      double kappa_bf_sum = 0.;
-      int i;
-      for (i = 0; i < nbfcontinua; i++)
-      {
-        kappa_bf_sum += phixslist[tid].allcont[i].kappa_bf_contr;
-        if (kappa_bf_sum > zrand*kappa_bf_inrest)
-        {
-          double nu_edge = phixslist[tid].allcont[i].nu_edge;
-          //if (nu < nu_edge) printout("does this ever happen?\n");
-          int element = phixslist[tid].allcont[i].element;
-          int ion = phixslist[tid].allcont[i].ion;
-          int level = phixslist[tid].allcont[i].level;
-
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n",element,ion+1,0,ion,level);
-            if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n",nu_edge,nu);
-          #endif
-
-          /// and decide whether we go to ionisation energy
-          zrand = gsl_rng_uniform(rng);
-          if (zrand < nu_edge/nu)
-          {
-            #ifdef DEBUG_ON
-              //if (tid == 0) ma_stat_activation_bf += 1;
-              ma_stat_activation_bf += 1;
-              pkt_ptr->interactions += 1;
-              pkt_ptr->last_event = 3;
-            #endif
-            pkt_ptr->type = TYPE_MA;
-            #ifndef FORCE_LTE
-              //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-            #endif
-            mastate[tid].element = element;
-            mastate[tid].ion     = ion+1;
-            int upper = 0; //TODO: this should come from phixsupperlevel;
-            mastate[tid].level   = upper;
-            mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
-            mastate[tid].activatingline = -99;
-            //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-          }
-          /// or to the thermal pool
-          else
-          {
-            /// transform to k-pkt
-            #ifdef DEBUG_ON
-              if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
-              //if (tid == 0) k_stat_from_bf += 1;
-              k_stat_from_bf += 1;
-              pkt_ptr->interactions += 1;
-              pkt_ptr->last_event = 4;
-            #endif
-            pkt_ptr->type = TYPE_KPKT;
-            #ifndef FORCE_LTE
-              //kbfabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-            #endif
-            //if (element == 6) cell[pkt_ptr->where].bfabs[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-          }
-          break;
-        }
-      }
-
-      #ifdef DEBUG_ON
-        if (i >= nbfcontinua) printout("[warning] rpkt_event: problem in selecting bf-continuum zrand %g, kappa_bf_sum %g, kappa_bf_inrest %g\n",zrand,kappa_bf_sum,kappa_bf_inrest);
-      #endif
-    }
-  }
-
-  return 0;
-}
-
-
-
-///****************************************************************************
 double closest_transition(PKT *restrict pkt_ptr)
 /// for the propagation through non empty cells
 {
@@ -796,7 +808,6 @@ double closest_transition(PKT *restrict pkt_ptr)
 }
 
 
-///****************************************************************************
 void emitt_rpkt(PKT *pkt_ptr, double t_current)
 {
   /// now make the packet a r-pkt and set further flags
@@ -871,7 +882,6 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
 }
 
 
-///****************************************************************************
 double closest_transition_empty(PKT *restrict pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
@@ -952,7 +962,6 @@ double closest_transition_empty(PKT *restrict pkt_ptr)
 }
 
 
-///****************************************************************************
 void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
 {
   double kappa_ffheating = 0.;
@@ -1223,8 +1232,6 @@ void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
 }
 
 
-
-///****************************************************************************
 void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
 {
     double sigma;
@@ -1506,8 +1513,6 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
 }
 
 
-
-///****************************************************************************
 int compare_phixslistentry_bynuedge(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
@@ -1524,8 +1529,6 @@ int compare_phixslistentry_bynuedge(const void *restrict p1, const void *restric
 }
 
 
-
-///****************************************************************************
 int compare_groundphixslistentry_bynuedge(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the groundphixslist by ascending threshold frequency.
 {
@@ -1542,9 +1545,8 @@ int compare_groundphixslistentry_bynuedge(const void *restrict p1, const void *r
 }
 
 
-///****************************************************************************
 double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
-/** Routine for moving an r-packet. Similar to do_gamma in objective.*/
+// Routine for moving an r-packet. Similar to do_gamma in objective.
 {
   double tdist;
   double edist;
@@ -1753,30 +1755,4 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
   }
 
   return PACKET_SAME;
-}
-
-
-void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
-/// Event handling for optically thick cells. Those cells are treated in a grey
-/// approximation with electron scattering only.
-/// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
-/// but with different direction.
-{
-  #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug] rpkt_event_thickcell:   electron scattering\n");
-    pkt_ptr->interactions += 1;
-    pkt_ptr->nscatterings += 1;
-    pkt_ptr->last_event = 12;
-    escounter += 1;
-  #endif
-
-  //pkt_ptr->nu_cmf = 3.7474058e+14;
-  emitt_rpkt(pkt_ptr,t_current);
-  /// Electron scattering does not modify the last emission flag
-  //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
-  /// but it updates the last emission position
-  pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-  pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-  pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
-  pkt_ptr->em_time = t_current;
 }

@@ -8,6 +8,7 @@
 #include "ratecoeff.h"
 #include "rpkt.h"
 
+
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.
 {
@@ -830,7 +831,6 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 
 /// Calculation of radiative rates ///////////////////////////////////////////////////////
 
-///****************************************************************************
 double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex, double t_current)
 ///radiative deexcitation rate: paperII 3.5.2
 {
@@ -903,8 +903,6 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 }
 
 
-
-///***************************************************************************/
 double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int lineindex, double t_current)//, double T_R, double W)
 ///radiative excitation rate: paperII 3.5.2
 {
@@ -992,7 +990,6 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
 }
 
 
-///****************************************************************************
 double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
 ///radiative recombination rate: paperII 3.5.2
 {
@@ -1029,6 +1026,7 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
 
 /// Calculation of collisional rates /////////////////////////////////////////////////////
 ///***************************************************************************/
+
 double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex)
 /// collisional deexcitation rate: paperII 3.5.1
 {
@@ -1111,9 +1109,8 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 }
 
 
-///***************************************************************************/
-/// collisional excitation rate: paperII 3.5.1
 double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans)
+/// collisional excitation rate: paperII 3.5.1
 {
   double C;
   double coll_str_thisline = coll_str(lineindex);
@@ -1193,9 +1190,8 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 }
 
 
-///***************************************************************************/
-/// collisional recombination rate: paperII 3.5.1
 double col_recombination(int modelgridindex, int lower, double epsilon_trans)
+/// collisional recombination rate: paperII 3.5.1
 {
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;
@@ -1249,9 +1245,8 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 }
 
 
-///***************************************************************************/
-/// collisional ionization rate: paperII 3.5.1
 double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
+/// collisional ionization rate: paperII 3.5.1
 {
   int element = mastate[tid].element;
   int ion = mastate[tid].ion;

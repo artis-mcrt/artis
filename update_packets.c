@@ -8,14 +8,23 @@
 #include "rpkt.h"
 
 
-//private functions
-int compare_packets_byposition(const void *p1, const void *p2);
-int compare_packets_bymodelgridposition(const void *p1, const void *p2);
-int compare_packets_bymodelgriddensity(const void *p1, const void *p2);
+static int compare_packets_bymodelgriddensity(const void *restrict p1, const void *restrict p2)
+/// Helper function to sort the phixslist by descending cell density.
+{
+  const PKT *restrict a1 = (PKT *)(p1);
+  const PKT *restrict a2 = (PKT *)(p2);
+
+  double rho_diff = modelgrid[cell[a1->where].modelgridindex].rho - modelgrid[cell[a2->where].modelgridindex].rho;
+  if (rho_diff < 0)
+    return 1;
+  else if (rho_diff > 0)
+    return -1;
+  else
+    return 0;
+}
 
 
 /** Subroutine to move the packets and update them during the currect timestep. */
-
 int update_packets(int nts)
 ///nts the time step we're doing
 {
@@ -382,8 +391,7 @@ void update_cell(int cellnumber)
 }*/
 
 
-///****************************************************************************
-int compare_packets_byposition(const void *restrict p1, const void *restrict p2)
+/*static int compare_packets_byposition(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
   const PKT *restrict a1 = (PKT *)(p1);
@@ -399,8 +407,7 @@ int compare_packets_byposition(const void *restrict p1, const void *restrict p2)
 }
 
 
-///****************************************************************************
-int compare_packets_bymodelgridposition(const void *restrict p1, const void *restrict p2)
+static int compare_packets_bymodelgridposition(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
   const PKT *restrict a1 = (PKT *)(p1);
@@ -413,21 +420,4 @@ int compare_packets_bymodelgridposition(const void *restrict p1, const void *res
     return 1;
   else
     return 0;
-}
-
-
-///****************************************************************************
-int compare_packets_bymodelgriddensity(const void *restrict p1, const void *restrict p2)
-/// Helper function to sort the phixslist by descending cell density.
-{
-  const PKT *restrict a1 = (PKT *)(p1);
-  const PKT *restrict a2 = (PKT *)(p2);
-
-  double rho_diff = modelgrid[cell[a1->where].modelgridindex].rho - modelgrid[cell[a2->where].modelgridindex].rho;
-  if (rho_diff < 0)
-    return 1;
-  else if (rho_diff > 0)
-    return -1;
-  else
-    return 0;
-}
+}*/

@@ -2,7 +2,7 @@
 #include "polarization.h"
 #include "vectors.h"
 
-///****************************************************************************
+
 void escat_rpkt(PKT *pkt_ptr, double t_current)
 {
   double dummy_dir[3],vel_vec[3];

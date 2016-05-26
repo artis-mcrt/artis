@@ -4,9 +4,9 @@
 #include "vectors.h"
 
 
-double choose_f(double xx, double zrand);
-double sigma_compton_partial(double x, double f);
-double thomson_angle(void);
+static double choose_f(double xx, double zrand);
+static double sigma_compton_partial(double x, double f);
+static double thomson_angle(void);
 
 
 // Stuff for compton scattering.
@@ -179,7 +179,7 @@ int com_sca(PKT *pkt_ptr, double t_current)
    xx is the photon energy (in units of electron mass) and f
    is the energy loss factor up to which we wish to integrate.*/
 
-double sigma_compton_partial(double x, double f)
+static double sigma_compton_partial(double x, double f)
 {
   double term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
   double term2 = ( ((f*f) -1) / (f * f)) / 2;
@@ -192,7 +192,7 @@ double sigma_compton_partial(double x, double f)
 /**************************************************************/
 /* To choose the value of f to integrate to - idea is we want
    sigma_compton_partial(xx,f) = zrand. */
-double choose_f(double xx, double zrand)
+static double choose_f(double xx, double zrand)
 {
   double ftry, try;
 
@@ -235,7 +235,7 @@ double choose_f(double xx, double zrand)
 
 
 /******************************************************************/
-double thomson_angle(void)
+static double thomson_angle(void)
 {
   /*For Thomson scattering we can get the new angle from a random number very easily. */
 

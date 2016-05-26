@@ -4,9 +4,9 @@
 #include "vectors.h"
 
 // private functions
-void init_spectrum(void);
-int add_to_spec(const EPKT *pkt_ptr);
-int add_to_spec_res(EPKT *pkt_ptr, int current_abin);
+static void init_spectrum(void);
+static int add_to_spec(const EPKT *pkt_ptr);
+static int add_to_spec_res(EPKT *pkt_ptr, int current_abin);
 
 
 /*int make_spectrum()
@@ -106,7 +106,7 @@ int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
 
 
 /**********************************************************************/
-void init_spectrum(void)
+static void init_spectrum(void)
 {
   if (nnubins > MNUBINS)
   {
@@ -194,7 +194,7 @@ int gather_spectrum(int depth)
 
 /**********************************************************************/
 /*Routine to add a packet to the outcoming spectrum.*/
-int add_to_spec(const EPKT *pkt_ptr)
+static int add_to_spec(const EPKT *pkt_ptr)
 {
   /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
   int at,element,ion,nproc;
@@ -279,7 +279,7 @@ int gather_spectrum_res(int current_abin)
 
 /**********************************************************************/
 /**Routine to add a packet to the outcoming spectrum.*/
-int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
+static int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 

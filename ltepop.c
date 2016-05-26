@@ -8,10 +8,6 @@
 #include "update_grid.h"
 
 
-// private functions
-double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level);
-
-
 ///***************************************************************************/
 double nne_solution_f(double x, void *paras)
 /// For libgsl bracketing type solver
@@ -522,7 +518,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 
 
 ///***************************************************************************/
-double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level)
+static double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation number of level relative to the ions ground level population
 /// using a modified version of the Boltzmann formula, which fulfills the diluted BB
 /// approximation (or nebular approximation).

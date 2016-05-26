@@ -4,7 +4,7 @@
 #include "update_grid.h"
 #include "vectors.h"
 
-///****************************************************************************
+
 void update_estimators(const PKT *restrict pkt_ptr, double distance)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
@@ -98,7 +98,6 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
 }
 
 
-///****************************************************************************
 void move_pkt(PKT *restrict pkt_ptr, double distance, double time)
 /// Subroutine to move a packet along a straight line (specified by currect
 /// dir vector). The distance moved is in the rest frame. Time must be the

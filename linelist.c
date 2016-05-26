@@ -1,7 +1,43 @@
 #include "sn3d.h"
 #include "linelist.h"
 
-int identify_gam_line(int ele_type, int ele_index, double *eret, double *pret);
+
+static int identify_gam_line(int ele_type, int ele_index, double *eret, double *pret)
+{
+  if (ele_type == NI_GAM_LINE_ID)
+  {
+    *eret = nickel_spec.energy[ele_index];
+    *pret = nickel_spec.probability[ele_index];
+  }
+  else if (ele_type == CO_GAM_LINE_ID)
+  {
+    *eret = cobalt_spec.energy[ele_index];
+    *pret = cobalt_spec.probability[ele_index];
+  }
+  else if (ele_type == FAKE_GAM_LINE_ID)
+  {
+    *eret = fakeg_spec.energy[ele_index];
+    *pret = fakeg_spec.probability[ele_index];
+  }
+  else if (ele_type == CR48_GAM_LINE_ID)
+  {
+    *eret = cr48_spec.energy[ele_index];
+    *pret = cr48_spec.probability[ele_index];
+  }
+  else if (ele_type == V48_GAM_LINE_ID)
+  {
+    *eret = v48_spec.energy[ele_index];
+    *pret = v48_spec.probability[ele_index];
+  }
+  else
+  {
+    printout("Identify_gam_line failed. Abort.\n");
+    exit(0);
+  }
+
+  return 0;
+}
+
 
 // To construct an energy ordered gamma ray line list.
 int get_gam_ll(void)
@@ -100,44 +136,6 @@ int get_gam_ll(void)
     fprintf(line_list, "%d %d %d %g %g \n", i, gam_line_list.type[i], gam_line_list.index[i], a/MEV, b);
   }
   fclose(line_list);
-
-  return 0;
-}
-
-
-/********************************************************************************************/
-int identify_gam_line(int ele_type, int ele_index, double *eret, double *pret)
-{
-  if (ele_type == NI_GAM_LINE_ID)
-  {
-    *eret = nickel_spec.energy[ele_index];
-    *pret = nickel_spec.probability[ele_index];
-  }
-  else if (ele_type == CO_GAM_LINE_ID)
-  {
-    *eret = cobalt_spec.energy[ele_index];
-    *pret = cobalt_spec.probability[ele_index];
-  }
-  else if (ele_type == FAKE_GAM_LINE_ID)
-  {
-    *eret = fakeg_spec.energy[ele_index];
-    *pret = fakeg_spec.probability[ele_index];
-  }
-  else if (ele_type == CR48_GAM_LINE_ID)
-  {
-    *eret = cr48_spec.energy[ele_index];
-    *pret = cr48_spec.probability[ele_index];
-  }
-  else if (ele_type == V48_GAM_LINE_ID)
-  {
-    *eret = v48_spec.energy[ele_index];
-    *pret = v48_spec.probability[ele_index];
-  }
-  else
-  {
-    printout("Identify_gam_line failed. Abort.\n");
-    exit(0);
-  }
 
   return 0;
 }

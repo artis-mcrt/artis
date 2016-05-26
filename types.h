@@ -63,8 +63,8 @@ typedef struct
 typedef struct
 {
   double collisional;
-  double collbb;
-  double collbf;
+  //double collbb;
+  //double collbf;
   double fb;
   double ff;
   double adiabatic;
@@ -73,8 +73,8 @@ typedef struct
 typedef struct
 {
   double collisional;
-  double collbb;
-  double collbf;
+  //double collbb;
+  //double collbf;
   double bf;
   double ff;
   double gamma;

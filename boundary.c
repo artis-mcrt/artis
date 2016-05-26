@@ -5,10 +5,6 @@
 #include "update_packets.h"
 
 
-// private functions
-int locate(const PKT *pkt_ptr, double t_current);
-
-
 ///****************************************************************************
 /// Basic routine to compute distance to a call boundary.
 double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
@@ -565,14 +561,13 @@ int change_cell_vpkt(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
 }
 
 
-///****************************************************************************
+/*static int locate(const PKT *restrict pkt_ptr, double t_current)
 /// Routine to return which grid cell the packet is in.
-int locate(const PKT *pkt_ptr, double t_current)
 {
-  /* Cheap and nasty version for now - assume a uniform grid. */
+  // Cheap and nasty version for now - assume a uniform grid.
   int xx = (pkt_ptr->pos[0] - (cell[0].pos_init[0]*t_current/tmin)) / (wid_init*t_current/tmin);
   int yy = (pkt_ptr->pos[1] - (cell[0].pos_init[1]*t_current/tmin)) / (wid_init*t_current/tmin);
   int zz = (pkt_ptr->pos[2] - (cell[0].pos_init[2]*t_current/tmin)) / (wid_init*t_current/tmin);
 
   return xx + (nxgrid * yy) + (nxgrid * nygrid * zz);
-}
+}*/

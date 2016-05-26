@@ -422,7 +422,7 @@ int get_nul(double freq)
 }
 
 /**************************************************************/
-double get_gam_freq(const LIST *line_list, int n)
+double get_gam_freq(const LIST *restrict line_list, int n)
 {
   double freq;
 

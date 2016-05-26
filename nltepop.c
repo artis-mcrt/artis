@@ -7,11 +7,102 @@
 #include "update_grid.h"
 
 
-// private functions
-int get_nlte_vector_index(int element_in, int ion_in, int level_in);
-void get_ion_level_of_nlte_vector_index(int index, int element, int *ion, int *level);
-void filter_nlte_matrix(int element, int nlte_dimension, double *rate_matrix, double *balance_vector, const double *pop_norm_factors);
-void eliminate_nlte_matrix_rowcol(int index, int gs_index, int nlte_dimension, double *rate_matrix, double *balance_vector);
+static int get_nlte_vector_index(int element_in, int ion_in, int level_in)
+{
+  int index = 0;
+  for (int ion = 0; ion < ion_in; ion++)
+  {
+    int nlevels_nlte = get_nlevels_nlte(element_in,ion);
+
+    index += nlevels_nlte + 1;
+    if (nlevels_nlte != (get_nlevels(element_in,ion) - 1))
+      index += 1; // there's a superlevel here
+  }
+  int nlevels_nlte = get_nlevels_nlte(element_in,ion_in);
+  if (is_nlte(element_in, ion_in, level_in) == true)
+    index += level_in;
+  else
+    index += nlevels_nlte + 1; //the index of the superlevel
+
+  return index;
+}
+
+
+static void get_ion_level_of_nlte_vector_index(int index, int element, int *ion, int *level)
+{
+  for (int dion = 0; dion < get_nions(element); dion++)
+  {
+    for (int dlevel = 0; dlevel < get_nlevels(element,dion); dlevel++)
+    {
+      if (get_nlte_vector_index(element,dion,dlevel) == index)
+      {
+        *ion = dion;
+        *level = dlevel;
+        return;
+      }
+    }
+  }
+}
+
+
+static void eliminate_nlte_matrix_rowcol(int index, int gs_index, int nlte_dimension, double *rate_matrix, double *balance_vector)
+{
+  for (int column = 0; column < nlte_dimension; column++)
+    rate_matrix[index * nlte_dimension + column] = 0.0;
+
+  for (int row = 1; row < nlte_dimension; row++)
+    rate_matrix[row * nlte_dimension + index] = 0.0;
+
+  rate_matrix[index * nlte_dimension + gs_index] = -1.0;
+  rate_matrix[index * nlte_dimension + index] = 1.0;
+  balance_vector[index] = 0.0;
+}
+
+
+static void filter_nlte_matrix(int element, int nlte_dimension, double *rate_matrix,
+                               double *balance_vector, const double *pop_norm_factors)
+// find rows and columns that barely interaction with other levels, and effectively
+// removing them by zeroing their interactions and setting their departure
+// coeff to 1.0
+{
+  for (int index = 0; index < nlte_dimension; index++)
+  {
+    double row_max = 0.0;
+    for (int column = 0; column < nlte_dimension; column++)
+    {
+      double element_value = rate_matrix[index * nlte_dimension + column];
+      if (element_value > row_max)
+        row_max = element_value;
+    }
+    double col_max = 0.0;
+    for (int row = 1; row < nlte_dimension; row++) //skip the normalisation row 0
+    {
+      double element_value = rate_matrix[row * nlte_dimension + index];
+      if (element_value > col_max)
+        col_max = element_value;
+    }
+    int ion = -1;
+    int level = -1;
+    get_ion_level_of_nlte_vector_index(index,element,&ion,&level);
+    printout("index%4d (ion%2d level%4d) row_max %.1e col_max %.1e ",index,ion,level,row_max,col_max);
+    if ((row_max < 1e-10) || (col_max < 1e-10))
+    {
+      double gs_index = get_nlte_vector_index(element,ion,0);
+      eliminate_nlte_matrix_rowcol(index,gs_index,nlte_dimension,rate_matrix,balance_vector);
+      if (level == 0)
+      {
+        printout("(Would eliminate but it's a ground state, so forcing pop=MINPOP=%g)",MINPOP);
+        balance_vector[index] = MINPOP / pop_norm_factors[index];
+        //printout("(Eliminating this ground state)");
+      }
+      else
+      {
+        printout("(forcing LTE population)");
+      }
+    }
+    printout("\n");
+  }
+}
 
 
 void nlte_pops_element(int element, int modelgridindex, int timestep)
@@ -443,103 +534,6 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
       }
     }
   }
-}
-
-int get_nlte_vector_index(int element_in, int ion_in, int level_in)
-{
-  int index = 0;
-  for (int ion = 0; ion < ion_in; ion++)
-  {
-    int nlevels_nlte = get_nlevels_nlte(element_in,ion);
-
-    index += nlevels_nlte + 1;
-    if (nlevels_nlte != (get_nlevels(element_in,ion) - 1))
-      index += 1; // there's a superlevel here
-  }
-  int nlevels_nlte = get_nlevels_nlte(element_in,ion_in);
-  if (is_nlte(element_in, ion_in, level_in) == true)
-    index += level_in;
-  else
-    index += nlevels_nlte + 1; //the index of the superlevel
-
-  return index;
-}
-
-
-void get_ion_level_of_nlte_vector_index(int index, int element, int *ion, int *level)
-{
-  for (int dion = 0; dion < get_nions(element); dion++)
-  {
-    for (int dlevel = 0; dlevel < get_nlevels(element,dion); dlevel++)
-    {
-      if (get_nlte_vector_index(element,dion,dlevel) == index)
-      {
-        *ion = dion;
-        *level = dlevel;
-        return;
-      }
-    }
-  }
-}
-
-
-void filter_nlte_matrix(int element, int nlte_dimension, double *rate_matrix,
-                        double *balance_vector, const double *pop_norm_factors)
-// find rows and columns that barely interaction with other levels, and effectively
-// removing them by zeroing their interactions and setting their departure
-// coeff to 1.0
-{
-  for (int index = 0; index < nlte_dimension; index++)
-  {
-    double row_max = 0.0;
-    for (int column = 0; column < nlte_dimension; column++)
-    {
-      double element_value = rate_matrix[index * nlte_dimension + column];
-      if (element_value > row_max)
-        row_max = element_value;
-    }
-    double col_max = 0.0;
-    for (int row = 1; row < nlte_dimension; row++) //skip the normalisation row 0
-    {
-      double element_value = rate_matrix[row * nlte_dimension + index];
-      if (element_value > col_max)
-        col_max = element_value;
-    }
-    int ion = -1;
-    int level = -1;
-    get_ion_level_of_nlte_vector_index(index,element,&ion,&level);
-    printout("index%4d (ion%2d level%4d) row_max %.1e col_max %.1e ",index,ion,level,row_max,col_max);
-    if ((row_max < 1e-10) || (col_max < 1e-10))
-    {
-      double gs_index = get_nlte_vector_index(element,ion,0);
-      eliminate_nlte_matrix_rowcol(index,gs_index,nlte_dimension,rate_matrix,balance_vector);
-      if (level == 0)
-      {
-        printout("(Would eliminate but it's a ground state, so forcing pop=MINPOP=%g)",MINPOP);
-        balance_vector[index] = MINPOP / pop_norm_factors[index];
-        //printout("(Eliminating this ground state)");
-      }
-      else
-      {
-        printout("(forcing LTE population)");
-      }
-    }
-    printout("\n");
-  }
-}
-
-
-void eliminate_nlte_matrix_rowcol(int index, int gs_index, int nlte_dimension, double *rate_matrix, double *balance_vector)
-{
-  for (int column = 0; column < nlte_dimension; column++)
-    rate_matrix[index * nlte_dimension + column] = 0.0;
-
-  for (int row = 1; row < nlte_dimension; row++)
-    rate_matrix[row * nlte_dimension + index] = 0.0;
-
-  rate_matrix[index * nlte_dimension + gs_index] = -1.0;
-  rate_matrix[index * nlte_dimension + index] = 1.0;
-  balance_vector[index] = 0.0;
 }
 
 

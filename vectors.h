@@ -3,9 +3,9 @@
 
 #include <math.h>
 
-void angle_ab(const double *dir1, const double *restrict vel, double *restrict dir2);
-double doppler(const double *dir1, const double *restrict vel);
-void scatter_dir(const double *dir_in, double cos_theta, double *dir_out);
+void angle_ab(const double *restrict dir1, const double *restrict vel, double *dir2);
+double doppler(const double *restrict dir1, const double *restrict vel);
+void scatter_dir(const double *restrictdir_in, double cos_theta, double *dir_out);
 
 /*Routine for getting the magnitude of a vector.*/
 static inline

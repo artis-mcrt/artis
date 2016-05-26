@@ -12,7 +12,6 @@
 
 #include "threadprivate.h"
 #include "sn3d.h"
-#include "atomic.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
@@ -28,10 +27,108 @@
 #include "version.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
-// private functions
-FILE *initialise_linestat_file(void);
-void pkt_action_counters_reset(void);
-void pkt_action_counters_printout(void);
+
+static FILE *initialise_linestat_file(void)
+{
+  FILE *linestat_file;
+  if ((linestat_file = fopen("linestat.out", "w")) == NULL)
+  {
+    printout("Cannot open line_stat.out.\n");
+    exit(0);
+  }
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
+    fprintf(linestat_file,"\n");
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
+    fprintf(linestat_file,"\n");
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
+    fprintf(linestat_file,"\n");
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
+    fprintf(linestat_file,"\n");
+
+  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
+    fprintf(linestat_file,"\n");
+
+  fflush(linestat_file);
+  //setvbuf(linestat_file, NULL, _IOLBF, 1); //flush after every line makes it slow!
+
+  return linestat_file;
+}
+
+static void pkt_action_counters_reset(void)
+{
+  ma_stat_activation_collexc = 0;
+  ma_stat_activation_collion = 0;
+  ma_stat_activation_bb = 0;
+  ma_stat_activation_bf = 0;
+  ma_stat_deactivation_colldeexc = 0;
+  ma_stat_deactivation_collrecomb = 0;
+  ma_stat_deactivation_bb = 0;
+  ma_stat_deactivation_fb = 0;
+  k_stat_to_ma_collexc = 0;
+  k_stat_to_ma_collion = 0;
+  k_stat_to_r_ff = 0;
+  k_stat_to_r_fb = 0;
+  k_stat_to_r_bb = 0;
+  k_stat_from_ff = 0;
+  k_stat_from_bf = 0;
+  k_stat_from_gamma = 0;
+  k_stat_from_eminus = 0;
+  k_stat_from_earlierdecay = 0;
+  escounter = 0;
+  cellcrossings = 0;
+  updatecellcounter = 0;
+  coolingratecalccounter = 0;
+  resonancescatterings = 0;
+  upscatter = 0;
+  downscatter = 0;
+}
+
+
+static void pkt_action_counters_printout(void)
+{
+  int allpktinteractions = 0;
+  for (int i = 0; i < npkts; i++)
+  {
+    allpktinteractions += pkt[i].interactions;
+  }
+  double meaninteractions = allpktinteractions / npkts;
+  printout("mean number of interactions per packet = %g\n",meaninteractions);
+
+  /// Printout packet statistics
+  printout("ma_stat_activation_collexc = %d\n",ma_stat_activation_collexc);
+  printout("ma_stat_activation_collion = %d\n",ma_stat_activation_collion);
+  printout("ma_stat_activation_bb = %d\n",ma_stat_activation_bb);
+  printout("ma_stat_activation_bf = %d\n",ma_stat_activation_bf);
+  printout("ma_stat_deactivation_colldeexc = %d\n",ma_stat_deactivation_colldeexc);
+  printout("ma_stat_deactivation_collrecomb = %d\n",ma_stat_deactivation_collrecomb);
+  printout("ma_stat_deactivation_bb = %d\n",ma_stat_deactivation_bb);
+  printout("ma_stat_deactivation_fb = %d\n",ma_stat_deactivation_fb);
+
+  printout("k_stat_to_ma_collexc = %d\n",k_stat_to_ma_collexc);
+  printout("k_stat_to_ma_collion = %d\n",k_stat_to_ma_collion);
+  printout("k_stat_to_r_ff = %d\n",k_stat_to_r_ff);
+  printout("k_stat_to_r_fb = %d\n",k_stat_to_r_fb);
+  printout("k_stat_to_r_bb = %d\n",k_stat_to_r_bb);
+  printout("k_stat_from_ff = %d\n",k_stat_from_ff);
+  printout("k_stat_from_bf = %d\n",k_stat_from_bf);
+  printout("k_stat_from_gamma = %d\n",k_stat_from_gamma);
+  printout("k_stat_from_eminus = %d\n",k_stat_from_eminus);
+  printout("k_stat_from_earlierdecay = %d\n",k_stat_from_earlierdecay);
+
+  printout("escounter = %d\n",escounter);
+  printout("cellcrossing  = %d\n",cellcrossings);
+  printout("updatecellcounter  = %d\n",updatecellcounter);
+  printout("coolingratecalccounter = %d\n",coolingratecalccounter);
+  printout("resonancescatterings  = %d\n",resonancescatterings);
+
+  printout("upscatterings  = %d\n",upscatter);
+  printout("downscatterings  = %d\n",downscatter);
+}
+
 
 // Main - top level routine.
 int main(int argc, char** argv)
@@ -1426,107 +1523,6 @@ int printout(const char *restrict format, ...)
    return ret_status;
 }
 
-
-FILE *initialise_linestat_file(void)
-{
-  FILE *linestat_file;
-  if ((linestat_file = fopen("linestat.out", "w")) == NULL)
-  {
-    printout("Cannot open line_stat.out.\n");
-    exit(0);
-  }
-
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
-    fprintf(linestat_file,"\n");
-
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
-    fprintf(linestat_file,"\n");
-
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
-    fprintf(linestat_file,"\n");
-
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
-    fprintf(linestat_file,"\n");
-
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
-    fprintf(linestat_file,"\n");
-
-  fflush(linestat_file);
-  //setvbuf(linestat_file, NULL, _IOLBF, 1); //flush after every line makes it slow!
-
-  return linestat_file;
-}
-
-void pkt_action_counters_reset(void)
-{
-  ma_stat_activation_collexc = 0;
-  ma_stat_activation_collion = 0;
-  ma_stat_activation_bb = 0;
-  ma_stat_activation_bf = 0;
-  ma_stat_deactivation_colldeexc = 0;
-  ma_stat_deactivation_collrecomb = 0;
-  ma_stat_deactivation_bb = 0;
-  ma_stat_deactivation_fb = 0;
-  k_stat_to_ma_collexc = 0;
-  k_stat_to_ma_collion = 0;
-  k_stat_to_r_ff = 0;
-  k_stat_to_r_fb = 0;
-  k_stat_to_r_bb = 0;
-  k_stat_from_ff = 0;
-  k_stat_from_bf = 0;
-  k_stat_from_gamma = 0;
-  k_stat_from_eminus = 0;
-  k_stat_from_earlierdecay = 0;
-  escounter = 0;
-  cellcrossings = 0;
-  updatecellcounter = 0;
-  coolingratecalccounter = 0;
-  resonancescatterings = 0;
-  upscatter = 0;
-  downscatter = 0;
-}
-
-
-void pkt_action_counters_printout(void)
-{
-  int allpktinteractions = 0;
-  for (int i = 0; i < npkts; i++)
-  {
-    allpktinteractions += pkt[i].interactions;
-  }
-  double meaninteractions = allpktinteractions / npkts;
-  printout("mean number of interactions per packet = %g\n",meaninteractions);
-
-  /// Printout packet statistics
-  printout("ma_stat_activation_collexc = %d\n",ma_stat_activation_collexc);
-  printout("ma_stat_activation_collion = %d\n",ma_stat_activation_collion);
-  printout("ma_stat_activation_bb = %d\n",ma_stat_activation_bb);
-  printout("ma_stat_activation_bf = %d\n",ma_stat_activation_bf);
-  printout("ma_stat_deactivation_colldeexc = %d\n",ma_stat_deactivation_colldeexc);
-  printout("ma_stat_deactivation_collrecomb = %d\n",ma_stat_deactivation_collrecomb);
-  printout("ma_stat_deactivation_bb = %d\n",ma_stat_deactivation_bb);
-  printout("ma_stat_deactivation_fb = %d\n",ma_stat_deactivation_fb);
-
-  printout("k_stat_to_ma_collexc = %d\n",k_stat_to_ma_collexc);
-  printout("k_stat_to_ma_collion = %d\n",k_stat_to_ma_collion);
-  printout("k_stat_to_r_ff = %d\n",k_stat_to_r_ff);
-  printout("k_stat_to_r_fb = %d\n",k_stat_to_r_fb);
-  printout("k_stat_to_r_bb = %d\n",k_stat_to_r_bb);
-  printout("k_stat_from_ff = %d\n",k_stat_from_ff);
-  printout("k_stat_from_bf = %d\n",k_stat_from_bf);
-  printout("k_stat_from_gamma = %d\n",k_stat_from_gamma);
-  printout("k_stat_from_eminus = %d\n",k_stat_from_eminus);
-  printout("k_stat_from_earlierdecay = %d\n",k_stat_from_earlierdecay);
-
-  printout("escounter = %d\n",escounter);
-  printout("cellcrossing  = %d\n",cellcrossings);
-  printout("updatecellcounter  = %d\n",updatecellcounter);
-  printout("coolingratecalccounter = %d\n",coolingratecalccounter);
-  printout("resonancescatterings  = %d\n",resonancescatterings);
-
-  printout("upscatterings  = %d\n",upscatter);
-  printout("downscatterings  = %d\n",downscatter);
-}
 
 ///****************************************************************************
 /*void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element)

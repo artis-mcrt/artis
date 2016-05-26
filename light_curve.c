@@ -3,10 +3,6 @@
 #include "light_curve.h"
 #include "vectors.h"
 
-// private functions
-int add_to_lc(const EPKT *pkt_ptr);
-int add_to_lc_res(const EPKT *pkt_ptr, int current_abin);
-
 
 // Routine to make a MC light curve from the r-packets.
 
@@ -18,6 +14,31 @@ int add_to_lc_res(const EPKT *pkt_ptr, int current_abin);
   return 0;
 }
 */
+
+int add_to_lc(const EPKT *pkt_ptr)
+/**Routine to add a packet to the outcoming light-curve.*/
+/**See add_to_spec.*/
+{
+  /// Put this into the time grid
+  double t_arrive = pkt_ptr->arrive_time;
+  if (t_arrive > tmin && t_arrive < tmax)
+  {
+    int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
+    light_curve[nt].lum += pkt_ptr->e_rf / light_curve[nt].delta_t / nprocs;
+  }
+
+  /// Now do the cmf light curve.
+  //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
+  t_arrive = pkt_ptr->arrive_time_cmf;
+  if (t_arrive > tmin && t_arrive < tmax)
+  {
+    int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
+    light_curve_cmf[nt].lum += pkt_ptr->e_cmf / light_curve[nt].delta_t / nprocs / sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
+  }
+
+  return 0;
+}
+
 
 void init_light_curve(void)
 {
@@ -153,60 +174,9 @@ int gather_light_curve(void)
 }
 
 
-
-
-/**********************************************************************/
-/**Routine to add a packet to the outcoming light-curve.*/
-/**See add_to_spec.*/
-int add_to_lc(const EPKT *pkt_ptr)
-{
-  /// Put this into the time grid
-  double t_arrive = pkt_ptr->arrive_time;
-  if (t_arrive > tmin && t_arrive < tmax)
-  {
-    int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
-    light_curve[nt].lum += pkt_ptr->e_rf / light_curve[nt].delta_t / nprocs;
-  }
-
-  /// Now do the cmf light curve.
-  //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-  t_arrive = pkt_ptr->arrive_time_cmf;
-  if (t_arrive > tmin && t_arrive < tmax)
-  {
-    int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
-    light_curve_cmf[nt].lum += pkt_ptr->e_cmf / light_curve[nt].delta_t / nprocs / sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-  }
-
-  return 0;
-}
-
-
-
-/************************************************************/
-int gather_light_curve_res(int current_abin)
-{
-  //void read_packets(FILE *packets_file);
-  //int i,n,p,nn;
-  EPKT *pkt_ptr;
-
-  /// Set up the light curve grid and initialise the bins to zero.
-  init_light_curve();
-
-  /// Now add the energy of all the escaping packets to the
-  /// appropriate bins.
-  for (int p = 0; p < nepkts; p++)
-  {
-    pkt_ptr = &epkts[p];
-    add_to_lc_res(pkt_ptr,current_abin);
-  }
-  return 0;
-}
-
-
-/**********************************************************************/
-/**Routine to add a packet to the outcoming light-curve.*/
-/**See add_to_spec.*/
 int add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
+/**Routine to add a packet to the outcoming light-curve.*/
+/**See add_to_spec.*/
 {
   double vec1[3], vec2[3], xhat[3], vec3[3];
 
@@ -247,5 +217,25 @@ int add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
     }
   }
 
+  return 0;
+}
+
+
+int gather_light_curve_res(int current_abin)
+{
+  //void read_packets(FILE *packets_file);
+  //int i,n,p,nn;
+  EPKT *pkt_ptr;
+
+  /// Set up the light curve grid and initialise the bins to zero.
+  init_light_curve();
+
+  /// Now add the energy of all the escaping packets to the
+  /// appropriate bins.
+  for (int p = 0; p < nepkts; p++)
+  {
+    pkt_ptr = &epkts[p];
+    add_to_lc_res(pkt_ptr,current_abin);
+  }
   return 0;
 }

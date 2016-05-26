@@ -9,12 +9,7 @@
 #include "rpkt.h"
 
 
-// private functions
-void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum);
-double sample_planck(double T);
-double planck(double nu, double T);
 
-///****************************************************************************
 void calculate_kpkt_rates(int modelgridindex)
 /// Set up the global cooling list and determine the important entries
 /// by applying a cut to the total cooling rate. Then sort the global
@@ -240,7 +235,7 @@ void calculate_kpkt_rates(int modelgridindex)
 
 
 ///****************************************************************************
-void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum)
+static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum)
 /// Set up the global cooling list and determine the important entries
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
@@ -415,9 +410,42 @@ void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low,
 }
 
 
+static double planck(double nu, double T)
+/// returns intensity for frequency nu and temperature T according
+/// to the Planck distribution
+{
+  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / (expm1(HOVERKB*nu/T));
+}
 
 
-///****************************************************************************
+static double sample_planck(double T)
+/// returns a randomly chosen frequency according to the Planck
+/// distribution of temperature T
+{
+  double nu_peak = 5.879e10 * T;
+  if (nu_peak > nu_max_r || nu_peak < nu_min_r)
+    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
+
+  double B_peak = planck(nu_peak,T);
+
+  double nu;
+  int endloop = 0;
+  int i = 0;
+  while (endloop == 0)
+  {
+    i += 1;
+    double zrand = gsl_rng_uniform(rng);
+    double zrand2 = gsl_rng_uniform(rng);
+    nu = nu_min_r + zrand * (nu_max_r - nu_min_r);
+    if (zrand2 * B_peak <= planck(nu,T))
+      endloop = 1;
+    //printout("[debug] sample_planck: planck_sampling %d\n",i);
+  }
+
+  return nu;
+}
+
+
 double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
@@ -453,45 +481,6 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
 }
 
 
-
-///****************************************************************************
-double sample_planck(double T)
-/// returns a randomly chosen frequency according to the Planck
-/// distribution of temperature T
-{
-  double nu_peak = 5.879e10 * T;
-  if (nu_peak > nu_max_r || nu_peak < nu_min_r)
-    printout("[warning] sample_planck: intensity peaks outside frequency range\n");
-
-  double B_peak = planck(nu_peak,T);
-
-  double nu;
-  int endloop = 0;
-  int i = 0;
-  while (endloop == 0)
-  {
-    i += 1;
-    double zrand = gsl_rng_uniform(rng);
-    double zrand2 = gsl_rng_uniform(rng);
-    nu = nu_min_r + zrand * (nu_max_r - nu_min_r);
-    if (zrand2 * B_peak <= planck(nu,T))
-      endloop = 1;
-    //printout("[debug] sample_planck: planck_sampling %d\n",i);
-  }
-
-  return nu;
-}
-
-///****************************************************************************
-double planck(double nu, double T)
-/// returns intensity for frequency nu and temperature T according
-/// to the Planck distribution
-{
-  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / (expm1(HOVERKB*nu/T));
-}
-
-
-///****************************************************************************
 double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 //{

@@ -4,183 +4,6 @@
 #include "rpkt.h"
 #include "vectors.h"
 
-// private functions
-int uniform_grid_setup(void);
-int density_1d_read(void);
-int density_2d_read(void);
-int density_3d_read(void);
-void abundances_3d_read(void);
-void abundances_1d_read(void);
-void assign_temperature(void);
-//void abundances_setup(void);
-
-
-///***************************************************************************
-/// Subroutine that initialises the grid cells. Designed so that grid cells
-/// don't need to be uniform but for the moment they are.
-int grid_init(void)
-{
-  /// Start by checking that the number of grid cells is okay */
-  //ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
-  //if (ngrid > MGRID)
-  //{
-  //  printout("[fatal] grid_init: Error: too many grid cells. Abort.");
-  //  exit(0);
-  //}
-  for (int n = 0; n <= MMODELGRID; n++)
-  {
-    modelgrid[n].initial_radial_pos = 0;
-  }
-
-  /// The cells will be ordered by x then y, then z. Call a routine that
-  /// sets up the initial positions and widths of the cells.
-  if (grid_type == GRID_UNIFORM)
-  {
-    uniform_grid_setup();
-  }
-  else
-  {
-    printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
-    exit(0);
-  }
-
-  /// Now set up the density in each cell.
-  if (model_type == RHO_UNIFORM)
-  {
-    //uniform_density_setup ();
-    //abundances_setup();
-  }
-  else if (model_type == RHO_1D_READ)
-  {
-    abundances_1d_read();
-    density_1d_read();
-  }
-  else if (model_type == RHO_2D_READ)
-  {
-    abundances_1d_read(); //for 2d can handle abundances exactly as for 1D
-    density_2d_read();
-  }
-  else if (model_type == RHO_3D_READ)
-  {
-    density_3d_read();
-    abundances_3d_read();
-  }
-  else
-  {
-    printout("[fatal] grid_init: Error: Unknown density type. Abort.");
-    exit(0);
-  }
-
-  /// and assign a temperature to the cells
-  assign_temperature();
-
-  /// Finally determine which cells are non-empty...
-  /*if ((nonemptycells = malloc(ngrid*sizeof(int))) == NULL)
-  {
-    printout("[fatal] grid_init: not enough memory to initialize the list of non-empty cells\n");
-    exit(0);
-  }
-  i = 0;
-  for (n = 0; n < ngrid; n++)
-  {
-    if (cell[n].rho_init > MINDENSITY)
-    {
-      nonemptycells[i] = n;
-      i += 1;
-    }
-  }
-  nnonemptycells = i;*/
-  /*  if ((nonemptycells = realloc(nonemptycells, nnonemptycells*sizeof(int))) == NULL)
-  {
-    printout("[fatal] grid_init: problem during reallocation of list of non-empty cells\n");
-    exit(0);
-  }
-  */
-
-  return 0;
-}
-
-
-
-///***************************************************************************/
-int uniform_grid_setup(void)
-/// Routine for doing a uniform cuboidal grid.
-{
-  int nx = 0;
-  int ny = 0;
-  int nz = 0;
-  for (int n = 0; n < ngrid; n++)
-  {
-    cell[n].pos_init[0] = -xmax + (2 * nx * xmax / nxgrid);
-    cell[n].pos_init[1] = -ymax + (2 * ny * ymax / nygrid);
-    cell[n].pos_init[2] = -zmax + (2 * nz * zmax / nzgrid);
-
-    wid_init = 2 * xmax / nxgrid;
-    wid_init = 2 * ymax / nygrid;
-    wid_init = 2 * zmax / nzgrid;
-
-    //cell[n].cen_init[0] = cell[n].pos_init[0] + (0.5 * wid_init);
-    //cell[n].cen_init[1] = cell[n].pos_init[1] + (0.5 * wid_init);
-    //cell[n].cen_init[2] = cell[n].pos_init[2] + (0.5 * wid_init);
-
-    cell[n].xyz[0] = nx;
-    cell[n].xyz[1] = ny;
-    cell[n].xyz[2] = nz;
-
-    nx++;
-    if (nx == nxgrid)
-    {
-      nx = 0;
-      ny++;
-    }
-    if (ny == nygrid)
-    {
-      ny = 0;
-      nz++;
-    }
-
-    ///Do we need this initialisation anywhere else (after modelgridindex was initialised) ???????????????????????????????????
-    //cell[n].f_ni_stable = 0.0;
-    //cell[n].f_co_stable = 0.0;
-    //cell[n].f_fe_init = 0.0;
-  }
-
-  /*
-  /// Finally we must also create the composition dependent data structure for
-  /// the samplingcell which is located at MGRID (i.e. the MGRID+1th cell)
-  n = MGRID;
-  if ((cell[n].composition = malloc(nelements*sizeof(compositionlist_entry))) == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",n);
-    exit(0);
-  }
-  for (element = 0; element < nelements; element++)
-  {
-    ///now set the abundances (by mass) of included elements, i.e.
-    ///read out the abundances specified in the atomic data file
-    ///and allocate memory to store the ground level populations for each ionisation stage
-    if ((cell[n].composition[element].groundlevelpop = malloc(get_nions(element)*sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,n);
-      exit(0);
-    }
-    if ((cell[n].composition[element].partfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,n);
-      exit(0);
-    }
-//     if ((cell[n].composition[element].ltepartfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
-//     {
-//       printout("[fatal] input: not enough memory to initialize lte partfunctlist for element %d in cell %d... abort\n",element,n);
-//       exit(0);
-//     }
-  }
-  */
-
-  return 0;
-}
-
-
 
 ///****************************************************************************
 /// Routine for doing a uniform density grid.
@@ -322,7 +145,7 @@ int uniform_grid_setup(void)
 
 ///****************************************************************************
 /// Routine for doing a density grid read from a 1-D model.
-int density_1d_read(void)
+static int density_1d_read(void)
 {
   //int renorm[MMODELGRID];
   //double den_norm[MMODELGRID];
@@ -842,7 +665,7 @@ int density_1d_read(void)
 
 ///****************************************************************************
 /// Routine for doing a density grid read from a 2-D model.
-int density_2d_read(void)
+static int density_2d_read(void)
 {
   double radial_pos;
   int mkeep1, mkeep2;
@@ -1111,7 +934,7 @@ int density_2d_read(void)
 
 ///****************************************************************************
 /// Routine for doing a density grid read from a 3-D model.
-int density_3d_read ()
+static int density_3d_read ()
 {
   rho_sum = 0.0;
   fe_sum = 0.0;
@@ -1516,7 +1339,7 @@ void allocate_cooling(int modelgridindex)
 }*/
 
 
-void abundances_3d_read(void)
+static void abundances_3d_read(void)
 {
   FILE *abundance_file;
   /// Open the abundances file
@@ -1584,7 +1407,7 @@ void abundances_3d_read(void)
 
 
 ///***************************************************************************/
-void abundances_1d_read(void)
+static void abundances_1d_read(void)
 {
   /// Open the abundances file
   FILE *abundance_file;
@@ -1626,7 +1449,7 @@ void abundances_1d_read(void)
 
 
 ///***************************************************************************/
-void assign_temperature(void)
+static void assign_temperature(void)
 /// Routine for assigning temperatures to the grid cells at the start of the
 /// simulation.
 {
@@ -1747,4 +1570,167 @@ void assign_temperature(void)
 
     fclose(gridsave_file);
   }
+}
+
+
+static int uniform_grid_setup(void)
+/// Routine for doing a uniform cuboidal grid.
+{
+  int nx = 0;
+  int ny = 0;
+  int nz = 0;
+  for (int n = 0; n < ngrid; n++)
+  {
+    cell[n].pos_init[0] = -xmax + (2 * nx * xmax / nxgrid);
+    cell[n].pos_init[1] = -ymax + (2 * ny * ymax / nygrid);
+    cell[n].pos_init[2] = -zmax + (2 * nz * zmax / nzgrid);
+
+    wid_init = 2 * xmax / nxgrid;
+    wid_init = 2 * ymax / nygrid;
+    wid_init = 2 * zmax / nzgrid;
+
+    //cell[n].cen_init[0] = cell[n].pos_init[0] + (0.5 * wid_init);
+    //cell[n].cen_init[1] = cell[n].pos_init[1] + (0.5 * wid_init);
+    //cell[n].cen_init[2] = cell[n].pos_init[2] + (0.5 * wid_init);
+
+    cell[n].xyz[0] = nx;
+    cell[n].xyz[1] = ny;
+    cell[n].xyz[2] = nz;
+
+    nx++;
+    if (nx == nxgrid)
+    {
+      nx = 0;
+      ny++;
+    }
+    if (ny == nygrid)
+    {
+      ny = 0;
+      nz++;
+    }
+
+    ///Do we need this initialisation anywhere else (after modelgridindex was initialised) ???????????????????????????????????
+    //cell[n].f_ni_stable = 0.0;
+    //cell[n].f_co_stable = 0.0;
+    //cell[n].f_fe_init = 0.0;
+  }
+
+  /*
+  /// Finally we must also create the composition dependent data structure for
+  /// the samplingcell which is located at MGRID (i.e. the MGRID+1th cell)
+  n = MGRID;
+  if ((cell[n].composition = malloc(nelements*sizeof(compositionlist_entry))) == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",n);
+    exit(0);
+  }
+  for (element = 0; element < nelements; element++)
+  {
+    ///now set the abundances (by mass) of included elements, i.e.
+    ///read out the abundances specified in the atomic data file
+    ///and allocate memory to store the ground level populations for each ionisation stage
+    if ((cell[n].composition[element].groundlevelpop = malloc(get_nions(element)*sizeof(float))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,n);
+      exit(0);
+    }
+    if ((cell[n].composition[element].partfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,n);
+      exit(0);
+    }
+//     if ((cell[n].composition[element].ltepartfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
+//     {
+//       printout("[fatal] input: not enough memory to initialize lte partfunctlist for element %d in cell %d... abort\n",element,n);
+//       exit(0);
+//     }
+  }
+  */
+
+  return 0;
+}
+
+
+int grid_init(void)
+/// Subroutine that initialises the grid cells. Designed so that grid cells
+/// don't need to be uniform but for the moment they are.
+{
+  /// Start by checking that the number of grid cells is okay */
+  //ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
+  //if (ngrid > MGRID)
+  //{
+  //  printout("[fatal] grid_init: Error: too many grid cells. Abort.");
+  //  exit(0);
+  //}
+  for (int n = 0; n <= MMODELGRID; n++)
+  {
+    modelgrid[n].initial_radial_pos = 0;
+  }
+
+  /// The cells will be ordered by x then y, then z. Call a routine that
+  /// sets up the initial positions and widths of the cells.
+  if (grid_type == GRID_UNIFORM)
+  {
+    uniform_grid_setup();
+  }
+  else
+  {
+    printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
+    exit(0);
+  }
+
+  /// Now set up the density in each cell.
+  if (model_type == RHO_UNIFORM)
+  {
+    //uniform_density_setup ();
+    //abundances_setup();
+  }
+  else if (model_type == RHO_1D_READ)
+  {
+    abundances_1d_read();
+    density_1d_read();
+  }
+  else if (model_type == RHO_2D_READ)
+  {
+    abundances_1d_read(); //for 2d can handle abundances exactly as for 1D
+    density_2d_read();
+  }
+  else if (model_type == RHO_3D_READ)
+  {
+    density_3d_read();
+    abundances_3d_read();
+  }
+  else
+  {
+    printout("[fatal] grid_init: Error: Unknown density type. Abort.");
+    exit(0);
+  }
+
+  /// and assign a temperature to the cells
+  assign_temperature();
+
+  /// Finally determine which cells are non-empty...
+  /*if ((nonemptycells = malloc(ngrid*sizeof(int))) == NULL)
+  {
+    printout("[fatal] grid_init: not enough memory to initialize the list of non-empty cells\n");
+    exit(0);
+  }
+  i = 0;
+  for (n = 0; n < ngrid; n++)
+  {
+    if (cell[n].rho_init > MINDENSITY)
+    {
+      nonemptycells[i] = n;
+      i += 1;
+    }
+  }
+  nnonemptycells = i;*/
+  /*  if ((nonemptycells = realloc(nonemptycells, nnonemptycells*sizeof(int))) == NULL)
+  {
+    printout("[fatal] grid_init: problem during reallocation of list of non-empty cells\n");
+    exit(0);
+  }
+  */
+
+  return 0;
 }

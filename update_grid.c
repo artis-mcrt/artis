@@ -11,9 +11,9 @@
 #include "update_grid.h"
 
 //private functions
-int get_cell(double x, double y, double z, double t);
-void update_abundances(int modelgridindex, double t_current);
-void precalculate_partfuncts(int modelgridindex);
+static int get_cell(double x, double y, double z, double t);
+static void update_abundances(int modelgridindex, double t_current);
+static void precalculate_partfuncts(int modelgridindex);
 
 
 // Subroutine to update the matter quantities in the grid cells at the start
@@ -1274,7 +1274,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
 ///****************************************************************************
 /// subroutine to identify the cell index from a position and a time. */
-int get_cell(double x, double y, double z, double t)
+static int get_cell(double x, double y, double z, double t)
 {
   /* Original version of this was general but very slow. Modifying to be
   faster but only work for regular grid. */
@@ -1366,7 +1366,7 @@ double get_abundance(int modelgridindex, int element)
 
 
 ///***************************************************************************/
-void update_abundances(int modelgridindex, double t_current)
+static void update_abundances(int modelgridindex, double t_current)
 /// Updates the mass fractions of elements associated with the decay sequence
 /// (56)Ni -> (56)Co -> (56)Fe at the onset of each timestep
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
@@ -1744,7 +1744,7 @@ double calculate_electron_densities(int modelgridindex)
 
 
 ///****************************************************************************
-void precalculate_partfuncts(int modelgridindex)
+static void precalculate_partfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
 /// change during any iteration on T_e. Therefore their precalculation was
 /// taken out of calculate_populations to save runtime.

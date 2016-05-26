@@ -8,14 +8,70 @@
 #include "thermalbalance.h"
 #include "update_grid.h"
 
+
 #ifndef FORCE_LTE
+static double find_T_e(double T_e, void *paras)
+/// Thermal balance equation on which we have to iterate to get T_e
+{
+  double nntot;
+
+  int modelgridindex = ((Te_solution_paras *) paras)->cellnumber;
+  double t_current = ((Te_solution_paras *) paras)->t_current;
+
+  /// Set new T_e guess for the current cell and update populations
+  //cell[cellnumber].T_e = T_e;
+  set_Te(modelgridindex,T_e);
+  #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+    nntot = calculate_electron_densities(modelgridindex);
+  #else
+    nntot = calculate_populations(modelgridindex,0);
+  #endif
+
+  /// Then calculate heating and cooling rates
+  calculate_cooling_rates(modelgridindex);
+  calculate_heating_rates(modelgridindex);
+  /// These heating rates using estimators work only for hydrogen!!!
+  //double ionstagepop(int cellnumber, int element, int ion);
+  //double heating_ff,heating_bf;
+  //double nne = cell[cellnumber].nne;
+  //double W = cell[cellnumber].W;
+  //heating_ff = cell[cellnumber].heating_ff * ionstagepop(cellnumber,0,1)/cell[cellnumber].composition[0].partfunct[1]*nne / sqrt(T_e);
+  //heating_bf = cell[cellnumber].heating_bf * W*ionstagepop(cellnumber,0,0)/cell[cellnumber].composition[0].partfunct[0];
+
+  /// If selected take direct gamma heating into account
+  if (do_rlc_est == 3)
+  {
+    heatingrates[tid].gamma = rpkt_emiss[modelgridindex] * 1.e20; ///1.e20 since the emissivities are all scaled by this
+    heatingrates[tid].gamma *= 4*PI; /// This was missing here! rpkt_emiss is normalised to give a real emissivity
+                                     /// for the formal integral calculation!!!
+    // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
+    heatingrates[tid].gamma += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
+    heatingrates[tid].gamma += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
+  }
+  else
+  {
+    heatingrates[tid].gamma = 0.;
+  }
+
+  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL)));
+  //heatingrates[tid].gamma *= 0.01;
+  //double factor = -1./(t_current*(-TCOBALT+TNICKEL));
+  //factor *= (-ENICKEL*exp(-t_current/TNICKEL)*t_current*TCOBALT - ENICKEL*exp(-t_current/TNICKEL)*TNICKEL*TCOBALT + ENICKEL*exp(-t_current/TNICKEL)*t_current*TNICKEL + pow(TNICKEL,2)*ENICKEL*exp(-t_current/TNICKEL) - TCOBALT*t_current*ECOBALT*exp(-t_current/TCOBALT) - pow(TCOBALT,2)*ECOBALT*exp(-t_current/TCOBALT) + ECOBALT*t_current*TNICKEL*exp(-t_current/TNICKEL) + pow(TNICKEL,2)*ECOBALT*exp(-t_current/TNICKEL) + ENICKEL*TCOBALT*TNICKEL - ENICKEL*pow(TNICKEL,2) - pow(TNICKEL,2)*ECOBALT + ECOBALT*pow(TCOBALT,2));
+  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL))) - factor/t_current);
+
+  /// Adiabatic cooling term
+  double p = nntot*KB*T_e;
+  double dV = 3 * pow(wid_init/tmin,3) * pow(t_current,2);
+  double V = pow(wid_init * t_current / tmin,3);
+  //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
+  coolingrates[tid].adiabatic = p * dV / V;
+
+  return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collisional + heatingrates[tid].gamma - coolingrates[tid].adiabatic; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
+  //return heatingrates[tid].gamma - coolingrates[tid].fb; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
+  //return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collbf - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collbf + heatingrates[tid].gamma - coolingrates[tid].adiabatic - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
+}
 
 
-// private functions
-double find_T_e(double T_e, void *paras);
-
-
-///****************************************************************************
 double call_T_e_finder(int modelgridindex, double t_current, double T_min, double T_max)
 {
   double T_e;
@@ -210,77 +266,12 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
 }
 
 
-
-///***************************************************************************/
-double find_T_e(double T_e, void *paras)
-/// Thermal balance equation on which we have to iterate to get T_e
-{
-  double nntot;
-
-  int modelgridindex = ((Te_solution_paras *) paras)->cellnumber;
-  double t_current = ((Te_solution_paras *) paras)->t_current;
-
-  /// Set new T_e guess for the current cell and update populations
-  //cell[cellnumber].T_e = T_e;
-  set_Te(modelgridindex,T_e);
-  #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
-    nntot = calculate_electron_densities(modelgridindex);
-  #else
-    nntot = calculate_populations(modelgridindex,0);
-  #endif
-
-  /// Then calculate heating and cooling rates
-  calculate_cooling_rates(modelgridindex);
-  calculate_heating_rates(modelgridindex);
-  /// These heating rates using estimators work only for hydrogen!!!
-  //double ionstagepop(int cellnumber, int element, int ion);
-  //double heating_ff,heating_bf;
-  //double nne = cell[cellnumber].nne;
-  //double W = cell[cellnumber].W;
-  //heating_ff = cell[cellnumber].heating_ff * ionstagepop(cellnumber,0,1)/cell[cellnumber].composition[0].partfunct[1]*nne / sqrt(T_e);
-  //heating_bf = cell[cellnumber].heating_bf * W*ionstagepop(cellnumber,0,0)/cell[cellnumber].composition[0].partfunct[0];
-
-  /// If selected take direct gamma heating into account
-  if (do_rlc_est == 3)
-  {
-    heatingrates[tid].gamma = rpkt_emiss[modelgridindex] * 1.e20; ///1.e20 since the emissivities are all scaled by this
-    heatingrates[tid].gamma *= 4*PI; /// This was missing here! rpkt_emiss is normalised to give a real emissivity
-                                     /// for the formal integral calculation!!!
-    // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-    heatingrates[tid].gamma += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
-    heatingrates[tid].gamma += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
-  }
-  else
-  {
-    heatingrates[tid].gamma = 0.;
-  }
-
-  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL)));
-  //heatingrates[tid].gamma *= 0.01;
-  //double factor = -1./(t_current*(-TCOBALT+TNICKEL));
-  //factor *= (-ENICKEL*exp(-t_current/TNICKEL)*t_current*TCOBALT - ENICKEL*exp(-t_current/TNICKEL)*TNICKEL*TCOBALT + ENICKEL*exp(-t_current/TNICKEL)*t_current*TNICKEL + pow(TNICKEL,2)*ENICKEL*exp(-t_current/TNICKEL) - TCOBALT*t_current*ECOBALT*exp(-t_current/TCOBALT) - pow(TCOBALT,2)*ECOBALT*exp(-t_current/TCOBALT) + ECOBALT*t_current*TNICKEL*exp(-t_current/TNICKEL) + pow(TNICKEL,2)*ECOBALT*exp(-t_current/TNICKEL) + ENICKEL*TCOBALT*TNICKEL - ENICKEL*pow(TNICKEL,2) - pow(TNICKEL,2)*ECOBALT + ECOBALT*pow(TCOBALT,2));
-  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL))) - factor/t_current);
-
-  /// Adiabatic cooling term
-  double p = nntot*KB*T_e;
-  double dV = 3 * pow(wid_init/tmin,3) * pow(t_current,2);
-  double V = pow(wid_init * t_current / tmin,3);
-  //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
-  coolingrates[tid].adiabatic = p * dV / V;
-
-  return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collisional + heatingrates[tid].gamma - coolingrates[tid].adiabatic; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
-  //return heatingrates[tid].gamma - coolingrates[tid].fb; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
-  //return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collbf - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collbf + heatingrates[tid].gamma - coolingrates[tid].adiabatic - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
-}
-
-
-
 ///****************************************************************************
 void calculate_heating_rates(int modelgridindex)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
-  gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1000);
+  //gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1000);
   //double intaccuracy = 1e-2;
   //double error;
   //size_t neval; ///for qng integrator
@@ -475,7 +466,7 @@ void calculate_heating_rates(int modelgridindex)
   heatingrates[tid].ff = ffheating;
   //printout("ffheating %g, bfheating %g, colheating %g\n",ffheating,bfheating,C_deexc+C_recomb);
 
-  gsl_integration_workspace_free(wspace);
+  //gsl_integration_workspace_free(wspace);
 }
 
 
