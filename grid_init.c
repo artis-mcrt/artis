@@ -142,10 +142,8 @@
 }*/
 
 
-
-///****************************************************************************
-/// Routine for doing a density grid read from a 1-D model.
 static int density_1d_read(void)
+/// Routine for doing a density grid read from a 1-D model.
 {
   //int renorm[MMODELGRID];
   //double den_norm[MMODELGRID];
@@ -663,9 +661,9 @@ static int density_1d_read(void)
   return 0;
 }
 
-///****************************************************************************
-/// Routine for doing a density grid read from a 2-D model.
+
 static int density_2d_read(void)
+/// Routine for doing a density grid read from a 2-D model.
 {
   double radial_pos;
   int mkeep1, mkeep2;
@@ -931,10 +929,8 @@ static int density_2d_read(void)
 }
 
 
-
-///****************************************************************************
-/// Routine for doing a density grid read from a 3-D model.
 static int density_3d_read ()
+/// Routine for doing a density grid read from a 3-D model.
 {
   rho_sum = 0.0;
   fe_sum = 0.0;
@@ -1180,9 +1176,8 @@ static int density_3d_read ()
 }
 
 
-///****************************************************************************
-/// Initialise composition dependent cell data for the given cell
 void allocate_compositiondata(int modelgridindex)
+/// Initialise composition dependent cell data for the given cell
 {
   if ((modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements*sizeof(compositionlist_entry))) == NULL)
   {
@@ -1236,9 +1231,8 @@ void allocate_compositiondata(int modelgridindex)
 }
 
 
-///****************************************************************************
-/// Initialise composition dependent cell data for the given cell
 void allocate_cooling(int modelgridindex)
+/// Initialise composition dependent cell data for the given cell
 {
   if ((modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(nelements*sizeof(mgicooling_t))) == NULL)
   {
@@ -1448,7 +1442,6 @@ static void abundances_1d_read(void)
 }
 
 
-///***************************************************************************/
 static void assign_temperature(void)
 /// Routine for assigning temperatures to the grid cells at the start of the
 /// simulation.

@@ -5,9 +5,8 @@
 #include "update_packets.h"
 
 
-///****************************************************************************
-/// Basic routine to compute distance to a call boundary.
 double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
+/// Basic routine to compute distance to a call boundary.
 {
   //double close, close_try;
 

@@ -5,10 +5,10 @@
 #include "packet_prop.h"
 #include "rpkt.h"
 
-/* Master routine for moving packets around. When it called,
-   it is given the time at start of inverval and at end - when it finishes,
-   everything the packet does during this time should be sorted out. */
 void packet_prop(PKT *restrict pkt_ptr, double t1, double t2, int nts)
+// Master routine for moving packets around. When it called,
+//   it is given the time at start of inverval and at end - when it finishes,
+//   everything the packet does during this time should be sorted out.
 {
   double t_current = t1;
 

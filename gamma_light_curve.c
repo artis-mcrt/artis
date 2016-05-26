@@ -16,7 +16,7 @@ int make_gamma_light_curve(void)
   return 0;
 }
 
-/**********************************************************************/
+
 int gather_gamma_light_curve(int my_rank)
 {
   PKT *pkt_ptr;
@@ -83,7 +83,7 @@ int gather_gamma_light_curve(int my_rank)
   return 0;
 }
 
-/***********************************************************************************/
+
 int write_gamma_light_curve(void)
 {
   double save[MTLCBINS][MANGLCBINS];
@@ -147,12 +147,10 @@ int write_gamma_light_curve(void)
   return 0;
 }
 
-/**********************************************************************/
-
-/*Routine to add a packet to the outcoming light-curve.*/
-/*See add_to_spec.*/
 
 int add_to_lc_angle(PKT *pkt_ptr)
+/*Routine to add a packet to the outcoming light-curve.*/
+/*See add_to_spec.*/
 {
   int nt, na;
   int thetabin, phibin;

@@ -9,6 +9,7 @@
 #include "ray_prop.h"
 #include "vectors.h"
 
+
 int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double single_t, int lindex, double dnuds)
 {
   double emitt_energy;

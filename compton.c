@@ -4,21 +4,29 @@
 #include "vectors.h"
 
 
-static double choose_f(double xx, double zrand);
-static double sigma_compton_partial(double x, double f);
-static double thomson_angle(void);
-
-
 // Stuff for compton scattering.
+
+static double sigma_compton_partial(double x, double f)
+// Routine to compute the partial cross section for Compton scattering.
+//   xx is the photon energy (in units of electron mass) and f
+//  is the energy loss factor up to which we wish to integrate.
+{
+  double term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
+  double term2 = ( ((f*f) -1) / (f * f)) / 2;
+  double term3 = ( (f - 1) / x) * ( (1/x) + (2/f) + (1/(x*f)));
+
+  return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
+}
+
 
 double sig_comp(const PKT *pkt_ptr, double t_current)
 {
   double sigma_cmf;
-  /* Start by working out the compton x-section in the co-moving frame.*/
+  // Start by working out the compton x-section in the co-moving frame.
 
   double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
-  /* Use this to decide whether the Thompson limit is acceptable. */
+  // Use this to decide whether the Thompson limit is acceptable.
 
   if (xx < THOMSON_LIMIT)
   {
@@ -30,11 +38,11 @@ double sig_comp(const PKT *pkt_ptr, double t_current)
     sigma_cmf = sigma_compton_partial(xx, fmax);
   }
 
-  /* Now need to multiply by the electron number density. */
+  // Now need to multiply by the electron number density.
 
   sigma_cmf *= get_nnetot(cell[pkt_ptr->where].modelgridindex);
 
-  /* Now need to convert between frames. */
+  // Now need to convert between frames.
 
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
@@ -43,9 +51,78 @@ double sig_comp(const PKT *pkt_ptr, double t_current)
   return sigma_rf;
 }
 
-/******************************************************************/
-/*Routine to deal with physical Compton scattering event. */
+
+static double choose_f(double xx, double zrand)
+// To choose the value of f to integrate to - idea is we want
+//   sigma_compton_partial(xx,f) = zrand. */
+{
+  double ftry, try;
+
+  double fmax = 1 + (2 * xx);
+  double fmin = 1;
+
+  double norm = zrand * sigma_compton_partial(xx, fmax);
+
+  int count = 0;
+  double err = 1e20;
+
+  //printout("new\n");
+
+  while ((err > 1.e-4) && (count < 1000))
+  {
+    ftry = (fmax + fmin)/2;
+    try = sigma_compton_partial(xx, ftry);
+    //printout("ftry %g %g %g %g %g\n",ftry, fmin, fmax, try, norm);
+    if (try > norm)
+    {
+      fmax = ftry;
+      err = (try - norm) / norm;
+    }
+    else
+    {
+      fmin = ftry;
+      err = (norm - try) / norm;
+    }
+    //      printout("error %g\n",err);
+    count += 1;
+  }
+
+  if (count == 1000)
+  {
+    printout("Compton hit 1000 tries. %g %g %g %g %g\n", fmax, fmin, ftry, try, norm);
+  }
+
+  return ftry;
+}
+
+
+static double thomson_angle(void)
+{
+  // For Thomson scattering we can get the new angle from a random number very easily.
+
+  double zrand = gsl_rng_uniform(rng);
+
+  double B_coeff = (8. * zrand) - 4.;
+
+  double t_coeff = sqrt( (B_coeff * B_coeff) + 4);
+  t_coeff = t_coeff - B_coeff;
+  t_coeff = t_coeff / 2;
+  t_coeff = pow(t_coeff, (1./3));
+
+  double mu = (1./t_coeff) - t_coeff;
+
+  if (fabs(mu) > 1)
+  {
+    printout("Error in Thomson. Abort.\n");
+    exit(0);
+  }
+
+  return mu;
+}
+
+
 int com_sca(PKT *pkt_ptr, double t_current)
+// Routine to deal with physical Compton scattering event.
 {
   double f;
   double final_dir[3];
@@ -170,91 +247,4 @@ int com_sca(PKT *pkt_ptr, double t_current)
   }
 
   return 0;
-}
-
-
-/**************************************************************/
-
-/* Routine to compute the partial cross section for Compton scattering.
-   xx is the photon energy (in units of electron mass) and f
-   is the energy loss factor up to which we wish to integrate.*/
-
-static double sigma_compton_partial(double x, double f)
-{
-  double term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
-  double term2 = ( ((f*f) -1) / (f * f)) / 2;
-  double term3 = ( (f - 1) / x) * ( (1/x) + (2/f) + (1/(x*f)));
-
-  return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
-}
-
-
-/**************************************************************/
-/* To choose the value of f to integrate to - idea is we want
-   sigma_compton_partial(xx,f) = zrand. */
-static double choose_f(double xx, double zrand)
-{
-  double ftry, try;
-
-  double fmax = 1 + (2 * xx);
-  double fmin = 1;
-
-  double norm = zrand * sigma_compton_partial(xx, fmax);
-
-  int count = 0;
-  double err = 1e20;
-
-  //printout("new\n");
-
-  while ((err > 1.e-4) && (count < 1000))
-  {
-    ftry = (fmax + fmin)/2;
-    try = sigma_compton_partial(xx, ftry);
-    //printout("ftry %g %g %g %g %g\n",ftry, fmin, fmax, try, norm);
-    if (try > norm)
-    {
-      fmax = ftry;
-      err = (try - norm) / norm;
-    }
-    else
-    {
-      fmin = ftry;
-      err = (norm - try) / norm;
-    }
-    //      printout("error %g\n",err);
-    count += 1;
-  }
-
-  if (count == 1000)
-  {
-    printout("Compton hit 1000 tries. %g %g %g %g %g\n", fmax, fmin, ftry, try, norm);
-  }
-
-  return ftry;
-}
-
-
-/******************************************************************/
-static double thomson_angle(void)
-{
-  /*For Thomson scattering we can get the new angle from a random number very easily. */
-
-  double zrand = gsl_rng_uniform(rng);
-
-  double B_coeff = (8. * zrand) - 4.;
-
-  double t_coeff = sqrt( (B_coeff * B_coeff) + 4);
-  t_coeff = t_coeff - B_coeff;
-  t_coeff = t_coeff / 2;
-  t_coeff = pow(t_coeff, (1./3));
-
-  double mu = (1./t_coeff) - t_coeff;
-
-  if (fabs(mu) > 1)
-  {
-    printout("Error in Thomson. Abort.\n");
-    exit(0);
-  }
-
-  return mu;
 }

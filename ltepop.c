@@ -496,7 +496,7 @@ float calculate_groundlevelpop(int element, int ion, double T, int cellnumber, d
 }
 */
 
-///***************************************************************************/
+
 double get_groundlevelpop(int modelgridindex, int element, int ion)
 /// Returns the given ions groundlevel population for modelgridindex which was precalculated
 /// during update_grid and stored to the grid.
@@ -517,8 +517,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 }
 
 
-///***************************************************************************/
-static double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level)
+/*static double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation number of level relative to the ions ground level population
 /// using a modified version of the Boltzmann formula, which fulfills the diluted BB
 /// approximation (or nebular approximation).
@@ -529,18 +528,18 @@ static double calculate_exclevelpop_old(int modelgridindex, int element, int ion
   //  T_exc = MINTEMP;
 
 
-/*  if (T_exc <= MINTEMP)
-  {
-    if (elements[element].ions[ion].levels[level].metastable == 1)
-    {
-      T_exc = get_TJ(modelgridindex);
-    }
-    else
-    {
-      T_exc = get_TR(modelgridindex);
-      W = get_W(modelgridindex);
-    }
-  }*/
+  // if (T_exc <= MINTEMP)
+  // {
+  //   if (elements[element].ions[ion].levels[level].metastable == 1)
+  //   {
+  //     T_exc = get_TJ(modelgridindex);
+  //   }
+  //   else
+  //   {
+  //     T_exc = get_TR(modelgridindex);
+  //     W = get_W(modelgridindex);
+  //   }
+  // }
 
   double nn;
   if (level == 0)
@@ -570,7 +569,7 @@ static double calculate_exclevelpop_old(int modelgridindex, int element, int ion
     }
   #endif
   return nn;
-}
+}*/
 
 
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
@@ -609,7 +608,6 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
 }
 
 
-///***************************************************************************/
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
 /// Calculates the population of a level
 /// (if in LTE mode) using a modified version of the Boltzmann formula, which fulfills the diluted BB
@@ -791,7 +789,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 }*/
 
 
-///***************************************************************************/
 double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
@@ -807,7 +804,6 @@ double calculate_sahafact(int element, int ion, int level, int phixstargetindex,
 }
 
 
-///***************************************************************************/
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
 /// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {

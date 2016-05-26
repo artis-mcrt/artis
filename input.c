@@ -25,8 +25,6 @@ typedef struct
 } transitiontable_entry;  /// only used temporarily during input
 
 
-
-
 static void read_phixs_data(void)
 {
   printout("readin phixs data\n");
@@ -1719,9 +1717,8 @@ static int read_1d_model(void)
 }
 
 
-///****************************************************************************
-/// Subroutine to read in a 2-D model.
 static int read_2d_model(void)
+/// Subroutine to read in a 2-D model.
 {
   FILE *model_input;
   if ((model_input = fopen("model.txt", "r")) == NULL)
@@ -1807,9 +1804,9 @@ static int read_2d_model(void)
   return 0;
 }
 
-///****************************************************************************
-/// Subroutine to read in a 3-D model.
+
 static int read_3d_model(void)
+/// Subroutine to read in a 3-D model.
 {
   float dum2, dum3, dum4, dum5, dum6;
   float rho_model;
@@ -1998,8 +1995,8 @@ static int read_3d_model(void)
 }
 
 
-/// To govern the input. For now hardwire everything.
 int input(int rank)
+/// To govern the input. For now hardwire everything.
 {
   homogeneous_abundances = 0;
   t_model = 0.0;
@@ -2281,9 +2278,10 @@ int input(int rank)
 
   return 0;
 }
-///****************************************************************************
-/// Subroutine to read in input parameters from input.txt.
+
+
 void read_parameterfile(int rank)
+/// Subroutine to read in input parameters from input.txt.
 {
   //double z1, z2, x;
   unsigned long int pre_zseed;
@@ -2570,9 +2568,8 @@ int compare_linelistentry(const void *p1, const void *p2)
 */
 
 
-///****************************************************************************
-/// Subroutine to read in input parameters from input.txt.
 void update_parameterfile(int nts)
+/// Subroutine to read in input parameters from input.txt.
 {
   FILE *input_file;
   if ((input_file = fopen("input.txt", "r+")) == NULL)

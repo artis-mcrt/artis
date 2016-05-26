@@ -10,23 +10,23 @@
    it is given the time at start of inverval and at end - when it finishes,
    everything the ray passes during this time should be sorted out. */
 
-int ray_prop(RAY *ray_ptr, double t1, double t2, int nts)
+/*static int ray_prop(RAY *ray_ptr, double t1, double t2, int nts)
 {
   double t_current = t1;
 
   int end_packet = 0;  //means "keep working"
   while (end_packet == 0)
   {
-    /* Start by sorting out what sort of packet it is.*/
+    // Start by sorting out what sort of packet it is.
     if (ray_ptr->status == ACTIVE)
     {
-      /*It's a gamma-ray ray.*/
-      /* Call do_gamma_ray. */
+      // It's a gamma-ray ray.
+      // Call do_gamma_ray.
       double t_change_type = do_gamma_ray(ray_ptr, t_current, t2);
-      /* This returns a flag if the packet gets to t2 without
-         changing to something else. If the packet does change it
-         returns the time of change and sets everything for the
-         new packet.*/
+        //  This returns a flag if the packet gets to t2 without
+        //  changing to something else. If the packet does change it
+        //  returns the time of change and sets everything for the
+        //  new packet.
       if (t_change_type < 0)
       {
         end_packet = 1;
@@ -45,9 +45,150 @@ int ray_prop(RAY *ray_ptr, double t1, double t2, int nts)
   }
 
   return 0;
+}*/
+
+static int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double single_t)
+{
+  if (dist < 0)
+  {
+    printout("Trying to move -v distance. Abort.\n");
+    exit(0);
+  }
+
+  single_pos[0] += syn_dir[0] * dist;
+  single_pos[1] += syn_dir[1] * dist;
+  single_pos[2] += syn_dir[2] * dist;
+
+  double vel_vec[3];
+  get_velocity(single_pos, vel_vec, single_t);
+
+  ray_ptr->nu_cmf[nray] = ray_ptr->nu_rf[nray] * doppler(syn_dir, vel_vec);
+  // again, rmoving next line since e_cmf seems redundant.
+  //ray_ptr->e_cmf[nray] = ray_ptr->e_rf[nray] * ray_ptr->nu_cmf[nray] / ray_ptr->nu_rf[nray];
+
+  return 0;
 }
 
-/***************************************************************/
+
+static int change_cell_ray(RAY *ray_ptr, int snext, int *end_packet, double t_current)
+{
+  PKT dummy;
+
+  /* Similar to above. */
+
+  dummy.pos[0] = ray_ptr->pos[0];
+  dummy.pos[1] = ray_ptr->pos[1];
+  dummy.pos[2] = ray_ptr->pos[2];
+
+  dummy.type = TYPE_GAMMA;
+
+  change_cell(&dummy, snext, end_packet, t_current);
+
+  if (dummy.type == TYPE_GAMMA)
+    {
+      ray_ptr->where = dummy.where;
+      ray_ptr->pos[0] = dummy.pos[0];
+      ray_ptr->pos[1] = dummy.pos[1];
+      ray_ptr->pos[2] = dummy.pos[2];
+    }
+  else if (dummy.type == TYPE_ESCAPE)
+    {
+      ray_ptr->status = FINISHED;
+    }
+
+  return 0;
+}
+
+/**************************************************/
+static int copy_ray (const RAY *ray1, RAY *ray2)
+{
+  ray2->last_cross = ray1->last_cross;
+  ray2->where = ray1->where;
+  ray2->status = ray1->status;
+  ray2->tstart = ray1->tstart;
+  ray2->rstart[0] = ray1->rstart[0];
+  ray2->rstart[1] = ray1->rstart[1];
+  ray2->rstart[2] = ray1->rstart[2];
+  ray2->pos[0] = ray1->pos[0];
+  ray2->pos[1] = ray1->pos[1];
+  ray2->pos[2] = ray1->pos[2];
+
+  for (int n = 0; n < NSYN; n++)
+  {
+    ray2->nu_rf[n] = ray1->nu_rf[n];
+    ray2->nu_cmf[n] = ray1->nu_cmf[n];
+    ray2->e_rf[n] = ray1->e_rf[n];
+    ray2->e_cmf[n] = ray1->e_cmf[n];
+  }
+
+  return 0;
+}
+
+/**********************************************/
+static int move_ray(RAY *ray_ptr, double dist, double time)
+{
+  /* just make a dummy packet and use move. */
+
+  PKT dummy;
+
+  dummy.pos[0] = ray_ptr->pos[0];
+  dummy.pos[1] = ray_ptr->pos[1];
+  dummy.pos[2] = ray_ptr->pos[2];
+  dummy.dir[0] = syn_dir[0];
+  dummy.dir[1] = syn_dir[1];
+  dummy.dir[2] = syn_dir[2];
+
+  dummy.nu_cmf = ray_ptr->nu_cmf[0];
+  dummy.nu_rf = ray_ptr->nu_rf[0];
+  dummy.e_cmf = ray_ptr->e_cmf[0];
+  dummy.e_rf = ray_ptr->e_rf[0];
+
+  move_pkt(&dummy, dist, time);
+
+  ray_ptr->pos[0] = dummy.pos[0];
+  ray_ptr->pos[1] = dummy.pos[1];
+  ray_ptr->pos[2] = dummy.pos[2];
+
+  double doppler_fac = dummy.nu_cmf / dummy.nu_rf;
+
+  for (int n = 0; n < NSYN; n++)
+  {
+    ray_ptr->nu_cmf[n] = ray_ptr->nu_rf[n] * doppler_fac;
+
+    /* removing next line (Jan06) since e_cmf seems redundant for rays. */
+    //      ray_ptr->e_cmf[n] = ray_ptr->e_rf[n] * doppler_fac;
+  }
+
+  return 0;
+}
+
+
+static double boundary_cross_ray(RAY *ray_ptr, double tstart, int *snext)
+{
+  // This is just a front end to use boundary_cross with a ray. Puts relevant
+  //   info in to a fake packet and passes. Then sets return in ray. */
+
+  PKT dummy;
+
+  dummy.pos[0] = ray_ptr->pos[0];
+  dummy.pos[1] = ray_ptr->pos[1];
+  dummy.pos[2] = ray_ptr->pos[2];
+
+  dummy.dir[0] = syn_dir[0];
+  dummy.dir[1] = syn_dir[1];
+  dummy.dir[2] = syn_dir[2];
+
+  dummy.where = ray_ptr->where;
+  dummy.last_cross = ray_ptr->last_cross;
+
+  double dist = boundary_cross(&dummy, tstart, snext);
+
+  ray_ptr->last_cross = dummy.last_cross;
+
+  return dist;
+}
+
+
 double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 {
   double t_current = t1; //this will keep track of time in the calculation
@@ -240,151 +381,6 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 }
 
 
-/****************************************************/
-double boundary_cross_ray(RAY *ray_ptr, double tstart, int *snext)
-{
-  /* This is just a front end to use boundary_cross with a ray. Puts relevant
-     info in to a fake packet and passes. Then sets return in ray. */
-
-  PKT dummy;
-
-  dummy.pos[0] = ray_ptr->pos[0];
-  dummy.pos[1] = ray_ptr->pos[1];
-  dummy.pos[2] = ray_ptr->pos[2];
-
-  dummy.dir[0] = syn_dir[0];
-  dummy.dir[1] = syn_dir[1];
-  dummy.dir[2] = syn_dir[2];
-
-  dummy.where = ray_ptr->where;
-  dummy.last_cross = ray_ptr->last_cross;
-
-  double dist = boundary_cross(&dummy, tstart, snext);
-
-  ray_ptr->last_cross = dummy.last_cross;
-
-  return dist;
-}
-
-/****************************************************/
-int change_cell_ray(RAY *ray_ptr, int snext, int *end_packet, double t_current)
-{
-  PKT dummy;
-
-  /* Similar to above. */
-
-  dummy.pos[0] = ray_ptr->pos[0];
-  dummy.pos[1] = ray_ptr->pos[1];
-  dummy.pos[2] = ray_ptr->pos[2];
-
-  dummy.type = TYPE_GAMMA;
-
-  change_cell(&dummy, snext, end_packet, t_current);
-
-  if (dummy.type == TYPE_GAMMA)
-    {
-      ray_ptr->where = dummy.where;
-      ray_ptr->pos[0] = dummy.pos[0];
-      ray_ptr->pos[1] = dummy.pos[1];
-      ray_ptr->pos[2] = dummy.pos[2];
-    }
-  else if (dummy.type == TYPE_ESCAPE)
-    {
-      ray_ptr->status = FINISHED;
-    }
-
-  return 0;
-}
-
-/**************************************************/
-int copy_ray (const RAY *ray1, RAY *ray2)
-{
-  ray2->last_cross = ray1->last_cross;
-  ray2->where = ray1->where;
-  ray2->status = ray1->status;
-  ray2->tstart = ray1->tstart;
-  ray2->rstart[0] = ray1->rstart[0];
-  ray2->rstart[1] = ray1->rstart[1];
-  ray2->rstart[2] = ray1->rstart[2];
-  ray2->pos[0] = ray1->pos[0];
-  ray2->pos[1] = ray1->pos[1];
-  ray2->pos[2] = ray1->pos[2];
-
-  for (int n = 0; n < NSYN; n++)
-  {
-    ray2->nu_rf[n] = ray1->nu_rf[n];
-    ray2->nu_cmf[n] = ray1->nu_cmf[n];
-    ray2->e_rf[n] = ray1->e_rf[n];
-    ray2->e_cmf[n] = ray1->e_cmf[n];
-  }
-
-  return 0;
-}
-
-/**********************************************/
-int move_ray(RAY *ray_ptr, double dist, double time)
-{
-  /* just make a dummy packet and use move. */
-
-  PKT dummy;
-
-  dummy.pos[0] = ray_ptr->pos[0];
-  dummy.pos[1] = ray_ptr->pos[1];
-  dummy.pos[2] = ray_ptr->pos[2];
-  dummy.dir[0] = syn_dir[0];
-  dummy.dir[1] = syn_dir[1];
-  dummy.dir[2] = syn_dir[2];
-
-  dummy.nu_cmf = ray_ptr->nu_cmf[0];
-  dummy.nu_rf = ray_ptr->nu_rf[0];
-  dummy.e_cmf = ray_ptr->e_cmf[0];
-  dummy.e_rf = ray_ptr->e_rf[0];
-
-  move_pkt(&dummy, dist, time);
-
-  ray_ptr->pos[0] = dummy.pos[0];
-  ray_ptr->pos[1] = dummy.pos[1];
-  ray_ptr->pos[2] = dummy.pos[2];
-
-  double doppler_fac = dummy.nu_cmf / dummy.nu_rf;
-
-  for (int n = 0; n < NSYN; n++)
-  {
-    ray_ptr->nu_cmf[n] = ray_ptr->nu_rf[n] * doppler_fac;
-
-    /* removing next line (Jan06) since e_cmf seems redundant for rays. */
-    //      ray_ptr->e_cmf[n] = ray_ptr->e_rf[n] * doppler_fac;
-  }
-
-  return 0;
-}
-
-/**************************************************************/
-int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double single_t)
-{
-  if (dist < 0)
-  {
-    printout("Trying to move -v distance. Abort.\n");
-    exit(0);
-  }
-
-  single_pos[0] += syn_dir[0] * dist;
-  single_pos[1] += syn_dir[1] * dist;
-  single_pos[2] += syn_dir[2] * dist;
-
-  double vel_vec[3];
-  get_velocity(single_pos, vel_vec, single_t);
-
-  ray_ptr->nu_cmf[nray] = ray_ptr->nu_rf[nray] * doppler(syn_dir, vel_vec);
-  // again, rmoving next line since e_cmf seems redundant.
-  //ray_ptr->e_cmf[nray] = ray_ptr->e_rf[nray] * ray_ptr->nu_cmf[nray] / ray_ptr->nu_rf[nray];
-
-  return 0;
-}
-
-
-
-/**************************************************************/
 int get_nul(double freq)
 {
   double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);

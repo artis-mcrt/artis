@@ -222,7 +222,7 @@ double alpha_sp_E_integrand_gsl(double nu, void *restrict paras)
 }
 
 
-static double gamma_integrand_gsl(double nu, void *paras)
+/*static double gamma_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators.
 {
@@ -243,7 +243,7 @@ static double gamma_integrand_gsl(double nu, void *paras)
   //else x = sigma_bf * pow(nu,2)/(exp(HOVERKB*nu/T)-1);
 
   return x;
-}
+}*/
 
 
 static double gammacorr_integrand_gsl(double nu, void *paras)
@@ -397,7 +397,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
   return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
 }
 
-static double bfcooling_integrand_gsl_2(double nu, void *paras)
+/*static double bfcooling_integrand_gsl_2(double nu, void *paras)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
@@ -412,10 +412,10 @@ static double bfcooling_integrand_gsl_2(double nu, void *paras)
   double sigma_bf = photoionization_crosssection(nu_edge,nu);
 
   return sigma_bf*(1/nu_edge-1/nu) * TWOOVERCLIGHTSQUARED*pow(nu,3) * exp(-HOVERKB*nu/T);
-}
+}*/
 
 
-static double stimulated_bfcooling_integrand_gsl(double nu, void *paras)
+/*static double stimulated_bfcooling_integrand_gsl(double nu, void *paras)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximate way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
@@ -430,10 +430,10 @@ static double stimulated_bfcooling_integrand_gsl(double nu, void *paras)
   double sigma_bf = photoionization_crosssection(nu_edge,nu);
 
   return sigma_bf * (1-nu_edge/nu) * radfield2(nu, T, 1) * exp(-HOVERKB*nu/T);
-}
+}*/
 
 
-static double stimulated_recomb_integrand_gsl(double nu, void *paras)
+/*static double stimulated_recomb_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -457,7 +457,7 @@ static double stimulated_recomb_integrand_gsl(double nu, void *paras)
   ///set contributions from Lyman continuum artificially to zero to overcome it's large opacity
   //if (exchangepkt_ptr->MA_level == 0) x = 0;
   return x;
-}
+}*/
 
 
 static void calculate_rate_coefficients(void)

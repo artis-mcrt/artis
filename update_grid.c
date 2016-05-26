@@ -10,15 +10,121 @@
 #include "thermalbalance.h"
 #include "update_grid.h"
 
-//private functions
-static int get_cell(double x, double y, double z, double t);
-static void update_abundances(int modelgridindex, double t_current);
-static void precalculate_partfuncts(int modelgridindex);
+static void precalculate_partfuncts(int modelgridindex)
+/// The partition functions depend only on T_R and W. This means they don't
+/// change during any iteration on T_e. Therefore their precalculation was
+/// taken out of calculate_populations to save runtime.
+{
+  /// Precalculate partition functions for each ion in every cell
+  /// this saves a factor 10 in calculation time of Saha-Boltzman populations
+  for (int element = 0; element < nelements; element++)
+  {
+    int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
+    {
+      //printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);
+      //cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
+      modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element,ion,modelgridindex);
+    }
+  }
+}
 
 
+static void update_abundances(int modelgridindex, double t_current)
+/// Updates the mass fractions of elements associated with the decay sequence
+/// (56)Ni -> (56)Co -> (56)Fe at the onset of each timestep
+/// Parameters: - modelgridindex: the grid cell for which to update the abundances
+///             - t_current: current time (here mid of current timestep)
+{
+  t_current -= t_model;
+  double lambdani = 1./TNICKEL;
+  double lambdaco = 1./TCOBALT;
+  double lambdafe = 1./T52FE;
+  double lambdamn = 1./T52MN;
+  double lambdacr = 1./T48CR;
+  double lambdav = 1./T48V;
+
+  if (homogeneous_abundances == 1)
+  {
+    double ni_in = elements[get_elementindex(28)].abundance;
+    double co_in = elements[get_elementindex(27)].abundance;
+    double fe_in = elements[get_elementindex(26)].abundance;
+    //fe_in = cell[modelgridindex].f_fe_init;
+    for (int element = nelements-1; element >= 0; element--)
+    {
+      if (get_element(element) == 28)
+      {
+        double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
+        modelgrid[modelgridindex].composition[element].abundance = nifrac;
+      }
+      if (get_element(element) == 27)
+      {
+        double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
+        modelgrid[modelgridindex].composition[element].abundance = cofrac;
+      }
+      if (get_element(element) == 26)
+      {
+        double fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
+        modelgrid[modelgridindex].composition[element].abundance = fefrac;
+      }
+    }
+  }
+  else
+  {
+    double ni_in = modelgrid[modelgridindex].fni;
+    double co_in = modelgrid[modelgridindex].fco;
+    double fe52_in = modelgrid[modelgridindex].f52fe;
+    double cr48_in = modelgrid[modelgridindex].f48cr;
+    //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe_in);
+    for (int element = nelements-1; element >= 0; element--)
+    {
+      if (get_element(element) == 28)
+      {
+        double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
+        modelgrid[modelgridindex].composition[element].abundance = nifrac;
+        //cell[modelgridindex].composition[element].abundance = nifrac;
+      }
+      if (get_element(element) == 27)
+      {
+        double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
+        modelgrid[modelgridindex].composition[element].abundance = cofrac;
+      }
+      if (get_element(element) == 26)
+      {
+        double fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + modelgrid[modelgridindex].ffestable + (fe52_in* exp(-lambdafe*t_current));
+        modelgrid[modelgridindex].composition[element].abundance = fefrac;
+      }
+      if (get_element(element) == 25)
+      {
+        double mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + modelgrid[modelgridindex].fmnstable;
+        modelgrid[modelgridindex].composition[element].abundance = mnfrac;
+      }
+      if (get_element(element) == 24)
+      {
+        double crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
+        modelgrid[modelgridindex].composition[element].abundance = crfrac;
+      }
+      if (get_element(element) == 23)
+      {
+        double vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + modelgrid[modelgridindex].fvstable;
+        modelgrid[modelgridindex].composition[element].abundance = vfrac;
+      }
+      if (get_element(element) == 22)
+      {
+        double tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
+        modelgrid[modelgridindex].composition[element].abundance = tifrac;
+      }
+    }
+    //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g, abund %g, %g, %g, stable %g,%g\n",modelgridindex,ni_in,co_in,fe_in,nifrac,cofrac,fefrac,modelgrid[modelgridindex].fnistable,modelgrid[modelgridindex].fcostable);
+  }
+  //printout("nifrac_old %g, cofrac_old %g, fefrac_old %g\n",nifrac_old,cofrac_old,fefrac_old);
+  //printout("nifrac_new %g, cofrac_new %g, fefrac_new %g\n",nifrac_new,cofrac_new,fefrac_new);
+}
+
+
+int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
-int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     /// m timestep
 {
   //double gamma_lte,zeta;
@@ -1272,12 +1378,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
 
 
-///****************************************************************************
-/// subroutine to identify the cell index from a position and a time. */
-static int get_cell(double x, double y, double z, double t)
+/*static int get_cell(double x, double y, double z, double t)
+/// subroutine to identify the cell index from a position and a time.
 {
-  /* Original version of this was general but very slow. Modifying to be
-  faster but only work for regular grid. */
+  // Original version of this was general but very slow. Modifying to be
+  // faster but only work for regular grid.
 
   double trat = t / tmin;
   int nx = (x - (cell[0].pos_init[0] * trat))/(wid_init * trat);
@@ -1286,7 +1391,7 @@ static int get_cell(double x, double y, double z, double t)
 
   int n = nx + (nxgrid * ny) + (nxgrid * nygrid * nz);
 
-  /* do a check */
+  // do a check
 
   if (x < cell[n].pos_init[0] * trat)
   {
@@ -1321,23 +1426,23 @@ static int get_cell(double x, double y, double z, double t)
   return(n);
 
 
-  /* OLD
-  trat = t / tmin;
-
-  for (n = 0; n < ngrid; n++)
-  {
-  if (
-  (x > cell[n].pos_init[0] * trat) &&
-  (x < (cell[n].pos_init[0] + wid_init) *trat) &&
-  (y > cell[n].pos_init[1] * trat) &&
-  (y < (cell[n].pos_init[1] + wid_init) *trat) &&
-  (z > cell[n].pos_init[2] * trat) &&
-  (z < (cell[n].pos_init[2] + wid_init) *trat))
-  {
-  return(n);
-}
-}
-  END OLD */
+  // OLD
+        //   trat = t / tmin;
+        //
+        //   for (n = 0; n < ngrid; n++)
+        //   {
+        //   if (
+        //   (x > cell[n].pos_init[0] * trat) &&
+        //   (x < (cell[n].pos_init[0] + wid_init) *trat) &&
+        //   (y > cell[n].pos_init[1] * trat) &&
+        //   (y < (cell[n].pos_init[1] + wid_init) *trat) &&
+        //   (z > cell[n].pos_init[2] * trat) &&
+        //   (z < (cell[n].pos_init[2] + wid_init) *trat))
+        //   {
+        //   return(n);
+        // }
+        // }
+  // END OLD
 
   printout("Failed to find cell (get_cell). \n");
   printout("x %g, y %g, z %g, t %g\n", x, y, z, t);
@@ -1347,7 +1452,7 @@ static int get_cell(double x, double y, double z, double t)
   printout("xwid %g ywid %g zwid %g\n", (wid_init) * trat, (wid_init) * trat,(wid_init) * trat);
 
   exit(0);
-}
+}*/
 
 
 
@@ -1358,103 +1463,9 @@ static int get_cell(double x, double y, double z, double t)
 }*/
 
 
-///****************************************************************************
 double get_abundance(int modelgridindex, int element)
 {
   return modelgrid[modelgridindex].composition[element].abundance;
-}
-
-
-///***************************************************************************/
-static void update_abundances(int modelgridindex, double t_current)
-/// Updates the mass fractions of elements associated with the decay sequence
-/// (56)Ni -> (56)Co -> (56)Fe at the onset of each timestep
-/// Parameters: - modelgridindex: the grid cell for which to update the abundances
-///             - t_current: current time (here mid of current timestep)
-{
-  t_current -= t_model;
-  double lambdani = 1./TNICKEL;
-  double lambdaco = 1./TCOBALT;
-  double lambdafe = 1./T52FE;
-  double lambdamn = 1./T52MN;
-  double lambdacr = 1./T48CR;
-  double lambdav = 1./T48V;
-
-  if (homogeneous_abundances == 1)
-  {
-    double ni_in = elements[get_elementindex(28)].abundance;
-    double co_in = elements[get_elementindex(27)].abundance;
-    double fe_in = elements[get_elementindex(26)].abundance;
-    //fe_in = cell[modelgridindex].f_fe_init;
-    for (int element = nelements-1; element >= 0; element--)
-    {
-      if (get_element(element) == 28)
-      {
-        double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
-        modelgrid[modelgridindex].composition[element].abundance = nifrac;
-      }
-      if (get_element(element) == 27)
-      {
-        double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
-        modelgrid[modelgridindex].composition[element].abundance = cofrac;
-      }
-      if (get_element(element) == 26)
-      {
-        double fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
-        modelgrid[modelgridindex].composition[element].abundance = fefrac;
-      }
-    }
-  }
-  else
-  {
-    double ni_in = modelgrid[modelgridindex].fni;
-    double co_in = modelgrid[modelgridindex].fco;
-    double fe52_in = modelgrid[modelgridindex].f52fe;
-    double cr48_in = modelgrid[modelgridindex].f48cr;
-    //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe_in);
-    for (int element = nelements-1; element >= 0; element--)
-    {
-      if (get_element(element) == 28)
-      {
-        double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
-        modelgrid[modelgridindex].composition[element].abundance = nifrac;
-        //cell[modelgridindex].composition[element].abundance = nifrac;
-      }
-      if (get_element(element) == 27)
-      {
-        double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
-        modelgrid[modelgridindex].composition[element].abundance = cofrac;
-      }
-      if (get_element(element) == 26)
-      {
-        double fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + modelgrid[modelgridindex].ffestable + (fe52_in* exp(-lambdafe*t_current));
-        modelgrid[modelgridindex].composition[element].abundance = fefrac;
-      }
-      if (get_element(element) == 25)
-      {
-        double mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + modelgrid[modelgridindex].fmnstable;
-        modelgrid[modelgridindex].composition[element].abundance = mnfrac;
-      }
-      if (get_element(element) == 24)
-      {
-        double crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
-        modelgrid[modelgridindex].composition[element].abundance = crfrac;
-      }
-      if (get_element(element) == 23)
-      {
-        double vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + modelgrid[modelgridindex].fvstable;
-        modelgrid[modelgridindex].composition[element].abundance = vfrac;
-      }
-      if (get_element(element) == 22)
-      {
-        double tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
-        modelgrid[modelgridindex].composition[element].abundance = tifrac;
-      }
-    }
-    //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g, abund %g, %g, %g, stable %g,%g\n",modelgridindex,ni_in,co_in,fe_in,nifrac,cofrac,fefrac,modelgrid[modelgridindex].fnistable,modelgrid[modelgridindex].fcostable);
-  }
-  //printout("nifrac_old %g, cofrac_old %g, fefrac_old %g\n",nifrac_old,cofrac_old,fefrac_old);
-  //printout("nifrac_new %g, cofrac_new %g, fefrac_new %g\n",nifrac_new,cofrac_new,fefrac_new);
 }
 
 
@@ -1741,28 +1752,6 @@ double calculate_electron_densities(int modelgridindex)
   set_nnetot(modelgridindex, nne_tot);
   return nne_tot;
 }
-
-
-///****************************************************************************
-static void precalculate_partfuncts(int modelgridindex)
-/// The partition functions depend only on T_R and W. This means they don't
-/// change during any iteration on T_e. Therefore their precalculation was
-/// taken out of calculate_populations to save runtime.
-{
-  /// Precalculate partition functions for each ion in every cell
-  /// this saves a factor 10 in calculation time of Saha-Boltzman populations
-  for (int element = 0; element < nelements; element++)
-  {
-    int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++)
-    {
-      //printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);
-      //cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
-      modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element,ion,modelgridindex);
-    }
-  }
-}
-
 
 /*
 // ****************************************************************************

@@ -80,7 +80,7 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
   return 0;
 }
 
-/*******************************************************/
+
 int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 {
   /* Subroutine to record the rate of destruction (and re-creation) of
@@ -131,7 +131,6 @@ int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 }
 
 
-/***********************************************/
 int normalise_grey(int nts)
 {
   //for (n=0; n < ngrid; n++)
@@ -146,7 +145,6 @@ int normalise_grey(int nts)
   }
   return 0;
 }
-
 
 
 int write_grey(int nts)

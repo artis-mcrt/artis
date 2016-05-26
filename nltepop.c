@@ -1003,51 +1003,39 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 }*/
 
 
-//*****************************************************************
-double get_tot_nion(int modelgridindex)
+int read_binding_energies()
 {
-  double result = 0.;
-  for (int element = 0; element < nelements; element++)
+  FILE *binding;
+  if ((binding = fopen("binding_energies.txt", "r")) == NULL)
   {
-    result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
-
-    //int nions = get_nions(element);
-    //for (ion = 0; ion < nions; ion++)
-    //{
-    //  result += ionstagepop(modelgridindex,element,ion);
-    //}
+    printout("Cannot open binding_energies.txt.\n");
+    exit(0);
   }
 
-  return result;
-}
-
-//*****************************************************************
-double get_oneoverw(int element, int ion, int modelgridindex)
-{
-  // Routine to compute the work per ion pair for doing the NT ionization calculation. Makes use of EXTREMELY SIMPLE approximations - high energy limits only */
-
-  // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
-  // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
-  // denominator is extremely simplified. Need to get the mean Z value.
-
-  double Zbar = 0.0;
-  for (int ielement = 0; ielement < nelements; ielement++)
+  int dum1, dum2;
+  fscanf(binding, "%d %d", &dum1, &dum2); //dimensions of the table
+  if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING))
   {
-    Zbar += modelgrid[modelgridindex].composition[ielement].abundance * elements[ielement].anumber;
+    printout("Wrong size for the binding energy tables!\n");
+    exit(0);
   }
-  //printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
 
-  double Aconst = 1.33e-14 * EV * EV;
-  double binding = get_mean_binding_energy(element, ion);
-  double oneoverW = Aconst * binding / Zbar / (2*3.14159*pow(QE,4.0));
-  //printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
+  for (int index1 = 0; index1 < dum2; index1++)
+  {
+    float dum[10];
+    fscanf(binding, "%g %g %g %g %g %g %g %g %g %g", &dum[0],&dum[1], &dum[2],&dum[3],&dum[4],&dum[5],&dum[6],&dum[7],&dum[8],&dum[9]);
+    for (int index2 = 0; index2 < 10; index2++)
+    {
+      electron_binding[index1][index2] = dum[index2]*EV;
+    }
+  }
 
-  return oneoverW;
+  fclose(binding);
+  return 0;
 }
 
 
-//*****************************************************************
-double get_mean_binding_energy(int element, int ion)
+static double get_mean_binding_energy(int element, int ion)
 {
   int q[M_NT_SHELLS];
   double total;
@@ -1207,40 +1195,48 @@ double get_mean_binding_energy(int element, int ion)
 }
 
 
-//*****************************************************************
-int read_binding_energies()
+static double get_tot_nion(int modelgridindex)
 {
-  FILE *binding;
-  if ((binding = fopen("binding_energies.txt", "r")) == NULL)
+  double result = 0.;
+  for (int element = 0; element < nelements; element++)
   {
-    printout("Cannot open binding_energies.txt.\n");
-    exit(0);
+    result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
+
+    //int nions = get_nions(element);
+    //for (ion = 0; ion < nions; ion++)
+    //{
+    //  result += ionstagepop(modelgridindex,element,ion);
+    //}
   }
 
-  int dum1, dum2;
-  fscanf(binding, "%d %d", &dum1, &dum2); //dimensions of the table
-  if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING))
-  {
-    printout("Wrong size for the binding energy tables!\n");
-    exit(0);
-  }
-
-  for (int index1 = 0; index1 < dum2; index1++)
-  {
-    float dum[10];
-    fscanf(binding, "%g %g %g %g %g %g %g %g %g %g", &dum[0],&dum[1], &dum[2],&dum[3],&dum[4],&dum[5],&dum[6],&dum[7],&dum[8],&dum[9]);
-    for (int index2 = 0; index2 < 10; index2++)
-    {
-      electron_binding[index1][index2] = dum[index2]*EV;
-    }
-  }
-
-  fclose(binding);
-  return 0;
+  return result;
 }
 
 
-//*****************************************************************
+static double get_oneoverw(int element, int ion, int modelgridindex)
+{
+  // Routine to compute the work per ion pair for doing the NT ionization calculation. Makes use of EXTREMELY SIMPLE approximations - high energy limits only */
+
+  // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
+  // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
+  // denominator is extremely simplified. Need to get the mean Z value.
+
+  double Zbar = 0.0;
+  for (int ielement = 0; ielement < nelements; ielement++)
+  {
+    Zbar += modelgrid[modelgridindex].composition[ielement].abundance * elements[ielement].anumber;
+  }
+  //printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
+
+  double Aconst = 1.33e-14 * EV * EV;
+  double binding = get_mean_binding_energy(element, ion);
+  double oneoverW = Aconst * binding / Zbar / (2*3.14159*pow(QE,4.0));
+  //printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
+
+  return oneoverW;
+}
+
+
 double nt_ionization_rate(int modelgridindex, int element, int ion)
 {
   double gammadeposition = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;

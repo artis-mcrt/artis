@@ -136,7 +136,6 @@ static double radfield_get_bin_J(int modelgridindex, int binindex)
 }
 
 
-
 static inline
 double radfield_get_bin_nu_lower(int modelgridindex, int binindex)
 {
@@ -275,6 +274,7 @@ void radfield_close_file(void)
   //free(radfieldbins);
 }
 
+
 void radfield_zero_estimators(int modelgridindex)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
@@ -295,6 +295,7 @@ void radfield_zero_estimators(int modelgridindex)
   radfield_set_J_normfactor(modelgridindex, -1.0);
   printout("done.\n");
 }
+
 
 inline
 void radfield_update_estimators(int modelgridindex, double distance,
@@ -428,7 +429,7 @@ static double integrate_planck(double T_R, double nu_lower, double nu_upper, enu
   //double error = 0.0;
   double integratoraccuracy = 1e-10;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(131072);
 
   gsl_planck_integral_paras intparas;
   intparas.T_R = T_R;
@@ -439,7 +440,7 @@ static double integrate_planck(double T_R, double nu_lower, double nu_upper, enu
   F_plank.function = &gsl_integrand_planck;
   F_plank.params = &intparas;
   gsl_integration_qag(&F_plank, nu_lower, nu_upper, 0.,
-                      integratoraccuracy, 65536, 6, w, &integral,
+                      integratoraccuracy, 131072, 6, w, &integral,
                       error);
 
   gsl_integration_workspace_free(w);
