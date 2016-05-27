@@ -319,6 +319,7 @@ int syn_gamma_init(double time)
       rays[n].status = WAITING;
 
       get_velocity(rays[n].rstart, vel_vec, tin);
+      double dlognusyn = (log(nusyn_max) - log(nusyn_min))/NSYN;
       for (int i = 0; i < NSYN; i++)
       {
         rays[n].nu_rf[i] = (nusyn_min) * exp(i * dlognusyn);

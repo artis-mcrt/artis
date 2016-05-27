@@ -2382,7 +2382,6 @@ void read_parameterfile(int rank)
   fscanf(input_file, "%g %g", &dum2, &dum3);
   nusyn_min = dum2 * MEV / H; ///lowest frequency to synthesise
   nusyn_max = dum3 * MEV / H; ///highest frequecnt to synthesise
-  dlognusyn = (log(nusyn_max) - log(nusyn_min))/NSYN;
 
   fscanf(input_file, "%d", &dum1); ///number of times for synthesis
   nsyn_time = dum1;

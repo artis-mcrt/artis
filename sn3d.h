@@ -161,11 +161,6 @@ int vgrid_flag;
 #define MLINES 500000    // Increase linelist by this blocksize
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
-#define RHO_UNIFORM 1  // Constant density.
-#define RHO_1D_READ 2  // Read model.
-#define RHO_2D_READ 4  // Read model.
-#define RHO_3D_READ 3  // Read model.
-
 
 double ENICKEL;
 double ECOBALT;
@@ -213,7 +208,16 @@ extern gsl_rng *rng; /// pointer for random number generator
 
 int nxgrid, nygrid, nzgrid; /// actual grid dimensions to use
 int ngrid;
-int grid_type, model_type;
+int grid_type;
+
+enum model_types {
+  RHO_UNIFORM = 1,  // Constant density.
+  RHO_1D_READ = 2,  // Read model.
+  RHO_2D_READ = 4,  // Read model.
+  RHO_3D_READ = 3,  // Read model.
+};
+
+enum model_types model_type;
 
 int nprocs;      /// Global variable which holds the number of MPI processes
 int rank_global; /// Global variable which holds the rank of the active MPI process
@@ -241,7 +245,6 @@ double nu_min_r, nu_max_r; //limits on frequency range for r-pkt spectrum
 
 int ntlcbins; //number of bins for light curve
 
-double dlognusyn; //logarithmic interval for syn
 double nusyn_min, nusyn_max; //limits on range for syn
 int nfake_gam; //# of fake gamma ray lines for syn
 
