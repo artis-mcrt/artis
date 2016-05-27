@@ -209,6 +209,7 @@ int main(int argc, char** argv)
     #define GIT_HASH "UNKNOWN"
   #endif
   printout("ARTIS git branch %s\n",GIT_BRANCH);
+  printout("PKT takes up %d bytes\n",sizeof(PKT));
   #ifdef GIT_VERSION
     printout("Current version: %s\n",GIT_VERSION);
   #endif
@@ -505,7 +506,7 @@ int main(int argc, char** argv)
 
 
       // New simulation
-      if (continue_simulation==0)
+      if (!continue_simulation)
       {
         init_vspecpol();
 

@@ -2477,11 +2477,11 @@ void read_parameterfile(int rank)
   ///MK: end
 
   /// Do we start a new simulation or, continue another one?
-  continue_simulation = 0;          /// Preselection is to start a new simulation
+  continue_simulation = false;          /// Preselection is to start a new simulation
   fscanf(input_file, "%d", &dum1);
   if (dum1 == 1)
   {
-    continue_simulation = 1;        /// Continue simulation if dum1 = 1
+    continue_simulation = true;        /// Continue simulation if dum1 = 1
     printout("input: continue simulation\n");
   }
 

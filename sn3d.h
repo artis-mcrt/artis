@@ -265,7 +265,6 @@ int n_middle_it;
 #define MINPOP 1e-30
 
 PKT pkt[MPKTS];
-//PKT *exchangepkt_ptr;            ///global variable to transfer a local pkt to another function
 
 
 int total_nlte_levels;            ///total number of nlte levels
@@ -322,9 +321,9 @@ LIST gam_line_list;
 
 double syn_dir[3]; // vector pointing from origin to observer
 
-#define NRAYS_SYN 1 // number of rays traced in a syn calculation
+//#define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
-RAY rays[NRAYS_SYN];
+//RAY rays[NRAYS_SYN];
 
 #define MSYN_TIME 100
 int nsyn_time;
@@ -524,7 +523,7 @@ bool homogeneous_abundances;
 ///Constant for van-Regemorter approximation.
 #define C_0 5.465e-11
 
-int continue_simulation;
+bool continue_simulation;
 extern int tid;
 int nthreads;
 double nu_rfcut;

@@ -55,7 +55,7 @@ enum coolingtype {
   COOLINGTYPE_COLLION    = 883,
 };
 
-typedef struct
+typedef struct cellhistorycoolinglist_t
 {
   double contribution;
   enum coolingtype type;
@@ -73,7 +73,7 @@ typedef struct
   HEATINGTYPE_COLLRECOMB = 887,
 };*/
 
-typedef struct
+typedef struct coolingrates_t
 {
   double collisional;
   //double collbb;
@@ -83,7 +83,7 @@ typedef struct
   double adiabatic;
 } coolingrates_t;
 
-typedef struct
+typedef struct heatingrates_t
 {
   double collisional;
   //double collbb;
@@ -111,7 +111,7 @@ typedef struct
 // } samplegridphixslist_t;
 
 
-typedef struct
+typedef struct fullphixslist_t
 {
   double nu_edge;
   double kappa_bf_contr;
@@ -122,7 +122,7 @@ typedef struct
   //double nnlevel;
 } fullphixslist_t;
 
-typedef struct
+typedef struct groundphixslist_t
 {
   double nu_edge;
   //double photoion_contr;
@@ -135,7 +135,7 @@ typedef struct
 } groundphixslist_t;
 
 
-typedef struct
+typedef struct phixslist_t
 {
   fullphixslist_t *restrict allcont;
   groundphixslist_t *restrict groundcont;
@@ -169,7 +169,7 @@ enum cell_boundary {
   NONE = 107,
 };
 
-struct packet
+typedef struct packet
 {
   int where;      /// The grid cell that the packet is in.
   enum packet_type type;       /// Identifies the type of packet (k-, r-, etc.)
@@ -205,8 +205,7 @@ struct packet
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
   int scat_count;  /// WHAT'S THAT???
   int number;     /// A unique number to identify which packet caused potential troubles.
-};
-typedef struct packet PKT;
+} PKT;
 
 enum ma_action {
   MA_ACTION_NONE = 0,
@@ -220,7 +219,7 @@ enum ma_action {
   MA_ACTION_INTERNALUPHIGHER = 8,
 };
 
-typedef struct
+typedef struct mastate_t
 {
   double nnlevel;           /// population number of the active level
   double einstein;
@@ -233,12 +232,11 @@ typedef struct
   int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
   enum ma_action lastaction;           /// Holds information on last action performed by do_ma
 } mastate_t;
-//mastate_t mastate;
 
 
 /// GRID
 ///============================================================================
-typedef struct
+typedef struct compositionlist_entry
 {
   float abundance;         /// Abundance of the element (by mass!).
   float *groundlevelpop;   /// Pointer to an array of floats which contains the groundlevel populations
@@ -249,21 +247,20 @@ typedef struct
   //                         /// of all included ionisation stages for the element.
 } compositionlist_entry;
 
-struct grid
+typedef struct grid
 {
   double pos_init[3]; /// Initial co-ordinates of inner most corner of cell.
   int xyz[3];         /// Integer position of cell in grid.
   int modelgridindex;
-};
-typedef struct grid CELL;
+} CELL;
 
-typedef struct
+typedef struct mgicooling_t
 {
   double *contrib;
 } mgicooling_t;
 
 
-typedef struct
+typedef struct modelgrid_t
 {
   int associated_cells;
   short thick;
@@ -326,13 +323,12 @@ typedef struct
 
 
 #define MGAM_LINES 30 /* Max gamma ray lines per nucleus.*/
-struct gamma_ll
+typedef struct gamma_ll
 {
   int type[3 * MGAM_LINES]; /* is it a Ni, Co or fake line */
   int index[3 * MGAM_LINES]; /* which of the lines of that element is it */
   int total;         /* the total number of lines in the list */
-};
-typedef struct gamma_ll LIST;
+} LIST;
 
 #define NSYN 1 /* number of frequency points in syn calculation */
 
@@ -342,7 +338,7 @@ enum ray_status {
   FINISHED = 3,
 };
 
-struct syn_ray
+typedef struct syn_ray
 {
   double tstart; /* time at which the ray enters the grid */
   double rstart[3]; /* vector position at which the ray enters the grid */
@@ -356,15 +352,14 @@ struct syn_ray
   int lindex[NSYN]; /* array of ray positions in the line list */
   enum cell_boundary last_cross; /* last boundary crossed */
   enum ray_status status; /*WAITING, then ACTIVE then FINISHED*/
-};
-typedef struct syn_ray RAY;
+} RAY;
 
 
 
 /// ATOMIC DATA
 ///============================================================================
 
-typedef struct
+typedef struct transitionlist_entry
 {
   double epsilon;
   int targetlevel;
@@ -381,7 +376,7 @@ typedef struct
 } transitionlist_entry;
 */
 
-typedef struct
+typedef struct phixstarget_entry
 {
   int levelindex;         // index of upper ion level after photoionisation
   float probability;        // fraction of phixs cross section leading to this final level
@@ -392,7 +387,7 @@ typedef struct
   double *restrict bfcooling_coeff;
 } phixstarget_entry;
 
-typedef struct
+typedef struct levellist_entry
 {
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
   float *restrict photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
@@ -437,7 +432,7 @@ typedef struct
 
 } levellist_entry;
 
-typedef struct
+typedef struct ionlist_entry
 {
   levellist_entry *restrict levels;                   /// Carries information for each level: 0,1,...,nlevels-1
   int ionstage;                            /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
@@ -453,7 +448,7 @@ typedef struct
   //ionsphixslist_t *phixslist;
 } ionlist_entry;
 
-typedef struct
+typedef struct elementlist_entry
 {
   ionlist_entry *restrict ions;                       /// Carries information for each ion: 0,1,...,nions-1
   int nions;                               /// Number of ions for the current element
@@ -465,7 +460,7 @@ typedef struct
   float mass;                                /// Atomic mass number in multiple of MH
 } elementlist_entry;
 
-typedef struct
+typedef struct linelist_entry
 {
   double nu;                                 /// Frequency of the line transition
   float einstein_A;
@@ -478,46 +473,25 @@ typedef struct
   int lowerlevelindex;                     /// and lower levels
 } linelist_entry;
 
-typedef struct
+typedef struct bflist_t
 {
   int elementindex;
   int ionindex;
   int levelindex;
 } bflist_t;
 
-typedef struct
+typedef struct nne_solution_paras
 {
   int cellnumber;
 } nne_solution_paras;
 
-typedef struct
-{
-  double t_current;
-  int cellnumber;
-} Te_solution_paras;
-
-
-typedef struct
+typedef struct gslintegration_paras
 {
   double nu_edge;
   float T;
 } gslintegration_paras;
 
-typedef struct
-{
-  float T_e;
-  int cellnumber;
-} gslintegration_ffheatingparas;
-
-typedef struct
-{
-  double nu_edge;
-  int cellnumber;
-} gslintegration_bfheatingparas;
-
-
-
-typedef struct
+typedef struct rpkt_cont_opacity_struct
 {
   double total;
   double es;
@@ -532,7 +506,7 @@ typedef struct
 
 /// Cell history
 ///============================================================================
-typedef struct
+typedef struct coolinglist_contributions
 {
   double contribution;
 } coolinglist_contributions;
@@ -546,7 +520,7 @@ typedef struct
 } chphixstargets_struct;
 
 
-typedef struct
+typedef struct chlevels_struct
 {
   double population;                      /// The level's population
 
@@ -566,17 +540,17 @@ typedef struct
   chphixstargets_struct *restrict chphixstargets;
 } chlevels_struct;
 
-typedef struct
+typedef struct chions_struct
 {
   chlevels_struct *restrict chlevels;              /// Pointer to the ions levellist.
 } chions_struct;
 
-typedef struct
+typedef struct chelements_struct
 {
   chions_struct *restrict chions;                  /// Pointer to the elements ionlist.
 } chelements_struct;
 
-typedef struct
+typedef struct cellhistory_struct
 {
 //  double totalcooling;                    /// Total cooling rate in this cell.
 //  double bfcooling;                       /// Total cooling rate in this cell.
@@ -588,7 +562,7 @@ typedef struct
 } cellhistory_struct;
 
 
-typedef struct
+typedef struct transitions_t
 {
   int *restrict to;
 } transitions_t;

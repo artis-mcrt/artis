@@ -8,6 +8,18 @@
 #include <gsl/gsl_integration.h>
 
 
+typedef struct gslintegration_ffheatingparas
+{
+  float T_e;
+  int cellnumber;
+} gslintegration_ffheatingparas;
+
+typedef struct gslintegration_bfheatingparas
+{
+  double nu_edge;
+  int cellnumber;
+} gslintegration_bfheatingparas;
+
 typedef struct
 {
   int modelgridindex;

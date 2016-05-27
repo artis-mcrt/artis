@@ -10,6 +10,13 @@
 
 
 #ifndef FORCE_LTE
+typedef struct Te_solution_paras
+{
+  double t_current;
+  int cellnumber;
+} Te_solution_paras;
+
+
 static double find_T_e(double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
