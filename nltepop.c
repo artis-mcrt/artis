@@ -1003,7 +1003,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 }*/
 
 
-void read_binding_energies()
+void read_binding_energies(void)
 {
   FILE *binding;
   if ((binding = fopen("binding_energies.txt", "r")) == NULL)
