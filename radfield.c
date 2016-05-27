@@ -6,16 +6,19 @@
 #include <gsl/gsl_sf_debye.h>
 
 //#const int RADFIELDBINCOUNT = 1000;
-#define RADFIELDBINCOUNT 500
+#define RADFIELDBINCOUNT 32
 
 #define nu_lower_first_initial (CLIGHT / (10000e-8))
-#define nu_upper_last_initial (CLIGHT / (50e-8))
+#define nu_upper_last_initial (CLIGHT / (100e-8))
 
 static double nu_lower_first = nu_lower_first_initial;
 
 static double J_normfactor[MMODELGRID + 1];
 
 static bool radfield_initialized = false;
+
+double T_R_min = MINTEMP;
+double T_R_max = MAXTEMP * 4;
 
 typedef enum
 {
@@ -359,11 +362,7 @@ double radfield(double nu, int modelgridindex)
       double W_bin = radfieldbins[modelgridindex][binindex].W;
       if (W_bin >= 0.)
       {
-        if (radfieldbins[modelgridindex][binindex].fit_type == FIT_CONSTANT)
-        {
-            return W_bin;
-        }
-        else
+        if (radfieldbins[modelgridindex][binindex].fit_type == FIT_DILUTED_BLACKBODY)
         {
           double T_R_bin = radfieldbins[modelgridindex][binindex].T_R;
           if (T_R_bin > 0.)
@@ -381,6 +380,10 @@ double radfield(double nu, int modelgridindex)
           //  printout("WARNING: Radfield modelgridindex %d binindex %d has W %g T_R=%g<=0, using W %g T_R %g nu %g\n",
           //           modelgridindex, binindex, W_bin, T_R_bin, W_fullspec, T_R_fullspec, nu);
           //}
+        }
+        else
+        {
+          return W_bin;
         }
       }
       else
@@ -412,8 +415,7 @@ static double gsl_integrand_planck(double nu, void *restrict paras)
   double T_R = ((gsl_planck_integral_paras *) paras)->T_R;
   enum_prefactor prefactor = ((gsl_planck_integral_paras *) paras)->prefactor;
 
-  double integrand = TWOHOVERCLIGHTSQUARED * pow(nu,3) /
-                     (expm1(HOVERKB * nu / T_R));
+  double integrand = TWOHOVERCLIGHTSQUARED * pow(nu,3) / (expm1(HOVERKB * nu / T_R));
 
   if (prefactor == TIMES_NU)
     integrand *= nu;
@@ -426,7 +428,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
 {
   double integral = 0.0;
 
-  /*double error = 0.0;
+  double error = 0.0;
   double integratoraccuracy = 1e-8;
 
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
@@ -442,7 +444,15 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   gsl_set_error_handler_off();
   gsl_integration_qag(&F_plank, nu_lower, nu_upper, 0., integratoraccuracy, 65536, 6, w, &integral, &error);
 
-  gsl_integration_workspace_free(w);*/
+  gsl_integration_workspace_free(w);
+
+  return integral;
+}
+
+
+static double planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor)
+{
+  double integral = 0.0;
 
   if (prefactor == TIMES_NU)
   {
@@ -455,6 +465,26 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
     double debye_upper = gsl_sf_debye_3(HOVERKB * nu_upper / T_R) * pow(nu_upper,3);
     double debye_lower = gsl_sf_debye_3(HOVERKB * nu_lower / T_R) * pow(nu_lower,3);
     integral = TWOHOVERCLIGHTSQUARED * (debye_upper - debye_lower) * T_R / HOVERKB / 3;
+
+    if (integral == 0.)
+    {
+      /*double upperexp = exp(HOVERKB * nu_upper / T_R);
+      double upperint = - pow(nu_upper,4) / 4
+                        + pow(nu_upper,3) * log(1 - upperexp) / HOVERKB
+                        + 3 * pow(nu_upper,2) * polylog(2,upperexp) / pow(HOVERKB,2)
+                        - 6 * nu_upper * polylog(3,upperexp) / pow(HOVERKB,3)
+                        + 6 * polylog(4,upperexp) / pow(HOVERKB,4);
+      double lowerexp = exp(HOVERKB * nu_lower / T_R);
+      double lowerint = - pow(nu_lower,4) / 4
+                        + pow(nu_lower,3) * log(1 - lowerexp) / HOVERKB
+                        + 3 * pow(nu_lower,2) * polylog(2,lowerexp) / pow(HOVERKB,2)
+                        - 6 * nu_lower * polylog(3,lowerexp) / pow(HOVERKB,3)
+                        + 6 * polylog(4,lowerexp) / pow(HOVERKB,4);
+      double integral2 = TWOHOVERCLIGHTSQUARED * (upperint - lowerint);
+
+      printout("planck_integral_analytic is zero. debye_upper %g debye_lower %g. Test alternative %g\n",
+               debye_upper,debye_lower,integral2);*/
+    }
   }
 
   return integral;
@@ -476,20 +506,33 @@ static double delta_nu_bar(double T_R, void *restrict paras)
   double nu_bar = nuJ_bin_raw / J_bin_raw;
 
 
-  double debye_upper_timesnu = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper,4);
+  //avoid calling planck_integral and simplify the expression
+  /*double debye_upper_timesnu = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper,4);
   double debye_lower_timesnu = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower,4);
   double debye_upper = gsl_sf_debye_3(HOVERKB * nu_upper / T_R) * pow(nu_upper,3);
   double debye_lower = gsl_sf_debye_3(HOVERKB * nu_lower / T_R) * pow(nu_lower,3);
-  double nu_bar_plank = (debye_upper_timesnu - debye_lower_timesnu) / (debye_upper - debye_lower) * 3 / 4;
+  double nu_bar_planck = (debye_upper_timesnu - debye_lower_timesnu) / (debye_upper - debye_lower) * 3 / 4;*/
 
-  /*double nu_times_plank_integral = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
-  double plank_integral = planck_integral(T_R, nu_lower, nu_upper, ONE);
-  double nu_bar_plank = nu_times_plank_integral / plank_integral;*/
+  double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, TIMES_NU);
+  double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, ONE);
+  double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
 
   //printout("nu_bar %g nu_bar_plank(T=%g) %g\n",nu_bar,T_R,nu_bar_plank);
 
-  double delta_nu_bar = nu_bar_plank - nu_bar;
+  if (!isfinite(nu_bar_planck))
+  {
+    double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
+    double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
+    double nu_bar_planck_numerical = nu_times_planck_numerical / planck_integral_numerical;
+
+    printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n",nu_bar_planck,nu_bar_planck_numerical);
+    nu_bar_planck = nu_bar_planck_numerical;
+  }
+
+  double delta_nu_bar = nu_bar_planck - nu_bar;
   //double delta_nu_bar = nu_bar_plank / nu_bar - 1.0;
+
+  //printout("delta_nu_bar %g nu_bar_planck %g\n",delta_nu_bar,nu_bar_planck);
 
   return delta_nu_bar;
 }
@@ -501,26 +544,7 @@ static double find_T_R(int modelgridindex, int binindex)
   int maxit = 100;
   double T_R = 0.0;
 
-  double T_R_min = MINTEMP;
-  double T_R_max = MAXTEMP * 4;
-
-  //gsl_root_fsolver *solver;
-  //solver = gsl_root_fsolver_alloc(solvertype);
-  //mintemp_f.function = &mintemp_solution_f;
-  //maxtemp_f.function = &maxtemp_solution_f;
-
-  ///onedimensional gsl root solver, derivative type
-  /*const gsl_root_fdfsolver_type *solvertype;
-     solvertype = gsl_root_fdfsolver_newton;
-     gsl_root_fdfsolver *solver;
-     solver = gsl_root_fdfsolver_alloc(solvertype);
-
-     gsl_function_fdf fdf;
-     fdf.f = &nne_solution_f;
-     fdf.df = &nne_solution_deriv;
-     fdf.fdf = &nne_solution_fdf;*/
-
-  ///onedimensional gsl root solver, bracketing type
+  ///one dimensional gsl root solver, bracketing type
   const gsl_root_fsolver_type *solvertype;
   gsl_root_fsolver *T_R_solver;
   solvertype = gsl_root_fsolver_brent;
@@ -537,7 +561,7 @@ static double find_T_R(int modelgridindex, int binindex)
   double delta_nu_bar_min = delta_nu_bar(T_R_min,find_T_R_f.params);
   double delta_nu_bar_max = delta_nu_bar(T_R_max,find_T_R_f.params);
 
-  printout("call_T_R_finder: bin %d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
+  printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
            binindex, delta_nu_bar_min,delta_nu_bar_max);
 
   if (!isfinite(delta_nu_bar_min) || !isfinite(delta_nu_bar_max))
@@ -559,13 +583,11 @@ static double find_T_R(int modelgridindex, int binindex)
       T_R = gsl_root_fsolver_root(T_R_solver);
       //cell[cellnumber].T_e = T_e;
 
-      T_R_min = gsl_root_fsolver_x_lower(T_R_solver);
-      T_R_max = gsl_root_fsolver_x_upper(T_R_solver);
-      status = gsl_root_test_interval(T_R_min,T_R_max,0,fractional_accuracy);
-      printout(
-        "call_T_R_finder: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status %d\n",
-        binindex,iteration_num,T_R_min,T_R_max,T_R,delta_nu_bar(T_R,&paras),
-        status);
+      double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
+      double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
+      status = gsl_root_test_interval(T_R_lower,T_R_upper,0,fractional_accuracy);
+      printout("call_T_R_finder: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status %d\n",
+               binindex,iteration_num,T_R_lower,T_R_upper,T_R,delta_nu_bar(T_R,&paras),status);
     }
     while (status == GSL_CONTINUE && iteration_num < maxit);
 
@@ -575,22 +597,19 @@ static double find_T_R(int modelgridindex, int binindex)
 
     gsl_root_fsolver_free(T_R_solver);
   }
-  /// Quick solver style: works if we can assume that there is either one or no
-  /// solution on [MINTEM.MAXTEMP] (check that by doing a plot of heating-cooling
-  /// vs. T_e using the tb_info switch)
   else if (delta_nu_bar_max < 0)
   {
     /// Thermal balance equation always negative ===> T_R = T_min
     /// Calculate the rates again at this T_e to print them to file
-    T_R = MINTEMP;
-    printout("call_T_R_finder: bin %4d no solution in interval, clamping to MINTEMP\n",
-             binindex);
+    T_R = T_R_max;
+    printout("find_T_R: bin %4d no solution in interval, clamping to T_R_max=%g\n",
+             binindex,T_R_max);
   }
   else
   {
-    T_R = MAXTEMP;
-    printout("call_T_R_finder: bin %4d no solution in interval, clamping to MAXTEMP\n",
-             binindex);
+    T_R = T_R_min;
+    printout("find_T_R: bin %4d no solution in interval, clamping to T_R_min=%g\n",
+             binindex,T_R_min);
   }
 
   return T_R;
@@ -641,24 +660,21 @@ void radfield_fit_parameters(int modelgridindex)
 
         if (W_bin > 1e2)
         {
-          printout("W %g too high, try setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",W_bin,binindex,MAXTEMP,plank_integral);
-          double plank_integral = planck_integral(MAXTEMP, nu_lower, nu_upper, ONE);
+          printout("W %g too high, try setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",W_bin,binindex,T_R_max,plank_integral);
+          double plank_integral = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
           W_bin = J_bin / plank_integral;
           if (W_bin > 1e2)
           {
-            printout("W still too high %g\n",W_bin);
+            printout("W still very high, W=%g. Continuing...\n",W_bin);
             T_R_bin = -99.0;
             W_bin = 0.;
-            abort();
           }
         }
       }
       else //if (radfieldbins[modelgridindex][binindex].fit_type == FIT_CONSTANT)
       {
-        double delta_nu = nu_upper - nu_lower;
-
         T_R_bin = -1;
-        W_bin = J_bin / delta_nu;
+        W_bin = J_bin / (nu_upper - nu_lower);
       }
     }
     radfieldbins[modelgridindex][binindex].T_R = T_R_bin;
@@ -670,7 +686,7 @@ void radfield_fit_parameters(int modelgridindex)
     double J_bin = radfield_get_bin_J(modelgridindex,binindex);
     double T_R_bin = radfield_get_bin_T_R(modelgridindex,binindex);
     double W_bin = radfield_get_bin_W(modelgridindex,binindex);
-    printout("bin %d: J %g, T_R %g, W %g\n",
+    printout("bin %4d: J %g, T_R %7.1f, W %12.5e\n",
            binindex, J_bin, T_R_bin, W_bin);
   }
 }
