@@ -207,8 +207,8 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
 {
   double t_current = t1; //this will keep track of time in the calculation
 
-  int end_packet = 0; //tells us when to stop working on this packet
-  while (end_packet == 0)
+  bool end_packet = false; //tells us when to stop working on this packet
+  while (!end_packet)
   {
     /* Assign optical depth to next physical event. And start counter of
     optical depth for this path.*/
@@ -342,7 +342,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       t_current = t2;
       move_pkt(pkt_ptr,tdist,t_current);
       tdist = tdist * 2.;
-      end_packet = 1;
+      end_packet = true;
     }
     else if ((edist < sdist) && (edist < tdist))
     {
@@ -420,4 +420,82 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     }
   }
   return PACKET_SAME;
+}
+
+
+double get_gam_freq(const LIST *restrict line_list, int n)
+{
+  double freq;
+
+  if (n == RED_OF_LIST)
+  {
+    return 0.0;
+  }
+  /* returns the frequency of line n */
+  else if (line_list->type[n] == NI_GAM_LINE_ID)
+  {
+    freq = nickel_spec.energy[line_list->index[n]] / H;
+  }
+  else if (line_list->type[n] == CO_GAM_LINE_ID)
+  {
+    freq = cobalt_spec.energy[line_list->index[n]] / H;
+  }
+  else if (line_list->type[n] == FAKE_GAM_LINE_ID)
+  {
+    freq = fakeg_spec.energy[line_list->index[n]] / H;
+  }
+  else if (line_list->type[n] == CR48_GAM_LINE_ID)
+  {
+    freq = cr48_spec.energy[line_list->index[n]] / H;
+  }
+  else if (line_list->type[n] == V48_GAM_LINE_ID)
+  {
+    freq = v48_spec.energy[line_list->index[n]] / H;
+  }
+  else
+  {
+    printout("Unknown line. %d Abort.\n", n);
+    printout("line_list->type[n] %d line_list->index[n] %d\n", line_list->type[n], line_list->index[n]);
+    printout(" %d %d \n", gam_line_list.type[n], gam_line_list.index[n]);
+    exit(0);
+  }
+
+  return freq;
+}
+
+
+int get_nul(double freq)
+{
+  double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
+  double freq_min = get_gam_freq(&gam_line_list, 0);
+
+  if (freq > freq_max)
+  {
+    return(gam_line_list.total-1);
+  }
+  else if (freq < freq_min)
+  {
+    return(RED_OF_LIST);
+  }
+  else
+  {
+    int too_high = gam_line_list.total - 1;
+    int too_low = 0;
+
+    while (too_high != too_low + 1)
+  	{
+  	  int try = (too_high + too_low)/2;
+  	  double freq_try = get_gam_freq(&gam_line_list, try);
+  	  if (freq_try >= freq)
+	    {
+	      too_high = try;
+	    }
+  	  else
+	    {
+	      too_low = try;
+	    }
+  	}
+
+    return too_low;
+  }
 }

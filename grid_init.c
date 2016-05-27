@@ -142,7 +142,7 @@
 }*/
 
 
-static int density_1d_read(void)
+static void density_1d_read(void)
 /// Routine for doing a density grid read from a 1-D model.
 {
   //int renorm[MMODELGRID];
@@ -657,12 +657,10 @@ static int density_1d_read(void)
 
   printout("Grey normalisation check: %g\n", check1/check2);
   printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN);
-
-  return 0;
 }
 
 
-static int density_2d_read(void)
+static void density_2d_read(void)
 /// Routine for doing a density grid read from a 2-D model.
 {
   double radial_pos;
@@ -924,12 +922,10 @@ static int density_2d_read(void)
 
   printout("Grey normalisation check: %g\n", check1/check2);
   printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN);
-
-  return 0;
 }
 
 
-static int density_3d_read ()
+static void density_3d_read ()
 /// Routine for doing a density grid read from a 3-D model.
 {
   rho_sum = 0.0;
@@ -1171,8 +1167,6 @@ static int density_3d_read ()
 
   printout("Initial densities taken from readin.\n");
   printout("Grey normalisation check: %g\n", check1/check2);
-
-  return 0;
 }
 
 
@@ -1400,7 +1394,6 @@ static void abundances_3d_read(void)
 }
 
 
-///***************************************************************************/
 static void abundances_1d_read(void)
 {
   /// Open the abundances file

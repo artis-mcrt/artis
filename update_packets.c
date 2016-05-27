@@ -24,8 +24,8 @@ static int compare_packets_bymodelgriddensity(const void *restrict p1, const voi
 }
 
 
+void update_packets(int nts)
 /** Subroutine to move the packets and update them during the currect timestep. */
-int update_packets(int nts)
 ///nts the time step we're doing
 {
   //double n_1;
@@ -208,7 +208,6 @@ int update_packets(int nts)
 
   printout("end of update_packets parallel for loop %d\n",time(NULL));
   //printout("[debug] update_packets: packet %d updated for timestep %d\n",n,nts);
-  return 0;
 }
 
 

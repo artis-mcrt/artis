@@ -121,7 +121,7 @@ static double thomson_angle(void)
 }
 
 
-int com_sca(PKT *pkt_ptr, double t_current)
+void com_sca(PKT *pkt_ptr, double t_current)
 // Routine to deal with physical Compton scattering event.
 {
   double f;
@@ -245,6 +245,4 @@ int com_sca(PKT *pkt_ptr, double t_current)
     pkt_ptr->type = TYPE_EMINUS;
     pkt_ptr->absorptiontype = -3;
   }
-
-  return 0;
 }

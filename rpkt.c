@@ -463,8 +463,8 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
   //printout("[debug] r-pkt propagation init\n");
   //int it = 1;
 
-  int end_packet = 0; ///means "keep working"
-  while (end_packet == 0)
+  bool end_packet = false; ///means "keep working"
+  while (!end_packet)
   {
 
     /*
@@ -658,7 +658,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
         /// find the next possible line interaction.
         if (find_nextline == 1)
           closest_transition_empty(pkt_ptr);
-        end_packet = 1;
+        end_packet = true;
       }
       else if ((edist < sdist) && (edist < tdist))
       {
@@ -1556,8 +1556,8 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
   //printout("[debug] r-pkt propagation init\n");
   //int it = 1;
 
-  int end_packet = 0; ///means "keep working"
-  while (end_packet == 0)
+  bool end_packet = false; ///means "keep working"
+  while (!end_packet)
   {
 
     /*
@@ -1695,7 +1695,7 @@ double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
         #ifdef DEBUG_ON
           pkt_ptr->last_event = pkt_ptr->last_event + 1000;
         #endif
-        end_packet = 1;
+        end_packet = true;
       }
       else if ((edist < sdist) && (edist < tdist))
       {

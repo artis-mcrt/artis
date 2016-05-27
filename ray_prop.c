@@ -1,9 +1,9 @@
 #include "sn3d.h"
 #include "boundary.h"
 #include "emissivities.h"
+#include "gamma.h"
 #include "grey_emissivities.h"
 #include "move.h"
-#include "ray_prop.h"
 #include "vectors.h"
 
 /* Master routine for moving along ray. When it called,
@@ -14,7 +14,7 @@
 {
   double t_current = t1;
 
-  int end_packet = 0;  //means "keep working"
+  bool end_packet = 0;  //means "keep working"
   while (end_packet == 0)
   {
     // Start by sorting out what sort of packet it is.
@@ -47,7 +47,7 @@
   return 0;
 }*/
 
-static int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double single_t)
+static void move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos, double single_t)
 {
   if (dist < 0)
   {
@@ -65,12 +65,10 @@ static int move_one_ray(RAY *ray_ptr, int nray, double dist, double *single_pos,
   ray_ptr->nu_cmf[nray] = ray_ptr->nu_rf[nray] * doppler(syn_dir, vel_vec);
   // again, rmoving next line since e_cmf seems redundant.
   //ray_ptr->e_cmf[nray] = ray_ptr->e_rf[nray] * ray_ptr->nu_cmf[nray] / ray_ptr->nu_rf[nray];
-
-  return 0;
 }
 
 
-static int change_cell_ray(RAY *ray_ptr, int snext, int *end_packet, double t_current)
+static void change_cell_ray(RAY *ray_ptr, int snext, bool *end_packet, double t_current)
 {
   PKT dummy;
 
@@ -85,22 +83,20 @@ static int change_cell_ray(RAY *ray_ptr, int snext, int *end_packet, double t_cu
   change_cell(&dummy, snext, end_packet, t_current);
 
   if (dummy.type == TYPE_GAMMA)
-    {
-      ray_ptr->where = dummy.where;
-      ray_ptr->pos[0] = dummy.pos[0];
-      ray_ptr->pos[1] = dummy.pos[1];
-      ray_ptr->pos[2] = dummy.pos[2];
-    }
+  {
+    ray_ptr->where = dummy.where;
+    ray_ptr->pos[0] = dummy.pos[0];
+    ray_ptr->pos[1] = dummy.pos[1];
+    ray_ptr->pos[2] = dummy.pos[2];
+  }
   else if (dummy.type == TYPE_ESCAPE)
-    {
-      ray_ptr->status = FINISHED;
-    }
-
-  return 0;
+  {
+    ray_ptr->status = FINISHED;
+  }
 }
 
-/**************************************************/
-static int copy_ray (const RAY *ray1, RAY *ray2)
+
+static void copy_ray (const RAY *ray1, RAY *ray2)
 {
   ray2->last_cross = ray1->last_cross;
   ray2->where = ray1->where;
@@ -120,12 +116,10 @@ static int copy_ray (const RAY *ray1, RAY *ray2)
     ray2->e_rf[n] = ray1->e_rf[n];
     ray2->e_cmf[n] = ray1->e_cmf[n];
   }
-
-  return 0;
 }
 
-/**********************************************/
-static int move_ray(RAY *ray_ptr, double dist, double time)
+
+static void move_ray(RAY *ray_ptr, double dist, double time)
 {
   /* just make a dummy packet and use move. */
 
@@ -158,8 +152,6 @@ static int move_ray(RAY *ray_ptr, double dist, double time)
     /* removing next line (Jan06) since e_cmf seems redundant for rays. */
     //      ray_ptr->e_cmf[n] = ray_ptr->e_rf[n] * doppler_fac;
   }
-
-  return 0;
 }
 
 
@@ -189,7 +181,7 @@ static double boundary_cross_ray(RAY *ray_ptr, double tstart, int *snext)
 }
 
 
-double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
+static double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 {
   double t_current = t1; //this will keep track of time in the calculation
 
@@ -201,8 +193,8 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
     ray_ptr->lindex[nray] = lindex;
   }
 
-  int end_packet = 0; //tells us when to stop working on this ray
-  while (end_packet == 0)
+  bool end_packet = false; //tells us when to stop working on this ray
+  while (!end_packet)
   {
       /* Start by finding the distance to the crossing of the grid cell
          boundaries. sdist is the boundary distance and snext is the
@@ -369,7 +361,7 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 
     if (tdist < sdist)
     {
-      end_packet = 1;
+      end_packet = true;
     }
     else
     {
@@ -381,79 +373,3 @@ double do_gamma_ray(RAY *ray_ptr, double t1, double t2)
 }
 
 
-int get_nul(double freq)
-{
-  double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
-  double freq_min = get_gam_freq(&gam_line_list, 0);
-
-  if (freq > freq_max)
-  {
-    return(gam_line_list.total-1);
-  }
-  else if (freq < freq_min)
-  {
-    return(RED_OF_LIST);
-  }
-  else
-  {
-    int too_high = gam_line_list.total - 1;
-    int too_low = 0;
-
-    while (too_high != too_low + 1)
-  	{
-  	  int try = (too_high + too_low)/2;
-  	  double freq_try = get_gam_freq(&gam_line_list, try);
-  	  if (freq_try >= freq)
-	    {
-	      too_high = try;
-	    }
-  	  else
-	    {
-	      too_low = try;
-	    }
-  	}
-
-    return too_low;
-  }
-}
-
-/**************************************************************/
-double get_gam_freq(const LIST *restrict line_list, int n)
-{
-  double freq;
-
-  if (n == RED_OF_LIST)
-  {
-    return 0.0;
-  }
-  /* returns the frequency of line n */
-  else if (line_list->type[n] == NI_GAM_LINE_ID)
-  {
-    freq = nickel_spec.energy[line_list->index[n]] / H;
-  }
-  else if (line_list->type[n] == CO_GAM_LINE_ID)
-  {
-    freq = cobalt_spec.energy[line_list->index[n]] / H;
-  }
-  else if (line_list->type[n] == FAKE_GAM_LINE_ID)
-  {
-    freq = fakeg_spec.energy[line_list->index[n]] / H;
-  }
-  else if (line_list->type[n] == CR48_GAM_LINE_ID)
-  {
-    freq = cr48_spec.energy[line_list->index[n]] / H;
-  }
-  else if (line_list->type[n] == V48_GAM_LINE_ID)
-  {
-    freq = v48_spec.energy[line_list->index[n]] / H;
-  }
-  else
-  {
-    printout("Unknown line. %d Abort.\n", n);
-    printout("line_list->type[n] %d line_list->index[n] %d\n", line_list->type[n], line_list->index[n]);
-    printout(" %d %d \n", gam_line_list.type[n], gam_line_list.index[n]);
-    exit(0);
-  }
-
-  return freq;
-}

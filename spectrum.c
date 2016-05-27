@@ -3,12 +3,6 @@
 #include "spectrum.h"
 #include "vectors.h"
 
-// private functions
-static void init_spectrum(void);
-static int add_to_spec(const EPKT *pkt_ptr);
-static int add_to_spec_res(EPKT *pkt_ptr, int current_abin);
-
-
 /*int make_spectrum()
 /// Routine to make a MC spectrum from the packets.
 {
@@ -20,7 +14,7 @@ static int add_to_spec_res(EPKT *pkt_ptr, int current_abin);
 
 
 /*******************************************************/
-int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
+void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
 {
   //FILE *spec_file,*emission_file;
 
@@ -101,100 +95,11 @@ int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
   fclose(spec_file);
   fclose(emission_file);
   */
-  return 0;
 }
 
 
-/**********************************************************************/
-static void init_spectrum(void)
-{
-  if (nnubins > MNUBINS)
-  {
-    printout("Too many frequency bins in spectrum - reducing.\n");
-    nnubins = MNUBINS;
-  }
-  if (ntbins > MTBINS)
-  {
-    printout("Too many time bins in spectrum - reducing.\n");
-    ntbins = MTBINS;
-  }
-
-  /** start by setting up the time and frequency bins. */
-  /** it is all done interms of a logarithmic spacing in both t and nu - get the
-  step sizes first. */
-  ///Should be moved to input.c or exspec.c
-  dlogt = (log(tmax) - log(tmin))/ntbins;
-  dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
-
-  for (int n = 0; n < ntbins; n++)
-  {
-    spectra[n].lower_time = exp( log(tmin) + (n * (dlogt)));
-    spectra[n].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - spectra[n].lower_time;
-    for (int m = 0; m < nnubins; m++)
-    {
-      spectra[n].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
-      spectra[n].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - spectra[n].lower_freq[m];
-      spectra[n].flux[m] = 0.0;
-      for (int i = 0; i < 2*nelements*maxion+1; i++)
-        spectra[n].stat[m].emission[i] = 0;  ///added
-      for (int i = 0; i < nelements*maxion; i++)
-        spectra[n].stat[m].absorption[i] = 0;  ///added
-    }
-  }
-}
-
-int gather_spectrum(int depth)
-{
-  //void read_packets(FILE *packets_file);
-  EPKT *pkt_ptr;
-  //int i,n,m,p;
-  //PKT *pkt_ptr;
-  //int add_to_spec();
-
-  /// Set up the spectrum grid and initialise the bins to zero.
-  init_spectrum();
-
-  if (depth < 0)
-  {
-    /// Do not extract depth-dependent spectra
-    /// Now add the energy of all the escaping packets to the
-    /// appropriate bins.
-    for (int p = 0; p < nepkts; p++)
-    {
-      pkt_ptr = &epkts[p];
-      add_to_spec(pkt_ptr);
-    }
-  }
-  else
-  {
-    /// Extract depth-dependent spectra
-    /// Set velocity cut
-    double vcut;
-    if (depth < 9)
-      vcut = (depth+1.)*vmax/10.;
-    else
-      vcut = 100*vmax;     /// Make sure that all escaping packets are taken for
-                        /// depth=9 . For 2d and 3d models the corners of a
-                        /// simulation box contain material with v>vmax.
-
-    /// Now add the energy of all the escaping packets to the
-    /// appropriate bins.
-    for (int p = 0; p < nepkts; p++)
-    {
-      pkt_ptr = &epkts[p];
-      double vem = sqrt(pow(pkt_ptr->em_pos[0],2)+pow(pkt_ptr->em_pos[1],2)+pow(pkt_ptr->em_pos[2],2))/pkt_ptr->em_time;
-      //printout("vem %g, vcut %g, vmax %g, time %d\n",vem,vcut,vmax,pkt_ptr->em_time);
-      if (vem < vcut) add_to_spec(pkt_ptr);
-    }
-  }
-
-  return 0;
-}
-
-
-/**********************************************************************/
+static void add_to_spec(const EPKT *pkt_ptr)
 /*Routine to add a packet to the outcoming spectrum.*/
-static int add_to_spec(const EPKT *pkt_ptr)
 {
   /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
   int at,element,ion,nproc;
@@ -249,37 +154,95 @@ static int add_to_spec(const EPKT *pkt_ptr)
       }
     }
   }
-
-  return 0;
 }
 
 
+static void init_spectrum(void)
+{
+  if (nnubins > MNUBINS)
+  {
+    printout("Too many frequency bins in spectrum - reducing.\n");
+    nnubins = MNUBINS;
+  }
+  if (ntbins > MTBINS)
+  {
+    printout("Too many time bins in spectrum - reducing.\n");
+    ntbins = MTBINS;
+  }
 
-/***********************************************/
-int gather_spectrum_res(int current_abin)
+  /** start by setting up the time and frequency bins. */
+  /** it is all done interms of a logarithmic spacing in both t and nu - get the
+  step sizes first. */
+  ///Should be moved to input.c or exspec.c
+  dlogt = (log(tmax) - log(tmin))/ntbins;
+  dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
+
+  for (int n = 0; n < ntbins; n++)
+  {
+    spectra[n].lower_time = exp( log(tmin) + (n * (dlogt)));
+    spectra[n].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - spectra[n].lower_time;
+    for (int m = 0; m < nnubins; m++)
+    {
+      spectra[n].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
+      spectra[n].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - spectra[n].lower_freq[m];
+      spectra[n].flux[m] = 0.0;
+      for (int i = 0; i < 2*nelements*maxion+1; i++)
+        spectra[n].stat[m].emission[i] = 0;  ///added
+      for (int i = 0; i < nelements*maxion; i++)
+        spectra[n].stat[m].absorption[i] = 0;  ///added
+    }
+  }
+}
+
+void gather_spectrum(int depth)
 {
   //void read_packets(FILE *packets_file);
-  //int i,n,m,nn,p;
   EPKT *pkt_ptr;
+  //int i,n,m,p;
+  //PKT *pkt_ptr;
+  //int add_to_spec();
 
   /// Set up the spectrum grid and initialise the bins to zero.
   init_spectrum();
 
-  /// Now add the energy of all the escaping packets to the
-  /// appropriate bins.
-  for (int p = 0; p < nepkts; p++)
+  if (depth < 0)
   {
-    pkt_ptr = &epkts[p];
-    add_to_spec_res(pkt_ptr,current_abin);
+    /// Do not extract depth-dependent spectra
+    /// Now add the energy of all the escaping packets to the
+    /// appropriate bins.
+    for (int p = 0; p < nepkts; p++)
+    {
+      pkt_ptr = &epkts[p];
+      add_to_spec(pkt_ptr);
+    }
   }
+  else
+  {
+    /// Extract depth-dependent spectra
+    /// Set velocity cut
+    double vcut;
+    if (depth < 9)
+      vcut = (depth+1.)*vmax/10.;
+    else
+      vcut = 100*vmax;     /// Make sure that all escaping packets are taken for
+                        /// depth=9 . For 2d and 3d models the corners of a
+                        /// simulation box contain material with v>vmax.
 
-  return 0;
+    /// Now add the energy of all the escaping packets to the
+    /// appropriate bins.
+    for (int p = 0; p < nepkts; p++)
+    {
+      pkt_ptr = &epkts[p];
+      double vem = sqrt(pow(pkt_ptr->em_pos[0],2)+pow(pkt_ptr->em_pos[1],2)+pow(pkt_ptr->em_pos[2],2))/pkt_ptr->em_time;
+      //printout("vem %g, vcut %g, vmax %g, time %d\n",vem,vcut,vmax,pkt_ptr->em_time);
+      if (vem < vcut) add_to_spec(pkt_ptr);
+    }
+  }
 }
 
 
-/**********************************************************************/
+static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
 /**Routine to add a packet to the outcoming spectrum.*/
-static int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
@@ -377,6 +340,26 @@ static int add_to_spec_res(EPKT *pkt_ptr, int current_abin)
       }
     }
   }
-
-  return 0;
 }
+
+
+void gather_spectrum_res(int current_abin)
+{
+  //void read_packets(FILE *packets_file);
+  //int i,n,m,nn,p;
+  EPKT *pkt_ptr;
+
+  /// Set up the spectrum grid and initialise the bins to zero.
+  init_spectrum();
+
+  /// Now add the energy of all the escaping packets to the
+  /// appropriate bins.
+  for (int p = 0; p < nepkts; p++)
+  {
+    pkt_ptr = &epkts[p];
+    add_to_spec_res(pkt_ptr,current_abin);
+  }
+
+}
+
+

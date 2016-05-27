@@ -6,5 +6,7 @@
 int pellet_decay(int nts, PKT *pkt_ptr);
 int choose_gamma_ray(PKT *pkt_ptr);
 double do_gamma(PKT *restrict pkt_ptr, double t1, double t2);
+double get_gam_freq(const LIST *restrict line_list, int n);
+int get_nul(double freq);
 
 #endif //GAMMA_H

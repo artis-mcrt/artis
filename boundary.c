@@ -5,7 +5,7 @@
 #include "update_packets.h"
 
 
-double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
+double boundary_cross(PKT *restrict pkt_ptr, double tstart, int *snext)
 /// Basic routine to compute distance to a call boundary.
 {
   //double close, close_try;
@@ -345,7 +345,7 @@ double boundary_cross(PKT *pkt_ptr, double tstart, int *snext)
 
 ///****************************************************************************
 /// Routine to take a packet across a boundary.
-void change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
+void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_current)
 {
   //void copy_populations_to_phixslist();
   //void calculate_kpkt_rates(int cellnumber);
@@ -367,7 +367,7 @@ void change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
     pkt_ptr->escape_time = t_current;
     pkt_ptr->type = TYPE_ESCAPE;
     nesc += 1;
-    *end_packet = 1;
+    *end_packet = true;
   }
   else
   {
@@ -524,7 +524,7 @@ void change_cell(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
 
 ///****************************************************************************
 /// Routine to take a VIRTUAL packet across a boundary.
-int change_cell_vpkt(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
+int change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
 {
   //int element, ion, level;
 
@@ -543,7 +543,7 @@ int change_cell_vpkt(PKT *pkt_ptr, int snext, int *end_packet, double t_current)
       pkt_ptr->escape_type = pkt_ptr->type;
       pkt_ptr->escape_time = t_current;
       pkt_ptr->type = TYPE_ESCAPE;
-      *end_packet = 1;
+      *end_packet = true;
       return(0);
   }
   else

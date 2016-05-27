@@ -3,11 +3,11 @@
 //#include <stdlib.h>
 #include "sn3d.h"
 #include "atomic.h"
+#include "gamma.h"
 #include "grid_init.h"
 #include "input.h"
 #include "linelist.h"
 #include "nltepop.h"
-#include "ray_prop.h"
 #include "rpkt.h"
 #ifdef DO_EXSPEC
   #include "exspec.h"

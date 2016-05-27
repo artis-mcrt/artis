@@ -111,9 +111,9 @@ void move_pkt(PKT *restrict pkt_ptr, double distance, double time)
   }
 
   //printout("Move distance %g\n", distance);
-  pkt_ptr->pos[0] = pkt_ptr->pos[0] + (pkt_ptr->dir[0] * distance);
-  pkt_ptr->pos[1] = pkt_ptr->pos[1] + (pkt_ptr->dir[1] * distance);
-  pkt_ptr->pos[2] = pkt_ptr->pos[2] + (pkt_ptr->dir[2] * distance);
+  pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
+  pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
+  pkt_ptr->pos[2] += (pkt_ptr->dir[2] * distance);
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.

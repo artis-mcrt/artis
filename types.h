@@ -179,7 +179,6 @@ typedef struct packet
   int last_event;  /// debug: stores information about the packets history
   double pos[3];  /// Position of the packet (x,y,z).
   double dir[3];  /// Direction of propagation. (x,y,z). Always a unit vector.
-  double tdecay;  /// Time at which pellet decays.
   double e_cmf;   /// The energy the packet carries in the co-moving frame.
   double e_rf;    /// The energy the packet carries in the rest frame.
   double nu_cmf;  /// The frequency in the co-moving frame.
@@ -201,6 +200,7 @@ typedef struct packet
   double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
   enum packet_type escape_type; /// Flag to tell us in which form it escaped from the grid.
+  double tdecay;  /// Time at which pellet decays.
   int escape_time; /// Time at which is passes out of the grid.
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
   int scat_count;  /// WHAT'S THAT???

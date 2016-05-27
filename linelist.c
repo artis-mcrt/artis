@@ -2,7 +2,7 @@
 #include "linelist.h"
 
 
-static int identify_gam_line(int ele_type, int ele_index, double *eret, double *pret)
+static void identify_gam_line(int ele_type, int ele_index, double *eret, double *pret)
 {
   if (ele_type == NI_GAM_LINE_ID)
   {
@@ -34,13 +34,11 @@ static int identify_gam_line(int ele_type, int ele_index, double *eret, double *
     printout("Identify_gam_line failed. Abort.\n");
     exit(0);
   }
-
-  return 0;
 }
 
 
 // To construct an energy ordered gamma ray line list.
-int get_gam_ll(void)
+void get_gam_ll(void)
 {
   /* Start by setting up the grid of fake lines and their energies. */
   fakeg_spec.nlines = nfake_gam;
@@ -136,6 +134,4 @@ int get_gam_ll(void)
     fprintf(line_list, "%d %d %d %g %g \n", i, gam_line_list.type[i], gam_line_list.index[i], a/MEV, b);
   }
   fclose(line_list);
-
-  return 0;
 }

@@ -122,7 +122,7 @@ static void update_abundances(int modelgridindex, double t_current)
 }
 
 
-int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
+void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
     /// m timestep
@@ -1373,7 +1373,6 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   //printout("[debug] update_grid: update for timestep %d finished\n",m);
   //printf("time %ld\n",time(NULL));
   printout("[debug] update_grid: process %d finished update_grid at %d\n",my_rank,time(NULL));
-  return 0;
 }
 
 

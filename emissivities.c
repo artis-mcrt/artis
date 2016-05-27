@@ -6,11 +6,11 @@
 #include "packet_init.h"
 #include "photo_electric.h"
 #include "radfield.h"
-#include "ray_prop.h"
+#include "gamma.h"
 #include "vectors.h"
 
 
-int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double single_t, int lindex, double dnuds)
+void add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double single_t, int lindex, double dnuds)
 {
   double emitt_energy;
   struct grid *grid_ptr;
@@ -86,13 +86,10 @@ int add_gam_line_emissivity(RAY *ray_ptr, int nray, double *single_pos, double s
     ray_ptr->e_rf[nray]+= emitt_energy / fabs(dnuds)
         / doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec);
   }
-
-
-  return 0;
 }
 
-/*******************************************************/
-int continuum_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)
+
+void continuum_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)
 {
   /* This is called when a ray is about to be moved a distance ldist. */
   /* It should account for the changes in the ray intensity due to
@@ -145,12 +142,10 @@ int continuum_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, doubl
 
   /* This MUST be followed by a call to move_one_ray() in source
      since e_cmf is NOT reset here. */
-
-  return 0;
 }
 
 /*******************************************************/
-int compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
+void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 {
   /* Subroutine to add contriubtion to the MC estimator for the
 compton emissivity. Called with a packet that is about to travel a
@@ -255,12 +250,10 @@ motion and the local velocity vectors to the cmf.*/
     }
 
   }
-
-  return 0;
 }
 
-/*******************************************************/
-int pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
+
+void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 {
   /* New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
      emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something
@@ -289,13 +282,10 @@ int pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 
   /* Note (SS May 07) - the Doppler factors are not all sorted out yet - the expression used above needs to be
      consistent with what syn_lc does. */
-
-  return 0;
 }
 
 
-/***********************************************/
-int zero_estimators()
+void zero_estimators()
 {
   //for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
@@ -341,13 +331,10 @@ int zero_estimators()
 
     rpkt_emiss[n] = 0.0;
   }
-
-  return 0;
 }
 
 
-/******************************************/
-int normalise_estimators(int nts)
+void normalise_estimators(int nts)
 {
   double dfreq[EMISS_MAX];
 
@@ -381,12 +368,10 @@ int normalise_estimators(int nts)
       }
     }
   }
-
-  return 0;
 }
 
-/*************************************************/
-int write_estimators(int nts)
+
+void write_estimators(int nts)
 {
   FILE *est_file, *dummy;
   char chch;
@@ -455,10 +440,9 @@ int write_estimators(int nts)
     }
   }
   fclose(est_file);
-  return 0;
 }
 
-/***********************************************/
+
 bool estim_switch(int nts)
 {
   int on_or_off = true; //on
@@ -482,8 +466,8 @@ bool estim_switch(int nts)
   return on_or_off;
 }
 
-/*************************************************/
-int emiss_load(int nts)
+
+void emiss_load(int nts)
 {
   /* Routine to read in the stored estimators for the time step that is about to begin. */
   FILE *est_file, *dummy;
@@ -533,6 +517,4 @@ int emiss_load(int nts)
     }
   }
   fclose(est_file);
-  return 0;
 }
-/***********************************************/

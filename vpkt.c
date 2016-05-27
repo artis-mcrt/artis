@@ -18,7 +18,7 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
   double sdist;
   double kap_cont;
   int snext;
-  int end_packet;
+  bool end_packet;
   double t_future,t_arrive;
   double ldist;
   double nutrans;
@@ -38,7 +38,7 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
   dummy_ptr = &dummy;
 
 
-  end_packet = 0;
+  end_packet = false;
   tau = 0;
   sdist = 0;
   ldist = 0;
@@ -146,7 +146,7 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
   mgi = cell[dummy_ptr->where].modelgridindex;
 
-  while (end_packet == 0) {
+  while (!end_packet) {
 
       ldist = 0 ;
 
