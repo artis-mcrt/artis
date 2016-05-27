@@ -183,45 +183,13 @@ double E48V;
 #define T52FE   (0.497429*DAY)
 #define T52MN   (0.0211395*DAY)
 
-#define TYPE_ESCAPE        32
-#define TYPE_NICKEL_PELLET 100
-#define TYPE_COBALT_PELLET 101
-#define TYPE_48CR_PELLET   102
-#define TYPE_48V_PELLET    103
-#define TYPE_52FE_PELLET   104
-#define TYPE_52MN_PELLET   105
-#define TYPE_COBALT_POSITRON_PELLET   106
-#define TYPE_GAMMA         10
-#define TYPE_RPKT          11
-#define TYPE_KPKT          12
-#define TYPE_MA            13
-#define TYPE_EMINUS        20
-#define TYPE_PRE_KPKT      120
-#define TYPE_GAMMA_KPKT      121
-
 #define COOLING_UNDEFINED       -99
-#define COOLINGTYPE_FF          880
-#define COOLINGTYPE_FB          881
-#define COOLINGTYPE_COLLEXC     882
-#define COOLINGTYPE_COLLION     883
-#define HEATINGTYPE_FF          884
-#define HEATINGTYPE_BF          885
-#define HEATINGTYPE_COLLDEEXC   886
-#define HEATINGTYPE_COLLRECOMB  887
+
 #define COOLINGCUT              0.99 //1.01
-#define TAKE_N_COOLINGTERMS     100
 //#define TAKE_N_BFCONTINUA       900 //40 //900 //20 //900 //40 //20
 
 #define RPKT_EVENTTYPE_BB 550
 #define RPKT_EVENTTYPE_CONT 551
-
-#define NEG_X  101
-#define POS_X  102
-#define NEG_Y  103
-#define POS_Y  104
-#define NEG_Z  105
-#define POS_Z  106
-#define NONE   107
 
 #define PACKET_SAME -929 //MUST be negative
 
@@ -302,17 +270,6 @@ int n_super_levels;
 
 mastate_t *restrict mastate;
 
-#define MA_ACTION_NONE 0
-#define MA_ACTION_RADDEEXC 1
-#define MA_ACTION_COLDEEXC 2
-#define MA_ACTION_RADRECOMB 3
-#define MA_ACTION_COLRECOMB 4
-#define MA_ACTION_INTERNALDOWNSAME 5
-#define MA_ACTION_INTERNALDOWNLOWER 6
-#define MA_ACTION_INTERNALUPSAME 7
-#define MA_ACTION_INTERNALUPHIGHER 8
-
-
 double wid_init;
 
 
@@ -364,13 +321,7 @@ double syn_dir[3]; // vector pointing from origin to observer
 
 #define NRAYS_SYN 1 // number of rays traced in a syn calculation
 
-
 RAY rays[NRAYS_SYN];
-
-
-#define ACTIVE 1
-#define WAITING 2
-#define FINISHED 3
 
 #define MSYN_TIME 100
 int nsyn_time;
@@ -561,13 +512,13 @@ int debuglevel;
 double T_step;
 double T_step_log;
 
-int homogeneous_abundances;
+bool homogeneous_abundances;
 
 // now set by input files
 //#define NPHIXSPOINTS 200
 //#define NPHIXSNUINCREMENT 0.1  //sets the frequency/energy spacing of the phixs array in units of nu_edge
 
-///Constant for van-Regmorter approximation.
+///Constant for van-Regemorter approximation.
 #define C_0 5.465e-11
 
 int continue_simulation;

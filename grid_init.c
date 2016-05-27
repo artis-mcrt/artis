@@ -1259,7 +1259,7 @@ void allocate_cooling(int modelgridindex)
   double dcen[3],m_r;
   int element,n;
 
-  if (homogeneous_abundances == 1)
+  if (homogeneous_abundances)
   {
     for (n = 0; n < ngrid; n++)
     {

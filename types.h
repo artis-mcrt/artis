@@ -48,10 +48,17 @@ typedef struct
   int lineindex;
 } samplegridcoolinglist_t;*/
 
+enum coolingtype {
+  COOLINGTYPE_FF         = 880,
+  COOLINGTYPE_FB         = 881,
+  COOLINGTYPE_COLLEXC    = 882,
+  COOLINGTYPE_COLLION    = 883,
+};
+
 typedef struct
 {
   double contribution;
-  int type;
+  enum coolingtype type;
   int element;
   int ion;
   int level;
@@ -59,6 +66,12 @@ typedef struct
   int lineindex;
 } cellhistorycoolinglist_t;
 
+/*enum heatingtype {
+  HEATINGTYPE_FF         = 884,
+  HEATINGTYPE_BF         = 885,
+  HEATINGTYPE_COLLDEEXC  = 886,
+  HEATINGTYPE_COLLRECOMB = 887,
+};*/
 
 typedef struct
 {
@@ -100,12 +113,12 @@ typedef struct
 
 typedef struct
 {
+  double nu_edge;
+  double kappa_bf_contr;
   int element;
   int ion;
   int level;          ///limited to 32767 levels
   int index_in_groundphixslist;
-  double nu_edge;
-  double kappa_bf_contr;
   //double nnlevel;
 } fullphixslist_t;
 
@@ -128,13 +141,39 @@ typedef struct
   groundphixslist_t *restrict groundcont;
 } phixslist_t;
 
+enum packet_type {
+  TYPE_ESCAPE = 32,
+  TYPE_NICKEL_PELLET = 100,
+  TYPE_COBALT_PELLET = 101,
+  TYPE_48CR_PELLET = 102,
+  TYPE_48V_PELLET = 103,
+  TYPE_52FE_PELLET = 104,
+  TYPE_52MN_PELLET = 105,
+  TYPE_COBALT_POSITRON_PELLET = 106,
+  TYPE_GAMMA = 10,
+  TYPE_RPKT = 11,
+  TYPE_KPKT = 12,
+  TYPE_MA = 13,
+  TYPE_EMINUS = 20,
+  TYPE_PRE_KPKT = 120,
+  TYPE_GAMMA_KPKT = 121,
+};
 
+enum cell_boundary {
+  NEG_X = 101,
+  POS_X = 102,
+  NEG_Y = 103,
+  POS_Y = 104,
+  NEG_Z = 105,
+  POS_Z = 106,
+  NONE = 107,
+};
 
 struct packet
 {
   int where;      /// The grid cell that the packet is in.
-  int type;       /// Identifies the type of packet (k-, r-, etc.)
-  int last_cross; /// To avoid rounding errors on cell crossing.
+  enum packet_type type;       /// Identifies the type of packet (k-, r-, etc.)
+  enum cell_boundary last_cross; /// To avoid rounding errors on cell crossing.
   int interactions;/// debug: number of interactions the packet undergone
   int nscatterings;   /// records number of electron scatterings a r-pkt undergone since it was emitted
   int last_event;  /// debug: stores information about the packets history
@@ -161,13 +200,25 @@ struct packet
   double stokes[3]; //I, Q and U Stokes parameters
   double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
-  int escape_type; /// Flag to tell us in which form it escaped from the grid.
+  enum packet_type escape_type; /// Flag to tell us in which form it escaped from the grid.
   int escape_time; /// Time at which is passes out of the grid.
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
   int scat_count;  /// WHAT'S THAT???
   int number;     /// A unique number to identify which packet caused potential troubles.
 };
 typedef struct packet PKT;
+
+enum ma_action {
+  MA_ACTION_NONE = 0,
+  MA_ACTION_RADDEEXC = 1,
+  MA_ACTION_COLDEEXC = 2,
+  MA_ACTION_RADRECOMB = 3,
+  MA_ACTION_COLRECOMB = 4,
+  MA_ACTION_INTERNALDOWNSAME = 5,
+  MA_ACTION_INTERNALDOWNLOWER = 6,
+  MA_ACTION_INTERNALUPSAME = 7,
+  MA_ACTION_INTERNALUPHIGHER = 8,
+};
 
 typedef struct
 {
@@ -180,7 +231,7 @@ typedef struct
   int activatedfromlevel;   /// Helper variable for bb-activation of macro atoms due to a rpkt event
                             /// It holds information about the lower level of the bb-transition.
   int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
-  int lastaction;           /// Holds information on last action performed by do_ma
+  enum ma_action lastaction;           /// Holds information on last action performed by do_ma
 } mastate_t;
 //mastate_t mastate;
 
@@ -210,6 +261,7 @@ typedef struct
 {
   double *contrib;
 } mgicooling_t;
+
 
 typedef struct
 {
@@ -283,12 +335,15 @@ struct gamma_ll
 typedef struct gamma_ll LIST;
 
 #define NSYN 1 /* number of frequency points in syn calculation */
+
+enum ray_status {
+  ACTIVE = 1,
+  WAITING = 2,
+  FINISHED = 3,
+};
+
 struct syn_ray
 {
-  int last_cross; /* last boundary crossed */
-  int where; /* the grid cell the ray is in */
-  int status; /*WAITING, then ACTIVE then FINISHED*/
-  int lindex[NSYN]; /* array of ray positions in the line list */
   double tstart; /* time at which the ray enters the grid */
   double rstart[3]; /* vector position at which the ray enters the grid */
   double pos[3]; /* current position of the ray */
@@ -297,6 +352,10 @@ struct syn_ray
   double nu_cmf[NSYN]; /*cmf freqencies */
   double e_rf[NSYN]; /*rest frame energy of rays */
   double e_cmf[NSYN]; /* cmf energies of rays */
+  int where; /* the grid cell the ray is in */
+  int lindex[NSYN]; /* array of ray positions in the line list */
+  enum cell_boundary last_cross; /* last boundary crossed */
+  enum ray_status status; /*WAITING, then ACTIVE then FINISHED*/
 };
 typedef struct syn_ray RAY;
 
@@ -336,20 +395,19 @@ typedef struct
 typedef struct
 {
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
-  float *restrict photoion_xs;                      /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
-  phixstarget_entry *restrict phixstargets;         /// pointer to table of target states and probabilities
+  float *restrict photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  phixstarget_entry *restrict phixstargets;  /// pointer to table of target states and probabilities
   int nphixstargets;                       /// length of phixstargets array:
 
-  int cont_index;                            /// Index of the continuum associated to this level. Negative number.
-  int metastable;                            /// 1 if the level is metastable, else 0
   int closestgroundlevelcont;
 
-  //transitionlist_entry *transitions;
   transitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
   transitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
+  int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   short stat_weight;                           /// Statistical weight of this level.
   bool is_nlte;                              /// 1 if the level is to
                                              /// be treated in nlte
+  bool metastable;                            ///
 
 //  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.
 

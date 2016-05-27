@@ -117,8 +117,8 @@ int get_bfcontinua(int element, int ion)
 
 static inline
 bool is_nlte(int element, int ion, int level)
-// Returns 1 if (element,ion,level) is to be treated in nlte.
-// (note this function gives 1 for the ground state)
+// Returns true if (element,ion,level) is to be treated in nlte.
+// (note this function returns true for the ground state)
 {
   if (level < 100) //TODO: change back to 200
     elements[element].ions[ion].levels[level].is_nlte = true;

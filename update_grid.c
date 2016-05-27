@@ -44,7 +44,7 @@ static void update_abundances(int modelgridindex, double t_current)
   double lambdacr = 1./T48CR;
   double lambdav = 1./T48V;
 
-  if (homogeneous_abundances == 1)
+  if (homogeneous_abundances)
   {
     double ni_in = elements[get_elementindex(28)].abundance;
     double co_in = elements[get_elementindex(27)].abundance;

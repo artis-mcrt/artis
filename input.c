@@ -293,7 +293,7 @@ static void read_unprocessed_atomicdata(void)
   int T_preset;
   fscanf(compositiondata,"%d",&T_preset);
   fscanf(compositiondata,"%d",&homogeneous_abundances);
-  if (homogeneous_abundances == 1)
+  if (homogeneous_abundances)
     printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
 
   /// open transition data file
@@ -506,7 +506,7 @@ static void read_unprocessed_atomicdata(void)
             //elements[element].ions[ion].levels[level].cont_index = cont_index;
             //cont_index -= 1;
             /// Initialise the metastable flag to true. Set it to false (0) if downward transition exists.
-            elements[element].ions[ion].levels[level].metastable = 1;
+            elements[element].ions[ion].levels[level].metastable = true;
             //elements[element].ions[ion].levels[level].main_qn = mainqn;
 
             /// The level contributes to the ionisinglevels if its energy
@@ -599,7 +599,7 @@ static void read_unprocessed_atomicdata(void)
               }
 
               /// This is not a metastable level.
-              elements[element].ions[ion].levels[level].metastable = 0;
+              elements[element].ions[ion].levels[level].metastable = false;
 
               elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
               if ((elements[element].ions[ion].levels[level].downtrans
@@ -2022,7 +2022,7 @@ static int read_3d_model(void)
 int input(int rank)
 /// To govern the input. For now hardwire everything.
 {
-  homogeneous_abundances = 0;
+  homogeneous_abundances = false;
   t_model = 0.0;
 
   /// Select grid type

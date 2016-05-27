@@ -408,7 +408,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   {
     for (level = 1; level < nlevels; level++)
     {
-      if (elements[element].ions[ion].levels[level].metastable == 1)
+      if (elements[element].ions[ion].levels[level].metastable)
       {
         T_exc = get_TJ(modelgridindex);
         W = 1.;
@@ -530,7 +530,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 
   // if (T_exc <= MINTEMP)
   // {
-  //   if (elements[element].ions[ion].levels[level].metastable == 1)
+  //   if (elements[element].ions[ion].levels[level].metastable)
   //   {
   //     T_exc = get_TJ(modelgridindex);
   //   }
@@ -628,7 +628,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 
 /*  if (T_exc <= MINTEMP)
   {
-    if (elements[element].ions[ion].levels[level].metastable == 1)
+    if (elements[element].ions[ion].levels[level].metastable)
     {
       T_exc = get_TJ(modelgridindex);
     }
