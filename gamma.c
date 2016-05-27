@@ -88,12 +88,11 @@ int pellet_decay(int nts, PKT *pkt_ptr)
   dummy_dir[2]=1.0;
   cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
   if ((dot(pkt_ptr->pol_dir,pkt_ptr->pol_dir)) < 1.e-8)
-    {
-      dummy_dir[0]=dummy_dir[2]=0.0;
-      dummy_dir[1]=1.0;
-      cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
-
-    }
+  {
+    dummy_dir[0]=dummy_dir[2]=0.0;
+    dummy_dir[1]=1.0;
+    cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
+  }
 
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
   //printout("initialise pol state of packet %g, %g, %g, %g, %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
