@@ -6,7 +6,7 @@
 #include <gsl/gsl_sf_debye.h>
 
 //#const int RADFIELDBINCOUNT = 1000;
-#define RADFIELDBINCOUNT 32
+#define RADFIELDBINCOUNT 128
 
 #define nu_lower_first_initial (CLIGHT / (10000e-8))
 #define nu_upper_last_initial (CLIGHT / (100e-8))

@@ -26,7 +26,7 @@
   #define NLTE_POPS_ON
 #endif
 
-#define USE_MULTIBIN_RADFIELD_MODEL //if using this, avoid look up tables below
+//#define USE_MULTIBIN_RADFIELD_MODEL //if using this, avoid look up tables below
 #define NO_LUT_PHOTOION  // dynamically calculate photoionization
                          // rates for the current radiation field
                          // instead of interpolating precalculated

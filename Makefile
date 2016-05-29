@@ -2,7 +2,7 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-  CC = cc
+  CC = clang
 #  CC = gcc-6
 #  CC = clang-omp
 #  CC = mpicc

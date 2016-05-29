@@ -914,9 +914,9 @@ static double gammacorr_integrand_gsl_radfield(double nu, void *restrict voidpar
 
 static double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  double integratorrelaccuracy = 1e-2;
+  double integratorrelaccuracy = 2e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1024);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(4096);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -936,7 +936,7 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   F_gammacorr.params = &intparas;
   double error = 0.0;
   gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
-                      integratorrelaccuracy, 1024, 6, w, &gammacorr, &error);
+                      integratorrelaccuracy, 4096, 6, w, &gammacorr, &error);
   gammacorr *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);
@@ -1067,9 +1067,9 @@ static double bfheating_integrand_gsl_radfield(double nu, void *restrict voidpar
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  double integratoraccuracy = 2e-2;
+  double integratoraccuracy = 2e-3;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(1024);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -1092,7 +1092,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   F_bfheating.function = &bfheating_integrand_gsl_radfield;
   F_bfheating.params = &intparas;
   gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0,
-                      integratoraccuracy, 1024, 6, w, &bfheating, &error);
+                      integratoraccuracy, 65536, 6, w, &bfheating, &error);
   bfheating *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);
