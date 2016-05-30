@@ -3,7 +3,7 @@
 
 #include "atomic.h"
 
-double nne_solution_f(double x, void *paras);
+double nne_solution_f(double x, void *restrict paras);
 double ionfract(int element, int ion, int modelgridindex, double nne);
 double phi(int element, int ion, int modelgridindex);
 double calculate_partfunct(int element, int ion, int modelgridindex);

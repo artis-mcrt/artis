@@ -8,15 +8,11 @@
 #include "update_grid.h"
 
 
-///***************************************************************************/
-double nne_solution_f(double x, void *paras)
+double nne_solution_f(double x, void *restrict paras)
 /// For libgsl bracketing type solver
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)
 {
-  double innersum, abundance;
-  int uppermost_ion;
-
   int n = ((nne_solution_paras *) paras)->cellnumber;
   //double T = cell[n].T_R;
   double rho = modelgrid[n].rho;
@@ -26,13 +22,13 @@ double nne_solution_f(double x, void *paras)
   //printout("debug nelements %d =========================\n",nelements);
   for (int element = 0; element < nelements; element++)
   {
-    abundance = modelgrid[n].composition[element].abundance;
+    double abundance = modelgrid[n].composition[element].abundance;
     if (abundance > 0)
     {
-      innersum = 0.;
+      double innersum = 0.;
       //printout("debug get_nions (element %d) %d =========================\n",element,get_nions(element));
       //uppermost_ion = elements[element].uppermost_ion;
-      uppermost_ion = elements_uppermost_ion[tid][element];
+      int uppermost_ion = elements_uppermost_ion[tid][element];
       /*
       #ifdef FORCE_LTE
         uppermost_ion = get_nions(element)-1;
