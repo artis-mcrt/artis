@@ -312,7 +312,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             mastate[tid].level = upper;
             mastate[tid].statweight = stat_weight(element,ion+1,upper);
             double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            //double R = rad_recombination(modelgridindex,level,epsilon_trans);
+            //double R = rad_recombination(modelgridindex,level);
             double R = 0.0; //TODO: remove, testing only
             double C = col_recombination(modelgridindex,level,epsilon_trans);
             //double C = 0.0; //TODO: remove, testing only

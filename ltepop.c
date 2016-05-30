@@ -197,7 +197,7 @@ double phi(int element, int ion, int modelgridindex)
           mastate[tid].level = upper;
           double epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
           Col_rec += col_recombination(modelgridindex,level,epsilon_trans);
-          //Alpha_sp += rad_recombination(modelgridindex,level,epsilon_trans) / get_nne(modelgridindex);
+          //Alpha_sp += rad_recombination(modelgridindex,level) / get_nne(modelgridindex);
         }
       }
 
