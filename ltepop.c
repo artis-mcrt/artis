@@ -807,22 +807,26 @@ double calculate_sahafact(int element, int ion, int level, int phixstargetindex,
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
 /// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
-  double sf;
   if (use_cellhist)
-    sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
-  else
-    sf = -1;
+  {
+    double sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
 
-  if (sf < 0)
+    if (sf < 0)
+    {
+      int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+      sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
+      if (use_cellhist)
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
+    }
+    return sf;
+  }
+  else
   {
     int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-    sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
-    if (use_cellhist)
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
+    return (stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T));
   }
 
   //printout("get_sahafact: sf= %g\n",sf);
-  return sf;
 }
 
 
