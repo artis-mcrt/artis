@@ -9,7 +9,6 @@
 #include "update_grid.h"
 
 
-#ifndef FORCE_LTE
 typedef struct Te_solution_paras
 {
   double t_current;
@@ -777,5 +776,3 @@ void calculate_cooling_rates(int modelgridindex)
 //
 //   gsl_integration_workspace_free(wspace);
 // }
-
-#endif
