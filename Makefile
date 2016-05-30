@@ -11,7 +11,7 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  LIB = -L/usr/local/opt/gperftools/lib
   LIB = -L/usr/local/Cellar/gsl/1.16/lib
 #  CFLAGS = -Wall -O0 -g -std=c11 $(INCLUDE)
-  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -ftree-vectorize -flto -O3 -march=native -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
+  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -ftree-vectorize -flto -O3 -march=native -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)
@@ -225,7 +225,7 @@ endif
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
 
 
-sn3d_files = sn3d.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c ray_prop.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c polarization.c nltepop.c vpkt.c radfield.c
+sn3d_files = sn3d.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c polarization.c nltepop.c vpkt.c radfield.c
 
 sn3d: version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
