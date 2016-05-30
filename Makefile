@@ -225,7 +225,7 @@ endif
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
 
 
-sn3d_files = sn3d.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c polarization.c nltepop.c vpkt.c radfield.c
+sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c linelist.c ltepop.c macroatom.c move.c nltepop.c packet_init.c packet_prop.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c time_init.c update_grid.c update_packets.c vectors.c vpkt.c
 
 sn3d: version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
