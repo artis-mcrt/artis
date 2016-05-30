@@ -286,7 +286,7 @@ typedef struct modelgrid_t
   float Te;
   float TR;
   float TJ;
-  float W;
+  double W;
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
                                          /// so there is no need to communicate it via MPI so far!
@@ -390,16 +390,15 @@ typedef struct phixstarget_entry
 typedef struct levellist_entry
 {
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
-  float *restrict photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   phixstarget_entry *restrict phixstargets;  /// pointer to table of target states and probabilities
-  int nphixstargets;                       /// length of phixstargets array:
-
-  int closestgroundlevelcont;
+  float *restrict photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  int nphixstargets;                         /// length of phixstargets array:
 
   transitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
   transitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
-  int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   short stat_weight;                           /// Statistical weight of this level.
+  int cont_index;                            /// Index of the continuum associated to this level. Negative number.
+  int closestgroundlevelcont;
   bool is_nlte;                              /// 1 if the level is to
                                              /// be treated in nlte
   bool metastable;                            ///

@@ -156,7 +156,7 @@ static void read_phixs_data(void)
           //double nu_edge = (epsilon(element,upperion,upperlevel) - epsilon(element,lowerion,lowerlevel))/H;
           //elements[element].ions[lowerion].levels[lowerlevel].photoion_xs_nu_edge = nu_edge;
 
-          if ((elements[element].ions[lowerion].levels[lowerlevel].photoion_xs = calloc(NPHIXSPOINTS,sizeof(float))) == NULL)
+          if ((elements[element].ions[lowerion].levels[lowerlevel].photoion_xs = (float *) calloc(NPHIXSPOINTS,sizeof(float))) == NULL)
           {
             printout("[fatal] input: not enough memory to initialize photoion_xslist... abort\n");
             exit(0);
@@ -970,7 +970,7 @@ static void read_processed_modelatom(FILE *restrict modelatom)
             /// we allocate only memory for as many levels as we want to use as bf-continua
             if (level < nbfcont)
             {
-              if ((elements[element].ions[ion].levels[level].photoion_xs = calloc(NPHIXSPOINTS,sizeof(float))) == NULL)
+              if ((elements[element].ions[ion].levels[level].photoion_xs = (float *) calloc(NPHIXSPOINTS,sizeof(float))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize photoionxslist... abort\n");
                 exit(0);

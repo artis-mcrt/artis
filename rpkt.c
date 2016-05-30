@@ -964,19 +964,19 @@ double closest_transition_empty(PKT *restrict pkt_ptr)
 
 void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current)
 {
-  double kappa_ffheating = 0.;
+  double sigma = 0.0;
   double kappa_ff = 0.;
   double kappa_bf = 0.;
+  double kappa_ffheating = 0.;
 
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
-  double sigma = 0.0;
   if (do_r_lc)
   {
-    double nne = get_nne(modelgridindex);
-    double T_e = get_Te(modelgridindex);
-    double nu = pkt_ptr->nu_cmf;
-    double g_ff = 1;
+    const double nne = get_nne(modelgridindex);
+    const double T_e = get_Te(modelgridindex);
+    const double nu = pkt_ptr->nu_cmf;
+    const double g_ff = 1;
     if (opacity_case == 4)
     {
       /// First contribution: Thomson scattering on free electrons
@@ -995,16 +995,16 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
       double ionpops_local[MELEMENTS][MIONS];
       for (int element = 0; element < nelements; element++)
       {
-        int nions = get_nions(element);
+        const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++)
         {
           ///calculate population of ionstage ...
-          double nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
+          const double nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
           ionpops_local[element][ion] = nnion / get_nnetot(modelgridindex);
           //Z = get_element(element);  ///atomic number
           //if (get_ionstage(element,ion) > 1)
           /// Z is ionic charge in the following formula
-          int Z = get_ionstage(element,ion) - 1;
+          const int Z = get_ionstage(element,ion) - 1;
           if (Z > 0)
           {
             //kappa_ff += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
@@ -1026,18 +1026,18 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
       kappa_bf = 0.;
       for (int i = 0; i < nbfcontinua; i++)
       {
-        int element = phixslist[tid].allcont[i].element;
-        int ion = phixslist[tid].allcont[i].ion;
-        int level = phixslist[tid].allcont[i].level;
+        const int element = phixslist[tid].allcont[i].element;
+        const int ion = phixslist[tid].allcont[i].ion;
+        const int level = phixslist[tid].allcont[i].level;
         /// The bf process happens only if the current cell contains
         /// the involved atomic species
         if ((get_abundance(modelgridindex,element) > 0) && ((ionpops_local[element][ion] > 1.e-6) || (level == 0)))
         {
-          double nu_edge = phixslist[tid].allcont[i].nu_edge;
+          const double nu_edge = phixslist[tid].allcont[i].nu_edge;
           //printout("i %d, nu_edge %g\n",i,nu_edge);
           if (nu >= nu_edge)
           {
-            double nnlevel = get_levelpop(modelgridindex,element,ion,level);
+            const double nnlevel = get_levelpop(modelgridindex,element,ion,level);
             //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
 
             //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
@@ -1049,23 +1049,23 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             mastate[tid].element = element;
             mastate[tid].ion = ion;
             mastate[tid].level = level;
-            double sigma_bf = photoionization_crosssection(nu_edge,nu);
+            const double sigma_bf = photoionization_crosssection(nu_edge,nu);
             double check = 0.0; //corrfactor
-            int nphixstargets = get_nphixstargets(element,ion,level);
+            const int nphixstargets = get_nphixstargets(element,ion,level);
             if (nphixstargets > 0)
             {
-              int upper = get_phixsupperlevel(element,ion,level,0);
-              double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
-              double sf = get_sahafact(element,ion,level,0,T_e,H*nu_edge);
-              float probability = get_phixsprobability(element,ion,level,0);
-              double helper = nnlevel * sigma_bf * probability;
-              double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+              const int upper = get_phixsupperlevel(element,ion,level,0);
+              const double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+              const double sf = get_sahafact(element,ion,level,0,T_e,H*nu_edge);
+              const float probability = get_phixsprobability(element,ion,level,0);
+              const double helper = nnlevel * sigma_bf * probability;
+              const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
               check = helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
 
               if (level == 0)
               {
-                int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+                const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
                 double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
                 if (corrfactor < 0)
                   corrfactor = 1;
@@ -1074,11 +1074,11 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             }
             for (int phixstargetindex = 1; phixstargetindex < nphixstargets; phixstargetindex++)
             {
-              int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-              double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
-              double sf = get_sahafact(element,ion,level,phixstargetindex,T_e,H*nu_edge);
-              double helper = nnlevel * sigma_bf * get_phixsprobability(element,ion,level,phixstargetindex);
-              double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+              const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+              const double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+              const double sf = get_sahafact(element,ion,level,phixstargetindex,T_e,H*nu_edge);
+              const double helper = nnlevel * sigma_bf * get_phixsprobability(element,ion,level,phixstargetindex);
+              const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
               check += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
             }
@@ -1134,7 +1134,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
           phixslist[tid].allcont[i].kappa_bf_contr = 0.;
           if (phixslist[tid].allcont[i].level == 0)
           {
-            int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+            const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
             //phixslist[tid].groundcont[gphixsindex].photoion_contr = 0.;
             phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
             //phixslist[tid].groundcont[gphixsindex].stimrecomb_contr = 0.;
@@ -1162,13 +1162,13 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
       kappa_ff = 0.;
       for (int element = 0; element < nelements; element++)
       {
-        int nions = get_nions(element);
+        const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++)
         {
           ///calculate population of ionstage ...
-          double nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
+          const double nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
           /// Z is ionic charge in the following formula
-          int Z = get_ionstage(element,ion)-1;
+          const int Z = get_ionstage(element,ion)-1;
           if (Z > 0)
           {
             kappa_ff += pow(Z,2) * g_ff * nnion;
@@ -1199,7 +1199,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
 
   kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_ff;
   #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
+    //if (debuglevel == 2)
+    //  printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
   #endif
   kappa_rpkt_cont[tid].es = sigma;
   kappa_rpkt_cont[tid].ff = kappa_ff;

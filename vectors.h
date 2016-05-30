@@ -19,7 +19,7 @@ double vec_len(const double x[3])
 static inline
 void vec_norm(const double vec_in[3], double vec_out[3])
 {
-  double magnitude = vec_len(vec_in);
+  const double magnitude = vec_len(vec_in);
 
   vec_out[0] = vec_in[0] / magnitude;
   vec_out[1] = vec_in[1] / magnitude;
@@ -50,12 +50,12 @@ void get_velocity(const double *const restrict x, double *restrict y, const doub
 static inline
 void cross_prod(const double vec1[3], const double vec2[3], double vecout[3])
 {
-  double vec1x = vec1[0];
-  double vec1y = vec1[1];
-  double vec1z = vec1[2];
-  double vec2x = vec2[0];
-  double vec2y = vec2[1];
-  double vec2z = vec2[2];
+  const double vec1x = vec1[0];
+  const double vec1y = vec1[1];
+  const double vec1z = vec1[2];
+  const double vec2x = vec2[0];
+  const double vec2y = vec2[1];
+  const double vec2z = vec2[2];
   vecout[0] = (vec1y*vec2z) - (vec2y*vec1z);
   vecout[1] = (vec1z*vec2x) - (vec2z*vec1x);
   vecout[2] = (vec1x*vec2y) - (vec2x*vec1y);

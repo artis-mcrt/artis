@@ -154,8 +154,8 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   }*/
 
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
-  double trat = time_step[m].start / tmin;
-  double tratmid = time_step[m].mid / tmin;
+  const double trat = time_step[m].start / tmin;
+  const double tratmid = time_step[m].mid / tmin;
 
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
                          /// assigned to max_path_step after the parallel update_grid finished.
@@ -198,7 +198,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   /// Needed to update abundances of radioactive isotopes.
   //double dt_elapsed,dt_forward;
-  double t_current = time_step[m].start;
+  const double t_current = time_step[m].start;
   double t_previous;
   double deltaV;
   if (m == 0)
@@ -363,8 +363,8 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
         {
           /// Check if this task should work on the current model grid cell.
           /// If yes, do update grid
-          int assoc_cells = modelgrid[n].associated_cells;
-          double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
+          const int assoc_cells = modelgrid[n].associated_cells;
+          const double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
           if (assoc_cells > 0)
           {
             int log_this_cell = ((n % 50 == 0) || (npts_model < 50));

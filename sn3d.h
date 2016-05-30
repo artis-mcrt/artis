@@ -536,13 +536,13 @@ float kpktdiffusion_timescale;
 extern FILE *restrict output_file;
 //extern short output_file_open;
 
-transitions_t *transitions;
+transitions_t *restrict transitions;
 int maxion;
-FILE *tau_file;
-FILE *tb_file;
-FILE *heating_file;
-FILE *estimators_file;
-FILE *nlte_file;
+FILE *restrict tau_file;
+FILE *restrict tb_file;
+FILE *restrict heating_file;
+FILE *restrict estimators_file;
+FILE *restrict nlte_file;
 
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
 extern bool neutral_flag;

@@ -612,7 +612,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   double nn;
 
   double T_exc = get_TJ(modelgridindex);
-  double W = 1.;
+  double W = 1;
 
 #ifdef NLTE_POPS_ON
   double test;
@@ -697,8 +697,8 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 #endif
   else
   {
-    double E_level = epsilon(element,ion,level);
-    double E_ground = epsilon(element,ion,0);
+    const double E_level = epsilon(element,ion,level);
+    const double E_ground = epsilon(element,ion,0);
     nn = get_groundlevelpop(modelgridindex,element,ion) * W *
          stat_weight(element,ion,level)/stat_weight(element,ion,0) *
          exp(-(E_level-E_ground)/KB/T_exc);

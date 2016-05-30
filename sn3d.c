@@ -30,7 +30,7 @@
 
 static FILE *initialise_linestat_file(void)
 {
-  FILE *linestat_file;
+  FILE *restrict linestat_file;
   if ((linestat_file = fopen("linestat.out", "w")) == NULL)
   {
     printout("Cannot open line_stat.out.\n");
@@ -133,7 +133,7 @@ static void pkt_action_counters_printout(void)
 int main(int argc, char** argv)
 // Main - top level routine.
 {
-  FILE *packets_file;
+  FILE *restrict packets_file;
   //FILE *temperature_file;
   #ifdef MPI_ON
     double a, b;
@@ -329,7 +329,7 @@ int main(int argc, char** argv)
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
-  int real_time_start = time(NULL);
+  const int real_time_start = time(NULL);
   printout("time before input %d\n",real_time_start);
   input(my_rank);
 
@@ -361,7 +361,7 @@ int main(int argc, char** argv)
   printout("time after zero estimators %d\n",time(NULL));
 
   /// Record the chosen syn_dir
-  FILE *syn_file;
+  FILE *restrict syn_file;
   if ((syn_file = fopen("syn_dir.txt", "w")) == NULL)
   {
     printout("Cannot open syn_dir.txt.\n");
