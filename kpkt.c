@@ -23,7 +23,7 @@ void calculate_kpkt_rates(int modelgridindex)
   double T_e = get_Te(modelgridindex);
   //double T_R = get_TR(modelgridindex);
   //double W = get_W(modelgridindex);
-  //if (SILENT == 0) printout("[info] kpkt_cuts: sampling cell %d, T_e %g, T_R %g, W %g, nne %g\n",modelgridindex,T_e,T_R,W,nne);
+  //if (!SILENT) printout("[info] kpkt_cuts: sampling cell %d, T_e %g, T_R %g, W %g, nne %g\n",modelgridindex,T_e,T_R,W,nne);
 
 /*  PKT dummypkt;
   dummypkt.where = cellnumber;
@@ -204,9 +204,9 @@ void calculate_kpkt_rates(int modelgridindex)
 
   //printout("[info] kpkt_cuts: C_ff %g, C_fb %g, C_col %g, C_exc %g, C_ion %g\n",C_ff,C_fb,C_col,C_exc,C_ion);
   /*
-  if (SILENT == 0) printout("[info] kpkt_cuts: term counter %d, ioncounter %d, linecounter %d, levelcounter %d\n",iii,ioncounter,linecounter,levelcounter);
-  if (SILENT == 0) printout("[info] kpkt_cuts: C_ff %g, C_fb %g, C_col %g, C_exc %g, C_ion %g\n",C_ff,C_fb,C_col,C_exc,C_ion);
-  if (SILENT == 0) printout("[info] kpkt_cuts: totalcooling %g\n",totalcooling);
+  if (!SILENT) printout("[info] kpkt_cuts: term counter %d, ioncounter %d, linecounter %d, levelcounter %d\n",iii,ioncounter,linecounter,levelcounter);
+  if (!SILENT) printout("[info] kpkt_cuts: C_ff %g, C_fb %g, C_col %g, C_exc %g, C_ion %g\n",C_ff,C_fb,C_col,C_exc,C_ion);
+  if (!SILENT) printout("[info] kpkt_cuts: totalcooling %g\n",totalcooling);
 
 
   /// Sort this the coolinglist

@@ -2511,12 +2511,12 @@ void read_parameterfile(int rank)
     printout("input: No non-thermal ionisation is used in this run.\n");
   #endif
 
-  #ifdef NO_LUT_PHOTOION
+  if (NO_LUT_PHOTOION)
     printout("Corrphotoioncoeff is calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
-  #endif
-  #ifdef NO_LUT_BFHEATING
+
+  if (NO_LUT_BFHEATING)
     printout("bfheating coefficients are calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
-  #endif
+
   #ifdef USE_MULTIBIN_RADFIELD_MODEL
     printout("The multibin radiation field model is being used instead of the whole-spectrum fit.\n");
   #endif

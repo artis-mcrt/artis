@@ -96,8 +96,8 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
       //if (element == 7) fprintf(tau_file,"%g %g %d\n",nu_trans,tau_line,ion);
       if (tau_line < 0)
       {
-        if (SILENT == 0) printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(cell[pkt_ptr->where].modelgridindex),get_TR(cell[pkt_ptr->where].modelgridindex),element,ion,upper,lower);
-        if (SILENT == 0) printout("[warning] get_event: set tau_line = 0\n");
+        //printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(cell[pkt_ptr->where].modelgridindex),get_TR(cell[pkt_ptr->where].modelgridindex),element,ion,upper,lower);
+        //printout("[warning] get_event: set tau_line = 0\n");
         tau_line = 0.;
         //printout("[fatal] get_event: tau_line < 0 ... abort\n");
         //abort();

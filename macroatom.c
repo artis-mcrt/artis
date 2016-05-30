@@ -8,6 +8,8 @@
 #include "ratecoeff.h"
 #include "rpkt.h"
 
+// constant for van-Regemorter approximation.
+#define C_0 (5.465e-11)
 
 double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.

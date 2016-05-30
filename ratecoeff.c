@@ -966,22 +966,24 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     double T_R = get_TR(modelgridindex);
     gammacorr = interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
   #else
-  # ifdef NO_LUT_PHOTOION
-    gammacorr = calculate_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-    //double W = get_W(modelgridindex);
-    //double oldgammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
-    //if (fabs(gammacorr/oldgammacorr - 1.0) > 0.5)
-    //  printout("LUKETEST: New corrphotoion coeff: %g, old value: %g\n",gammacorr,oldgammacorr);
-  # else
-    double W = get_W(modelgridindex);
-    double T_R = get_TR(modelgridindex);
+    if (NO_LUT_PHOTOION)
+    {
+      gammacorr = calculate_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
+      //double W = get_W(modelgridindex);
+      //double oldgammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
+      //if (fabs(gammacorr/oldgammacorr - 1.0) > 0.5)
+      //  printout("LUKETEST: New corrphotoion coeff: %g, old value: %g\n",gammacorr,oldgammacorr);
+    }
+    else
+    {
+      double W = get_W(modelgridindex);
+      double T_R = get_TR(modelgridindex);
 
-    gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
-    int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-    if (index_in_groundlevelcontestimator >= 0)
-      gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator];
-
-  # endif
+      gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
+      int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+      if (index_in_groundlevelcontestimator >= 0)
+        gammacorr *= corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator];
+    }
   #endif
     if (use_cellhist)
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
@@ -1103,37 +1105,39 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
 double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  #ifdef NO_LUT_BFHEATING
-  double bfheating = calculate_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
-
-  /*double T_R = get_TR(modelgridindex);
-  double W = get_W(modelgridindex);
-  double bfheating_old = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
-  int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-  if (index_in_groundlevelcontestimator >= 0)
-    bfheating_old *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
-  printout("bfheating new %g old %g\n",bfheating,bfheating_old);*/
-  #else
-  /// The correction factor for stimulated emission in gammacorr is set to its
-  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  /// correction may be evaluated at T_R!
-  double T_R = get_TR(modelgridindex);
-  double W = get_W(modelgridindex);
-  double bfheating = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
-  int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-  if (index_in_groundlevelcontestimator >= 0)
-    bfheating *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
-
-  if (!isfinite(bfheating))
+  if (NO_LUT_BFHEATING)
   {
-    printout("[fatal] get_bfheatingcoeff returns a NaN! W %g interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
-             W,interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
-    abort();
-  }
-  #endif
+    double bfheating = calculate_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
 
-  return bfheating;
-  //return get_bfheatingcoeff_ana(element, ion, level, cellnumber);
+    /*double T_R = get_TR(modelgridindex);
+    double W = get_W(modelgridindex);
+    double bfheating_old = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
+    int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+    if (index_in_groundlevelcontestimator >= 0)
+      bfheating_old *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
+    printout("bfheating new %g old %g\n",bfheating,bfheating_old);*/
+    return bfheating;
+  }
+  else
+  {
+    /// The correction factor for stimulated emission in gammacorr is set to its
+    /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+    /// correction may be evaluated at T_R!
+    double T_R = get_TR(modelgridindex);
+    double W = get_W(modelgridindex);
+    double bfheating = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
+    int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+    if (index_in_groundlevelcontestimator >= 0)
+      bfheating *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
+
+    if (!isfinite(bfheating))
+    {
+      printout("[fatal] get_bfheatingcoeff returns a NaN! W %g interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
+               W,interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
+      abort();
+    }
+    return bfheating;
+  }
 }
 
 

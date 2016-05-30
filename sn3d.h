@@ -11,7 +11,6 @@
 #endif
 
 #define DEBUG_ON
-#define SILENT 1
 //#define DO_TITER
 //#define FORCE_LTE
 #define NT_ON        /// Switch on non-thermal ionisation
@@ -27,11 +26,12 @@
 #endif
 
 //#define USE_MULTIBIN_RADFIELD_MODEL //if using this, avoid look up tables below
-#define NO_LUT_PHOTOION  // dynamically calculate photoionization
-                         // rates for the current radiation field
-                         // instead of interpolating precalculated
-                         // values assuming a blackbody radiation field
-//#define NO_LUT_BFHEATING // as above
+#define NO_LUT_PHOTOION true // dynamically calculate photoionization
+                             // rates for the current radiation field
+                             // instead of interpolating precalculated
+                             // values assuming a blackbody radiation field
+
+#define NO_LUT_BFHEATING true
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
@@ -519,9 +519,6 @@ bool homogeneous_abundances;
 // now set by input files
 //#define NPHIXSPOINTS 200
 //#define NPHIXSNUINCREMENT 0.1  //sets the frequency/energy spacing of the phixs array in units of nu_edge
-
-///Constant for van-Regemorter approximation.
-#define C_0 5.465e-11
 
 bool continue_simulation;
 extern int tid;
