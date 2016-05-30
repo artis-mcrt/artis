@@ -24,14 +24,14 @@ typedef struct
 {
   int modelgridindex;
   double nu_edge;
-  float *photoion_xs;
+  float *restrict photoion_xs;
 } gsl_integral_paras_gammacorr;
 
 typedef struct
 {
   int modelgridindex;
   double nu_edge;
-  float *photoion_xs;
+  float *restrict photoion_xs;
   double sf_Te;
   double sf_TR;
 } gsl_integral_paras_bfheating;
@@ -736,7 +736,7 @@ static double interpolate_bfheatingcoeff(int element, int ion, int level, int ph
   int upperindex = lowerindex + 1;
   double T_upper =  MINTEMP + upperindex*T_step;
   double T_lower =  MINTEMP + lowerindex*T_step;*/
-  int lowerindex = floor(log(T/MINTEMP)/T_step_log);
+  const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
   if (lowerindex < TABLESIZE-1)
   {
     int upperindex = lowerindex + 1;
@@ -772,7 +772,7 @@ static double interpolate_bfcoolingcoeff(int element, int ion, int level, int ph
   int upperindex = lowerindex + 1;
   double T_upper =  MINTEMP + upperindex*T_step;
   double T_lower =  MINTEMP + lowerindex*T_step;*/
-  int lowerindex = floor(log(T/MINTEMP)/T_step_log);
+  const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
   if (lowerindex < TABLESIZE-1)
   {
     int upperindex = lowerindex + 1;
@@ -836,7 +836,7 @@ double interpolate_ions_spontrecombcoeff(int element, int ion, double T)
   int upperindex = lowerindex + 1;
   double T_upper =  MINTEMP + upperindex*T_step;
   double T_lower =  MINTEMP + lowerindex*T_step;*/
-  int lowerindex = floor(log(T/MINTEMP)/T_step_log);
+  const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
   if (lowerindex < TABLESIZE-1)
   {
     int upperindex = lowerindex + 1;
@@ -861,22 +861,23 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
 /// cell history if known.
 /// For ionisation to other levels than the ground level this must be adapted.
 {
-  double alpha_sp;
   if (use_cellhist)
-    alpha_sp = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate;
-  else
-    alpha_sp = -1.0;
+  {
+    double alpha_sp = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate;
 
-  if (alpha_sp < 0. || !use_cellhist)
+    if (alpha_sp < 0.)
+    {
+      const double T_e = get_Te(modelgridindex);
+      alpha_sp = interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e);
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = alpha_sp;
+    }
+    return alpha_sp;
+  }
+  else
   {
     double T_e = get_Te(modelgridindex);
-    alpha_sp = interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e);
-
-    if (use_cellhist)
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = alpha_sp;
+    return interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e);
   }
-
-  return alpha_sp;
 }
 
 
@@ -885,18 +886,14 @@ static double gammacorr_integrand_gsl_radfield(double nu, void *restrict voidpar
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  gsl_integral_paras_gammacorr *restrict paras = (gsl_integral_paras_gammacorr *) voidparas;
-  int modelgridindex = paras->modelgridindex;
-  double nu_edge = paras->nu_edge;
-  float *photoion_xs = paras->photoion_xs;
+  const gsl_integral_paras_gammacorr *const restrict params = (gsl_integral_paras_gammacorr *) voidparas;
+  const int modelgridindex = params->modelgridindex;
+  const double nu_edge = params->nu_edge;
 
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
+  const double T_R = get_TR(modelgridindex);
 
-  double T_R = get_TR(modelgridindex);
-
-  int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
+  const int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
+  const float sigma_bf = params->photoion_xs[i];
 
   #ifdef DEBUG_ON
   /*if (i > NPHIXSPOINTS-1)
@@ -907,7 +904,7 @@ static double gammacorr_integrand_gsl_radfield(double nu, void *restrict voidpar
   #endif
 
   //TODO: MK thesis page 41, use population ratios and Te
-  return ONEOVERH * photoion_xs[i] / nu * radfield(nu,modelgridindex) *
+  return ONEOVERH * sigma_bf / nu * radfield(nu,modelgridindex) *
          (1 - exp(-HOVERKB * nu / T_R));
 }
 
@@ -956,10 +953,8 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   double gammacorr;
   if (use_cellhist)
     gammacorr = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
-  else
-    gammacorr = -1.0;
 
-  if (gammacorr < 0 || !use_cellhist)
+  if (!use_cellhist || gammacorr < 0)
   {
   #ifdef FORCE_LTE
     /// Interpolate gammacorr out of precalculated values
@@ -969,10 +964,6 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     if (NO_LUT_PHOTOION)
     {
       gammacorr = calculate_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-      //double W = get_W(modelgridindex);
-      //double oldgammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
-      //if (fabs(gammacorr/oldgammacorr - 1.0) > 0.5)
-      //  printout("LUKETEST: New corrphotoion coeff: %g, old value: %g\n",gammacorr,oldgammacorr);
     }
     else
     {
@@ -990,23 +981,19 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   }
 
   return gammacorr;
-  //return get_corrphotoioncoeff_ana(element, ion, level, cellnumber);
 }
 
 
 double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 /// Returns the for stimulated emission corrected photoionisation rate coefficient.
-/// Only needed during packet propagation, therefore the value is taken from the
-/// cell history if known.
 {
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
-  double T_R = get_TR(modelgridindex);
   double W = get_W(modelgridindex);
+  double T_R = get_TR(modelgridindex);
 
-  double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
-  return gammacorr;
+  return W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
 }
 
 
@@ -1047,21 +1034,21 @@ static double bfheating_integrand_gsl_radfield(double nu, void *restrict voidpar
 /// Integrand to calculate the rate coefficient for bfheating
 /// using gsl integrators.
 {
-  gsl_integral_paras_bfheating *restrict p = (gsl_integral_paras_bfheating *) voidparas;
+  const gsl_integral_paras_bfheating *restrict const params = (gsl_integral_paras_bfheating *) voidparas;
 
-  int modelgridindex = p->modelgridindex;
-  double nu_edge = p->nu_edge;
-  float *photoion_xs = p->photoion_xs;
-  double sf_Te = p->sf_Te;
-  double sf_TR = p->sf_TR;
+  int modelgridindex = params->modelgridindex;
+  double nu_edge = params->nu_edge;
+  double sf_Te = params->sf_Te;
+  double sf_TR = params->sf_TR;
   int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
+  const float sigma_bf = params->photoion_xs[i];
 
   double T_e = get_Te(modelgridindex);
   double T_R = get_TR(modelgridindex);
 
-  return photoion_xs[i] * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-HOVERKB * nu / T_e));
+  return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-HOVERKB * nu / T_e));
 
-  //return photoion_xs[i] * (1-nu_edge/nu) * radfield(nu,modelgridindex) *
+  //return sigma_bf * (1-nu_edge/nu) * radfield(nu,modelgridindex) *
   //       (1 - exp(-HOVERKB*nu/T_R));
 }
 
