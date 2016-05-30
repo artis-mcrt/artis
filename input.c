@@ -28,7 +28,12 @@ typedef struct
 static void read_phixs_data(void)
 {
   printout("readin phixs data\n");
-  FILE *phixsdata = fopen("phixsdata_v2.txt", "r");
+
+  FILE* popenphixshash = popen("openssl md5 -binary phixsdata_v2.txt | xxd -p", "r");
+  fgets(phixsfile_hash, 33, popenphixshash);
+  printout("MD5 hash of phixsdata_v2.txt: %s\n",phixsfile_hash);
+
+  FILE *restrict phixsdata = fopen("phixsdata_v2.txt", "r");
   if (phixsdata == NULL)
   {
     printout("Cannot open phixsdata_v2.txt.\n");
@@ -257,14 +262,14 @@ static void read_unprocessed_atomicdata(void)
   int cont_index = -1;
 
   ///open atomic data file
-  FILE *compositiondata = fopen("compositiondata.txt", "r");
+  FILE *restrict compositiondata = fopen("compositiondata.txt", "r");
   if (compositiondata == NULL)
   {
     printout("Cannot open compositiondata.txt.\n");
     exit(0);
   }
 
-  FILE *adata = fopen("adata.txt", "r");
+  FILE *restrict adata = fopen("adata.txt", "r");
   if (adata == NULL)
   {
     printout("Cannot open adata.txt.\n");
@@ -297,7 +302,7 @@ static void read_unprocessed_atomicdata(void)
     printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
 
   /// open transition data file
-  FILE *transitiondata;
+  FILE *restrict transitiondata;
   if ((transitiondata = fopen("transitiondata.txt", "r")) == NULL)
   {
     printout("Cannot open transitiondata.txt.\n");
@@ -743,7 +748,7 @@ static void read_unprocessed_atomicdata(void)
   /// Save sorted linelist into a file
   if (rank_global == 0)
   {
-    FILE *linelist_file;
+    FILE *restrict linelist_file;
     if ((linelist_file = fopen("linelist.dat", "w")) == NULL)
     {
       printout("Cannot open linelist.out.\n");
@@ -803,7 +808,7 @@ static void read_unprocessed_atomicdata(void)
 }
 
 
-static void read_processed_modelatom(FILE *modelatom)
+static void read_processed_modelatom(FILE *restrict modelatom)
 {
   int totaluptrans = 0;
   int totaldowntrans = 0;

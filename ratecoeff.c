@@ -1,10 +1,12 @@
 #include "sn3d.h"
 #include "atomic.h"
+#include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "grid_init.h"
+#include <string.h>
 #include <gsl/gsl_integration.h>
 
 
@@ -47,32 +49,44 @@ static bool read_ratecoeff_dat(void)
     /// Check whether current temperature range and atomic data match
     /// the precalculated rate coefficients
     bool fileisamatch = true;
-    float T_min,T_max;
-    int in_tablesize;
-    fscanf(ratecoeff_file,"%g %g %d",&T_min,&T_max,&in_tablesize);
-    printout("Tmin %g Tmax %g TABLESIZE %d \n",T_min,T_max,in_tablesize);
+    char phixsfile_hash_in[33];
+    fscanf(ratecoeff_file,"%33s\n",phixsfile_hash_in);
+    printout("ratecoeff.dat specifies a phixs file MD5 hash of %s\n",phixsfile_hash_in);
 
-    if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE)
+    if (strcmp(phixsfile_hash,phixsfile_hash_in) == 0)
     {
-      for (int element = 0; element < nelements; element++)
+      float T_min,T_max;
+      int in_tablesize;
+      fscanf(ratecoeff_file,"%g %g %d\n",&T_min,&T_max,&in_tablesize);
+      printout("ratecoeff.dat has Tmin %g Tmax %g TABLESIZE %d \n",T_min,T_max,in_tablesize);
+
+      if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE)
       {
-        int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++)
+        for (int element = 0; element < nelements; element++)
         {
-          int in_element,in_ionstage,in_levels,in_ionisinglevels;
-          fscanf(ratecoeff_file,"%d %d %d %d",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
-          int nlevels = get_nlevels(element,ion);
-          int ionisinglevels = get_ionisinglevels(element,ion);
-          if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
+          int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
           {
-            fileisamatch = false;
-            break;
+            int in_element,in_ionstage,in_levels,in_ionisinglevels;
+            fscanf(ratecoeff_file,"%d %d %d %d\n",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
+            int nlevels = get_nlevels(element,ion);
+            int ionisinglevels = get_ionisinglevels(element,ion);
+            if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
+            {
+              fileisamatch = false;
+              break;
+            }
           }
         }
       }
+      else
+      fileisamatch = false;
     }
     else
+    {
+      printout("Hash mismatch: phixs file has an md5 hash of %s\n",phixsfile_hash);
       fileisamatch = false;
+    }
 
     if (fileisamatch)
     {
@@ -137,6 +151,7 @@ static void write_ratecoeff_dat(void)
     printout("Cannot open ratecoeff.dat\n");
     exit(0);
   }
+  fprintf(ratecoeff_file,"%33s\n",phixsfile_hash);
   fprintf(ratecoeff_file,"%g %g %d\n",MINTEMP,MAXTEMP,TABLESIZE);
   for (int element = 0; element < nelements; element++)
   {
@@ -167,7 +182,7 @@ static void write_ratecoeff_dat(void)
             double gammacorr = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter];
             double bfheating_coeff = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter];
             //fprintf(ratecoeff_file,"%g %g %g %g %g %g %g %g %g\n", alpha_sp,alpha_sp_E,bfcooling_coeff,gamma_below,gamma_above,gammacorr_below,gammacorr_above,bfheating_coeff_below,bfheating_coeff_above);
-            fprintf(ratecoeff_file,"%g %g %g %g\n", alpha_sp,bfcooling_coeff,gammacorr,bfheating_coeff);
+            fprintf(ratecoeff_file,"%g %g %g %g\n",alpha_sp,bfcooling_coeff,gammacorr,bfheating_coeff);
           }
         }
       }
