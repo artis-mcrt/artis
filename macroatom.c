@@ -167,7 +167,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         {
           double epsilon_target = epsilon(element,ion-1,lower);
           epsilon_trans = epsilon_current - epsilon_target;
-          R = rad_recombination(modelgridindex,lower,epsilon_trans);
+          R = rad_recombination(modelgridindex,lower);
           //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
           C = col_recombination(modelgridindex,lower,epsilon_trans);
           rad_recomb += R * epsilon_trans;
@@ -450,7 +450,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       for (lower = 0; lower < nlevels; lower++)
       {
         epsilon_trans = epsilon_current - epsilon(element,ion-1,lower);
-        R = rad_recombination(modelgridindex,lower,epsilon_trans);
+        R = rad_recombination(modelgridindex,lower);
         rate += R * epsilon_trans;
         #ifdef DEBUG_ON
           if (debuglevel == 2)
@@ -652,7 +652,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       {
         double epsilon_target = epsilon(element,ion-1,lower);
         epsilon_trans = epsilon_current - epsilon_target;
-        R = rad_recombination(modelgridindex,lower,epsilon_trans);
+        R = rad_recombination(modelgridindex,lower);
         C = col_recombination(modelgridindex,lower,epsilon_trans);
         rate += (R + C) * epsilon_target;
         if (zrand*internal_down_lower < rate) break;
@@ -762,7 +762,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
           {
             double epsilon_target = epsilon(element,ion-1,lower);
             epsilon_trans = epsilon_current - epsilon_target;
-            R = rad_recombination(modelgridindex,lower,epsilon_trans);
+            R = rad_recombination(modelgridindex,lower);
             C = col_recombination(modelgridindex,lower,epsilon_trans);
             printout("[debug]    recombination to ion %d, level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",ion-1,lower,epsilon_target,epsilon_trans,R,C);
           }
@@ -992,7 +992,7 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
 }
 
 
-double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
+double rad_recombination(int modelgridindex, int lower)
 ///radiative recombination rate: paperII 3.5.2
 {
   int element = mastate[tid].element;
