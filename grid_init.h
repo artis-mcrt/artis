@@ -9,7 +9,7 @@ void allocate_cooling(int modelgridindex);
 
 /// Routine for getting the initial cell volume.
 static inline
-double vol_init(CELL *grid_ptr)
+double vol_init() //CELL *restrict grid_ptr
 {
   return (wid_init * wid_init * wid_init);
 }
