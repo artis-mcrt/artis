@@ -533,7 +533,7 @@ int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
 
-extern FILE *output_file;
+extern FILE *restrict output_file;
 //extern short output_file_open;
 
 transitions_t *transitions;

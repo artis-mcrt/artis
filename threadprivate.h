@@ -33,5 +33,5 @@ gsl_rng *rng;
 //float T_Dsum[MSAMPLEGRID];
 //int associatedcells[MSAMPLEGRID];
 
-FILE *output_file;
+FILE *restrict output_file;
 //short output_file_open;
