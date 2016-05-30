@@ -5,7 +5,7 @@
 #include "sn3d.h"
 #include "types.h"
 
-double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep);
+double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep);
 
 double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans,
                         int lineindex, double t_current);
@@ -20,8 +20,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans,
 double col_excitation(int modelgridindex, int upper, int lineindex,
                       double epsilon_trans);
 double col_recombination(int modelgridindex, int lower, double epsilon_trans);
-double col_ionization(int modelgridindex, int phixstargetindex,
-                      double epsilon_trans);
+double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
 
 static inline
 double get_individ_rad_deexc(int i)

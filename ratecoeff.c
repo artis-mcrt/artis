@@ -49,42 +49,67 @@ static bool read_ratecoeff_dat(void)
     /// Check whether current temperature range and atomic data match
     /// the precalculated rate coefficients
     bool fileisamatch = true;
+
+    char adatafile_hash_in[33];
+    fscanf(ratecoeff_file,"%33s\n",adatafile_hash_in);
+    printout("ratecoeff.dat: adata file should have MD5 of %s\n",adatafile_hash_in);
+
+    char compositionfile_hash_in[33];
+    fscanf(ratecoeff_file,"%33s\n",compositionfile_hash_in);
+    printout("ratecoeff.dat: composition file should have MD5 of %s\n",compositionfile_hash_in);
+
     char phixsfile_hash_in[33];
     fscanf(ratecoeff_file,"%33s\n",phixsfile_hash_in);
-    printout("ratecoeff.dat specifies a phixs file MD5 hash of %s\n",phixsfile_hash_in);
+    printout("ratecoeff.dat: phixs file should have MD5 of %s\n",phixsfile_hash_in);
 
-    if (strcmp(phixsfile_hash,phixsfile_hash_in) == 0)
+    if (strcmp(adatafile_hash,adatafile_hash_in) == 0)
     {
-      float T_min,T_max;
-      int in_tablesize;
-      fscanf(ratecoeff_file,"%g %g %d\n",&T_min,&T_max,&in_tablesize);
-      printout("ratecoeff.dat has Tmin %g Tmax %g TABLESIZE %d \n",T_min,T_max,in_tablesize);
-
-      if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE)
+      if (strcmp(compositionfile_hash,compositionfile_hash_in) == 0)
       {
-        for (int element = 0; element < nelements; element++)
+        if (strcmp(phixsfile_hash,phixsfile_hash_in) == 0)
         {
-          int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++)
+          float T_min,T_max;
+          int in_tablesize;
+          fscanf(ratecoeff_file,"%g %g %d\n",&T_min,&T_max,&in_tablesize);
+          printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d \n",T_min,T_max,in_tablesize);
+
+          if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE)
           {
-            int in_element,in_ionstage,in_levels,in_ionisinglevels;
-            fscanf(ratecoeff_file,"%d %d %d %d\n",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
-            int nlevels = get_nlevels(element,ion);
-            int ionisinglevels = get_ionisinglevels(element,ion);
-            if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
+            for (int element = 0; element < nelements; element++)
             {
-              fileisamatch = false;
-              break;
+              int nions = get_nions(element);
+              for (int ion = 0; ion < nions; ion++)
+              {
+                int in_element,in_ionstage,in_levels,in_ionisinglevels;
+                fscanf(ratecoeff_file,"%d %d %d %d\n",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
+                int nlevels = get_nlevels(element,ion);
+                int ionisinglevels = get_ionisinglevels(element,ion);
+                if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
+                {
+                  fileisamatch = false;
+                  break;
+                }
+              }
             }
           }
+          else
+          fileisamatch = false;
+        }
+        else
+        {
+          printout("Hash mismatch: phixs file has an MD5 of %s\n",phixsfile_hash);
+          fileisamatch = false;
         }
       }
       else
-      fileisamatch = false;
+      {
+        printout("Hash mismatch: composition file has an MD5 of %s\n",compositionfile_hash);
+        fileisamatch = false;
+      }
     }
     else
     {
-      printout("Hash mismatch: phixs file has an md5 hash of %s\n",phixsfile_hash);
+      printout("Hash mismatch: adata file has an MD5 of %s\n",adatafile_hash);
       fileisamatch = false;
     }
 
@@ -151,6 +176,8 @@ static void write_ratecoeff_dat(void)
     printout("Cannot open ratecoeff.dat\n");
     exit(0);
   }
+  fprintf(ratecoeff_file,"%33s\n",adatafile_hash);
+  fprintf(ratecoeff_file,"%33s\n",compositionfile_hash);
   fprintf(ratecoeff_file,"%33s\n",phixsfile_hash);
   fprintf(ratecoeff_file,"%g %g %d\n",MINTEMP,MAXTEMP,TABLESIZE);
   for (int element = 0; element < nelements; element++)
@@ -273,7 +300,7 @@ double alpha_sp_E_integrand_gsl(double nu, void *restrict paras)
 }*/
 
 
-static double gammacorr_integrand_gsl(double nu, void *paras)
+static double gammacorr_integrand_gsl(double nu, void *restrict paras)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
@@ -292,7 +319,7 @@ static double gammacorr_integrand_gsl(double nu, void *paras)
 }
 
 
-static double approx_bfheating_integrand_gsl(double nu, void *paras)
+static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying

@@ -29,16 +29,17 @@ static void read_phixs_data(void)
 {
   printout("readin phixs data\n");
 
-  FILE* popenphixshash = popen("openssl md5 -binary phixsdata_v2.txt | xxd -p", "r");
-  fgets(phixsfile_hash, 33, popenphixshash);
-  printout("MD5 hash of phixsdata_v2.txt: %s\n",phixsfile_hash);
-
   FILE *restrict phixsdata = fopen("phixsdata_v2.txt", "r");
   if (phixsdata == NULL)
   {
     printout("Cannot open phixsdata_v2.txt.\n");
     exit(0);
   }
+
+  FILE *popenphixshash = popen("openssl md5 -binary phixsdata_v2.txt | xxd -p", "r");
+  fgets(phixsfile_hash, 33, popenphixshash);
+  printout("MD5 hash of phixsdata_v2.txt: %s\n",phixsfile_hash);
+
   fscanf(phixsdata,"%d\n",&NPHIXSPOINTS);
   fscanf(phixsdata,"%lg\n",&NPHIXSNUINCREMENT);
   int Z,upperion,upperlevel,lowerion,lowerlevel;
@@ -269,14 +270,20 @@ static void read_unprocessed_atomicdata(void)
     exit(0);
   }
 
+  FILE *popencomphash = popen("openssl md5 -binary compositiondata.txt | xxd -p", "r");
+  fgets(compositionfile_hash, 33, popencomphash);
+  printout("MD5 hash of compositiondata.txt: %s\n",compositionfile_hash);
+
   FILE *restrict adata = fopen("adata.txt", "r");
   if (adata == NULL)
   {
     printout("Cannot open adata.txt.\n");
     exit(0);
   }
-  //printout("adata open\n");
 
+  FILE *popenadatahash = popen("openssl md5 -binary adata.txt | xxd -p", "r");
+  fgets(adatafile_hash, 33, popenadatahash);
+  printout("MD5 hash of adata.txt: %s\n",adatafile_hash);
 
   /// initialize atomic data structure to number of elements
   fscanf(compositiondata,"%d",&nelements);
@@ -1536,17 +1543,17 @@ static void read_atomicdata(void)
   includedions = 0;
 
   //printout("start input.c\n");
-  FILE *modelatom = fopen("modelatom.dat", "r");
-  if (modelatom == NULL || true) //changed to always read in unprocessed data files
-  {
-    read_unprocessed_atomicdata();
-  }
-  else /// Preprocessed model atom available read that in
-  {
-    read_processed_modelatom(modelatom);
-    fclose(modelatom);
-    read_processed_linelist();
-  }
+  //FILE *modelatom = fopen("modelatom.dat", "r");
+  //if (modelatom == NULL || true) //changed to always read in unprocessed data files
+  //{
+  read_unprocessed_atomicdata();
+  //}
+  //else /// Preprocessed model atom available read that in
+  //{
+  //  read_processed_modelatom(modelatom);
+  //  fclose(modelatom);
+  //  read_processed_linelist();
+  //}
   last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
 
 
@@ -2522,9 +2529,8 @@ void read_parameterfile(int rank)
   if (NO_LUT_BFHEATING)
     printout("bfheating coefficients are calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
 
-  #ifdef USE_MULTIBIN_RADFIELD_MODEL
+  if (USE_MULTIBIN_RADFIELD_MODEL)
     printout("The multibin radiation field model is being used instead of the whole-spectrum fit.\n");
-  #endif
 
   /// Set up initial grey approximation?
   fscanf(input_file, "%lg %d", &cell_is_optically_thick, &n_grey_timesteps);

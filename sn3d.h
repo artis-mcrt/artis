@@ -25,7 +25,7 @@
   #define NLTE_POPS_ON
 #endif
 
-//#define USE_MULTIBIN_RADFIELD_MODEL //if using this, avoid look up tables below
+#define USE_MULTIBIN_RADFIELD_MODEL true //if using this, should avoid look up tables below (since they assume J_nu is Planck function)
 #define NO_LUT_PHOTOION true // dynamically calculate photoionization
                              // rates for the current radiation field
                              // instead of interpolating precalculated

@@ -17,8 +17,8 @@ static double J_normfactor[MMODELGRID + 1];
 
 static bool radfield_initialized = false;
 
-double T_R_min = MINTEMP;
-double T_R_max = MAXTEMP * 4;
+static const double T_R_min = MINTEMP;
+static const double T_R_max = MAXTEMP * 4;
 
 typedef enum
 {
@@ -58,7 +58,7 @@ typedef struct
   int binindex;
 } gsl_T_R_solver_paras;
 
-static FILE *radfieldfile = NULL;
+static FILE *restrict radfieldfile = NULL;
 
 
 void radfield_init(void)
@@ -353,8 +353,7 @@ double radfield(double nu, int modelgridindex)
   double T_R_fullspec = get_TR(modelgridindex);
   double W_fullspec   = get_W(modelgridindex);
 
-  #ifdef USE_MULTIBIN_RADFIELD_MODEL
-  if (radfield_initialized) // && radfieldbins[modelgridindex] != NULL
+  if (radfield_initialized && USE_MULTIBIN_RADFIELD_MODEL) // && radfieldbins[modelgridindex] != NULL
   {
     int binindex = radfield_select_bin(modelgridindex,nu);
     if (binindex >= 0)
@@ -403,7 +402,6 @@ double radfield(double nu, int modelgridindex)
     printout("radfield: WARNING: Radfield called before initialized. Using global T_R %g W %g nu %g modelgridindex %d\n",
              W_fullspec, T_R_fullspec, nu, modelgridindex);
   }*/
-  #endif
 
   double J_nu_fullspec = radfield2(nu, T_R_fullspec, W_fullspec);
   return J_nu_fullspec;

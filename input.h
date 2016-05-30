@@ -1,6 +1,8 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+char compositionfile_hash[33];
+char adatafile_hash[33];
 char phixsfile_hash[33];
 
 int input(int rank);
