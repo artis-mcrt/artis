@@ -117,25 +117,25 @@ float get_kappagrey(int modelgridindex)
 }
 
 static inline
-float get_Te(int modelgridindex)
+double get_Te(int modelgridindex)
 {
   return modelgrid[modelgridindex].Te;
 }
 
 static inline
-float get_TR(int modelgridindex)
+double get_TR(int modelgridindex)
 {
   return modelgrid[modelgridindex].TR;
 }
 
 static inline
-float get_TJ(int modelgridindex)
+double get_TJ(int modelgridindex)
 {
   return modelgrid[modelgridindex].TJ;
 }
 
 static inline
-float get_W(int modelgridindex)
+double get_W(int modelgridindex)
 {
   return modelgrid[modelgridindex].W;
 }
