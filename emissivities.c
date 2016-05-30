@@ -356,7 +356,7 @@ void normalise_estimators(int nts)
   for (int n = 0; n < npts_model; n++)
   {
     int assoc_cells = modelgrid[n].associated_cells;
-    double volume = 1. / vol_init(&cell[n]);  ///That's not going to work if the parameter matters!!!!!!!!!!!!!!!!!!
+    double volume = 1. / vol_init();  ///That's not going to work if the cell number matters!!!!!!!!!!!!!!!!!!
     for (int m = 0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = compton_emiss[n][m] * time_factor * volume / nprocs / assoc_cells;
