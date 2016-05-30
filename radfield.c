@@ -681,14 +681,14 @@ void radfield_fit_parameters(int modelgridindex)
     radfieldbins[modelgridindex][binindex].W = W_bin;
   }
 
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  /*for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
   {
     double J_bin = radfield_get_bin_J(modelgridindex,binindex);
     double T_R_bin = radfield_get_bin_T_R(modelgridindex,binindex);
     double W_bin = radfield_get_bin_W(modelgridindex,binindex);
     printout("bin %4d: J %g, T_R %7.1f, W %12.5e\n",
            binindex, J_bin, T_R_bin, W_bin);
-  }
+  }*/
 }
 
 
