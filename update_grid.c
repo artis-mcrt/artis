@@ -19,7 +19,7 @@ static void precalculate_partfuncts(int modelgridindex)
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       //printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);

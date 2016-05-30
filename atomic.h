@@ -170,7 +170,7 @@ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
 
 
 static inline
-float get_phixsprobability(int element, int ion, int level, int phixstargetindex)
+double get_phixsprobability(int element, int ion, int level, int phixstargetindex)
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
   #ifdef DEBUG_ON

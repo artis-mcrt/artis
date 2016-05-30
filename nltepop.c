@@ -482,7 +482,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
 
         double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
-        float T_e = get_Te(modelgridindex);
+        double T_e = get_Te(modelgridindex);
         double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion-1]/modelgrid[modelgridindex].composition[element].partfunct[ion];
         double gs_g_ratio = stat_weight(element,ion-1,0)/stat_weight(element,ion,0);
         double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);

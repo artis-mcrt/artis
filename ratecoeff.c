@@ -12,7 +12,7 @@
 
 typedef struct gslintegration_ffheatingparas
 {
-  float T_e;
+  double T_e;
   int cellnumber;
 } gslintegration_ffheatingparas;
 
@@ -332,14 +332,14 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
   double sigma_bf = photoionization_crosssection(nu_edge,nu);
 
   /// Precalculation for T_e=T_R and W=1
-  float T  = ((gslintegration_paras *) paras)->T;
+  double T  = ((gslintegration_paras *) paras)->T;
   double x = sigma_bf * (1-nu_edge/nu) * radfield2(nu,T,1) * (1-exp(-H*nu/KB/T));
 
   /// Precalculation for a (T_R,T_e)-grid, but still W is assumed to be 1.
   /// The radfield part can be corrected later because of its linear dependence.
   /// But not the W in the stimulated correction term!
-  /*float T_e  = ((gslintegration_paras *) paras)->T;
-  float T_R  = ((gslintegration_paras *) paras)->T2;
+  /*double T_e  = ((gslintegration_paras *) paras)->T;
+  double T_R  = ((gslintegration_paras *) paras)->T2;
   int element = mastate[tid].element;
   int ion  = mastate[tid].ion;
   int level = mastate[tid].level;
@@ -361,10 +361,10 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
   int cellnumber = ((gslintegration_bfheatingparas *) paras)->cellnumber;
   double nu_edge = ((gslintegration_bfheatingparas *) paras)->nu_edge;
 
-  float T_e = cell[cellnumber].T_e;
-  float T_R = cell[cellnumber].T_R;
-  float W = cell[cellnumber].W;
-  float nne = cell[cellnumber].nne;
+  double T_e = cell[cellnumber].T_e;
+  double T_R = cell[cellnumber].T_R;
+  double W = cell[cellnumber].W;
+  double nne = cell[cellnumber].nne;
 
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
@@ -440,7 +440,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  float T = ((gslintegration_paras *) paras)->T;
+  double T = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
   /// Information about the current level is passed via the global variable
@@ -457,7 +457,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  float T  = ((gslintegration_paras *) paras)->T;
+  double T  = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
   /// Information about the current level is passed via the global variable
@@ -475,7 +475,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  float T  = ((gslintegration_paras *) paras)->T;
+  double T  = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
   /// Information about the current level is passed via the global variable
@@ -546,7 +546,7 @@ static void calculate_rate_coefficients(void)
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
         {
           int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-          float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
+          double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
 
           //printout("element %d, ion %d, level %d, upperlevel %d, epsilon %g, continuum %g, nlevels %d\n",element,ion,level,upperlevel,epsilon(element,ion,level),epsilon(element,ion+1,upperlevel),nlevels);
 
@@ -958,7 +958,7 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(4096);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-  float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
+  double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
 
   double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
   double nu_threshold = E_threshold / H;
@@ -1103,7 +1103,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-  float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
+  double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
 
   double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
   double nu_threshold = E_threshold / H;

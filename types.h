@@ -223,7 +223,7 @@ typedef struct mastate_t
 {
   double nnlevel;           /// population number of the active level
   double einstein;
-  float statweight;         /// statistical weight of the active level
+  double statweight;         /// statistical weight of the active level
   int element;              /// macro atom of type element (this is an element index)
   int ion;                  /// in ionstage ion (this is an ion index)
   int level;                /// and level=level (this is a level index)
@@ -262,6 +262,10 @@ typedef struct mgicooling_t
 
 typedef struct modelgrid_t
 {
+  double Te;
+  double TR;
+  double TJ;
+  double W;
   int associated_cells;
   short thick;
   float initial_radial_pos;
@@ -283,10 +287,6 @@ typedef struct modelgrid_t
   float fvstable;
   float ftistable;
   float kappagrey;
-  float Te;
-  float TR;
-  float TJ;
-  double W;
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
                                          /// so there is no need to communicate it via MPI so far!
@@ -487,7 +487,7 @@ typedef struct nne_solution_paras
 typedef struct gslintegration_paras
 {
   double nu_edge;
-  float T;
+  double T;
 } gslintegration_paras;
 
 typedef struct rpkt_cont_opacity_struct

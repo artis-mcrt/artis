@@ -110,8 +110,7 @@ static void place_pellet(const struct grid *restrict grid_ptr, double e0, int m,
 static void setup_packets(int pktnumberoffset)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
-  CELL *grid_ptr;
-  // float cont[MGRID+1];
+  float cont[MGRID+1];
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
@@ -124,7 +123,7 @@ static void setup_packets(int pktnumberoffset)
   printout("E52FE, E52MN %g %g\n",E52FE/MEV, E52MN/MEV);
 
   /// So energy per pellet is
-  double e0 = etot / npkts / n_out_it / n_middle_it;
+  const double e0 = etot / npkts / n_out_it / n_middle_it;
   printout("e0 %g\n", e0);
 
   /* Now place the pellets in the ejecta and decide at what time
@@ -134,7 +133,7 @@ static void setup_packets(int pktnumberoffset)
   float norm = 0.0;
   for (int m = 0; m < ngrid; m++)
   {
-    grid_ptr = &cell[m];
+    const CELL *grid_ptr = &cell[m];
     cont[m] = norm;
     //printf("%g %g %g\n", (fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     norm += get_rhoinit(grid_ptr->modelgridindex) * vol_init() * //vol_init(grid_ptr)
@@ -201,7 +200,7 @@ static void setup_packets(int pktnumberoffset)
     m = m - 1;
     */
 
-    grid_ptr = &cell[m];
+    CELL *grid_ptr = &cell[m];
     if (m >= ngrid)
     {
       printout("Failed to place pellet. Abort.\n");
@@ -238,7 +237,7 @@ void packet_init(int middle_iteration, int my_rank)
 {
   if (!continue_simulation)
   {
-    int pktnumberoffset = middle_iteration*npkts;
+    const int pktnumberoffset = middle_iteration * npkts;
     setup_packets(pktnumberoffset);
     char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
     sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank);
@@ -416,7 +415,7 @@ double f48cr(const CELL *restrict grid_ptr)
 
 
 ///***************************************************************************/
-void write_packets(FILE *packets_file)
+void write_packets(FILE *restrict packets_file)
 {
   for (int i = 0; i < npkts; i++)
   {
@@ -452,7 +451,7 @@ void write_packets(FILE *packets_file)
 
 
 ///***************************************************************************/
-void read_packets(FILE *packets_file)
+void read_packets(FILE *restrict packets_file)
 {
   for (int i = 0; i < npkts; i++)
   {

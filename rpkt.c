@@ -808,7 +808,7 @@ double closest_transition(PKT *restrict pkt_ptr)
 }
 
 
-void emitt_rpkt(PKT *pkt_ptr, double t_current)
+void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
 {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
@@ -1057,7 +1057,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
               const int upper = get_phixsupperlevel(element,ion,level,0);
               const double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
               const double sf = get_sahafact(element,ion,level,0,T_e,H*nu_edge);
-              const float probability = get_phixsprobability(element,ion,level,0);
+              const double probability = get_phixsprobability(element,ion,level,0);
               const double helper = nnlevel * sigma_bf * probability;
               const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 

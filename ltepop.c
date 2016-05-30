@@ -130,10 +130,10 @@ double phi(int element, int ion, int modelgridindex)
 
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
-  float T_e = get_Te(modelgridindex);
-  //float T_R = get_TR(modelgridindex);
+  double T_e = get_Te(modelgridindex);
+  //double T_R = get_TR(modelgridindex);
 
-  //float W = cell[cellnumber].W;
+  //double W = cell[cellnumber].W;
 
   /// Old ionisation formula
   //partfunct_ratio = cell[cellnumber].composition[element].partfunct[ion]/cell[cellnumber].composition[element].partfunct[ion+1];
@@ -318,7 +318,7 @@ double phi(int element, int ion, int modelgridindex)
   double phi;
 
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
-  float T_e = cell[cellnumber].T_e;
+  double T_e = cell[cellnumber].T_e;
 
   partfunct_ratio = cell[cellnumber].composition[element].partfunct[ion]/cell[cellnumber].composition[element].partfunct[ion+1];
   phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
@@ -475,7 +475,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 
 ///***************************************************************************/
 /*
-float calculate_groundlevelpop(int element, int ion, double T, int cellnumber, double nne, double nnnextion)
+double calculate_groundlevelpop(int element, int ion, double T, int cellnumber, double nne, double nnnextion)
 ///calculates ground level population for ion=ion of element=element at
 ///temperature T and electron number density nne
 ///further the total population number nnnextion of the next higher ionisation stage is needed

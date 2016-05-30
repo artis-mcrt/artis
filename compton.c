@@ -11,9 +11,9 @@ static double sigma_compton_partial(double x, double f)
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
 {
-  double term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
-  double term2 = ( ((f*f) -1) / (f * f)) / 2;
-  double term3 = ( (f - 1) / x) * ( (1/x) + (2/f) + (1/(x*f)));
+  const double term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
+  const double term2 = ( ((f*f) -1) / (f * f)) / 2;
+  const double term3 = ( (f - 1) / x) * ( (1/x) + (2/f) + (1/(x*f)));
 
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
@@ -58,10 +58,10 @@ static double choose_f(double xx, double zrand)
 {
   double ftry, try;
 
-  double fmax = 1 + (2 * xx);
-  double fmin = 1;
+  double f_max = 1 + (2 * xx);
+  double f_min = 1;
 
-  double norm = zrand * sigma_compton_partial(xx, fmax);
+  const double norm = zrand * sigma_compton_partial(xx, f_max);
 
   int count = 0;
   double err = 1e20;
@@ -70,17 +70,17 @@ static double choose_f(double xx, double zrand)
 
   while ((err > 1.e-4) && (count < 1000))
   {
-    ftry = (fmax + fmin)/2;
+    ftry = (f_max + f_min)/2;
     try = sigma_compton_partial(xx, ftry);
-    //printout("ftry %g %g %g %g %g\n",ftry, fmin, fmax, try, norm);
+    //printout("ftry %g %g %g %g %g\n",ftry, f_min, f_max, try, norm);
     if (try > norm)
     {
-      fmax = ftry;
+      f_max = ftry;
       err = (try - norm) / norm;
     }
     else
     {
-      fmin = ftry;
+      f_min = ftry;
       err = (norm - try) / norm;
     }
     //      printout("error %g\n",err);
@@ -89,7 +89,7 @@ static double choose_f(double xx, double zrand)
 
   if (count == 1000)
   {
-    printout("Compton hit 1000 tries. %g %g %g %g %g\n", fmax, fmin, ftry, try, norm);
+    printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, try, norm);
   }
 
   return ftry;
@@ -100,16 +100,16 @@ static double thomson_angle(void)
 {
   // For Thomson scattering we can get the new angle from a random number very easily.
 
-  double zrand = gsl_rng_uniform(rng);
+  const double zrand = gsl_rng_uniform(rng);
 
-  double B_coeff = (8. * zrand) - 4.;
+  const double B_coeff = (8. * zrand) - 4.;
 
   double t_coeff = sqrt( (B_coeff * B_coeff) + 4);
   t_coeff = t_coeff - B_coeff;
   t_coeff = t_coeff / 2;
   t_coeff = pow(t_coeff, (1./3));
 
-  double mu = (1./t_coeff) - t_coeff;
+  const double mu = (1./t_coeff) - t_coeff;
 
   if (fabs(mu) > 1)
   {

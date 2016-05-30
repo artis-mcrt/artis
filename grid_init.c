@@ -1511,9 +1511,9 @@ static void assign_temperature(void)
     {
       //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
       //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g %g %d\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy,&dummy,&idummy);
-      float T_R,T_e,W,T_J;
+      double T_R,T_e,W,T_J;
       int mgi,thick;
-      fscanf(gridsave_file,"%d %g %g %g %g %d",&mgi,&T_R,&T_e,&W,&T_J,&thick);
+      fscanf(gridsave_file,"%d %lg %lg %lg %lg %d",&mgi,&T_R,&T_e,&W,&T_J,&thick);
       if (n == mgi)
       {
         set_TR(mgi, T_R);

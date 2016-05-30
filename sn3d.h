@@ -411,7 +411,6 @@ double min_den;
 
 #define GREY_OP 0.1
 
-float cont[MGRID+1];
 double max_path_step;
 
 int opacity_case; // 0 normally, 1 for Fe-grp dependence.

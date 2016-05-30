@@ -38,7 +38,7 @@ typedef struct
   enum_bin_fit_type fit_type;
 } radfieldbin;
 
-static radfieldbin *radfieldbins[MMODELGRID + 1];
+static radfieldbin *restrict radfieldbins[MMODELGRID + 1];
 
 typedef enum
 {
@@ -630,7 +630,7 @@ void radfield_fit_parameters(int modelgridindex)
     abort();
   }
 
-  float T_R_fullspec = get_TR(modelgridindex);
+  double T_R_fullspec = get_TR(modelgridindex);
   double J_fullspec = J[modelgridindex];
   //double plank_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
 

@@ -12,9 +12,9 @@ double photoionization_crosssection(double nu_edge, double nu)
 {
   double sigma_bf;
 
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
+  const int element = mastate[tid].element;
+  const int ion = mastate[tid].ion;
+  const int level = mastate[tid].level;
 
   if (nu == nu_edge)
   {

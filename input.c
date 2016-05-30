@@ -91,9 +91,9 @@ static void read_phixs_data(void)
               }
               for (int i = 0; i < in_nphixstargets; i++)
               {
-                float phixstargetprobability;
+                double phixstargetprobability;
                 int in_upperlevel;
-                fscanf(phixsdata,"%d %g\n",&in_upperlevel,&phixstargetprobability);
+                fscanf(phixsdata,"%d %lg\n",&in_upperlevel,&phixstargetprobability);
                 elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = in_upperlevel-1;//subtract one to get index
                 elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].probability = phixstargetprobability;
               }
@@ -105,9 +105,9 @@ static void read_phixs_data(void)
               fscanf(phixsdata,"%d\n",&in_nphixstargets);
               for (int i = 0; i < in_nphixstargets; i++)
               {
-                float phixstargetprobability;
+                double phixstargetprobability;
                 int in_upperlevel;
-                fscanf(phixsdata,"%d %g\n",&in_upperlevel,&phixstargetprobability);
+                fscanf(phixsdata,"%d %lg\n",&in_upperlevel,&phixstargetprobability);
               }
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1,sizeof(phixstarget_entry))) == NULL)
               {
@@ -192,8 +192,8 @@ static void read_phixs_data(void)
         fscanf(phixsdata,"%d\n",&nphixstargets);
         for (int i = 0; i < nphixstargets; i++)
         {
-          float phixstargetprobability;
-          fscanf(phixsdata,"%d %g\n",&upperlevel,&phixstargetprobability);
+          double phixstargetprobability;
+          fscanf(phixsdata,"%d %lg\n",&upperlevel,&phixstargetprobability);
         }
       }
       for (int i = 0; i < NPHIXSPOINTS; i++) //skip through cross section list
@@ -954,9 +954,9 @@ static void read_processed_modelatom(FILE *restrict modelatom)
 
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
-          float phixstargetprobability;
+          double phixstargetprobability;
           int upperlevel;
-          fscanf(modelatom,"%d %g\n",&upperlevel,&phixstargetprobability);
+          fscanf(modelatom,"%d %lg\n",&upperlevel,&phixstargetprobability);
           elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex = upperlevel;
           elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability = phixstargetprobability;
         }
@@ -1117,7 +1117,7 @@ static void write_processed_modelatom(void)
             for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
             {
                 int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-                float phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
+                double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
                 //printout("> goes to target level %d with probability %g\n",upperlevel,phixstargetprobability);
                 fprintf(modelatom,"%d %f\n",upperlevel,phixstargetprobability);
             }
