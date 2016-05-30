@@ -29,7 +29,7 @@ void vec_norm(const double vec_in[3], double vec_out[3])
 
 /*Routine for taking dot product.*/
 static inline
-double dot(const double *x, const double *y)
+double dot(const double *const restrict x, const double *const restrict y)
 {
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
 }
@@ -37,7 +37,7 @@ double dot(const double *x, const double *y)
 
 /*Routine for getting velocity vector of the flow at a position.*/
 static inline
-void get_velocity(const double *restrict x, double *restrict y, const double t)
+void get_velocity(const double *const restrict x, double *restrict y, const double t)
 {
   /* For homologous expansion. */
 

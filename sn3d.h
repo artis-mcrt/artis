@@ -31,7 +31,7 @@
                          // rates for the current radiation field
                          // instead of interpolating precalculated
                          // values assuming a blackbody radiation field
-#define NO_LUT_BFHEATING // as above
+//#define NO_LUT_BFHEATING // as above
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS

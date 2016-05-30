@@ -962,7 +962,7 @@ double closest_transition_empty(PKT *restrict pkt_ptr)
 }
 
 
-void calculate_kappa_rpkt_cont(const PKT *restrict pkt_ptr, double t_current)
+void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, double t_current)
 {
   double kappa_ffheating = 0.;
   double kappa_ff = 0.;
