@@ -6,19 +6,21 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  CC = gcc-6
 #  CC = clang-omp
 #  CC = mpicc
+  INCLUDE = -I/usr/local/Cellar/gsl/1.16/include
 #  INCLUDE = -I/usr/local/opt/gperftools/include
 #  LIB = -L/usr/local/opt/gperftools/lib
-#  CFLAGS = -Wall -O0 -std=c11 $(INCLUDE)
-  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -ftree-vectorize -O3 -march=native -flto -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
+  LIB = -L/usr/local/Cellar/gsl/1.16/lib
+#  CFLAGS = -Wall -O0 -g -std=c11 $(INCLUDE)
+  CFLAGS = -Wall -Wextra -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -ftree-vectorize -flto -O3 -march=native -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)
 #maybe  -fopt-info-vec-missed
 #add -lprofiler for gperftools
 
-  LDFLAGS = $(LIB) -lgsl -lgslcblas -lm
-  exspec: override CFLAGS =  -g -Wextra -Wunused-parameter -O3 $(INCLUDE) -DDO_EXSPEC
-  exgamma: override CFLAGS =  -g -O3 $(INCLUDE) -DDO_EXSPEC
+  LDFLAGS = $(LIB) -lgsl -lgslcblas
+  exspec: CFLAGS += -DDO_EXSPEC
+  exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
 
 ### Settings for the miner
 ifeq ($(OSTYPE),linux)
@@ -223,15 +225,15 @@ endif
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
 
 
-sn3d_objects = sn3d.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o polarization.o nltepop.o vpkt.o radfield.o
+sn3d_files = sn3d.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c ray_prop.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c polarization.c nltepop.c vpkt.c radfield.c
 
-sn3d: version $(sn3d_objects)
-	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+sn3d: version
+	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
-exspec_objects = exspec.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o radfield.o
+exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c ray_prop.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c
 
-exspec: $(exspec_objects)
-	$(CC) $(CFLAGS) $(exspec_objects) $(LDFLAGS) -o exspec
+exspec: version
+	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exspec
 
 exgamma_objects = exgamma.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o ray_prop.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o radfield.o
 
@@ -248,6 +250,7 @@ sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time
 sn3dlcsyn: $(sn3dlcsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
 
+
 .PHONY: clean version
 
 version:
@@ -257,4 +260,4 @@ version:
 	@echo "#define COMPILETIME \"`date`\"" >> version.h
 
 clean:
-	rm *.o sn3d exspec exgamma version.h
+	rm -f *.o version.h
