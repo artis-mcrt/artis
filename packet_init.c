@@ -138,9 +138,9 @@ static void setup_packets(int pktnumberoffset)
     cont[m] = norm;
     //printf("%g %g %g\n", (fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     norm += get_rhoinit(grid_ptr->modelgridindex) * vol_init() * //vol_init(grid_ptr)
-      ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
-       +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
-       +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
+              ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
+               +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
+               +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
   }
   cont[ngrid] = norm;
 
