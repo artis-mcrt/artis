@@ -13,7 +13,7 @@
 #define DEBUG_ON
 //#define DO_TITER
 //#define FORCE_LTE
-#define NT_ON        /// Switch on non-thermal ionisation
+#define NT_ON true       /// Switch on non-thermal ionisation
 
 //#define NLTE_POPS_ON
 //#define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
@@ -25,7 +25,8 @@
   #define NLTE_POPS_ON
 #endif
 
-#define USE_MULTIBIN_RADFIELD_MODEL true //if using this, should avoid look up tables below (since they assume J_nu is Planck function)
+#define USE_MULTIBIN_RADFIELD_MODEL true // if using this, should avoid look up tables below
+                                         // (since they assume J_nu is Planck function)
 #define NO_LUT_PHOTOION true // dynamically calculate photoionization
                              // rates for the current radiation field
                              // instead of interpolating precalculated

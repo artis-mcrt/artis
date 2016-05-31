@@ -431,12 +431,6 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
                 calculate_populations(n,0);
 
-                #ifdef NT_ON
-                    //    for (int jjj=0; jjj < 10; jjj++)
-                    //  {
-                    //    nntot = calculate_populations(n,0);
-                    //  }
-                #endif
                 double nne = get_nne(n);
                 double compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
 
@@ -526,12 +520,14 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
                     modelgrid[n].thick = 1;
                   }
-                  else if (grey_optical_depth > cell_is_optically_thick_vpkt )
+                  else if (grey_optical_depth > cell_is_optically_thick_vpkt)
                   {
                     modelgrid[n].thick = 2;
                   }
                   else
+                  {
                     modelgrid[n].thick = 0;
+                  }
 
                 #else
                   /// non-LTE version of the code
@@ -1523,7 +1519,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
           {
             //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
             //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
-            #ifdef NT_ON
+            #if NT_ON == true
               if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.))
                 break;
             #else

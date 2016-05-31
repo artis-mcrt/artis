@@ -246,7 +246,8 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             printout("WARNING: Negative excitation rate from ion %d level %d tolevel %d\n",ion,level,upper);
         }
 
-        #ifdef NT_ON
+        if (NT_ON)
+        {
           if (ion < nions-1)
           {
             double Y = nt_ionization_rate(modelgridindex,element,ion);
@@ -267,7 +268,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             if (Y < 0)
               printout("WARNING: Negative NT_ionization rate from ion %d level %d\n",ion,level);
           }
-        #endif
+        }
 
         //now put in the photoionization/recombination processes
         int ionisinglevels = get_bfcontinua(element,ion);
@@ -730,7 +731,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           //printout("Fourth using %d of %d\n", upper_use*(nlte_size) + level_use, nlte_size*nlte_size);
         }
 
-        #ifdef NT_ON
+        #if NT_ON == true
           if (ion < get_nions(element)-1)
           {
             Y = nt_ionization_rate(modelgridindex,element,ion);

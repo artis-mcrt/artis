@@ -2264,9 +2264,8 @@ int input(int rank)
     exit(0);
   }
 
-  #ifdef NT_ON
-  read_binding_energies();
-  #endif
+  if (NT_ON)
+    read_binding_energies();
 
   #ifdef DO_EXSPEC
     /// Check if enough  memory for spectra has been assigned
@@ -2513,15 +2512,16 @@ void read_parameterfile(int rank)
     printout("input: do the first %d timesteps in LTE\n",n_lte_timesteps);
   #endif
 
-  #ifdef NT_ON
+  if (NT_ON)
+  {
     printout("input: Non-thermal ionisation is switched on for this run.\n");
     #ifdef FORCE_LTE
       printout("input: Non-thermal ionisation requires the code to run in non-LTE mode. Remove macro FORCE_LTE and recompile!\n");
       exit(0);
     #endif
-  #else
+  }
+  else
     printout("input: No non-thermal ionisation is used in this run.\n");
-  #endif
 
   if (NO_LUT_PHOTOION)
     printout("Corrphotoioncoeff is calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
