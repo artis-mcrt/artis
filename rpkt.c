@@ -1281,7 +1281,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
             double ionpops_local[MELEMENTS][MIONS];
             for (int element = 0; element < nelements; element++)
             {
-                int nions = get_nions(element);
+                const int nions = get_nions(element);
                 for (int ion = 0; ion < nions; ion++)
                 {
                     ///calculate population of ionstage ...

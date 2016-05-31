@@ -1000,7 +1000,7 @@ double rad_recombination(int modelgridindex, int lower)
   int upper = mastate[tid].level;
 
   double R = 0.0;
-  int nphixstargets = get_nphixstargets(element,ion-1,lower);
+  const int nphixstargets = get_nphixstargets(element,ion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
@@ -1200,7 +1200,7 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
   int upper = mastate[tid].level;
   double n_u = mastate[tid].nnlevel;
 
-  int nphixstargets = get_nphixstargets(element,ion-1,lower);
+  const int nphixstargets = get_nphixstargets(element,ion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)

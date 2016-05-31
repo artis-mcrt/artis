@@ -141,7 +141,7 @@ static inline
 int get_nphixstargets(int element, int ion, int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
-  int nions = get_nions(element);
+  const int nions = get_nions(element);
   int nionisinglevels = get_ionisinglevels(element,ion);
   if ((ion < nions-1) && (level < nionisinglevels))
     return elements[element].ions[ion].levels[level].nphixstargets;

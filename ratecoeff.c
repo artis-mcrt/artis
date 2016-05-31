@@ -77,12 +77,12 @@ static bool read_ratecoeff_dat(void)
           {
             for (int element = 0; element < nelements; element++)
             {
-              int nions = get_nions(element);
+              const int nions = get_nions(element);
               for (int ion = 0; ion < nions; ion++)
               {
                 int in_element,in_ionstage,in_levels,in_ionisinglevels;
                 fscanf(ratecoeff_file,"%d %d %d %d\n",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
-                int nlevels = get_nlevels(element,ion);
+                const int nlevels = get_nlevels(element,ion);
                 int ionisinglevels = get_ionisinglevels(element,ion);
                 if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
                 {
@@ -122,12 +122,12 @@ static bool read_ratecoeff_dat(void)
         for (int ion = 0; ion < nions; ion++)
         {
           //nlevels = get_nlevels(element,ion);
-          int nlevels = get_ionisinglevels(element,ion); /// number of ionising levels associated with current ion
+          const int nlevels = get_ionisinglevels(element,ion); /// number of ionising levels associated with current ion
           int nbfcont = get_bfcontinua(element,ion);     /// number of ionising levels of the current ion which are used in the simulation
           for (int level = 0; level < nlevels; level++)
           {
             /// Loop over the phixs target states
-            int nphixstargets = get_nphixstargets(element,ion,level);
+            const int nphixstargets = get_nphixstargets(element,ion,level);
             for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
             {
               /// Loop over the temperature grid
@@ -182,7 +182,7 @@ static void write_ratecoeff_dat(void)
   fprintf(ratecoeff_file,"%g %g %d\n",MINTEMP,MAXTEMP,TABLESIZE);
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       fprintf(ratecoeff_file,"%d %d %d %d\n",get_element(element), get_ionstage(element,ion), get_nlevels(element,ion),  get_ionisinglevels(element,ion));
@@ -195,7 +195,7 @@ static void write_ratecoeff_dat(void)
     for (int ion = 0; ion < nions; ion++)
     {
       //nlevels = get_nlevels(element,ion);
-      int nlevels = get_ionisinglevels(element,ion);
+      const int nlevels = get_ionisinglevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
         /// Loop over the phixs targets
@@ -528,7 +528,7 @@ static void calculate_rate_coefficients(void)
     for (int ion = 0; ion < nions; ion++)
     {
       //nlevels = get_nlevels(element,ion);
-      int nlevels = get_ionisinglevels(element,ion);
+      const int nlevels = get_ionisinglevels(element,ion);
       /// That's only an option for pure LTE
       //if (TAKE_N_BFCONTINUA < nlevels) nlevels = TAKE_N_BFCONTINUA;
       printout("Performing rate integrals for Z = %d, ionstage %d...\n",elements[element].anumber,ion+1);
@@ -542,7 +542,7 @@ static void calculate_rate_coefficients(void)
         if ((level > 0) && (level % 10 == 0))
           printout("  completed up to level %d of %d\n",level,nlevels);
 
-        int nphixstargets = get_nphixstargets(element,ion,level);
+        const int nphixstargets = get_nphixstargets(element,ion,level);
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
         {
           int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
@@ -644,12 +644,12 @@ static void calculate_ion_alpha_sp(void)
     //T_e = MINTEMP + iter*T_step;
     for (int element = 0; element < nelements; element++)
     {
-      int nions = get_nions(element);
+      const int nions = get_nions(element);
       for (int ion = 0; ion < nions-1; ion++)
       {
         //nlevels = get_nlevels(element,ion);
         //nlevels = get_ionisinglevels(element,ion); ///number of levels of the current ion which have an associated photoion cross section
-        int nlevels = get_bfcontinua(element,ion); /// number of ionising levels used in the simulation
+        const int nlevels = get_bfcontinua(element,ion); /// number of ionising levels used in the simulation
         int nlevelsupperion = get_nlevels(element,ion+1);
         double zeta = 0.;
         double pfunc = 0.;
@@ -660,7 +660,7 @@ static void calculate_ion_alpha_sp(void)
         }
         for (int level = 0; level < nlevels; level++)
         {
-          int nphixstargets = get_nphixstargets(element,ion,level);
+          const int nphixstargets = get_nphixstargets(element,ion,level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
           {
             int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);

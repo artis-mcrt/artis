@@ -1525,7 +1525,7 @@ static void assign_temperature(void)
         #ifndef FORCE_LTE
           for (int element = 0; element < nelements; element++)
           {
-            int nions = get_nions(element);
+            const int nions = get_nions(element);
             for (int ion = 0; ion < nions; ion++)
             {
               double Gamma;
@@ -1536,7 +1536,7 @@ static void assign_temperature(void)
 
           for (int element = 0; element < nelements; element++)
           {
-            int nions = get_nions(element);
+            const int nions = get_nions(element);
             for (int ion = 0; ion < nions; ion++)
             {
               double Gamma;

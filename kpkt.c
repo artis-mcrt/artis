@@ -43,7 +43,7 @@ void calculate_kpkt_rates(int modelgridindex)
   {
     //printout("[debug] do_kpkt: element %d\n",element);
     mastate[tid].element = element;
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     //if (get_abundance(modelgridindex,element) > 0.)
     //{
       for (int ion = 0; ion < nions; ion++)
@@ -260,7 +260,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   int i = low;
 
   //printout("[debug] do_kpkt: element %d\n",element);
-  int nions = get_nions(element);
+  const int nions = get_nions(element);
   mastate[tid].element = element;
   mastate[tid].ion = ion;
   int nlevels_currention = get_nlevels(element,ion);
@@ -572,7 +572,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
     int element,ion;
     for (element = 0; element < nelements; element++)
     {
-      int nions = get_nions(element);
+      const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++)
       {
         oldcoolingsum = coolingsum;
@@ -592,7 +592,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n",modelgridindex,pkt_ptr->where,get_nne(modelgridindex));
         for (element = 0; element < nelements; element++)
         {
-          int nions = get_nions(element);
+          const int nions = get_nions(element);
           for (ion = 0; ion < nions; ion++)
           {
             printout("do_kpkt: element %d, ion %d, coolingcontr %g\n",element,ion,modelgrid[modelgridindex].cooling[element].contrib[ion]);

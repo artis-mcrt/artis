@@ -109,7 +109,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels in all ions of an element
 {
   double t_mid = time_step[timestep].mid;
-  int nions = get_nions(element);
+  const int nions = get_nions(element);
 
   if (get_abundance(modelgridindex, element) > 0.0)
   {
@@ -1201,7 +1201,7 @@ static double get_tot_nion(int modelgridindex)
   {
     result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
 
-    //int nions = get_nions(element);
+    //const int nions = get_nions(element);
     //for (ion = 0; ion < nions; ion++)
     //{
     //  result += ionstagepop(modelgridindex,element,ion);

@@ -327,11 +327,11 @@ void update_cell(int cellnumber)
   //printout("update cell %d at histindex %d\n",cellnumber,histindex);
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution = COOLING_UNDEFINED;
-      int nlevels = get_nlevels(element,ion);
+      const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
         double population = calculate_exclevelpop(cellnumber,element,ion,level);

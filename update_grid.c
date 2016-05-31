@@ -321,11 +321,11 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
       //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
       for (int element = 0; element < nelements; element++)
       {
-        int nions = get_nions(element);
+        const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++)
         {
           cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution = COOLING_UNDEFINED;
-          int nlevels = get_nlevels(element,ion);
+          const int nlevels = get_nlevels(element,ion);
           for (int level = 0; level < nlevels; level++)
           {
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = -99.;
@@ -404,7 +404,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   {
                     for (int element = 0; element < nelements; element++)
                     {
-                      int nions = get_nions(element);
+                      const int nions = get_nions(element);
                       for (int ion = 0; ion < nions; ion++)
                       {
                         corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 1.;
@@ -582,7 +582,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     /// These don't depend on T_e, therefore take them out of the T_e iteration
                     for (int element = 0; element < nelements; element++)
                     {
-                      int nions = get_nions(element);
+                      const int nions = get_nions(element);
                       for (int ion = 0; ion < nions-1; ion++)
                       {
                         corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 1.;
@@ -656,7 +656,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                     for (int element = 0; element < nelements; element++)
                     {
-                      int nions = get_nions(element);
+                      const int nions = get_nions(element);
                       for (int ion = 0; ion < nions-1; ion++)
                       {
                         //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[n*nelements*maxion+element*maxion+ion]);
@@ -688,7 +688,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     /// Then reopen the same loops again.
                     for (int element = 0; element < nelements; element++)
                     {
-                      int nions = get_nions(element);
+                      const int nions = get_nions(element);
                       for (int ion = 0; ion < nions-1; ion++)
                       {
                         /// Reuse the gammaestimator array as temporary storage of the Gamma values during
@@ -696,7 +696,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         /// the next timesteps gamma estimators.
                         //nlevels = get_nlevels(element,ion);
                         //nlevels = get_ionisinglevels(element,ion);
-                        int nlevels = get_bfcontinua(element,ion);
+                        const int nlevels = get_bfcontinua(element,ion);
                         double Gamma = 0.;
                         if (ion < nions-1)
                         {
@@ -769,7 +769,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         {
                           for (int element = 0; element < nelements; element++)
                           {
-                            int nions = get_nions(element);
+                            const int nions = get_nions(element);
                             for (int ion = 0; ion < nions-1; ion++)
                             {
                               double Gamma = 0.;
@@ -848,7 +848,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                             #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
                               nlte_pops_element(element, n, m);
                             #else
-                              int nions = get_nions(element);
+                              const int nions = get_nions(element);
                               for (int ion = 0; ion < nions-1; ion++)
                               {
                                 double trial = nlte_pops(element, ion, n, m);
@@ -1056,7 +1056,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               for (int element = 0; element < nelements; element++)
               {
                 fprintf(estimators_file,"Z=%d: ",get_element(element));
-                int nions = get_nions(element);
+                const int nions = get_nions(element);
                 for (int ion = 0; ion < nions; ion++)
                 {
                   fprintf(estimators_file,"%g ",ionstagepop(n,element,ion));
@@ -1067,7 +1067,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 fprintf(estimators_file, "\ncorrphotoionrenorm ");
                 for (int element = 0; element < nelements; element++)
                 {
-                  int nions = get_nions(element);
+                  const int nions = get_nions(element);
                   for (int ion = 0; ion < nions; ion++)
                   {
                     fprintf(estimators_file,"%g ",corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]);
@@ -1076,7 +1076,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 fprintf(estimators_file, "\ngammaestimator ");
                 for (int element = 0; element < nelements; element++)
                 {
-                  int nions = get_nions(element);
+                  const int nions = get_nions(element);
                   for (int ion = 0; ion < nions; ion++)
                   {
                     fprintf(estimators_file,"%g ",gammaestimator[n*nelements*maxion+element*maxion+ion]);
@@ -1100,7 +1100,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             #ifndef FORCE_LTE
               for (int element = 0; element < nelements; element++)
               {
-                int nions = get_nions(element);
+                const int nions = get_nions(element);
                 for (int ion = 0; ion < nions; ion++)
                 {
                   corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 0.;
@@ -1144,7 +1144,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
               for (int element = 0; element < nelements; element++)
               {
-                int nions = get_nions(element);
+                const int nions = get_nions(element);
                 for (int ion = 0; ion < nions; ion++)
                 {
                   fprintf(estimators_file,"%g ",0.);
@@ -1154,7 +1154,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
               #ifndef FORCE_LTE
                 for (int element = 0; element < nelements; element++)
                 {
-                  int nions = get_nions(element);
+                  const int nions = get_nions(element);
                   for (int ion = 0; ion < nions; ion++)
                   {
                     fprintf(estimators_file,"%g ",0.);
@@ -1162,7 +1162,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 }
                 for (int element = 0; element < nelements; element++)
                 {
-                  int nions = get_nions(element);
+                  const int nions = get_nions(element);
                   for (int ion = 0; ion < nions; ion++)
                   {
                     fprintf(estimators_file,"%g ",0.);
@@ -1181,7 +1181,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           /// and write a contiguous restart file with grid properties
           for (int element = 0; element < nelements; element++)
           {
-            int nions = get_nions(element);
+            const int nions = get_nions(element);
             for (int ion = 0; ion < nions - 1; ion++)
             {
               gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
@@ -1235,7 +1235,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
         for (int element = 0; element < nelements; element++)
         {
-          int nions = get_nions(element);
+          const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
             fprintf(estimators_file,"%g ",ionstagepop(n,element,ion));
@@ -1245,7 +1245,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
         #ifndef FORCE_LTE
           for (int element = 0; element < nelements; element++)
           {
-            int nions = get_nions(element);
+            const int nions = get_nions(element);
             for (int ion = 0; ion < nions; ion++)
             {
               fprintf(estimators_file,"%g ",corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]);
@@ -1253,7 +1253,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           }
           for (int element = 0; element < nelements; element++)
           {
-            int nions = get_nions(element);
+            const int nions = get_nions(element);
             for (int ion = 0; ion < nions; ion++)
             {
               fprintf(estimators_file,"%g ",gammaestimator[n*nelements*maxion+element*maxion+ion]);
@@ -1297,7 +1297,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
         for (int element = 0; element < nelements; element++)
         {
-          int nions = get_nions(element);
+          const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
             fprintf(estimators_file,"%g ",0.);
@@ -1307,7 +1307,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
         #ifndef FORCE_LTE
           for (int element = 0; element < nelements; element++)
           {
-            int nions = get_nions(element);
+            const int nions = get_nions(element);
             for (int ion = 0; ion < nions; ion++)
             {
               fprintf(estimators_file,"%g ",0.);
@@ -1315,7 +1315,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
           }
           for (int element = 0; element < nelements; element++)
           {
-            int nions = get_nions(element);
+            const int nions = get_nions(element);
             for (int ion = 0; ion < nions; ion++)
             {
               fprintf(estimators_file,"%g ",0.);
@@ -1511,7 +1511,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   nelements_in_cell = 0;
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     //elements[element].uppermost_ion = nions-1;
     elements_uppermost_ion[tid][element] = nions-1;
     abundance = get_abundance(modelgridindex,element);
@@ -1584,7 +1584,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     for (int element = 0; element < nelements; element++)
     {
       abundance = get_abundance(modelgridindex,element);
-      int nions = get_nions(element);
+      const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
@@ -1668,7 +1668,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     for (int element = 0; element < nelements; element++)
     {
       abundance = get_abundance(modelgridindex,element);
-      int nions = get_nions(element);
+      const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
@@ -1731,7 +1731,7 @@ double calculate_electron_densities(int modelgridindex)
   for (int element = 0; element < nelements; element++)
   {
     double abundance = get_abundance(modelgridindex,element);
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
     double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
     nne_tot += nnelement * get_element(element);
@@ -1852,7 +1852,7 @@ double get_Gamma(int cellnumber, int element, int ion)
 /// n_1 - occupation number of ground state
 {
   int i,level;
-  int nlevels = get_nlevels(element,ion);
+  const int nlevels = get_nlevels(element,ion);
   double Gamma = 0.;
 
   for (i = 0; i < nlevels; i++)
@@ -1870,7 +1870,7 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 /// n_1 - occupation number of ground state
 {
   int i,level;
-  int nlevels = get_nlevels(element,ion);
+  const int nlevels = get_nlevels(element,ion);
   double Gamma = 0.;
 
   //for (i = 0; i < nlevels; i++)
@@ -1903,7 +1903,7 @@ void write_grid_restart_data(void)
       #ifndef FORCE_LTE
         for (int element = 0; element < nelements; element++)
         {
-          int nions = get_nions(element);
+          const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
             fprintf(gridsave_file,"%g ",corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]);
@@ -1911,7 +1911,7 @@ void write_grid_restart_data(void)
         }
         for (int element = 0; element < nelements; element++)
         {
-          int nions = get_nions(element);
+          const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
             fprintf(gridsave_file,"%g ",gammaestimator[n*nelements*maxion+element*maxion+ion]);
@@ -1929,7 +1929,7 @@ void write_grid_restart_data(void)
       #ifndef FORCE_LTE
         for (int element = 0; element < nelements; element++)
         {
-          int nions = get_nions(element);
+          const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
             fprintf(gridsave_file,"%g ",0.);
@@ -1937,7 +1937,7 @@ void write_grid_restart_data(void)
         }
         for (int element = 0; element < nelements; element++)
         {
-          int nions = get_nions(element);
+          const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
             fprintf(gridsave_file,"%g ",0.);

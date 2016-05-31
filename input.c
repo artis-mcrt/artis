@@ -1058,11 +1058,11 @@ static void write_processed_modelatom(void)
   fprintf(modelatom,"%d\n",homogeneous_abundances);
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     fprintf(modelatom,"%d %d %g %g\n",elements[element].anumber,nions,elements[element].abundance,elements[element].mass);
     for (int ion = 0; ion < nions; ion++)
     {
-      int nlevels = get_nlevels(element,ion);
+      const int nlevels = get_nlevels(element,ion);
       int ionisinglevels = elements[element].ions[ion].ionisinglevels;
       int ionstage = elements[element].ions[ion].ionstage;
       double ionpot = elements[element].ions[ion].ionpot;
@@ -1107,7 +1107,7 @@ static void write_processed_modelatom(void)
           fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
         }
 
-        int nphixstargets = get_nphixstargets(element,ion,level);
+        const int nphixstargets = get_nphixstargets(element,ion,level);
         fprintf(modelatom,"%d\n",nphixstargets);
         if (ion < nions)
         {
@@ -1278,7 +1278,7 @@ static void setup_cellhistory(void)
       }
       for (int element = 0; element < nelements; element++)
       {
-        int nions = get_nions(element);
+        const int nions = get_nions(element);
         if ((cellhistory[tid].chelements[element].chions = (chions_struct *) malloc(nions*sizeof(chions_struct))) == NULL)
         {
           printout("[fatal] input: not enough memory to initialize cellhistory's ionlist ... abort\n");
@@ -1286,7 +1286,7 @@ static void setup_cellhistory(void)
         }
         for (int ion = 0; ion < nions; ion++)
         {
-          int nlevels = get_nlevels(element,ion);
+          const int nlevels = get_nlevels(element,ion);
           if ((cellhistory[tid].chelements[element].chions[ion].chlevels = (chlevels_struct *) malloc(nlevels*sizeof(chlevels_struct))) == NULL)
           {
             printout("[fatal] input: not enough memory to initialize cellhistory's levellist ... abort\n");
@@ -1294,7 +1294,7 @@ static void setup_cellhistory(void)
           }
           for (int level = 0; level < nlevels; level++)
           {
-            int nphixstargets = get_nphixstargets(element,ion,level);
+            const int nphixstargets = get_nphixstargets(element,ion,level);
             if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = (chphixstargets_struct *) malloc(nphixstargets*sizeof(chphixstargets_struct))) == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
@@ -1347,10 +1347,10 @@ static void write_bflist_file(int includedionisinglevels)
   int i = 0;
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
-      int nlevels = get_ionisinglevels(element,ion);
+      const int nlevels = get_ionisinglevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
         bflist[i].elementindex = element;
@@ -1392,7 +1392,7 @@ static void setup_coolinglist(void)
   ncoolingterms = 0;
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       int add = 0; /// Helper variable to count coolingterms per ion
@@ -1405,7 +1405,7 @@ static void setup_coolinglist(void)
       //  add += 2 * get_ionisinglevels(element,ion);
         add += 2 * get_bfcontinua(element,ion);
       /// All the levels add number of col excitations
-      int nlevels = get_nlevels(element,ion);
+      const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
         add += elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
@@ -1470,7 +1470,7 @@ static void setup_phixs_list(void)
     int i = 0;
     for (int element = 0; element < nelements; element++)
     {
-      int nions = get_nions(element);
+      const int nions = get_nions(element);
       for (int ion = 0; ion < nions-1; ion++)
       {
         double epsilon_upper = epsilon(element,ion+1,0);
@@ -1500,10 +1500,10 @@ static void setup_phixs_list(void)
     i = 0;
     for (int element = 0; element < nelements; element++)
     {
-      int nions = get_nions(element);
+      const int nions = get_nions(element);
       for (int ion = 0; ion < nions-1; ion++)
       {
-        int nlevels = get_bfcontinua(element,ion);
+        const int nlevels = get_bfcontinua(element,ion);
         //nlevels = get_ionisinglevels(element,ion);
         ///// The following line reduces the number of bf-continua per ion
         //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
@@ -1596,7 +1596,7 @@ static void read_atomicdata(void)
   for (int element = 0; element < nelements; element++)
   {
     printout("[input.c]   element Z = %d\n",get_element(element));
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     //includedions += nions;
     for (int ion = 0; ion < nions; ion++)
     {
@@ -1631,12 +1631,12 @@ static void read_atomicdata(void)
   #ifdef NLTE_POPS_ON
     for (int element = 0; element < nelements; element++)
     {
-      int nions = get_nions(element);
+      const int nions = get_nions(element);
       //includedions += nions;
       for (int ion = 0; ion < nions; ion++)
       {
         elements[element].ions[ion].first_nlte = total_nlte_levels;
-        int nlevels = get_nlevels(element,ion);
+        const int nlevels = get_nlevels(element,ion);
         int count = 0;
         if (nlevels > 1)
         {

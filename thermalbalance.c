@@ -308,7 +308,7 @@ void calculate_heating_rates(int modelgridindex)
   for (int element = 0; element < nelements; element++)
   {
     mastate[tid].element = element;
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       #ifdef DIRECT_COL_HEAT
@@ -500,7 +500,7 @@ void calculate_cooling_rates(int modelgridindex)
   {
     //printout("[debug] do_kpkt: element %d\n",element);
     mastate[tid].element = element;
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       //printout("[debug] do_kpkt: ion %d\n",ion);

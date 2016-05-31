@@ -66,7 +66,7 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
 /// modelgridindex needed to access precalculated partition functions
 {
   //printout("debug nne %g\n",nne);
-  //int nions = get_nions(element);
+  //const int nions = get_nions(element);
 
   //int uppermost_ion = elements[element].uppermost_ion;
   int uppermost_ion = elements_uppermost_ion[tid][element];
@@ -208,7 +208,7 @@ double phi(int element, int ion, int modelgridindex)
         Y_nt = nt_ionization_rate(modelgridindex, element, ion);
 
       /*
-      int nlevels = get_nlevels(element,ion);
+      const int nlevels = get_nlevels(element,ion);
       double run_tot=0.0;
       for (level = 0; level < nlevels; level++)
       {
@@ -399,7 +399,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   //printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
 
   double U = 1.0;//stat_weight(element,ion,0);
-  int nlevels = get_nlevels(element,ion);
+  const int nlevels = get_nlevels(element,ion);
 /*  if (T_exc <= MINTEMP)
   {
     for (level = 1; level < nlevels; level++)
@@ -769,12 +769,12 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 {
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       cellhistory[tid].chelements[element].chions[ion].chlevels[0].population = get_groundlevelpop(modelgridindex, element, ion);
       //printout("element %d, ion %d, level 0: population %g\n",element,ion,groundlevelpop(cellnumber, element, ion));
-      int nlevels = get_nlevels(element,ion);
+      const int nlevels = get_nlevels(element,ion);
       for (int level = 1; level < nlevels; level++)
       {
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = calculate_exclevelpop(modelgridindex,element,ion,level);
@@ -845,7 +845,7 @@ void initialise_photoionestimators(void)
       #endif
       for (int element = 0; element < nelements; element++)
       {
-        int nions = get_nions(element);
+        const int nions = get_nions(element);
         for (int ion = 0; ion < nions-1; ion++)
         {
           //  double ionpot,Alpha_sp,sw_ratio,Gamma;
