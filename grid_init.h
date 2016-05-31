@@ -299,25 +299,25 @@ void set_kappagrey(int modelgridindex, float x)
 }
 
 static inline
-void set_Te(int modelgridindex, float x)
+void set_Te(int modelgridindex, double x)
 {
   modelgrid[modelgridindex].Te = x;
 }
 
 static inline
-void set_TR(int modelgridindex, float x)
+void set_TR(int modelgridindex, double x)
 {
   modelgrid[modelgridindex].TR = x;
 }
 
 static inline
-void set_TJ(int modelgridindex, float x)
+void set_TJ(int modelgridindex, double x)
 {
   modelgrid[modelgridindex].TJ = x;
 }
 
 static inline
-void set_W(int modelgridindex, float x)
+void set_W(int modelgridindex, double x)
 {
   modelgrid[modelgridindex].W = x;
 }

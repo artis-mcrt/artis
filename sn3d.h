@@ -51,8 +51,8 @@
 
 #define MOBS 5
 #define MRANGE 5
-#define VMNUBINS   10000
-#define VMTBINS   111
+#define VMNUBINS 10000
+#define VMTBINS 111
 
 
 // Input parameters
@@ -348,8 +348,13 @@ double J[MMODELGRID+1];
 
 #ifdef FORCE_LTE
   double redhelper[MMODELGRID+1];
-#endif
-#ifndef FORCE_LTE
+  //don't use the variables below in LTE mode, just declare them here so the code compiles
+  double *ffheatingestimator;
+  double *bfheatingestimator;
+  double *corrphotoionrenorm;
+  double *gammaestimator;
+  double *nuJ;
+#else
   double nuJ[MMODELGRID+1];
   double ffheatingestimator[MMODELGRID+1];
   double colheatingestimator[MMODELGRID+1];

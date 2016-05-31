@@ -488,7 +488,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     J_reduced_save[n] = J[n];
                   #endif
 
-                  T_R = pow(PI/STEBO*(J[n]),1./4.);
+                  double T_R = pow(PI/STEBO*(J[n]),1./4.);
                   if (isfinite(T_R))
                   {
                     /// Make sure that T is in the allowed temperature range.
@@ -501,27 +501,23 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",n);
                     T_R = modelgrid[n].TR;
                   }
-                  T_J = T_R;
-                  T_e = T_R;
-                  W = 1.;
-
                   modelgrid[n].TR = T_R;
-                  modelgrid[n].Te = T_e;
-                  modelgrid[n].TJ = T_J;
-                  modelgrid[n].W = W;
+                  modelgrid[n].Te = T_R;
+                  modelgrid[n].TJ = T_R;
+                  modelgrid[n].W = 1;
 
                   /// These don't depend on T_e, therefore take them out of the T_e iteration
                   precalculate_partfuncts(n);
                   calculate_populations(n,0);
-                  nne = get_nne(n);
-                  compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                  grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
+                  double nne = get_nne(n);
+                  double compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
+                  double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
+                  double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                   if (log_this_cell)
                   {
                     printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
                     printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                   }
-                  grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                   modelgrid[n].grey_depth = grey_optical_depth;
 
   //                 grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
@@ -570,14 +566,10 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",n);
                       T_R = modelgrid[n].TR;
                     }
-                    double T_J = T_R;
-                    double T_e = T_R;
-                    double W = 1.;
-
+                    modelgrid[n].Te = T_R;
                     modelgrid[n].TR = T_R;
-                    modelgrid[n].Te = T_e;
-                    modelgrid[n].TJ = T_J;
-                    modelgrid[n].W = W;
+                    modelgrid[n].TJ = T_R;
+                    modelgrid[n].W = 1;
 
                     /// These don't depend on T_e, therefore take them out of the T_e iteration
                     for (int element = 0; element < nelements; element++)
@@ -865,7 +857,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                             #endif
                           }
                           #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
-                          printout("Solving for NLTE populations in cell %d for timestep %d.", n, m);
+                          printout("Solving for NLTE populations in cell %d for timestep %d.\n", n, m);
                           #else
                           printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, m, nlte_test);
                           #endif
@@ -892,11 +884,11 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         }
                       #endif
 
-                    double nne = get_nne(n);
-                    double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
-                    double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
+                    const double nne = get_nne(n);
+                    const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
+                    const double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
                     printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
-                    double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
+                    const double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
                     printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
                     modelgrid[n].grey_depth = grey_optical_depth;
 
@@ -1034,21 +1026,21 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 //printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
 
                 //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
-                for (int dummy_element = 0; dummy_element < nelements; dummy_element++)
-                {
-                  int nions = get_nions(dummy_element);
-                  for (int dummy_ion = 0; dummy_ion < nions; dummy_ion++)
-                  {
-                    int nlte = get_nlevels_nlte(dummy_element, dummy_ion);
-                    if (nlte > 0)
-                    {
-                      for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
-                      {
-                        //fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
-                      }
-                    }
-                  }
-                }
+                // for (int dummy_element = 0; dummy_element < nelements; dummy_element++)
+                // {
+                //   int nions = get_nions(dummy_element);
+                //   for (int dummy_ion = 0; dummy_ion < nions; dummy_ion++)
+                //   {
+                //     int nlte = get_nlevels_nlte(dummy_element, dummy_ion);
+                //     if (nlte > 0)
+                //     {
+                //       for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+                //       {
+                //         fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
+                //       }
+                //     }
+                //   }
+                // }
                 //fprintf(nlte_file,"\n");
               #endif
 

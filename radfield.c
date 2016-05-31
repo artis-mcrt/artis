@@ -65,7 +65,7 @@ void radfield_init(void)
 {
   if (radfield_initialized == false)
   {
-    char filename[100] = "radfield.out";
+    const char filename[100] = "radfield.out";
     radfieldfile = fopen(filename, "w");
     if (radfieldfile == NULL)
     {
@@ -85,11 +85,11 @@ void radfield_init(void)
 
       double prev_nu_upper = nu_lower_first_initial;
       //double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
-      double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+      const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
 
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
+        const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
         radfieldbins[modelgridindex][binindex].nu_upper = prev_nu_upper + delta_nu;
         prev_nu_upper = radfieldbins[modelgridindex][binindex].nu_upper; // importantly, the below part doesn't change this
 
@@ -350,23 +350,23 @@ void radfield_update_estimators(int modelgridindex, double distance,
 
 double radfield(double nu, int modelgridindex)
 {
-  double T_R_fullspec = get_TR(modelgridindex);
-  double W_fullspec   = get_W(modelgridindex);
+  const double T_R_fullspec = get_TR(modelgridindex);
+  const double W_fullspec   = get_W(modelgridindex);
 
   if (radfield_initialized && USE_MULTIBIN_RADFIELD_MODEL) // && radfieldbins[modelgridindex] != NULL
   {
     int binindex = radfield_select_bin(modelgridindex,nu);
     if (binindex >= 0)
     {
-      double W_bin = radfieldbins[modelgridindex][binindex].W;
+      const double W_bin = radfieldbins[modelgridindex][binindex].W;
       if (W_bin >= 0.)
       {
         if (radfieldbins[modelgridindex][binindex].fit_type == FIT_DILUTED_BLACKBODY)
         {
-          double T_R_bin = radfieldbins[modelgridindex][binindex].T_R;
+          const double T_R_bin = radfieldbins[modelgridindex][binindex].T_R;
           if (T_R_bin > 0.)
           {
-            double J_nu = radfield2(nu, T_R_bin, W_bin);
+            const double J_nu = radfield2(nu, T_R_bin, W_bin);
             /*if (fabs(J_nu / J_nu_fullspec - 1.0) > 0.5)
             {
               printout("WARNING: radfield: significant discrepancy. J_nu_fullspec %g, J_nu %g, nu %g W_bin %g T_R_bin %g\n",
@@ -403,7 +403,7 @@ double radfield(double nu, int modelgridindex)
              W_fullspec, T_R_fullspec, nu, modelgridindex);
   }*/
 
-  double J_nu_fullspec = radfield2(nu, T_R_fullspec, W_fullspec);
+  const double J_nu_fullspec = radfield2(nu, T_R_fullspec, W_fullspec);
   return J_nu_fullspec;
 }
 
@@ -435,12 +435,12 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   intparas.T_R = T_R;
   intparas.prefactor = prefactor;
 
-  gsl_function F_plank;
-  F_plank.function = &gsl_integrand_planck;
-  F_plank.params = &intparas;
+  gsl_function F_planck;
+  F_planck.function = &gsl_integrand_planck;
+  F_planck.params = &intparas;
 
   gsl_set_error_handler_off();
-  gsl_integration_qag(&F_plank, nu_lower, nu_upper, 0., integratoraccuracy, 65536, 6, w, &integral, &error);
+  gsl_integration_qag(&F_planck, nu_lower, nu_upper, 0., integratoraccuracy, 65536, 6, w, &integral, &error);
 
   gsl_integration_workspace_free(w);
 
@@ -515,7 +515,7 @@ static double delta_nu_bar(double T_R, void *restrict paras)
   double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, ONE);
   double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
 
-  //printout("nu_bar %g nu_bar_plank(T=%g) %g\n",nu_bar,T_R,nu_bar_plank);
+  //printout("nu_bar %g nu_bar_planck(T=%g) %g\n",nu_bar,T_R,nu_bar_planck);
 
   if (!isfinite(nu_bar_planck))
   {
@@ -528,7 +528,7 @@ static double delta_nu_bar(double T_R, void *restrict paras)
   }
 
   double delta_nu_bar = nu_bar_planck - nu_bar;
-  //double delta_nu_bar = nu_bar_plank / nu_bar - 1.0;
+  //double delta_nu_bar = nu_bar_planck / nu_bar - 1.0;
 
   //printout("delta_nu_bar %g nu_bar_planck %g\n",delta_nu_bar,nu_bar_planck);
 
@@ -630,9 +630,9 @@ void radfield_fit_parameters(int modelgridindex)
     abort();
   }
 
-  double T_R_fullspec = get_TR(modelgridindex);
-  double J_fullspec = J[modelgridindex];
-  //double plank_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
+  const double T_R_fullspec = get_TR(modelgridindex);
+  const double J_fullspec = J[modelgridindex];
+  //double planck_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
 
   printout("Full-spectrum fit radfield params for mgi %d: J %g, T_R %g, W %g\n",
            modelgridindex, J_fullspec, T_R_fullspec, get_W(modelgridindex));
@@ -652,15 +652,15 @@ void radfield_fit_parameters(int modelgridindex)
       {
         T_R_bin = find_T_R(modelgridindex, binindex);
 
-        double plank_integral = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
+        double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
 
-        W_bin = J_bin / plank_integral;
+        W_bin = J_bin / planck_integral_result;
 
         if (W_bin > 1e2)
         {
-          printout("W %g too high, try setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",W_bin,binindex,T_R_max,plank_integral);
-          double plank_integral = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
-          W_bin = J_bin / plank_integral;
+          printout("W %g too high, try setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",W_bin,binindex,T_R_max,planck_integral_result);
+          planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
+          W_bin = J_bin / planck_integral_result;
           if (W_bin > 1e2)
           {
             printout("W still very high, W=%g. Continuing...\n",W_bin);
