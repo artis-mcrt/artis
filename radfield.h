@@ -13,12 +13,10 @@ void radfield_fit_parameters(int modelgridindex);
 void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
 void radfield_set_J_normfactor(int modelgridindex, double normfactor);
 
-static inline
-double radfield2(double nu, double T, double W)
-// calculates J_nu for a diluted black body
+inline double radfield2(double nu, double T, double W)
+// returns J_nu for a diluted black body
 {
-  return W * TWOHOVERCLIGHTSQUARED *
-         pow(nu,3) * 1.0 / (expm1(HOVERKB * nu / T));
+  return W * TWOHOVERCLIGHTSQUARED * nu * nu * nu / (expm1(HOVERKB * nu / T));
 }
 
 

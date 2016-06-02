@@ -1059,17 +1059,21 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
       //f = osc_strength(element,ion,upper,lower);
       //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
 
-      double fac1 = epsilon_trans / KB / T_e;
+      const double fac1 = epsilon_trans / KB / T_e;
       ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+      const double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
       //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
       /// crude approximation to the already crude Van-Regemorter formula
-      double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-      double Gamma = fmax(g_bar, test);
 
-      double g_ratio = statweight_target / mastate[tid].statweight;
+      //double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      //double Gamma = (g_bar > test) ? g_bar : test;
 
-      C = C_0 * 14.5 * n_u * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+      //optimisation
+      const double Gamma = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+
+      const double g_ratio = statweight_target / mastate[tid].statweight;
+
+      C = C_0 * 14.5 * n_u * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {
@@ -1115,15 +1119,15 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 /// collisional excitation rate: paperII 3.5.1
 {
   double C;
-  double coll_str_thisline = coll_str(lineindex);
-  double n_l = mastate[tid].nnlevel;
+  const double coll_str_thisline = coll_str(lineindex);
+  const double n_l = mastate[tid].nnlevel;
 
-  double T_e = get_Te(modelgridindex);
-  double fac1 = epsilon_trans/KB/T_e;
-  double nne = get_nne(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
+  const double nne = get_nne(modelgridindex);
+  const double fac1 = epsilon_trans/KB/T_e;
 
   #ifdef DEBUG_ON
-    int lower = mastate[tid].level;
+    const int lower = mastate[tid].level;
     if (upper <= lower)
     {
       printout("[fatal] col_excitation: tried to calculate downward transition ... abort");
@@ -1141,14 +1145,17 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
 
       ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+      const double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
       //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
       /// crude approximation to the already crude Van-Regemorter formula
-      double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
 
-      double Gamma = fmax(g_bar, test);
+      //double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      //double Gamma = g_bar > test ? g_bar : test;
+      //C = C_0 * 14.5 * n_u * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
 
-      C = C_0 * 14.5 * n_l * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * exp(-fac1) * Gamma;
+      //optimisation
+      const double Gamma = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      C = C_0 * 14.5 * H_ionpot * H_ionpot * n_l * nne * sqrt(T_e) * osc_strength(lineindex) / (epsilon_trans * epsilon_trans) * fac1 * exp(-fac1) * Gamma;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {
@@ -1171,21 +1178,21 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   #ifdef DEBUG_ON
     //int element = mastate[tid].element;
     //int ion = mastate[tid].ion
-    if (debuglevel == 2)
-    {
+    // if (debuglevel == 2)
+    // {
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-    }
+    // }
 
-    if (!isfinite(C))
-    {
-      printout("fatal a5: abort\n");
+    //if (!isfinite(C))
+    //{
+    //  printout("fatal a5: abort\n");
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
       //printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
-      printout("[debug] col_exc: coll_str(lineindex) %g statw_up(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_up(lineindex),mastate[tid].statweight);
-      abort();
-    }
+    //  printout("[debug] col_exc: coll_str(lineindex) %g statw_up(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_up(lineindex),mastate[tid].statweight);
+    //  abort();
+    //}
   #endif
 
   return C;
@@ -1195,23 +1202,23 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 /// collisional recombination rate: paperII 3.5.1
 {
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int upper = mastate[tid].level;
-  double n_u = mastate[tid].nnlevel;
+  const int element = mastate[tid].element;
+  const int ion = mastate[tid].ion;
+  const int upper = mastate[tid].level;
+  const double n_u = mastate[tid].nnlevel;
 
   const int nphixstargets = get_nphixstargets(element,ion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
     {
+      const double T_e = get_Te(modelgridindex);
+      const double fac1 = epsilon_trans / KB / T_e;
+      const double nne = get_nne(modelgridindex);
+      const int ionstage = get_ionstage(element,ion);
+
       ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
       ///select gaunt factor according to ionic charge
-      double T_e = get_Te(modelgridindex);
-      double fac1 = epsilon_trans / KB / T_e;
-      double nne = get_nne(modelgridindex);
-      int ionstage = get_ionstage(element,ion);
-
       double g;
       if (ionstage-1 == 1)
         g = 0.1;
@@ -1226,7 +1233,7 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
                  1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
       #ifdef DEBUG_ON
-        if (debuglevel == 777)
+        /*if (debuglevel == 777)
         {
           printout("get_sahafact %g, fac1 %g, C %g\n",get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans),fac1,C);
           ///means n_u*nne * detailed_balancing of c_ikappa
@@ -1236,7 +1243,7 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
         {
           printout("fatal a8: abort\n");
           abort();
-        }
+        }*/
       #endif
 
       return C;
@@ -1294,3 +1301,7 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
 
   return C;
 }
+
+extern inline double get_individ_rad_deexc(int i);
+extern inline double get_individ_internal_down_same(int i);
+extern inline double get_individ_internal_up_same(int i);

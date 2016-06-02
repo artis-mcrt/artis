@@ -7,12 +7,7 @@
 #include <math.h>
 #include <time.h>
 #include <gsl/gsl_rng.h>
-#include <gsl/gsl_roots.h>
-#include <gsl/gsl_sf_expint.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_linalg.h>
+//#include <gsl/gsl_sf_expint.h>
 
 #ifdef _OPENMP
   #include "omp.h"

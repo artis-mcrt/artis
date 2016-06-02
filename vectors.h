@@ -7,17 +7,15 @@ void angle_ab(const double *restrict dir1, const double *restrict vel, double *d
 double doppler(const double *restrict dir1, const double *restrict vel);
 void scatter_dir(const double *restrictdir_in, double cos_theta, double *dir_out);
 
-/*Routine for getting the magnitude of a vector.*/
-static inline
-double vec_len(const double x[3])
+inline double vec_len(const double x[3])
+// Routine for getting the magnitude of a vector.
 {
-  return sqrt((x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]));
+  return sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
 }
 
 
-/*Routine for normalizing a vector.*/
-static inline
-void vec_norm(const double vec_in[3], double vec_out[3])
+inline void vec_norm(const double vec_in[3], double vec_out[3])
+// Routine for normalizing a vector.
 {
   const double magnitude = vec_len(vec_in);
 
@@ -27,17 +25,15 @@ void vec_norm(const double vec_in[3], double vec_out[3])
 }
 
 
-/*Routine for taking dot product.*/
-static inline
-double dot(const double *const restrict x, const double *const restrict y)
+inline double dot(const double *const restrict x, const double *const restrict y)
+// Routine for taking dot product.
 {
   return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
 }
 
 
-/*Routine for getting velocity vector of the flow at a position.*/
-static inline
-void get_velocity(const double *const restrict x, double *restrict y, const double t)
+inline void get_velocity(const double *const restrict x, double *restrict y, const double t)
+// Routine for getting velocity vector of the flow at a position.
 {
   /* For homologous expansion. */
 
@@ -47,8 +43,7 @@ void get_velocity(const double *const restrict x, double *restrict y, const doub
 }
 
 
-static inline
-void cross_prod(const double vec1[3], const double vec2[3], double vecout[3])
+inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3])
 {
   const double vec1x = vec1[0];
   const double vec1y = vec1[1];

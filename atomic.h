@@ -252,6 +252,6 @@ double osc_strength_old(int lineindex)
   return f_ul;
 }*/
 
-double photoionization_crosssection(double nu_edge, double nu);
+extern inline double photoionization_crosssection(double nu_edge, double nu);
 
 #endif //ATOMIC_H

@@ -1,5 +1,6 @@
-#include "sn3d.h"
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_roots.h>
+#include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
 #include "ltepop.h"

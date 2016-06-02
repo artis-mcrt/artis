@@ -1,15 +1,17 @@
+#include <math.h>
+#include <stdbool.h>
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_sf_debye.h>
+#include <gsl/gsl_roots.h>
 #include "grid_init.h"
 #include "radfield.h"
 #include "sn3d.h"
-#include <math.h>
-#include <stdbool.h>
-#include <gsl/gsl_sf_debye.h>
 
 //#const int RADFIELDBINCOUNT = 1000;
-#define RADFIELDBINCOUNT 128
+#define RADFIELDBINCOUNT 10
 
 #define nu_lower_first_initial (CLIGHT / (10000e-8))
-#define nu_upper_last_initial (CLIGHT / (100e-8))
+#define nu_upper_last_initial (CLIGHT / (500e-8))
 
 static double nu_lower_first = nu_lower_first_initial;
 
@@ -18,7 +20,7 @@ static double J_normfactor[MMODELGRID + 1];
 static bool radfield_initialized = false;
 
 static const double T_R_min = MINTEMP;
-static const double T_R_max = MAXTEMP * 4;
+static const double T_R_max = MAXTEMP * 2;
 
 typedef enum
 {
@@ -26,7 +28,7 @@ typedef enum
   FIT_CONSTANT = 1,
 } enum_bin_fit_type;
 
-typedef struct
+struct radfieldbin
 {
   double nu_upper;   //lower wavelength boundary of this bin
   double J_raw;      //value needs to be multipled by J_normfactor
@@ -36,9 +38,9 @@ typedef struct
   double T_R;        // radiation temperature
   int contribcount;
   enum_bin_fit_type fit_type;
-} radfieldbin;
+};
 
-static radfieldbin *restrict radfieldbins[MMODELGRID + 1];
+static struct radfieldbin *restrict radfieldbins[MMODELGRID + 1];
 
 typedef enum
 {
@@ -79,12 +81,12 @@ void radfield_init(void)
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID + 1; modelgridindex++)
     {
-      radfieldbins[modelgridindex] = (radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(radfieldbin));
+      radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
 
       radfield_set_J_normfactor(modelgridindex, -1.0);
 
       double prev_nu_upper = nu_lower_first_initial;
-      //double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+      //const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
       const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
 
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -349,40 +351,38 @@ void radfield_update_estimators(int modelgridindex, double distance,
 
 
 double radfield(double nu, int modelgridindex)
+// mean intensity J_nu
 {
-  const double T_R_fullspec = get_TR(modelgridindex);
-  const double W_fullspec   = get_W(modelgridindex);
-
   if (radfield_initialized && USE_MULTIBIN_RADFIELD_MODEL) // && radfieldbins[modelgridindex] != NULL
   {
     int binindex = radfield_select_bin(modelgridindex,nu);
     if (binindex >= 0)
     {
-      const double W_bin = radfieldbins[modelgridindex][binindex].W;
-      if (W_bin >= 0.)
+      const struct radfieldbin *restrict const bin = &radfieldbins[modelgridindex][binindex];
+      if (bin->W >= 0.)
       {
-        if (radfieldbins[modelgridindex][binindex].fit_type == FIT_DILUTED_BLACKBODY)
+        if (bin->fit_type == FIT_DILUTED_BLACKBODY)
         {
-          const double T_R_bin = radfieldbins[modelgridindex][binindex].T_R;
-          if (T_R_bin > 0.)
+          if (bin->T_R > 0.)
           {
-            const double J_nu = radfield2(nu, T_R_bin, W_bin);
+            const double J_nu = radfield2(nu, bin->T_R, bin->W);
             /*if (fabs(J_nu / J_nu_fullspec - 1.0) > 0.5)
             {
-              printout("WARNING: radfield: significant discrepancy. J_nu_fullspec %g, J_nu %g, nu %g W_bin %g T_R_bin %g\n",
-                       J_nu_fullspec, J_nu, nu, W_bin, T_R_bin);
+              printout("WARNING: radfield: significant discrepancy. J_nu_fullspec %g, J_nu %g, nu %g bin->W %g bin->T_R %g\n",
+                       J_nu_fullspec, J_nu, nu, bin->W, bin->T_R);
             }*/
             return J_nu;
           }
-          //else
-          //{
+          else
+          {
+            return 0.;
           //  printout("WARNING: Radfield modelgridindex %d binindex %d has W %g T_R=%g<=0, using W %g T_R %g nu %g\n",
-          //           modelgridindex, binindex, W_bin, T_R_bin, W_fullspec, T_R_fullspec, nu);
-          //}
+          //           modelgridindex, binindex, bin->W, bin->T_R, W_fullspec, T_R_fullspec, nu);
+          }
         }
         else
         {
-          return W_bin;
+          return bin->W;
         }
       }
       else
@@ -403,6 +403,8 @@ double radfield(double nu, int modelgridindex)
              W_fullspec, T_R_fullspec, nu, modelgridindex);
   }*/
 
+  const double T_R_fullspec = get_TR(modelgridindex);
+  const double W_fullspec   = get_W(modelgridindex);
   const double J_nu_fullspec = radfield2(nu, T_R_fullspec, W_fullspec);
   return J_nu_fullspec;
 }
@@ -427,7 +429,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   double integral = 0.0;
 
   double error = 0.0;
-  double integratoraccuracy = 1e-8;
+  double integratoraccuracy = 1e-10;
 
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
 
@@ -439,7 +441,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   F_planck.function = &gsl_integrand_planck;
   F_planck.params = &intparas;
 
-  gsl_set_error_handler_off();
+  //gsl_set_error_handler_off();
   gsl_integration_qag(&F_planck, nu_lower, nu_upper, 0., integratoraccuracy, 65536, 6, w, &integral, &error);
 
   gsl_integration_workspace_free(w);
@@ -501,17 +503,13 @@ static double delta_nu_bar(double T_R, void *restrict paras)
 
   double nuJ_bin_raw = radfieldbins[modelgridindex][binindex].nuJ_raw;
   double J_bin_raw = radfieldbins[modelgridindex][binindex].J_raw;
-  double nu_bar = nuJ_bin_raw / J_bin_raw;
+  double nu_bar_estimator = nuJ_bin_raw / J_bin_raw;
 
+  double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
+  double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
+  double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
 
-  //avoid calling planck_integral and simplify the expression
-  /*double debye_upper_timesnu = gsl_sf_debye_4(HOVERKB * nu_upper / T_R) * pow(nu_upper,4);
-  double debye_lower_timesnu = gsl_sf_debye_4(HOVERKB * nu_lower / T_R) * pow(nu_lower,4);
-  double debye_upper = gsl_sf_debye_3(HOVERKB * nu_upper / T_R) * pow(nu_upper,3);
-  double debye_lower = gsl_sf_debye_3(HOVERKB * nu_lower / T_R) * pow(nu_lower,3);
-  double nu_bar_planck = (debye_upper_timesnu - debye_lower_timesnu) / (debye_upper - debye_lower) * 3 / 4;*/
-
-  double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, TIMES_NU);
+  /*double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, TIMES_NU);
   double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, ONE);
   double nu_bar_planck = nu_times_planck_integral / planck_integral_result;
 
@@ -525,10 +523,10 @@ static double delta_nu_bar(double T_R, void *restrict paras)
 
     printout("planck_integral_analytic is %g. Replacing with numerical result of %g.\n",nu_bar_planck,nu_bar_planck_numerical);
     nu_bar_planck = nu_bar_planck_numerical;
-  }
+  }*/
 
-  double delta_nu_bar = nu_bar_planck - nu_bar;
-  //double delta_nu_bar = nu_bar_planck / nu_bar - 1.0;
+  double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
+  //double delta_nu_bar = nu_bar_planck_T_R / nu_bar_estimator - 1.0;
 
   //printout("delta_nu_bar %g nu_bar_planck %g\n",delta_nu_bar,nu_bar_planck);
 
@@ -634,7 +632,7 @@ void radfield_fit_parameters(int modelgridindex)
   const double J_fullspec = J[modelgridindex];
   //double planck_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
 
-  printout("Full-spectrum fit radfield params for mgi %d: J %g, T_R %g, W %g\n",
+  printout("Full-spectrum fit radfield params for cell %d: J %g, T_R %g, W %g\n",
            modelgridindex, J_fullspec, T_R_fullspec, get_W(modelgridindex));
 
   printout("radfield: Finding parameters for %d bins...\n",RADFIELDBINCOUNT);
@@ -646,7 +644,8 @@ void radfield_fit_parameters(int modelgridindex)
     double nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
     double T_R_bin = -1.0;
     double W_bin = -1.0;
-    if (radfieldbins[modelgridindex][binindex].contribcount > 10)
+    int contribcount = radfieldbins[modelgridindex][binindex].contribcount;
+    if (contribcount > 10)
     {
       if (radfieldbins[modelgridindex][binindex].fit_type == FIT_DILUTED_BLACKBODY)
       {
@@ -674,6 +673,11 @@ void radfield_fit_parameters(int modelgridindex)
         T_R_bin = -1;
         W_bin = J_bin / (nu_upper - nu_lower);
       }
+    }
+    else if (contribcount == 0)
+    {
+      T_R_bin = 0.;
+      W_bin = 0.;
     }
     radfieldbins[modelgridindex][binindex].T_R = T_R_bin;
     radfieldbins[modelgridindex][binindex].W = W_bin;
@@ -736,3 +740,5 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 {
   J_normfactor[modelgridindex] = normfactor;
 }
+
+extern inline double radfield2(double nu, double T, double W);

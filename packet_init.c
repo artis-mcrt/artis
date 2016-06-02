@@ -151,7 +151,7 @@ static void setup_packets(int pktnumberoffset)
 
   int n = 0;
   int packet_reset = 0;
-  printout("starting loop over npkts\n");
+  printout("Placing pellets...\n");
   while (n < npkts)
   {
     /// Get random number.

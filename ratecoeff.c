@@ -315,7 +315,7 @@ static double gammacorr_integrand_gsl(double nu, void *restrict paras)
   /// Dependence on dilution factor W is linear. This allows to set it here to
   /// 1. and scale to its actual value later on.
   /// Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
-  return sigma_bf / H / nu * radfield2(nu,T,1.) * (1 - exp(-H*nu/KB/T));
+  return sigma_bf / H / nu * radfield2(nu,T,1) * (1 - exp(-H*nu/KB/T));
 }
 
 
@@ -946,16 +946,15 @@ static double gammacorr_integrand_gsl_radfield(double nu, void *restrict voidpar
   #endif
 
   //TODO: MK thesis page 41, use population ratios and Te
-  return ONEOVERH * sigma_bf / nu * radfield(nu,modelgridindex) *
-         (1 - exp(-HOVERKB * nu / T_R));
+  return ONEOVERH * sigma_bf / nu * radfield(nu,modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
 
 static double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  double integratorrelaccuracy = 2e-2;
+  double integratorrelaccuracy = 1e-3;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(4096);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(16384);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
   double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
@@ -975,7 +974,7 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   F_gammacorr.params = &intparas;
   double error = 0.0;
   gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0,
-                      integratorrelaccuracy, 4096, 6, w, &gammacorr, &error);
+                      integratorrelaccuracy, 16384, 4, w, &gammacorr, &error);
   gammacorr *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);
@@ -1078,15 +1077,15 @@ static double bfheating_integrand_gsl_radfield(double nu, void *restrict voidpar
 {
   const gsl_integral_paras_bfheating *restrict const params = (gsl_integral_paras_bfheating *) voidparas;
 
-  int modelgridindex = params->modelgridindex;
-  double nu_edge = params->nu_edge;
-  double sf_Te = params->sf_Te;
-  double sf_TR = params->sf_TR;
-  int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
+  const int modelgridindex = params->modelgridindex;
+  const double nu_edge = params->nu_edge;
+  const double sf_Te = params->sf_Te;
+  const double sf_TR = params->sf_TR;
+  const int i = (int) ((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
   const float sigma_bf = params->photoion_xs[i];
 
-  double T_e = get_Te(modelgridindex);
-  double T_R = get_TR(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
+  const double T_R = get_TR(modelgridindex);
 
   return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-HOVERKB * nu / T_e));
 
@@ -1098,22 +1097,22 @@ static double bfheating_integrand_gsl_radfield(double nu, void *restrict voidpar
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  double integratoraccuracy = 2e-3;
+  const double integratoraccuracy = 1e-2;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(32768);
 
-  int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-  double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
+  const int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+  const double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
 
-  double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
-  double nu_threshold = E_threshold / H;
-  double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+  const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
+  const double nu_threshold = E_threshold / H;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
   gsl_integral_paras_bfheating intparas;
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
-  double T_R = get_TR(modelgridindex);
-  double T_e = get_Te(modelgridindex);
+  const double T_R = get_TR(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
   intparas.sf_Te = calculate_sahafact(element,ion,level,phixstargetindex,T_e,E_threshold);
   intparas.sf_TR = calculate_sahafact(element,ion,level,phixstargetindex,T_R,E_threshold);
   intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
@@ -1123,7 +1122,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   F_bfheating.function = &bfheating_integrand_gsl_radfield;
   F_bfheating.params = &intparas;
   gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0,
-                      integratoraccuracy, 65536, 6, w, &bfheating, &error);
+                      integratoraccuracy, 32768, 4, w, &bfheating, &error);
   bfheating *= FOURPI * phixstargetprobability;
 
   gsl_integration_workspace_free(w);

@@ -2,8 +2,7 @@
 #include "atomic.h"
 
 
-inline
-double photoionization_crosssection(double nu_edge, double nu)
+inline double photoionization_crosssection(double nu_edge, double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu

@@ -1,5 +1,4 @@
 #include "sn3d.h"
-#include "atomic.h"
 #include "gamma.h"
 #include "kpkt.h"
 #include "ltepop.h"
