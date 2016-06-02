@@ -2,10 +2,9 @@
 #include "vectors.h"
 
 
-/************************************************************/
-/*Routine for aberation of angles in SR. Takes one direction and velocity
- as input and gives back another direction.*/
 void angle_ab(const double *restrict const dir1, const double *restrict vel, double *dir2)
+// Routine for aberation of angles in SR. Takes one direction and velocity
+// as input and gives back another direction.
 {
   const double vsqr = dot(vel,vel)/CLIGHTSQUARED;
   const double gamma_rel = 1./(sqrt(1 - vsqr));
@@ -20,10 +19,9 @@ void angle_ab(const double *restrict const dir1, const double *restrict vel, dou
 }
 
 
-/************************************************************/
-/*Routine for Doppler shift in SR. Takes one direction and velocity
- as input and gives back double.*/
 double doppler (const double *restrict dir1, const double *restrict vel)
+// Routine for Doppler shift in SR. Takes one direction and velocity
+//  as input and gives back double.
 {
   //double vsqr = dot(vel,vel)/CLIGHTSQUARED;
   //double gamma_rel = 1./(sqrt(1 - vsqr));
@@ -43,12 +41,11 @@ double doppler (const double *restrict dir1, const double *restrict vel)
 }
 
 
-/************************************************************/
-/*Routine for scattering a direction through angle theta.*/
 void scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
+// Routine for scattering a direction through angle theta.
 {
-  /*begin with setting the direction in coordinates where original direction
-    is parallel to z-hat.*/
+  // begin with setting the direction in coordinates where original direction
+  // is parallel to z-hat.
 
   const double zrand = gsl_rng_uniform(rng);
   const double phi = zrand * 2 * PI;
@@ -59,8 +56,8 @@ void scatter_dir(const double *dir_in, double cos_theta, double *dir_out)
   const double xprime = sin_theta * cos(phi);
   const double yprime = sin_theta * sin(phi);
 
-  /* Now need to derotate the coordinates back to real x,y,z. */
-  /* Rotation matrix is determined by dir_in. */
+  // Now need to derotate the coordinates back to real x,y,z.
+  // Rotation matrix is determined by dir_in.
 
   const double norm1 = 1./( sqrt( (dir_in[0]*dir_in[0]) + (dir_in[1]*dir_in[1]))) ;
   const double norm2 = 1./( sqrt( (dir_in[0]*dir_in[0]) + (dir_in[1]*dir_in[1]) + (dir_in[2]*dir_in[2])) );
