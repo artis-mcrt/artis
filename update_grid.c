@@ -467,6 +467,9 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 /// (This could in principle also be done for empty cells)
 
                 #ifndef FORCE_LTE
+                double estimator_normfactor = 1. / (deltaV * deltat) / nprocs / assoc_cells;
+                double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
+
                 if (initial_iteration || modelgrid[n].thick == 1)
                 #endif
                 {
@@ -476,7 +479,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
                     abort();
                   }
-                  J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+                  J[n] *= estimator_normfactor_over4pi;
 
                   #ifdef DO_TITER
                     if (J_reduced_save[n] >= 0)
@@ -518,29 +521,6 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                   precalculate_partfuncts(n);
                   calculate_populations(n,0);
-                  double nne = get_nne(n);
-                  double compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                  double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
-                  double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
-                  if (log_this_cell)
-                  {
-                    printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
-                    printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
-                  }
-                  modelgrid[n].grey_depth = grey_optical_depth;
-
-  //                 grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                  if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
-                  {
-                    printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
-                    modelgrid[n].thick = 1;
-                  }
-                  else if (grey_optical_depth > cell_is_optically_thick_vpkt)
-                  {
-                      modelgrid[n].thick = 2;
-                  }
-                  else
-                    modelgrid[n].thick = 0;
                 }
                 #ifndef FORCE_LTE
                 else
@@ -552,8 +532,6 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     abort();
                   }
 
-                  double estimator_normfactor = 1. / (deltaV * deltat) / nprocs / assoc_cells;
-                  double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
                   J[n] *= estimator_normfactor_over4pi;
                   nuJ[n] *= estimator_normfactor_over4pi;
                   ffheatingestimator[n] *= estimator_normfactor;
@@ -656,29 +634,30 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         Gamma += Col_ion;
                         Gamma /= get_groundlevelpop(n, element, ion);
                       }
-                      gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
+                      int ionindex = n*nelements*maxion+element*maxion+ion;
+                      gammaestimator[ionindex] = Gamma;
                       //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
 
-                      bfheatingestimator[n*nelements*maxion+element*maxion+ion] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
+                      bfheatingestimator[ionindex] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
                       #ifdef DO_TITER
-                        if (bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
+                        if (bfheatingestimator_save[ionindex] >= 0)
                         {
-                          bfheatingestimator[n*nelements*maxion+element*maxion+ion] = (bfheatingestimator[n*nelements*maxion+element*maxion+ion]+bfheatingestimator_save[n*nelements*maxion+element*maxion+ion])/2.;
+                          bfheatingestimator[ionindex] = (bfheatingestimator[ionindex]+bfheatingestimator_save[ionindex])/2.;
                         }
-                        bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion];
+                        bfheatingestimator_save[ionindex] = bfheatingestimator[ionindex];
                       #endif
                       /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
                       /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
 
-                      bfheatingestimator[n*nelements*maxion+element*maxion+ion] = bfheatingestimator[n*nelements*maxion+element*maxion+ion]/get_bfheatingcoeff_ana(element,ion,0,0,n);
+                      bfheatingestimator[ionindex] = bfheatingestimator[ionindex]/get_bfheatingcoeff_ana(element,ion,0,0,n);
 
-                      if (!isfinite(bfheatingestimator[n*nelements*maxion+element*maxion+ion]))
+                      if (!isfinite(bfheatingestimator[ionindex]))
                       {
-                        printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[n*nelements*maxion+element*maxion+ion],get_bfheatingcoeff_ana(element,ion,0,0,n));
+                        printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[ionindex],get_bfheatingcoeff_ana(element,ion,0,0,n));
                         abort();
                       }
 
-                      //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[n*nelements*maxion+element*maxion+ion]);
+                      //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[ionindex]);
                     }
                   }
 
@@ -820,28 +799,31 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test, nlte_iter);
                       }
                     #endif
-
-                  const double nne = get_nne(n);
-                  const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
-                  const double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
-                  printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
-                  const double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
-                  printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
-                  modelgrid[n].grey_depth = grey_optical_depth;
-
-  //                   grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                  if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
-                  {
-                    printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
-                    modelgrid[n].thick = 1;
-                  }
-                  else if (grey_optical_depth > cell_is_optically_thick_vpkt )
-                  {
-                      modelgrid[n].thick = 2;
-                  }
-                  else modelgrid[n].thick = 0;
                 }
                 #endif
+                double nne = get_nne(n);
+                double compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
+                double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
+                double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
+                if (log_this_cell)
+                {
+                  printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
+                  printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+                }
+                modelgrid[n].grey_depth = grey_optical_depth;
+
+//                 grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
+                if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                {
+                  printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                  modelgrid[n].thick = 1;
+                }
+                else if (grey_optical_depth > cell_is_optically_thick_vpkt)
+                {
+                    modelgrid[n].thick = 2;
+                }
+                else
+                  modelgrid[n].thick = 0;
               }
 
 
