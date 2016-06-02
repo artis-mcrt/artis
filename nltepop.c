@@ -1,3 +1,8 @@
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_linalg.h>
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
