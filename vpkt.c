@@ -738,8 +738,8 @@ void init_vpkt_grid(void)
     ybin = 2 * vmax / NY_VGRID ;
     zbin = 2 * vmax / NZ_VGRID ;
 
-    int n,m,bin_range;
-    for (int bin = 0; bin < MOBS; bin++) {
+    int n,m,bin,bin_range;
+    for (bin = 0; bin < MOBS; bin++) {
 
         for (bin_range = 0; bin_range < MRANGE_GRID; bin_range++) {
 
