@@ -10,7 +10,7 @@ make_gamma_light_curve()
 {
   int gather_gamma_light_curve();
   int write_gamma_light_curve();
-  
+
   gather_gamma_light_curve(0);
   write_gamma_light_curve();
   return(0);
@@ -26,14 +26,14 @@ gather_gamma_light_curve(my_rank)
   int add_to_lc_angle();
   int i,n,p,nn;
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
-  
+
   if (ntlcbins > MTLCBINS)
     {
       printout("Too many time bins in light curve - reducing.\n");
       ntlcbins = MTLCBINS;
     }
 
-  /* start by setting up the time bins. */ 
+  /* start by setting up the time bins. */
   /* it is all done interms of a logarithmic spacing in t - get the
      step sizes first. */
   dlogtlc_angle = (log(tmax) - log(tmin))/ntlcbins;
@@ -57,7 +57,7 @@ gather_gamma_light_curve(my_rank)
     for (i = 0; i < nprocs; i++)
     {
       /// Read in the next bunch of packets to work on
-      //sprintf(filename,"packets%d_%d.tmp",0,i);
+      //sprintf(filename,"packets%d_%d.tmp",i,0);
       sprintf(filename,"packets%.2d_%.4d.out",0,i);
       //if ((packets_file = fopen(filename, "rb")) == NULL)
       if ((packets_file = fopen(filename, "r")) == NULL)
@@ -67,7 +67,7 @@ gather_gamma_light_curve(my_rank)
       }
       //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
       read_packets(packets_file);
-      
+
       /// Close the current file.
       fclose(packets_file);
 
@@ -94,7 +94,7 @@ write_gamma_light_curve()
   int m,nn;
   float dum1, dum2;
   double save[MTLCBINS][MANGLCBINS];
-  
+
 
   /* Light curve is done - write it out. */
 
@@ -143,7 +143,7 @@ write_gamma_light_curve()
 	}
       fprintf(lc_gamma_file, "\n");
     }
-  
+
 
   fclose(lc_gamma_file);
 
@@ -177,7 +177,7 @@ add_to_lc_angle(pkt_ptr)
   t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
 
   /* Put this into the time grid. */
-  
+
   if (t_arrive > tmin && t_arrive < tmax)
     {
       nt = (log(t_arrive) - log(tmin)) / dlogtlc_angle;
@@ -190,7 +190,7 @@ add_to_lc_angle(pkt_ptr)
       cross_prod(xhat, syn_dir, vec2);
       cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
 
-      cross_prod(vec2, syn_dir, vec3);      
+      cross_prod(vec2, syn_dir, vec3);
       testphi = dot(vec1,vec3);
 
       if (testphi > 0)

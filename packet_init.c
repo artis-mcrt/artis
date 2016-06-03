@@ -8,12 +8,12 @@ int packet_init(int middle_iteration, int my_rank)
   FILE *packets_file;
   int pktnumberoffset;
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
-  
+
   if (!continue_simulation)
   {
     pktnumberoffset = middle_iteration*npkts;
     setup_packets(pktnumberoffset);
-    sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank); 
+    sprintf(filename,"packets%d_%d_odd.tmp",my_rank,middle_iteration);
     if ((packets_file = fopen(filename, "wb")) == NULL)
     {
       printf("[fatal]: packet_init: Cannot open packets file\n");
@@ -28,7 +28,7 @@ int packet_init(int middle_iteration, int my_rank)
     int n;
     if (i > 0)
     {
-    sprintf(filename,"packets%d_%d.tmp",i-1,my_rank); 
+    sprintf(filename,"packets%d_%d.tmp",my_rank,i-1);
     if ((packets_file = fopen(filename, "rb")) == NULL)
     {
     printf("Cannot open packets file\n");
@@ -36,7 +36,7 @@ int packet_init(int middle_iteration, int my_rank)
   }
     fread(&testpkt, sizeof(PKT), npkts, packets_file);
     fclose(packets_file);
-          
+
     for (n=0; n<npkts; n++)
     {
     if (testpkt[n].number-pkt[n].number != 0) printout("fatal 1!!! %d, %d\n",testpkt[n].number,pkt[n].number);
@@ -57,14 +57,14 @@ int packet_init(int middle_iteration, int my_rank)
     if (testpkt[n].escape_type-pkt[n].escape_type != 0) printout("fatal 16!!!\n"); /// Flag to tell us in which form it escaped from the grid.
     if (testpkt[n].escape_time-pkt[n].escape_time != 0) printout("fatal 17!!!\n");
     if (testpkt[n].scat_count-pkt[n].scat_count != 0) printout("fatal 18!!!\n");  /// WHAT'S THAT???
-    if (testpkt[n].next_trans-pkt[n].next_trans != 0) printout("fatal 19!!!\n");  
+    if (testpkt[n].next_trans-pkt[n].next_trans != 0) printout("fatal 19!!!\n");
     if (testpkt[n].interactions-pkt[n].interactions != 0) printout("fatal 20!!!\n");/// debug: number of interactions the packet undergone
     if (testpkt[n].last_event-pkt[n].last_event != 0) printout("fatal 21!!!\n");  /// debug: stores information about the packets history
   }
   }
     */
   }
-  
+
   return 0;
 }
 
@@ -101,7 +101,7 @@ int setup_packets (int pktnumberoffset)
 
   /* Now place the pellets in the ejecta and decide at what time
   they will decay. */
- 
+
   /* Need to get a normalisation factor. */
   norm = 0.0;
   for (m=0; m<ngrid; m++)
@@ -134,7 +134,7 @@ int setup_packets (int pktnumberoffset)
     mabove=ngrid;
     mbelow = 0;
     zrand = gsl_rng_uniform(rng);
-      
+
     while (mabove != (mbelow+1))
     {
       if (mabove == (mbelow + 2))
@@ -154,7 +154,7 @@ int setup_packets (int pktnumberoffset)
         mbelow = m;
       }
     }
-    
+
     if (cont[mbelow] > (zrand*norm))
     {
       printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand*norm);
@@ -165,7 +165,7 @@ int setup_packets (int pktnumberoffset)
       printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand*norm);
       exit(0);
     }
-    
+
     m = mbelow;
     //printout("chosen cell %d (%d, %g, %g)\n", m, ngrid, zrand, norm);
     //exit(0);
@@ -179,7 +179,7 @@ int setup_packets (int pktnumberoffset)
     }
     m = m - 1;
     */
-    
+
     grid_ptr = &cell[m];
     if (m >= ngrid)
     {
@@ -200,10 +200,10 @@ int setup_packets (int pktnumberoffset)
       packet_reset++;
     }
   }
-  
-  
-  /// Some fraction of the packets we reasigned because they were not going 
-  /// to activate in the time of interest so need to renormalise energies 
+
+
+  /// Some fraction of the packets we reasigned because they were not going
+  /// to activate in the time of interest so need to renormalise energies
   /// to account for this.
   for (n = 0; n < npkts; n++)
   {
@@ -234,7 +234,7 @@ double fni(CELL *grid_ptr)
     dcen[0]=grid_ptr->pos_init[0] + (0.5*wid_init);
     dcen[1]=grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2]=grid_ptr->pos_init[2] + (0.5*wid_init);
-      
+
 
     m_r = vec_len(dcen) / rmax;
     m_r = pow(m_r,3) * mtot / MSUN;
@@ -258,7 +258,7 @@ double fni(CELL *grid_ptr)
     dcen[0] = grid_ptr->pos_init[0] + (0.5*wid_init);
     dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
-      
+
     /*radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
@@ -276,7 +276,7 @@ double fni(CELL *grid_ptr)
       fraction = 0.0;
     }*/
     fraction = get_fni(grid_ptr->modelgridindex);
-   
+
     return(fraction);
   }
   else if (model_type == RHO_3D_READ)
@@ -397,7 +397,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
   zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]);
   if (zrand3 <= prob_chain[0])
     {
-      
+
       /// Now choose whether it's going to be a nickel or cobalt pellet and
       /// mark it as such.
       zrand = gsl_rng_uniform(rng);
@@ -408,7 +408,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
       else
 	{
 	  zrand = gsl_rng_uniform(rng);
-	  
+
 	  if (zrand < ECOBALT_GAMMA/ECOBALT)
 	    {
 	      pkt[n].type = TYPE_COBALT_PELLET;
@@ -418,7 +418,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	      pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
 	    }
 	}
-      
+
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_NICKEL_PELLET)
 	{
@@ -445,7 +445,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	{
 	  pkt[n].type = TYPE_52MN_PELLET;
 	}
-      
+
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_52FE_PELLET)
 	{
@@ -460,7 +460,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	}
     }
   else
-    {  
+    {
       /// Now choose whether it's going to be a 48Cr or 48V pellet and
       /// mark it as such.
       zrand = gsl_rng_uniform(rng);
@@ -472,7 +472,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	{
 	  pkt[n].type = TYPE_48V_PELLET;
 	}
-      
+
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_48CR_PELLET)
 	{
@@ -500,7 +500,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 void write_packets(FILE *packets_file)
 {
   int i;
-  
+
   for (i = 0; i < npkts; i++)
   {
    fprintf(packets_file,"%d ",pkt[i].number);
@@ -538,7 +538,7 @@ void write_packets(FILE *packets_file)
 void read_packets(FILE *packets_file)
 {
   int i;
-  
+
   for (i = 0; i < npkts; i++)
   {
    fscanf(packets_file,"%d ",&pkt[i].number);

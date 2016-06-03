@@ -1,9 +1,9 @@
 
 /* 2007-10-30 -- MK
-   Non-grey treatment of UVOIR opacity as opacity_case 4 added. 
+   Non-grey treatment of UVOIR opacity as opacity_case 4 added.
    Still not fully commented.
    Comments are marked by ///  Deactivated code by // */
-/* 2007-01-17 -- MK 
+/* 2007-01-17 -- MK
    Several minor modifications (some marked in the code with //MK), these include
      - global printout() routine (located in sn3d.c)
      - opacity_cases 2 and 3 added (changes in grid_init.c and update_grid.c,
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
   int nts;
   int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
   int update_packets();
-  
+
   //void init_spectrum();
   int gather_spectrum(int depth);
   int gather_spectrum_res(int current_abin);
@@ -47,7 +47,7 @@ int main(int argc, char** argv)
   int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file);
   int write_light_curve(FILE *lc_file, int current_abin);
   double dot();
-  
+
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
   FILE *emissionpol_file,*specpol_file,*absorptionpol_file;
   int j,t_arrive;
@@ -95,12 +95,12 @@ int main(int argc, char** argv)
   char *buffer2;
   double nntot;
   int titer;
-  
+
   double deltaV,deltat;
   int assoc_cells;
-  
+
 //  int HUGEE;
-  
+
   #ifdef MPI_ON
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -109,12 +109,12 @@ int main(int argc, char** argv)
     my_rank = 0;
     p=1;
   #endif
-  
+
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
   if (my_rank == 0)
   {
-    
+
     tid = 0;
     nthreads = 1;
     sprintf(filename,"exspec_%d-%d.txt",my_rank,tid);
@@ -124,22 +124,22 @@ int main(int argc, char** argv)
       abort();
     }
     setvbuf(output_file, NULL, _IOLBF, 1);
-  
+
     printout("Begining do_exspec.\n");
-  
+
     /// Get input stuff
     printout("time before input %d\n",time(NULL));
     input (0);
     printout("time after input %d\n",time(NULL));
     nprocs = nprocs_exspec;
-    
+
     /// Read binary packet files and create ASCII packets files out of them
     /*
     npkts=MPKTS;
     for (i = 0; i < nprocs; i++)
     {
       /// Read in the next bunch of packets to work on
-      sprintf(filename,"packets%d_%d.tmp",0,i);
+      sprintf(filename,"packets%d_%d.tmp",i,0);
       printout("%s\n",filename);
       if ((packets_file = fopen(filename, "rb")) == NULL)
       //sprintf(filename,"packets%.2d_%.4d.out",0,i);
@@ -152,8 +152,8 @@ int main(int argc, char** argv)
       //read_packets(packets_file);
       /// Close the current file.
       fclose(packets_file);
-    
-      
+
+
       /// Read in the next bunch of packets to work on
       sprintf(filename,"packets%.2d_%.4d.out",0,i);
       printout("%s\n",filename);
@@ -169,20 +169,20 @@ int main(int argc, char** argv)
     }
     exit(0);
     */
-  
+
     for (outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
     {
       /// Initialise the grid. Call routine that sets up the initial positions
       /// and sizes of the grid cells.
       //grid_init();
       time_init();
-      
+
       if ((epkts = (EPKT *) malloc((nprocs*npkts)*sizeof(EPKT))) == NULL)
       {
         printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
         exit(0);
       }
-      
+
       /// Loop over all packets in all the packets files of the simulation and check if
       /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
       /// epkts array, which is then used for the binning.
@@ -190,8 +190,8 @@ int main(int argc, char** argv)
       for (i = 0; i < nprocs; i++)
       {
         /// Read in the next bunch of packets to work on
-        //sprintf(filename,"packets%d_%d.tmp",0,i);
-        sprintf(filename,"packets%.2d_%.4d.out",0,i);
+        //sprintf(filename,"packets%d_%d.tmp",i,0);
+        sprintf(filename,"packets%.2d_%.4d.out",i,0);
         printout("%s, %d %d\n",filename,i,nprocs);
         //if ((packets_file = fopen(filename, "rb")) == NULL)
         if ((packets_file = fopen(filename, "r")) == NULL)
@@ -202,19 +202,19 @@ int main(int argc, char** argv)
         //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
         read_packets(packets_file);
         fclose(packets_file);
-        
+
         for (ii = 0; ii < npkts; ii++)
         {
           pkt_ptr = &pkt[ii];
           if (pkt_ptr->type == TYPE_ESCAPE && pkt_ptr->escape_type == TYPE_RPKT)
           {
             //printout("add packet %d\n",j);
-            /// We know that a packet escaped at "escape_time". However, we have 
+            /// We know that a packet escaped at "escape_time". However, we have
             /// to allow for travel time. Use the formula in Leon's paper. The extra
             /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
             t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
             epkts[j].arrive_time = t_arrive;
-            
+
             /// Now do the cmf time.
             t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHT2));
             epkts[j].arrive_time_cmf = t_arrive;
@@ -228,20 +228,20 @@ int main(int argc, char** argv)
             epkts[j].emissiontype = pkt_ptr->emissiontype;
             epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
             epkts[j].absorptiontype = pkt_ptr->absorptiontype;
-              
+
             #ifdef POL_ON
             epkts[j].stokes[0] = pkt_ptr->stokes[0];
             epkts[j].stokes[1] = pkt_ptr->stokes[1];
             epkts[j].stokes[2] = pkt_ptr->stokes[2];
             #endif
-              
+
             j += 1;
           }
         }
       }
       nepkts = j;
-      
-      
+
+
       /// Extract angle-averaged spectra, light curves and specpol
       if ((lc_file = fopen("light_curve.out", "w")) == NULL)
       {
@@ -252,12 +252,12 @@ int main(int argc, char** argv)
       gather_light_curve();
       write_light_curve(lc_file,-1);
       make_gamma_light_curve();
-      
+
       fclose(lc_file);
-      
-      
+
+
       #ifdef POL_ON
-        
+
       if ((specpol_file = fopen("specpol.out", "w")) == NULL)
       {
           printout("Cannot open specpol.out\n");
@@ -280,9 +280,9 @@ int main(int argc, char** argv)
       fclose(specpol_file);
       fclose(emissionpol_file);
       fclose(absorptionpol_file);
-      
+
       #else
-      
+
       if ((spec_file = fopen("spec.out", "w")) == NULL)
       {
           printout("Cannot open spec.out\n");
@@ -298,23 +298,23 @@ int main(int argc, char** argv)
           printf("Cannot open absorption.out\n");
           exit(0);
       }
-        
+
       gather_spectrum(-1);
       write_spectrum(spec_file,emission_file,absorption_file);
-      
+
       fclose(spec_file);
       fclose(emission_file);
       fclose(absorption_file);
 
-        
+
       #endif
-        
-      
-    
-        
+
+
+
+
       printout("finished angle-averaged stuff\n");
-      
-        
+
+
       /// Extract LOS dependent spectra and light curves
       if (model_type != RHO_1D_READ)
       {
@@ -323,24 +323,24 @@ int main(int argc, char** argv)
           printout("Cannot open light_curve_res.out\n");
           exit(0);
         }
-        
+
         for (i = 0; i < MABINS; i++)
         {
             gather_light_curve_res(i);
             write_light_curve(lc_file,i);
         }
-          
+
         fclose(lc_file);
-          
-          
+
+
         #ifdef POL_ON
-        
+
         if ((specpol_file = fopen("specpol_res.out", "w")) == NULL)
         {
             printout("Cannot open specpol_res.out\n");
             exit(0);
         }
-          
+
         for (i = 0; i < MABINS; i++)
         {
             if (do_emission_res == 1)
@@ -352,7 +352,7 @@ int main(int argc, char** argv)
                     printf("Cannot open emissionpol_res.out\n");
                     exit(0);
                 }
-                  
+
                 sprintf(filename,"absorptionpol_res_%.2d.out",i);
                 printout("%s \n",filename);
                 if ((absorptionpol_file = fopen(filename, "w")) == NULL)
@@ -360,12 +360,12 @@ int main(int argc, char** argv)
                     printf("Cannot open absorptionpol_res.out\n");
                     exit(0);
                 }
-                  
+
             }
-            
+
             gather_specpol_res(i);
             write_specpol(specpol_file,emissionpol_file,absorptionpol_file);
-        
+
             if (do_emission_res == 1)
             {
                 fclose(emissionpol_file);
@@ -374,17 +374,17 @@ int main(int argc, char** argv)
             printout("Did %d of %d angle bins.\n",i+1,MABINS);
         }
         fclose(specpol_file);
-          
-          
+
+
         #else
-        
-          
+
+
         if ((spec_file = fopen("spec_res.out", "w")) == NULL)
         {
             printout("Cannot open spec_res.out\n");
             exit(0);
         }
-          
+
         for (i = 0; i < MABINS; i++)
         {
             if (do_emission_res == 1)
@@ -396,7 +396,7 @@ int main(int argc, char** argv)
                     printf("Cannot open emission_res.out\n");
                     exit(0);
                 }
-                
+
                 sprintf(filename,"absorption_res_%.2d.out",i);
                 printout("%s \n",filename);
                 if ((absorption_file = fopen(filename, "w")) == NULL)
@@ -404,12 +404,12 @@ int main(int argc, char** argv)
                     printf("Cannot open absorption_res.out\n");
                     exit(0);
                 }
-                
+
             }
-            
+
             gather_spectrum_res(i);
             write_spectrum(spec_file,emission_file,absorption_file);
-            
+
             if (do_emission_res == 1)
             {
                 fclose(emission_file);
@@ -417,38 +417,38 @@ int main(int argc, char** argv)
             }
             printout("Did %d of %d angle bins.\n",i+1,MABINS);
         }
-        
+
         fclose(spec_file);
-          
-          
+
+
         #endif
-          
-          
-        
+
+
+
       }
     }
-  
+
     //fclose(ldist_file);
     //fclose(output_file);
-  
+
     /* Spec syn. */
     //grid_init();
     //syn_gamma();
-  
+
     printout("simulation finished at %d\n",time(NULL));
     fclose(output_file);
   }
-  
+
   #ifdef MPI_ON
     MPI_Finalize();
-  #endif  
+  #endif
 
   return 0;
 }
 
 
 /// Generalized output routine
-/// following section 7.3 of "C. Programming Language." 
+/// following section 7.3 of "C. Programming Language."
 /// by Brian W. Kernighan and Dennis Ritchie
 /// As it stands it is only capable to printout floating point variables as %g
 /// specifiers which determine the number of digits don't work!
@@ -460,8 +460,8 @@ void printout(char *fmt, ...)
   double dval;
   char filename[100];
   //FILE *output_file;
-  
-  /// To be able to follow the messages interactively the file is continuously 
+
+  /// To be able to follow the messages interactively the file is continuously
   /// opened and closed. As this happens always with the "a" argument the file
   /// is so far never really initialized: a existing output.txt will be continued!
 /*      sprintf(filename,"output_%d-%d.txt",rank_global,tid);
@@ -475,7 +475,7 @@ void printout(char *fmt, ...)
         }
         output_file_open = 1;
       }*/
-  
+
       va_start(ap, fmt);
       for (p = fmt; *p; p++)
       {
@@ -487,20 +487,20 @@ void printout(char *fmt, ...)
         }
         switch (*++p)
         {
-          case 'd': 
+          case 'd':
             ival = va_arg(ap, int);
         //printf(output_file,"%d", ival);  ///for output on the screen
             fprintf(output_file,"%d", ival);
             break;
-          case 'f': 
+          case 'f':
             dval = va_arg(ap, double);
             fprintf(output_file,"%f", dval);
             break;
-          case 'g': 
+          case 'g':
             dval = va_arg(ap, double);
             fprintf(output_file,"%g", dval);
             break;
-          case 's': 
+          case 's':
             for (sval = va_arg(ap, char *); *sval; sval++)
               fputc(*sval,output_file);
             break;
@@ -510,7 +510,7 @@ void printout(char *fmt, ...)
         }
       }
       va_end(ap);
-  
+
       //fclose(output_file);
 }
 

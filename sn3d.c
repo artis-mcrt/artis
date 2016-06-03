@@ -788,7 +788,7 @@ int main(int argc, char** argv)
             /// Read in the next bunch of packets to work on.
             if (n_middle_it > 1)
             {
-              sprintf(filename,"packets%d_%d.tmp",middle_iteration,my_rank);
+              sprintf(filename,"packets%d_%d.tmp",my_rank,middle_iteration);
               if ((packets_file = fopen(filename, "rb")) == NULL)
               {
                 printf("Cannot open packets file\n");
@@ -812,7 +812,7 @@ int main(int argc, char** argv)
             /// And save their new state back to disc before proceeding with the next bunch of packets.
             if (n_middle_it > 1)
             {
-              sprintf(filename,"packets%d_%d.tmp",middle_iteration,my_rank);
+              sprintf(filename,"packets%d_%d.tmp",my_rank,middle_iteration);
               if ((packets_file = fopen(filename, "wb")) == NULL)
               {
                 printf("Cannot open packets file\n");
@@ -1237,7 +1237,7 @@ int main(int argc, char** argv)
 
           if (nts == ftstep-1)
           {
-            sprintf(filename,"packets%.2d_%.4d.out",0,my_rank);
+            sprintf(filename,"packets%.2d_%.4d.out",my_rank,0);
             //sprintf(filename,"packets%.2d_%.4d.out",middle_iteration,my_rank);
             if ((packets_file = fopen(filename, "w")) == NULL)
             {
