@@ -51,7 +51,7 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
   dummy_ptr = &dummy;
 
 
-  end_packet = 0;
+  end_packet = 0 ;
   tau = 0;
   sdist = 0;
   ldist = 0;
