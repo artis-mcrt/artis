@@ -409,6 +409,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     }
 
     gsl_matrix_view m = gsl_matrix_view_array(rate_matrix, nlte_dimension, nlte_dimension);
+    gsl_matrix_view morig = gsl_matrix_view_array(rate_matrix_copy, nlte_dimension, nlte_dimension);
     gsl_permutation *p = gsl_permutation_alloc(nlte_dimension);
 
     int s; //sign of the transformation
@@ -419,7 +420,18 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     gsl_linalg_LU_solve(&m.matrix, p, &b.vector, x); //solve matrix equation m * x = b for x (populations)
     //gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
 
-    //printf("after solving: rate %p balance %p NULL %p\n", rate_matrix, balance_vector, NULL);
+    // NEW: does this work correctly and improve accuracy?
+    const double TOLERANCE = 1e-15;
+    double d = 2 * TOLERANCE;
+    gsl_vector* r = gsl_vector_alloc(nlte_dimension);;
+
+    for (int iteration = 1; d > TOLERANCE; iteration++)
+    {
+      gsl_linalg_LU_refine(&morig.matrix, &m.matrix, p, &b.vector, x, r);
+      d = gsl_blas_dnrm2(r);
+      printout("NLTE solver iteration %d has tolerance of %g\n",iteration,d);
+    }
+
     for (int row = 0; row < nlte_dimension; row++)
     {
       double sum = 0.;
@@ -438,6 +450,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         printout("WARNING: NLTE solver gave negative population to index %d (ion %d level %d), pop = %g\n",row,ion,level,gsl_vector_get(x,row)*pop_norm_factors[row]);
       }
     }
+    gsl_vector_free(r);
 
     double *ion_populations = calloc(nions,sizeof(double));
     double matrix_elem_pop = 0.0;

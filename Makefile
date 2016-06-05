@@ -223,12 +223,12 @@ endif
 
 ### use pg when you want to use gprof the profiler
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
-
-
 sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c linelist.c ltepop.c macroatom.c move.c nltepop.c packet_init.c packet_prop.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c time_init.c update_grid.c update_packets.c vectors.c vpkt.c
 
-sn3d: version
-	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o linelist.o ltepop.o macroatom.o move.o nltepop.o packet_init.o packet_prop.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o time_init.o update_grid.o update_packets.o vectors.o vpkt.o
+
+sn3d: clean version $(sn3d_objects)
+	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c
 

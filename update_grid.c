@@ -128,12 +128,9 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 //   of the new timestep.
     /// m timestep
 {
-  //double gamma_lte,zeta;
-
   /// only needed if all level populations should be printed to the output-file
   //double pop, excitedlevelpops;
 
-  //int n;
   //int samplecell;
   //double deltarho;
 
@@ -534,9 +531,9 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                   J[n] *= estimator_normfactor_over4pi;
                   nuJ[n] *= estimator_normfactor_over4pi;
+                  radfield_set_J_normfactor(n,estimator_normfactor_over4pi);
                   ffheatingestimator[n] *= estimator_normfactor;
                   colheatingestimator[n] *= estimator_normfactor;
-                  radfield_set_J_normfactor(n,estimator_normfactor_over4pi);
 
                   #ifdef DO_TITER
                     if (J_reduced_save[n] >= 0)
@@ -607,7 +604,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       double Gamma = 0.;
                       if (ion < nions-1)
                       {
-                        int ionisinglevels = get_bfcontinua(element,ion);
+                        const int ionisinglevels = get_bfcontinua(element,ion);
                         mastate[tid].element = element;
                         mastate[tid].ion = ion;
                         mastate[tid].nnlevel = 1.0;

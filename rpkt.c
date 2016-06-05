@@ -1345,7 +1345,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
 
                         bef = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact;
 
-                        sf = calculate_sahafact(element,ion,level,0,T_e,nu_edge*H);
+                        sf = calculate_sahafact(element,ion,level,0,T_e,nu_edge*H); //TODO: this is not correct, fix before using VPKTS
                         helper = nnlevel * sigma_bf;
                         departure_ratio = nnionlevel / nnlevel * nne * sf; ///put that to phixslist
                         if (nnlevel == 0.) check = 0.;

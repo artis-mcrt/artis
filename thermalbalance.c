@@ -17,7 +17,7 @@ typedef struct Te_solution_paras
 } Te_solution_paras;
 
 
-static double find_T_e(double T_e, void *paras)
+static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
   double nntot;
@@ -107,19 +107,18 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
   paras.t_current = t_current;
 
   gsl_function find_T_e_f;
-  find_T_e_f.function = &find_T_e;
+  find_T_e_f.function = &T_e_eqn_heating_minus_cooling;
   find_T_e_f.params = &paras;
 
-  double thermalmin = find_T_e(T_min,find_T_e_f.params);
-  double thermalmax = find_T_e(T_max,find_T_e_f.params);
+  double thermalmin = T_e_eqn_heating_minus_cooling(T_min,find_T_e_f.params);
+  double thermalmax = T_e_eqn_heating_minus_cooling(T_max,find_T_e_f.params);
+  printout("find T_e: (heating - cooling) at T_min: %g, at T_max: %g\n",thermalmin,thermalmax);
   if (!isfinite(thermalmin) || !isfinite(thermalmax))
   {
-    printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
     printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
     thermalmax = thermalmin = -1;
   }
 
-  printout("thermalmin %g, thermalmax %g\n",thermalmin,thermalmax);
   //double thermalmax = find_T_e(T_max,find_T_e_f.params);
   if (thermalmin*thermalmax < 0)
   {
@@ -150,7 +149,7 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
 
     ///onedimensional gsl root solver, bracketing type
     const gsl_root_fsolver_type *solvertype;
-    gsl_root_fsolver *T_e_solver;
+    gsl_root_fsolver *restrict T_e_solver;
     solvertype = gsl_root_fsolver_brent;
 
     T_e_solver = gsl_root_fsolver_alloc(solvertype);

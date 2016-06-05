@@ -8,10 +8,12 @@
 #include "sn3d.h"
 
 //#const int RADFIELDBINCOUNT = 1000;
-#define RADFIELDBINCOUNT 10
+#define RADFIELDBINCOUNT 32
+
+#define FIRST_TIMESTEP_NLTE_RADFIELD 14
 
 #define nu_lower_first_initial (CLIGHT / (10000e-8))
-#define nu_upper_last_initial (CLIGHT / (500e-8))
+#define nu_upper_last_initial (CLIGHT / (1500e-8))
 
 static double nu_lower_first = nu_lower_first_initial;
 
@@ -86,12 +88,12 @@ void radfield_init(void)
       radfield_set_J_normfactor(modelgridindex, -1.0);
 
       double prev_nu_upper = nu_lower_first_initial;
-      //const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
-      const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+      const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+      //const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
 
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
+        //const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
         radfieldbins[modelgridindex][binindex].nu_upper = prev_nu_upper + delta_nu;
         prev_nu_upper = radfieldbins[modelgridindex][binindex].nu_upper; // importantly, the below part doesn't change this
 
@@ -303,11 +305,10 @@ void radfield_zero_estimators(int modelgridindex)
 
 
 inline
-void radfield_update_estimators(int modelgridindex, double distance,
-                                double e_cmf, double nu_cmf)
+void radfield_update_estimators(int modelgridindex, double distance, double e_cmf, double nu_cmf)
 {
   int binindex = 0;
-  if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
+  /*if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
   {
     #ifdef DEBUG_ON
     printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
@@ -322,7 +323,7 @@ void radfield_update_estimators(int modelgridindex, double distance,
     #endif
     radfieldbins[modelgridindex][binindex].nu_upper = nu_cmf;
   }
-  else
+  else*/
   {
     binindex = radfield_select_bin(modelgridindex,nu_cmf);
   }
@@ -334,18 +335,17 @@ void radfield_update_estimators(int modelgridindex, double distance,
     #endif
     {
       radfieldbins[modelgridindex][binindex].J_raw += distance * e_cmf;
-      radfieldbins[modelgridindex][binindex].nuJ_raw += distance * e_cmf *
-                                                        nu_cmf;
+      radfieldbins[modelgridindex][binindex].nuJ_raw += distance * e_cmf * nu_cmf;
       radfieldbins[modelgridindex][binindex].contribcount += 1;
     }
   }
   else
   {
     // dropping the contribution of this packet
-    printout("WARNING: radfield_update_estimators dropping packet contribution for nu_cmf %g\n",
-             nu_cmf);
-    printout("           modelgridindex %d binindex %d nu_lower_first %g nu_upper_last %g \n",
-             modelgridindex, binindex, nu_lower_first, radfield_get_bin_nu_upper(modelgridindex,RADFIELDBINCOUNT - 1));
+    // printout("WARNING: radfield_update_estimators dropping packet contribution for nu_cmf %g\n",
+    //          nu_cmf);
+    // printout("           modelgridindex %d binindex %d nu_lower_first %g nu_upper_last %g \n",
+    //          modelgridindex, binindex, nu_lower_first, radfield_get_bin_nu_upper(modelgridindex,RADFIELDBINCOUNT - 1));
   }
 }
 
@@ -353,7 +353,14 @@ void radfield_update_estimators(int modelgridindex, double distance,
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
 {
-  if (radfield_initialized && USE_MULTIBIN_RADFIELD_MODEL) // && radfieldbins[modelgridindex] != NULL
+  #ifdef DEBUG_ON_NDEF //disabled code
+  if (!radfield_initialized)
+  {
+    printout("radfield not initialized.\n");
+    abort();
+  }
+  #endif
+  if (USE_MULTIBIN_RADFIELD_MODEL && (nts_global > FIRST_TIMESTEP_NLTE_RADFIELD-1)) // && radfieldbins[modelgridindex] != NULL
   {
     int binindex = radfield_select_bin(modelgridindex,nu);
     if (binindex >= 0)
@@ -441,8 +448,14 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   F_planck.function = &gsl_integrand_planck;
   F_planck.params = &intparas;
 
-  //gsl_set_error_handler_off();
-  gsl_integration_qag(&F_planck, nu_lower, nu_upper, 0., integratoraccuracy, 65536, 6, w, &integral, &error);
+  gsl_error_handler_t *gsl_error_handler = gsl_set_error_handler_off();
+  int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, 0., integratoraccuracy, 65536, 6, w, &integral, &error);
+  if (status != 0)
+  {
+    printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,GSL_FAILURE,integral);
+    integral = 0.;
+  }
+  gsl_set_error_handler(gsl_error_handler);
 
   gsl_integration_workspace_free(w);
 
@@ -582,7 +595,7 @@ static double find_T_R(int modelgridindex, int binindex)
       double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
       double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
       status = gsl_root_test_interval(T_R_lower,T_R_upper,0,fractional_accuracy);
-      printout("call_T_R_finder: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status %d\n",
+      printout("find_T_R: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status %d\n",
                binindex,iteration_num,T_R_lower,T_R_upper,T_R,delta_nu_bar(T_R,&paras),status);
     }
     while (status == GSL_CONTINUE && iteration_num < maxit);
@@ -635,6 +648,12 @@ void radfield_fit_parameters(int modelgridindex)
   printout("Full-spectrum fit radfield params for cell %d: J %g, T_R %g, W %g\n",
            modelgridindex, J_fullspec, T_R_fullspec, get_W(modelgridindex));
 
+  double J_bin_sum = 0.;
+  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    J_bin_sum += radfield_get_bin_J(modelgridindex,binindex);
+
+  printout("radfield bins sum to J of %g out of total J %g (%.1f%%).\n",
+           J_bin_sum,J[modelgridindex],100.*J_bin_sum/J[modelgridindex]);
   printout("radfield: Finding parameters for %d bins...\n",RADFIELDBINCOUNT);
 
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)

@@ -1069,15 +1069,16 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
       //double Gamma = (g_bar > test) ? g_bar : test;
 
       //optimisation
-      const double Gamma = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      const double gauntfac = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
 
       const double g_ratio = statweight_target / mastate[tid].statweight;
 
-      C = C_0 * 14.5 * n_u * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+      C = C_0 * 14.5 * n_u * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * gauntfac;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {
       //forbidden transitions: magnetic dipole, electric quadropole...
+      //could be Axelrod? or Maurer
       C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
     }
     else
@@ -1154,8 +1155,8 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       //C = C_0 * 14.5 * n_u * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
 
       //optimisation
-      const double Gamma = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-      C = C_0 * 14.5 * H_ionpot * H_ionpot * n_l * nne * sqrt(T_e) * osc_strength(lineindex) / (epsilon_trans * epsilon_trans) * fac1 * exp(-fac1) * Gamma;
+      const double gauntfac = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      C = C_0 * 14.5 * H_ionpot * H_ionpot * n_l * nne * sqrt(T_e) * osc_strength(lineindex) / (epsilon_trans * epsilon_trans) * fac1 * exp(-fac1) * gauntfac;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {

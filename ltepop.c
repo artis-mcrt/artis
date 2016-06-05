@@ -785,11 +785,10 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 }*/
 
 
-double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
+double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
-  int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-  double sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
+  double sf = SAHACONST * stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * pow(T,-1.5) * exp(E_threshold/(KB*T));
   //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0)
   {

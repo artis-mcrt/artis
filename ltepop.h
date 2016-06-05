@@ -53,7 +53,7 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
   }
 }
 
-double calculate_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
+double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
 void initialise_photoionestimators(void);
 

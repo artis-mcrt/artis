@@ -944,7 +944,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
   F_bfcooling.params = &intparas;
   gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling, &error);
-  bfcooling *= nnionlevel*nne*4*PI*calculate_sahafact(element,ion,level,phixstargetindex,T_e,nu_threshold*H);
+  bfcooling *= nnionlevel*nne*4*PI*calculate_sahafact(element,ion,level,upperionlevel,T_e,nu_threshold*H);
 
   gsl_integration_workspace_free(wsp);
   return bfcooling;
