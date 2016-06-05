@@ -304,7 +304,9 @@ static void read_unprocessed_atomicdata(void)
   /// temperature to determine relevant ionstages
   int T_preset;
   fscanf(compositiondata,"%d",&T_preset);
-  fscanf(compositiondata,"%d",&homogeneous_abundances);
+  int homogeneous_abundances_in;
+  fscanf(compositiondata,"%d",&homogeneous_abundances_in);
+  homogeneous_abundances = (homogeneous_abundances_in != 0);
   if (homogeneous_abundances)
     printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
 
@@ -828,7 +830,10 @@ static void read_processed_modelatom(FILE *restrict modelatom)
   fscanf(modelatom,"%d",&NPHIXSPOINTS);
   fscanf(modelatom,"%lg",&NPHIXSNUINCREMENT);
   fscanf(modelatom,"%d",&nelements);
-  fscanf(modelatom,"%d",&homogeneous_abundances);
+
+  int homogeneous_abundances_in;
+  fscanf(modelatom,"%d",&homogeneous_abundances_in);
+  homogeneous_abundances = (homogeneous_abundances_in != 0);
 
   printout("nelements %d\n",nelements);
 
