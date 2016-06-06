@@ -7,6 +7,8 @@
 #include "ratecoeff.h"
 #include "update_grid.h"
 
+extern inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
+extern inline double ionstagepop(int modelgridindex, int element, int ion);
 
 double nne_solution_f(double x, void *restrict paras)
 /// For libgsl bracketing type solver
@@ -58,8 +60,6 @@ double nne_solution_f(double x, void *restrict paras)
 }
 
 
-
-///***************************************************************************/
 double ionfract(int element, int ion, int modelgridindex, double nne)
 /// Calculates ionization fraction for ion=ion of element=element at
 /// temperature T and electron number density nne
@@ -117,7 +117,6 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
 }
 
 
-///***************************************************************************/
 double phi(int element, int ion, int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
@@ -309,7 +308,6 @@ double phi(int element, int ion, int modelgridindex)
 }
 
 
-//***************************************************************************/
 //double phi_lte(int element, int ion, int cellnumber)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/N_j+1,k* * nne
@@ -332,8 +330,6 @@ double phi(int element, int ion, int modelgridindex)
 }*/
 
 
-
-///***************************************************************************/
 /*
 double calculate_ltepartfunct(int element, int ion, double T)
 /// Calculates the LTE partition function for ion=ion of element=element at
@@ -359,8 +355,6 @@ double calculate_ltepartfunct(int element, int ion, double T)
 }
 */
 
-
-///***************************************************************************/
 
 double calculate_partfunct(int element, int ion, int modelgridindex)
 /// Calculates the partition function for ion=ion of element=element in
@@ -473,7 +467,6 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
 }
 
 
-///***************************************************************************/
 /*
 double calculate_groundlevelpop(int element, int ion, double T, int cellnumber, double nne, double nnnextion)
 ///calculates ground level population for ion=ion of element=element at
@@ -762,7 +755,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 */
 
 
-///***************************************************************************/
 /*void calculate_levelpops(int modelgridindex)
 /// Calculates the full level populations for a given grid cell
 /// and stores them to the active entry of the cellhistory.
@@ -785,18 +777,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 }*/
 
 
-double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
-/// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
-{
-  double sf = SAHACONST * stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * pow(T,-1.5) * exp(E_threshold/(KB*T));
-  //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
-  if (sf < 0)
-  {
-    printout("[fatal] sahafact: negative saha factor");
-    abort();
-  }
-  return sf;
-}
 
 
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)

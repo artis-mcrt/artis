@@ -2,10 +2,30 @@
 #include "atomic.h"
 
 
+extern inline int get_element(int element);
+extern inline int get_elementindex(int Z);
+extern inline int get_nions(int element);
+extern inline int get_ionstage(int element, int ion);
+extern inline int get_nlevels(int element, int ion);
+extern inline int get_nlevels_nlte(int element, int ion);
+extern inline int get_ionisinglevels(int element, int ion);
 extern inline double epsilon(int element, int ion, int level);
+extern inline double stat_weight(int element, int ion, int level);
+extern inline int get_bfcontinua(int element, int ion);
+extern inline bool is_nlte(int element, int ion, int level);
+extern inline int get_continuumindex(int element, int ion, int level);
+extern inline int get_nphixstargets(int element, int ion, int level);
+extern inline int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
+extern inline double get_phixsprobability(int element, int ion, int level, int phixstargetindex);
+extern inline int transitioncheck(int upper, int lower);
+extern inline double einstein_spontaneous_emission(int lineindex);
+extern inline double osc_strength(int lineindex);
+extern inline double coll_str(int lineindex);
+extern inline double statw_upper(int lineindex);
+extern inline double statw_lower(int lineindex);
 extern inline double photoionization_crosssection(double nu_edge, double nu);
 
-///***************************************************************************/
+
 /*double interpolate_photoionization_crosssection(double nu_edge, double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum

@@ -10,17 +10,17 @@
 #include <gsl/gsl_integration.h>
 
 
-typedef struct gslintegration_ffheatingparas
-{
-  double T_e;
-  int cellnumber;
-} gslintegration_ffheatingparas;
+// typedef struct gslintegration_ffheatingparas
+// {
+//   double T_e;
+//   int cellnumber;
+// } gslintegration_ffheatingparas;
 
-typedef struct gslintegration_bfheatingparas
-{
-  double nu_edge;
-  int cellnumber;
-} gslintegration_bfheatingparas;
+// typedef struct gslintegration_bfheatingparas
+// {
+//   double nu_edge;
+//   int cellnumber;
+// } gslintegration_bfheatingparas;
 
 typedef struct
 {
@@ -34,7 +34,7 @@ typedef struct
   int modelgridindex;
   double nu_edge;
   float *restrict photoion_xs;
-  double sf_Te_TR_ratio;
+  double Te_TR_factor;
 } gsl_integral_paras_bfheating;
 
 
@@ -587,7 +587,7 @@ static void calculate_rate_coefficients(void)
             gsl_function F_alpha_sp;
             F_alpha_sp.function = &alpha_sp_integrand_gsl;
             F_alpha_sp.params = &intparas;
-            gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, w, &alpha_sp, &error);
+            gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, w, &alpha_sp, &error);
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
 
             //if (iter == 0)
@@ -597,21 +597,21 @@ static void calculate_rate_coefficients(void)
             gsl_function F_gammacorr;
             F_gammacorr.function = &gammacorr_integrand_gsl;
             F_gammacorr.params = &intparas;
-            gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, w, &gammacorr, &error);
+            gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, w, &gammacorr, &error);
             gammacorr *= FOURPI * phixstargetprobability;
 
             double bfheating_coeff = 0.0;
             gsl_function F_bfheating;
             F_bfheating.function = &approx_bfheating_integrand_gsl;
             F_bfheating.params = &intparas;
-            gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, w, &bfheating_coeff, &error);
+            gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, w, &bfheating_coeff, &error);
             bfheating_coeff *= FOURPI * phixstargetprobability;
 
             double bfcooling_coeff = 0.0;
             gsl_function F_bfcooling;
             F_bfcooling.function = &bfcooling_integrand_gsl;
             F_bfcooling.params = &intparas;
-            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, w, &bfcooling_coeff, &error);
+            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, w, &bfcooling_coeff, &error);
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
 
             /// Save the calculated coefficients to memory
@@ -977,16 +977,15 @@ static double integrand_bfheating_current_radfield(double nu, void *restrict voi
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
-  const double sf_Te_TR_ratio = params->sf_Te_TR_ratio;
+  const double Te_TR_factor = params->Te_TR_factor; // sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
   int i = floor((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
   if (i > NPHIXSPOINTS-1)
     i = NPHIXSPOINTS-1;
   const float sigma_bf = params->photoion_xs[i];
 
   const double T_e = get_Te(modelgridindex);
-  const double T_R = get_TR(modelgridindex);
 
-  return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - sqrt(T_e/T_R) * sf_Te_TR_ratio * exp(-HOVERKB * nu / T_e));
+  return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
 
   //return sigma_bf * (1-nu_edge/nu) * radfield(nu,modelgridindex) *
   //       (1 - exp(-HOVERKB*nu/T_R));
@@ -1019,7 +1018,7 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   double error = 0.0;
 
   gsl_error_handler_t *gsl_error_handler = gsl_set_error_handler_off();
-  int status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, 6, w, &gammacorr, &error);
+  int status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS61, w, &gammacorr, &error);
   if (status != 0)
   {
     printout("corrphotoioncoeff integrator status %d. Integral value %g. Setting to zero.\n",status,gammacorr);
@@ -1058,7 +1057,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   gsl_integral_paras_bfheating intparas;
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
-  intparas.sf_Te_TR_ratio = sf_Te / sf_TR;
+  intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
   intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
 
   double bfheating = 0.0;
@@ -1067,7 +1066,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   F_bfheating.params = &intparas;
 
   gsl_error_handler_t *gsl_error_handler = gsl_set_error_handler_off();
-  int status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, 3, workspace_bfheating, &bfheating, &error);
+  int status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS31, workspace_bfheating, &bfheating, &error);
   if (status != 0)
   {
     printout("bf_heating integrator status %d. Integral value %g, setting to zero.\n",status,bfheating);

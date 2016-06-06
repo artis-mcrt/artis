@@ -9,6 +9,8 @@
 #include "rpkt.h"
 
 
+extern inline int get_coolinglistoffset(int element, int ion);
+
 
 void calculate_kpkt_rates(int modelgridindex)
 /// Set up the global cooling list and determine the important entries
@@ -234,7 +236,6 @@ void calculate_kpkt_rates(int modelgridindex)
 
 
 
-///****************************************************************************
 static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int low, double oldcoolingsum)
 /// Set up the global cooling list and determine the important entries
 /// by applying a cut to the total cooling rate. Then sort the global
@@ -478,6 +479,12 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
   pkt_ptr->nscatterings = 0;
 
   return(t_current);
+}
+
+
+static int get_ncoolingterms(int element, int ion)
+{
+  return elements[element].ions[ion].ncoolingterms;
 }
 
 
@@ -736,7 +743,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         F_bfcooling.params = &intparas;
         double deltanu = nu_threshold * NPHIXSNUINCREMENT * 0.9;
         double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-        gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &total_bfcooling_coeff, &error);
+        gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_bfcooling_coeff, &error);
         bfcooling_coeff = total_bfcooling_coeff;
         int ii;
         for (ii = 0; ii < NPHIXSPOINTS; ii++)
@@ -747,7 +754,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
           {
             nu_lower = nu_threshold + ii*deltanu;
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-            gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling_coeff, &error);
+            gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &bfcooling_coeff, &error);
             //bfcooling_coeff *= FOURPI * sf;
             //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
           }
@@ -887,10 +894,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 }
 
 
-
-
-
-///****************************************************************************
 /*int compare_coolinglistentry(const void *p1, const void *p2)
 /// Helper function to sort the coolinglist by the strength of the
 /// individual cooling contributions.
@@ -910,14 +913,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 }*/
 
 
-
-///***************************************************************************/
 /*double get_bfcooling_direct(int element, int ion, int level, int cellnumber)
 /// Returns the rate for bfheating. This can be called during packet propagation
 /// or update_grid. Therefore we need to decide whether a cell history is
 /// known or not.
 {
-  double get_groundlevelpop(int cellnumber, int element, int ion);
   double bfcooling;
 
   gsl_integration_workspace *wsp;
@@ -950,13 +950,3 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   return bfcooling;
 }*/
 
-
-int get_coolinglistoffset(int element, int ion)
-{
-  return elements[element].ions[ion].coolingoffset;
-}
-
-int get_ncoolingterms(int element, int ion)
-{
-  return elements[element].ions[ion].ncoolingterms;
-}

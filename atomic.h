@@ -6,16 +6,14 @@
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
 
-static inline
-int get_element(int element)
+inline int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
 {
   return elements[element].anumber;
 }
 
 
-static inline
-int get_elementindex(int Z)
+inline int get_elementindex(int Z)
 /// Returns the elementindex associated with a given atomic number.
 /// If there is no element with the given atomic number in the atomic data
 /// a negative value is returned to flag this event.
@@ -34,8 +32,7 @@ int get_elementindex(int Z)
 }
 
 
-static inline
-int get_nions(int element)
+inline int get_nions(int element)
 /// Returns the number of ions associated with a specific element given by
 /// its elementindex.
 {
@@ -43,8 +40,7 @@ int get_nions(int element)
 }
 
 
-static inline
-int get_ionstage(int element, int ion)
+inline int get_ionstage(int element, int ion)
 /// Returns the ionisation stage of an ion specified by its elementindex and
 /// ionindex.
 {
@@ -52,8 +48,7 @@ int get_ionstage(int element, int ion)
 }
 
 
-static inline
-int get_nlevels(int element, int ion)
+inline int get_nlevels(int element, int ion)
 /// Returns the number of levels associated with with a specific ion given
 /// its elementindex and ionindex.
 {
@@ -61,8 +56,7 @@ int get_nlevels(int element, int ion)
 }
 
 
-static inline
-int get_nlevels_nlte(int element, int ion)
+inline int get_nlevels_nlte(int element, int ion)
 /// Returns the number of levels associated with with a specific ion given
 /// its elementindex and ionindex.
 {
@@ -70,8 +64,7 @@ int get_nlevels_nlte(int element, int ion)
 }
 
 
-static inline
-int get_ionisinglevels(int element, int ion)
+inline int get_ionisinglevels(int element, int ion)
 /// Returns the number of levels associated with an ion that
 /// have energies below the ionisation threshold.
 {
@@ -86,8 +79,7 @@ inline double epsilon(int element, int ion, int level)
 }
 
 
-static inline
-double stat_weight(int element, int ion, int level)
+inline double stat_weight(int element, int ion, int level)
 /// Returns the statistical weight of (element,ion,level).
 {
   #ifdef DEBUG_ON
@@ -101,11 +93,10 @@ double stat_weight(int element, int ion, int level)
 }
 
 
-static inline
-int get_bfcontinua(int element, int ion)
+inline int get_bfcontinua(int element, int ion)
 /// Returns the number of bf-continua associated with ion ion of element element.
 {
-  int nionisinglevels = get_ionisinglevels(element,ion);
+  const int nionisinglevels = get_ionisinglevels(element,ion);
 
   if (nionisinglevels < max_bf_continua)
     return nionisinglevels;
@@ -114,8 +105,7 @@ int get_bfcontinua(int element, int ion)
 }
 
 
-static inline
-bool is_nlte(int element, int ion, int level)
+inline bool is_nlte(int element, int ion, int level)
 // Returns true if (element,ion,level) is to be treated in nlte.
 // (note this function returns true for the ground state)
 {
@@ -128,16 +118,14 @@ bool is_nlte(int element, int ion, int level)
 }
 
 
-static inline
-int get_continuumindex(int element, int ion, int level)
+inline int get_continuumindex(int element, int ion, int level)
 /// Returns the index of the continuum associated to the given level.
 {
   return elements[element].ions[ion].levels[level].cont_index;
 }
 
 
-static inline
-int get_nphixstargets(int element, int ion, int level)
+inline int get_nphixstargets(int element, int ion, int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
   const int nions = get_nions(element);
@@ -151,8 +139,7 @@ int get_nphixstargets(int element, int ion, int level)
 }
 
 
-static inline
-int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
+inline int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
   #ifdef DEBUG_ON
@@ -168,8 +155,7 @@ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
 }
 
 
-static inline
-double get_phixsprobability(int element, int ion, int level, int phixstargetindex)
+inline double get_phixsprobability(int element, int ion, int level, int phixstargetindex)
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
   #ifdef DEBUG_ON
@@ -185,8 +171,7 @@ double get_phixsprobability(int element, int ion, int level, int phixstargetinde
 }
 
 
-static inline
-int transitioncheck(int upper, int lower)
+inline int transitioncheck(int upper, int lower)
 /// reads A_ul from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
 {
@@ -197,8 +182,7 @@ int transitioncheck(int upper, int lower)
 }
 
 
-static inline
-double einstein_spontaneous_emission(int lineindex)
+inline double einstein_spontaneous_emission(int lineindex)
 //double einstein_spontaneous_emission(int element, int ion, int upper, int lower)
 /// reads A_ul from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
@@ -211,8 +195,7 @@ double einstein_spontaneous_emission(int lineindex)
 }
 
 
-static inline
-double osc_strength(int lineindex)
+inline double osc_strength(int lineindex)
 //double osc_strength(int element, int ion, int upper, int lower)
 /// reads f_lu from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
@@ -220,20 +203,20 @@ double osc_strength(int lineindex)
   return linelist[lineindex].osc_strength;
 }
 
-static inline
-double coll_str(int lineindex)
+
+inline double coll_str(int lineindex)
 {
   return linelist[lineindex].coll_str;
 }
 
-static inline
-double statw_up(int lineindex)
+
+inline double statw_upper(int lineindex)
 {
   return elements[linelist[lineindex].elementindex].ions[linelist[lineindex].ionindex].levels[linelist[lineindex].upperlevelindex].stat_weight;
 }
 
-static inline
-double statw_down(int lineindex)
+
+inline double statw_lower(int lineindex)
 {
   return elements[linelist[lineindex].elementindex].ions[linelist[lineindex].ionindex].levels[linelist[lineindex].lowerlevelindex].stat_weight;
 }
@@ -299,8 +282,7 @@ inline double photoionization_crosssection(double nu_edge, double nu)
   return sigma_bf;
 }
 
-/*static inline
-double osc_strength_old(int lineindex)
+/*static double osc_strength_old(int lineindex)
 //double osc_strength(int element, int ion, int upper, int lower)
 /// reads f_lu from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)

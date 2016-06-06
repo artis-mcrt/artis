@@ -295,7 +295,6 @@ void packet_init(int middle_iteration, int my_rank)
 }
 
 
-///***************************************************************************/
 double fni(const CELL *restrict grid_ptr)
 /// Subroutine that gives the Ni56 mass fraction.
 {
@@ -359,7 +358,6 @@ double fni(const CELL *restrict grid_ptr)
 }
 
 
-///***************************************************************************/
 double f52fe(const CELL *restrict grid_ptr)
 /// Subroutine that gives the Fe52 mass fraction.
 {
@@ -386,7 +384,7 @@ double f52fe(const CELL *restrict grid_ptr)
   return -99;
 }
 
-///***************************************************************************/
+
 double f48cr(const CELL *restrict grid_ptr)
 /// Subroutine that gives the Cr48 mass fraction.
 {
@@ -414,7 +412,6 @@ double f48cr(const CELL *restrict grid_ptr)
 }
 
 
-///***************************************************************************/
 void write_packets(FILE *restrict packets_file)
 {
   for (int i = 0; i < npkts; i++)
@@ -450,7 +447,6 @@ void write_packets(FILE *restrict packets_file)
 }
 
 
-///***************************************************************************/
 void read_packets(FILE *restrict packets_file)
 {
   for (int i = 0; i < npkts; i++)

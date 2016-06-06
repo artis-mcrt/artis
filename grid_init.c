@@ -5,7 +5,50 @@
 #include "vectors.h"
 
 
-///****************************************************************************
+extern inline double vol_init(void);
+extern inline float get_rhoinit(int modelgridindex);
+extern inline float get_rho(int modelgridindex);
+extern inline float get_nne(int modelgridindex);
+extern inline float get_nnetot(int modelgridindex);
+extern inline float get_fni(int modelgridindex);
+extern inline float get_fco(int modelgridindex);
+extern inline float get_f52fe(int modelgridindex);
+extern inline float get_f48cr(int modelgridindex);
+extern inline float get_ffe(int modelgridindex);
+extern inline float get_fnistable(int modelgridindex);
+extern inline float get_fcostable(int modelgridindex);
+extern inline float get_ffestable(int modelgridindex);
+extern inline float get_fmnstable(int modelgridindex);
+extern inline float get_fcrstable(int modelgridindex);
+extern inline float get_fvstable(int modelgridindex);
+extern inline float get_ftistable(int modelgridindex);
+extern inline float get_kappagrey(int modelgridindex);
+extern inline double get_Te(int modelgridindex);
+extern inline double get_TR(int modelgridindex);
+extern inline double get_TJ(int modelgridindex);
+extern inline double get_W(int modelgridindex);
+extern inline void set_rhoinit(int modelgridindex, float x);
+extern inline void set_rho(int modelgridindex, float x);
+extern inline void set_nne(int modelgridindex, float x);
+extern inline void set_nnetot(int modelgridindex, float x);
+extern inline void set_fni(int modelgridindex, float x);
+extern inline void set_fco(int modelgridindex, float x);
+extern inline void set_f48cr(int modelgridindex, float x);
+extern inline void set_f52fe(int modelgridindex, float x);
+extern inline void set_ffe(int modelgridindex, float x);
+extern inline void set_fnistable(int modelgridindex, float x);
+extern inline void set_fcostable(int modelgridindex, float x);
+extern inline void set_ffestable(int modelgridindex, float x);
+extern inline void set_fmnstable(int modelgridindex, float x);
+extern inline void set_fcrstable(int modelgridindex, float x);
+extern inline void set_fvstable(int modelgridindex, float x);
+extern inline void set_ftistable(int modelgridindex, float x);
+extern inline void set_kappagrey(int modelgridindex, float x);
+extern inline void set_Te(int modelgridindex, double x);
+extern inline void set_TR(int modelgridindex, double x);
+extern inline void set_TJ(int modelgridindex, double x);
+extern inline void set_W(int modelgridindex, double x);
+
 /// Routine for doing a uniform density grid.
 /*int uniform_density_setup ()
 {
@@ -179,7 +222,7 @@ static void density_1d_read(void)
       mkeep =0;
       cell[n].modelgridindex = 0;
 
-      helper = rho_model[0] * pow( (t_model/tmin), 3.);
+      helper = rho_model[0] * pow( (t_model/tmin), 3);
       set_rhoinit(0,helper);
       set_rho(0,helper);
       set_ffe(0,ffegrp_model[0]);
@@ -216,7 +259,7 @@ static void density_1d_read(void)
           mkeep = m+1;
           cell[n].modelgridindex = m+1;
 
-          helper = rho_model[m+1] * pow( (t_model/tmin), 3.);
+          helper = rho_model[m+1] * pow( (t_model/tmin), 3);
           set_rhoinit(m+1,helper);
           set_rho(m+1,helper);
           set_ffe(m+1,ffegrp_model[m+1]);
@@ -327,7 +370,7 @@ static void density_1d_read(void)
   {
     if (modelgrid[mgi].associated_cells > 0)
     {
-      double helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
+      double helper = rho_model[mgi] * pow( (t_model/tmin), 3);
       set_rhoinit(mgi,helper);
       set_rho(mgi,helper);
       set_ffe(mgi,ffegrp_model[mgi]);
@@ -1637,7 +1680,7 @@ static int uniform_grid_setup(void)
 }
 
 
-int grid_init(void)
+void grid_init(void)
 /// Subroutine that initialises the grid cells. Designed so that grid cells
 /// don't need to be uniform but for the moment they are.
 {
@@ -1717,6 +1760,4 @@ int grid_init(void)
     exit(0);
   }
   */
-
-  return 0;
 }

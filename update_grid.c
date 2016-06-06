@@ -123,10 +123,10 @@ static void update_abundances(int modelgridindex, double t_current)
 }
 
 
-void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
+void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
-    /// m timestep
+/// m timestep
 {
   /// only needed if all level populations should be printed to the output-file
   //double pop, excitedlevelpops;
@@ -152,8 +152,8 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   }*/
 
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
-  const double trat = time_step[m].start / tmin;
-  const double tratmid = time_step[m].mid / tmin;
+  const double trat = time_step[nts].start / tmin;
+  const double tratmid = time_step[nts].mid / tmin;
 
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
                          /// assigned to max_path_step after the parallel update_grid finished.
@@ -190,33 +190,33 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   ///regime proportional to the density to a regime independent of the density
   ///This is done by solving for tau_sobolev == 1
   ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
-  rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * time_step[m].mid);
+  rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * time_step[nts].mid);
   printout("update_grid: rho_crit = %g\n", rho_crit);
   //printf("time %ld\n",time(NULL));
 
   /// Needed to update abundances of radioactive isotopes.
   //double dt_elapsed,dt_forward;
-  const double t_current = time_step[m].start;
+  const double t_current = time_step[nts].start;
   double t_previous;
   double deltaV;
-  if (m == 0)
+  if (nts == 0)
   {
     t_previous = 0.;
-    deltaV = pow(wid_init*trat,3);  /// volume of grid cell: current or previous cell size???????????????????
+    deltaV = pow(wid_init * trat,3);  /// volume of grid cell: current or previous cell size???????????????????
   }
   else
   {
-    t_previous = time_step[m-1].start;
-    deltaV = pow(wid_init * time_step[m-1].mid/tmin,3);  /// volume of grid cell: current or previous cell size???????????????????
-    /*if (m == 1)
+    t_previous = time_step[nts - 1].start;
+    deltaV = pow(wid_init * time_step[nts - 1].mid / tmin,3);  /// volume of grid cell: current or previous cell size???????????????????
+    /*if (nts == 1)
     {
-      dt_elapsed = (log(time_step[m-1].mid) - log(time_step[m-1].start));
-      dt_forward = (log(time_step[m].mid) - log(time_step[m-1].mid));
+      dt_elapsed = (log(time_step[nts-1].mid) - log(time_step[nts-1].start));
+      dt_forward = (log(time_step[nts].mid) - log(time_step[nts-1].mid));
     }
     else
     {
-      dt_elapsed = (log(time_step[m-1].mid) - log(time_step[m-2].mid));
-      dt_forward = (log(time_step[m].mid) - log(time_step[m-1].mid));
+      dt_elapsed = (log(time_step[nts-1].mid) - log(time_step[nts-2].mid));
+      dt_forward = (log(time_step[nts].mid) - log(time_step[nts-1].mid));
     }*/
   }
 
@@ -225,25 +225,25 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
   if (titer == 0)
   {
-    if (m == 0)
+    if (nts == 0)
     {
       /// Set these values, but they will not be used
-      deltat = time_step[m].width;
-      deltaV = pow(wid_init*tratmid,3);
+      deltat = time_step[nts].width;
+      deltaV = pow(wid_init * tratmid,3);
     }
     else
     {
-      deltat = time_step[m-1].width;
-      deltaV = pow(wid_init * time_step[m-1].mid/tmin,3);
+      deltat = time_step[nts - 1].width;
+      deltaV = pow(wid_init * time_step[nts - 1].mid / tmin,3);
     }
   }
   else
   {
-    deltat = time_step[m].width;
-    deltaV = pow(wid_init*tratmid,3);
+    deltat = time_step[nts].width;
+    deltaV = pow(wid_init * tratmid,3);
   }
 
-  printout("timestep %d, titer %d\n",m,titer);
+  printout("timestep %d, titer %d\n",nts,titer);
   printout("deltaV %g, deltat %g\n",deltaV,deltat);
 
 
@@ -390,11 +390,11 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
               /// Update abundances of radioactive isotopes
               //printout("call update abundances for timestep %d in model cell %d\n",m,n);
-              update_abundances(n, time_step[m].mid);
+              update_abundances(n, time_step[nts].mid);
 
               /// For timestep 0 we calculate the level populations straight forward wihout
               /// applying any temperature correction
-              if (m-itstep == 0 && titer == 0)
+              if ((nts - itstep) == 0 && titer == 0)
               {
                 /// Determine renormalisation factor for corrected photoionsiation cross-sections
                 #ifndef FORCE_LTE
@@ -443,7 +443,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 modelgrid[n].grey_depth = grey_optical_depth;
 
   //               grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                if (grey_optical_depth > cell_is_optically_thick && nts < n_grey_timesteps)
                 {
                   printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
                   modelgrid[n].thick = 1;
@@ -660,7 +660,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 
                   /// Get radiation field parameters out of the estimators
                   radfield_fit_parameters(n);
-                  radfield_write_to_file(n,m);
+                  radfield_write_to_file(n,nts);
 
                   #ifdef NLTE_POPS_ON
                     //          for (nlte_iter = 0; nlte_iter < NLTEITER; nlte_iter++)
@@ -718,9 +718,9 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     double T_e_old = get_Te(n);
                     double T_e;
                     if (titer == 0)
-                      T_e = call_T_e_finder(n,time_step[m-1].mid,MINTEMP,MAXTEMP);
+                      T_e = call_T_e_finder(n,time_step[nts - 1].mid,MINTEMP,MAXTEMP);
                     else
-                      T_e = call_T_e_finder(n,time_step[m].mid,MINTEMP,MAXTEMP);
+                      T_e = call_T_e_finder(n,time_step[nts].mid,MINTEMP,MAXTEMP);
 
                     if (T_e > 2. * T_e_old)
                     {
@@ -751,12 +751,12 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                         for (int element = 0; element < nelements; element++)
                         {
                           #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
-                            nlte_pops_element(element, n, m);
+                            nlte_pops_element(element, n, nts);
                           #else
                             const int nions = get_nions(element);
                             for (int ion = 0; ion < nions-1; ion++)
                             {
-                              double trial = nlte_pops(element, ion, n, m);
+                              double trial = nlte_pops(element, ion, n, nts);
                               if ((trial < 1.0) && (trial > 0.0))
                               {
                                 trial = 1./trial;
@@ -770,24 +770,24 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                           #endif
                         }
                         #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
-                        printout("Solving for NLTE populations in cell %d for timestep %d.\n", n, m);
+                        printout("Solving for NLTE populations in cell %d for timestep %d.\n", n, nts);
                         #else
-                        printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, m, nlte_test);
+                        printout("Solving for NLTE populations in cell %d for timestep %d. Fractional error returned: %g\n", n, nts, nlte_test);
                         #endif
                         if (nlte_iter > NLTEITER)
                         {
                           printout("NLTE solver failed to converge after %d iterations. Test ratio %g.\n", NLTEITER, nlte_test);
                           nlte_test = 0.0;
                         }
-                        nne = get_nne(n);
                         #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+                          double oldnne = get_nne(n);
                           precalculate_partfuncts(n);
                           calculate_electron_densities(n); //sets nne
-                          nlte_test = get_nne(n) / nne;
+                          nlte_test = get_nne(n) / oldnne;
                           if (nlte_test < 1)
                             nlte_test = 1. / nlte_test;
-                          printout("iterate? old nne is %g, new nne is %g, accuracy is %g\n",nne,get_nne(n),nlte_test);
-                          set_nne(n, (get_nne(n) + nne) / 2.);
+                          printout("iterate? old nne is %g, new nne is %g, accuracy is %g\n",oldnne,get_nne(n),nlte_test);
+                          set_nne(n, (get_nne(n) + oldnne) / 2.);
                         #endif
                         nlte_iter++;
                       }
@@ -810,7 +810,7 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 modelgrid[n].grey_depth = grey_optical_depth;
 
 //                 grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                if (grey_optical_depth > cell_is_optically_thick && nts < n_grey_timesteps)
                 {
                   printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
                   modelgrid[n].thick = 1;
@@ -881,12 +881,12 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
             #ifndef _OPENMP
               //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
               //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
-              fprintf(estimators_file,"timestep %d modelgridindex %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",m,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].grey_depth,get_nne(n));
+              fprintf(estimators_file,"timestep %d modelgridindex %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",nts,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].grey_depth,get_nne(n));
               //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
               //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
               #ifdef NLTE_POPS_ON
-                fprintf(nlte_file,"timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",m,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),get_nne(n));
+                fprintf(nlte_file,"timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",nts,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),get_nne(n));
                 for (int nlte = 0; nlte < total_nlte_levels; nlte++)
                 {
                   int element = -1;
@@ -1361,22 +1361,12 @@ void update_grid(int m, int my_rank, int nstart, int nblock, int titer)
 }*/
 
 
-
-///****************************************************************************
-/*double get_abundance(int cellnumber, int element)
-{
-  return modelgrid[cellnumber].composition[element].abundance;
-}*/
-
-
 double get_abundance(int modelgridindex, int element)
 {
   return modelgrid[modelgridindex].composition[element].abundance;
 }
 
 
-
-///****************************************************************************
 double calculate_populations(int modelgridindex, int first_nonempty_cell)
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
@@ -1637,10 +1627,10 @@ double calculate_electron_densities(int modelgridindex)
 
   for (int element = 0; element < nelements; element++)
   {
-    double abundance = get_abundance(modelgridindex,element);
+    const double abundance = get_abundance(modelgridindex,element);
     const int nions = get_nions(element);
     /// calculate number density of the current element (abundances are given by mass)
-    double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
+    const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
     nne_tot += nnelement * get_element(element);
 
     /// Use ionisationfractions to calculate the groundlevel populations
@@ -1660,7 +1650,6 @@ double calculate_electron_densities(int modelgridindex)
 }
 
 /*
-// ****************************************************************************
 double nuB_nu_integrand(double nu, void *paras)
 {
   double T = ((gslintegration_paras *) paras)->T;
@@ -1668,7 +1657,6 @@ double nuB_nu_integrand(double nu, void *paras)
   return nu * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
 }
 
-/// ****************************************************************************
 double B_nu_integrand(double nu, void *paras)
 {
   double T = ((gslintegration_paras *) paras)->T;
@@ -1681,7 +1669,6 @@ double B_nu_integrand(double nu, void *paras)
 #ifndef FORCE_LTE
 
 /*
-// ****************************************************************************
 double get_ffcooling(int element, int ion, int cellnumber)
 {
   double ionstagepop(int cellnumber, int element, int ion);

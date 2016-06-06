@@ -23,24 +23,24 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   /* Modified so that it also returns the distance to the closest cell
   boundary, regardless of direction. */
 
-  double x0 = pkt_ptr->pos[0];
-  double y0 = pkt_ptr->pos[1];
-  double z0 = pkt_ptr->pos[2];
+  const double x0 = pkt_ptr->pos[0];
+  const double y0 = pkt_ptr->pos[1];
+  const double z0 = pkt_ptr->pos[2];
   //printout("boundary.c: x0 %g, y0 %g, z0 %g\n",x0,y0,z0);
 
-  double vx = pkt_ptr->dir[0] * CLIGHT_PROP;
-  double vy = pkt_ptr->dir[1] * CLIGHT_PROP;
-  double vz = pkt_ptr->dir[2] * CLIGHT_PROP;
+  const double vx = pkt_ptr->dir[0] * CLIGHT_PROP;
+  const double vy = pkt_ptr->dir[1] * CLIGHT_PROP;
+  const double vz = pkt_ptr->dir[2] * CLIGHT_PROP;
   //printout("boundary.c: vx %g, vy %g, vz %g\n",vx,vy,vz);
 
-  double cellxmin = cell[pkt_ptr->where].pos_init[0];
-  double cellymin = cell[pkt_ptr->where].pos_init[1];
-  double cellzmin = cell[pkt_ptr->where].pos_init[2];
+  const double cellxmin = cell[pkt_ptr->where].pos_init[0];
+  const double cellymin = cell[pkt_ptr->where].pos_init[1];
+  const double cellzmin = cell[pkt_ptr->where].pos_init[2];
   //printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",cellxmin,cellymin,cellzmin);
 
-  double cellxmax = cellxmin + wid_init;
-  double cellymax = cellymin + wid_init;
-  double cellzmax = cellzmin + wid_init;
+  const double cellxmax = cellxmin + wid_init;
+  const double cellymax = cellymin + wid_init;
+  const double cellzmax = cellzmin + wid_init;
   //printout("boundary.c: cellxmax %g, cellymax %g, cellzmax %g\n",cellxmax,cellymax,cellzmax);
 
   int not_allowed = pkt_ptr->last_cross;
@@ -176,14 +176,14 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
     }
   #endif
 
-  double tx_plus = ((x0 - (vx * tstart))/(cellxmax - (vx * tmin)) * tmin) - tstart;
-  double tx_minus = ((x0 - (vx * tstart))/(cellxmin - (vx * tmin)) * tmin) - tstart;
+  const double tx_plus = ((x0 - (vx * tstart))/(cellxmax - (vx * tmin)) * tmin) - tstart;
+  const double tx_minus = ((x0 - (vx * tstart))/(cellxmin - (vx * tmin)) * tmin) - tstart;
 
-  double ty_plus = ((y0 - (vy * tstart))/(cellymax - (vy * tmin)) * tmin) - tstart;
-  double ty_minus = ((y0 - (vy * tstart))/(cellymin - (vy * tmin)) * tmin) - tstart;
+  const double ty_plus = ((y0 - (vy * tstart))/(cellymax - (vy * tmin)) * tmin) - tstart;
+  const double ty_minus = ((y0 - (vy * tstart))/(cellymin - (vy * tmin)) * tmin) - tstart;
 
-  double tz_plus = ((z0 - (vz * tstart))/(cellzmax - (vz * tmin)) * tmin) - tstart;
-  double tz_minus = ((z0 - (vz * tstart))/(cellzmin - (vz * tmin)) * tmin) - tstart;
+  const double tz_plus = ((z0 - (vz * tstart))/(cellzmax - (vz * tmin)) * tmin) - tstart;
+  const double tz_minus = ((z0 - (vz * tstart))/(cellzmin - (vz * tmin)) * tmin) - tstart;
 
   /** We now need to identify the shortest +ve time - that's the one we want. */
   int choice = 0;         ///just a control variable to
@@ -343,14 +343,9 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
 }
 
 
-///****************************************************************************
-/// Routine to take a packet across a boundary.
 void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_current)
+/// Routine to take a packet across a boundary.
 {
-  //void copy_populations_to_phixslist();
-  //void calculate_kpkt_rates(int cellnumber);
-  //int element, ion, level;
-
   #ifdef DEBUG_ON
     if (debuglevel == 2)
     {
@@ -522,9 +517,8 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
 
 
 
-///****************************************************************************
-/// Routine to take a VIRTUAL packet across a boundary.
 int change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
+/// Routine to take a VIRTUAL packet across a boundary.
 {
   //int element, ion, level;
 

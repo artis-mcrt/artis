@@ -488,7 +488,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       double error;
       double total_alpha_sp;
-      gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &total_alpha_sp, &error);
+      gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_alpha_sp, &error);
       double alpha_sp_old = total_alpha_sp;
       double nu_lower = nu_threshold;
       for (int i = 1; i < NPHIXSPOINTS; i++)
@@ -501,7 +501,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         double alpha_sp;
         nu_lower += deltanu;
         /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-        gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &alpha_sp, &error);
+        gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &alpha_sp, &error);
         //alpha_sp *= FOURPI * sf;
         //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
         if (zrand >= alpha_sp / total_alpha_sp)
@@ -848,7 +848,7 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
     }
   #endif
 
-  double statweight_target = statw_down(lineindex);
+  double statweight_target = statw_lower(lineindex);
 
   double n_u = get_levelpop(modelgridindex,element,ion,upper);
   double n_l = get_levelpop(modelgridindex,element,ion,lower);
@@ -920,7 +920,7 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
     }
   #endif
 
-  double statweight_target = statw_up(lineindex);
+  double statweight_target = statw_upper(lineindex);
 
   double n_u = get_levelpop(modelgridindex,element,ion,upper);
   double n_l = get_levelpop(modelgridindex,element,ion,lower);
@@ -957,7 +957,7 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
     #ifdef DEBUG_ON
     if (R < 0)
     {
-      double g_u = statw_up(lineindex);
+      double g_u = statw_upper(lineindex);
       double g_u2 = stat_weight(element,ion,upper);
       double g_l = mastate[tid].statweight;
       double g_l2 = stat_weight(element,ion,lower);
@@ -1050,7 +1050,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 
   if (coll_str_thisline < 0)
   {
-    double statweight_target = statw_down(lineindex);
+    double statweight_target = statw_lower(lineindex);
     if (coll_str_thisline > -1.5) //i.e. to catch -1
     {
       ///permitted E1 electric dipole transitions
@@ -1125,7 +1125,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 
   const double T_e = get_Te(modelgridindex);
   const double nne = get_nne(modelgridindex);
-  const double fac1 = epsilon_trans/KB/T_e;
+  const double eoverkt = epsilon_trans / (KB * T_e);
 
   #ifdef DEBUG_ON
     const int lower = mastate[tid].level;
@@ -1143,25 +1143,25 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       ///permitted E1 electric dipole transitions
       ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
       ///Rutten script eq. 3.32. p.50
-      //C = n_l * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * exp(-fac1) * nne * osc_strength(element,ion,upper,lower);
+      //C = n_l * 2.16 * pow(eoverkt,-1.68) * pow(T_e,-1.5) * exp(-eoverkt) * nne * osc_strength(element,ion,upper,lower);
 
       ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
       const double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-      //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
+      //test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
       /// crude approximation to the already crude Van-Regemorter formula
 
-      //double test = 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      //double test = 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
       //double Gamma = g_bar > test ? g_bar : test;
-      //C = C_0 * 14.5 * n_u * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * Gamma;
+      //C = C_0 * 14.5 * n_u * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * eoverkt * g_ratio * Gamma;
 
       //optimisation
-      const double gauntfac = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
-      C = C_0 * 14.5 * H_ionpot * H_ionpot * n_l * nne * sqrt(T_e) * osc_strength(lineindex) / (epsilon_trans * epsilon_trans) * fac1 * exp(-fac1) * gauntfac;
+      const double gauntfac = (eoverkt > 0.33421) ? g_bar : 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
+      C = C_0 * 14.5 * H_ionpot * H_ionpot * n_l * nne * sqrt(T_e) * osc_strength(lineindex) / (epsilon_trans * epsilon_trans) * eoverkt * exp(-eoverkt) * gauntfac;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {
       //forbidden transitions: magnetic dipole, electric quadropole...
-      C = n_l * nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-fac1) * statw_up(lineindex);
+      C = n_l * nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-eoverkt) * statw_upper(lineindex);
     }
     else
     {
@@ -1171,9 +1171,9 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   else
   {
     //from Osterbrock and Ferland, p51
-    C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str_thisline * exp(-fac1) / statw_down(lineindex);
+    C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str_thisline * exp(-eoverkt) / statw_lower(lineindex);
     //test test
-    //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_up(lineindex);
+    //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_upper(lineindex);
   }
 
   #ifdef DEBUG_ON
@@ -1191,7 +1191,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
       //printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
-    //  printout("[debug] col_exc: coll_str(lineindex) %g statw_up(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_up(lineindex),mastate[tid].statweight);
+    //  printout("[debug] col_exc: coll_str(lineindex) %g statw_upper(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_upper(lineindex),mastate[tid].statweight);
     //  abort();
     //}
   #endif

@@ -10,9 +10,7 @@
 #include "vpkt.h"
 
 
-/*******************************************************/
-int
-rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype)
+int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype)
 {
   double vel_vec[3],old_dir_cmf[3],obs_cmf[3],vel_rev[3];
   double sdist;
@@ -293,11 +291,6 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
 
 
-
-
-
-
-///****************************************************************************
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2)
 {
 /* ------------- Rotation angle from the scattering plane --------------------------------------------- */

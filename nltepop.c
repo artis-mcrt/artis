@@ -9,6 +9,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nltepop.h"
+#include "ratecoeff.h"
 #include "update_grid.h"
 
 
@@ -292,7 +293,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             int upper_index = get_nlte_vector_index(element,ion+1,upper);
             double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            //double R = photoionization(modelgridindex,phixstargetindex,epsilon_trans);
+            //double R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
             double R = 0.0; //TODO: remove, testing only
             double C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
             //double C = 0.0; //TODO: remove, testing only
@@ -557,7 +558,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
 
 // this does single ion solving and will be deprecated at some point
-/*double nlte_pops(int element, int ion, int modelgridindex, int timestep)
+double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
 {
   int lower, level_use, lower_use, upper_use;
@@ -569,10 +570,9 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
   double statweight, epsilon_current;
   double R, C, Y;
   double t_mid;
-  double epsilon_target, statweight_target, epsilon_trans;
+  double epsilon_target, epsilon_trans;
   int lineindex;
   double s_renorm;
-  PKT dummy;
 
   int nlte_size, nlte_start;
 
@@ -592,7 +592,8 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     int nlevels_nlte = get_nlevels_nlte(element,ion);
     t_mid = time_step[timestep].mid;
 
-    dummy.where = modelgridindex;
+    //PKT dummy;
+    //dummy.where = modelgridindex;
 
     if (nlevels_nlte == (get_nlevels(element, ion) - 1))
     {
@@ -667,7 +668,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
           epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
-          statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
+          //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
 
@@ -712,7 +713,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         {
           int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
           epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
-          statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
+          //double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           epsilon_trans = epsilon_target - epsilon_current;
 
@@ -816,7 +817,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             mastate[tid].level = upper;
             mastate[tid].statweight = stat_weight(element,ion+1,upper);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            R = rad_recombination(modelgridindex,level,epsilon_trans);
+            R = rad_recombination(modelgridindex,level);
             //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
             //printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
             C = col_recombination(modelgridindex,level,epsilon_trans);
@@ -1019,7 +1020,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
   {
     return 0; //Case for ion with only one level
   }
-}*/
+}
 
 
 void read_binding_energies(void)
@@ -1278,7 +1279,6 @@ double nt_ionization_rate(int modelgridindex, int element, int ion)
 }
 
 
-//***************************************************************/
 double superlevel_boltzmann(int modelgridindex, int element, int ion, int level)
 {
   double T_exc = get_TJ(modelgridindex);

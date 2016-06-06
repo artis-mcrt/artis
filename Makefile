@@ -11,7 +11,7 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  LIB = -L/usr/local/opt/gperftools/lib
   LIB = -L/usr/local/Cellar/gsl/1.16/lib
 #  CFLAGS = -Wall -O0 -g -std=c11 $(INCLUDE)
-  CFLAGS = -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -ftree-vectorize -flto -O3 -march=native -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
+  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -ftree-vectorize -flto -O3 -march=native -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)

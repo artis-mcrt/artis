@@ -12,8 +12,7 @@
 
 // Material for handing r-packet propagation.
 
-static inline
-double min(double a, double b)
+static double min(double a, double b)
 // returns minimum of a and b
 {
   if (a >= b)
@@ -1011,14 +1010,14 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             kappa_ff += pow(Z,2) * g_ff * nnion;
             //kappa_ffheating += pow(Z,2) * g_ff * nnion;
             /// heating with level dependence
-            //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
+            //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1 - exp(-HOVERKB*nu/T_e));
             /// heating without level dependence
             //kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
           }
         }
       }
       kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
-      //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1-exp(-HOVERKB*nu/T_e));
+      //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB*nu/T_e));
       kappa_ffheating = kappa_ff;
       //kappa_ff *= 1e5;
 
@@ -1050,18 +1049,18 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             mastate[tid].ion = ion;
             mastate[tid].level = level;
             const double sigma_bf = photoionization_crosssection(nu_edge,nu);
-            double check = 0.0; //corrfactor
+            double kappa_bf_contr = 0.0; //corrfactor
             const int nphixstargets = get_nphixstargets(element,ion,level);
             if (nphixstargets > 0)
             {
               const int upper = get_phixsupperlevel(element,ion,level,0);
+              const double probability = get_phixsprobability(element,ion,level,0);
               const double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
               const double sf = get_sahafact(element,ion,level,0,T_e,H*nu_edge);
-              const double probability = get_phixsprobability(element,ion,level,0);
               const double helper = nnlevel * sigma_bf * probability;
               const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
-              check = helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
+              kappa_bf_contr = helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
 
               if (level == 0)
               {
@@ -1080,35 +1079,35 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
               const double helper = nnlevel * sigma_bf * get_phixsprobability(element,ion,level,phixstargetindex);
               const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
-              check += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
+              kappa_bf_contr += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
             }
 
-            if (check <= 0)
+            if (kappa_bf_contr < 0)
             {
               #ifdef DEBUG_ON
-                //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution T_e %g, T_R %g, W %g, E_threshold %g, check %g\n", T_e,cell[pkt_ptr->where].T_R,cell[pkt_ptr->where].W,nu_edge*H,nnlevel*sigma_bf);
+                //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution T_e %g, T_R %g, W %g, E_threshold %g, kappa_bf_contr %g\n", T_e,cell[pkt_ptr->where].T_R,cell[pkt_ptr->where].W,nu_edge*H,nnlevel*sigma_bf);
                 //printout("[warning] calculate_kappa_rpkt_cont: set this contribution to zero\n");
-                if (fabs(check) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnlevel %g, nne %g, sigma_bf %g)\n", check,element,ion,level,nnlevel,nne,sigma_bf);
+                if (fabs(kappa_bf_contr) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnlevel %g, nne %g, sigma_bf %g)\n", kappa_bf_contr,element,ion,level,nnlevel,nne,sigma_bf);
               #endif
-              check = 0.;
-              //phixslist[tid].allcont[i].kappa_bf_contr = check;
+              kappa_bf_contr = 0.;
+              //phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
               //phixslist[tid].allcont[i].photoion_contr = 0.;
               //phixslist[tid].allcont[i].stimrecomb_contr = 0.;
             }
 /*
             else
             {
-              phixslist[tid].allcont[i].kappa_bf_contr = check;
+              phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
               phixslist[tid].allcont[i].photoion_contr = nnlevel * sigma_bf;
               phixslist[tid].allcont[i].stimrecomb_contr = sf * sigma_bf;
             }*/
-            //check *= 2;
-            phixslist[tid].allcont[i].kappa_bf_contr = check;
-            kappa_bf += check;
+            //kappa_bf_contr *= 2;
+            phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
+            kappa_bf += kappa_bf_contr;
             #ifdef DEBUG_ON
-              if (!isfinite(check))
+              if (!isfinite(kappa_bf_contr))
               {
-                printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",check);
+                printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",kappa_bf_contr);
                 printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
                 printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
                 printout("[fatal] nne %g, nnlevel %g, \n",nne,nnlevel);
@@ -1183,9 +1182,9 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
     double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
-    sigma = sigma * dopplerfac;
-    kappa_ff = kappa_ff * dopplerfac;
-    kappa_bf = kappa_bf * dopplerfac;
+    sigma *= dopplerfac;
+    kappa_ff *= dopplerfac;
+    kappa_bf *= dopplerfac;
   }
   else
   {
@@ -1546,214 +1545,214 @@ int compare_groundphixslistentry_bynuedge(const void *restrict p1, const void *r
 }
 
 
-double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
-// Routine for moving an r-packet. Similar to do_gamma in objective.
-{
-  double tdist;
-  double edist;
-  int snext;
-
-  double t_current = t1; ///this will keep track of time in the calculation
-  //printout("[debug] r-pkt propagation init\n");
-  //int it = 1;
-
-  bool end_packet = false; ///means "keep working"
-  while (!end_packet)
-  {
-
-    /*
-    int i;
-    for (i=0; i < CELLHISTORYSIZE; i++)
-      printout("thread%d _ do_rpkt: cellhistory[%d].cellnumber = %d\n",tid,i,cellhistory[i].cellnumber);
-    */
-
-    #ifdef DEBUG_ON
-      if (pkt_ptr->next_trans > 0)
-      {
-        if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
-        if (debuglevel == 2) printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n", (pkt_ptr->nu_cmf-linelist[pkt_ptr->next_trans-1].nu)/pkt_ptr->nu_cmf);
-      }
-    #endif
-
-    //printout("[debug] r-pkt propagation iteration %d\n",it);
-    //it += 1;
-    /** Assign optical depth to next physical event. And start couter of
-    optical depth for this path.*/
-    double zrand = gsl_rng_uniform(rng);
-    double tau_next = -1. * log(zrand);
-
-    /** Start by finding the distance to the crossing of the grid cell
-    boundaries. sdist is the boundary distance and snext is the
-    grid cell into which we pass.*/
-    double sdist = boundary_cross(pkt_ptr, t_current, &snext);
-
-    if (sdist == 0)
-      change_cell(pkt_ptr, snext, &end_packet, t_current);
-    else
-    {
-      if (sdist > (rmax * t_current/tmin))
-      {
-        printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
-        abort();
-      }
-
-      if (sdist < 1)
-      {
-        printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-        printout("[warning] r_pkt: cell %d snext %d\n", pkt_ptr->where, snext);
-        printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
-        printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-        printout("[warning] r_pkt: cell corner %g %g %g\n",cell[pkt_ptr->where].pos_init[0]*t_current/tmin, cell[pkt_ptr->where].pos_init[1]*t_current/tmin,  cell[pkt_ptr->where].pos_init[2]*t_current/tmin);
-        printout("[warning] r_pkt: cell width %g %g %g\n",wid_init*t_current/tmin, wid_init*t_current/tmin,  wid_init*t_current/tmin);
-        //abort();
-      }
-      if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
-      {
-        printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
-        printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-        abort();
-      }
-      if (sdist > max_path_step)
-      {
-        sdist = max_path_step;
-        snext = pkt_ptr->where;
-      }
-
-
-      /// Find how far it can travel during the time inverval.
-      tdist = (t2 - t_current) * CLIGHT_PROP;
-      if (tdist < 0)
-      {
-        printout("[fatal] do_rpkt: Negative distance (tdist). Abort. \n");
-        abort();
-      }
-
-      /// Get distance to the next physical event in this case only electron scattering
-      //kappa = SIGMA_T*get_nne(cell[pkt_ptr->where].modelgridindex);
-      double kappa = get_kappagrey(cell[pkt_ptr->where].modelgridindex) * get_rho(cell[pkt_ptr->where].modelgridindex);
-      double vel_vec[3];
-      get_velocity(pkt_ptr->pos, vel_vec, t_current);
-      kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
-      double tau_current = 0.0;
-      edist = (tau_next - tau_current) / kappa;
-      if (edist < 0)
-      {
-        printout("[fatal] do_rpkt: Negative distance (edist). Abort. \n");
-        printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-        abort();
-      }
-
-      if ((sdist < tdist) && (sdist < edist))
-      {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
-        #endif
-        /** Move it into the new cell. */
-        sdist = sdist / 2.;
-        t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,sdist,t_current);
-        update_estimators(pkt_ptr,sdist*2);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
-        {
-          sdist = sdist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
-          sdist = sdist / 2.;
-        }
-        t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,sdist,t_current);
-        sdist = sdist * 2.;
-
-        if (snext != pkt_ptr->where)
-        {
-          change_cell(pkt_ptr, snext, &end_packet, t_current);
-        }
-        #ifdef DEBUG_ON
-          /** New cell so reset the scat_counter */
-          pkt_ptr->scat_count = 0;
-          //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
-          pkt_ptr->last_event = pkt_ptr->last_event + 100;
-        #endif
-      }
-      else if ((tdist < sdist) && (tdist < edist))
-      {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
-        #endif
-        /** Doesn't reach boundary. */
-        tdist = tdist / 2.;
-        t_current += tdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,tdist,t_current);
-        update_estimators(pkt_ptr,tdist*2);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
-        {
-          tdist = tdist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
-          tdist = tdist / 2.;
-        }
-        t_current = t2;
-        move_pkt(pkt_ptr,tdist,t_current);
-        tdist = tdist * 2.;
-        #ifdef DEBUG_ON
-          pkt_ptr->last_event = pkt_ptr->last_event + 1000;
-        #endif
-        end_packet = true;
-      }
-      else if ((edist < sdist) && (edist < tdist))
-      {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
-        #endif
-        edist = edist / 2.;
-        t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,edist,t_current);
-        update_estimators(pkt_ptr,edist*2);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
-        {
-          edist = edist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, edist, t_current);
-          edist = edist / 2.;
-        }
-        t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,edist,t_current);
-        edist = edist * 2.;
-
-        /// electron scattering occurs
-        /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
-        /// but with different direction
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] rpkt_event:   electron scattering\n");
-          pkt_ptr->interactions += 1;
-          pkt_ptr->nscatterings += 1;
-          pkt_ptr->last_event = 12;
-          escounter += 1;
-        #endif
-
-        //pkt_ptr->nu_cmf = 3.7474058e+14;
-        emitt_rpkt(pkt_ptr,t_current);
-        /// Electron scattering does not modify the last emission flag
-        //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
-        /// but it updates the last emission position
-        pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-        pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-        pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
-        pkt_ptr->em_time = t_current;
-
-        /*/// The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
-        rpkt_event(pkt_ptr,rpkt_eventtype,t_current);
-        if (pkt_ptr->type != TYPE_RPKT)
-        {
-          /// It's not an r-packet any more - return.
-          return(t_current);
-        }*/
-      }
-      else
-      {
-        printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-        printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-        abort();
-      }
-    }
-  }
-
-  return PACKET_SAME;
-}
+// double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
+// // Routine for moving an r-packet. Similar to do_gamma in objective.
+// {
+//   double tdist;
+//   double edist;
+//   int snext;
+//
+//   double t_current = t1; ///this will keep track of time in the calculation
+//   //printout("[debug] r-pkt propagation init\n");
+//   //int it = 1;
+//
+//   bool end_packet = false; ///means "keep working"
+//   while (!end_packet)
+//   {
+//
+//     /*
+//     int i;
+//     for (i=0; i < CELLHISTORYSIZE; i++)
+//       printout("thread%d _ do_rpkt: cellhistory[%d].cellnumber = %d\n",tid,i,cellhistory[i].cellnumber);
+//     */
+//
+//     #ifdef DEBUG_ON
+//       if (pkt_ptr->next_trans > 0)
+//       {
+//         if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
+//         if (debuglevel == 2) printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n", (pkt_ptr->nu_cmf-linelist[pkt_ptr->next_trans-1].nu)/pkt_ptr->nu_cmf);
+//       }
+//     #endif
+//
+//     //printout("[debug] r-pkt propagation iteration %d\n",it);
+//     //it += 1;
+//     /** Assign optical depth to next physical event. And start couter of
+//     optical depth for this path.*/
+//     double zrand = gsl_rng_uniform(rng);
+//     double tau_next = -1. * log(zrand);
+//
+//     /** Start by finding the distance to the crossing of the grid cell
+//     boundaries. sdist is the boundary distance and snext is the
+//     grid cell into which we pass.*/
+//     double sdist = boundary_cross(pkt_ptr, t_current, &snext);
+//
+//     if (sdist == 0)
+//       change_cell(pkt_ptr, snext, &end_packet, t_current);
+//     else
+//     {
+//       if (sdist > (rmax * t_current/tmin))
+//       {
+//         printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
+//         abort();
+//       }
+//
+//       if (sdist < 1)
+//       {
+//         printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
+//         printout("[warning] r_pkt: cell %d snext %d\n", pkt_ptr->where, snext);
+//         printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
+//         printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
+//         printout("[warning] r_pkt: cell corner %g %g %g\n",cell[pkt_ptr->where].pos_init[0]*t_current/tmin, cell[pkt_ptr->where].pos_init[1]*t_current/tmin,  cell[pkt_ptr->where].pos_init[2]*t_current/tmin);
+//         printout("[warning] r_pkt: cell width %g %g %g\n",wid_init*t_current/tmin, wid_init*t_current/tmin,  wid_init*t_current/tmin);
+//         //abort();
+//       }
+//       if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
+//       {
+//         printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
+//         printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
+//         abort();
+//       }
+//       if (sdist > max_path_step)
+//       {
+//         sdist = max_path_step;
+//         snext = pkt_ptr->where;
+//       }
+//
+//
+//       /// Find how far it can travel during the time inverval.
+//       tdist = (t2 - t_current) * CLIGHT_PROP;
+//       if (tdist < 0)
+//       {
+//         printout("[fatal] do_rpkt: Negative distance (tdist). Abort. \n");
+//         abort();
+//       }
+//
+//       /// Get distance to the next physical event in this case only electron scattering
+//       //kappa = SIGMA_T*get_nne(cell[pkt_ptr->where].modelgridindex);
+//       double kappa = get_kappagrey(cell[pkt_ptr->where].modelgridindex) * get_rho(cell[pkt_ptr->where].modelgridindex);
+//       double vel_vec[3];
+//       get_velocity(pkt_ptr->pos, vel_vec, t_current);
+//       kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
+//       double tau_current = 0.0;
+//       edist = (tau_next - tau_current) / kappa;
+//       if (edist < 0)
+//       {
+//         printout("[fatal] do_rpkt: Negative distance (edist). Abort. \n");
+//         printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
+//         abort();
+//       }
+//
+//       if ((sdist < tdist) && (sdist < edist))
+//       {
+//         #ifdef DEBUG_ON
+//           if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
+//         #endif
+//         /** Move it into the new cell. */
+//         sdist = sdist / 2.;
+//         t_current += sdist / CLIGHT_PROP;
+//         move_pkt(pkt_ptr,sdist,t_current);
+//         update_estimators(pkt_ptr,sdist*2);
+//         if (do_rlc_est != 0 && do_rlc_est != 3)
+//         {
+//           sdist = sdist * 2.;
+//           rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
+//           sdist = sdist / 2.;
+//         }
+//         t_current += sdist / CLIGHT_PROP;
+//         move_pkt(pkt_ptr,sdist,t_current);
+//         sdist = sdist * 2.;
+//
+//         if (snext != pkt_ptr->where)
+//         {
+//           change_cell(pkt_ptr, snext, &end_packet, t_current);
+//         }
+//         #ifdef DEBUG_ON
+//           /** New cell so reset the scat_counter */
+//           pkt_ptr->scat_count = 0;
+//           //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
+//           pkt_ptr->last_event = pkt_ptr->last_event + 100;
+//         #endif
+//       }
+//       else if ((tdist < sdist) && (tdist < edist))
+//       {
+//         #ifdef DEBUG_ON
+//           if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
+//         #endif
+//         /** Doesn't reach boundary. */
+//         tdist = tdist / 2.;
+//         t_current += tdist / CLIGHT_PROP;
+//         move_pkt(pkt_ptr,tdist,t_current);
+//         update_estimators(pkt_ptr,tdist*2);
+//         if (do_rlc_est != 0 && do_rlc_est != 3)
+//         {
+//           tdist = tdist * 2.;
+//           rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
+//           tdist = tdist / 2.;
+//         }
+//         t_current = t2;
+//         move_pkt(pkt_ptr,tdist,t_current);
+//         tdist = tdist * 2.;
+//         #ifdef DEBUG_ON
+//           pkt_ptr->last_event = pkt_ptr->last_event + 1000;
+//         #endif
+//         end_packet = true;
+//       }
+//       else if ((edist < sdist) && (edist < tdist))
+//       {
+//         #ifdef DEBUG_ON
+//           if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
+//         #endif
+//         edist = edist / 2.;
+//         t_current += edist / CLIGHT_PROP;
+//         move_pkt(pkt_ptr,edist,t_current);
+//         update_estimators(pkt_ptr,edist*2);
+//         if (do_rlc_est != 0 && do_rlc_est != 3)
+//         {
+//           edist = edist * 2.;
+//           rlc_emiss_rpkt(pkt_ptr, edist, t_current);
+//           edist = edist / 2.;
+//         }
+//         t_current += edist / CLIGHT_PROP;
+//         move_pkt(pkt_ptr,edist,t_current);
+//         edist = edist * 2.;
+//
+//         /// electron scattering occurs
+//         /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
+//         /// but with different direction
+//         #ifdef DEBUG_ON
+//           if (debuglevel == 2) printout("[debug] rpkt_event:   electron scattering\n");
+//           pkt_ptr->interactions += 1;
+//           pkt_ptr->nscatterings += 1;
+//           pkt_ptr->last_event = 12;
+//           escounter += 1;
+//         #endif
+//
+//         //pkt_ptr->nu_cmf = 3.7474058e+14;
+//         emitt_rpkt(pkt_ptr,t_current);
+//         /// Electron scattering does not modify the last emission flag
+//         //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
+//         /// but it updates the last emission position
+//         pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
+//         pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
+//         pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+//         pkt_ptr->em_time = t_current;
+//
+//         /*/// The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
+//         rpkt_event(pkt_ptr,rpkt_eventtype,t_current);
+//         if (pkt_ptr->type != TYPE_RPKT)
+//         {
+//           /// It's not an r-packet any more - return.
+//           return(t_current);
+//         }*/
+//       }
+//       else
+//       {
+//         printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
+//         printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
+//         abort();
+//       }
+//     }
+//   }
+//
+//   return PACKET_SAME;
+// }

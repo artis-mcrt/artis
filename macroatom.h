@@ -12,8 +12,6 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans,
 double rad_excitation(int modelgridindex, int upper, double epsilon_trans,
                       int lineindex, double t_current);
 double rad_recombination(int modelgridindex, int lower);
-double photoionization(int modelgridindex, int phixstargetindex,
-                       double epsilon_trans);
 
 double col_deexcitation(int modelgridindex, int lower, double epsilon_trans,
                         int lineindex);

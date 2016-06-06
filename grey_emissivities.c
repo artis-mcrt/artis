@@ -135,7 +135,7 @@ int normalise_grey(int nts)
 {
   //for (n=0; n < ngrid; n++)
   double dt = time_step[nts].width;
-  double helper = pow(time_step[nts].mid / tmin, 3.0);
+  double helper = pow(time_step[nts].mid / tmin, 3);
   for (int n = 0; n < npts_model; n++)
   {
     int assoc_cells = modelgrid[n].associated_cells;
@@ -212,7 +212,6 @@ int write_grey(int nts)
 }
 
 
-/**************************************************************/
 /*int emiss_rlc_load(int nts)
 {
   // Routine to read in the stored estimators for the time step that is about to begin.
@@ -262,7 +261,6 @@ int write_grey(int nts)
   return 0;
 }*/
 
-/***********************************************/
 /*int grey_rt(RAY *ray_ptr, int nray, double ldist, double *single_pos, double single_t, int lindex)
 {
   // This is called when a grey ray is about to be moved a distance ldist.

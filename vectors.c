@@ -2,6 +2,13 @@
 #include "vectors.h"
 
 
+extern inline double vec_len(const double x[3]);
+extern inline void vec_norm(const double vec_in[3], double vec_out[3]);
+extern inline double dot(const double *const restrict x, const double *const restrict y);
+extern inline void get_velocity(const double *const restrict x, double *restrict y, const double t);
+extern inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
+
+
 void angle_ab(const double *restrict const dir1, const double *restrict vel, double *dir2)
 // Routine for aberation of angles in SR. Takes one direction and velocity
 // as input and gives back another direction.
@@ -77,9 +84,3 @@ void scatter_dir(const double *restrict dir_in, double cos_theta, double *dir_ou
   dir_out[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
 }
 
-
-extern inline double vec_len(const double x[3]);
-extern inline void vec_norm(const double vec_in[3], double vec_out[3]);
-extern inline double dot(const double *const restrict x, const double *const restrict y);
-extern inline void get_velocity(const double *const restrict x, double *restrict y, const double t);
-extern inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
