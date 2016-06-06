@@ -118,9 +118,9 @@ static void setup_packets(int pktnumberoffset)
   etot += (E48V + E48CR) * mcr48 / MCR48;
   etot += (E52FE + E52MN) * mfe52 / MFE52;
   printout("etot %g\n", etot);
-  printout("ENICKEL, ECOBALT ECOBALT_GAMMA%g %g %g\n",ENICKEL/MEV, ECOBALT/MEV, ECOBALT_GAMMA/MEV);
-  printout("E48CR, E48V %g %g\n",E48CR/MEV, E48V/MEV);
-  printout("E52FE, E52MN %g %g\n",E52FE/MEV, E52MN/MEV);
+  printout("ENICKEL, ECOBALT, ECOBALT_GAMMA: %g, %g, %g\n",ENICKEL/MEV, ECOBALT/MEV, ECOBALT_GAMMA/MEV);
+  printout("E48CR, E48V: %g %g\n",E48CR/MEV, E48V/MEV);
+  printout("E52FE, E52MN: %g %g\n",E52FE/MEV, E52MN/MEV);
 
   /// So energy per pellet is
   const double e0 = etot / npkts / n_out_it / n_middle_it;

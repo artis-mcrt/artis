@@ -25,9 +25,9 @@
   #define NLTE_POPS_ON
 #endif
 
-#define USE_MULTIBIN_RADFIELD_MODEL true // if using this, should avoid look up tables below
+#define USE_MULTIBIN_RADFIELD_MODEL false // if using this, should avoid look up tables below
                                          // (since they assume J_nu is Planck function)
-#define NO_LUT_PHOTOION true // dynamically calculate photoionization
+#define NO_LUT_PHOTOION false // dynamically calculate photoionization
                              // rates for the current radiation field
                              // instead of interpolating precalculated
                              // values assuming a blackbody radiation field
@@ -347,6 +347,7 @@ double J[MMODELGRID+1];
   double J_reduced_save[MMODELGRID+1];
 #endif
 
+
 #ifdef FORCE_LTE
   double redhelper[MMODELGRID+1];
   //don't use the variables below in LTE mode, just declare them here so the code compiles
@@ -377,7 +378,9 @@ double J[MMODELGRID+1];
 #endif
 
 #ifdef RECORD_LINESTAT
-  int *ecounter,*acounter,*linestat_reduced;
+  int *restrict ecounter;
+  int *restrict acounter;
+  int *restrict linestat_reduced;
 #endif
 
 

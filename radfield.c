@@ -7,6 +7,8 @@
 #include "radfield.h"
 #include "sn3d.h"
 
+extern inline double radfield2(double nu, double T, double W);
+
 //#const int RADFIELDBINCOUNT = 1000;
 #define RADFIELDBINCOUNT 32
 
@@ -42,7 +44,9 @@ struct radfieldbin
   enum_bin_fit_type fit_type;
 };
 
-static struct radfieldbin *restrict radfieldbins[MMODELGRID + 1];
+//static struct radfieldbin *restrict radfieldbins[MMODELGRID];
+static struct radfieldbin radfieldbins[MMODELGRID][RADFIELDBINCOUNT];
+
 
 typedef enum
 {
@@ -83,7 +87,7 @@ void radfield_init(void)
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID + 1; modelgridindex++)
     {
-      radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
+      //radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
 
       radfield_set_J_normfactor(modelgridindex, -1.0);
 
@@ -275,8 +279,8 @@ void radfield_close_file(void)
 {
   fclose(radfieldfile);
 
-  for (int dmgi = 0; dmgi < MMODELGRID + 1; dmgi++)
-    free(radfieldbins[dmgi]);
+  // for (int dmgi = 0; dmgi < MMODELGRID + 1; dmgi++)
+  //   free(radfieldbins[dmgi]);
 
   //free(radfieldbins);
 }
@@ -625,7 +629,7 @@ static double find_T_R(int modelgridindex, int binindex)
 }
 
 
-void radfield_fit_parameters(int modelgridindex)
+void radfield_fit_parameters(int modelgridindex, int timestep)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
 {
@@ -710,6 +714,7 @@ void radfield_fit_parameters(int modelgridindex)
     printout("bin %4d: J %g, T_R %7.1f, W %12.5e\n",
            binindex, J_bin, T_R_bin, W_bin);
   }*/
+  radfield_write_to_file(modelgridindex,timestep);
 }
 
 
@@ -760,4 +765,44 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
   J_normfactor[modelgridindex] = normfactor;
 }
 
-extern inline double radfield2(double nu, double T, double W);
+
+void radfield_reduce_estimators(int my_rank)
+{
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    {
+      double J_raw_reduced = 0.;
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Reduce(&radfieldbins[modelgridindex][binindex].J_raw, &J_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      double nuJ_raw_reduced = 0.;
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Reduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &nuJ_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      int contribcount_reduced = 0;
+      MPI_Barrier(MPI_COMM_WORLD);
+      printout("MPI: Pre-reduction, process %d binindex %d has a individual contribcount of %d\n",my_rank,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+      MPI_Reduce(&radfieldbins[modelgridindex][binindex].contribcount, &contribcount_reduced, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0)
+      {
+        radfieldbins[modelgridindex][binindex].J_raw = J_raw_reduced;
+        radfieldbins[modelgridindex][binindex].nuJ_raw = nuJ_raw_reduced;
+        radfieldbins[modelgridindex][binindex].contribcount = contribcount_reduced;
+        printout("MPI: Process %d binindex %d took the reduced contribcount of %d\n",my_rank,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+      }
+    }
+  }
+}
+
+void radfield_broadcast_estimators(int my_rank)
+{
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    {
+      MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, 0, MPI_COMM_WORLD);
+      printout("MPI: After broadcast: Process %d binindex %d has a contribcount of %d\n",my_rank,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+    }
+  }
+}

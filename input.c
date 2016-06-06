@@ -335,7 +335,7 @@ static void read_unprocessed_atomicdata(void)
     elements[element].anumber = Z;
     elements[element].nions = nions;
     elements[element].abundance = abundance;       /// abundances are expected to be given by mass
-    elements[element].mass = mass*MH;
+    elements[element].mass = mass * MH;
     includedions += nions;
 
     /// Initialize the elements ionlist
@@ -466,7 +466,7 @@ static void read_unprocessed_atomicdata(void)
 //             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
 //             exit(0);
 //           }
-        if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
+        if ((elements[element].ions[ion].Alpha_sp = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
         {
           printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
           exit(0);
@@ -1028,7 +1028,7 @@ static void read_processed_modelatom(FILE *restrict modelatom)
       //           printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
       //           exit(0);
       //         }
-      if ((elements[element].ions[ion].Alpha_sp = (float *) malloc(TABLESIZE*sizeof(float))) == NULL)
+      if ((elements[element].ions[ion].Alpha_sp = (double *) malloc(TABLESIZE*sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
         exit(0);
@@ -2406,7 +2406,6 @@ void read_parameterfile(int rank)
   {
     time_syn[i] = exp(log(dum2) + (dum3*i)) * DAY;
   }
-
 
   fscanf(input_file, "%d", &dum1); ///model type
   if (dum1 == 1)

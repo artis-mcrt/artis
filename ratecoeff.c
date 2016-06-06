@@ -515,7 +515,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
 
 static void calculate_rate_coefficients(void)
 {
-  const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
+  const double intaccuracy = 2e-3;        /// Fractional accuracy of the integrator
 
   /// Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < nelements; element++)
@@ -951,9 +951,7 @@ static double integrand_corrphotoioncoeff_current_radfield(double nu, void *rest
 
   const double T_R = get_TR(modelgridindex);
 
-  int i = floor((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
-  if (i > NPHIXSPOINTS-1)
-    i = NPHIXSPOINTS-1;
+  const int i = (nu/nu_edge - 1.0) / NPHIXSNUINCREMENT;
   const float sigma_bf = params->photoion_xs[i];
 
   #ifdef DEBUG_ON
@@ -970,17 +968,14 @@ static double integrand_corrphotoioncoeff_current_radfield(double nu, void *rest
 
 
 static double integrand_bfheating_current_radfield(double nu, void *restrict voidparas)
-/// Integrand to calculate the rate coefficient for bfheating
-/// using gsl integrators.
+/// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
   const gsl_integral_paras_bfheating *restrict const params = (gsl_integral_paras_bfheating *) voidparas;
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
-  const double Te_TR_factor = params->Te_TR_factor; // sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
-  int i = floor((nu/nu_edge - 1.0) / NPHIXSNUINCREMENT);
-  if (i > NPHIXSPOINTS-1)
-    i = NPHIXSPOINTS-1;
+  const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
+  const int i = (nu/nu_edge - 1.0) / NPHIXSNUINCREMENT;
   const float sigma_bf = params->photoion_xs[i];
 
   const double T_e = get_Te(modelgridindex);
@@ -1000,7 +995,6 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(32768);
 
   int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-  double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
 
   const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
   const double nu_threshold = ONEOVERH * E_threshold;
@@ -1026,7 +1020,7 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   }
   gsl_set_error_handler(gsl_error_handler);
 
-  gammacorr *= FOURPI * phixstargetprobability;
+  gammacorr *= FOURPI * get_phixsprobability(element,ion,level,phixstargetindex);
 
   gsl_integration_workspace_free(w);
 
@@ -1037,13 +1031,12 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  const double epsrel = 2e-4;
+  const double epsrel = 2e-3;
   const double epsabs = heatingrates[tid].bf * 2e-5;
 
   gsl_integration_workspace *workspace_bfheating = gsl_integration_workspace_alloc(32768);
 
   const int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-  const double phixstargetprobability = get_phixsprobability(element,ion,level,phixstargetindex);
 
   const double E_threshold = epsilon(element,ion+1,upperionlevel) - epsilon(element,ion,level);
   const double nu_threshold = ONEOVERH * E_threshold;
@@ -1074,7 +1067,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   }
   gsl_set_error_handler(gsl_error_handler);
 
-  bfheating *= FOURPI * phixstargetprobability;
+  bfheating *= FOURPI * get_phixsprobability(element,ion,level,phixstargetindex);
 
   gsl_integration_workspace_free(workspace_bfheating);
 

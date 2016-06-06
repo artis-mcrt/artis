@@ -136,7 +136,6 @@ int main(int argc, char** argv)
   FILE *restrict packets_file;
   //FILE *temperature_file;
   #ifdef MPI_ON
-    double a, b;
     int nblock, numtot, n_leftover;
   #endif
   int nstart, ndo;
@@ -440,7 +439,7 @@ int main(int argc, char** argv)
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
       //int HUGEE = 4 * ((9+2*includedions)*(nblock+1) + 1);
       //int HUGEE = 4 * ((8+2*includedions)*(nblock+1) + 1);
-      int HUGEE = 4 * ((10+2*includedions)*(nblock+1) + 1) + 8 * ((1+includedions)*(nblock+1));
+      int HUGEE = (4 * ((10+2*includedions)*(nblock+1) + 1) + 8 * ((1+includedions)*(nblock+1))) * 2; // LJS just added factor of two to make this work. What's the minimum space needed?
       printout("reserve HUGEE %d space for MPI communication buffer\n",HUGEE);
       //char buffer[HUGEE];
       char *buffer;
@@ -518,34 +517,34 @@ int main(int argc, char** argv)
       else
       {
 
+        if (nts % 2 == 0)
+          sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+        else
+          sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+
+        if ((packets_file = fopen(filename, "rb")) == NULL)
+        {
+          printout("Cannot read temporary packets file %s\n",filename);
+          exit(0);
+        }
+
+        read_vspecpol(packets_file);
+
+        if (vgrid_flag == 1)
+        {
           if (nts % 2 == 0)
-            sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+            sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
           else
-            sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+            sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
 
           if ((packets_file = fopen(filename, "rb")) == NULL)
           {
-            printout("Cannot read temporary packets file %s\n",filename);
+            printout("Cannot read temporary vpkt_grid file %s\n",filename);
             exit(0);
           }
 
-          read_vspecpol(packets_file);
-
-          if (vgrid_flag==1)
-          {
-            if (nts % 2 == 0)
-              sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
-            else
-              sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
-
-            if ((packets_file = fopen(filename, "rb")) == NULL)
-            {
-              printout("Cannot read temporary vpkt_grid file %s\n",filename);
-              exit(0);
-            }
-
-            read_vpkt_grid(packets_file);
-          }
+          read_vpkt_grid(packets_file);
+        }
       }
     #endif
 
@@ -594,14 +593,13 @@ int main(int argc, char** argv)
           n_titer = 1;
           initial_iteration = false;
         }*/
+        n_titer = 1;
         if (nts < n_lte_timesteps)
         {
-          n_titer = 1;
           initial_iteration = true;
         }
         else
         {
-          n_titer = 1;
           initial_iteration = false;
         }
       #endif
@@ -707,11 +705,11 @@ int main(int argc, char** argv)
                   MPI_Pack(&modelgrid[mgi].nne, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   MPI_Pack(&modelgrid[mgi].nnetot, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   MPI_Pack(&modelgrid[mgi].kappagrey, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].Te, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].TR, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+                  MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+                  MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+                  MPI_Pack(&modelgrid[mgi].TR, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   //MPI_Pack(&cell[nn].T_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].W, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+                  MPI_Pack(&modelgrid[mgi].W, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   //MPI_Pack(&cell[nn].W_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   //MPI_Pack(&cell[nn].samplecell, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
                   MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
@@ -732,6 +730,7 @@ int main(int argc, char** argv)
             MPI_Unpack(buffer, HUGEE, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
             for (int nn = 0; nn < nlp; nn++)
             {
+              int mgi;
               MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
               //if (cell[ncl].rho > MINDENSITY)
               if (modelgrid[mgi].associated_cells > 0)
@@ -741,11 +740,11 @@ int main(int argc, char** argv)
                 MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
                 MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
                 MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
+                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_DOUBLE, MPI_COMM_WORLD);
                 //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].T_D, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
+                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_DOUBLE, MPI_COMM_WORLD);
                 //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].W_D, 1, MPI_FLOAT, MPI_COMM_WORLD);
                 //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].samplecell, 1, MPI_INT, MPI_COMM_WORLD);
                 MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
@@ -808,12 +807,12 @@ int main(int argc, char** argv)
               MPI_Reduce(&corrphotoionrenorm, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
                 {
                   corrphotoionrenorm[i] = redhelper[i];
                 }
               }
-              MPI_Bcast(&corrphotoionrenorm, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+              MPI_Bcast(&corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
               /// Reduce the gammaestimator array. Only needed to write restart data.
               printout("nts %d, titer %d: bcast gammaestimator\n",nts,titer);
@@ -821,12 +820,12 @@ int main(int argc, char** argv)
               MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
-                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
+                for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
                 {
                   gammaestimator[i] = redhelper[i];
                 }
               }
-              MPI_Bcast(&gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+              MPI_Bcast(&gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
             }
           #endif
         #endif
@@ -956,6 +955,7 @@ int main(int argc, char** argv)
                   nuJ[i] = redhelper[i];
                 }
               }
+              radfield_reduce_estimators(my_rank);
               MPI_Barrier(MPI_COMM_WORLD);
               MPI_Reduce(&ffheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
@@ -1102,8 +1102,8 @@ int main(int argc, char** argv)
               }
             #endif
 
-            double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
-            double deltat = time_step[nts].width;
+            //double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
+            //double deltat = time_step[nts].width;
             if (do_rlc_est != 0)
             {
               MPI_Reduce(&rpkt_emiss, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -1160,6 +1160,7 @@ int main(int argc, char** argv)
             MPI_Barrier(MPI_COMM_WORLD);
             MPI_Bcast(&J, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
             #ifndef FORCE_LTE
+              radfield_broadcast_estimators(my_rank);
               MPI_Bcast(&nuJ, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
               MPI_Bcast(&ffheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
               MPI_Bcast(&colheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -1200,10 +1201,10 @@ int main(int argc, char** argv)
             printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",outer_iteration,nts,my_rank,nvpkt,nvpkt_esc1+nvpkt_esc2+nvpkt_esc3);
             printout("%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a macroatom deactivation. \n",nvpkt_esc1,nvpkt_esc2,nvpkt_esc3);
 
-            nvpkt = 0 ;
-            nvpkt_esc1 = 0 ;
-            nvpkt_esc2 = 0 ;
-            nvpkt_esc3 = 0 ;
+            nvpkt = 0;
+            nvpkt_esc1 = 0;
+            nvpkt_esc2 = 0;
+            nvpkt_esc3 = 0;
 
           #endif
 
@@ -1242,8 +1243,10 @@ int main(int argc, char** argv)
           fclose(packets_file);
 
           #ifdef ESTIMATORS_ON
-          if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
-          else sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+          if (nts % 2 == 0)
+            sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+          else
+            sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
 
           if ((packets_file = fopen(filename, "wb")) == NULL)
           {
@@ -1256,7 +1259,7 @@ int main(int argc, char** argv)
 
           // Write temporary files for vpkt_grid
 
-          if (vgrid_flag==1)
+          if (vgrid_flag == 1)
           {
             if (nts % 2 == 0)
               sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
@@ -1300,7 +1303,6 @@ int main(int argc, char** argv)
                 write_vpkt_grid(vpkt_grid_file);
                 fclose(vpkt_grid_file);
               }
-
             #endif
 
             printout("time after write final packets file %d\n",time(NULL));
@@ -1328,7 +1330,6 @@ int main(int argc, char** argv)
       }
 
     }
-
 
 
     /// Now write a snapshot of the current model data to file to allow
@@ -1379,10 +1380,10 @@ int main(int argc, char** argv)
             MPI_Pack(&mgi, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
             if (modelgrid[mgi].associated_cells > 0)
             {
-              MPI_Pack(&modelgrid[mgi].Te, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-              MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-              MPI_Pack(&modelgrid[mgi].TR, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-              MPI_Pack(&modelgrid[mgi].W, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].TR, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].W, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
             }
           }
         }
@@ -1396,10 +1397,10 @@ int main(int argc, char** argv)
           MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
           if (modelgrid[mgi].associated_cells > 0)
           {
-            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
-            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
-            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
-            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
+            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_DOUBLE, MPI_COMM_WORLD);
           }
         }
       }
@@ -1457,11 +1458,11 @@ int main(int argc, char** argv)
   }
 
 
-
   #ifdef MPI_ON
     /// Communicate gamma and positron deposition and write to file
-    for (i = 0; i < ntstep; i++)
+    for (int i = 0; i < ntstep; i++)
     {
+      double depvalue = 0.;
       MPI_Reduce(&time_step[i].gamma_dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
       if (my_rank == 0) time_step[i].gamma_dep = depvalue / nprocs;
       MPI_Reduce(&time_step[i].positron_dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -1497,12 +1498,10 @@ int main(int argc, char** argv)
 
   #ifdef _OPENMP
     #pragma omp parallel
+  #endif
     {
       fclose(output_file);
     }
-  #else
-      fclose(output_file);
-  #endif
 
   #ifdef MPI_ON
     MPI_Finalize();
@@ -1521,11 +1520,11 @@ int printout(const char *restrict format, ...)
    va_start(args,format);
    ret_status = vfprintf(output_file,format,args);
    va_end(args);
+
    return ret_status;
 }
 
 
-///****************************************************************************
 /*void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element)
 {
   int nions,nlevels,nuptrans;

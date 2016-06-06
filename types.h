@@ -14,7 +14,7 @@
 #endif
 
 #define MGRID  1000000 //125000 //1000000 //1000000//262144 //2100000 //125000 //1000000  /* Max number of grid cells.*/
-#define MMODELGRID 125000 //125000 //12800 //12800 //125 //3200 //200 //200 //200 //8192 //125 //125000 //200 //125000 //8200 //200 //8200 //200 //125000
+#define MMODELGRID 1 //125000 //12800 //12800 //125 //3200 //200 //200 //200 //8192 //125 //125000 //200 //125000 //8200 //200 //8200 //200 //125000
 #define MPKTS 2000000//25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625 /* Maximum number of energy packets in calculation. */
 //#define MPKTS 2000000 //TODO: remove
 #define MELEMENTS 26 //26 //27 //9
@@ -359,7 +359,7 @@ typedef struct transitionlist_entry
   double epsilon;
   int targetlevel;
   int lineindex;
-  short stat_weight;
+  int stat_weight;
 } transitionlist_entry;
 
 /*
@@ -373,27 +373,29 @@ typedef struct
 
 typedef struct phixstarget_entry
 {
-  int levelindex;         // index of upper ion level after photoionisation
-  float probability;        // fraction of phixs cross section leading to this final level
-
   double *restrict spontrecombcoeff;
   double *restrict corrphotoioncoeff;
   double *restrict bfheating_coeff;
   double *restrict bfcooling_coeff;
+
+  double probability;        // fraction of phixs cross section leading to this final level
+  int levelindex;         // index of upper ion level after photoionisation
 } phixstarget_entry;
 
 typedef struct levellist_entry
 {
+  transitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
+  transitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
+
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
   phixstarget_entry *restrict phixstargets;  /// pointer to table of target states and probabilities
   float *restrict photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets;                         /// length of phixstargets array:
+  int stat_weight;                           /// Statistical weight of this level.
 
-  transitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
-  transitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
-  short stat_weight;                           /// Statistical weight of this level.
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   int closestgroundlevelcont;
+
   bool is_nlte;                              /// 1 if the level is to
                                              /// be treated in nlte
   bool metastable;                            ///
@@ -437,7 +439,7 @@ typedef struct ionlist_entry
   int coolingoffset;
   int ncoolingterms;
   double ionpot;                             /// Ionisation threshold to the next ionstage
-  float *Alpha_sp;
+  double *Alpha_sp;
   //int nbfcontinua;
   //ionsphixslist_t *phixslist;
 } ionlist_entry;
