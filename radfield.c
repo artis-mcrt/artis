@@ -19,7 +19,7 @@ extern inline double radfield2(double nu, double T, double W);
 
 static double nu_lower_first = nu_lower_first_initial;
 
-static double J_normfactor[MMODELGRID + 1];
+static double J_normfactor[MMODELGRID];
 
 static bool radfield_initialized = false;
 
@@ -85,7 +85,7 @@ void radfield_init(void)
             "nuJ","J","J_nu_avg","ncontrib","T_R","W");
     fflush(radfieldfile);
 
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID + 1; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
       //radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
 
@@ -279,7 +279,7 @@ void radfield_close_file(void)
 {
   fclose(radfieldfile);
 
-  // for (int dmgi = 0; dmgi < MMODELGRID + 1; dmgi++)
+  // for (int dmgi = 0; dmgi < MMODELGRID; dmgi++)
   //   free(radfieldbins[dmgi]);
 
   //free(radfieldbins);
@@ -768,6 +768,7 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 
 void radfield_reduce_estimators(int my_rank)
 {
+  #ifdef MPI_ON
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -791,10 +792,12 @@ void radfield_reduce_estimators(int my_rank)
       }
     }
   }
+  #endif
 }
 
 void radfield_broadcast_estimators(int my_rank)
 {
+  #ifdef MPI_ON
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -805,4 +808,5 @@ void radfield_broadcast_estimators(int my_rank)
       printout("MPI: After broadcast: Process %d binindex %d has a contribcount of %d\n",my_rank,binindex,radfieldbins[modelgridindex][binindex].contribcount);
     }
   }
+  #endif
 }
