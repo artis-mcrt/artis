@@ -58,152 +58,152 @@ void update_packets(int nts)
   #ifdef _OPENMP
     #pragma omp parallel
     //copyin(debuglevel,nuJ,J)
-    {
-      #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
   #endif
-      int time_of_last_packet_printout = 0;
-      for (int n = 0; n < npkts; n++)
+  {
+    int time_of_last_packet_printout = 0;
+    #ifdef _OPENMP
+    #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
+    #endif
+    for (int n = 0; n < npkts; n++)
+    {
+      //printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
+      if (time(NULL) - time_of_last_packet_printout > 2)
       {
-        //printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
-        if (time(NULL) - time_of_last_packet_printout > 2)
-        {
-          time_of_last_packet_printout = time(NULL);
-          printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
-        }
-        //if (n == 5000) exit(0);
+        time_of_last_packet_printout = time(NULL);
+        printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
+      }
+      //if (n == 5000) exit(0);
 
-        PKT *restrict pkt_ptr = &pkt[n];
-        pkt_ptr->interactions = 0;
-        //pkt_ptr->timestep = nts;
+      PKT *restrict pkt_ptr = &pkt[n];
+      pkt_ptr->interactions = 0;
+      //pkt_ptr->timestep = nts;
 
 //        if (pkt_ptr->number == debug_packet) debuglevel = 2;
 //        else debuglevel = 4;
-        //if (n % 10000 == 0) debuglevel = 2;
+      //if (n % 10000 == 0) debuglevel = 2;
 
-        if (debuglevel == 2) printout("[debug] update_packets: updating packet %d for timestep %d __________________________\n",n,nts);
+      if (debuglevel == 2) printout("[debug] update_packets: updating packet %d for timestep %d __________________________\n",n,nts);
 
-        int mgi = cell[pkt_ptr->where].modelgridindex;
-        /// for non empty cells update the global available level populations and cooling terms
-        if (mgi != MMODELGRID)
+      int mgi = cell[pkt_ptr->where].modelgridindex;
+      /// for non empty cells update the global available level populations and cooling terms
+      if (mgi != MMODELGRID)
+      {
+        //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
+        /// Reset cellhistory if packet starts up in another than the last active cell
+        if (cellhistory[tid].cellnumber != mgi)
+          update_cell(mgi);
+
+        /*
+        histindex = 0;
+        /// in the case of non isothermal or non homogenous grids this must be done for each packet
+        /// unless we do some special treatment
+        if (cellhistory[histindex].cellnumber != mgi)
         {
-          //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
-          /// Reset cellhistory if packet starts up in another than the last active cell
-          if (cellhistory[tid].cellnumber != mgi)
+          histindex = search_cellhistory(mgi);
+          if (histindex < 0)
+          {
+            //histindex = find_farthestcell_initial(mgi);
+            histindex = 0;
+            //printout("thread%d _ update_packets histindex %d\n",tid,histindex);
             update_cell(mgi);
-
-          /*
-          histindex = 0;
-          /// in the case of non isothermal or non homogenous grids this must be done for each packet
-          /// unless we do some special treatment
-          if (cellhistory[histindex].cellnumber != mgi)
-          {
-            histindex = search_cellhistory(mgi);
-            if (histindex < 0)
-            {
-              //histindex = find_farthestcell_initial(mgi);
-              histindex = 0;
-              //printout("thread%d _ update_packets histindex %d\n",tid,histindex);
-              update_cell(mgi);
-            }
-          }
-          */
-
-          //copy_populations_to_phixslist();
-          /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
-          if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
-          {
-            calculate_kappa_rpkt_cont(pkt_ptr,ts);
           }
         }
+        */
 
-        //printout("[debug] update_packets: current position of packet %d (%g, %g, %g)\n",n,pkt_ptr->pos[0],pkt_ptr->pos[1],pkt_ptr->pos[2]);
-        //printout("[debug] update_packets: target position of homologous flow (%g, %g, %g)\n",pkt_ptr->pos[0]*(ts + tw)/ts,pkt_ptr->pos[1]*(ts + tw)/ts,pkt_ptr->pos[2]*(ts + tw)/ts);
-        //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-
-        if ((pkt_ptr->type == TYPE_NICKEL_PELLET) || (pkt_ptr->type == TYPE_COBALT_PELLET) || (pkt_ptr->type == TYPE_48CR_PELLET) || (pkt_ptr->type == TYPE_48V_PELLET)|| (pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET))
+        //copy_populations_to_phixslist();
+        /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
+        if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
         {
-          //printout("inactive pellet\n");
-          /**It's still an inactive pellet. Need to do two things (a) check if it
-          decays in this time step and if it does handle that. (b) if it doesn't decay in
-          this time step then just move the packet along with the matter for the
-          start of the next time step. */
+          calculate_kappa_rpkt_cont(pkt_ptr,ts);
+        }
+      }
 
-          if (pkt_ptr->tdecay > (ts + tw))
+      //printout("[debug] update_packets: current position of packet %d (%g, %g, %g)\n",n,pkt_ptr->pos[0],pkt_ptr->pos[1],pkt_ptr->pos[2]);
+      //printout("[debug] update_packets: target position of homologous flow (%g, %g, %g)\n",pkt_ptr->pos[0]*(ts + tw)/ts,pkt_ptr->pos[1]*(ts + tw)/ts,pkt_ptr->pos[2]*(ts + tw)/ts);
+      //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
+
+      if ((pkt_ptr->type == TYPE_NICKEL_PELLET) || (pkt_ptr->type == TYPE_COBALT_PELLET) || (pkt_ptr->type == TYPE_48CR_PELLET) || (pkt_ptr->type == TYPE_48V_PELLET)|| (pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET))
+      {
+        //printout("inactive pellet\n");
+        /**It's still an inactive pellet. Need to do two things (a) check if it
+        decays in this time step and if it does handle that. (b) if it doesn't decay in
+        this time step then just move the packet along with the matter for the
+        start of the next time step. */
+
+        if (pkt_ptr->tdecay > (ts + tw))
+        {
+          /**It won't decay in this timestep just need to move it on.*/
+
+          pkt_ptr->pos[0] = pkt_ptr->pos[0] * (ts + tw) / ts;
+          pkt_ptr->pos[1] = pkt_ptr->pos[1] * (ts + tw) / ts;
+          pkt_ptr->pos[2] = pkt_ptr->pos[2] * (ts + tw) / ts;
+
+          /**That's all that needs to be done for the inactive pellet. */
+        }
+        else if (pkt_ptr->tdecay > ts)
+        {
+          /**These are the packets decaying in this timestep.*/
+          if ((pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET))
           {
-            /**It won't decay in this timestep just need to move it on.*/
+            pkt_ptr->pos[0] = pkt_ptr->pos[0] * pkt_ptr->tdecay / ts;
+            pkt_ptr->pos[1] = pkt_ptr->pos[1] * pkt_ptr->tdecay / ts;
+            pkt_ptr->pos[2] = pkt_ptr->pos[2] * pkt_ptr->tdecay / ts;
 
-            pkt_ptr->pos[0] = pkt_ptr->pos[0] * (ts + tw) / ts;
-            pkt_ptr->pos[1] = pkt_ptr->pos[1] * (ts + tw) / ts;
-            pkt_ptr->pos[2] = pkt_ptr->pos[2] * (ts + tw) / ts;
-
-            /**That's all that needs to be done for the inactive pellet. */
-          }
-          else if (pkt_ptr->tdecay > ts)
-          {
-            /**These are the packets decaying in this timestep.*/
-            if ((pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET))
-            {
-              pkt_ptr->pos[0] = pkt_ptr->pos[0] * pkt_ptr->tdecay / ts;
-              pkt_ptr->pos[1] = pkt_ptr->pos[1] * pkt_ptr->tdecay / ts;
-              pkt_ptr->pos[2] = pkt_ptr->pos[2] * pkt_ptr->tdecay / ts;
-
-              pkt_ptr->type = TYPE_KPKT;
-              pkt_ptr->absorptiontype = -6;
-              packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
-            }
-            else
-            {
-              pellet_decay(nts,pkt_ptr);
-              //printout("pellet to photon packet and propagation by packet_prop\n");
-              packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
-            }
-          }
-          else if ((pkt_ptr->tdecay > 0) && (nts == 0))
-          {
-            /** These are pellets whose decay times were before the first time step
-            They will be made into r-packets with energy reduced for doing work on the
-            ejects following Lucy 2004. */
-            /** The position is already set at tmin so don't need to move it. Assume
-            that it is fixed in place from decay to tmin - i.e. short mfp. */
-
-            pkt_ptr->e_cmf = pkt_ptr->e_cmf * pkt_ptr->tdecay / tmin;
-            //pkt_ptr->type = TYPE_KPKT;
-            pkt_ptr->type = TYPE_PRE_KPKT;
-            pkt_ptr->absorptiontype = -7;
-            //if (tid == 0) k_stat_from_earlierdecay += 1;
-            k_stat_from_earlierdecay += 1;
-
-            //printout("already decayed packets and propagation by packet_prop\n");
-            packet_prop(pkt_ptr, tmin, ts+tw, nts);
+            pkt_ptr->type = TYPE_KPKT;
+            pkt_ptr->absorptiontype = -6;
+            packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
           }
           else
           {
-            printout("Something gone wrong with decaying pellets. Abort.\n");
-            exit(0);
+            pellet_decay(nts,pkt_ptr);
+            //printout("pellet to photon packet and propagation by packet_prop\n");
+            packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
           }
         }
-        else if (pkt_ptr->type == TYPE_GAMMA || pkt_ptr->type == TYPE_RPKT || pkt_ptr->type == TYPE_KPKT)
+        else if ((pkt_ptr->tdecay > 0) && (nts == 0))
         {
-          /**Stuff for processing photons. */
-          //printout("further propagate a photon packet via packet_prop\n");
+          /** These are pellets whose decay times were before the first time step
+          They will be made into r-packets with energy reduced for doing work on the
+          ejects following Lucy 2004. */
+          /** The position is already set at tmin so don't need to move it. Assume
+          that it is fixed in place from decay to tmin - i.e. short mfp. */
 
-          packet_prop(pkt_ptr, ts, ts+tw, nts);
+          pkt_ptr->e_cmf = pkt_ptr->e_cmf * pkt_ptr->tdecay / tmin;
+          //pkt_ptr->type = TYPE_KPKT;
+          pkt_ptr->type = TYPE_PRE_KPKT;
+          pkt_ptr->absorptiontype = -7;
+          //if (tid == 0) k_stat_from_earlierdecay += 1;
+          k_stat_from_earlierdecay += 1;
 
+          //printout("already decayed packets and propagation by packet_prop\n");
+          packet_prop(pkt_ptr, tmin, ts+tw, nts);
         }
-        else if (pkt_ptr->type != TYPE_ESCAPE)
+        else
         {
-          printout("Unknown packet type %d %d. Abort.\n", pkt_ptr->type, n);
+          printout("Something gone wrong with decaying pellets. Abort.\n");
           exit(0);
         }
+      }
+      else if (pkt_ptr->type == TYPE_GAMMA || pkt_ptr->type == TYPE_RPKT || pkt_ptr->type == TYPE_KPKT)
+      {
+        /**Stuff for processing photons. */
+        //printout("further propagate a photon packet via packet_prop\n");
 
-        if (debuglevel == 10 || debuglevel == 2) printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",n,pkt_ptr->interactions,nts);
-
-        if (n == npkts-1) printout("last packet updated at %d\n",time(NULL));
+        packet_prop(pkt_ptr, ts, ts+tw, nts);
 
       }
-  #ifdef _OPENMP
+      else if (pkt_ptr->type != TYPE_ESCAPE)
+      {
+        printout("Unknown packet type %d %d. Abort.\n", pkt_ptr->type, n);
+        exit(0);
+      }
+
+      if (debuglevel == 10 || debuglevel == 2) printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",n,pkt_ptr->interactions,nts);
+
+      if (n == npkts-1) printout("last packet updated at %d\n",time(NULL));
+
     }
-  #endif
+  }
 
   printout("end of update_packets parallel for loop %d\n",time(NULL));
   //printout("[debug] update_packets: packet %d updated for timestep %d\n",n,nts);

@@ -314,7 +314,7 @@ int main(int argc, char** argv)
     printout("Cannot open %s.\n",filename);
     exit(0);
   }
-  setvbuf(estimators_file, NULL, _IOLBF, 1);
+  //setvbuf(estimators_file, NULL, _IOLBF, 1);
 
   sprintf(filename,"nlte_%.4d.out",my_rank);
   if ((nlte_file = fopen(filename, "w")) == NULL)

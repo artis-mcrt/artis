@@ -38,6 +38,12 @@ typedef struct
 } gsl_integral_paras_bfheating;
 
 
+static void gsl_error_handler_bfheating(const char *reason, const char *file, int line, int gsl_errno)
+{
+  printout("bfheating GSL ERROR %d %s %s %s\n",gsl_errno,file,line,reason);
+}
+
+
 static bool read_ratecoeff_dat(void)
 /// Try to readin the precalculated rate coefficients from file
 /// returns true if successful or false otherwise
@@ -1011,14 +1017,14 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   F_gammacorr.params = &intparas;
   double error = 0.0;
 
-  gsl_error_handler_t *gsl_error_handler = gsl_set_error_handler_off();
+  gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler(gsl_error_handler_bfheating);
   int status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS61, w, &gammacorr, &error);
   if (status != 0)
   {
     printout("corrphotoioncoeff integrator status %d. Integral value %g. Setting to zero.\n",status,gammacorr);
     gammacorr = 0.;
   }
-  gsl_set_error_handler(gsl_error_handler);
+  gsl_set_error_handler(gsl_error_handler_old);
 
   gammacorr *= FOURPI * get_phixsprobability(element,ion,level,phixstargetindex);
 
@@ -1031,8 +1037,8 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  const double epsrel = 2e-3;
-  const double epsabs = heatingrates[tid].bf * 2e-5;
+  const double epsrel = 1e-9;
+  const double epsabs = heatingrates[tid].bf * 1e-6;
 
   gsl_integration_workspace *workspace_bfheating = gsl_integration_workspace_alloc(32768);
 
@@ -1058,14 +1064,13 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   F_bfheating.function = &integrand_bfheating_current_radfield;
   F_bfheating.params = &intparas;
 
-  gsl_error_handler_t *gsl_error_handler = gsl_set_error_handler_off();
+  gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler_off();
   int status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS31, workspace_bfheating, &bfheating, &error);
   if (status != 0)
   {
-    printout("bf_heating integrator status %d. Integral value %g, setting to zero.\n",status,bfheating);
-    bfheating = 0.;
+    printout("bf_heating integrator status %d. Integral value %g.\n",status,bfheating);
   }
-  gsl_set_error_handler(gsl_error_handler);
+  gsl_set_error_handler(gsl_error_handler_old);
 
   bfheating *= FOURPI * get_phixsprobability(element,ion,level,phixstargetindex);
 
