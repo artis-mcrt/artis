@@ -1274,18 +1274,11 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
-  double nne_lo,nne_hi,nne_check,nne_tot;
-  double nnelement,nnion;
-  double nntot;
-  double nne = 0.;
-
   /// Initialise the gsl solver
   const gsl_root_fsolver_type *solvertype;
   solvertype = gsl_root_fsolver_brent;
   gsl_root_fsolver *solver;
   solver = gsl_root_fsolver_alloc(solvertype);
-  int uppermost_ion,only_neutral_ions,i,nelements_in_cell;
-  double factor,abundance;
 
   /// and the solution function
   gsl_function f;
@@ -1303,48 +1296,50 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 
   //int mgi = cell[cellnumber].modelgridindex;
 
-  nne_lo = 0.;  //MINPOP;
-  nne_hi = get_rho(modelgridindex)/MH;
+  double nne_lo = 0.;  //MINPOP;
+  double nne_hi = get_rho(modelgridindex)/MH;
 
   /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
-  only_neutral_ions = 0;
-  nelements_in_cell = 0;
+  int only_neutral_ions = 0;
+  int nelements_in_cell = 0;
   for (int element = 0; element < nelements; element++)
   {
     const int nions = get_nions(element);
     //elements[element].uppermost_ion = nions-1;
     elements_uppermost_ion[tid][element] = nions-1;
-    abundance = get_abundance(modelgridindex,element);
+    const double abundance = get_abundance(modelgridindex,element);
     if (abundance > 0)
     {
-      #ifdef FORCE_LTE
-        uppermost_ion = get_nions(element)-1;
-      #else
-        if (initial_iteration || modelgrid[modelgridindex].thick == 1)
+      int uppermost_ion;
+#     ifdef FORCE_LTE
+      uppermost_ion = get_nions(element) - 1;
+#     else
+      if (initial_iteration || modelgrid[modelgridindex].thick == 1)
+      {
+        uppermost_ion = get_nions(element) - 1;
+      }
+      else
+      {
+        int ion;
+        for (ion = 0; ion < nions-1; ion++)
         {
-          uppermost_ion = get_nions(element)-1;
+          //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
+          //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
+          #if NT_ON == true
+            if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.))
+              break;
+          #else
+            if (gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0)
+              break;
+          #endif
         }
-        else
-        {
-          int ion;
-          for (ion = 0; ion < nions-1; ion++)
-          {
-            //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
-            //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
-            #if NT_ON == true
-              if ((gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) && (rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.))
-                break;
-            #else
-              if (gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0)
-                break;
-            #endif
-          }
-          uppermost_ion = ion;
-        }
-      #endif
+        uppermost_ion = ion;
+      }
+#     endif
       //printout("cell %d, element %d, uppermost_ion by Gamma is %d\n",cellnumber,element,uppermost_ion);
 
-      factor = 1.;
+      double factor = 1.;
+      int i;
       for (i = 0; i < uppermost_ion; i++)
       {
         factor *= nne_hi * phi(element,i,modelgridindex);
@@ -1365,10 +1360,10 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     }
   }
 
-  nne_check = 0.;
-  nne_tot = 0.;   /// total number of electrons in grid cell which are possible
-                  /// targets for compton scattering of gamma rays
-  nntot = 0.;
+  double nne = 0.;
+  double nne_tot = 0.;   /// total number of electrons in grid cell which are possible
+                         /// targets for compton scattering of gamma rays
+  double nntot = 0.;
   if (only_neutral_ions == nelements_in_cell)
   {
     /// Special case of only neutral ions, set nne to some finite value that
@@ -1383,15 +1378,16 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 
     for (int element = 0; element < nelements; element++)
     {
-      abundance = get_abundance(modelgridindex,element);
+      const double abundance = get_abundance(modelgridindex,element);
       const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
-      nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
+      double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
 
       /// Assign the species population to the neutral ion and set higher ions to MINPOP
       for (int ion = 0; ion < nions; ion++)
       {
+        double nnion;
         if (ion == 0)
           nnion = nnelement;
         else if (abundance > 0.)
@@ -1406,7 +1402,8 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       }
     }
     nntot += nne;
-    if (nne < MINPOP) nne = MINPOP;
+    if (nne < MINPOP)
+      nne = MINPOP;
     set_nne(modelgridindex,nne);
   }
   else
@@ -1421,19 +1418,19 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n",modelgridindex,nne_lo,nne_hi,T_R,T_e,W,get_rho(modelgridindex));
       printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
       printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
-      #ifndef FORCE_LTE
-        for (int element = 0; element < nelements; element++)
+#     ifndef FORCE_LTE
+      for (int element = 0; element < nelements; element++)
+      {
+        //printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements[element].uppermost_ion);
+        printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements_uppermost_ion[tid][element]);
+        //for (ion=0; ion <= elements[element].uppermost_ion; ion++)
+        for (int ion = 0; ion <= elements_uppermost_ion[tid][element]; ion++)
         {
-          //printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements[element].uppermost_ion);
-          printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements_uppermost_ion[tid][element]);
-          //for (ion=0; ion <= elements[element].uppermost_ion; ion++)
-          for (int ion = 0; ion <= elements_uppermost_ion[tid][element]; ion++)
-          {
-            //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
-            printout("element %d, ion %d, photoionest %g\n",element,ion,gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
-          }
+          //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
+          printout("element %d, ion %d, photoionest %g\n",element,ion,gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
         }
-      #endif
+      }
+#     endif
     }
     gsl_root_fsolver_set(solver, &f, nne_lo, nne_hi);
     int iter = 0;
@@ -1460,31 +1457,34 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
     //printout("[debug] update_grid:   converged nne %g\n",cell[modelgridindex].nne);
 
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
-    nne_check = 0.;
+    double nne_check = 0.;
     nne_tot = 0.;   /// total number of electrons in grid cell which are possible
                     /// targets for compton scattering of gamma rays
 
     nntot = nne;
     for (int element = 0; element < nelements; element++)
     {
-      abundance = get_abundance(modelgridindex,element);
+      const double abundance = get_abundance(modelgridindex,element);
       const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
-      nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
+      double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
 
       /// Use ionisationfractions to calculate the groundlevel populations
       for (int ion = 0; ion < nions; ion++)
       {
+        double nnion;
         //if (ion <= elements[element].uppermost_ion)
         if (ion <= elements_uppermost_ion[tid][element])
         {
           if (abundance > 0)
           {
             nnion = nnelement * ionfract(element,ion,modelgridindex,nne);
-            if (nnion < MINPOP) nnion = MINPOP;
+            if (nnion < MINPOP)
+              nnion = MINPOP;
           }
-          else nnion = 0.;
+          else
+            nnion = 0.;
         }
         else
           nnion = MINPOP;  /// uppermost_ion is only < nions-1 in cells with nonzero abundance of the given species
