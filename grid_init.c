@@ -879,7 +879,7 @@ static void density_2d_read(void)
       {
         if (get_rhoinit(mgi) > rho_crit)
         {
-          set_kappagrey(mgi, (0.9 * get_ffe(mgi) + 0.1) * rho_crit/get_rhoinit(mgi));
+          set_kappagrey(mgi, (0.9 * get_ffe(mgi) + 0.1) * rho_crit / get_rhoinit(mgi));
         }
         else
         {

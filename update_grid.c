@@ -11,6 +11,10 @@
 #include "thermalbalance.h"
 #include "update_grid.h"
 
+
+extern inline double get_abundance(int modelgridindex, int element);
+
+
 static void precalculate_partfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
 /// change during any iteration on T_e. Therefore their precalculation was
@@ -1097,8 +1101,8 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
             double nne = get_nne(n);
             double compton_optical_depth = SIGMA_T*nne*wid_init*tratmid;
 
-            double grey_optical_deptha = get_kappagrey(n)*get_rho(n)*wid_init*tratmid;
-            double grey_optical_depth = get_kappagrey(n)*get_rho(n)*(rmax*tratmid-radial_pos);
+            double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init * tratmid;
+            double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
             if (log_this_cell)
             {
               printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
@@ -1263,12 +1267,6 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
   //printout("[debug] update_grid: update for timestep %d finished\n",m);
   //printf("time %ld\n",time(NULL));
   printout("[debug] update_grid: process %d finished update_grid at %d\n",my_rank,time(NULL));
-}
-
-
-double get_abundance(int modelgridindex, int element)
-{
-  return modelgrid[modelgridindex].composition[element].abundance;
 }
 
 

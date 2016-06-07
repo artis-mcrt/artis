@@ -19,7 +19,7 @@ extern inline double radfield2(double nu, double T, double W);
 
 static double nu_lower_first = nu_lower_first_initial;
 
-static double J_normfactor[MMODELGRID];
+static double J_normfactor[MMODELGRID+1];
 
 static bool radfield_initialized = false;
 
@@ -44,8 +44,8 @@ struct radfieldbin
   enum_bin_fit_type fit_type;
 };
 
-//static struct radfieldbin *restrict radfieldbins[MMODELGRID];
-static struct radfieldbin radfieldbins[MMODELGRID][RADFIELDBINCOUNT];
+//static struct radfieldbin *restrict radfieldbins[MMODELGRID+1]; //heap allocated alterative
+static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT];
 
 
 typedef enum
