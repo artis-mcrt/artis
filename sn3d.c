@@ -163,43 +163,35 @@ int main(int argc, char** argv)
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
 
-  #ifdef _OPENMP
-    /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
-    omp_set_dynamic(0);
-    #pragma omp parallel private(filename)
-    {
-      /// Get the current threads ID, copy it to a threadprivate variable
-      tid = omp_get_thread_num();
-      /// and initialise the threads outputfile
-      sprintf(filename,"output_%d-%d.txt",my_rank,tid);
-      if ((output_file = fopen(filename, "w")) == NULL)
-      {
-        printf("Cannot open %s.\n",filename);
-        abort();
-      }
-      /// Makes sure that the output_file is written line-by-line
-      setvbuf(output_file, NULL, _IOLBF, 1);
-
-      /// Get the total number of active threads
-      nthreads = omp_get_num_threads();
-      if (nthreads > MTHREADS)
-      {
-        printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n",MTHREADS,nthreads);
-        exit(0);
-      }
-      printout("OpenMP parallelisation active with %d threads\n",nthreads);
-    }
-  #else
-    tid = 0;
-    nthreads = 1;
+# ifdef _OPENMP
+  /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
+  omp_set_dynamic(0);
+  #pragma omp parallel private(filename)
+# endif
+  {
+    /// Get the current threads ID, copy it to a threadprivate variable
+    tid = omp_get_thread_num();
+    /// and initialise the threads outputfile
     sprintf(filename,"output_%d-%d.txt",my_rank,tid);
     if ((output_file = fopen(filename, "w")) == NULL)
     {
       printf("Cannot open %s.\n",filename);
       abort();
     }
+    /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
-  #endif
+
+    /// Get the total number of active threads
+    nthreads = omp_get_num_threads();
+    if (nthreads > MTHREADS)
+    {
+      printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n",MTHREADS,nthreads);
+      exit(0);
+    }
+#   ifdef _OPENMP
+    printout("OpenMP parallelisation active with %d threads\n",nthreads);
+#   endif
+  }
 
   #ifndef GIT_BRANCH
     #define GIT_BRANCH "UNKNOWN"

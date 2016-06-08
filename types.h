@@ -9,14 +9,9 @@
 #include <gsl/gsl_rng.h>
 //#include <gsl/gsl_sf_expint.h>
 
-#ifdef _OPENMP
-  #include "omp.h"
-#endif
-
 #define MGRID  1000000 //125000 //1000000 //1000000//262144 //2100000 //125000 //1000000  /* Max number of grid cells.*/
 #define MMODELGRID 1 //125000 //12800 //12800 //125 //3200 //200 //200 //200 //8192 //125 //125000 //200 //125000 //8200 //200 //8200 //200 //125000
 #define MPKTS 2000000//25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625 /* Maximum number of energy packets in calculation. */
-//#define MPKTS 2000000 //TODO: remove
 #define MELEMENTS 26 //26 //27 //9
 #define MIONS 5 //9
 #define MTHREADS 8    /// Max number of OpenMP threads

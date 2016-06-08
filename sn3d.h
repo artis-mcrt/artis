@@ -10,6 +10,16 @@
   #include "mpi.h"
 #endif
 
+//#define _OPENMP
+#ifdef _OPENMP
+  #include "omp.h"
+#else
+  typedef int omp_int_t;
+  inline omp_int_t omp_get_thread_num() { return 0; }
+  inline omp_int_t omp_get_max_threads() { return 1; }
+  inline omp_int_t omp_get_num_threads() { return 1; }
+#endif
+
 #define DEBUG_ON
 //#define DO_TITER
 //#define FORCE_LTE
@@ -32,7 +42,7 @@
                              // instead of interpolating precalculated
                              // values assuming a blackbody radiation field
 
-#define NO_LUT_BFHEATING true
+#define NO_LUT_BFHEATING false
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
@@ -172,8 +182,8 @@ double E48V;
 #define E52MN (3.415*MEV)
 
 /* mean lifetimes */
-#define TNICKEL (8.80*DAY)
-#define TCOBALT (113.7*DAY)
+#define TNICKEL (8.80*DAY)      // nickel-56
+#define TCOBALT (113.7*DAY)     // cobalt-56
 #define T48CR   (1.29602*DAY)
 #define T48V    (23.0442*DAY)
 #define T52FE   (0.497429*DAY)
