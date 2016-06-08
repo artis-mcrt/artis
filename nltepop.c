@@ -1227,23 +1227,29 @@ static double get_oneoverw(int element, int ion, int modelgridindex)
 
 double nt_ionization_rate(int modelgridindex, int element, int ion)
 {
-  double gammadeposition = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;
+
+  double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
   // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-  double positroncobalt = (0.610*0.19*MEV) *
-          (exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL)) /
-          (TCOBALT-TNICKEL) * modelgrid[modelgridindex].fni * get_rho(modelgridindex) / MNI56;
-  double positron48v = (0.290*0.499*MEV) *
-          (exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR)) /
-          (T48V-T48CR) * modelgrid[modelgridindex].f48cr * get_rho(modelgridindex) / MCR48;
+
+  double t = time_step[nts_global].mid;
+  double rho = get_rho(modelgridindex);
+
+  double co56_positron_dep = (0.610 * 0.19 * MEV) *
+          (exp(-t / TCOBALT) - exp(-t / TNICKEL)) /
+          (TCOBALT - TNICKEL) * modelgrid[modelgridindex].fni * rho / MNI56;
+
+  double v48_positron_dep = (0.290 * 0.499 * MEV) *
+          (exp(-t / T48V) - exp(-t / T48CR)) /
+          (T48V - T48CR) * modelgrid[modelgridindex].f48cr * rho / MCR48;
 
   //printout("nt_ionization_rate: element: %d, ion %d\n",element,ion);
   //printout("nt_ionization_rate: gammadep: %g, poscobalt %g pos48v %g\n",
-  //  gammadeposition,positroncobalt,positron48v);
+  //  gamma_deposition,co56_positron_dep,v48_positron_dep);
 
   // to get the non-thermal ionization rate we need to divide the energy deposited
   // per unit volume per unit time in the grid cell (sum of terms above)
   // by the total ion number density and the "work per ion pair"
-  return (gammadeposition + positroncobalt + positron48v) /
+  return (gamma_deposition + co56_positron_dep + v48_positron_dep) /
     get_tot_nion(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
 }
 
