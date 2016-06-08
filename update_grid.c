@@ -1060,8 +1060,9 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
           #endif
         }
 
+        //maybe want to add omp ordered here if the modelgrid cells should be output in order
         #ifdef _OPENMP
-        #pragma omp critical
+        #pragma omp critical(estimators_file)
         #endif
         {
           write_to_estimators_file(n,nts);

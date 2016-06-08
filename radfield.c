@@ -334,12 +334,18 @@ void radfield_update_estimators(int modelgridindex, double distance, double e_cm
 
   if (binindex >= 0)
   {
-    #ifdef _OPENMP
-      #pragma omp critical
-    #endif
     {
+      #ifdef _OPENMP
+      #pragma omp atomic
+      #endif
       radfieldbins[modelgridindex][binindex].J_raw += distance * e_cmf;
+      #ifdef _OPENMP
+      #pragma omp atomic
+      #endif
       radfieldbins[modelgridindex][binindex].nuJ_raw += distance * e_cmf * nu_cmf;
+      #ifdef _OPENMP
+      #pragma omp atomic
+      #endif
       radfieldbins[modelgridindex][binindex].contribcount += 1;
     }
   }

@@ -235,7 +235,7 @@ int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int rea
 
   /* increment the number of escaped virtual packet in the given timestep */
   #ifdef _OPENMP
-  #pragma omp critical
+  #pragma omp critical(escapedvpkts)
   #endif
   {
     if (realtype==1) nvpkt_esc1++;
