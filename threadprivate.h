@@ -1,8 +1,12 @@
+#ifndef THREADPRIVATE_H
+#define THREADPRIVATE_H
+
 #include "types.h"
 #include <stdbool.h>
 
 int tid;
 //int histindex;
+bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng;
 
@@ -35,3 +39,5 @@ gsl_rng *rng;
 
 FILE *restrict output_file;
 //short output_file_open;
+
+#endif

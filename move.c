@@ -10,20 +10,21 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
 {
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  const int modelgridindex = cell[cellindex].modelgridindex;
 
   /// Update only non-empty cells
   if (modelgridindex != MMODELGRID)
   {
-    double helper = distance * pkt_ptr->e_cmf;
+    const double helper = distance * pkt_ptr->e_cmf;
     #ifdef _OPENMP
       #pragma omp atomic
     #endif
     J[modelgridindex] += helper;
 
     #ifndef FORCE_LTE
-      double nu = pkt_ptr->nu_cmf;
-      double helper2 = helper / nu;
+      const double nu = pkt_ptr->nu_cmf;
+      const double helper2 = helper / nu;
       //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
       #ifdef _OPENMP
         #pragma omp atomic
@@ -39,11 +40,11 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
       ffheatingestimator[modelgridindex] += helper * kappa_rpkt_cont[tid].ffheating;
       for (int i = 0; i < nbfcontinua_ground; i++)
       {
-        double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+        const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
         if (nu > nu_edge)
         {
-          int element = phixslist[tid].groundcont[i].element;
-          int ion = phixslist[tid].groundcont[i].ion;
+          const int element = phixslist[tid].groundcont[i].element;
+          const int ion = phixslist[tid].groundcont[i].ion;
           /// Cells with zero abundance for a specific element have zero contribution
           /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
           /// the estimators

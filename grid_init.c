@@ -968,7 +968,7 @@ static void density_2d_read(void)
 }
 
 
-static void density_3d_read ()
+static void density_3d_read(void)
 /// Routine for doing a density grid read from a 3-D model.
 {
   rho_sum = 0.0;
@@ -1542,7 +1542,7 @@ static void assign_temperature(void)
   /// at the end of the simulation and write them to the grid.
   else
   {
-    FILE *gridsave_file;
+    FILE *restrict gridsave_file;
     printout("READIN GRID SNAPSHOT\n");
     if ((gridsave_file = fopen("gridsave.dat", "r")) == NULL)
     {

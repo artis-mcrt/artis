@@ -796,7 +796,7 @@ int main(int argc, char** argv)
             {
               /// Reduce the corrphotoionrenorm array.
               printout("nts %d, titer %d: bcast corr photoionrenorm\n",nts,titer);
-              MPI_Reduce(&corrphotoionrenorm, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+              MPI_Reduce(&corrphotoionrenorm, &redhelper, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
                 for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
@@ -809,7 +809,7 @@ int main(int argc, char** argv)
               /// Reduce the gammaestimator array. Only needed to write restart data.
               printout("nts %d, titer %d: bcast gammaestimator\n",nts,titer);
               MPI_Barrier(MPI_COMM_WORLD);
-              MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+              MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
               {
                 for (int i = 0; i < MMODELGRID * nelements * maxion; i++)

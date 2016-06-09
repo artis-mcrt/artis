@@ -224,7 +224,7 @@ static void write_to_estimators_file(int n, int timestep)
     }
 
     #ifndef FORCE_LTE
-      fprintf(estimators_file, "\ncorrphotoionrenorm ");
+      fprintf(estimators_file, "\ncorrphotoionrenorm: ");
       for (int element = 0; element < nelements; element++)
       {
         const int nions = get_nions(element);
@@ -233,7 +233,7 @@ static void write_to_estimators_file(int n, int timestep)
           fprintf(estimators_file,"%g ",corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]);
         }
       }
-      fprintf(estimators_file, "\ngammaestimator ");
+      fprintf(estimators_file, "\ngammaestimator: ");
       for (int element = 0; element < nelements; element++)
       {
         const int nions = get_nions(element);
@@ -1163,9 +1163,9 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   neutral_flag = false;
 
   /// Get temperatures
-  double T_R = get_TR(modelgridindex);
-  double T_e = get_Te(modelgridindex);
-  double W = get_W(modelgridindex);
+  const double T_R = get_TR(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
+  const double W = get_W(modelgridindex);
 
   //int mgi = cell[cellnumber].modelgridindex;
 
@@ -1396,10 +1396,10 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
 
 double calculate_electron_densities(int modelgridindex)
 // Determines the free and total electron number densities
-// for a given cell and saves them
+// for a given cell and stores them
 {
-  double nne_tot = 0.; //total electron density
-  double nne = 0.; //free electron density
+  double nne_tot = 0.; // total electron density
+  double nne = 0.;     // free electron density
 
   for (int element = 0; element < nelements; element++)
   {
@@ -1558,7 +1558,7 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 
 void write_grid_restart_data(void)
 {
-  FILE *gridsave_file;
+  FILE *restrict gridsave_file;
   if ((gridsave_file = fopen("gridsave.dat", "w")) == NULL)
   {
     printout("Cannot open gridsave.dat.\n");

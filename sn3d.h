@@ -5,21 +5,6 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-//#define MPI_ON
-#ifdef MPI_ON
-  #include "mpi.h"
-#endif
-
-//#define _OPENMP
-#ifdef _OPENMP
-  #include "omp.h"
-#else
-  typedef int omp_int_t;
-  inline omp_int_t omp_get_thread_num() { return 0; }
-  inline omp_int_t omp_get_max_threads() { return 1; }
-  inline omp_int_t omp_get_num_threads() { return 1; }
-#endif
-
 #define DEBUG_ON
 //#define DO_TITER
 //#define FORCE_LTE
@@ -35,14 +20,15 @@
   #define NLTE_POPS_ON
 #endif
 
-#define USE_MULTIBIN_RADFIELD_MODEL false // if using this, should avoid look up tables below
+#define USE_MULTIBIN_RADFIELD_MODEL true // if using this, should avoid look up tables below
                                          // (since they assume J_nu is Planck function)
-#define NO_LUT_PHOTOION false // dynamically calculate photoionization
+#define FIRST_NLTE_RADFIELD_TIMESTEP 14
+#define NO_LUT_PHOTOION true // dynamically calculate photoionization
                              // rates for the current radiation field
                              // instead of interpolating precalculated
                              // values assuming a blackbody radiation field
 
-#define NO_LUT_BFHEATING false
+#define NO_LUT_BFHEATING true
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
@@ -55,6 +41,20 @@
 // Polarisation for virtual packets
 //#define ESTIMATORS_ON
 
+
+//#define MPI_ON
+#ifdef MPI_ON
+  #include "mpi.h"
+#endif
+
+//#define _OPENMP
+#ifdef _OPENMP
+  #include "omp.h"
+#else
+  typedef int omp_int_t;
+  inline omp_int_t omp_get_thread_num(void) { return 0; }
+  inline omp_int_t omp_get_num_threads(void) { return 1; }
+#endif
 
 
 // ----------------------------------------------------------------
@@ -569,7 +569,7 @@ short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage 
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid
                                                    /// routine and their doughters.
 
-bool use_cellhist;
+extern bool use_cellhist;
 
 #ifdef _OPENMP
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)

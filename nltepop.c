@@ -568,7 +568,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
   int ionisinglevels, ndowntrans, nuptrans, i;
   double statweight, epsilon_current;
-  double R, C, Y;
+  double R, C;
   double t_mid;
   double epsilon_target, epsilon_trans;
   int lineindex;
@@ -753,7 +753,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
         #if NT_ON == true
           if (ion < get_nions(element)-1)
           {
-            Y = nt_ionization_rate(modelgridindex,element,ion);
+            double Y = nt_ionization_rate(modelgridindex,element,ion);
 
             if ((level == 0) || (is_nlte(element, ion, level) == 1))
             {

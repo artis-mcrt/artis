@@ -9,6 +9,7 @@
 
 extern inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
 extern inline double ionstagepop(int modelgridindex, int element, int ion);
+extern inline double get_levelpop(int modelgridindex, int element, int ion, int level);
 
 double nne_solution_f(double x, void *restrict paras)
 /// For libgsl bracketing type solver

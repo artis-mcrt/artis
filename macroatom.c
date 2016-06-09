@@ -27,7 +27,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
 
   //printout("[debug] do MA\n");
 
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  int modelgridindex = cell[cellindex].modelgridindex;
 
   /// calculate occupation number for active MA level ////////////////////////////////////
   /// general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
@@ -243,8 +244,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         printout("[debug]    internal_up_same %g, internal_up_higher %g\n",internal_up_same,internal_up_higher);
         printout("[debug]    zrand %g\n",zrand);
         printout("[debug]    jumps %d, jump %d\n",jumps,jump);
-        printout("[debug]    pkt_ptr->number %d, pkt_ptr->where %d\n",pkt_ptr->number,pkt_ptr->where);
-        printout("[debug]    groundlevelpop of current ion in current cell %g\n",modelgrid[cell[pkt_ptr->where].modelgridindex].composition[element].groundlevelpop[ion]);
+        printout("[debug]    pkt_ptr->number %d, pkt_ptr->where %d\n",pkt_ptr->number,cellindex);
+        printout("[debug]    groundlevelpop of current ion in current cell %g\n",modelgrid[cell[cellindex].modelgridindex].composition[element].groundlevelpop[ion]);
         printout("[debug]    levelpop %g\n",mastate[tid].nnlevel);
 
         R = 0.0;
@@ -1228,7 +1229,8 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
       else
         g = 0.3;
 
-      double sigma_bf = elements[element].ions[ion-1].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion-1,lower,phixstargetindex);
+      const float sigma_bf_all_targets = elements[element].ions[ion-1].levels[lower].photoion_xs[0];
+      const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,ion-1,lower,phixstargetindex);
 
       double C = n_u * nne * nne * get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans) *
                  1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
@@ -1287,8 +1289,9 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
 
   double fac1 = epsilon_trans / KB / T_e;
 
-  double sigma_bf = elements[element].ions[ion].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion,lower,phixstargetindex);
-  double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
+  const float sigma_bf_all_targets = elements[element].ions[ion].levels[lower].photoion_xs[0];
+  const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,ion,lower,phixstargetindex);
+  const double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
   #ifdef DEBUG_ON
     if (debuglevel == 777)

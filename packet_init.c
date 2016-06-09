@@ -3,7 +3,7 @@
 #include "packet_init.h"
 #include "vectors.h"
 
-static void place_pellet(const struct grid *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset)
+static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
   /// First choose a position for the pellet. In the cell.
@@ -18,7 +18,7 @@ static void place_pellet(const struct grid *restrict grid_ptr, double e0, int m,
   zrand = gsl_rng_uniform_pos(rng);
   pkt[n].pos[2] = grid_ptr->pos_init[2] + (zrand * wid_init);
 
-  /*first choose which of the decay chains to sample*/
+  // first choose which of the decay chains to sample
   double prob_chain[3];
   prob_chain[0] = fni(grid_ptr) * (ENICKEL + ECOBALT) / MNI56;
   prob_chain[1] = f52fe(grid_ptr) * (E52FE + E52MN) / MFE52;
@@ -136,7 +136,8 @@ static void setup_packets(int pktnumberoffset)
     const CELL *grid_ptr = &cell[m];
     cont[m] = norm;
     //printf("%g %g %g\n", (fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
-    norm += get_rhoinit(grid_ptr->modelgridindex) * vol_init() * //vol_init(grid_ptr)
+    const int mgi = grid_ptr->modelgridindex;
+    norm += get_rhoinit(mgi) * vol_init() * //vol_init(grid_ptr)
               ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
                +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
                +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
@@ -305,8 +306,8 @@ double fni(const CELL *restrict grid_ptr)
     dcen[1] = grid_ptr->pos_init[1] + (0.5 * wid_init);
     dcen[2] = grid_ptr->pos_init[2] + (0.5 * wid_init);
 
-    double r_on_rmax = vec_len(dcen) / rmax;
-    double m_r = pow(r_on_rmax,3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
+    const double r_on_rmax = vec_len(dcen) / rmax;
+    const double m_r = pow(r_on_rmax,3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
 
     if (m_r < 0.5)
       return 1.0;
@@ -340,13 +341,15 @@ double fni(const CELL *restrict grid_ptr)
     {
       fraction = 0.0;
     }*/
-    return get_fni(grid_ptr->modelgridindex);
+    const int mgi = grid_ptr->modelgridindex;
+    return get_fni(mgi);
   }
   else if (model_type == RHO_3D_READ)
   {
     /* This is a 3-D model read in. Just return input value. */
     //fraction = grid_ptr->f_ni;
-    return get_fni(grid_ptr->modelgridindex);
+    const int mgi = grid_ptr->modelgridindex;
+    return get_fni(mgi);
   }
   else
   {
@@ -367,13 +370,15 @@ double f52fe(const CELL *restrict grid_ptr)
   }
   else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
   {
-    return get_f52fe(grid_ptr->modelgridindex);
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f52fe(mgi);
   }
   else if (model_type == RHO_3D_READ)
   {
     /* This is a 3-D model read in. Just return input value. */
     //fraction = grid_ptr->f_ni;
-    return get_f52fe(grid_ptr->modelgridindex);
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f52fe(mgi);
   }
   else
   {
@@ -394,13 +399,15 @@ double f48cr(const CELL *restrict grid_ptr)
   }
   else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
   {
-    return get_f48cr(grid_ptr->modelgridindex);
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f48cr(mgi);
   }
   else if (model_type == RHO_3D_READ)
   {
     /* This is a 3-D model read in. Just return input value. */
     //fraction = grid_ptr->f_ni;
-    return get_f48cr(grid_ptr->modelgridindex);
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f48cr(mgi);
   }
   else
   {

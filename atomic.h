@@ -146,7 +146,7 @@ inline int get_phixsupperlevel(int element, int ion, int level, int phixstargeti
     if ((phixstargetindex < 0) || (phixstargetindex > get_nphixstargets(element,ion,level)-1))
     {
       printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex");
-      printout("arguments: element %d, ion %d, level %d phixstargetindex %d, nphixstargets %d\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
+      //printout("arguments: element %d, ion %d, level %d phixstargetindex %d, nphixstargets %d\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
       abort();
     }
   #endif
@@ -162,7 +162,7 @@ inline double get_phixsprobability(int element, int ion, int level, int phixstar
     if ((phixstargetindex < 0) || (phixstargetindex >= get_nphixstargets(element,ion,level)))
     {
       printout("[fatal]   get_phixsprobability called with invalid phixstargetindex");
-      printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
+      //printout("arguments: element %d, ion %d, level %d phixstargetindex %g, nphixstargets %g\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
       abort();
     }
   #endif
@@ -229,7 +229,7 @@ inline double photoionization_crosssection(double nu_edge, double nu)
 ///        - BE AWARE: the elements of the global structure variable mastate
 ///                    must fit to the bound state of the desired bf-continuum!!!
 {
-  double sigma_bf;
+  float sigma_bf;
 
   const int element = mastate[tid].element;
   const int ion = mastate[tid].ion;
@@ -247,10 +247,10 @@ inline double photoionization_crosssection(double nu_edge, double nu)
     if (i < 0)
     {
       sigma_bf = 0.0;
-      printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
-      printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
-      printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
-      printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
+      //printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
+      //printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
+      //printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
+      //printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
       //abort();
     }
     else if (i < NPHIXSPOINTS)
@@ -273,9 +273,10 @@ inline double photoionization_crosssection(double nu_edge, double nu)
   #ifdef DEBUG_ON
     if (sigma_bf < 0)
     {
-      printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
-      printout("[warning]   nu=%g,  nu_edge=%g, xs@edge=%g, xs@maxfreq\n",nu,nu_edge,elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
-      printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
+      //printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
+      //printout("[warning]   nu=%g,  nu_edge=%g\n",nu,nu_edge);
+      //printout("[warning]   xs@edge=%g, xs@maxfreq\n",elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
+      //printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
     }
   #endif
 

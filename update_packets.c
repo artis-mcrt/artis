@@ -10,10 +10,10 @@
 static int compare_packets_bymodelgriddensity(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the phixslist by descending cell density.
 {
-  const PKT *restrict a1 = (PKT *)(p1);
-  const PKT *restrict a2 = (PKT *)(p2);
+  const int a1_where = ((PKT *)p1)->where;
+  const int a2_where = ((PKT *)p2)->where;
 
-  double rho_diff = modelgrid[cell[a1->where].modelgridindex].rho - modelgrid[cell[a2->where].modelgridindex].rho;
+  double rho_diff = modelgrid[cell[a1_where].modelgridindex].rho - modelgrid[cell[a2_where].modelgridindex].rho;
   if (rho_diff < 0)
     return 1;
   else if (rho_diff > 0)
@@ -84,7 +84,8 @@ void update_packets(int nts)
 
       if (debuglevel == 2) printout("[debug] update_packets: updating packet %d for timestep %d __________________________\n",n,nts);
 
-      int mgi = cell[pkt_ptr->where].modelgridindex;
+      const int cellindex = pkt_ptr->where;
+      int mgi = cell[cellindex].modelgridindex;
       /// for non empty cells update the global available level populations and cooling terms
       if (mgi != MMODELGRID)
       {

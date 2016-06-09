@@ -2565,7 +2565,9 @@ void read_parameterfile(int rank)
     printout("bfheating coefficients are calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
 
   if (USE_MULTIBIN_RADFIELD_MODEL)
-    printout("The multibin radiation field model is being used instead of the whole-spectrum fit.\n");
+    printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n",FIRST_NLTE_RADFIELD_TIMESTEP);
+  else
+  printout("The radiation field model is a whole-spectrum fit to a diluted blackbody.\n");
 
   /// Set up initial grey approximation?
   fscanf(input_file, "%lg %d", &cell_is_optically_thick, &n_grey_timesteps);

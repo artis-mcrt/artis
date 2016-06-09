@@ -108,10 +108,11 @@ motion and the local velocity vectors to the cmf.*/
     }
     else
     {
+      const int cellindex = pkt_ptr->where;
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
-      compton_emiss[cell[pkt_ptr->where].modelgridindex][lindex - emiss_offset] += emiss_cont;
+      compton_emiss[cell[cellindex].modelgridindex][lindex - emiss_offset] += emiss_cont;
     }
 
   }
@@ -138,10 +139,11 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
      This will all be done later
   */
 
+  const int cellindex = pkt_ptr->where;
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
-  compton_emiss[cell[pkt_ptr->where].modelgridindex][emiss_max - 1] += 1.e-20 * emiss_cont;
+  compton_emiss[cell[cellindex].modelgridindex][emiss_max - 1] += 1.e-20 * emiss_cont;
 
   //  printf("emiss_cont %g\n", emiss_cont);
 

@@ -10,12 +10,10 @@
 extern inline double radfield2(double nu, double T, double W);
 
 //#const int RADFIELDBINCOUNT = 1000;
-#define RADFIELDBINCOUNT 32
+#define RADFIELDBINCOUNT 64
 
-#define FIRST_TIMESTEP_NLTE_RADFIELD 14
-
-#define nu_lower_first_initial (CLIGHT / (10000e-8))
-#define nu_upper_last_initial (CLIGHT / (1500e-8))
+#define nu_lower_first_initial (CLIGHT / (15000e-8))
+#define nu_upper_last_initial (CLIGHT / (250e-8))
 
 static double nu_lower_first = nu_lower_first_initial;
 
@@ -98,34 +96,29 @@ void radfield_init(void)
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
         //const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
-        radfieldbins[modelgridindex][binindex].nu_upper = prev_nu_upper + delta_nu;
-        prev_nu_upper = radfieldbins[modelgridindex][binindex].nu_upper; // importantly, the below part doesn't change this
+        radfieldbins[modelgridindex][binindex].nu_upper = nu_lower_first_initial + (binindex + 1) * delta_nu;
 
         // Align the bin edges with bound-free edges
         if (binindex < RADFIELDBINCOUNT - 1)
         {
-          /*for (int i = 0; i < nbfcontinua_ground; i++)
+          for (int i = 0; i < nbfcontinua_ground; i++)
           {
             double nu_edge = phixslist[tid].groundcont[i].nu_edge;
             //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
-            if ((nu_edge < nu_lower_first) || (nu_edge > nu_upper_last))
-            {
-              printout("MISSED bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
-            }
-            if ((nu_edge > prev_nu_upper) &&
-                (nu_edge < radfieldbins[modelgridindex][binindex].nu_upper))
+            if (binindex == 0 && ((nu_edge < nu_lower_first) || (nu_edge > nu_upper_last_initial)))
+              printout("MISSED bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first_initial,nu_upper_last_initial);
+
+            if ((nu_edge > prev_nu_upper) &&  (nu_edge < radfieldbins[modelgridindex][binindex].nu_upper))
               radfieldbins[modelgridindex][binindex].nu_upper = nu_edge;
-          }*/
-        }
-        else
-        {
-          radfieldbins[modelgridindex][binindex].nu_upper = nu_upper_last_initial;
+          }
         }
 
         radfieldbins[modelgridindex][binindex].W = -1.0;
         radfieldbins[modelgridindex][binindex].T_R = -1.0;
         //radfieldbins[modelgridindex][binindex].fit_type = FIT_CONSTANT;
         radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTED_BLACKBODY;
+
+        prev_nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
       }
     }
     radfield_initialized = true;
@@ -137,13 +130,10 @@ static double radfield_get_bin_J(int modelgridindex, int binindex)
 {
   if (J_normfactor[modelgridindex] <= 0.0)
   {
-    printout(
-      "radfield: Fatal error: radfield_get_bin_J called before J_normfactor set for modelgridindex %d",
-      modelgridindex);
+    printout("radfield: Fatal error: radfield_get_bin_J called before J_normfactor set for modelgridindex %d",modelgridindex);
     abort();
   }
-  return radfieldbins[modelgridindex][binindex].J_raw *
-         J_normfactor[modelgridindex];
+  return radfieldbins[modelgridindex][binindex].J_raw * J_normfactor[modelgridindex];
 }
 
 
@@ -226,6 +216,10 @@ int radfield_select_bin(int modelgridindex, double nu)
 
 void radfield_write_to_file(int modelgridindex, int timestep)
 {
+# ifdef _OPENMP
+# pragma omp critical (radfield_out_file)
+  {
+# endif
   if (!radfield_initialized)
   {
     printout("Call to write_to_radfield_file before init_radfield");
@@ -272,6 +266,9 @@ void radfield_write_to_file(int modelgridindex, int timestep)
             timestep,modelgridindex,binindex,nu_lower,nu_upper,nuJ_out,J_out,J_nu_bar,contribcount,T_R,W);
   }
   fflush(radfieldfile);
+# ifdef _OPENMP
+  }
+# endif
 }
 
 
@@ -370,7 +367,7 @@ double radfield(double nu, int modelgridindex)
     abort();
   }
   #endif
-  if (USE_MULTIBIN_RADFIELD_MODEL && (nts_global > FIRST_TIMESTEP_NLTE_RADFIELD-1)) // && radfieldbins[modelgridindex] != NULL
+  if (USE_MULTIBIN_RADFIELD_MODEL && (nts_global > FIRST_NLTE_RADFIELD_TIMESTEP-1)) // && radfieldbins[modelgridindex] != NULL
   {
     int binindex = radfield_select_bin(modelgridindex,nu);
     if (binindex >= 0)
@@ -380,7 +377,7 @@ double radfield(double nu, int modelgridindex)
       {
         if (bin->fit_type == FIT_DILUTED_BLACKBODY)
         {
-          if (bin->T_R > 0.)
+          if (bin->T_R >= 0.)
           {
             const double J_nu = radfield2(nu, bin->T_R, bin->W);
             /*if (fabs(J_nu / J_nu_fullspec - 1.0) > 0.5)
@@ -392,7 +389,7 @@ double radfield(double nu, int modelgridindex)
           }
           else
           {
-            return 0.;
+          //  return 0.;
           //  printout("WARNING: Radfield modelgridindex %d binindex %d has W %g T_R=%g<=0, using W %g T_R %g nu %g\n",
           //           modelgridindex, binindex, bin->W, bin->T_R, W_fullspec, T_R_fullspec, nu);
           }
@@ -402,13 +399,13 @@ double radfield(double nu, int modelgridindex)
           return bin->W;
         }
       }
-      else
+      else //W < 0
       {
         //printout("WARNING: Radfield modelgridindex %d binindex %d has W_bin=%g<0, using W %g T_R %g nu %g\n",
         //         modelgridindex, binindex, W_bin, W_fullspec, T_R_fullspec, nu);
       }
     }
-    else
+    else //binindex < 0
     {
       //printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
       //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
@@ -443,10 +440,11 @@ static double gsl_integrand_planck(double nu, void *restrict paras)
 
 static double planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor)
 {
-  double integral = 0.0;
+  double integral = 0.;
 
-  double error = 0.0;
-  double integratoraccuracy = 1e-10;
+  double error = 0.;
+  const double epsrel = 1e-10;
+  const double epsabs = 0.;
 
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
 
@@ -459,7 +457,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   F_planck.params = &intparas;
 
   gsl_error_handler_t *gsl_error_handler = gsl_set_error_handler_off();
-  int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, 0., integratoraccuracy, 65536, GSL_INTEG_GAUSS61, w, &integral, &error);
+  int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, 65536, GSL_INTEG_GAUSS61, w, &integral, &error);
   if (status != 0)
   {
     printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,GSL_FAILURE,integral);
@@ -475,7 +473,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
 
 static double planck_integral_analytic(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor)
 {
-  double integral = 0.0;
+  double integral = 0.;
 
   if (prefactor == TIMES_NU)
   {
@@ -559,26 +557,15 @@ static double delta_nu_bar(double T_R, void *restrict paras)
 
 static double find_T_R(int modelgridindex, int binindex)
 {
-  double fractional_accuracy = 1e-4;
-  int maxit = 100;
   double T_R = 0.0;
-
-  ///one dimensional gsl root solver, bracketing type
-  const gsl_root_fsolver_type *solvertype;
-  gsl_root_fsolver *T_R_solver;
-  solvertype = gsl_root_fsolver_brent;
 
   gsl_T_R_solver_paras paras;
   paras.modelgridindex = modelgridindex;
   paras.binindex = binindex;
 
-  gsl_function find_T_R_f;
-  find_T_R_f.function = &delta_nu_bar;
-  find_T_R_f.params = &paras;
-
   /// Check whether the equation has a root in [T_min,T_max]
-  double delta_nu_bar_min = delta_nu_bar(T_R_min,find_T_R_f.params);
-  double delta_nu_bar_max = delta_nu_bar(T_R_max,find_T_R_f.params);
+  double delta_nu_bar_min = delta_nu_bar(T_R_min,&paras);
+  double delta_nu_bar_max = delta_nu_bar(T_R_max,&paras);
 
   printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
            binindex, delta_nu_bar_min,delta_nu_bar_max);
@@ -588,10 +575,18 @@ static double find_T_R(int modelgridindex, int binindex)
 
   if (delta_nu_bar_min * delta_nu_bar_max < 0)
   {
-    /// If it has, then solve for the root T_R
+    /// If there is a root in the interval, solve for T_R
 
-    /// now start so iterate on solution
-    T_R_solver = gsl_root_fsolver_alloc(solvertype);
+    const double epsrel = 1e-4;
+    const double epsabs = 0.;
+    const int maxit = 100;
+
+    gsl_function find_T_R_f;
+    find_T_R_f.function = &delta_nu_bar;
+    find_T_R_f.params = &paras;
+
+    ///one dimensional gsl root solver, bracketing type
+    gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
     int iteration_num = 0;
     int status = GSL_CONTINUE;
@@ -604,7 +599,8 @@ static double find_T_R(int modelgridindex, int binindex)
 
       double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
       double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
-      status = gsl_root_test_interval(T_R_lower,T_R_upper,0,fractional_accuracy);
+      status = gsl_root_test_interval(T_R_lower,T_R_upper,epsabs,epsrel);
+
       printout("find_T_R: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status %d\n",
                binindex,iteration_num,T_R_lower,T_R_upper,T_R,delta_nu_bar(T_R,&paras),status);
     }
@@ -676,7 +672,8 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
     int contribcount = radfieldbins[modelgridindex][binindex].contribcount;
     if (contribcount > 10)
     {
-      if (radfieldbins[modelgridindex][binindex].fit_type == FIT_DILUTED_BLACKBODY)
+      enum_bin_fit_type bin_fit_type = radfieldbins[modelgridindex][binindex].fit_type;
+      if (bin_fit_type == FIT_DILUTED_BLACKBODY)
       {
         T_R_bin = find_T_R(modelgridindex, binindex);
 
@@ -691,22 +688,37 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
           W_bin = J_bin / planck_integral_result;
           if (W_bin > 1e2)
           {
-            printout("W still very high, W=%g. Continuing...\n",W_bin);
+            printout("W still very high, W=%g. Zeroing bin...\n",W_bin);
             T_R_bin = -99.0;
             W_bin = 0.;
           }
+          else
+          {
+            printout("new W is %g. Much better :)\n",W_bin);
+          }
         }
       }
-      else //if (radfieldbins[modelgridindex][binindex].fit_type == FIT_CONSTANT)
+      else if (bin_fit_type == FIT_CONSTANT)
       {
-        T_R_bin = -1;
+        T_R_bin = -1.;
         W_bin = J_bin / (nu_upper - nu_lower);
+      }
+      else
+      {
+        printout("radfield_fit_parameters: unknown fit type %d for bin %d\n",bin_fit_type,binindex);
+        T_R_bin = -1.;
+        W_bin = -1.;
       }
     }
     else if (contribcount == 0)
     {
       T_R_bin = 0.;
       W_bin = 0.;
+    }
+    else
+    {
+      T_R_bin = -1;
+      W_bin = -1;
     }
     radfieldbins[modelgridindex][binindex].T_R = T_R_bin;
     radfieldbins[modelgridindex][binindex].W = W_bin;

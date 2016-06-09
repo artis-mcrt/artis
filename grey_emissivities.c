@@ -52,7 +52,8 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
   dummy.where = pkt_ptr->where;
   dummy.last_cross = NONE;*/
 
-  int mgi = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  int mgi = cell[cellindex].modelgridindex;
 
   if (dist > 0)
   {
@@ -102,7 +103,8 @@ int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
   dummy.where = pkt_ptr->where;
   dummy.last_cross = NONE;*/
 
-  int mgi = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  const int mgi = cell[cellindex].modelgridindex;
 
   if (dist > 0.0)
   {

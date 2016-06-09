@@ -142,7 +142,8 @@ int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int rea
 
   //printout("next_trans = %d \t nu_cmf = %g \n",dummy_ptr->next_trans,dummy_ptr->nu_cmf);
 
-  mgi = cell[dummy_ptr->where].modelgridindex;
+  const int cellindex = dummy_ptr->where;
+  mgi = cell[cellindex].modelgridindex;
 
   while (!end_packet) {
 
@@ -222,7 +223,8 @@ int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int rea
       //printout("Completed change vpkt cell\n");
 
       //printout("dummy->nu_cmf = %g \n",dummy_ptr->nu_cmf);
-      mgi = cell[dummy_ptr->where].modelgridindex;
+      const int cellindex = dummy_ptr->where;
+      mgi = cell[cellindex].modelgridindex;
       // break if you reach an empty cell
       if (mgi == MMODELGRID) break;
 

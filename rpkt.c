@@ -57,8 +57,12 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
     int lower = mastate[tid].activatedfromlevel;
     #ifdef DEBUG_ON
       //if (debuglevel == 2) printout("[debug] get_event: propagationcounter %d\n",propagationcounter);
-      if (debuglevel == 2) printout("[debug] get_event:   dummypkt_ptr->nu_cmf %g, dummypkt_ptr->nu_rf %g, dummypkt_ptr->where %d\n", dummypkt_ptr->nu_cmf,dummypkt_ptr->nu_rf,dummypkt_ptr->where);
-      if (debuglevel == 2) printout("[debug] get_event:   closest_transition %g, pkt_ptr->next_trans %d, nu_next_trans %g\n",nu_trans,dummypkt_ptr->next_trans,linelist[dummypkt_ptr->next_trans].nu);
+      if (debuglevel == 2)
+      {
+        const int next_trans = dummypkt_ptr->next_trans;
+        printout("[debug] get_event:   dummypkt_ptr->nu_cmf %g, dummypkt_ptr->nu_rf %g, dummypkt_ptr->where %d\n", dummypkt_ptr->nu_cmf,dummypkt_ptr->nu_rf,dummypkt_ptr->where);
+        printout("[debug] get_event:   closest_transition %g, pkt_ptr->next_trans %d, nu_next_trans %g\n",nu_trans,next_trans,linelist[next_trans].nu);
+      }
     #endif
 
     if (nu_trans > 0)
@@ -144,14 +148,15 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
           move_pkt(dummypkt_ptr,ldist,t_current);
 
           #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] get_event:         dummypkt_ptr->nu_cmf %g, nu(dummypkt_ptr->next_trans=%d) %g, nu(dummypkt_ptr->next_trans-1=%d) %g\n", dummypkt_ptr->nu_cmf, dummypkt_ptr->next_trans, linelist[dummypkt_ptr->next_trans].nu, dummypkt_ptr->next_trans-1, linelist[dummypkt_ptr->next_trans-1].nu);
-            if (debuglevel == 2) printout("[debug] get_event:         (dummypkt_ptr->nu_cmf - nu(dummypkt_ptr->next_trans-1))/dummypkt_ptr->nu_cmf %g\n", (dummypkt_ptr->nu_cmf-linelist[dummypkt_ptr->next_trans-1].nu)/dummypkt_ptr->nu_cmf);
-
             if (debuglevel == 2)
             {
-              if (dummypkt_ptr->nu_cmf >= linelist[dummypkt_ptr->next_trans].nu && dummypkt_ptr->nu_cmf < linelist[dummypkt_ptr->next_trans-1].nu)
+              const int next_trans = dummypkt_ptr->next_trans;
+              printout("[debug] get_event:         dummypkt_ptr->nu_cmf %g, nu(dummypkt_ptr->next_trans=%d) %g, nu(dummypkt_ptr->next_trans-1=%d) %g\n", dummypkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu, next_trans-1, linelist[next_trans-1].nu);
+              printout("[debug] get_event:         (dummypkt_ptr->nu_cmf - nu(dummypkt_ptr->next_trans-1))/dummypkt_ptr->nu_cmf %g\n", (dummypkt_ptr->nu_cmf-linelist[next_trans-1].nu)/dummypkt_ptr->nu_cmf);
+
+              if (dummypkt_ptr->nu_cmf >= linelist[next_trans].nu && dummypkt_ptr->nu_cmf < linelist[next_trans-1].nu)
                 printout("[debug] get_event:           nu(next_trans-1) > nu_cmf >= nu(next_trans)\n");
-              else if (dummypkt_ptr->nu_cmf < linelist[dummypkt_ptr->next_trans].nu)
+              else if (dummypkt_ptr->nu_cmf < linelist[next_trans].nu)
                 printout("[debug] get_event:           nu_cmf < nu(next_trans)\n");
               else
                 printout("[debug] get_event:           nu_cmf >= nu(next_trans-1)\n");
@@ -165,7 +170,9 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
             if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
           #endif
           edist = dist+ldist;
-          if (edist > abort_dist) dummypkt_ptr->next_trans -= 1;
+          if (edist > abort_dist)
+            dummypkt_ptr->next_trans = dummypkt_ptr->next_trans - 1;
+
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
           /// the line and its parameters were already selected by closest_transition!
           endloop = 1;
@@ -248,7 +255,8 @@ static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curren
 
   //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
 
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  int modelgridindex = cell[cellindex].modelgridindex;
 
   //double nne = get_nne(modelgridindex);
   //double T_e = get_Te(modelgridindex);
@@ -456,7 +464,8 @@ static void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
 double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
-  int mgi = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  int mgi = cell[cellindex].modelgridindex;
 
   double t_current = t1; ///this will keep track of time in the calculation
   //printout("[debug] r-pkt propagation init\n");
@@ -475,7 +484,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
     #ifdef DEBUG_ON
       if (pkt_ptr->next_trans > 0)
       {
-        if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
+        //if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
         if (debuglevel == 2) printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n", (pkt_ptr->nu_cmf-linelist[pkt_ptr->next_trans-1].nu)/pkt_ptr->nu_cmf);
       }
     #endif
@@ -496,7 +505,8 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
     if (sdist == 0)
     {
       change_cell(pkt_ptr, snext, &end_packet, t_current);
-      mgi = cell[pkt_ptr->where].modelgridindex;
+      const int cellindex = pkt_ptr->where;
+      mgi = cell[cellindex].modelgridindex;
     }
     else
     {
@@ -508,12 +518,13 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
 
       if (sdist < 1)
       {
+        const int cellindex = pkt_ptr->where;
         printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-        printout("[warning] r_pkt: cell %d snext %d\n", pkt_ptr->where, snext);
+        printout("[warning] r_pkt: cell %d snext %d\n", cellindex, snext);
         printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
         printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-        printout("[warning] r_pkt: cell corner %g %g %g\n",cell[pkt_ptr->where].pos_init[0]*t_current/tmin, cell[pkt_ptr->where].pos_init[1]*t_current/tmin,  cell[pkt_ptr->where].pos_init[2]*t_current/tmin);
-        printout("[warning] r_pkt: cell width %g %g %g\n",wid_init*t_current/tmin, wid_init*t_current/tmin,  wid_init*t_current/tmin);
+        printout("[warning] r_pkt: cell corner %g %g %g\n",cell[cellindex].pos_init[0]*t_current/tmin, cell[cellindex].pos_init[1]*t_current/tmin,  cell[cellindex].pos_init[2]*t_current/tmin);
+        printout("[warning] r_pkt: cell width %g %g %g\n",wid_init*t_current/tmin, wid_init*t_current/tmin, wid_init*t_current/tmin);
         //abort();
       }
       if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
@@ -577,8 +588,9 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
       {
         /// get distance to the next physical event (continuum or bound-bound)
         edist = get_event(mgi,pkt_ptr, &rpkt_eventtype, t_current, tau_next, min(tdist,sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        const int next_trans = pkt_ptr->next_trans;
         #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu);
+          if (debuglevel == 2) printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
         #endif
       }
       if (edist < 0)
@@ -612,7 +624,8 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
         if (snext != pkt_ptr->where)
         {
           change_cell(pkt_ptr, snext, &end_packet, t_current);
-          mgi = cell[pkt_ptr->where].modelgridindex;
+          const int cellindex = pkt_ptr->where;
+          mgi = cell[cellindex].modelgridindex;
         }
         #ifdef DEBUG_ON
           /** New cell so reset the scat_counter */
@@ -851,7 +864,8 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
   /// Finally we want to put in the rest frame energy and frequency. And record
   /// that it's now a r-pkt.
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
+  const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
+  pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
 
   #ifdef DEBUG_ON
     if (pkt_ptr->e_cmf >1e50)
@@ -860,19 +874,18 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
       abort();
     }
   #endif
-  pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
+  pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
-  /**Rest polarization information */
-  pkt_ptr->stokes_qu[0]=pkt_ptr->stokes_qu[1]=0.0;
-  dummy_dir[0]=dummy_dir[1]=0.0;
-  dummy_dir[2]=1.0;
+  // Reset polarization information
+  pkt_ptr->stokes_qu[0] = pkt_ptr->stokes_qu[1] = 0.0;
+  dummy_dir[0] = dummy_dir[1] = 0.0;
+  dummy_dir[2] = 1.0;
   cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
   if ((dot(pkt_ptr->pol_dir,pkt_ptr->pol_dir)) < 1.e-8)
   {
-    dummy_dir[0]=dummy_dir[2]=0.0;
-    dummy_dir[1]=1.0;
+    dummy_dir[0] = dummy_dir[2]=0.0;
+    dummy_dir[1] = 1.0;
     cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
-
   }
 
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
@@ -896,13 +909,13 @@ double closest_transition_empty(PKT *restrict pkt_ptr)
   /// no line interaction is possible: return negative value as a flag
   if (pkt_ptr->nu_cmf < linelist[right].nu)
   {
-    pkt_ptr->next_trans   = nlines+1;  ///helper variable to overcome numerical problems after line scattering
+    pkt_ptr->next_trans = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
     return -1;
   }
   if (left > right)
   {
     //printout("[debug] pp should have no line interaction anymore\n");
-    pkt_ptr->next_trans   = nlines+1;  ///helper variable to overcome numerical problems after line scattering
+    pkt_ptr->next_trans = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
     return -1;
   }
 
@@ -922,8 +935,8 @@ double closest_transition_empty(PKT *restrict pkt_ptr)
     /// to lower frequencies
 
     int middle = 1;
-    while (left <= right)  ///must be a "<=" to obtain proper search results!!!
-                          ///access to negative array indices is prevented by the upper check
+    while (left <= right)  // must be a "<=" to obtain proper search results!!!
+                           // access to negative array indices is prevented by the upper check
     {
       middle = left + ((right-left) / 2);
 
@@ -943,7 +956,7 @@ double closest_transition_empty(PKT *restrict pkt_ptr)
   /// next transition for this packet. To save memory it is stored
   /// to the macro atoms state variables. This has no influence until
   /// the macro atom becomes activated by rpkt_event.
-  double nu_trans = linelist[match].nu;
+  const double nu_trans = linelist[match].nu;
   //mastate[tid].element = linelist[match].elementindex;
   //mastate[tid].ion     = linelist[match].ionindex;
   //mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
@@ -968,7 +981,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
   double kappa_bf = 0.;
   double kappa_ffheating = 0.;
 
-  const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  const int modelgridindex = cell[cellindex].modelgridindex;
 
   if (do_r_lc)
   {
@@ -1181,7 +1195,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
     /// Now need to convert between frames.
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
-    double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
+    const double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
     sigma *= dopplerfac;
     kappa_ff *= dopplerfac;
     kappa_bf *= dopplerfac;
@@ -1251,7 +1265,8 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
     double kappa_ff = 0.;
     double kappa_bf = 0.;
 
-    int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+    const int cellindex = pkt_ptr->where;
+    int modelgridindex = cell[cellindex].modelgridindex;
 
     if (do_r_lc)
     {

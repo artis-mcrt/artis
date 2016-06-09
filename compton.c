@@ -39,8 +39,8 @@ double sig_comp(const PKT *pkt_ptr, double t_current)
   }
 
   // Now need to multiply by the electron number density.
-
-  sigma_cmf *= get_nnetot(cell[pkt_ptr->where].modelgridindex);
+  const int cellindex = pkt_ptr->where;
+  sigma_cmf *= get_nnetot(cell[cellindex].modelgridindex);
 
   // Now need to convert between frames.
 

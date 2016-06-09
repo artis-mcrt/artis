@@ -33,9 +33,10 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   const double vz = pkt_ptr->dir[2] * CLIGHT_PROP;
   //printout("boundary.c: vx %g, vy %g, vz %g\n",vx,vy,vz);
 
-  const double cellxmin = cell[pkt_ptr->where].pos_init[0];
-  const double cellymin = cell[pkt_ptr->where].pos_init[1];
-  const double cellzmin = cell[pkt_ptr->where].pos_init[2];
+  const int celindex = pkt_ptr->where;
+  const double cellxmin = cell[celindex].pos_init[0];
+  const double cellymin = cell[celindex].pos_init[1];
+  const double cellzmin = cell[celindex].pos_init[2];
   //printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",cellxmin,cellymin,cellzmin);
 
   const double cellxmax = cellxmin + wid_init;
@@ -194,7 +195,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 1;
     time = tx_plus;
-    if (cell[pkt_ptr->where].xyz[0] == (nxgrid - 1))
+    if (cell[celindex].xyz[0] == (nxgrid - 1))
     {
       *snext = -99;
     }
@@ -215,7 +216,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 2;
     time = tx_minus;
-    if (cell[pkt_ptr->where].xyz[0] == 0)
+    if (cell[celindex].xyz[0] == 0)
     {
       *snext = -99;
     }
@@ -236,7 +237,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 3;
     time = ty_plus;
-    if (cell[pkt_ptr->where].xyz[1] == (nygrid - 1))
+    if (cell[celindex].xyz[1] == (nygrid - 1))
     {
       *snext = -99;
     }
@@ -257,13 +258,13 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 4;
     time = ty_minus;
-    if (cell[pkt_ptr->where].xyz[1] == 0)
+    if (cell[celindex].xyz[1] == 0)
     {
       *snext = -99;
     }
     else
     {
-      *snext = pkt_ptr->where - nxgrid;
+      *snext = celindex - nxgrid;
       pkt_ptr->last_cross = NEG_Y;
     }
   }
@@ -278,7 +279,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 5;
     time = tz_plus;
-    if (cell[pkt_ptr->where].xyz[2] == (nzgrid - 1))
+    if (cell[celindex].xyz[2] == (nzgrid - 1))
     {
       *snext = -99;
     }
@@ -299,13 +300,13 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 6;
     time = tz_minus;
-    if (cell[pkt_ptr->where].xyz[2] == 0)
+    if (cell[celindex].xyz[2] == 0)
     {
       *snext = -99;
     }
     else
     {
-      *snext = pkt_ptr->where - (nxgrid*nygrid);
+      *snext = celindex - (nxgrid*nygrid);
       pkt_ptr->last_cross = NEG_Z;
     }
   }
@@ -349,7 +350,8 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
   #ifdef DEBUG_ON
     if (debuglevel == 2)
     {
-      printout("[debug] cellnumber %d nne %g\n",pkt_ptr->where,get_nne(pkt_ptr->where));
+      const int cellindex = pkt_ptr->where;
+      printout("[debug] cellnumber %d nne %g\n",cellindex,get_nne(cell[cellindex].modelgridindex));
       printout("[debug] snext %d\n",snext);
     }
   #endif
@@ -368,9 +370,10 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
   {
     /** Just need to update "where".*/
     //int oldpos = pkt_ptr->where;
-    int old_mgi = cell[pkt_ptr->where].modelgridindex;
+    const int cellnum = pkt_ptr->where;
+    int old_mgi = cell[cellnum].modelgridindex;
     pkt_ptr->where = snext;
-    int mgi = cell[pkt_ptr->where].modelgridindex;
+    int mgi = cell[snext].modelgridindex;
     /*
     double cellwidth = t_current/tmin * wid_init;
     if (pkt_ptr->last_cross == POS_X)
@@ -525,8 +528,9 @@ int change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current
   #ifdef DEBUG_ON
     if (debuglevel == 2)
     {
-        printout("[debug] cellnumber %d nne %g\n",pkt_ptr->where,get_nne(pkt_ptr->where));
-        printout("[debug] snext %d\n",snext);
+      const int cellindex = pkt_ptr->where;
+      printout("[debug] cellnumber %d nne %g\n",cellindex,get_nne(cell[cellindex].modelgridindex));
+      printout("[debug] snext %d\n",snext);
     }
   #endif
 

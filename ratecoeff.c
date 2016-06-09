@@ -38,12 +38,6 @@ typedef struct
 } gsl_integral_paras_bfheating;
 
 
-static void gsl_error_handler_bfheating(const char *reason, const char *file, int line, int gsl_errno)
-{
-  printout("bfheating GSL ERROR %d %s %s %s\n",gsl_errno,file,line,reason);
-}
-
-
 static bool read_ratecoeff_dat(void)
 /// Try to readin the precalculated rate coefficients from file
 /// returns true if successful or false otherwise
@@ -519,9 +513,9 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
 }*/
 
 
-static void calculate_rate_coefficients(void)
+static void precalculate_rate_coefficient_integrals(void)
 {
-  const double intaccuracy = 2e-3;        /// Fractional accuracy of the integrator
+  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
 
   /// Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < nelements; element++)
@@ -593,7 +587,7 @@ static void calculate_rate_coefficients(void)
             gsl_function F_alpha_sp;
             F_alpha_sp.function = &alpha_sp_integrand_gsl;
             F_alpha_sp.params = &intparas;
-            gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, w, &alpha_sp, &error);
+            gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 4096, GSL_INTEG_GAUSS61, w, &alpha_sp, &error);
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
 
             //if (iter == 0)
@@ -603,21 +597,21 @@ static void calculate_rate_coefficients(void)
             gsl_function F_gammacorr;
             F_gammacorr.function = &gammacorr_integrand_gsl;
             F_gammacorr.params = &intparas;
-            gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, w, &gammacorr, &error);
+            gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 4096, GSL_INTEG_GAUSS61, w, &gammacorr, &error);
             gammacorr *= FOURPI * phixstargetprobability;
 
             double bfheating_coeff = 0.0;
             gsl_function F_bfheating;
             F_bfheating.function = &approx_bfheating_integrand_gsl;
             F_bfheating.params = &intparas;
-            gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, w, &bfheating_coeff, &error);
+            gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 4096, GSL_INTEG_GAUSS61, w, &bfheating_coeff, &error);
             bfheating_coeff *= FOURPI * phixstargetprobability;
 
             double bfcooling_coeff = 0.0;
             gsl_function F_bfcooling;
             F_bfcooling.function = &bfcooling_integrand_gsl;
             F_bfcooling.params = &intparas;
-            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, w, &bfcooling_coeff, &error);
+            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 4096, GSL_INTEG_GAUSS61, w, &bfcooling_coeff, &error);
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
 
             /// Save the calculated coefficients to memory
@@ -699,7 +693,7 @@ void ratecoefficients_init(void)
 
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   if (!read_ratecoeff_dat())
-    calculate_rate_coefficients();
+    precalculate_rate_coefficient_integrals();
 
   calculate_ion_alpha_sp();
 }
@@ -995,8 +989,8 @@ static double integrand_bfheating_current_radfield(double nu, void *restrict voi
 
 static double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  const double epsrel = 2e-5;
-  const double epsabs = 2e-40;
+  const double epsrel = 1e-5;
+  const double epsabs = 0.;
 
   gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(32768);
 
@@ -1017,12 +1011,11 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   F_gammacorr.params = &intparas;
   double error = 0.0;
 
-  gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler(gsl_error_handler_bfheating);
+  gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler_off();
   int status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS61, w, &gammacorr, &error);
   if (status != 0)
   {
-    printout("corrphotoioncoeff integrator status %d. Integral value %g. Setting to zero.\n",status,gammacorr);
-    gammacorr = 0.;
+    printout("corrphotoioncoeff integrator status %d. Integral value %g.\n",status,gammacorr);
   }
   gsl_set_error_handler(gsl_error_handler_old);
 
@@ -1037,8 +1030,8 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  const double epsrel = 1e-9;
-  const double epsabs = heatingrates[tid].bf * 1e-6;
+  const double epsrel = 1e-4;
+  const double epsabs = 0.;
 
   gsl_integration_workspace *workspace_bfheating = gsl_integration_workspace_alloc(32768);
 

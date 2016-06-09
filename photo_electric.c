@@ -10,7 +10,8 @@ double sig_photo_electric(const PKT *pkt_ptr, double t_current)
   double sigma_cmf;
   /* Start by working out the x-section in the co-moving frame.*/
 
-  int mgi = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  const int mgi = cell[cellindex].modelgridindex;
   double rho = get_rho(mgi);
 
   if (gamma_grey < 0)
@@ -59,8 +60,9 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 
   /* Start by working out the x-section in the co-moving frame.*/
 
-  int mgi = cell[pkt_ptr->where].modelgridindex;
-  double rho = get_rho(mgi);
+  const int cellindex = pkt_ptr->where;
+  const int mgi = cell[cellindex].modelgridindex;
+  const double rho = get_rho(mgi);
 
   if (gamma_grey < 0)
   {

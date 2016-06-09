@@ -20,25 +20,22 @@ typedef struct Te_solution_paras
 static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
-  double nntot;
-
   const int modelgridindex = ((Te_solution_paras *) paras)->cellnumber;
   const double t_current = ((Te_solution_paras *) paras)->t_current;
 
   /// Set new T_e guess for the current cell and update populations
   //cell[cellnumber].T_e = T_e;
   set_Te(modelgridindex,T_e);
-  #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
-    nntot = calculate_electron_densities(modelgridindex);
-  #else
-    nntot = calculate_populations(modelgridindex,0);
-  #endif
+# ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+  const double nntot = calculate_electron_densities(modelgridindex);
+# else
+  const double nntot = calculate_populations(modelgridindex,0);
+# endif
 
   /// Then calculate heating and cooling rates
   calculate_cooling_rates(modelgridindex);
   calculate_heating_rates(modelgridindex);
   /// These heating rates using estimators work only for hydrogen!!!
-  //double ionstagepop(int cellnumber, int element, int ion);
   //double heating_ff,heating_bf;
   //double nne = cell[cellnumber].nne;
   //double W = cell[cellnumber].W;
@@ -67,13 +64,19 @@ static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
   //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL))) - factor/t_current);
 
   /// Adiabatic cooling term
-  double p = nntot * KB * T_e;
-  double dV = 3 * pow(wid_init/tmin,3) * pow(t_current,2);
-  double V = pow(wid_init * t_current / tmin,3);
+  const double p = nntot * KB * T_e;
+  const double dV = 3 * pow(wid_init / tmin,3) * pow(t_current,2);
+  const double V = pow(wid_init * t_current / tmin,3);
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   coolingrates[tid].adiabatic = p * dV / V;
 
-  return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collisional + heatingrates[tid].gamma - coolingrates[tid].adiabatic; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
+  const double total_heating_rate = heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional + heatingrates[tid].gamma;
+  const double total_coolingrate = coolingrates[tid].ff + coolingrates[tid].fb + coolingrates[tid].collisional + coolingrates[tid].adiabatic;
+
+  return total_heating_rate - total_coolingrate; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
+
+  //return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collisional + heatingrates[tid].gamma - coolingrates[tid].adiabatic; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
+
   //return heatingrates[tid].gamma - coolingrates[tid].fb; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
   //return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collbf - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collbf + heatingrates[tid].gamma - coolingrates[tid].adiabatic - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
 }
@@ -158,7 +161,7 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
     int iter2 = 0;
     double fractional_accuracy = 1e-2;
-    int maxit = 100;
+    const int maxit = 100;
     int status;
     do
     {

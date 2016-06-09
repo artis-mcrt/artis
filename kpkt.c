@@ -451,7 +451,8 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   //double nne = cell[pkt_ptr->where].nne ;
-  double T_e = get_Te(cell[pkt_ptr->where].modelgridindex);
+  int cellindex = pkt_ptr->where;
+  double T_e = get_Te(cell[cellindex].modelgridindex);
   double t_current = t1;
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
@@ -464,7 +465,8 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
   emitt_rpkt(pkt_ptr,t_current);
   if (debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-  if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick != 1)
+  cellindex = pkt_ptr->where;
+  if (modelgrid[cell[cellindex].modelgridindex].thick != 1)
     calculate_kappa_rpkt_cont(pkt_ptr,t_current);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb += 1;
@@ -512,7 +514,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   double rndcool;
   double oldcoolingsum;
 
-  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  const int cellindex = pkt_ptr->where;
+  int modelgridindex = cell[cellindex].modelgridindex;
 
   /// Instead of doing the following, it is now made sure that kpkts in optically
   /// thick cells are treated by do_kpkt_bb in packet_prop
