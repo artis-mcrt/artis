@@ -5,8 +5,9 @@ version.h
 *.exe
 sn3d
 exspec
+exgamma
 *.o-*
 tags
 browse.VC.db
-
+*.optrpt
 sn3d.dSYM
