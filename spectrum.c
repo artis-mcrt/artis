@@ -111,7 +111,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
     if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
     {
       int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-      double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+      double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
       spectra[nt].flux[nnu] += deltaE;
 
       int et = pkt_ptr->emissiontype;
