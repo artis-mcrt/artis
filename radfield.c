@@ -48,8 +48,6 @@ struct radfieldbin
 //static struct radfieldbin *restrict radfieldbins[MMODELGRID+1]; //heap allocated alterative
 static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT];
 
-static int last_selected_binindex[MTHREADS] = {0}; //for performance
-
 typedef enum
 {
   ONE = 0,
@@ -239,35 +237,35 @@ int radfield_select_bin(int modelgridindex, double nu)
   return -1;
   */
 
-  // remember the last bin number and move from there (assume function calls often have similar nu)
+  /*// remember the last bin number and move from there (assume function calls often have similar nu)
   while (true)
   {
-    if (radfieldbins[modelgridindex][last_selected_binindex[tid]].nu_upper <= nu)
+    if (radfieldbins[modelgridindex][last_selected_binindex].nu_upper <= nu)
     {
-      last_selected_binindex[tid]++;
-      if (last_selected_binindex[tid] >= RADFIELDBINCOUNT)
+      last_selected_binindex++;
+      if (last_selected_binindex >= RADFIELDBINCOUNT)
       {
-        last_selected_binindex[tid] = RADFIELDBINCOUNT - 1;
+        last_selected_binindex = RADFIELDBINCOUNT - 1;
         return -1;
       }
     }
-    else if (radfield_get_bin_nu_lower(modelgridindex, last_selected_binindex[tid]) > nu)
+    else if (radfield_get_bin_nu_lower(modelgridindex, last_selected_binindex) > nu)
     {
-      last_selected_binindex[tid]--;
-      if (last_selected_binindex[tid] < 0)
+      last_selected_binindex--;
+      if (last_selected_binindex < 0)
       {
-        last_selected_binindex[tid] = 0;
+        last_selected_binindex = 0;
         return -1;
       }
     }
     else
     {
-      return last_selected_binindex[tid];
+      return last_selected_binindex;
     }
-  }
+  }*/
 
   // binary search
-  /*int low = 0;
+  int low = 0;
   int high = RADFIELDBINCOUNT - 1;
   while (low <= high)
   {
@@ -285,7 +283,7 @@ int radfield_select_bin(int modelgridindex, double nu)
       return mid;
     }
    }
-   return -1;*/
+   return -1;
 }
 
 
