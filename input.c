@@ -2354,7 +2354,6 @@ int input(int rank)
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
-  //double z1, z2, x;
   unsigned long int pre_zseed;
 
   FILE *input_file = fopen("input.txt", "r");
@@ -2379,23 +2378,11 @@ void read_parameterfile(int rank)
   #ifdef _OPENMP
     #pragma omp parallel
     {
-/*      tid = omp_get_thread_num();
-      nthreads = omp_get_num_threads();
-      if (nthreads > MTHREADS)
-      {
-        printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n",MTHREADS,nthreads);
-        exit(0);
-      }
-      if (tid == 0) printout("OpenMP parallelisation active with %d threads\n",nthreads);
-  #else
-      tid = 0;
-      nthreads = 1;*/
   #endif
-      unsigned long int zseed; /* rnum generator seed */
       /// For MPI parallelisation, the random seed is changed based on the rank of the process
       /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
       /// to the thread-ID tid.
-      zseed = pre_zseed + (13 * rank) + (17*tid);
+      unsigned long int zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
       printout("rank %d: thread %d has zseed %d\n",rank,tid,zseed);
       /// start by setting up the randon number generator
       rng = gsl_rng_alloc(gsl_rng_ran3);
