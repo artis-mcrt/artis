@@ -16,28 +16,28 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
   /// Update only non-empty cells
   if (modelgridindex != MMODELGRID)
   {
-    const double helper = distance * pkt_ptr->e_cmf;
+    const double distance_e_cmf = distance * pkt_ptr->e_cmf;
     #ifdef _OPENMP
       #pragma omp atomic
     #endif
-    J[modelgridindex] += helper;
+    J[modelgridindex] += distance_e_cmf;
 
     #ifndef FORCE_LTE
       const double nu = pkt_ptr->nu_cmf;
-      const double helper2 = helper / nu;
+      const double helper2 = distance_e_cmf / nu;
       //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
-      nuJ[modelgridindex] += helper * nu;
-      radfield_update_estimators(modelgridindex,distance,pkt_ptr->e_cmf,nu);
+      nuJ[modelgridindex] += distance_e_cmf * nu;
+      radfield_update_estimators(modelgridindex,distance_e_cmf,nu);
 
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
       ///quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
-      ffheatingestimator[modelgridindex] += helper * kappa_rpkt_cont[tid].ffheating;
+      ffheatingestimator[modelgridindex] += distance_e_cmf * kappa_rpkt_cont[tid].ffheating;
       for (int i = 0; i < nbfcontinua_ground; i++)
       {
         const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
@@ -65,8 +65,8 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
             #ifdef _OPENMP
               #pragma omp atomic
             #endif
-            bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper * (1. - nu_edge/nu);
-            //bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].bfheating_contr * helper * (1/nu_edge - 1/nu);
+            bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu);
+            //bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
           }
         }
         else break;
@@ -75,7 +75,7 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
       #ifdef DEBUG_ON
         if (!isfinite(nuJ[modelgridindex]))
         {
-          printout("[fatal] update_estimators: estimator becomes non finite: helper %g, nu_cmf %g ... abort\n",helper,pkt_ptr->nu_cmf);
+          printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,pkt_ptr->nu_cmf);
           abort();
         }
       #endif
@@ -83,14 +83,14 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
 
     ///Heating estimators. These are only applicable for pure H. Other elements
     ///need advanced treatment in thermalbalance calculation.
-    //cell[pkt_ptr->where].heating_ff += helper * kappa_rpkt_cont[tid].ffheating;
-    //cell[pkt_ptr->where].heating_bf += helper * kappa_rpkt_cont[tid].bfheating;
+    //cell[pkt_ptr->where].heating_ff += distance_e_cmf * kappa_rpkt_cont[tid].ffheating;
+    //cell[pkt_ptr->where].heating_bf += distance_e_cmf * kappa_rpkt_cont[tid].bfheating;
 
 
     #ifdef DEBUG_ON
       if (!isfinite(J[modelgridindex]))
       {
-        printout("[fatal] update_estimators: estimator becomes non finite: helper %g, nu_cmf %g ... abort\n",helper,pkt_ptr->nu_cmf);
+        printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,pkt_ptr->nu_cmf);
         abort();
       }
     #endif

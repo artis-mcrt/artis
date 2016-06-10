@@ -386,7 +386,7 @@ void radfield_zero_estimators(int modelgridindex)
 
 
 inline
-void radfield_update_estimators(int modelgridindex, double distance, double e_cmf, double nu_cmf)
+void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf)
 {
   int binindex = 0;
   /*if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
@@ -415,11 +415,11 @@ void radfield_update_estimators(int modelgridindex, double distance, double e_cm
       #ifdef _OPENMP
       #pragma omp atomic
       #endif
-      radfieldbins[modelgridindex][binindex].J_raw += distance * e_cmf;
+      radfieldbins[modelgridindex][binindex].J_raw += distance_e_cmf;
       #ifdef _OPENMP
       #pragma omp atomic
       #endif
-      radfieldbins[modelgridindex][binindex].nuJ_raw += distance * e_cmf * nu_cmf;
+      radfieldbins[modelgridindex][binindex].nuJ_raw += distance_e_cmf * nu_cmf;
       #ifdef _OPENMP
       #pragma omp atomic
       #endif

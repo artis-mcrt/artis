@@ -7,7 +7,7 @@ void radfield_zero_estimators(int modelgridindex);
 void radfield_init(void);
 void radfield_write_to_file(int modelgridindex, int timestep);
 void radfield_close_file(void);
-void radfield_update_estimators(int modelgridindex, double distance, double e_cmf, double nu_cmf);
+void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf);
 double radfield(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex, int timestep);
 void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
