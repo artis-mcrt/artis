@@ -1,9 +1,8 @@
 #include "sn3d.h"
 #include "time_init.h"
 
-/* Subroutine to define the time steps.*/
-
 void time_init(void)
+// Subroutine to define the time steps.
 {
   /// t=tmin is the start of the calcualtion. t=tmax is the end of the calculation.
   /// ntstep is the number of time steps wanted. For now the time steps
@@ -16,7 +15,7 @@ void time_init(void)
   }
 
   /// For logarithmic steps, the logarithmic inverval will be
-  double dlogt = (log(tmax) - log(tmin))/ntstep;
+  const double dlogt = (log(tmax) - log(tmin))/ntstep;
   //dlogt = 0.17917595;
   //dlogt = 0.03583518938456109026;
   //dlogt = (tmax - tmin)/ntstep;
@@ -25,11 +24,11 @@ void time_init(void)
   for (int n = 0; n < ntstep; n++)
   {
     time_step[n].start = tmin * exp(n*dlogt);
-    time_step[n].width = (tmin * exp((n+1)*dlogt)) - time_step[n].start;
     time_step[n].mid = tmin * exp((n+0.5)*dlogt);
+    time_step[n].width = (tmin * exp((n+1)*dlogt)) - time_step[n].start;
     //time_step[n].start = tmin * n*dlogt;
-    //time_step[n].width = (tmin * (n+1)*dlogt) - time_step[n].start;
     //time_step[n].mid = tmin * (n+0.5)*dlogt;
+    //time_step[n].width = (tmin * (n+1)*dlogt) - time_step[n].start;
 
     //      printout("start %g, width %g, mid %g\n",time_step[n].start,time_step[n].width,time_step[n].mid);
 

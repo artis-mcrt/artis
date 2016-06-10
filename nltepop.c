@@ -22,7 +22,7 @@ static int get_nlte_vector_index(int element_in, int ion_in, int level_in)
 
     index += nlevels_nlte + 1;
     if (nlevels_nlte != (get_nlevels(element_in,ion) - 1))
-      index += 1; // there's a superlevel here
+      index++; // there's a superlevel here
   }
   int nlevels_nlte = get_nlevels_nlte(element_in,ion_in);
   if (is_nlte(element_in, ion_in, level_in) == true)
@@ -144,7 +144,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
       }
       else
       {
-        nlte_dimension += 1;
+        nlte_dimension++;
         superlevel_partfunc[ion] = 0.0;
         for (int level = 1; level < get_nlevels(element,ion); level++)
         {
@@ -1043,45 +1043,45 @@ static double get_mean_binding_energy(int element, int ion)
     {
       if (q[0] < 2) //K 1s
       {
-        q[0] += 1;
+        q[0]++;
       }
       else if (q[1] < 2) //L1 2s
       {
-        q[1] += 1;
+        q[1]++;
       }
       else if (q[2] < 2) //L2 2p[1/2]
       {
-        q[2] += 1;
+        q[2]++;
       }
       else if (q[3] < 4) //L3 2p[3/2]
       {
-        q[3] += 1;
+        q[3]++;
       }
       else if (q[4] < 2) //M1 3s
       {
-        q[4] += 1;
+        q[4]++;
       }
       else if (q[5] < 2) //M2 3p[1/2]
       {
-        q[5] += 1;
+        q[5]++;
       }
       else if (q[6] < 4) //M3 3p[3/2]
       {
-        q[6] += 1;
+        q[6]++;
       }
       else if (ioncharge == 0)
       {
         if (q[9] < 2) //N1 4s
         {
-          q[9] += 1;
+          q[9]++;
         }
         else if (q[7] < 4) //M4 3d[3/2]
         {
-          q[7] += 1;
+          q[7]++;
         }
         else if (q[8] < 6) //M5 3d[5/2]
         {
-          q[8] += 1;
+          q[8]++;
         }
         else
         {
@@ -1093,15 +1093,15 @@ static double get_mean_binding_energy(int element, int ion)
       {
         if (q[9] < 1) // N1 4s
         {
-          q[9] += 1;
+          q[9]++;
         }
         else if (q[7] < 4) //M4 3d[3/2]
         {
-          q[7] += 1;
+          q[7]++;
         }
         else if (q[8] < 6) //M5 3d[5/2]
         {
-          q[8] += 1;
+          q[8]++;
         }
         else
         {
@@ -1113,11 +1113,11 @@ static double get_mean_binding_energy(int element, int ion)
       {
         if (q[7] < 4) //M4 3d[3/2]
         {
-          q[7] += 1;
+          q[7]++;
         }
         else if (q[8] < 6) //M5 3d[5/2]
         {
-          q[8] += 1;
+          q[8]++;
         }
         else
         {

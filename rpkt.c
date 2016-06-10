@@ -228,7 +228,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
         endloop = 1;
       }
     }
-    //propagationcounter += 1;
+    //propagationcounter++;
   }
 
   pkt_ptr->next_trans = dummypkt_ptr->next_trans;
@@ -275,8 +275,8 @@ static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curren
     /// we need here just the activation!
     #ifdef DEBUG_ON
       if (debuglevel == 2) printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
-      //if (tid == 0) ma_stat_activation_bb += 1;
-      ma_stat_activation_bb += 1;
+      //if (tid == 0) ma_stat_activation_bb++;
+      ma_stat_activation_bb++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 1;
     #endif
@@ -317,7 +317,7 @@ static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curren
         pkt_ptr->interactions += 1;
         pkt_ptr->nscatterings += 1;
         pkt_ptr->last_event = 12;
-        escounter += 1;
+        escounter++;
       #endif
 
       //pkt_ptr->nu_cmf = 3.7474058e+14;
@@ -339,8 +339,8 @@ static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curren
       /// ff: transform to k-pkt
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] rpkt_event:   free-free transition\n");
-        //if (tid == 0) k_stat_from_ff += 1;
-        k_stat_from_ff += 1;
+        //if (tid == 0) k_stat_from_ff++;
+        k_stat_from_ff++;
         pkt_ptr->interactions += 1;
         pkt_ptr->last_event = 5;
       #endif
@@ -387,8 +387,8 @@ static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curren
           if (zrand < nu_edge/nu)
           {
             #ifdef DEBUG_ON
-              //if (tid == 0) ma_stat_activation_bf += 1;
-              ma_stat_activation_bf += 1;
+              //if (tid == 0) ma_stat_activation_bf++;
+              ma_stat_activation_bf++;
               pkt_ptr->interactions += 1;
               pkt_ptr->last_event = 3;
             #endif
@@ -410,8 +410,8 @@ static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curren
             /// transform to k-pkt
             #ifdef DEBUG_ON
               if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
-              //if (tid == 0) k_stat_from_bf += 1;
-              k_stat_from_bf += 1;
+              //if (tid == 0) k_stat_from_bf++;
+              k_stat_from_bf++;
               pkt_ptr->interactions += 1;
               pkt_ptr->last_event = 4;
             #endif
@@ -446,7 +446,7 @@ static void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
     pkt_ptr->interactions += 1;
     pkt_ptr->nscatterings += 1;
     pkt_ptr->last_event = 12;
-    escounter += 1;
+    escounter++;
   #endif
 
   //pkt_ptr->nu_cmf = 3.7474058e+14;
@@ -490,7 +490,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
     #endif
 
     //printout("[debug] r-pkt propagation iteration %d\n",it);
-    //it += 1;
+    //it++;
     /** Assign optical depth to next physical event. And start counter of
     optical depth for this path.*/
     double zrand = gsl_rng_uniform(rng);
@@ -1590,7 +1590,7 @@ int compare_groundphixslistentry_bynuedge(const void *restrict p1, const void *r
 //     #endif
 //
 //     //printout("[debug] r-pkt propagation iteration %d\n",it);
-//     //it += 1;
+//     //it++;
 //     /** Assign optical depth to next physical event. And start couter of
 //     optical depth for this path.*/
 //     double zrand = gsl_rng_uniform(rng);
@@ -1739,7 +1739,7 @@ int compare_groundphixslistentry_bynuedge(const void *restrict p1, const void *r
 //           pkt_ptr->interactions += 1;
 //           pkt_ptr->nscatterings += 1;
 //           pkt_ptr->last_event = 12;
-//           escounter += 1;
+//           escounter++;
 //         #endif
 //
 //         //pkt_ptr->nu_cmf = 3.7474058e+14;

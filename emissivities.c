@@ -189,8 +189,6 @@ void zero_estimators()
         }
       }
     #endif
-    // cell[n].heating_ff = 0.;
-    // cell[n].heating_bf = 0.;
     for (int m = 0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = 0.0;

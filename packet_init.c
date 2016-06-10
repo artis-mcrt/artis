@@ -236,7 +236,7 @@ static void setup_packets(int pktnumberoffset)
 
 void packet_init(int middle_iteration, int my_rank)
 {
-  if (!continue_simulation)
+  if (!simulation_continued_from_saved)
   {
     const int pktnumberoffset = middle_iteration * npkts;
     setup_packets(pktnumberoffset);

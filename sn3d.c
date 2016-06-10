@@ -497,7 +497,7 @@ int main(int argc, char** argv)
 
 
       // New simulation
-      if (!continue_simulation)
+      if (!simulation_continued_from_saved)
       {
         init_vspecpol();
 
@@ -646,7 +646,7 @@ int main(int argc, char** argv)
         #ifndef FORCE_LTE
           /// Initialise corrphotoionrenorm[i] to zero before update_grid is called
           /// This allows reduction after update_grid has finished
-          if (continue_simulation && nts-itstep == 0 && titer == 0)
+          if (simulation_continued_from_saved && nts-itstep == 0 && titer == 0)
           {
             /// In this case they have been read from file and must neither be touched
             /// nor broadcasted after update_grid
@@ -788,7 +788,7 @@ int main(int argc, char** argv)
           #endif
 
           #ifndef FORCE_LTE
-            if (continue_simulation && nts-itstep == 0 && titer == 0)
+            if (simulation_continued_from_saved && nts-itstep == 0 && titer == 0)
             {
               ;
             }

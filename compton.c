@@ -84,7 +84,7 @@ static double choose_f(double xx, double zrand)
       err = (norm - try) / norm;
     }
     //      printout("error %g\n",err);
-    count += 1;
+    count++;
   }
 
   if (count == 1000)

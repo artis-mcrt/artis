@@ -57,9 +57,9 @@ static void read_phixs_data(void)
       //printout("[debug] element %d, lowermost_ionstage %d\n",element,elements[element].ions[0].ionstage);
       int lowermost_ionstage = elements[element].ions[0].ionstage;
       upperion -= lowermost_ionstage;
-      upperlevel -= 1;
+      upperlevel--;
       lowerion -= lowermost_ionstage;
-      lowerlevel -= 1;
+      lowerlevel--;
       /// store only photoionization crosssections for ions which are part of the current model atom
       /// for limited model atoms we further have to make sure that the lowerlevel is inside the limited model atom
       if (lowerion >= 0 && lowerlevel < get_nlevels(element,lowerion) && upperion < get_nions(element))
@@ -171,7 +171,7 @@ static void read_phixs_data(void)
             //fprintf(database_file,"%g %g\n", nutable[i], phixstable[i]);
           }
 
-          //nbfcontinua += 1;
+          //nbfcontinua++;
           //printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
           skip_this_phixs_table = false;
       }
@@ -518,7 +518,7 @@ static void read_unprocessed_atomicdata(void)
             elements[element].ions[ion].levels[level].stat_weight = statweight;
             ///Moved to the section with ionising levels below
             //elements[element].ions[ion].levels[level].cont_index = cont_index;
-            //cont_index -= 1;
+            //cont_index--;
             /// Initialise the metastable flag to true. Set it to false (0) if downward transition exists.
             elements[element].ions[ion].levels[level].metastable = true;
             //elements[element].ions[ion].levels[level].main_qn = mainqn;
@@ -529,10 +529,10 @@ static void read_unprocessed_atomicdata(void)
             /// Rate coefficients are only available for ionising levels.
             if (levelenergy < ionpot && ion < nions-1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
             {
-              elements[element].ions[ion].ionisinglevels += 1;
+              elements[element].ions[ion].ionisinglevels++;
 
               elements[element].ions[ion].levels[level].cont_index = cont_index;
-              cont_index -= 1;
+              cont_index--;
             }
 
 
@@ -601,7 +601,7 @@ static void read_unprocessed_atomicdata(void)
               linelist[lineindex].einstein_A = A_ul;
               linelist[lineindex].osc_strength = f_ul;
               linelist[lineindex].coll_str = coll_str;
-              lineindex += 1;
+              lineindex++;
               if (lineindex % MLINES == 0)
               {
                 printout("[info] read_atomicdata: increase linelistsize from %d to %d\n",lineindex,lineindex+MLINES);
@@ -627,7 +627,7 @@ static void read_unprocessed_atomicdata(void)
               elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].stat_weight = stat_weight(element,ion,targetlevel);
               //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
               //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
-              ndownarr[level] += 1;
+              ndownarr[level]++;
 
               elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
               if ((elements[element].ions[ion].levels[targetlevel].uptrans
@@ -639,7 +639,7 @@ static void read_unprocessed_atomicdata(void)
               elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
               elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon = epsilon(element,ion,level);
               elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element,ion,level);
-              nuparr[targetlevel] += 1;
+              nuparr[targetlevel]++;
             }
             else
             {
@@ -1387,7 +1387,7 @@ static void setup_coolinglist(void)
     nions = get_nions(element);
     for (ion=0; ion < nions; ion++)
     {
-      if (get_ionstage(element,ion) > 1) ncoolingterms += 1;
+      if (get_ionstage(element,ion) > 1) ncoolingterms++;
       if (ion < nions - 1) ncoolingterms += 2 * get_ionisinglevels(element,ion);
     }
   }
@@ -1404,7 +1404,7 @@ static void setup_coolinglist(void)
       elements[element].ions[ion].coolingoffset = ncoolingterms;
       /// Ionised ions add one ff-cooling term
       if (get_ionstage(element,ion) > 1)
-        add += 1;
+        add++;
       /// Ionisinglevels below the closure ion add to bf and col ionisation
       if (ion < nions - 1)
       //  add += 2 * get_ionisinglevels(element,ion);
@@ -1487,7 +1487,7 @@ static void setup_phixs_list(void)
         phixslist[itid].groundcont[i].level = level;
         phixslist[itid].groundcont[i].nu_edge = nu_edge;
         //printout("phixslist.groundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
-        i += 1;
+        i++;
       }
     }
     qsort(phixslist[itid].groundcont,nbfcontinua_ground,sizeof(groundphixslist_t),compare_groundphixslistentry_bynuedge);
@@ -1526,7 +1526,7 @@ static void setup_phixs_list(void)
           phixslist[itid].allcont[i].nu_edge = nu_edge;
           phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge,&index_in_groundlevelcontestimator,element,ion,level);
           if (itid == 0) elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
-          i += 1;
+          i++;
         }
       }
     }
@@ -2523,11 +2523,11 @@ void read_parameterfile(int rank)
   ///MK: end
 
   /// Do we start a new simulation or, continue another one?
-  continue_simulation = false;          /// Preselection is to start a new simulation
+  simulation_continued_from_saved = false;          /// Preselection is to start a new simulation
   fscanf(input_file, "%d", &dum1);
   if (dum1 == 1)
   {
-    continue_simulation = true;        /// Continue simulation if dum1 = 1
+    simulation_continued_from_saved = true;        /// Continue simulation if dum1 = 1
     printout("input: continue simulation\n");
   }
 

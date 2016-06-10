@@ -363,7 +363,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
     pkt_ptr->escape_type = pkt_ptr->type;
     pkt_ptr->escape_time = t_current;
     pkt_ptr->type = TYPE_ESCAPE;
-    nesc += 1;
+    nesc++;
     *end_packet = true;
   }
   else
@@ -407,7 +407,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
       pkt_ptr->last_cross = POS_Z;
     }
     */
-    cellcrossings += 1;
+    cellcrossings++;
 
     /// and calculate the continuums opacity in the new cell if the packet is a rpkt
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
@@ -542,7 +542,7 @@ int change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current
       pkt_ptr->escape_time = t_current;
       pkt_ptr->type = TYPE_ESCAPE;
       *end_packet = true;
-      return(0);
+      return 0;
   }
   else
   {
@@ -551,9 +551,9 @@ int change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current
       //int old_mgi = cell[pkt_ptr->where].modelgridindex;
       pkt_ptr->where = snext;
 
-      cellcrossings += 1;
+      cellcrossings++;
 
-      return(0);
+      return 0;
   }
 }
 

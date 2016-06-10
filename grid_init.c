@@ -94,7 +94,7 @@ extern inline void set_W(int modelgridindex, double x);
     {
       cell[n].rho_init = cell[n].rho = 0.0;
       cell[n].kappa_grey = 0.0;
-      empty_cells += 1;
+      empty_cells++;
     }
     rho_sum += cell[n].rho_init;
     fe_sum += fni(&cell[n]);  //MK: use for this model fni as values for iron group mass fractions
@@ -288,7 +288,7 @@ static void density_1d_read(void)
           }
         }
       }
-      renorm[mkeep] += 1;
+      renorm[mkeep]++;
     }
     else
     {
@@ -305,7 +305,7 @@ static void density_1d_read(void)
       set_TJ(MMODELGRID,MINTEMP);
       set_TR(MMODELGRID,MINTEMP);
       allocate_compositiondata(MMODELGRID);
-      empty_cells += 1;
+      empty_cells++;
     }
 
     mgi = cell[n].modelgridindex;
@@ -342,7 +342,7 @@ static void density_1d_read(void)
         }
       }
       modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
-      //renorm[mkeep] += 1;
+      //renorm[mkeep]++;
     }
     else
     {
@@ -595,7 +595,7 @@ static void density_1d_read(void)
 }
   check1 = check1 + (cell[n].kappa_grey  * cell[n].rho_init);
   check2 = check2 + cell[n].rho_init;
-  renorm[mkeep] += 1;
+  renorm[mkeep]++;
 
 }
   else
@@ -678,7 +678,7 @@ static void density_1d_read(void)
 }
   check1 = check1 + (cell[n].kappa_grey  * cell[n].rho_init);
   check2 = check2 + cell[n].rho_init;
-  renorm[mkeep] += 1;
+  renorm[mkeep]++;
 
 }
   else
@@ -768,7 +768,7 @@ static void density_2d_read(void)
       cell[n].modelgridindex = (mkeep2 * ncoord1_model) + mkeep1;
       modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
 
-      //renorm[mkeep] += 1;
+      //renorm[mkeep]++;
     }
     else
     {
@@ -1005,7 +1005,7 @@ static void density_3d_read(void)
       cell[n].rho_init = cell[n].rho = 0.0;
       cell[n].f_ni = 0.0;
       cell[n].f_fe = 0.0;
-      empty_cells += 1;
+      empty_cells++;
     }
     else if (cell[n].rho_init < min_den)
     {
@@ -1483,7 +1483,7 @@ static void assign_temperature(void)
 /// simulation.
 {
   /// For a simulation started from scratch we estimate the initial temperatures
-  if (!continue_simulation)
+  if (!simulation_continued_from_saved)
   {
     /// We assume that for early times the material is so optically thick, that
     /// all the radiation is trapped in the cell it originates from. This
@@ -1750,7 +1750,7 @@ void grid_init(void)
     if (cell[n].rho_init > MINDENSITY)
     {
       nonemptycells[i] = n;
-      i += 1;
+      i++;
     }
   }
   nnonemptycells = i;*/

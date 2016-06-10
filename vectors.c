@@ -17,12 +17,12 @@ void angle_ab(const double *restrict const dir1, const double *restrict vel, dou
   const double gamma_rel = 1./(sqrt(1 - vsqr));
 
   const double ndotv = dot(dir1,vel);
-  const double fact1 = gamma_rel * (1 - (ndotv/CLIGHT));
-  const double fact2 = (gamma_rel - (gamma_rel*gamma_rel*ndotv/(gamma_rel + 1)/CLIGHT))/CLIGHT;
+  const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
+  const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT))/CLIGHT;
 
-  dir2[0] = (dir1[0] - (vel[0] * fact2))/fact1;
-  dir2[1] = (dir1[1] - (vel[1] * fact2))/fact1;
-  dir2[2] = (dir1[2] - (vel[2] * fact2))/fact1;
+  dir2[0] = (dir1[0] - (vel[0] * fact2)) / fact1;
+  dir2[1] = (dir1[1] - (vel[1] * fact2)) / fact1;
+  dir2[2] = (dir1[2] - (vel[2] * fact2)) / fact1;
 }
 
 

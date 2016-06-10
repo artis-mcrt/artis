@@ -192,7 +192,6 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
     T_e = MINTEMP;
     //if (nts_global >= 15) T_e = MAXTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
     printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",MINTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
-    //cell[n].T_e = T_e;
   }
   else
   {
@@ -202,7 +201,6 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
     //if (nts_global >= 15) T_e = MINTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
     printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
     //printout("hot cell %d, with T_R %g, T_e %g, W %g, nne %g\n",cellnumber,cell[cellnumber].T_R,T_e,cell[cellnumber].W,cell[cellnumber].nne);
-    //cell[n].T_e = T_e;
   }
 
   /// Otherwise the more expensive solver style _might_ work
@@ -422,7 +420,8 @@ void calculate_heating_rates(int modelgridindex)
         {
           //double epsilon_current = epsilon(element,ion,level);
           const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          const int nphixstargets = get_nphixstargets(element,ion,level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
           {
             //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             //double epsilon_upper = epsilon(element,ion+1,upper);

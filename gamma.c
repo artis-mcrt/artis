@@ -22,7 +22,7 @@ int pellet_decay(int nts, PKT *pkt_ptr)
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
-  time_step[nts].pellet_decays += 1;
+  time_step[nts].pellet_decays++;
 
   /*Start by getting the position of the pellet at the point of decay. Pellet
   is moving with the matter.*/
@@ -391,8 +391,8 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
         #endif
         //pkt_ptr->type = TYPE_PRE_KPKT;
         //pkt_ptr->type = TYPE_GAMMA_KPKT;
-        //if (tid == 0) k_stat_from_gamma += 1;
-        k_stat_from_gamma += 1;
+        //if (tid == 0) k_stat_from_gamma++;
+        k_stat_from_gamma++;
         return t_current;
       }
       else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand*kap_tot))

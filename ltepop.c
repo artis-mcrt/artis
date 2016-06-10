@@ -17,10 +17,8 @@ double nne_solution_f(double x, void *restrict paras)
 /// density (passed by x)
 {
   int n = ((nne_solution_paras *) paras)->cellnumber;
-  //double T = cell[n].T_R;
   double rho = modelgrid[n].rho;
 
-  //printout("n, x, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g\n",n,x,T,cell[n].T_e,cell[n].W,cell[n].rho);
   double outersum = 0.;
   //printout("debug nelements %d =========================\n",nelements);
   for (int element = 0; element < nelements; element++)

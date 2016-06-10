@@ -76,7 +76,7 @@ void calculate_kpkt_rates(int modelgridindex)
           cellhistory[tid].coolinglist[i].ion = ion;
           cellhistory[tid].coolinglist[i].level = -99;
           cellhistory[tid].coolinglist[i].upperlevel = -99;*/
-          i += 1;
+          i++;
         }
 
         for (int level = 0; level < nlevels_currention; level++)
@@ -111,8 +111,8 @@ void calculate_kpkt_rates(int modelgridindex)
             cellhistory[tid].coolinglist[i].level = level;
             cellhistory[tid].coolinglist[i].upperlevel = upper;
             cellhistory[tid].coolinglist[i].lineindex = lineindex;*/
-            i += 1;
-            //linecounter += 1;
+            i++;
+            //linecounter++;
           }
 
           if (ion < nions-1 && level < ionisinglevels) ///check whether further ionisation stage available
@@ -141,7 +141,7 @@ void calculate_kpkt_rates(int modelgridindex)
             cellhistory[tid].coolinglist[i].ion = ion;
             cellhistory[tid].coolinglist[i].level = level;
             cellhistory[tid].coolinglist[i].upperlevel = upper;*/
-            i += 1;
+            i++;
             //}
 
 
@@ -180,7 +180,7 @@ void calculate_kpkt_rates(int modelgridindex)
             cellhistory[tid].coolinglist[i].ion = ion;
             cellhistory[tid].coolinglist[i].level = level;
             cellhistory[tid].coolinglist[i].upperlevel = 0;*/
-            i += 1;
+            i++;
           }
         }
 
@@ -288,7 +288,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     cellhistory[tid].coolinglist[i].level = -99;
     cellhistory[tid].coolinglist[i].upperlevel = -99;
     //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,-99,cellhistory[tid].coolinglist[i].type,i,low);
-    i += 1;
+    i++;
   }
 
   for (int level = 0; level < nlevels_currention; level++)
@@ -324,8 +324,8 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       cellhistory[tid].coolinglist[i].upperlevel = upper;
       cellhistory[tid].coolinglist[i].lineindex = lineindex;
       //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,cellhistory[tid].coolinglist[i].type,i,low);
-      i += 1;
-      //linecounter += 1;
+      i++;
+      //linecounter++;
     }
 
     if (ion < nions-1 && level < ionisinglevels) ///check whether further ionisation stage available
@@ -359,7 +359,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       cellhistory[tid].coolinglist[i].level = level;
       cellhistory[tid].coolinglist[i].upperlevel = upper;
       //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,cellhistory[tid].coolinglist[i].type,i,low);
-      i += 1;
+      i++;
       //}
 
 
@@ -399,7 +399,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       cellhistory[tid].coolinglist[i].level = level;
       cellhistory[tid].coolinglist[i].upperlevel = 0;
       //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,cellhistory[tid].coolinglist[i].type,i,low);
-      i += 1;
+      i++;
     }
   }
 
@@ -434,7 +434,7 @@ static double sample_planck(double T)
   int i = 0;
   while (endloop == 0)
   {
-    i += 1;
+    i++;
     double zrand = gsl_rng_uniform(rng);
     double zrand2 = gsl_rng_uniform(rng);
     nu = nu_min_r + zrand * (nu_max_r - nu_min_r);
@@ -469,9 +469,9 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
   if (modelgrid[cell[cellindex].modelgridindex].thick != 1)
     calculate_kappa_rpkt_cont(pkt_ptr,t_current);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
-  //if (tid == 0) k_stat_to_r_bb += 1;
-  k_stat_to_r_bb += 1;
-  pkt_ptr->interactions += 1;
+  //if (tid == 0) k_stat_to_r_bb++;
+  k_stat_to_r_bb++;
+  pkt_ptr->interactions++;
   pkt_ptr->last_event = 6;
   pkt_ptr->emissiontype = -9999999;
   pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
@@ -538,7 +538,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   if (modelgrid[modelgridindex].totalcooling == COOLING_UNDEFINED)
   {
     //printout("initial calculation of all cooling rates\n");
-    coolingratecalccounter += 1;
+    coolingratecalccounter++;
     ondemand = 0;
     calculate_kpkt_rates(modelgridindex);
   }*/
@@ -674,7 +674,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       /// Need to select the r-packets frequency and a random direction in the
       /// co-moving frame.
       if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> free-free\n");
-      //kdecay.to_r += 1;
+      //kdecay.to_r++;
 
       /// Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
       //zrand = gsl_rng_uniform(rng);   /// delivers zrand in [0,1[
@@ -693,8 +693,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
       calculate_kappa_rpkt_cont(pkt_ptr,t_current);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
-      //if (tid == 0) k_stat_to_r_ff += 1;
-      k_stat_to_r_ff += 1;
+      //if (tid == 0) k_stat_to_r_ff++;
+      k_stat_to_r_ff++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 6;
       pkt_ptr->emissiontype = -9999999;
@@ -815,8 +815,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by fb\n");
       calculate_kappa_rpkt_cont(pkt_ptr,t_current);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
-      //if (tid == 0) k_stat_to_r_fb += 1;
-      k_stat_to_r_fb += 1;
+      //if (tid == 0) k_stat_to_r_fb++;
+      k_stat_to_r_fb++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
       pkt_ptr->emissiontype = get_continuumindex(element,ion,level);
@@ -839,10 +839,10 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,upper);
       mastate[tid].activatingline = -99;
       pkt_ptr->type = TYPE_MA;
-      //if (tid == 0) ma_stat_activation_collexc += 1;
-      ma_stat_activation_collexc += 1;
-      //if (tid == 0) k_stat_to_ma_collexc += 1;
-      k_stat_to_ma_collexc += 1;
+      //if (tid == 0) ma_stat_activation_collexc++;
+      ma_stat_activation_collexc++;
+      //if (tid == 0) k_stat_to_ma_collexc++;
+      k_stat_to_ma_collexc++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 8;
       #ifndef FORCE_LTE
@@ -863,10 +863,10 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,upper);
       mastate[tid].activatingline = -99;
       pkt_ptr->type = TYPE_MA;
-      //if (tid == 0) ma_stat_activation_collion += 1;
-      ma_stat_activation_collion += 1;
-      //if (tid == 0) k_stat_to_ma_collion += 1;
-      k_stat_to_ma_collion += 1;
+      //if (tid == 0) ma_stat_activation_collion++;
+      ma_stat_activation_collion++;
+      //if (tid == 0) k_stat_to_ma_collion++;
+      k_stat_to_ma_collion++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 9;
       #ifndef FORCE_LTE

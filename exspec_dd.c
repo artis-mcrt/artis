@@ -195,7 +195,7 @@ int main(int argc, char** argv)
             epkts[j].em_time = pkt_ptr->em_time;
             epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
             epkts[j].absorptiontype = pkt_ptr->absorptiontype;
-            j += 1;
+            j++;
           }
         }
       }

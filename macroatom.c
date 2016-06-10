@@ -303,7 +303,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
           epsilon_trans = epsilon_current - epsilon_target;
           //linelistindex = elements[element].ions[ion].levels[level].transitions[level-lower-1].linelistindex;
           #ifdef RECORD_LINESTAT
-            if (tid == 0) ecounter[linelistindex] += 1;    /// This way we will only record line statistics from OMP-thread 0
+            if (tid == 0) ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
                                                            /// With an atomic pragma or a thread-private structure with subsequent
                                                            /// reduction this could be extended to all threads. However, I'm not
                                                            /// sure if this is worth the additional computational expenses.
@@ -321,9 +321,9 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       if (pkt_ptr->last_event == 1)
       {
         if (oldnucmf < pkt_ptr->nu_cmf)
-          upscatter += 1;
+          upscatter++;
         else
-          downscatter += 1;
+          downscatter++;
       }
       //}
 
@@ -341,8 +341,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         }
         if (debuglevel == 2)
           printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA deactivation\n");
-        //if (tid == 0) ma_stat_deactivation_bb += 1;
-        ma_stat_deactivation_bb += 1;
+        //if (tid == 0) ma_stat_deactivation_bb++;
+        ma_stat_deactivation_bb++;
         mastate[tid].lastaction = MA_ACTION_RADDEEXC;
         pkt_ptr->interactions += 1;
         pkt_ptr->last_event = 0;
@@ -352,7 +352,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       emitt_rpkt(pkt_ptr,t_current);
       if (linelistindex == mastate[tid].activatingline)
       {
-        resonancescatterings += 1;
+        resonancescatterings++;
       }
       else calculate_kappa_rpkt_cont(pkt_ptr,t_current);
 
@@ -376,8 +376,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   collisonal deexcitation\n");
         if (debuglevel == 2) printout("[debug] do_ma: jumps = %d\n",jumps);
-        //if (tid == 0) ma_stat_deactivation_colldeexc += 1;
-        ma_stat_deactivation_colldeexc += 1;
+        //if (tid == 0) ma_stat_deactivation_colldeexc++;
+        ma_stat_deactivation_colldeexc++;
         mastate[tid].lastaction = MA_ACTION_COLDEEXC;
         pkt_ptr->interactions += 1;
         pkt_ptr->last_event = 10;
@@ -398,7 +398,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         if (debuglevel == 2) printout("[debug] do_ma:   internal downward jump within current ionstage\n");
         mastate[tid].lastaction = MA_ACTION_INTERNALDOWNSAME;
         pkt_ptr->interactions += 1;
-        jumps += 1;
+        jumps++;
         jump = 0;
       #endif
 
@@ -590,8 +590,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
           printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
           abort();
         }
-        //if (tid == 0) ma_stat_deactivation_fb += 1;
-        ma_stat_deactivation_fb += 1;
+        //if (tid == 0) ma_stat_deactivation_fb++;
+        ma_stat_deactivation_fb++;
         mastate[tid].lastaction = MA_ACTION_RADRECOMB;
         pkt_ptr->interactions += 1;
         pkt_ptr->last_event = 2;
@@ -616,8 +616,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   collisonal recombination\n");
         if (debuglevel == 2) printout("[debug] do_ma: jumps = %d\n",jumps);
-        //if (tid == 0) ma_stat_deactivation_collrecomb += 1;
-        ma_stat_deactivation_collrecomb += 1;
+        //if (tid == 0) ma_stat_deactivation_collrecomb++;
+        ma_stat_deactivation_collrecomb++;
         mastate[tid].lastaction = MA_ACTION_COLRECOMB;
         pkt_ptr->interactions += 1;
         pkt_ptr->last_event = 11;
@@ -638,7 +638,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         if (debuglevel == 2) printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
         mastate[tid].lastaction = MA_ACTION_INTERNALDOWNLOWER;
         pkt_ptr->interactions += 1;
-        jumps += 1;
+        jumps++;
         jump = 1;
       #endif
 
@@ -686,7 +686,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         if (debuglevel == 2) printout("[debug] do_ma:   internal upward jump within current ionstage\n");
         mastate[tid].lastaction = MA_ACTION_INTERNALUPSAME;
         pkt_ptr->interactions += 1;
-        jumps += 1;
+        jumps++;
         jump = 2;
       #endif
 
@@ -717,7 +717,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         if (debuglevel == 2) printout("[debug] do_ma:   internal upward jump to next ionstage\n");
         mastate[tid].lastaction = MA_ACTION_INTERNALUPHIGHER;
         pkt_ptr->interactions += 1;
-        jumps += 1;
+        jumps++;
         jump = 3;
       #endif
 

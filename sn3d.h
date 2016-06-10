@@ -538,7 +538,7 @@ bool homogeneous_abundances;
 //#define NPHIXSPOINTS 200
 //#define NPHIXSNUINCREMENT 0.1  //sets the frequency/energy spacing of the phixs array in units of nu_edge
 
-bool continue_simulation;
+bool simulation_continued_from_saved;
 extern int tid;
 int nthreads;
 double nu_rfcut;

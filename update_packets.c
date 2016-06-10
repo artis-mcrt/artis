@@ -173,8 +173,8 @@ void update_packets(int nts)
           //pkt_ptr->type = TYPE_KPKT;
           pkt_ptr->type = TYPE_PRE_KPKT;
           pkt_ptr->absorptiontype = -7;
-          //if (tid == 0) k_stat_from_earlierdecay += 1;
-          k_stat_from_earlierdecay += 1;
+          //if (tid == 0) k_stat_from_earlierdecay++;
+          k_stat_from_earlierdecay++;
 
           //printout("already decayed packets and propagation by packet_prop\n");
           packet_prop(pkt_ptr, tmin, ts+tw, nts);
@@ -316,7 +316,7 @@ void update_cell(int cellnumber)
 ///=calculate_levelpops for non isothermal homogeneous grids
 ///
 {
-  updatecellcounter += 1;
+  updatecellcounter++;
 
   /// Make known that cellhistory[tid] contains information about the
   /// cell given by cellnumber.

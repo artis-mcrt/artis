@@ -575,13 +575,6 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
 
           if (opacity_case == 4)
           {
-            /// Initialise shortcuts to previous values.
-            /*T_R = cell[n].T_R;
-            T_e = cell[n].T_e;
-            T_e_old = T_e;
-            W = cell[n].W;
-            nne = cell[n].nne;*/
-
             /// Update abundances of radioactive isotopes
             //printout("call update abundances for timestep %d in model cell %d\n",m,n);
             update_abundances(n, time_step[nts].mid);
@@ -592,7 +585,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
             {
               /// Determine renormalisation factor for corrected photoionsiation cross-sections
               #ifndef FORCE_LTE
-                if (!continue_simulation)
+                if (!simulation_continued_from_saved)
                 {
                   for (int element = 0; element < nelements; element++)
                   {
@@ -650,17 +643,19 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
                 #ifdef DO_TITER
                   if (J_reduced_save[n] >= 0)
                   {
-                    J[n] = (J[n]+J_reduced_save[n])/2.;
+                    J[n] = (J[n] + J_reduced_save[n]) / 2;
                   }
                   J_reduced_save[n] = J[n];
                 #endif
 
-                double T_R = pow(PI/STEBO*(J[n]),1./4.);
+                double T_R = pow(PI / STEBO * J[n], 1/4);
                 if (isfinite(T_R))
                 {
                   /// Make sure that T is in the allowed temperature range.
-                  if (T_R > MAXTEMP) T_R = MAXTEMP;
-                  if (T_R < MINTEMP) T_R = MINTEMP;
+                  if (T_R > MAXTEMP)
+                    T_R = MAXTEMP;
+                  if (T_R < MINTEMP)
+                    T_R = MINTEMP;
                 }
                 else
                 {
@@ -668,10 +663,10 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
                   printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",n);
                   T_R = modelgrid[n].TR;
                 }
-                modelgrid[n].TR = T_R;
-                modelgrid[n].Te = T_R;
-                modelgrid[n].TJ = T_R;
-                modelgrid[n].W = 1;
+                set_TR(n,T_R);
+                set_Te(n,T_R);
+                set_TJ(n,T_R);
+                set_W(n,1);
 
                 #ifndef FORCE_LTE
                 /// These don't depend on T_e, therefore take them out of the T_e iteration
@@ -1228,8 +1223,8 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       //elements[element].uppermost_ion = uppermost_ion;
       elements_uppermost_ion[tid][element] = uppermost_ion;
       if (uppermost_ion == 0)
-        only_neutral_ions += 1;
-      nelements_in_cell += 1;
+        only_neutral_ions++;
+      nelements_in_cell++;
     }
   }
 
@@ -1451,7 +1446,7 @@ double get_ffcooling(int element, int ion, int cellnumber)
   int ioncharge;
   double T_e,nne,nncurrention,C_ff;
 
-  ion += 1;
+  ion++;
   nncurrention = ionstagepop(cellnumber,element,ion);
   nne = cell[cellnumber].nne;
   T_e = cell[cellnumber].T_e;
