@@ -1262,3 +1262,80 @@ double superlevel_boltzmann(int modelgridindex, int element, int ion, int level)
 
   return (stat_weight(element,ion,level) * exp(-(E_level-E_superlevel)/KB/T_exc));
 }
+
+
+void write_to_nlte_file(int n, int timestep)
+{
+  fprintf(nlte_file,"timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",timestep,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),get_nne(n));
+  for (int nlte = 0; nlte < total_nlte_levels; nlte++)
+  {
+    int element = -1;
+    int ion = -1;
+    int level = -1;
+    for (int dum_element = 0; dum_element < nelements; dum_element++)
+    {
+      const int nions = get_nions(dum_element);
+      for (int dum_ion = 0; dum_ion < nions; dum_ion++)
+      {
+        const int ion_first_nlte = elements[dum_element].ions[dum_ion].first_nlte;
+        //printout("NLTETEST: element %d ion %d first_nlte %d looking for %d\n",dum_element,dum_ion,ion_first_nlte,nlte);
+        if (nlte >= ion_first_nlte)
+        {
+          element = dum_element;
+          ion = dum_ion;
+          level = nlte - ion_first_nlte + 1;
+        }
+      }
+    }
+    if (level == -1)
+    {
+      printout("FATAL: matching ion & level for NLTE index %d not found",nlte);
+      abort();
+    }
+    else
+    {
+      //printout("found it in element %d ion %d level %d\n",element,ion,level);
+    }
+    double nnlevelnlte = modelgrid[n].nlte_pops[nlte] * modelgrid[n].rho;
+    double E_level = epsilon(element,ion,level);
+    double E_ground = epsilon(element,ion,0);
+    double T_e = get_TJ(n);
+    //double W = get_W(n);
+    double W = 1.;
+    double nnlevellte = get_groundlevelpop(n,element,ion) * W *
+        stat_weight(element,ion,level)/stat_weight(element,ion,0) *
+        exp(-(E_level-E_ground)/KB/T_e);
+    //double nnlevellte = calculate_levelpop_lte(n,element,ion,level); this function includes a minpop
+    //if (ion == 1)
+    {
+      if (level == 1)
+        fprintf(nlte_file,"nlte_index - element %d ion %d level 0 energy 0 nlte_pop - nnlevelnlte - nnlevellte %g\n",
+              element,ion,get_groundlevelpop(n,element,ion));
+
+      fprintf(nlte_file,"nlte_index %d element %d ion %d level %d energy %g nlte_pop %g nnlevelnlte %g nnlevellte %g\n",
+              nlte,element,ion,level,E_level-E_ground,modelgrid[n].nlte_pops[nlte],
+              nnlevelnlte,nnlevellte);
+    }
+  }
+  fprintf(nlte_file,"\n");
+  //printout("I just wrote %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+
+  //fprintf(nlte_file,"%d %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n));
+  // for (int dummy_element = 0; dummy_element < nelements; dummy_element++)
+  // {
+  //   int nions = get_nions(dummy_element);
+  //   for (int dummy_ion = 0; dummy_ion < nions; dummy_ion++)
+  //   {
+  //     int nlte = get_nlevels_nlte(dummy_element, dummy_ion);
+  //     if (nlte > 0)
+  //     {
+  //       for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
+  //       {
+  //         fprintf(nlte_file,"%g ", calculate_exclevelpop_old(n, dummy_element, dummy_ion, dummy_level));
+  //       }
+  //     }
+  //   }
+  // }
+  //fprintf(nlte_file,"\n");
+  fflush(nlte_file);
+}

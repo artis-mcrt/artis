@@ -314,7 +314,6 @@ int main(int argc, char** argv)
     printout("Cannot open %s.\n",filename);
     exit(0);
   }
-  setvbuf(nlte_file, NULL, _IOLBF, 1);
 
   printout("Beginning.\n");
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
