@@ -2,23 +2,24 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-  CC = clang
+#  CC = clang
+#  CC = clang-3.8
+  CC = clang-omp
 #  CC = gcc-6
-#  CC = clang-omp
 #  CC = mpicc
-  INCLUDE = -I/usr/local/Cellar/gsl/1.16/include
-#  INCLUDE = -I/usr/local/opt/gperftools/include
-#  LIB = -L/usr/local/opt/gperftools/lib
-  LIB = -L/usr/local/Cellar/gsl/1.16/lib
-#  CFLAGS = -Wall -O0 -g -std=c11 $(INCLUDE)
-  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -ftree-vectorize -flto -O3 -march=native -fstrict-aliasing -Wstrict-aliasing -std=c11 $(INCLUDE)
+#  CC = icc
+  INCLUDE = -I/usr/local/Cellar/gsl/1.16/include -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/opt/gperftools/include
+  LIB = -L/usr/local/Cellar/gsl/1.16/lib -L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
+  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -fopenmp=libomp 
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)
 #maybe  -fopt-info-vec-missed
+#  -fwhole-program
 #add -lprofiler for gperftools
 
   LDFLAGS = $(LIB) -lgsl -lgslcblas
+  sn3d: CFLAGS += -fopenmp
   exspec: CFLAGS += -DDO_EXSPEC
   exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
 
@@ -227,8 +228,11 @@ sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_em
 
 sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o linelist.o ltepop.o macroatom.o move.o nltepop.o packet_init.o packet_prop.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o time_init.o update_grid.o update_packets.o vectors.o vpkt.o
 
-sn3d: clean version $(sn3d_objects)
-	$(CC) $(CFLAGS) $(sn3d_objects) $(LDFLAGS) -o sn3d
+sn3d: clean version
+	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+
+sn3ddebug: clean version $(sn3d_objects)
+	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
 exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c
 

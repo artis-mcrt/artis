@@ -10,8 +10,8 @@
 //#define FORCE_LTE
 #define NT_ON true       /// Switch on non-thermal ionisation
 
-//#define NLTE_POPS_ON
-//#define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
+#define NLTE_POPS_ON
+#define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
                                           // equation simultaneously for levels
                                           // in all ions
 #define NLTEITER 30
