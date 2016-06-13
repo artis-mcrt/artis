@@ -1633,41 +1633,41 @@ static void read_atomicdata(void)
   total_nlte_levels = 0;
   n_super_levels = 0;
 
-  #ifdef NLTE_POPS_ON
-    for (int element = 0; element < nelements; element++)
+#ifdef NLTE_POPS_ON
+  for (int element = 0; element < nelements; element++)
+  {
+    const int nions = get_nions(element);
+    //includedions += nions;
+    for (int ion = 0; ion < nions; ion++)
     {
-      const int nions = get_nions(element);
-      //includedions += nions;
-      for (int ion = 0; ion < nions; ion++)
+      elements[element].ions[ion].first_nlte = total_nlte_levels;
+      const int nlevels = get_nlevels(element,ion);
+      int count = 0;
+      if (nlevels > 1)
       {
-        elements[element].ions[ion].first_nlte = total_nlte_levels;
-        const int nlevels = get_nlevels(element,ion);
-        int count = 0;
-        if (nlevels > 1)
+        for (int level = 1; level < nlevels; level++)
         {
-          for (int level = 1; level < nlevels; level++)
+          if (is_nlte(element,ion,level))
           {
-            if (is_nlte(element,ion,level))
-            {
-              count++;
-              total_nlte_levels++;
-            }
+            count++;
+            total_nlte_levels++;
           }
         }
-
-        if (count < (nlevels - 1))
-        {
-          /* If there are more levels that the ground state + the number of NLTE levels then we need an extra slot to store data for the "superlevel", which is a representation of all the other levels that are not treated in detail. */
-          total_nlte_levels++;
-          n_super_levels++;
-        }
-
-        elements[element].ions[ion].nlevels_nlte = count;
-
-        printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element),get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
       }
+
+      if (count < (nlevels - 1))
+      {
+        /* If there are more levels that the ground state + the number of NLTE levels then we need an extra slot to store data for the "superlevel", which is a representation of all the other levels that are not treated in detail. */
+        total_nlte_levels++;
+        n_super_levels++;
+      }
+
+      elements[element].ions[ion].nlevels_nlte = count;
+
+      printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element),get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
     }
-  #endif
+  }
+#endif
 
   printout("[input.c]....total nlte levels: %d of which %d are superlevels\n", total_nlte_levels, n_super_levels);
 }
