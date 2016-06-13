@@ -18,13 +18,13 @@ static int get_nlte_vector_index(int element_in, int ion_in, int level_in)
   int index = 0;
   for (int ion = 0; ion < ion_in; ion++)
   {
-    int nlevels_nlte = get_nlevels_nlte(element_in,ion);
+    const int nlevels_nlte = get_nlevels_nlte(element_in,ion);
 
     index += nlevels_nlte + 1;
     if (nlevels_nlte != (get_nlevels(element_in,ion) - 1))
       index++; // there's a superlevel here
   }
-  int nlevels_nlte = get_nlevels_nlte(element_in,ion_in);
+  const int nlevels_nlte = get_nlevels_nlte(element_in,ion_in);
   if (is_nlte(element_in, ion_in, level_in) == true)
     index += level_in;
   else
@@ -76,14 +76,14 @@ static void filter_nlte_matrix(int element, int nlte_dimension, double *rate_mat
     double row_max = 0.0;
     for (int column = 0; column < nlte_dimension; column++)
     {
-      double element_value = rate_matrix[index * nlte_dimension + column];
+      const double element_value = rate_matrix[index * nlte_dimension + column];
       if (element_value > row_max)
         row_max = element_value;
     }
     double col_max = 0.0;
     for (int row = 1; row < nlte_dimension; row++) //skip the normalisation row 0
     {
-      double element_value = rate_matrix[row * nlte_dimension + index];
+      const double element_value = rate_matrix[row * nlte_dimension + index];
       if (element_value > col_max)
         col_max = element_value;
     }
@@ -114,19 +114,19 @@ static void filter_nlte_matrix(int element, int nlte_dimension, double *rate_mat
 void nlte_pops_element(int element, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels in all ions of an element
 {
-  double t_mid = time_step[timestep].mid;
+  const double t_mid = time_step[timestep].mid;
   const int nions = get_nions(element);
 
   if (get_abundance(modelgridindex, element) > 0.0)
   {
-    set_TR(modelgridindex,3000); //TODO: remove after testing complete
+    //set_TR(modelgridindex,3000); //TODO: remove after testing complete
     //set_W(modelgridindex,1.0); //TODO: remove after testing complete
 
     printout("Solving for NLTE populations in cell %d at timestep %d for element %d\n",modelgridindex,timestep,element);
     printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
 
     int nlte_dimension = 0;
-    double *superlevel_partfunc = calloc(nions,sizeof(double)); //space is allocated for every ion, whether or not it has a superlevel
+    double *const superlevel_partfunc = calloc(nions,sizeof(double)); //space is allocated for every ion, whether or not it has a superlevel
     for (int ion = 0; ion < nions; ion++)
     {
       int nlevels_nlte = get_nlevels_nlte(element,ion);
@@ -417,21 +417,41 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     gsl_linalg_LU_decomp(&m.matrix, p, &s);
 
     gsl_vector_view b = gsl_vector_view_array(balance_vector, nlte_dimension);
-    gsl_vector *x = gsl_vector_alloc(nlte_dimension);
+    gsl_vector *x = gsl_vector_alloc(nlte_dimension); //population solution vector
     gsl_linalg_LU_solve(&m.matrix, p, &b.vector, x); //solve matrix equation m * x = b for x (populations)
+
     //gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
 
-    // NEW: does this work correctly and improve accuracy?
-    const double TOLERANCE = 1e-15;
-    double d = 2 * TOLERANCE;
-    gsl_vector* r = gsl_vector_alloc(nlte_dimension);;
+    const double TOLERANCE = 1e-10;
 
-    for (int iteration = 1; d > TOLERANCE; iteration++)
+    double error_best = -1.;
+    gsl_vector *x_best = gsl_vector_alloc(nlte_dimension); //population solution vector
+    gsl_vector *vec_residual = gsl_vector_alloc(nlte_dimension);;
+    int iteration;
+    for (iteration = 1; iteration < 1000; iteration++)
     {
-      gsl_linalg_LU_refine(&morig.matrix, &m.matrix, p, &b.vector, x, r);
-      d = gsl_blas_dnrm2(r);
-      printout("NLTE solver iteration %d has tolerance of %g\n",iteration,d);
+      gsl_linalg_LU_refine(&morig.matrix, &m.matrix, p, &b.vector, x, vec_residual);
+      const double error = fabs(gsl_vector_get(vec_residual, gsl_blas_idamax(vec_residual))); // value of the largest absolute residual
+      //const double error = gsl_blas_dnrm2(residual); // Euclidean mean of residual vector
+
+      if (error < error_best || error_best < 0.)
+      {
+        gsl_vector_memcpy(x_best,x);
+        error_best = error;
+      }
+      printout("NLTE solver iteration %d has a maximum residual of %g\n",iteration,error);
+      if (error < TOLERANCE)
+      {
+        break;
+      }
     }
+    if (error_best >= 0.)
+    {
+      printout("NLTE solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",iteration,error_best);
+      gsl_vector_memcpy(x,x_best);
+    }
+    gsl_vector_free(vec_residual);
+    gsl_vector_free(x_best);
 
     for (int row = 0; row < nlte_dimension; row++)
     {
@@ -451,7 +471,6 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         printout("WARNING: NLTE solver gave negative population to index %d (ion %d level %d), pop = %g\n",row,ion,level,gsl_vector_get(x,row)*pop_norm_factors[row]);
       }
     }
-    gsl_vector_free(r);
 
     double *ion_populations = calloc(nions,sizeof(double));
     double matrix_elem_pop = 0.0;
@@ -542,8 +561,8 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
              modelgridindex,timestep,element);
     for (int ion = 0; ion < nions; ion++)
     {
-      int nlte_start = elements[element].ions[ion].first_nlte;
-      int nlevels_nlte = get_nlevels_nlte(element,ion);
+      const int nlte_start = elements[element].ions[ion].first_nlte;
+      const int nlevels_nlte = get_nlevels_nlte(element,ion);
       for (int level = 1; level < nlevels_nlte+1; level++)
       {
         modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = -1.0;///flag to indicate no useful data
