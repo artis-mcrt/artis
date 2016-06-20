@@ -3,6 +3,7 @@
 #include "packet_init.h"
 #include "vectors.h"
 
+
 static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {

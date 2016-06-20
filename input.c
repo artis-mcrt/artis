@@ -12,8 +12,6 @@
 #ifdef DO_EXSPEC
   #include "exspec.h"
 #endif
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_spline.h>
 
 
 typedef struct
@@ -1608,7 +1606,7 @@ static void read_atomicdata(void)
       int photoiontransitions = 0;
       for (int level = 0; level < get_nlevels(element,ion); level++)
         photoiontransitions += get_nphixstargets(element,ion,level);
-      printout("[input.c]     ion %d with %d levels (%d ionising) and %d photoionisation transitions\n",
+      printout("[input.c]      ion_stage %d with %d levels (%d ionising) and %d photoionisation transitions\n",
                get_ionstage(element,ion),get_nlevels(element,ion),get_ionisinglevels(element,ion),photoiontransitions);
       includedlevels += get_nlevels(element,ion);
       includedionisinglevels += get_ionisinglevels(element,ion);

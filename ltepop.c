@@ -151,11 +151,12 @@ double phi(int element, int ion, int modelgridindex)
        phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
     }
     else
-#ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
-    {
-      phi = ionstagepop(modelgridindex,element,ion+1) / ionstagepop(modelgridindex,element,ion);
-    }
-#else
+// #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+//     {
+//       const double nne = get_nne(modelgridindex);
+//       phi = ionstagepop(modelgridindex,element,ion) / ionstagepop(modelgridindex,element,ion+1) / nne;
+//     }
+// #else
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
       double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]; //try setting to zero
@@ -171,8 +172,8 @@ double phi(int element, int ion, int modelgridindex)
 
       //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
       double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
-      //double Alpha_sp = 0.;
-      double Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
+      double Alpha_sp = 0.;
+      //double Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
       double Col_rec = 0.;
 
       //     if (ion > 0)
@@ -180,24 +181,29 @@ double phi(int element, int ion, int modelgridindex)
       int ionisinglevels = get_bfcontinua(element,ion);
       mastate[tid].element = element;
       mastate[tid].ion = ion+1;
-      mastate[tid].nnlevel = 1.0;
 
       //nlevelsupperion = get_nlevels(element,ion+1);
       for (int level = 0; level < ionisinglevels; level++)
       {
+        double Alpha_sp_unnormed = 0.;
+        double Col_rec_unnormed = 0.;
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
           int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           mastate[tid].level = upper;
+          const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+          mastate[tid].nnlevel = nnlevel;
           double epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
-          Col_rec += col_recombination(modelgridindex,level,epsilon_trans);
-          //Alpha_sp += rad_recombination(modelgridindex,level) / get_nne(modelgridindex);
+          Col_rec_unnormed += col_recombination(modelgridindex,level,epsilon_trans);
+          Alpha_sp_unnormed += rad_recombination(modelgridindex,level);
         }
+        Col_rec += Col_rec_unnormed / ionstagepop(modelgridindex, element, ion + 1) / get_nne(modelgridindex);
+        Alpha_sp += Alpha_sp_unnormed / ionstagepop(modelgridindex, element, ion + 1) / get_nne(modelgridindex);
       }
 
 	  //	}
 
-      double recomb_total = Alpha_sp + Alpha_st + (Col_rec / get_nne(modelgridindex));
+      double recomb_total = Alpha_sp + Alpha_st + Col_rec;
 
       /* NT TEST LINES */
       double Y_nt = 0.0;
@@ -277,8 +283,8 @@ double phi(int element, int ion, int modelgridindex)
       // recombinations / ionizations
       //printout("[debug-luke] phi for ion %d Gamma-part %g, Y_nt %g\n",ion,(Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]),Y_nt);
       //Gamma = 0.0; //TODO: testing testing no gamma part
-      phi = recomb_total *
-          (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
+      phi = recomb_total
+          //* (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
             / ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
             /// Y_nt;
             //Y_nt should be higher than the Gamma term for nebular epoch
@@ -301,7 +307,7 @@ double phi(int element, int ion, int modelgridindex)
       }
     }
   #endif
-#endif //ALL IONS SIMULTANEOUS
+// #endif //ALL IONS SIMULTANEOUS
 
   return phi;
 }
