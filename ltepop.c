@@ -612,9 +612,8 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   double T_exc = get_TJ(modelgridindex);
   double W = 1;
 
-  bool use_lte_pop = false;
-
 #ifdef NLTE_POPS_ON
+  double test;
   int nlte_levels;
 #endif
 
@@ -642,21 +641,24 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   else if (is_nlte(element,ion,level))
   {
     //printout("Using an nlte population!\n");
-    double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1];
-    if (nltepop_over_rho < -0.9)
+    if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
     {
-      // Case for when no NLTE level information is available yet
-      use_lte_pop = true;
+      /* Case for when no NLTE level information is available yet */
+      double E_level = epsilon(element,ion,level);
+      double E_ground = epsilon(element,ion,0);
+      nn = get_groundlevelpop(modelgridindex,element,ion) * W *
+          stat_weight(element,ion,level)/stat_weight(element,ion,0) *
+          exp(-(E_level-E_ground)/KB/T_exc);
     }
     else
     {
       //printout("Using an nlte population!\n");
-      nn = nltepop_over_rho * modelgrid[modelgridindex].rho;
+      nn = test * modelgrid[modelgridindex].rho;
       if (!isfinite(nn))
       {
         printout("[fatal] NLTE population failure.\n");
         printout("element %d ion %d level %d\n", element, ion, level);
-        printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, modelgrid[modelgridindex].rho);
+        printout("nn %g test %g rho %g\n", nn, test, modelgrid[modelgridindex].rho);
         printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
         exit(0);
       }
@@ -665,22 +667,25 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }
   else if ((nlte_levels = get_nlevels_nlte(element,ion)) > 0)
   {
-    // Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
-    double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels];
-    if (nltepop_over_rho < -0.9) //TODO: should change this to less than zero?
+    //Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
+    if ((test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels]) < -0.9) //TODO: should change this to less than zero?
     {
-      // Case for when no NLTE level information is available yet
-      use_lte_pop = true;
+      /* Case for when no NLTE level information is available yet */
+      double E_level = epsilon(element,ion,level);
+      double E_ground = epsilon(element,ion,0);
+      nn = get_groundlevelpop(modelgridindex,element,ion) * W *
+           stat_weight(element,ion,level)/stat_weight(element,ion,0) *
+           exp(-(E_level-E_ground)/KB/T_exc);
     }
     else
     {
       //printout("Using a superlevel population!\n");
-      nn = nltepop_over_rho * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level);
+      nn = test * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level); //TOOD: fix
       if (!isfinite(nn))
       {
         printout("[fatal] NLTE population failure.\n");
         printout("element %d ion %d level %d\n", element, ion, level);
-        printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, modelgrid[modelgridindex].rho);
+        printout("nn %g test %g rho %g\n", nn, test, modelgrid[modelgridindex].rho);
         printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
         exit(0);
       }
@@ -689,11 +694,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }
 #endif
   else
-  {
-    use_lte_pop = true;
-  }
-
-  if (use_lte_pop)
   {
     const double E_level = epsilon(element,ion,level);
     const double E_ground = epsilon(element,ion,0);
