@@ -9,9 +9,10 @@
 //#define DO_TITER
 //#define FORCE_LTE
 #define NT_ON true       /// Switch on non-thermal ionisation
+#define NT_SOLVE_SPENCERFANO true       /// Use the Spencer-Fano solver instead of Axelrod's work function approximation
 
-#define NLTE_POPS_ON
-#define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
+// #define NLTE_POPS_ON
+// #define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
                                           // equation simultaneously for levels
                                           // in all ions
 #define NLTEITER 30
@@ -20,19 +21,20 @@
   #define NLTE_POPS_ON
 #endif
 
-#define USE_MULTIBIN_RADFIELD_MODEL true // if using this, should avoid look up tables below
+#define USE_MULTIBIN_RADFIELD_MODEL false // if using this, should avoid look up tables below
                                          // (since they assume J_nu is Planck function)
 #define FIRST_NLTE_RADFIELD_TIMESTEP 14
-#define NO_LUT_PHOTOION true // dynamically calculate photoionization
+#define NO_LUT_PHOTOION false // dynamically calculate photoionization
                              // rates for the current radiation field
                              // instead of interpolating precalculated
                              // values assuming a blackbody radiation field
 
-#define NO_LUT_BFHEATING true
+#define NO_LUT_BFHEATING false
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
+#define SKIPRATECOEFFVALIDATION false
 
 // Polarisation for real packets
 //#define DIPOLE
@@ -126,7 +128,7 @@ int vgrid_flag;
 #define CLIGHT        2.99792458e+10    /// Speed of light [cm/s]
 #define H             6.6260755e-27     /// Planck constant [erg s]
 #define MSUN          1.98855e+33       /// Solar mass [g]
-#define LSUN          3.826e+33         /// Solar luminosity [erg s]
+#define LSUN          3.826e+33         /// Solar luminosity [erg/s]
 #define MH            1.67352e-24       /// Mass of hydrogen atom [g]
 #define ME            9.1093897e-28     /// Mass of free electron [g]
 #define QE            4.80325E-10       /// elementary charge in cgs units [statcoulomb]
@@ -139,7 +141,7 @@ int vgrid_flag;
 #define PARSEC        3.0857e+18        /// pc to cm [pc/cm]
 #define KB            1.38064852e-16    /// Boltzmann constant [erg/K]
 #define STEBO         5.670400e-5       /// Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
-                                        /// (data taken from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
+                                        /// (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
 #define SAHACONST     2.0706659e-16     /// Saha constant
 
 /// numerical constants

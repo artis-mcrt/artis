@@ -18,6 +18,7 @@
 #include "input.h"
 #include "ltepop.h"
 #include "move.h"
+#include "nonthermal.h"
 #include "packet_init.h"
 #include "radfield.h"
 #include "ratecoeff.h"
@@ -474,6 +475,8 @@ int main(int argc, char** argv)
     int nts = itstep;
 
     radfield_init();
+    if (NT_SOLVE_SPENCERFANO)
+      nonthermal_init();
     // Initialise virtual packets file and vspecpol
     #ifdef ESTIMATORS_ON
       sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
@@ -1486,6 +1489,8 @@ int main(int argc, char** argv)
   fclose(estimators_file);
   fclose(nlte_file);
   radfield_close_file();
+  if (NT_SOLVE_SPENCERFANO)
+    nonthermal_close_file();
 
   #ifdef _OPENMP
     #pragma omp parallel

@@ -2,15 +2,15 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-#  CC = clang
+  CC = clang
 #  CC = clang-3.8
-  CC = clang-omp
+#  CC = clang-omp
 #  CC = gcc-6
 #  CC = mpicc
 #  CC = icc
   INCLUDE = -I/usr/local/Cellar/gsl/1.16/include -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/opt/gperftools/include
   LIB = -L/usr/local/Cellar/gsl/1.16/lib -L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -fopenmp=libomp 
+  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) #-fopenmp=libomp 
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)
@@ -19,7 +19,7 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #add -lprofiler for gperftools
 
   LDFLAGS = $(LIB) -lgsl -lgslcblas
-  sn3d: CFLAGS += -fopenmp
+#  sn3d: CFLAGS += -fopenmp
   exspec: CFLAGS += -DDO_EXSPEC
   exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
 
@@ -224,9 +224,9 @@ endif
 
 ### use pg when you want to use gprof the profiler
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
-sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c linelist.c ltepop.c macroatom.c move.c nltepop.c packet_init.c packet_prop.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c time_init.c update_grid.c update_packets.c vectors.c vpkt.c
+sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c linelist.c ltepop.c macroatom.c move.c nltepop.c nonthermal.c packet_init.c packet_prop.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c time_init.c update_grid.c update_packets.c vectors.c vpkt.c
 
-sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o linelist.o ltepop.o macroatom.o move.o nltepop.o packet_init.o packet_prop.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o time_init.o update_grid.o update_packets.o vectors.o vpkt.o
+sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o linelist.o ltepop.o macroatom.o move.o nltepop.o nonthermal.o packet_init.o packet_prop.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o time_init.o update_grid.o update_packets.o vectors.o vpkt.o
 
 sn3d: clean version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d

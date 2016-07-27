@@ -1074,7 +1074,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 
       const double g_ratio = statweight_target / mastate[tid].statweight;
 
-      C = C_0 * 14.5 * n_u * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * gauntfac;
+      C = C_0 * 14.51039491 * n_u * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * gauntfac;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {
@@ -1146,22 +1146,18 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       ///Rutten script eq. 3.32. p.50
       //C = n_l * 2.16 * pow(eoverkt,-1.68) * pow(T_e,-1.5) * exp(-eoverkt) * nne * osc_strength(element,ion,upper,lower);
 
-      ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
-      const double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
+      // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      const double g_bar = 0.2; // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
       //test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
       /// crude approximation to the already crude Van-Regemorter formula
 
-      //double test = 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
-      //double Gamma = g_bar > test ? g_bar : test;
-      //C = C_0 * 14.5 * n_u * nne * pow(T_e,0.5) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * eoverkt * g_ratio * Gamma;
-
-      //optimisation
-      const double gauntfac = (eoverkt > 0.33421) ? g_bar : 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
-      C = C_0 * 14.5 * H_ionpot * H_ionpot * n_l * nne * sqrt(T_e) * osc_strength(lineindex) / (epsilon_trans * epsilon_trans) * eoverkt * exp(-eoverkt) * gauntfac;
+      double test = 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
+      double Gamma = g_bar > test ? g_bar : test;
+      C = n_l * C_0 * nne * pow(T_e,0.5) * 14.51039491 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * eoverkt * exp(-eoverkt) * Gamma;
     }
     else if (coll_str_thisline > -3.5) //to catch -2 or -3
     {
-      //forbidden transitions: magnetic dipole, electric quadropole...
+      // forbidden transitions: magnetic dipole, electric quadropole...
       C = n_l * nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-eoverkt) * statw_upper(lineindex);
     }
     else

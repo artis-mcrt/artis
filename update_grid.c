@@ -5,6 +5,7 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "nonthermal.h"
 #include "nltepop.h"
 #include "radfield.h"
 #include "ratecoeff.h"
@@ -242,6 +243,7 @@ static void write_to_estimators_file(int n, int timestep)
     #endif
     fprintf(estimators_file,"\n");
   }
+
   fflush(estimators_file);
 }
 
@@ -889,6 +891,9 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
               #endif
             }
 
+            if (NT_SOLVE_SPENCERFANO)
+              nt_solve_spencerfano(n,nts,deltaV);
+
             double nne = get_nne(n);
             double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
 
@@ -1092,7 +1097,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
   const double W = get_W(modelgridindex);
 
   double nne_lo = 0.;  //MINPOP;
-  double nne_hi = get_rho(modelgridindex)/MH;
+  double nne_hi = get_rho(modelgridindex) / MH;
 
   /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
   int only_neutral_ions = 0;
@@ -1325,13 +1330,13 @@ double calculate_electron_densities(int modelgridindex)
 
   for (int element = 0; element < nelements; element++)
   {
-    const double abundance = get_abundance(modelgridindex,element);
+    const double elem_abundance = get_abundance(modelgridindex,element);
     // calculate number density of the current element (abundances are given by mass)
-    const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
+    const double nnelement = elem_abundance / elements[element].mass * get_rho(modelgridindex);
     nne_tot += nnelement * get_element(element);
 
-    // Use ionisation fractions to calculate the groundlevel populations
-    if (abundance > 0)
+    // Use ionisation fractions to calculate the free electron contributions
+    if (elem_abundance > 0)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)

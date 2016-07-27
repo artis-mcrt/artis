@@ -50,15 +50,15 @@ static bool read_ratecoeff_dat(void)
     bool fileisamatch = true;
 
     char adatafile_hash_in[33];
-    fscanf(ratecoeff_file,"%33s\n",adatafile_hash_in);
+    fscanf(ratecoeff_file,"%32s\n",adatafile_hash_in);
     printout("ratecoeff.dat: adata file should have MD5 of %s\n",adatafile_hash_in);
 
     char compositionfile_hash_in[33];
-    fscanf(ratecoeff_file,"%33s\n",compositionfile_hash_in);
+    fscanf(ratecoeff_file,"%32s\n",compositionfile_hash_in);
     printout("ratecoeff.dat: composition file should have MD5 of %s\n",compositionfile_hash_in);
 
     char phixsfile_hash_in[33];
-    fscanf(ratecoeff_file,"%33s\n",phixsfile_hash_in);
+    fscanf(ratecoeff_file,"%32s\n",phixsfile_hash_in);
     printout("ratecoeff.dat: phixs file should have MD5 of %s\n",phixsfile_hash_in);
 
     if (strcmp(adatafile_hash,adatafile_hash_in) == 0)
@@ -112,8 +112,10 @@ static bool read_ratecoeff_dat(void)
       fileisamatch = false;
     }
 
-    if (fileisamatch)
+    if (fileisamatch || SKIPRATECOEFFVALIDATION)
     {
+      if (SKIPRATECOEFFVALIDATION && !fileisamatch)
+        printout("SKIPRATECOEFFVALIDATION on, ignoring checks and forcing use ratecoeff.dat\n");
       printout("[info] ratecoefficients_init:  Matching ratecoeff.dat file found. Readin this file ...\n");
       for (int element = 0; element < nelements; element++)
       {
@@ -122,7 +124,7 @@ static bool read_ratecoeff_dat(void)
         {
           //nlevels = get_nlevels(element,ion);
           const int nlevels = get_ionisinglevels(element,ion); /// number of ionising levels associated with current ion
-          int nbfcont = get_bfcontinua(element,ion);     /// number of ionising levels of the current ion which are used in the simulation
+          // int nbfcont = get_bfcontinua(element,ion);     /// number of ionising levels of the current ion which are used in the simulation
           for (int level = 0; level < nlevels; level++)
           {
             /// Loop over the phixs target states
@@ -133,15 +135,15 @@ static bool read_ratecoeff_dat(void)
               for (int iter = 0; iter < TABLESIZE; iter++)
               {
                 double alpha_sp,bfcooling_coeff,gammacorr,bfheating_coeff;
-                fscanf(ratecoeff_file,"%lg %lg %lg %lg\n", &alpha_sp,&bfcooling_coeff,&gammacorr,&bfheating_coeff);
+                fscanf(ratecoeff_file,"%lg %lg %lg %lg\n", &alpha_sp, &bfcooling_coeff, &gammacorr, &bfheating_coeff);
 
-                if (level < nbfcont)
-                {
+                // if (level < nbfcont)
+                // {
                   elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
                   elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] = bfcooling_coeff;
                   elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter] = gammacorr;
                   elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter] = bfheating_coeff;
-                }
+                // }
               }
             }
           }
@@ -515,12 +517,12 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
 
 static void precalculate_rate_coefficient_integrals(void)
 {
-  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
+  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
 
   /// Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < nelements; element++)
   {
-    int nions = get_nions(element) - 1;
+    const int nions = get_nions(element) - 1;
     #ifdef _OPENMP
       #pragma omp parallel for
     #endif
@@ -530,9 +532,10 @@ static void precalculate_rate_coefficient_integrals(void)
       const int nlevels = get_ionisinglevels(element,ion);
       /// That's only an option for pure LTE
       //if (TAKE_N_BFCONTINUA < nlevels) nlevels = TAKE_N_BFCONTINUA;
-      printout("Performing rate integrals for Z = %d, ionstage %d...\n",elements[element].anumber,ion+1);
+      printout("Performing rate integrals for Z = %d, ion_stage %d...\n",elements[element].anumber,get_ionstage(element,ion));
 
-      gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(1024);
+      gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(8192);
+      gsl_error_handler_t *gsl_error_handler = gsl_set_error_handler_off();
 
       mastate[tid].element = element;   /// Global variable which passes the current element to all subfunctions of macroatom.c
       mastate[tid].ion = ion;   /// Global variable which passes the current ion to all subfunctions of macroatom.c
@@ -560,6 +563,7 @@ static void precalculate_rate_coefficient_integrals(void)
           for (int iter = 0; iter < TABLESIZE; iter++)
           {
             double error;
+            int status = 0;
             const double T_e = MINTEMP * exp(iter * T_step_log);
             //T_e = MINTEMP + iter*T_step;
             const double sfac = calculate_sahafact(element,ion,level,upperlevel,T_e,E_threshold);
@@ -587,7 +591,11 @@ static void precalculate_rate_coefficient_integrals(void)
             gsl_function F_alpha_sp;
             F_alpha_sp.function = &alpha_sp_integrand_gsl;
             F_alpha_sp.params = &intparas;
-            gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 4096, GSL_INTEG_GAUSS61, w, &alpha_sp, &error);
+            status = gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 8192, GSL_INTEG_GAUSS61, w, &alpha_sp, &error);
+            if (status != 0)
+            {
+                printout("alpha_sp integrator status %d. Integral value %9.3e +/- %9.3e\n",status,alpha_sp,error);
+            }
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
 
             //if (iter == 0)
@@ -597,21 +605,33 @@ static void precalculate_rate_coefficient_integrals(void)
             gsl_function F_gammacorr;
             F_gammacorr.function = &gammacorr_integrand_gsl;
             F_gammacorr.params = &intparas;
-            gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 4096, GSL_INTEG_GAUSS61, w, &gammacorr, &error);
+            status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, 0, intaccuracy, 8192, GSL_INTEG_GAUSS61, w, &gammacorr, &error);
+            if (status != 0)
+            {
+              printout("gammcorr integrator status %d. Integral value %9.3e +/- %9.3e\n",status,gammacorr,error);
+            }
             gammacorr *= FOURPI * phixstargetprobability;
 
             double bfheating_coeff = 0.0;
             gsl_function F_bfheating;
             F_bfheating.function = &approx_bfheating_integrand_gsl;
             F_bfheating.params = &intparas;
-            gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 4096, GSL_INTEG_GAUSS61, w, &bfheating_coeff, &error);
+            status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, 0, intaccuracy, 8192, GSL_INTEG_GAUSS61, w, &bfheating_coeff, &error);
+            if (status != 0)
+            {
+              printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status,bfheating_coeff,error);
+            }
             bfheating_coeff *= FOURPI * phixstargetprobability;
 
             double bfcooling_coeff = 0.0;
             gsl_function F_bfcooling;
             F_bfcooling.function = &bfcooling_integrand_gsl;
             F_bfcooling.params = &intparas;
-            gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 4096, GSL_INTEG_GAUSS61, w, &bfcooling_coeff, &error);
+            status = gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 8192, GSL_INTEG_GAUSS61, w, &bfcooling_coeff, &error);
+            if (status != 0)
+            {
+              printout("bfcooling_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status,bfcooling_coeff,error);
+            }
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
 
             /// Save the calculated coefficients to memory
@@ -622,6 +642,7 @@ static void precalculate_rate_coefficient_integrals(void)
           }
         }
       }
+      gsl_set_error_handler(gsl_error_handler);
       gsl_integration_workspace_free(w);
     }
   }
@@ -982,8 +1003,8 @@ static double integrand_bfheating_current_radfield(double nu, void *restrict voi
 
   return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
 
-  //return sigma_bf * (1-nu_edge/nu) * radfield(nu,modelgridindex) *
-  //       (1 - exp(-HOVERKB*nu/T_R));
+  // const double T_R = get_TR(modelgridindex);
+  // return sigma_bf * (1-nu_edge/nu) * radfield(nu,modelgridindex) * (1 - exp(-HOVERKB*nu/T_R));
 }
 
 

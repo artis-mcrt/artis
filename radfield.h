@@ -19,7 +19,7 @@ void radfield_broadcast_estimators(int my_rank);
 inline double radfield2(double nu, double T, double W)
 // returns J_nu for a diluted black body
 {
-  return W * TWOHOVERCLIGHTSQUARED * nu * nu * nu / (exp(HOVERKB * nu / T) - 1);
+  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) / (exp(HOVERKB * nu / T) - 1);
 }
 
 

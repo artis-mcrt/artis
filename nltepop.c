@@ -7,6 +7,7 @@
 #include "grid_init.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "nonthermal.h"
 #include "nltepop.h"
 #include "ratecoeff.h"
 #include "update_grid.h"
@@ -248,7 +249,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         {
           if (ion < nions-1)
           {
-            const double Y = nt_ionization_rate(modelgridindex,element,ion);
+            const double Y = nt_ionization_ratecoeff(modelgridindex,element,ion);
             //double Y = 0.0; // TODO: remove, testing only
 
             const int lower_index = get_nlte_vector_index(element,ion,level);
@@ -266,7 +267,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           }
         }
 
-        //now put in the photoionization/recombination processes
+        // now put in the photoionization/recombination processes
         const int nionisinglevels = get_bfcontinua(element,ion);
         if (ion < nions-1 && level < nionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
         {
@@ -347,7 +348,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           if (is_nlte(element,ion,dummylevel) == false)
             pop_norm_factors[column] += calculate_levelpop_lte(modelgridindex,element,ion,dummylevel);
         }
-        //NOTE: above calulation is not always equal to the sum of LTE populations,
+        //NOTE: above calculation is not always equal to the sum of LTE populations,
         //since calculate_levelpop_lte imposes MINPOP minimum
         printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*levelpop(SL)/g(SL) %g\n",
                  column,pop_norm_factors[column],superlevel_partfunc[ion],
@@ -544,6 +545,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     gsl_vector_free(x);
 
     gsl_matrix_free(rate_matrix);
+    gsl_matrix_free(rate_matrix_LU_decomp);
     gsl_vector_free(balance_vector);
     free(pop_norm_factors);
     free(superlevel_partfunc);
@@ -767,7 +769,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
         #if NT_ON == true
           if (ion < get_nions(element)-1)
           {
-            double Y = nt_ionization_rate(modelgridindex,element,ion);
+            double Y = nt_ionization_ratecoeff(modelgridindex,element,ion);
 
             if ((level == 0) || (is_nlte(element, ion, level) == 1))
             {
@@ -1037,238 +1039,6 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 }
 
 
-static double get_mean_binding_energy(int element, int ion)
-{
-  int q[M_NT_SHELLS];
-  double total;
-
-  const int ioncharge = get_ionstage(element,ion) - 1;
-  const int nbound = elements[element].anumber - ioncharge; //number of bound electrons
-
-  if (nbound > 0)
-  {
-    for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
-    {
-      q[electron_loop] = 0;
-    }
-
-    for (int electron_loop = 0; electron_loop < nbound; electron_loop++)
-    {
-      if (q[0] < 2) //K 1s
-      {
-        q[0]++;
-      }
-      else if (q[1] < 2) //L1 2s
-      {
-        q[1]++;
-      }
-      else if (q[2] < 2) //L2 2p[1/2]
-      {
-        q[2]++;
-      }
-      else if (q[3] < 4) //L3 2p[3/2]
-      {
-        q[3]++;
-      }
-      else if (q[4] < 2) //M1 3s
-      {
-        q[4]++;
-      }
-      else if (q[5] < 2) //M2 3p[1/2]
-      {
-        q[5]++;
-      }
-      else if (q[6] < 4) //M3 3p[3/2]
-      {
-        q[6]++;
-      }
-      else if (ioncharge == 0)
-      {
-        if (q[9] < 2) //N1 4s
-        {
-          q[9]++;
-        }
-        else if (q[7] < 4) //M4 3d[3/2]
-        {
-          q[7]++;
-        }
-        else if (q[8] < 6) //M5 3d[5/2]
-        {
-          q[8]++;
-        }
-        else
-        {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          exit(0);
-        }
-      }
-      else if (ioncharge == 1)
-      {
-        if (q[9] < 1) // N1 4s
-        {
-          q[9]++;
-        }
-        else if (q[7] < 4) //M4 3d[3/2]
-        {
-          q[7]++;
-        }
-        else if (q[8] < 6) //M5 3d[5/2]
-        {
-          q[8]++;
-        }
-        else
-        {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          exit(0);
-        }
-      }
-      else if (ioncharge > 1)
-      {
-        if (q[7] < 4) //M4 3d[3/2]
-        {
-          q[7]++;
-        }
-        else if (q[8] < 6) //M5 3d[5/2]
-        {
-          q[8]++;
-        }
-        else
-        {
-          printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          exit(0);
-        }
-      }
-    }
-
-    //      printout("For element %d ion %d I got q's of: %d %d %d %d %d %d %d %d %d %d\n", element, ion, q[0], q[1], q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9]);
-    //printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[elements[element].anumber-1][0], electron_binding[elements[element].anumber-1][1], electron_binding[elements[element].anumber-1][2],electron_binding[elements[element].anumber-1][3],electron_binding[elements[element].anumber-1][4],electron_binding[elements[element].anumber-1][5],electron_binding[elements[element].anumber-1][6],electron_binding[elements[element].anumber-1][7],electron_binding[elements[element].anumber-1][8],electron_binding[elements[element].anumber-1][9]);
-
-    total = 0.0;
-    for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
-    {
-      const double use1 = q[electron_loop];
-      if ((use1) > 0)
-      {
-        double use2 = electron_binding[elements[element].anumber-1][electron_loop];
-        const double use3 = elements[element].ions[ion].ionpot;
-        if (use2 > 0)
-        {
-          if (use2 < use3)
-          {
-            total += use1 / use3;
-          }
-          else
-          {
-            total += use1 / use2;
-          }
-        }
-        else
-        {
-          use2 = electron_binding[elements[element].anumber-1][electron_loop-1];
-          if (use2 < use3)
-          {
-            total += use1 / use3;
-          }
-          else
-          {
-            total += use1 / use2;
-          }
-          //		  total += use1/electron_binding[elements[element].anumber-1][electron_loop-1];
-          if (electron_loop != 8)
-          {
-            //For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
-            //is for 8 (corresponding to that shell) then just use the M4 value
-            printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n",element,ion);
-            exit(0);
-          }
-        }
-      }
-      //printout("total %g\n", total);
-    }
-
-  }
-  else
-  {
-    total = 0.0;
-  }
-
-  //printout("For element %d ion %d I got mean binding energy of %g (eV)\n", element, ion, 1./total/EV);
-
-  return total;
-}
-
-
-static double get_tot_nion(int modelgridindex)
-{
-  double result = 0.;
-  for (int element = 0; element < nelements; element++)
-  {
-    result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
-
-    //const int nions = get_nions(element);
-    //for (ion = 0; ion < nions; ion++)
-    //{
-    //  result += ionstagepop(modelgridindex,element,ion);
-    //}
-  }
-
-  return result;
-}
-
-
-static double get_oneoverw(int element, int ion, int modelgridindex)
-{
-  // Routine to compute the work per ion pair for doing the NT ionization calculation. Makes use of EXTREMELY SIMPLE approximations - high energy limits only */
-
-  // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
-  // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
-  // denominator is extremely simplified. Need to get the mean Z value.
-
-  double Zbar = 0.0;
-  for (int ielement = 0; ielement < nelements; ielement++)
-  {
-    Zbar += modelgrid[modelgridindex].composition[ielement].abundance * elements[ielement].anumber;
-  }
-  //printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
-
-  double Aconst = 1.33e-14 * EV * EV;
-  double binding = get_mean_binding_energy(element, ion);
-  double oneoverW = Aconst * binding / Zbar / (2*3.14159*pow(QE,4.0));
-  //printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
-
-  return oneoverW;
-}
-
-
-double nt_ionization_rate(int modelgridindex, int element, int ion)
-{
-
-  double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
-  // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-
-  double t = time_step[nts_global].mid;
-  double rho = get_rho(modelgridindex);
-
-  double co56_positron_dep = (0.610 * 0.19 * MEV) *
-          (exp(-t / TCOBALT) - exp(-t / TNICKEL)) /
-          (TCOBALT - TNICKEL) * modelgrid[modelgridindex].fni * rho / MNI56;
-
-  double v48_positron_dep = (0.290 * 0.499 * MEV) *
-          (exp(-t / T48V) - exp(-t / T48CR)) /
-          (T48V - T48CR) * modelgrid[modelgridindex].f48cr * rho / MCR48;
-
-  //printout("nt_ionization_rate: element: %d, ion %d\n",element,ion);
-  //printout("nt_ionization_rate: gammadep: %g, poscobalt %g pos48v %g\n",
-  //  gamma_deposition,co56_positron_dep,v48_positron_dep);
-
-  // to get the non-thermal ionization rate we need to divide the energy deposited
-  // per unit volume per unit time in the grid cell (sum of terms above)
-  // by the total ion number density and the "work per ion pair"
-  return (gamma_deposition + co56_positron_dep + v48_positron_dep) /
-    get_tot_nion(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
-}
-
-
 double superlevel_boltzmann(int modelgridindex, int element, int ion, int level)
 {
   double T_exc = get_TJ(modelgridindex);
@@ -1314,7 +1084,7 @@ void write_to_nlte_file(int n, int timestep)
     double nnlevelnlte = modelgrid[n].nlte_pops[nlte] * modelgrid[n].rho;
     double E_level = epsilon(element,ion,level);
     double E_ground = epsilon(element,ion,0);
-    double T_e = get_TJ(n);
+    double T_e = get_TJ(n); //TODO: is this right? should be TJ?
     //double W = get_W(n);
     double W = 1.;
     double nnlevellte = get_groundlevelpop(n,element,ion) * W *
@@ -1327,9 +1097,14 @@ void write_to_nlte_file(int n, int timestep)
         fprintf(nlte_file,"nlte_index - element %d ion %d level 0 energy 0 nlte_pop - nnlevel_NLTE - nnlevel_LTE %g\n",
               element,ion,get_groundlevelpop(n,element,ion));
 
-      fprintf(nlte_file,"nlte_index %d element %d ion %d level %d energy %g nlte_pop %g nnlevel_NLTE %g nnlevel_LTE %g\n",
-              nlte,element,ion,level,E_level-E_ground,modelgrid[n].nlte_pops[nlte],
-              nnlevelnlte,nnlevellte);
+      fprintf(nlte_file,"nlte_index %d element %d ion %d ",nlte,element,ion);
+      if (is_nlte(element, ion, level))
+        fprintf(nlte_file,"level %d ",level);
+      else
+        fprintf(nlte_file,"level SL ");
+
+      fprintf(nlte_file,"energy %g nlte_pop %g nnlevel_NLTE %g nnlevel_LTE %g\n",
+              E_level-E_ground,modelgrid[n].nlte_pops[nlte],nnlevelnlte,nnlevellte);
     }
   }
   fprintf(nlte_file,"\n");

@@ -82,7 +82,7 @@ static void read_phixs_data(void)
             {
               int in_nphixstargets;
               fscanf(phixsdata,"%d\n",&in_nphixstargets);
-              if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) malloc(in_nphixstargets*sizeof(phixstarget_entry))) == NULL)
+              if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets,sizeof(phixstarget_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
                 exit(0);

@@ -3,6 +3,7 @@
 #include "grid_init.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "nonthermal.h"
 #include "nltepop.h"
 #include "ratecoeff.h"
 #include "update_grid.h"
@@ -209,7 +210,7 @@ double phi(int element, int ion, int modelgridindex)
       double Y_nt = 0.0;
 
       #ifdef NT_ON
-        Y_nt = nt_ionization_rate(modelgridindex, element, ion);
+        Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
 
       /*
       const int nlevels = get_nlevels(element,ion);
@@ -286,8 +287,8 @@ double phi(int element, int ion, int modelgridindex)
       phi = recomb_total
           //* (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
             / ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
-            /// Y_nt;
-            //Y_nt should be higher than the Gamma term for nebular epoch
+            
+      // Y_nt should generally be higher than the Gamma term for nebular epoch
 
       //phi = (Alpha_sp+Alpha_st)/(Y_nt);
 

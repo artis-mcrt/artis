@@ -84,13 +84,13 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
 
 int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 {
-  /* Subroutine to record the rate of destruction (and re-creation) of
-     r-packets by the grey opacity. */
+  // Subroutine to record the rate of destruction (and re-creation) of
+  // r-packets by the grey opacity.
 
-  /* This is only done to order v/c for now. */
+  // This is only done to order v/c for now.
 
-  /* Called with a packet that is about to travel a
-     distance dist in the lab frame. Time at start of distance is t_current.*/
+  // Called with a packet that is about to travel a
+  //    distance dist in the lab frame. Time at start of distance is t_current
 
   /*PKT dummy;
 
@@ -108,7 +108,7 @@ int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 
   if (dist > 0.0)
   {
-    /* for the weighted estimators version */
+    // for the weighted estimators version
 
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
