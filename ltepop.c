@@ -149,7 +149,7 @@ double phi(int element, int ion, int modelgridindex)
   #else
     if  (initial_iteration == true || modelgrid[modelgridindex].thick == 1)
     {
-       phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
+      phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
     }
     else
 // #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
@@ -287,7 +287,7 @@ double phi(int element, int ion, int modelgridindex)
       phi = recomb_total
           //* (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
             / ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
-            
+
       // Y_nt should generally be higher than the Gamma term for nebular epoch
 
       //phi = (Alpha_sp+Alpha_st)/(Y_nt);
