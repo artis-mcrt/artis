@@ -13,13 +13,13 @@
 #include "nonthermal.h"
 #include "sn3d.h"
 
-#define SFPTS 2000  // number of points in Spencer-Fano solution function
+#define SFPTS 1000  // number of points in Spencer-Fano solution function
 
 #define EMAX 1000. // eV
 #define EMIN 1. // eV
 const double DELTA_E = (EMAX - EMIN) / SFPTS;
 
-#define minionfraction 0.  // minimum number fraction of the total population to include in SF solution
+#define minionfraction 1.e-4  // minimum number fraction of the total population to include in SF solution
 
 struct collionrow {
   int Z;
@@ -46,7 +46,12 @@ gsl_matrix *y;                // Spencer-Fano solution function samples for each
 double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 double E_0 = 0.;              // the lowest energy ionization or excitation in eV
 
-// double cellvolume[MMODELGRID+1];
+struct nt_solution_struct {
+  int timestep;
+  double frac_heating;
+};
+
+struct nt_solution_struct nt_solution[MMODELGRID+1];
 
 static void read_collion_data()
 {
@@ -93,6 +98,11 @@ void nonthermal_init(void)
     fflush(nonthermalfile);
 
     y = gsl_matrix_calloc(MMODELGRID, SFPTS);
+    for (int mgi = 0; mgi < MMODELGRID; mgi++)
+    {
+      nt_solution[mgi].frac_heating = 1.0;
+      nt_solution[mgi].timestep = -1;
+    }
 
     envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
     sourcevec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
@@ -134,7 +144,7 @@ void nonthermal_init(void)
 }
 
 
-static double get_deposition_rate_density(int modelgridindex)
+double get_deposition_rate_density(int modelgridindex)
 // should be in erg / s / cm^3
 {
   const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
@@ -414,13 +424,13 @@ static double N_e(int modelgridindex, double energy)
   }
 
   // source term
-  // N_e += gsl_vector_get(sourcevec, get_energyindex_ev(energy_ev));
+  N_e += gsl_vector_get(sourcevec, get_energyindex_ev(energy_ev));
 
   return N_e;
 }
 
 
-static double get_frac_heating(int modelgridindex)
+static double calculate_frac_heating(int modelgridindex)
 // Kozma & Fransson equation 3
 {
   double frac_heating_Einit = 0.;
@@ -439,7 +449,7 @@ static double get_frac_heating(int modelgridindex)
 
   // third term (integral from zero to E_0)
   const int nsteps = 100;
-  const double delta_endash = E_0 / nsteps;
+  const double delta_endash = fmax(E_0 / nsteps, DELTA_E / 2);
   for (int j = 0; j < nsteps; j++)
   {
     const double endash = E_0 * j / nsteps;
@@ -447,6 +457,15 @@ static double get_frac_heating(int modelgridindex)
   }
 
   return frac_heating_Einit / E_init_ev;
+}
+
+
+double get_nt_frac_heating(int modelgridindex)
+{
+  if (nt_solution[modelgridindex].frac_heating < 0)
+    nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
+
+  return nt_solution[modelgridindex].frac_heating;
 }
 
 
@@ -819,7 +838,7 @@ void printout_sf_solution(int modelgridindex)
              nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
   }
 
-  const double frac_heating = get_frac_heating(modelgridindex);
+  const double frac_heating = get_nt_frac_heating(modelgridindex);
 
   // calculate number density of non-thermal electrons
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
@@ -867,11 +886,12 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
     *gsl_matrix_ptr(sfmatrix, i, i) += (electron_loss_rate(en * EV, nne) / EV);
 
-    double source_integral_to_emax = 1.;
+    // double source_integral_to_emax = 0.;
     // for (int j = i; j < SFPTS; j++) // integral of source function from en to EMAX
     // {
     //   source_integral_to_emax += gsl_vector_get(sourcevec, j) * DELTA_E;
     // }
+    const double source_integral_to_emax = 1.;
     gsl_vector_set(rhsvec, i, source_integral_to_emax);
   }
 
@@ -949,12 +969,12 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
             {
                 const double endash = gsl_vector_get(envec, j);
 
-                const double prefactor = xs_impactionization(endash, n) / (J * atan((endash - ionpot_ev) / 2 / J));
+                const double prefactor = nnion * xs_impactionization(endash, n) / atan((endash - ionpot_ev) / 2 / J);
 
                 const double epsilon_upper = (endash + ionpot_ev) / 2;
                 double epsilon_lower = endash - en;
                 // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
-                *gsl_matrix_ptr(sfmatrix, i, j) += nnion * prefactor * J * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * DELTA_E;
+                *gsl_matrix_ptr(sfmatrix, i, j) += prefactor * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * DELTA_E;
 
                 if (j >= secondintegralstartindex)
                 {
@@ -964,7 +984,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
                     deltaendash = endash + DELTA_E - (2 * en + ionpot_ev);
                   else
                     deltaendash = DELTA_E;
-                  *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * prefactor * J * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * deltaendash;
+                  *gsl_matrix_ptr(sfmatrix, i, j) -= prefactor * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * deltaendash;
                 }
             }
           }
@@ -1050,6 +1070,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
   nonthermal_write_to_file(modelgridindex, timestep);
 
+  nt_solution[modelgridindex].timestep = timestep;
+  nt_solution[modelgridindex].frac_heating = -1.;
   printout_sf_solution(modelgridindex);
 }
-

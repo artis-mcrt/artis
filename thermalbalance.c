@@ -5,6 +5,7 @@
 #include "grid_init.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "nonthermal.h"
 #include "ratecoeff.h"
 #include "thermalbalance.h"
 #include "update_grid.h"
@@ -45,12 +46,7 @@ static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
   /// If selected take direct gamma heating into account
   if (do_rlc_est == 3)
   {
-    heatingrates[tid].gamma = rpkt_emiss[modelgridindex] * 1.e20; ///1.e20 since the emissivities are all scaled by this
-    heatingrates[tid].gamma *= FOURPI; /// This was missing here! rpkt_emiss is normalised to give a real emissivity
-                                     /// for the formal integral calculation!!!
-    // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-    heatingrates[tid].gamma += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
-    heatingrates[tid].gamma += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
+    heatingrates[tid].gamma = get_deposition_rate_density(modelgridindex);// * get_nt_frac_heating(modelgridindex);
   }
   else
   {

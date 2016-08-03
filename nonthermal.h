@@ -7,5 +7,7 @@ void nonthermal_init(void);
 void nonthermal_close_file(void);
 void nt_solve_spencerfano(int modelgridindex, int timestep);
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
+double get_deposition_rate_density(int modelgridindex);
+double get_nt_frac_heating(int modelgridindex);
 
 #endif //NONTHERMAL_H

@@ -753,7 +753,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
                   }
                 }
 
-                /// Get radiation field parameters out of the estimators
+                // Get radiation field parameters out of the estimators
                 radfield_fit_parameters(n,nts);
 
                 #ifdef NLTE_POPS_ON
