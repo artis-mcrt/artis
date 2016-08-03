@@ -5,7 +5,7 @@
 
 void nonthermal_init(void);
 void nonthermal_close_file(void);
-void nt_solve_spencerfano(int modelgridindex, int timestep, double deltaV);
+void nt_solve_spencerfano(int modelgridindex, int timestep);
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
 
 #endif //NONTHERMAL_H

@@ -892,7 +892,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
             }
 
             if (NT_SOLVE_SPENCERFANO)
-              nt_solve_spencerfano(n,nts,deltaV);
+              nt_solve_spencerfano(n,nts);
 
             double nne = get_nne(n);
             double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
