@@ -139,7 +139,7 @@ static void write_to_estimators_file(int n, int timestep)
     //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
 #   ifdef NLTE_POPS_ON
-    write_to_nlte_file(n,timestep);
+    nltepop_write_to_file(n,timestep);
 #   endif
 
     fprintf(estimators_file, "populations ");

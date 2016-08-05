@@ -18,6 +18,7 @@
 #include "input.h"
 #include "ltepop.h"
 #include "move.h"
+#include "nltepop.h"
 #include "nonthermal.h"
 #include "packet_init.h"
 #include "radfield.h"
@@ -309,12 +310,7 @@ int main(int argc, char** argv)
   }
   //setvbuf(estimators_file, NULL, _IOLBF, 1);
 
-  sprintf(filename,"nlte_%.4d.out",my_rank);
-  if ((nlte_file = fopen(filename, "w")) == NULL)
-  {
-    printout("Cannot open %s.\n",filename);
-    exit(0);
-  }
+  nltepop_open_file(my_rank);
 
   printout("Beginning.\n");
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
