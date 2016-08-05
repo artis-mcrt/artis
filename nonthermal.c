@@ -820,7 +820,7 @@ void printout_sf_solution(int modelgridindex)
       {
         const double frac_ionization_ion_shell = get_frac_ionization(modelgridindex, element, ion, n);
         frac_ionization_ion += frac_ionization_ion_shell;
-        printout("  frac_ionization: %g (n %d l %d)\n", frac_ionization_ion_shell, colliondata[n].n, colliondata[n].l);
+        printout("  frac_ionization_shell: %g (n %d l %d)\n", frac_ionization_ion_shell, colliondata[n].n, colliondata[n].l);
       }
     }
     const double frac_excitation_ion = get_frac_excitation(modelgridindex, element, ion);
@@ -856,12 +856,11 @@ void printout_sf_solution(int modelgridindex)
   printout("nne:         %9.3e e-/cm^3\n", nne);
   printout("nne_nt     < %9.3e e-/cm^3\n", nne_nt_max);
   printout("nne_nt/nne < %9.3e\n", nne_nt_max / nne);
-  printout("frac_heating:    %g\n", frac_heating);
-  printout("frac_excitation: %g\n", frac_excitation_total);
-  const double frac_ionization_true = 1 - frac_heating - frac_excitation_total;
-  printout("frac_ionization: %g (should be %g, = %6.4fx)\n", frac_ionization_total, frac_ionization_true, frac_ionization_true/frac_ionization_total);
+  printout("frac_heating_tot:    %g\n", frac_heating);
+  printout("frac_excitation_tot: %g\n", frac_excitation_total);
+  printout("frac_ionization_tot: %g\n", frac_ionization_total);
   const double frac_sum = frac_heating + frac_excitation_total + frac_ionization_total;
-  printout("Fractions sum to %g\n", frac_sum);
+  printout("frac_sum:            %g (should be close to 1.0)\n", frac_sum);
 
   // compensate for lost energy by scaling the solution
   // E_init_ev *= frac_sum;
