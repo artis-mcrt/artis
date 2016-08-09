@@ -148,6 +148,8 @@ static void print_level_diags(int modelgridindex, int element, int selected_ion,
                               gsl_matrix *rate_matrix_coll_bf, gsl_matrix *rate_matrix_ntcoll_bf)
 
 {
+  if (element > nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > get_nlevels_nlte(element, selected_ion) - 1)
+    return;
   const int nlte_dimension = popvec->size;
   const int selected_ionstage = get_ionstage(element, selected_ion);
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
@@ -662,6 +664,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     print_level_diags(modelgridindex, element, 1, 21, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     print_level_diags(modelgridindex, element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     print_level_diags(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+
     gsl_matrix_free(rate_matrix_rad_bb);
     gsl_matrix_free(rate_matrix_coll_bb);
     gsl_matrix_free(rate_matrix_rad_bf);
