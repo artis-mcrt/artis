@@ -13,6 +13,7 @@
   #include "exspec.h"
 #endif
 
+const int nlevels_requiretransitions = 0; // first n levels will be collisionally coupled to all other levels
 
 typedef struct
 {
@@ -359,7 +360,7 @@ static void read_unprocessed_atomicdata(void)
       int Zcheck2,ionstage,nlevels;
       fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
       printout("readin level information for adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
-      while (Zcheck2 != Z || ionstage != lowermost_ionstage + ion)
+      while (Zcheck2 != Z || ionstage != lowermost_ionstage + ion) // skip over this ion block
       {
         if (Zcheck2 == Z)
         {
@@ -408,7 +409,7 @@ static void read_unprocessed_atomicdata(void)
       }
 
       int tottransitions_all = tottransitions;
-      if (ion == nions-1)
+      if (ion == nions-1) // limit the top ion to one level and no transitions
       {
         nlevelsmax = 1;
         tottransitions = 0;
@@ -417,10 +418,10 @@ static void read_unprocessed_atomicdata(void)
       /// then read in its level and transition data
       if (Zcheck == Z && ionstagecheck == ionstage)
       {
-        transitiontable_entry *transitiontable;
+        transitiontable_entry *transitiontable = calloc(tottransitions, sizeof(transitiontable_entry));
 
         /// load transition table for the CURRENT ion to temporary memory
-        if ((transitiontable = calloc(tottransitions, sizeof(transitiontable_entry))) == NULL)
+        if (transitiontable == NULL)
         {
           if (tottransitions > 0)
             {
@@ -440,25 +441,64 @@ static void read_unprocessed_atomicdata(void)
         }
         else
         {
+          int prev_upper = -1;
+          int prev_lower = 0;
           for (int i = 0; i < tottransitions; i++)
           {
             double A,coll_str;
-            int transitionindex,lower,upper;
-            fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
-            transitiontable[i].lower = lower-1;
-            transitiontable[i].upper = upper-1;
+            int transitionindex,lower_in,upper_in;
+            fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower_in,&upper_in,&A,&coll_str);
+            const int lower = lower_in - 1; // TODO: remove the minus after we change the level indicies to start at zero in transitiondata.txt
+            const int upper = upper_in - 1;
+            if (prev_lower < nlevels_requiretransitions && prev_upper < nlevelsmax - 1)
+            {
+              if (lower == prev_lower && upper > prev_upper + 1) // same lower level, but skipped some upper levels
+              {
+                for (int tmplevel = prev_upper + 1; tmplevel < upper; tmplevel++)
+                {
+                  if (tmplevel == prev_lower)
+                    continue;
+                  tottransitions += 1;
+                  transitiontable = realloc(transitiontable, tottransitions * sizeof(transitiontable_entry));
+                  transitiontable[i].lower = prev_lower;
+                  transitiontable[i].upper = tmplevel;
+                  transitiontable[i].A = 0.;
+                  transitiontable[i].coll_str = -2.;
+                  printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
+                  i++;
+                }
+              }
+              else if (lower > prev_lower) // we've moved onto another lower level, but the previous one was missing some transitions!
+              {
+                for (int tmplevel = prev_upper + 1; tmplevel < nlevelsmax; tmplevel++)
+                {
+                  tottransitions++;
+                  transitiontable = realloc(transitiontable, tottransitions * sizeof(transitiontable_entry));
+                  transitiontable[i].lower = prev_lower;
+                  transitiontable[i].upper = tmplevel;
+                  transitiontable[i].A = 0.;
+                  transitiontable[i].coll_str = -2.;
+                  printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
+                  i++;
+                }
+              }
+            }
+            transitiontable[i].lower = lower;
+            transitiontable[i].upper = upper;
             transitiontable[i].A = A;
             transitiontable[i].coll_str = coll_str;
             //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
+            // printout("reading transition index %d lower %d upper %d\n", i, transitiontable[i].lower, transitiontable[i].upper);
+            prev_lower = lower;
+            prev_upper = upper;
           }
         }
-
 
         /// store the ions data to memory and set up the ions zeta and levellist
         elements[element].ions[ion].ionstage = ionstage;
         elements[element].ions[ion].nlevels = nlevelsmax;
         elements[element].ions[ion].ionisinglevels = 0;
-        elements[element].ions[ion].ionpot = ionpot*EV;
+        elements[element].ions[ion].ionpot = ionpot * EV;
 //           if ((elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
 //           {
 //             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
@@ -506,7 +546,7 @@ static void read_unprocessed_atomicdata(void)
             ndownarr[level] = 1;
             nuparr[level] = 1;
             //elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
-            double currentlevelenergy = (energyoffset + levelenergy) * EV;
+            const double currentlevelenergy = (energyoffset + levelenergy) * EV;
             //if (element == 1 && ion == 0) printf("%d %16.10e\n",levelindex,currentlevelenergy);
             //printout("energy for level %d of ionstage %d of element %d is %g\n",level,ionstage,element,currentlevelenergy/EV);
             elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
@@ -522,7 +562,7 @@ static void read_unprocessed_atomicdata(void)
             //elements[element].ions[ion].levels[level].main_qn = mainqn;
 
             /// The level contributes to the ionisinglevels if its energy
-            /// is below the ionisiation potential and the level doesn't
+            /// is below the ionization potential and the level doesn't
             /// belong to the topmost ion included.
             /// Rate coefficients are only available for ionising levels.
             if (levelenergy < ionpot && ion < nions-1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
@@ -586,7 +626,7 @@ static void read_unprocessed_atomicdata(void)
 
               double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
               double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
-              double f_ul = g * ME * pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+              double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
               //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
               //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
@@ -641,7 +681,7 @@ static void read_unprocessed_atomicdata(void)
             }
             else
             {
-              /** This is a new brach to deal with lines that have different types of transition. It should trip after a transition is already known. */
+              // This is a new branch to deal with lines that have different types of transition. It should trip after a transition is already known.
               int linelistindex = transitions[level].to[level-targetlevel-1];
               double A_ul = transitiontable[ii].A;
               double coll_str = transitiontable[ii].coll_str;
