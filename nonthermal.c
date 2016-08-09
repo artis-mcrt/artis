@@ -890,11 +890,11 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     // {
     //   source_integral_to_emax += gsl_vector_get(sourcevec, j) * DELTA_E;
     // }
-    const double source_integral_to_emax = 1.;
-    gsl_vector_set(rhsvec, i, source_integral_to_emax);
+    // gsl_vector_set(rhsvec, i, source_integral_to_emax);
   }
+  gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at EMAX
 
-  E_0 = -1.; // reset E_0 to find it again
+  E_0 = -1.; // reset E_0 so it can be found it again
 
   for (int element = 0; element < nelements; element++)
   {
