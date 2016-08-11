@@ -142,7 +142,7 @@ static double get_total_rate_out(int index_from, gsl_matrix *rate_matrix, gsl_ve
 }
 
 
-static void print_level_diags(int modelgridindex, int element, int selected_ion, int selected_level,
+static void print_level_rates(int modelgridindex, int element, int selected_ion, int selected_level,
                               gsl_vector *popvec, gsl_matrix *rate_matrix_rad_bb,
                               gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_rad_bf,
                               gsl_matrix *rate_matrix_coll_bf, gsl_matrix *rate_matrix_ntcoll_bf)
@@ -267,6 +267,14 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
     for (int ion = 0; ion < nions; ion++)
     {
+      double Y_nt = 0.; // rate coeff for collisional ionization by non-thermal electrons
+      if (NT_ON && ion < nions-1)
+      {
+        Y_nt = nt_ionization_ratecoeff(modelgridindex,element,ion);
+        if (Y_nt < 0.)
+          printout("WARNING: Negative NT_ionization rate from ion_stage %d\n",get_ionstage(element,ion));
+      }
+
       for (int level = 0; level < get_nlevels(element,ion); level++)
       {
         const double statweight = stat_weight(element,ion,level);
@@ -292,10 +300,6 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           //double R = 0.0; //TODO: remove, testing only
           const double C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
           //double C = 0.0; //TODO: remove, testing only
-
-          //TOOD: remove
-          //if (level < 10 && lower < 10)
-          //  printout("deexc: level %d, lower %d, R/C %g\n",level,lower,R/C);
 
           const int upper_index = get_nlte_vector_index(element,ion,level);
           const int lower_index = get_nlte_vector_index(element,ion,lower);
@@ -349,11 +353,8 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
         }
 
         // collisional ionization by non-thermal electrons
-        if (NT_ON && ion < nions-1)
+        if (Y_nt > 0.)
         {
-          const double Y = nt_ionization_ratecoeff(modelgridindex,element,ion);
-          //double Y = 0.0; // TODO: remove, testing only
-
           const int lower_index = get_nlte_vector_index(element,ion,level);
           const int upper_index = get_nlte_vector_index(element,ion+1,0);
 
@@ -362,11 +363,8 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           if ((level != 0) && (is_nlte(element,ion,level) == false))
             s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level) / superlevel_partfunc[ion];
 
-          *gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index) -= Y * s_renorm;
-          *gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_index, lower_index) += Y * s_renorm;
-
-          if (Y < 0)
-            printout("WARNING: Negative NT_ionization rate from ion_stage %d level %d\n",get_ionstage(element,ion),level);
+          *gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index) -= Y_nt * s_renorm;
+          *gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_index, lower_index) += Y_nt * s_renorm;
         }
 
         // thermal collisional ionization, photoionisation and recombination processes
@@ -437,7 +435,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
       } // level loop
     } // ion loop
 
-    // combine the transition processes together into a total rate matrix
+    // sum the matricies for each transition process to get a total rate matrix
     gsl_matrix *const rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     gsl_matrix_add(rate_matrix, rate_matrix_rad_bb);
     gsl_matrix_add(rate_matrix, rate_matrix_coll_bb);
@@ -445,14 +443,16 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     gsl_matrix_add(rate_matrix, rate_matrix_coll_bf);
     gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bf);
 
-    // replace the first row of the matrix and balance vector with the normalisation constraint
+    // replace the first row of the matrix and balance vector with the normalisation
+    // constraint on the total element population
     gsl_vector_view first_row_view = gsl_matrix_row(rate_matrix, 0);
     gsl_vector_set_all(&first_row_view.vector, 1.0);
     // set first balance vector entry to the element population (all other entries will be zero)
     double element_population = get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex);
     gsl_vector_set(balance_vector, 0, element_population);
 
-    // calculate the normalisation factors and apply them to the matrix columns and balance vector elements
+    // calculate the normalisation factors and apply them to the matrix
+    // columns and balance vector elements
     gsl_vector *pop_norm_factor_vec = gsl_vector_calloc(nlte_dimension);
     for (int column = 0; column < nlte_dimension; column++)
     {
@@ -471,7 +471,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
             *gsl_vector_ptr(pop_norm_factor_vec, column) += calculate_levelpop_lte(modelgridindex,element,ion,dummylevel);
           }
         }
-        // NOTE: above calculation is not always equal to the sum of LTE populations,
+        // NOTE: above calculation is not always equal to the sum of LTE populations
         // since calculate_levelpop_lte imposes MINPOP minimum
         printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*levelpop(SL)/g(SL) %g\n",
                  column, gsl_vector_get(pop_norm_factor_vec, column), superlevel_partfunc[ion],
@@ -554,22 +554,22 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     gsl_vector_free(gsl_residual_vector);
     gsl_vector_free(x_best);
 
-    gsl_vector *popvec = gsl_vector_alloc(nlte_dimension);
-    gsl_vector_memcpy(popvec, x);
-    gsl_vector_mul(popvec, pop_norm_factor_vec);
+    gsl_vector *popvec = gsl_vector_alloc(nlte_dimension); // the true population densities
+    gsl_vector_memcpy(popvec, x);                          // are equal to the normed pops multiplied
+    gsl_vector_mul(popvec, pop_norm_factor_vec);           // by the normalisation factors
 
     for (int row = 0; row < nlte_dimension; row++)
     {
-      double recovered_balance_vector = 0.;
-      gsl_vector_view row_view = gsl_matrix_row(rate_matrix,row);
-      gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector);
+      double recovered_balance_vector_elem = 0.;
+      gsl_vector_view row_view = gsl_matrix_row(rate_matrix, row);
+      gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
 
       int ion, level;
       get_ion_level_of_nlte_vector_index(row,element,&ion,&level);
 
       printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e departure ratio %.4f\n",
                row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
-               recovered_balance_vector, gsl_vector_get(x,row),
+               recovered_balance_vector_elem, gsl_vector_get(x,row),
                gsl_vector_get(popvec, row),
                gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
       if (gsl_vector_get(popvec, row) < 0.0)
@@ -659,12 +659,12 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
     if (atomic_number == 26)
     {
-      print_level_diags(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_diags(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_diags(modelgridindex, element, 1, 20, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_diags(modelgridindex, element, 1, 21, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_diags(modelgridindex, element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_diags(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 1, 20, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 1, 21, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     gsl_matrix_free(rate_matrix_rad_bb);
