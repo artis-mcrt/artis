@@ -788,10 +788,16 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
 
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
 {
+  double Y_nt;
   if (NT_SOLVE_SPENCERFANO)
-    return nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
+  {
+    Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
+    if (!isfinite(Y_nt))
+      Y_nt = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+  }
   else
-    return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+    Y_nt = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+  return Y_nt;
 }
 
 
@@ -801,41 +807,43 @@ void printout_sf_solution(int modelgridindex)
   const double nntot = get_tot_nion(modelgridindex);
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
-  const int element = 0;
-  const int Z = get_element(element);
-  for (int ion = 0; ion < get_nions(element); ion++)
+  for (int element = 0; element < nelements; element++)
   {
-    const int ionstage = get_ionstage(element, ion);
-    const double nnion = ionstagepop(modelgridindex, element, ion);
-    if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
-      continue;
-
-    double frac_ionization_ion = 0.;
-    printout("Z=%d ion_stage %d:\n", Z, ionstage);
-    printout("  nnion: %g\n", nnion);
-    printout("  nnion/nntot: %g\n", nnion / nntot, get_nne(modelgridindex));
-    for (int n = 0; n < colliondatacount; n++)
+    const int Z = get_element(element);
+    for (int ion = 0; ion < get_nions(element); ion++)
     {
-      if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
-      {
-        const double frac_ionization_ion_shell = get_frac_ionization(modelgridindex, element, ion, n);
-        frac_ionization_ion += frac_ionization_ion_shell;
-        printout("  frac_ionization_shell: %g (n %d l %d)\n", frac_ionization_ion_shell, colliondata[n].n, colliondata[n].l);
-      }
-    }
-    const double frac_excitation_ion = get_frac_excitation(modelgridindex, element, ion);
-    frac_excitation_total += frac_excitation_ion;
-    frac_ionization_total += frac_ionization_ion;
+      const int ionstage = get_ionstage(element, ion);
+      const double nnion = ionstagepop(modelgridindex, element, ion);
+      // if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
+        // continue;
 
-    printout("  frac_ionization: %g\n", frac_ionization_ion);
-    printout("  frac_excitation: %g\n", frac_excitation_ion);
-    printout("  workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
-    printout("  eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
-    printout("  eff_ionpotold:%9.2f eV\n", get_eff_ionpot_old(modelgridindex, element, ion) / EV);
-    printout("  workfn approx Gamma: %9.3e\n",
-             nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
-    printout("  Spencer-Fano Gamma:  %9.3e\n",
-             nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
+      double frac_ionization_ion = 0.;
+      printout("Z=%d ion_stage %d:\n", Z, ionstage);
+      printout("  nnion: %g\n", nnion);
+      printout("  nnion/nntot: %g\n", nnion / nntot, get_nne(modelgridindex));
+      for (int n = 0; n < colliondatacount; n++)
+      {
+        if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
+        {
+          const double frac_ionization_ion_shell = get_frac_ionization(modelgridindex, element, ion, n);
+          frac_ionization_ion += frac_ionization_ion_shell;
+          printout("  frac_ionization_shell: %g (n %d l %d)\n", frac_ionization_ion_shell, colliondata[n].n, colliondata[n].l);
+        }
+      }
+      const double frac_excitation_ion = get_frac_excitation(modelgridindex, element, ion);
+      frac_excitation_total += frac_excitation_ion;
+      frac_ionization_total += frac_ionization_ion;
+
+      printout("  frac_ionization: %g\n", frac_ionization_ion);
+      printout("  frac_excitation: %g\n", frac_excitation_ion);
+      printout("  workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
+      printout("  eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
+      printout("  eff_ionpotold:%9.2f eV\n", get_eff_ionpot_old(modelgridindex, element, ion) / EV);
+      printout("  workfn approx Gamma: %9.3e\n",
+               nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
+      printout("  Spencer-Fano Gamma:  %9.3e\n",
+               nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
+    }
   }
 
   const double frac_heating = get_nt_frac_heating(modelgridindex);
