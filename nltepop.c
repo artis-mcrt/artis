@@ -51,13 +51,14 @@ static void get_ion_level_of_nlte_vector_index(int index, int element, int *ion,
 }
 
 
-static void eliminate_nlte_matrix_rowcol(int index, int gs_index, gsl_matrix *rate_matrix, gsl_vector *balance_vector)
+static void eliminate_nlte_matrix_rowcol(int index, int gs_index, gsl_matrix *const rate_matrix, gsl_vector *const balance_vector)
 {
-  const int colcount = rate_matrix->size2;
+  const gsl_matrix rate_matrix_var = *rate_matrix;
+  const int colcount = rate_matrix_var.size2;
   for (int column = 0; column < colcount; column++)
     gsl_matrix_set(rate_matrix,index,column,0.0);
 
-  const int rowcount = rate_matrix->size1;
+  const int rowcount = rate_matrix_var.size1;
   for (int row = 1; row < rowcount; row++)
     gsl_matrix_set(rate_matrix,row,index,0.0);
 
@@ -67,12 +68,13 @@ static void eliminate_nlte_matrix_rowcol(int index, int gs_index, gsl_matrix *ra
 }
 
 
-static void filter_nlte_matrix(int element, gsl_matrix *rate_matrix, gsl_vector *balance_vector, gsl_vector *pop_norm_factors)
+static void filter_nlte_matrix(int element, gsl_matrix *const rate_matrix, gsl_vector *const balance_vector, gsl_vector *const pop_norm_factors)
 // find rows and columns that barely interaction with other levels, and effectively
 // removing them by zeroing their interactions and setting their departure
 // coeff to 1.0
 {
-  const int nlte_dimension = rate_matrix->size1;
+  const gsl_matrix rate_matrix_var = *rate_matrix;
+  const int nlte_dimension = rate_matrix_var.size1;
   for (int index = 0; index < nlte_dimension; index++)
   {
     double row_max = 0.0;
@@ -118,7 +120,8 @@ static void filter_nlte_matrix(int element, gsl_matrix *rate_matrix, gsl_vector 
 
 static double get_total_rate_in(int index_to, gsl_matrix *rate_matrix, gsl_vector *popvec)
 {
-  gsl_vector *rates_in_vec = gsl_vector_alloc(rate_matrix->size1);
+  const gsl_matrix rate_matrix_var = *rate_matrix;
+  gsl_vector *rates_in_vec = gsl_vector_alloc(rate_matrix_var.size1);
   gsl_vector_view row_view = gsl_matrix_row(rate_matrix, index_to);
   gsl_vector_memcpy(rates_in_vec, &row_view.vector);
   gsl_vector_set(rates_in_vec, index_to, 0.);
@@ -131,7 +134,8 @@ static double get_total_rate_in(int index_to, gsl_matrix *rate_matrix, gsl_vecto
 
 static double get_total_rate_out(int index_from, gsl_matrix *rate_matrix, gsl_vector *popvec)
 {
-  gsl_vector *rates_out_vec = gsl_vector_alloc(rate_matrix->size2);
+  const gsl_matrix rate_matrix_var = *rate_matrix;
+  gsl_vector *rates_out_vec = gsl_vector_alloc(rate_matrix_var.size2);
   gsl_vector_view col_view = gsl_matrix_column(rate_matrix, index_from);
   gsl_vector_memcpy(rates_out_vec, &col_view.vector);
   gsl_vector_set(rates_out_vec, index_from, 0.);
@@ -150,7 +154,8 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
 {
   if (element > nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > get_nlevels_nlte(element, selected_ion) - 1)
     return;
-  const int nlte_dimension = popvec->size;
+  const gsl_vector popvector = *popvec;
+  const int nlte_dimension = popvector.size;
   const int selected_ionstage = get_ionstage(element, selected_ion);
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
   const double pop_selectedlevel = gsl_vector_get(popvec, selected_index);
