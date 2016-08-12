@@ -53,7 +53,7 @@ struct nt_solution_struct {
 
 struct nt_solution_struct nt_solution[MMODELGRID+1];
 
-static void read_collion_data()
+static void read_collion_data(void)
 {
   printout("Reading collisional ionization data...\n");
 
@@ -801,7 +801,7 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
 }
 
 
-void printout_sf_solution(int modelgridindex)
+static void printout_sf_solution(int modelgridindex)
 {
   const double nne = get_nne(modelgridindex);
   const double nntot = get_tot_nion(modelgridindex);
