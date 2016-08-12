@@ -145,8 +145,8 @@ inline int get_phixsupperlevel(int element, int ion, int level, int phixstargeti
   #ifdef DEBUG_ON
     if ((phixstargetindex < 0) || (phixstargetindex > get_nphixstargets(element,ion,level)-1))
     {
-      printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex");
-      //printout("arguments: element %d, ion %d, level %d phixstargetindex %d, nphixstargets %d\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
+      printout("[fatal]   get_phixsupperlevel called with invalid phixstargetindex\n");
+      printout("arguments: element %d, ion %d, level %d phixstargetindex %d, nphixstargets %d\n",element,ion,level,phixstargetindex,get_nphixstargets(element,ion,level));
       abort();
     }
   #endif
