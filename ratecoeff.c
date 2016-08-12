@@ -582,10 +582,6 @@ static void precalculate_rate_coefficient_integrals(void)
             //F_stimulated_recomb.function = &stimulated_recomb_integrand_gsl;
             //F_stimulated_recomb.params = &intparas;
 
-            //TODO: These integrals will be zero for photoionization processes with all zero cross sections.
-            //We could speed this up by detecting this case and skipping the integrals,
-            //although the integrator is probably pretty fast in these cases anyway
-
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
             double alpha_sp = 0.0;
             gsl_function F_alpha_sp;
