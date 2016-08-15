@@ -101,7 +101,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
 /*Routine to add a packet to the outcoming spectrum.*/
 {
   /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
-  int at,element,ion,nproc;
+  int nproc;
 
   /// Put this into the time grid.
   double t_arrive = pkt_ptr->arrive_time;
@@ -118,8 +118,8 @@ static void add_to_spec(const EPKT *pkt_ptr)
       if (et >= 0)
       {
         /// bb-emission
-        element = linelist[et].elementindex;
-        ion = linelist[et].ionindex;
+        const int element = linelist[et].elementindex;
+        const int ion = linelist[et].ionindex;
         nproc = element*maxion+ion;
       }
       else if (et == -9999999)
@@ -131,8 +131,8 @@ static void add_to_spec(const EPKT *pkt_ptr)
       {
         /// bf-emission
         et = -1*et - 1;
-        element = bflist[et].elementindex;
-        ion = bflist[et].ionindex;
+        const int element = bflist[et].elementindex;
+        const int ion = bflist[et].ionindex;
         nproc = nelements*maxion + element*maxion+ion;
       }
       spectra[nt].stat[nnu].emission[nproc] += deltaE;
@@ -141,12 +141,12 @@ static void add_to_spec(const EPKT *pkt_ptr)
       if (nnu >= 0 && nnu < MNUBINS)
       {
         deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
-        at = pkt_ptr->absorptiontype;
+        const int at = pkt_ptr->absorptiontype;
         if (at >= 0)
         {
           /// bb-emission
-          element = linelist[at].elementindex;
-          ion = linelist[at].ionindex;
+          const int element = linelist[at].elementindex;
+          const int ion = linelist[at].ionindex;
           nproc = element*maxion+ion;
           spectra[nt].stat[nnu].absorption[nproc] += deltaE;
         }
@@ -169,9 +169,9 @@ static void init_spectrum(void)
     ntbins = MTBINS;
   }
 
-  /** start by setting up the time and frequency bins. */
-  /** it is all done interms of a logarithmic spacing in both t and nu - get the
-  step sizes first. */
+  // start by setting up the time and frequency bins.
+  // it is all done interms of a logarithmic spacing in both t and nu - get the
+  // step sizes first.
   ///Should be moved to input.c or exspec.c
   dlogt = (log(tmax) - log(tmin))/ntbins;
   dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
@@ -196,7 +196,6 @@ static void init_spectrum(void)
 void gather_spectrum(int depth)
 {
   //void read_packets(FILE *packets_file);
-  EPKT *pkt_ptr;
   //int i,n,m,p;
   //PKT *pkt_ptr;
   //int add_to_spec();
@@ -211,8 +210,7 @@ void gather_spectrum(int depth)
     /// appropriate bins.
     for (int p = 0; p < nepkts; p++)
     {
-      pkt_ptr = &epkts[p];
-      add_to_spec(pkt_ptr);
+      add_to_spec(&epkts[p]);
     }
   }
   else
@@ -221,20 +219,20 @@ void gather_spectrum(int depth)
     /// Set velocity cut
     double vcut;
     if (depth < 9)
-      vcut = (depth+1.)*vmax/10.;
+      vcut = (depth+1.) * vmax / 10.;
     else
-      vcut = 100*vmax;     /// Make sure that all escaping packets are taken for
-                        /// depth=9 . For 2d and 3d models the corners of a
-                        /// simulation box contain material with v>vmax.
+      vcut = 100 * vmax;     /// Make sure that all escaping packets are taken for
+                             /// depth=9 . For 2d and 3d models the corners of a
+                             /// simulation box contain material with v>vmax.
 
     /// Now add the energy of all the escaping packets to the
     /// appropriate bins.
     for (int p = 0; p < nepkts; p++)
     {
-      pkt_ptr = &epkts[p];
-      double vem = sqrt(pow(pkt_ptr->em_pos[0],2)+pow(pkt_ptr->em_pos[1],2)+pow(pkt_ptr->em_pos[2],2))/pkt_ptr->em_time;
+      double vem = sqrt(pow(epkts[p].em_pos[0],2) + pow(epkts[p].em_pos[1],2) + pow(epkts[p].em_pos[2],2)) / (epkts[p].em_time);
       //printout("vem %g, vcut %g, vmax %g, time %d\n",vem,vcut,vmax,pkt_ptr->em_time);
-      if (vem < vcut) add_to_spec(pkt_ptr);
+      if (vem < vcut)
+        add_to_spec(&epkts[p]);
     }
   }
 }
@@ -250,60 +248,58 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
      The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
   */
 
-  double t_arrive,deltaE;
-  int nt, nnu;
-  int phibin;
-  double vec1[3], vec2[3], vec3[3], xhat[3];
-  int at,et,element,ion,nproc;
+  int nproc;
 
-  xhat[0] = 1.0;
-  xhat[1] = 0;
-  xhat[2] = 0;
+  double xhat[3] = {1.0, 0.0, 0.0};
 
   /// Angle resolved case: need to work out the correct angle bin
-  double costheta = dot(pkt_ptr->dir, syn_dir);
-  double thetabin = ((costheta + 1.0) * sqrt(MABINS) / 2.0);
+  const double costheta = dot(pkt_ptr->dir, syn_dir);
+  const double thetabin = ((costheta + 1.0) * sqrt(MABINS) / 2.0);
+  double vec1[3];
   cross_prod(pkt_ptr->dir, syn_dir, vec1);
+  double vec2[3];
   cross_prod(xhat, syn_dir, vec2);
-  double cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
+  const double cosphi = dot(vec1,vec2) / vec_len(vec1) / vec_len(vec2);
 
+  double vec3[3];
   cross_prod(vec2, syn_dir, vec3);
-  double testphi = dot(vec1,vec3);
+  const double testphi = dot(vec1,vec3);
 
+  int phibin;
   if (testphi > 0)
   {
-    phibin = (acos(cosphi) /2. / PI * sqrt(MABINS));
+    phibin = (acos(cosphi) / 2. / PI * sqrt(MABINS));
   }
   else
   {
-    phibin = ((acos(cosphi) + PI) /2. / PI * sqrt(MABINS));
+    phibin = ((acos(cosphi) + PI) / 2. / PI * sqrt(MABINS));
   }
-  int na = (thetabin*sqrt(MABINS)) + phibin;
+  const int na = (thetabin*sqrt(MABINS)) + phibin;
 
   /// Add only packets which escape to the current angle bin
   if (na == current_abin)
   {
     /// Put this into the time grid.
-    t_arrive = pkt_ptr->arrive_time;
+    const double t_arrive = pkt_ptr->arrive_time;
     if (t_arrive > tmin && t_arrive < tmax)
     {
-      nt = (log(t_arrive) - log(tmin)) / dlogt;
+      const int nt = (log(t_arrive) - log(tmin)) / dlogt;
 
       /// and the correct frequency bin.
       if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
       {
-        nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-        deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
+        int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
+        double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
         spectra[nt].flux[nnu] += deltaE;
 
         if (do_emission_res == 1)
         {
-          et = pkt_ptr->emissiontype;
+          int et = pkt_ptr->emissiontype;
           if (et >= 0)
           {
             /// bb-emission
-            element = linelist[et].elementindex;
-            ion = linelist[et].ionindex;
+            const int element = linelist[et].elementindex;
+            const int ion = linelist[et].ionindex;
             nproc = element*maxion+ion;
           }
           else if (et == -9999999)
@@ -315,8 +311,8 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
           {
             /// bf-emission
             et = -1*et - 1;
-            element = bflist[et].elementindex;
-            ion = bflist[et].ionindex;
+            const int element = bflist[et].elementindex;
+            const int ion = bflist[et].ionindex;
             nproc = nelements*maxion + element*maxion+ion;
           }
           spectra[nt].stat[nnu].emission[nproc] += deltaE;
@@ -325,12 +321,12 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
           if (nnu >= 0 && nnu < MNUBINS)
           {
             deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
-            at = pkt_ptr->absorptiontype;
+            int at = pkt_ptr->absorptiontype;
             if (at >= 0)
             {
               /// bb-emission
-              element = linelist[at].elementindex;
-              ion = linelist[at].ionindex;
+              const int element = linelist[at].elementindex;
+              const int ion = linelist[at].ionindex;
               nproc = element*maxion+ion;
               spectra[nt].stat[nnu].absorption[nproc] += deltaE;
             }
