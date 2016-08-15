@@ -454,6 +454,7 @@ static void read_unprocessed_atomicdata(void)
             {
               if (lower == prev_lower && upper > prev_upper + 1) // same lower level, but skipped some upper levels
               {
+                printout("+adding transitions from lower level %d starting at lineindex %d\n", prev_lower, i);
                 for (int tmplevel = prev_upper + 1; tmplevel < upper; tmplevel++)
                 {
                   if (tmplevel == prev_lower)
@@ -464,11 +465,11 @@ static void read_unprocessed_atomicdata(void)
                   transitiontable[i].upper = tmplevel;
                   transitiontable[i].A = 0.;
                   transitiontable[i].coll_str = -2.;
-                  printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
+                  // printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
                   i++;
                 }
               }
-              else if (lower > prev_lower) // we've moved onto another lower level, but the previous one was missing some transitions!
+              else if (lower > prev_lower) // we've moved onto another lower level, but the previous one was missing some required transitions
               {
                 for (int tmplevel = prev_upper + 1; tmplevel < nlevelsmax; tmplevel++)
                 {
