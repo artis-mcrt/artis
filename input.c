@@ -1,4 +1,4 @@
-//#include <stdio.h>
+#include <stdio.h>
 //#include <math.h>
 //#include <stdlib.h>
 #include "sn3d.h"
@@ -34,10 +34,12 @@ static void read_phixs_data(void)
     printout("Cannot open phixsdata_v2.txt.\n");
     exit(0);
   }
+  extern FILE *popen();
 
   FILE *popenphixshash = popen("openssl md5 -binary phixsdata_v2.txt | xxd -p", "r");
   fgets(phixsfile_hash, 33, popenphixshash);
   printout("MD5 hash of phixsdata_v2.txt: %s\n",phixsfile_hash);
+  pclose(popenphixshash);
 
   fscanf(phixsdata,"%d\n",&NPHIXSPOINTS);
   fscanf(phixsdata,"%lg\n",&NPHIXSNUINCREMENT);
@@ -268,10 +270,12 @@ static void read_unprocessed_atomicdata(void)
     printout("Cannot open compositiondata.txt.\n");
     exit(0);
   }
+  extern FILE *popen();
 
   FILE *popencomphash = popen("openssl md5 -binary compositiondata.txt | xxd -p", "r");
   fgets(compositionfile_hash, 33, popencomphash);
   printout("MD5 hash of compositiondata.txt: %s\n",compositionfile_hash);
+  pclose(popencomphash);
 
   FILE *restrict adata = fopen("adata.txt", "r");
   if (adata == NULL)
@@ -283,6 +287,7 @@ static void read_unprocessed_atomicdata(void)
   FILE *popenadatahash = popen("openssl md5 -binary adata.txt | xxd -p", "r");
   fgets(adatafile_hash, 33, popenadatahash);
   printout("MD5 hash of adata.txt: %s\n",adatafile_hash);
+  pclose(popenadatahash);
 
   /// initialize atomic data structure to number of elements
   fscanf(compositiondata,"%d",&nelements);
