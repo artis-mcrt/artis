@@ -840,7 +840,13 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
   const int element = mastate[tid].element;
   const int ion = mastate[tid].ion;
   const int upper = mastate[tid].level;
+  return rad_deexcitation_ratecoeff(modelgridindex, element, ion, upper, lower, epsilon_trans, lineindex, t_current);
+}
 
+
+double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans, int lineindex, double t_current)
+///radiative deexcitation rate: paperII 3.5.2
+{
   #ifdef DEBUG_ON
   if (upper <= lower)
   {
@@ -912,7 +918,13 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
   const int element = mastate[tid].element;
   const int ion = mastate[tid].ion;
   const int lower = mastate[tid].level;
+  return rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_current);
+}
 
+
+double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex, double t_current)//, double T_R, double W)
+///radiative excitation rate: paperII 3.5.2
+{
   #ifdef DEBUG_ON
   if (upper <= lower)
   {
@@ -993,22 +1005,17 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
 }
 
 
-double rad_recombination(int modelgridindex, int lower)
+double rad_recombination_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower)
 ///radiative recombination rate: paperII 3.5.2
 {
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int upper = mastate[tid].level;
-
   double R = 0.0;
   const int nphixstargets = get_nphixstargets(element,ion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
     if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
     {
-      double nnlevel = mastate[tid].nnlevel;
       double nne = get_nne(modelgridindex);
-      R = nnlevel * nne * get_spontrecombcoeff(element,ion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
+      R = nne * get_spontrecombcoeff(element,ion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
       //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
       break;
     }
@@ -1027,18 +1034,24 @@ double rad_recombination(int modelgridindex, int lower)
 }
 
 
+double rad_recombination(int modelgridindex, int lower)
+///radiative recombination rate: paperII 3.5.2
+{
+  int element = mastate[tid].element;
+  int ion = mastate[tid].ion;
+  int upper = mastate[tid].level;
+
+  return mastate[tid].nnlevel * rad_recombination_ratecoeff(modelgridindex, element, ion, upper, lower);
+}
+
+
 /// Calculation of collisional rates /////////////////////////////////////////////////////
 ///***************************************************************************/
 
 double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex)
 /// collisional deexcitation rate: paperII 3.5.1
 {
-  double C;
-
   const double n_u = mastate[tid].nnlevel;
-  const double T_e = get_Te(modelgridindex);
-  const double nne = get_nne(modelgridindex);
-  const double coll_str_thisline = get_coll_str(lineindex);
 
   #ifdef DEBUG_ON
   const int upper = mastate[tid].level;
@@ -1049,6 +1062,15 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
   }
   #endif
 
+  return n_u * col_deexcitation_ratecoeff(modelgridindex, upper, lower, epsilon_trans, lineindex);
+}
+
+double col_deexcitation_ratecoeff(int modelgridindex, int upper, int lower, double epsilon_trans, int lineindex)
+{
+  double C;
+  const double T_e = get_Te(modelgridindex);
+  const double nne = get_nne(modelgridindex);
+  const double coll_str_thisline = get_coll_str(lineindex);
   if (coll_str_thisline < 0)
   {
     const double statweight_target = statw_lower(lineindex);
@@ -1075,13 +1097,13 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 
       const double g_ratio = statweight_target / mastate[tid].statweight;
 
-      C = C_0 * 14.51039491 * n_u * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * gauntfac;
+      C = C_0 * 14.51039491 * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * gauntfac;
     }
     else // alterative: (coll_strength > -3.5) to catch -2 or -3
     {
       //forbidden transitions: magnetic dipole, electric quadropole...
       //could be Axelrod? or Maurer
-      C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+      C = nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
     }
   }
   else //positive values are treated as effective collision strengths
@@ -1089,7 +1111,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
     //from Osterbrock and Ferland, p51
     //mastate[tid].statweight is UPPER LEVEL stat weight
     //statweight_target is LOWER LEVEL stat weight
-    C = n_u * nne * 8.629e-6 * pow(T_e, -0.5) * coll_str_thisline / mastate[tid].statweight;
+    C = nne * 8.629e-6 * pow(T_e, -0.5) * coll_str_thisline / mastate[tid].statweight;
     // test test
     //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
   }
@@ -1114,24 +1136,20 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 }
 
 
-double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans)
-/// collisional excitation rate: paperII 3.5.1
+double col_excitation_ratecoeff(int modelgridindex, int lineindex, double epsilon_trans)
 {
   double C;
   const double coll_strength = get_coll_str(lineindex);
-  const double n_l = mastate[tid].nnlevel;
-
   const double T_e = get_Te(modelgridindex);
   const double nne = get_nne(modelgridindex);
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   #ifdef DEBUG_ON
-  const int lower = mastate[tid].level;
-  if (upper <= lower)
-  {
-    printout("[fatal] col_excitation: tried to calculate downward transition ... abort");
-    abort();
-  }
+  // if (upper <= lower)
+  // {
+  //   printout("[fatal] col_excitation: tried to calculate downward transition ... abort");
+  //   abort();
+  // }
   #endif
 
   if (coll_strength < 0)
@@ -1151,18 +1169,18 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 
       const double test = 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
       const double Gamma = g_bar > test ? g_bar : test;
-      C = n_l * C_0 * nne * sqrt(T_e) * 14.51039491 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans, 2) * eoverkt * exp(-eoverkt) * Gamma;
+      C = C_0 * nne * sqrt(T_e) * 14.51039491 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans, 2) * eoverkt * exp(-eoverkt) * Gamma;
     }
     else // alterative: (coll_strength > -3.5) to catch -2 or -3
     {
       // forbidden transitions: magnetic dipole, electric quadropole...
-      C = n_l * nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-eoverkt) * statw_upper(lineindex);
+      C = nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-eoverkt) * statw_upper(lineindex);
     }
   }
   else
   {
     //from Osterbrock and Ferland, p51
-    C = n_l * nne * 8.629e-6 * pow(T_e, -0.5) * coll_strength * exp(-eoverkt) / statw_lower(lineindex);
+    C = nne * 8.629e-6 * pow(T_e, -0.5) * coll_strength * exp(-eoverkt) / statw_lower(lineindex);
     //test test
     //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_upper(lineindex);
   }
@@ -1191,14 +1209,17 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 }
 
 
-double col_recombination(int modelgridindex, int lower, double epsilon_trans)
-/// collisional recombination rate: paperII 3.5.1
+double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans)
+/// collisional excitation rate: paperII 3.5.1
 {
-  const int element = mastate[tid].element;
-  const int ion = mastate[tid].ion;
-  const int upper = mastate[tid].level;
-  const double n_u = mastate[tid].nnlevel;
+  const double n_l = mastate[tid].nnlevel;
+  // const int lower = mastate[tid].level;
+  return n_l * col_excitation_ratecoeff(modelgridindex, lineindex, epsilon_trans);
+}
 
+
+double col_recombination_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans)
+{
   const int nphixstargets = get_nphixstargets(element,ion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
@@ -1222,7 +1243,7 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
       const float sigma_bf_all_targets = elements[element].ions[ion-1].levels[lower].photoion_xs[0];
       const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,ion-1,lower,phixstargetindex);
 
-      double C = n_u * nne * nne * get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans) *
+      double C = nne * nne * get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans) *
                  1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
       #ifdef DEBUG_ON
@@ -1247,14 +1268,22 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 }
 
 
-double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
-/// collisional ionization rate: paperII 3.5.1
+double col_recombination(int modelgridindex, int lower, double epsilon_trans)
+/// collisional recombination rate: paperII 3.5.1
 {
   const int element = mastate[tid].element;
   const int ion = mastate[tid].ion;
-  const int lower = mastate[tid].level;
-  const double n_l = mastate[tid].nnlevel;
+  const int upper = mastate[tid].level;
+  const double n_u = mastate[tid].nnlevel;
 
+  return n_u * col_recombination_ratecoeff(modelgridindex, element, ion, upper, lower, epsilon_trans);
+}
+
+
+double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lower, int phixstargetindex, double epsilon_trans)
+/// collisional ionization rate: paperII 3.5.1
+// no mastate globals in here!
+{
   #ifdef DEBUG_ON
   if (phixstargetindex > get_nphixstargets(element,ion,lower))
   {
@@ -1281,11 +1310,11 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
 
   const float sigma_bf_all_targets = elements[element].ions[ion].levels[lower].photoion_xs[0];
   const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,ion,lower,phixstargetindex);
-  const double C = n_l * nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
+  const double C = nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
   #ifdef DEBUG_ON
     if (debuglevel == 777)
-    printout("[debug] col_ion: n_l %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_l, nne,T_e,g,epsilon_trans,sigma_bf);
+    printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
     if (!isfinite(C))
     {
       printout("fatal a6: abort\n");
@@ -1294,6 +1323,17 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   #endif
 
   return C;
+}
+
+
+double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
+{
+  const int element = mastate[tid].element;
+  const int ion = mastate[tid].ion;
+  const int lower = mastate[tid].level;
+  const double n_l = mastate[tid].nnlevel;
+
+  return n_l * col_ionization_ratecoeff(modelgridindex, element, ion, lower, phixstargetindex, epsilon_trans);
 }
 
 extern inline double get_individ_rad_deexc(int i);
