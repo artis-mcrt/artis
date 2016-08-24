@@ -1006,7 +1006,7 @@ static double integrand_bfheating_current_radfield(double nu, void *restrict voi
 
 static double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  const double epsrel = 1e-5;
+  const double epsrel = 1e-4;
   const double epsabs = 0.;
 
   gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(32768);

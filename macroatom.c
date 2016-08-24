@@ -837,38 +837,38 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
 double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex, double t_current)
 ///radiative deexcitation rate: paperII 3.5.2
 {
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int upper = mastate[tid].level;
+  const int element = mastate[tid].element;
+  const int ion = mastate[tid].ion;
+  const int upper = mastate[tid].level;
 
   #ifdef DEBUG_ON
-    if (upper <= lower)
-    {
-      printout("[fatal] rad_deexcitation: tried to calculate upward transition ... abort\n");
-      abort();
-    }
+  if (upper <= lower)
+  {
+    printout("[fatal] rad_deexcitation: tried to calculate upward transition ... abort\n");
+    abort();
+  }
   #endif
 
-  double statweight_target = statw_lower(lineindex);
+  const double statweight_target = statw_lower(lineindex);
 
-  double n_u = get_levelpop(modelgridindex,element,ion,upper);
-  double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  const double n_u = get_levelpop(modelgridindex,element,ion,upper);
+  const double n_l = get_levelpop(modelgridindex,element,ion,lower);
 
   double R = 0.0;
 
   if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
   {
-    double nu_trans = epsilon_trans/H;
+    const double nu_trans = epsilon_trans / H;
 
-    double A_ul = einstein_spontaneous_emission(lineindex);
-    double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
-    double B_lu = mastate[tid].statweight/statweight_target * B_ul;
+    const double A_ul = einstein_spontaneous_emission(lineindex);
+    const double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
+    const double B_lu = mastate[tid].statweight/statweight_target * B_ul;
 
-    double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+    const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
     if (tau_sobolev > 0)
     {
-      double beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
+      const double beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
       R = A_ul * beta * mastate[tid].nnlevel;
     }
     else
@@ -909,26 +909,26 @@ double rad_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int lineindex, double t_current)//, double T_R, double W)
 ///radiative excitation rate: paperII 3.5.2
 {
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int lower = mastate[tid].level;
+  const int element = mastate[tid].element;
+  const int ion = mastate[tid].ion;
+  const int lower = mastate[tid].level;
 
   #ifdef DEBUG_ON
-    if (upper <= lower)
-    {
-      printout("[fatal] rad_excitation: tried to calculate downward transition ... abort\n");
-      abort();
-    }
+  if (upper <= lower)
+  {
+    printout("[fatal] rad_excitation: tried to calculate downward transition ... abort\n");
+    abort();
+  }
   #endif
 
-  double statweight_target = statw_upper(lineindex);
+  const double statweight_target = statw_upper(lineindex);
 
-  double n_u = get_levelpop(modelgridindex,element,ion,upper);
-  double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  const double n_u = get_levelpop(modelgridindex,element,ion,upper);
+  const double n_l = get_levelpop(modelgridindex,element,ion,lower);
   double R = 0.0;
   if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
-    double nu_trans = epsilon_trans/H;
+    double nu_trans = epsilon_trans / H;
     double A_ul = einstein_spontaneous_emission(lineindex);
     double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
     double B_lu = statweight_target / mastate[tid].statweight * B_ul;
@@ -941,7 +941,7 @@ double rad_excitation(int modelgridindex, int upper, double epsilon_trans, int l
       //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
       //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
       //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
-      R = mastate[tid].nnlevel * (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans,modelgridindex);
+      R = mastate[tid].nnlevel * (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans, modelgridindex);
     }
     else
     {
@@ -1035,24 +1035,25 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 {
   double C;
 
-  double n_u = mastate[tid].nnlevel;
-  double T_e = get_Te(modelgridindex);
-  double nne = get_nne(modelgridindex);
-  double coll_str_thisline = coll_str(lineindex);
+  const double n_u = mastate[tid].nnlevel;
+  const double T_e = get_Te(modelgridindex);
+  const double nne = get_nne(modelgridindex);
+  const double coll_str_thisline = get_coll_str(lineindex);
 
   #ifdef DEBUG_ON
-    int upper = mastate[tid].level;
-    if (upper <= lower)
-    {
-      printout("[fatal] col_deexcitation: tried to calculate upward transition ... abort");
-      abort();
-    }
+  const int upper = mastate[tid].level;
+  if (upper <= lower)
+  {
+    printout("[fatal] col_deexcitation: tried to calculate upward transition ... abort");
+    abort();
+  }
   #endif
 
   if (coll_str_thisline < 0)
   {
-    double statweight_target = statw_lower(lineindex);
-    if (coll_str_thisline > -1.5) //i.e. to catch -1
+    const double statweight_target = statw_lower(lineindex);
+    const bool forbidden = linelist[lineindex].forbidden;
+    if (!forbidden) // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       ///permitted E1 electric dipole transitions
       ///collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
@@ -1076,15 +1077,11 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
 
       C = C_0 * 14.51039491 * n_u * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * gauntfac;
     }
-    else if (coll_str_thisline > -3.5) //to catch -2 or -3
+    else // alterative: (coll_strength > -3.5) to catch -2 or -3
     {
       //forbidden transitions: magnetic dipole, electric quadropole...
       //could be Axelrod? or Maurer
       C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
-    }
-    else
-    {
-      C = 0.0;
     }
   }
   else //positive values are treated as effective collision strengths
@@ -1092,7 +1089,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int
     //from Osterbrock and Ferland, p51
     //mastate[tid].statweight is UPPER LEVEL stat weight
     //statweight_target is LOWER LEVEL stat weight
-    C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str_thisline / mastate[tid].statweight;
+    C = n_u * nne * 8.629e-6 * pow(T_e, -0.5) * coll_str_thisline / mastate[tid].statweight;
     // test test
     //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
   }
@@ -1121,7 +1118,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
 /// collisional excitation rate: paperII 3.5.1
 {
   double C;
-  const double coll_str_thisline = coll_str(lineindex);
+  const double coll_strength = get_coll_str(lineindex);
   const double n_l = mastate[tid].nnlevel;
 
   const double T_e = get_Te(modelgridindex);
@@ -1129,46 +1126,43 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
   const double eoverkt = epsilon_trans / (KB * T_e);
 
   #ifdef DEBUG_ON
-    const int lower = mastate[tid].level;
-    if (upper <= lower)
-    {
-      printout("[fatal] col_excitation: tried to calculate downward transition ... abort");
-      abort();
-    }
+  const int lower = mastate[tid].level;
+  if (upper <= lower)
+  {
+    printout("[fatal] col_excitation: tried to calculate downward transition ... abort");
+    abort();
+  }
   #endif
 
-  if (coll_str_thisline < 0)
+  if (coll_strength < 0)
   {
-    if (coll_str_thisline > -1.5) //i.e. to catch -1
+    const bool forbidden = linelist[lineindex].forbidden;
+    if (!forbidden) // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
-      ///permitted E1 electric dipole transitions
-      ///collisional excitation: formula valid only for atoms!!!!!!!!!!!
-      ///Rutten script eq. 3.32. p.50
+      /// permitted E1 electric dipole transitions
+      /// collisional excitation: formula valid only for atoms!!!!!!!!!!!
+      /// Rutten script eq. 3.32. p.50
       //C = n_l * 2.16 * pow(eoverkt,-1.68) * pow(T_e,-1.5) * exp(-eoverkt) * nne * osc_strength(element,ion,upper,lower);
 
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
       const double g_bar = 0.2; // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
-      //test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
+      // test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
       /// crude approximation to the already crude Van-Regemorter formula
 
-      double test = 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
-      double Gamma = g_bar > test ? g_bar : test;
-      C = n_l * C_0 * nne * pow(T_e,0.5) * 14.51039491 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * eoverkt * exp(-eoverkt) * Gamma;
+      const double test = 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
+      const double Gamma = g_bar > test ? g_bar : test;
+      C = n_l * C_0 * nne * sqrt(T_e) * 14.51039491 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans, 2) * eoverkt * exp(-eoverkt) * Gamma;
     }
-    else if (coll_str_thisline > -3.5) //to catch -2 or -3
+    else // alterative: (coll_strength > -3.5) to catch -2 or -3
     {
       // forbidden transitions: magnetic dipole, electric quadropole...
       C = n_l * nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-eoverkt) * statw_upper(lineindex);
-    }
-    else
-    {
-      C = 0.0;
     }
   }
   else
   {
     //from Osterbrock and Ferland, p51
-    C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * coll_str_thisline * exp(-eoverkt) / statw_lower(lineindex);
+    C = n_l * nne * 8.629e-6 * pow(T_e, -0.5) * coll_strength * exp(-eoverkt) / statw_lower(lineindex);
     //test test
     //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_upper(lineindex);
   }
@@ -1188,7 +1182,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
       //printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
-    //  printout("[debug] col_exc: coll_str(lineindex) %g statw_upper(lineindex) %g mastate[tid].statweight %g\n", coll_str(lineindex),statw_upper(lineindex),mastate[tid].statweight);
+    //  printout("[debug] col_exc: get_coll_str(lineindex) %g statw_upper(lineindex) %g mastate[tid].statweight %g\n", get_coll_str(lineindex),statw_upper(lineindex),mastate[tid].statweight);
     //  abort();
     //}
   #endif
@@ -1256,10 +1250,10 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
 /// collisional ionization rate: paperII 3.5.1
 {
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int lower = mastate[tid].level;
-  double n_l = mastate[tid].nnlevel;
+  const int element = mastate[tid].element;
+  const int ion = mastate[tid].ion;
+  const int lower = mastate[tid].level;
+  const double n_l = mastate[tid].nnlevel;
 
   #ifdef DEBUG_ON
   if (phixstargetindex > get_nphixstargets(element,ion,lower))
@@ -1269,13 +1263,13 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   }
   #endif
 
-  double T_e = get_Te(modelgridindex);
-  double nne = get_nne(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
+  const double nne = get_nne(modelgridindex);
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge
   double g;
-  int ionstage = get_ionstage(element,ion);
+  const int ionstage = get_ionstage(element,ion);
   if (ionstage == 1)
     g = 0.1;
   else if (ionstage == 2)
@@ -1283,7 +1277,7 @@ double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_t
   else
     g = 0.3;
 
-  double fac1 = epsilon_trans / KB / T_e;
+  const double fac1 = epsilon_trans / KB / T_e;
 
   const float sigma_bf_all_targets = elements[element].ions[ion].levels[lower].photoion_xs[0];
   const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,ion,lower,phixstargetindex);

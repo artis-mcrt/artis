@@ -1,6 +1,6 @@
 #include "sn3d.h"
 #include "atomic.h"
-
+#include "ltepop.h"
 
 extern inline int get_element(int element);
 extern inline int get_elementindex(int Z);
@@ -20,10 +20,32 @@ extern inline double get_phixsprobability(int element, int ion, int level, int p
 extern inline int transitioncheck(int upper, int lower);
 extern inline double einstein_spontaneous_emission(int lineindex);
 extern inline double osc_strength(int lineindex);
-extern inline double coll_str(int lineindex);
+extern inline double get_coll_str(int lineindex);
 extern inline double statw_upper(int lineindex);
 extern inline double statw_lower(int lineindex);
 extern inline double photoionization_crosssection(double nu_edge, double nu);
+extern inline double xs_photoionization(int element, int ion, int level, double nu_edge, double nu);
+
+double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
+{
+  const int element = linelist[lineindex].elementindex;
+  const int ion = linelist[lineindex].ionindex;
+  const int lower = linelist[lineindex].lowerlevelindex;
+  const int upper = linelist[lineindex].upperlevelindex;
+
+  const double statweight_target = statw_upper(lineindex);
+
+  const double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  const double n_u = get_levelpop(modelgridindex,element,ion,upper);
+
+  const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
+  const double A_ul = einstein_spontaneous_emission(lineindex);
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+  const double B_lu = statweight_target / mastate[tid].statweight * B_ul;
+
+  const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+  return tau_sobolev;
+}
 
 
 /*double interpolate_photoionization_crosssection(double nu_edge, double nu)

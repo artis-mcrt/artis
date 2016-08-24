@@ -3,6 +3,7 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_debye.h>
 #include <gsl/gsl_roots.h>
+#include "atomic.h"
 #include "grid_init.h"
 #include "radfield.h"
 #include "sn3d.h"
@@ -10,10 +11,10 @@
 extern inline double radfield2(double nu, double T, double W);
 
 //#const int RADFIELDBINCOUNT = 1000;
-#define RADFIELDBINCOUNT 16
+#define RADFIELDBINCOUNT 32
 
-#define nu_lower_first_initial (CLIGHT / (15000e-8))
-#define nu_upper_last_initial (CLIGHT / (1500e-8))
+#define nu_lower_first_initial (CLIGHT / (15000e-8)) // 15000 Angstroms
+#define nu_upper_last_initial (CLIGHT / (200e-8))  // 1000 Angstroms
 
 static double nu_lower_first = nu_lower_first_initial;
 
@@ -107,12 +108,18 @@ void radfield_init(void)
           {
             for (int i = 0; i < nbfcontinua_ground; i++)
             {
-              double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+              const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+              const int Z = get_element(phixslist[tid].groundcont[i].element);
+              const int ion_stage = get_ionstage(phixslist[tid].groundcont[i].element, phixslist[tid].groundcont[i].ion);
+              const int level = phixslist[tid].groundcont[i].level;
               //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
               if (binindex == 0 && ((nu_edge < nu_lower_first) || (nu_edge > nu_upper_last_initial)))
-                printout("MISSED bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first_initial,nu_upper_last_initial);
+              {
+                printout("MISSED bf edge at %g Hz (%g eV), nu_lower_first %g Hz, nu_upper_last %g Hz, Z=%d ion_stage %d level %d\n",
+                         nu_edge, H * nu_edge / EV, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
+              }
 
-              if ((nu_edge > prev_nu_upper) &&  (nu_edge < radfieldbins[modelgridindex][binindex].nu_upper))
+              if ((nu_edge > prev_nu_upper) && (nu_edge < radfieldbins[modelgridindex][binindex].nu_upper))
                 radfieldbins[modelgridindex][binindex].nu_upper = nu_edge;
             }
           }
@@ -125,7 +132,6 @@ void radfield_init(void)
           radfieldbins[modelgridindex][binindex].prev_contribcount = 0;
           radfieldbins[modelgridindex][binindex].W = -1.;
           radfieldbins[modelgridindex][binindex].T_R = -1.;
-          //radfieldbins[modelgridindex][binindex].fit_type = FIT_CONSTANT;
           radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTED_BLACKBODY;
 
           prev_nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
@@ -172,9 +178,6 @@ static inline
 double radfield_get_bin_nu_bar(int modelgridindex, int binindex)
 // importantly, this is average beween the current and previous timestep
 {
-  //const double nuJ_bin_raw = radfieldbins[modelgridindex][binindex].nuJ_raw;
-  //const double J_bin_raw = radfieldbins[modelgridindex][binindex].J_raw;
-  //return nuJ_bin_raw / J_bin_raw;
   const double nuJ_sum = radfield_get_bin_nuJ(modelgridindex, binindex, true);
   const double J_sum = radfield_get_bin_J(modelgridindex, binindex, true);
   return nuJ_sum / J_sum;
@@ -239,33 +242,6 @@ int radfield_select_bin(int modelgridindex, double nu)
   }
   return -1;
   */
-
-  /*// remember the last bin number and move from there (assume function calls often have similar nu)
-  while (true)
-  {
-    if (radfieldbins[modelgridindex][last_selected_binindex].nu_upper <= nu)
-    {
-      last_selected_binindex++;
-      if (last_selected_binindex >= RADFIELDBINCOUNT)
-      {
-        last_selected_binindex = RADFIELDBINCOUNT - 1;
-        return -1;
-      }
-    }
-    else if (radfield_get_bin_nu_lower(modelgridindex, last_selected_binindex) > nu)
-    {
-      last_selected_binindex--;
-      if (last_selected_binindex < 0)
-      {
-        last_selected_binindex = 0;
-        return -1;
-      }
-    }
-    else
-    {
-      return last_selected_binindex;
-    }
-  }*/
 
   // binary search
   int low = 0;
@@ -868,9 +844,9 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 }
 
 
+#ifdef MPI_ON
 void radfield_reduce_estimators(int my_rank)
 {
-  #ifdef MPI_ON
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -894,12 +870,10 @@ void radfield_reduce_estimators(int my_rank)
       }
     }
   }
-  #endif
 }
 
 void radfield_broadcast_estimators(int my_rank)
 {
-  #ifdef MPI_ON
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -910,5 +884,5 @@ void radfield_broadcast_estimators(int my_rank)
       printout("MPI: After broadcast: Process %d binindex %d has a contribcount of %d\n",my_rank,binindex,radfieldbins[modelgridindex][binindex].contribcount);
     }
   }
-  #endif
 }
+#endif

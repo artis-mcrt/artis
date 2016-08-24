@@ -206,8 +206,9 @@ void nonthermal_close_file(void)
 
 
 static int get_energyindex_ev(double energy_ev)
+// finds the nearest energy point to energy_ev (may be above or below)
 {
-  int index = floor((energy_ev - EMIN) / DELTA_E);
+  int index = round((energy_ev - EMIN) / DELTA_E);
   if (index < 0)
     return 0;
   else if (index > SFPTS - 1)
@@ -239,45 +240,33 @@ static double xs_excitation(int lineindex, double epsilon_trans, double energy)
 // excitation cross section in cm^2
 // energies are in erg
 {
-  double sigma;
-  const double coll_str_thisline = coll_str(lineindex);
-  const double A_naught_sq = pow(5.2917721067e-9, 2); // Bohr radius squared in cm^2
+  double sigma = 0.;
+  const double coll_str = get_coll_str(lineindex);
+  const double A_naught_squared = pow(5.2917721067e-9, 2); // Bohr radius squared in cm^2
 
-  if (coll_str_thisline < 0)
-  {
-    const double fij = osc_strength(lineindex);
-    if (coll_str_thisline > -1.5) // to catch -1
-    {
-      // permitted E1 electric dipole transitions
-      const double prefactor = 45.585750051; // 8 * pi^2/sqrt(3)
-      const double U = energy / epsilon_trans;
-
-      // const double g_bar = 0.2;
-      const double A = 0.28;
-      const double B = 0.15;
-      const double g_bar = A * log(U) + B;
-
-      // Eq 4 of Mewe 1972, possibly from Seaton 1962?
-      sigma = prefactor * A_naught_sq * pow(H_ionpot / epsilon_trans, 2) * fij * g_bar / U;
-    }
-    else if (coll_str_thisline > -3.5) //to catch -2 or -3
-    {
-      // forbidden transitions: magnetic dipole, electric quadropole...
-      sigma = 0.0;
-    }
-    else
-    {
-      sigma = 0.0;
-    }
-    // printout("lineindex %d excitation sigma %g, osc strength %g\n", lineindex, sigma, fij);
-  }
-  else
+  if (coll_str >= 0)
   {
     // collision strength is available, so use that
-    sigma = pow(H_ionpot / energy, 2) / statw_lower(lineindex) * coll_str_thisline * PI * A_naught_sq;
+    // Li et al. 2012 equation 11
+    return pow(H_ionpot / energy, 2) / statw_lower(lineindex) * coll_str * PI * A_naught_squared;
   }
+  else if (!linelist[lineindex].forbidden)
+  {
+    const double fij = osc_strength(lineindex);
+    // permitted E1 electric dipole transitions
+    const double U = energy / epsilon_trans;
 
-  return sigma;
+    // const double g_bar = 0.2;
+    const double A = 0.28;
+    const double B = 0.15;
+    const double g_bar = A * log(U) + B;
+
+    const double prefactor = 45.585750051; // 8 * pi^2/sqrt(3)
+    // Eq 4 of Mewe 1972, possibly from Seaton 1962?
+    return prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij * g_bar / U;
+  }
+  else
+    return 0.;
 }
 
 
@@ -353,7 +342,8 @@ static double get_tot_nion(int modelgridindex)
 
 static double N_e(int modelgridindex, double energy)
 // Kozma & Fransson equation 6.
-// not sure what quantity means, but it's needed to calculate the heating fraction in equation 3
+// Something related to a number of electrons, needed to calculate the heating fraction in equation 3
+// possibly not valid for energy > E_0
 {
   const double energy_ev = energy / EV;
   double N_e = 0.;
@@ -440,8 +430,13 @@ static double calculate_frac_heating(int modelgridindex)
   for (int i = startindex; i < SFPTS; i++)
   {
     const double endash = gsl_vector_get(envec, i);
+    double deltaendash;
+    if (i == startindex)
+      deltaendash = endash + DELTA_E - E_0;
+    else
+      deltaendash = DELTA_E;
     // first term
-    frac_heating_Einit += gsl_matrix_get(y, modelgridindex, i) * (electron_loss_rate(endash * EV, nne) / EV) * DELTA_E;
+    frac_heating_Einit += gsl_matrix_get(y, modelgridindex, i) * (electron_loss_rate(endash * EV, nne) / EV) * deltaendash;
   }
 
   // second term
@@ -657,9 +652,10 @@ static double get_oneoverw(int element, int ion, int modelgridindex)
 
 static double get_frac_excitation(int modelgridindex, int element, int ion)
 // Kozma & Fransson equation 4, but summed over all transitions for given ion
+// integral in Kozma & Fransson equation 9
 {
-  double frac_excitation = 0.;
   const double nnion = ionstagepop(modelgridindex, element, ion);
+  gsl_vector *cross_section_vec = gsl_vector_calloc(SFPTS);
 
   // for (int level = 0; level < get_nlevels(element,ion); level++)
   const int level = 0; // just consider excitation from the ground level
@@ -674,17 +670,20 @@ static double get_frac_excitation(int modelgridindex, int element, int ion)
       const double epsilon_trans = epsilon_target - epsilon_current;
       const double epsilon_trans_ev = epsilon_trans / EV;
 
-      double integral = 0.; // integral in Kozma & Fransson equation 9
       const int startindex = get_energyindex_ev(epsilon_trans_ev);
       for (int i = startindex; i < SFPTS; i++)
       {
         const double endash = gsl_vector_get(envec, i);
-        integral += gsl_matrix_get(y, modelgridindex, i) * xs_excitation(lineindex, epsilon_trans, endash * EV) * DELTA_E;
+        *gsl_vector_ptr(cross_section_vec, i) += xs_excitation(lineindex, epsilon_trans, endash * EV) * epsilon_trans_ev;
       }
-
-      frac_excitation += nnion * epsilon_trans_ev * integral / E_init_ev;
     }
   }
+
+  double y_dot_crosssection = 0.;
+  gsl_vector_view yvecview = gsl_matrix_row(y, modelgridindex);
+  gsl_blas_ddot(&yvecview.vector, cross_section_vec, &y_dot_crosssection);
+  gsl_vector_free(cross_section_vec);
+  double frac_excitation = nnion * y_dot_crosssection * DELTA_E / E_init_ev;
 
   return frac_excitation;
 }
@@ -692,21 +691,27 @@ static double get_frac_excitation(int modelgridindex, int element, int ion)
 
 static double get_frac_ionization(int modelgridindex, int element, int ion, int collionindex)
 {
-  double frac_ionization = 0.;
   const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
+  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
+  // cross_section_vec will contain impact ionization cross sections for E > ionpot_ev (otherwise zeros)
 
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
   const int startindex = get_energyindex_ev(ionpot_ev);
 
-  double ionization_integral = 0.; // integral in Kozma & Fransson equation 10
+  for (int i = 0; i < startindex; i++)
+    gsl_vector_set(cross_section_vec, i, 0.);
+
   for (int i = startindex; i < SFPTS; i++)
   {
     double endash = gsl_vector_get(envec, i);
-
-    ionization_integral += gsl_matrix_get(y, modelgridindex, i) * xs_impactionization(endash, collionindex) * DELTA_E;
+    gsl_vector_set(cross_section_vec, i, xs_impactionization(endash, collionindex));
   }
 
-  frac_ionization = nnion * ionpot_ev * ionization_integral / E_init_ev;
+  double y_dot_crosssection = 0.;
+  gsl_vector_view yvecview_thismgi = gsl_matrix_row(y, modelgridindex);
+  gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec, &y_dot_crosssection);
+  gsl_vector_free(cross_section_vec);
+  double frac_ionization = nnion * ionpot_ev * y_dot_crosssection * DELTA_E / E_init_ev;
 
   return frac_ionization;
 }
@@ -720,36 +725,6 @@ static double nt_ionization_ratecoeff_wfapprox(int modelgridindex, int element, 
   // per unit volume per unit time in the grid cell (sum of terms above)
   // by the total ion number density and the "work per ion pair"
   return deposition_rate_density / get_tot_nion(modelgridindex) * get_oneoverw(element, ion, modelgridindex);
-}
-
-
-static double get_eff_ionpot_old(int modelgridindex, int element, int ion)
-// Kozma & Fransson 1992 equation 12
-// result is in erg
-{
-  double eff_ionpot = 0.;
-  const int Z = get_element(element);
-  const int ionstage = get_ionstage(element, ion);
-  const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
-  const double tot_nion = get_tot_nion(modelgridindex);
-  double frac_ionization_ion = 0.;
-  double weighted_ionpot_sum = 0.;
-  for (int n = 0; n < colliondatacount; n++)
-  {
-    if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
-    {
-      const double ionpot = colliondata[n].ionpot_ev * EV;
-
-      const double frac_ionization_shell = get_frac_ionization(modelgridindex, element, ion, n);
-      frac_ionization_ion += frac_ionization_shell;
-
-      weighted_ionpot_sum += frac_ionization_shell * ionpot;
-
-      // break; // consider only the valence shell
-    }
-  }
-  eff_ionpot += weighted_ionpot_sum * (nnion / tot_nion) / pow(frac_ionization_ion, 2);
-  return eff_ionpot;
 }
 
 
@@ -781,7 +756,6 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
 // Kozma & Fransson 1992 equation 13
 {
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-  // const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
   return deposition_rate_density / get_tot_nion(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
 }
 
@@ -798,6 +772,41 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
   else
     Y_nt = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
   return Y_nt;
+}
+
+
+double get_nt_excitation_rate(int modelgridindex, int element, int ion, int lowerlevel, int upperlevel)
+// Kozma & Fransson equation 9 divided by epsilon_trans to get a rate
+{
+  double rate = 0.;
+  const double nnion = ionstagepop(modelgridindex, element, ion);
+
+  const double epsilon_current = epsilon(element,ion,lowerlevel);
+  const int nuptrans = elements[element].ions[ion].levels[lowerlevel].uptrans[0].targetlevel;
+
+  for (int t = 1; t <= nuptrans; t++)
+  {
+    const int transupperlevel = elements[element].ions[ion].levels[lowerlevel].uptrans[t].targetlevel;
+    if (transupperlevel == upperlevel)
+    {
+      const double epsilon_target = elements[element].ions[ion].levels[lowerlevel].uptrans[t].epsilon;
+      const int lineindex = elements[element].ions[ion].levels[lowerlevel].uptrans[t].lineindex;
+      const double epsilon_trans = epsilon_target - epsilon_current;
+      const double epsilon_trans_ev = epsilon_trans / EV;
+
+      double integral = 0.; // integral in Kozma & Fransson equation 9
+      const int startindex = get_energyindex_ev(epsilon_trans_ev);
+      for (int i = startindex; i < SFPTS; i++)
+      {
+        const double endash = gsl_vector_get(envec, i);
+        integral += gsl_matrix_get(y, modelgridindex, i) * xs_excitation(lineindex, epsilon_trans, endash * EV) * DELTA_E;
+      }
+
+      rate += nnion * integral / E_init_ev;
+    }
+  }
+
+  return rate;
 }
 
 
@@ -838,7 +847,6 @@ static void printout_sf_solution(int modelgridindex)
       printout("  frac_excitation: %g\n", frac_excitation_ion);
       printout("  workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("  eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
-      printout("  eff_ionpotold:%9.2f eV\n", get_eff_ionpot_old(modelgridindex, element, ion) / EV);
       printout("  workfn approx Gamma: %9.3e\n",
                nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
       printout("  Spencer-Fano Gamma:  %9.3e\n",
@@ -869,6 +877,13 @@ static void printout_sf_solution(int modelgridindex)
   printout("frac_ionization_tot: %g\n", frac_ionization_total);
   const double frac_sum = frac_heating + frac_excitation_total + frac_ionization_total;
   printout("frac_sum:            %g (should be close to 1.0)\n", frac_sum);
+
+  // double ntexcit_in_a = 0.;
+  // for (int level = 0; level < get_nlevels(0, 1); level++)
+  // {
+  //   ntexcit_in_a += get_nt_excitation_rate(modelgridindex, 0, 1, level, 75);
+  // }
+  // printout("total nt excitation rate into level 75: %g\n", ntexcit_in_a);
 
   // compensate for lost energy by scaling the solution
   // E_init_ev *= frac_sum;

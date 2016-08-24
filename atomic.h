@@ -5,6 +5,7 @@
 
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
+double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 
 inline int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
@@ -57,8 +58,8 @@ inline int get_nlevels(int element, int ion)
 
 
 inline int get_nlevels_nlte(int element, int ion)
-/// Returns the number of levels associated with with a specific ion given
-/// its elementindex and ionindex.
+// Returns the number of levels associated with with a specific ion given
+// its elementindex and ionindex.
 {
   return elements[element].ions[ion].nlevels_nlte;
 }
@@ -109,7 +110,7 @@ inline bool is_nlte(int element, int ion, int level)
 // Returns true if (element,ion,level) is to be treated in nlte.
 // (note this function returns true for the ground state)
 {
-  if (level <= 63)
+  if (level <= 80)
     elements[element].ions[ion].levels[level].is_nlte = true;
   else
     elements[element].ions[ion].levels[level].is_nlte = false;
@@ -129,7 +130,7 @@ inline int get_nphixstargets(int element, int ion, int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
   const int nions = get_nions(element);
-  int nionisinglevels = get_ionisinglevels(element,ion);
+  const int nionisinglevels = get_ionisinglevels(element,ion);
   if ((ion < nions-1) && (level < nionisinglevels))
     return elements[element].ions[ion].levels[level].nphixstargets;
   else
@@ -175,8 +176,8 @@ inline int transitioncheck(int upper, int lower)
 /// reads A_ul from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
 {
-  int index = (upper - lower) - 1;
-  int flag = transitions[upper].to[index];
+  const int index = (upper - lower) - 1;
+  const int flag = transitions[upper].to[index];
 
   return flag;
 }
@@ -204,7 +205,7 @@ inline double osc_strength(int lineindex)
 }
 
 
-inline double coll_str(int lineindex)
+inline double get_coll_str(int lineindex)
 {
   return linelist[lineindex].coll_str;
 }
@@ -212,17 +213,23 @@ inline double coll_str(int lineindex)
 
 inline double statw_upper(int lineindex)
 {
-  return elements[linelist[lineindex].elementindex].ions[linelist[lineindex].ionindex].levels[linelist[lineindex].upperlevelindex].stat_weight;
+  const int element = linelist[lineindex].elementindex;
+  const int ion = linelist[lineindex].ionindex;
+  const int upper = linelist[lineindex].upperlevelindex;
+  return elements[element].ions[ion].levels[upper].stat_weight;
 }
 
 
 inline double statw_lower(int lineindex)
 {
-  return elements[linelist[lineindex].elementindex].ions[linelist[lineindex].ionindex].levels[linelist[lineindex].lowerlevelindex].stat_weight;
+  const int element = linelist[lineindex].elementindex;
+  const int ion = linelist[lineindex].ionindex;
+  const int lower = linelist[lineindex].lowerlevelindex;
+  return elements[element].ions[ion].levels[lower].stat_weight;
 }
 
 
-inline double photoionization_crosssection(double nu_edge, double nu)
+inline double xs_photoionization(int element, int ion, int level, double nu_edge, double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
@@ -230,11 +237,6 @@ inline double photoionization_crosssection(double nu_edge, double nu)
 ///                    must fit to the bound state of the desired bf-continuum!!!
 {
   float sigma_bf;
-
-  const int element = mastate[tid].element;
-  const int ion = mastate[tid].ion;
-  const int level = mastate[tid].level;
-
   if (nu == nu_edge)
   {
     sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
@@ -265,7 +267,7 @@ inline double photoionization_crosssection(double nu_edge, double nu)
       /// use a parameterization of sigma_bf by the Kramers formula
       /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       /// so far the highest grid point, otherwise the cross-section is not continuous
-      double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+      const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs/nu, 3);
     }
   }
@@ -281,6 +283,18 @@ inline double photoionization_crosssection(double nu_edge, double nu)
   #endif
 
   return sigma_bf;
+}
+
+
+inline double photoionization_crosssection(double nu_edge, double nu)
+///        - BE AWARE: the elements of the global structure variable mastate
+///                    must fit to the bound state of the desired bf-continuum!!!
+{
+  const int element = mastate[tid].element;
+  const int ion = mastate[tid].ion;
+  const int level = mastate[tid].level;
+
+  return xs_photoionization(element, ion, level, nu_edge, nu);
 }
 
 /*static double osc_strength_old(int lineindex)

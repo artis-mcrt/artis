@@ -21,6 +21,7 @@ typedef struct
   int upper;
   double A;
   double coll_str;
+  bool forbidden;
 } transitiontable_entry;  /// only used temporarily during input
 
 
@@ -406,8 +407,8 @@ static void read_unprocessed_atomicdata(void)
         for (int i = 0; i < tottransitions; i++)
         {
           double A,coll_str;
-          int transitionindex,lower,upper;
-          fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
+          int lower,upper,intforbidden;
+          fscanf(transitiondata,"%d %d %lg %lg %d\n",&lower,&upper,&A,&coll_str,&intforbidden);
         }
         fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
         printout("proceed through transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
@@ -439,8 +440,8 @@ static void read_unprocessed_atomicdata(void)
           for (int i = 0; i < tottransitions_all; i++)
           {
             double A, coll_str;
-            int transitionindex,lower,upper;
-            fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower,&upper,&A,&coll_str);
+            int lower,upper,intforbidden;
+            fscanf(transitiondata,"%d %d %lg %lg %d\n",&lower,&upper,&A,&coll_str,&intforbidden);
             //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
           }
         }
@@ -451,8 +452,8 @@ static void read_unprocessed_atomicdata(void)
           for (int i = 0; i < tottransitions; i++)
           {
             double A,coll_str;
-            int transitionindex,lower_in,upper_in;
-            fscanf(transitiondata,"%d %d %d %lg %lg\n",&transitionindex,&lower_in,&upper_in,&A,&coll_str);
+            int lower_in,upper_in,intforbidden;
+            fscanf(transitiondata,"%d %d %lg %lg %d\n",&lower_in,&upper_in,&A,&coll_str,&intforbidden);
             const int lower = lower_in - 1; // TODO: remove the minus after we change the level indicies to start at zero in transitiondata.txt
             const int upper = upper_in - 1;
             if (prev_lower < nlevels_requiretransitions && prev_upper < nlevelsmax - 1)
@@ -470,6 +471,7 @@ static void read_unprocessed_atomicdata(void)
                   transitiontable[i].upper = tmplevel;
                   transitiontable[i].A = 0.;
                   transitiontable[i].coll_str = -2.;
+                  transitiontable[i].forbidden = true;
                   // printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
                   i++;
                 }
@@ -484,6 +486,7 @@ static void read_unprocessed_atomicdata(void)
                   transitiontable[i].upper = tmplevel;
                   transitiontable[i].A = 0.;
                   transitiontable[i].coll_str = -2.;
+                  transitiontable[i].forbidden = true;
                   printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
                   i++;
                 }
@@ -493,6 +496,7 @@ static void read_unprocessed_atomicdata(void)
             transitiontable[i].upper = upper;
             transitiontable[i].A = A;
             transitiontable[i].coll_str = coll_str;
+            transitiontable[i].forbidden = (intforbidden == 1);
             //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
             // printout("reading transition index %d lower %d upper %d\n", i, transitiontable[i].lower, transitiontable[i].upper);
             prev_lower = lower;
@@ -626,13 +630,13 @@ static void read_unprocessed_atomicdata(void)
             if (transitioncheck(level,targetlevel) == -99)
             {
               transitions[level].to[level-targetlevel-1] = lineindex;
-              double A_ul = transitiontable[ii].A;
-              double coll_str = transitiontable[ii].coll_str;
+              const double A_ul = transitiontable[ii].A;
+              const double coll_str = transitiontable[ii].coll_str;
               //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
-              double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
-              double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
-              double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+              const double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
+              const double g = stat_weight(element,ion,level) / stat_weight(element,ion,targetlevel);
+              const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
               //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
               //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
@@ -645,6 +649,7 @@ static void read_unprocessed_atomicdata(void)
               linelist[lineindex].einstein_A = A_ul;
               linelist[lineindex].osc_strength = f_ul;
               linelist[lineindex].coll_str = coll_str;
+              linelist[lineindex].forbidden = transitiontable[ii].forbidden;
               lineindex++;
               if (lineindex % MLINES == 0)
               {
@@ -799,25 +804,25 @@ static void read_unprocessed_atomicdata(void)
 
 
   /// Save sorted linelist into a file
-  if (rank_global == 0)
-  {
-    FILE *restrict linelist_file;
-    if ((linelist_file = fopen("linelist.dat", "w")) == NULL)
-    {
-      printout("Cannot open linelist.out.\n");
-      exit(0);
-    }
-    fprintf(linelist_file,"%d\n",nlines);
-    for (int i = 0; i < nlines; i++)
-    {
-      fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",
-              i, linelist[i].elementindex, linelist[i].ionindex,
-              linelist[i].upperlevelindex, linelist[i].lowerlevelindex,
-              linelist[i].nu, linelist[i].einstein_A, linelist[i].osc_strength,
-              linelist[i].coll_str);
-    }
-    fclose(linelist_file);
-  }
+  // if (rank_global == 0)
+  // {
+  //   FILE *restrict linelist_file;
+  //   if ((linelist_file = fopen("linelist.dat", "w")) == NULL)
+  //   {
+  //     printout("Cannot open linelist.out.\n");
+  //     exit(0);
+  //   }
+  //   fprintf(linelist_file,"%d\n",nlines);
+  //   for (int i = 0; i < nlines; i++)
+  //   {
+  //     fprintf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg %d\n",
+  //             i, linelist[i].elementindex, linelist[i].ionindex,
+  //             linelist[i].upperlevelindex, linelist[i].lowerlevelindex,
+  //             linelist[i].nu, linelist[i].einstein_A, linelist[i].osc_strength,
+  //             linelist[i].coll_str, linelist[i].forbidden);
+  //   }
+  //   fclose(linelist_file);
+  // }
 
 
   ///Establish connection between transitions and sorted linelist
@@ -1200,9 +1205,9 @@ static void read_processed_linelist(void)
   }
   for (int i = 0; i < nlines; i++)
   {
-    int dum,element,ion,upperlevel,lowerlevel;
+    int dum,element,ion,upperlevel,lowerlevel,intforbidden;
     double nu,A_ul,f_ul,coll_str;
-    fscanf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg\n",&dum,&element,&ion,&upperlevel,&lowerlevel,&nu,&A_ul,&f_ul,&coll_str);
+    fscanf(linelist_file,"%d %d %d %d %d %lg %lg %lg %lg %d\n",&dum,&element,&ion,&upperlevel,&lowerlevel,&nu,&A_ul,&f_ul,&coll_str,&intforbidden);
     linelist[i].elementindex = element;
     linelist[i].ionindex = ion;
     linelist[i].upperlevelindex = upperlevel;
@@ -1211,9 +1216,7 @@ static void read_processed_linelist(void)
     linelist[i].einstein_A = A_ul;
     linelist[i].osc_strength = f_ul;
     linelist[i].coll_str = coll_str;
-    //if (coll_str < 0.0)
-      //linelist[i].coll_str = -1; //TESTING ONLY, TREAT ALL AS PERMITTED
-      //linelist[i].coll_str = -2; //TESTING ONLY, TREAT ALL AS FORBIDDEN
+    linelist[i].forbidden = (intforbidden == 1);
   }
   fclose(linelist_file);
 }

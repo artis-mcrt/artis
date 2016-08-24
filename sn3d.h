@@ -1,9 +1,9 @@
 #ifndef SN3D_H
 #define SN3D_H
 
-#include "types.h"
 #include <unistd.h>
 #include <stdbool.h>
+#include "types.h"
 
 #define DEBUG_ON
 //#define DO_TITER
@@ -11,8 +11,8 @@
 #define NT_ON true       /// Switch on non-thermal ionisation
 #define NT_SOLVE_SPENCERFANO true       /// Use the Spencer-Fano solver instead of Axelrod's work function approximation
 
-// #define NLTE_POPS_ON
-// #define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
+#define NLTE_POPS_ON
+#define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
                                           // equation simultaneously for levels
                                           // in all ions
 #define NLTEITER 30
@@ -21,15 +21,15 @@
   #define NLTE_POPS_ON
 #endif
 
-#define USE_MULTIBIN_RADFIELD_MODEL false // if using this, should avoid look up tables below
+#define USE_MULTIBIN_RADFIELD_MODEL true // if using this, should avoid look up tables below
                                          // (since they assume J_nu is Planck function)
 #define FIRST_NLTE_RADFIELD_TIMESTEP 14
-#define NO_LUT_PHOTOION false // dynamically calculate photoionization
+#define NO_LUT_PHOTOION true // dynamically calculate photoionization
                              // rates for the current radiation field
                              // instead of interpolating precalculated
                              // values assuming a blackbody radiation field
 
-#define NO_LUT_BFHEATING false
+#define NO_LUT_BFHEATING true
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS

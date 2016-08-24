@@ -113,7 +113,7 @@ static void filter_nlte_matrix(int element, gsl_matrix *const rate_matrix, gsl_v
         printout("(forcing LTE population)");
       }
     }
-    printout("\n");
+    // printout("\n");
   }
 }
 
@@ -319,7 +319,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index) -= C * s_renorm;
           *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index) += C * s_renorm;
           if (R + C < 0)
-            printout("WARNING: Negative de-excitation rate from ion_stage %d level %d to level %d\n",get_ionstage(element,ion),level,lower);
+            printout("WARNING: Negative de-excitation rate from ion_stage %d level %d to level %d\n",get_ionstage(element, ion), level, lower);
         }
 
         // excitation
@@ -336,10 +336,16 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          const double R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);
+          const double R = rad_excitation(modelgridindex, upper, epsilon_trans, lineindex, t_mid);
           //double R = 0.0; //TODO: remove, testing only
-          const double C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
+          const double C = col_excitation(modelgridindex, upper, lineindex, epsilon_trans);
           //double C = 0.0; //TODO: remove, testing only
+
+          // if ((element == 0) && (ion == 1) && ((level <= 5) || (level == 35)) && (upper >= 74) && (upper <= 77))
+          // {
+          //   const double tau_sobolev = get_tau_sobolev(modelgridindex, lineindex, t_mid);
+          //   printout("timestep %d lower %d upper %d tau_sobolev=%g\n", timestep, level, upper, tau_sobolev);
+          // }
 
           const int lower_index = get_nlte_vector_index(element,ion,level);
           const int upper_index = get_nlte_vector_index(element,ion,upper);
@@ -664,12 +670,13 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
     if (atomic_number == 26)
     {
-      print_level_rates(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 1, 20, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 1, 21, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 1, 35, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 1, 75, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 1, 76, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(modelgridindex, element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     gsl_matrix_free(rate_matrix_rad_bb);
