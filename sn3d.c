@@ -775,6 +775,7 @@ int main(int argc, char** argv)
               MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
               for (int nn = 0; nn < nlp; nn++)
               {
+                int mgi;
                 MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
                 //if (cell[ncl].rho > MINDENSITY)
                 if (modelgrid[mgi].associated_cells > 0)
