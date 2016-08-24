@@ -520,7 +520,8 @@ void calculate_cooling_rates(int modelgridindex)
         //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
         const double epsilon_current = epsilon(element,ion,level);
         mastate[tid].level = level;
-        mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+        const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+        mastate[tid].nnlevel = nnlevel;
 
         /// excitation to same ionization stage
         /// -----------------------------------
@@ -531,7 +532,7 @@ void calculate_cooling_rates(int modelgridindex)
           int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
           //printout("    excitation to level %d possible\n",upper);
           double epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-          C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans) * epsilon_trans;
+          C = nnlevel * col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans) * epsilon_trans;
           C_exc += C;
         }
 
@@ -547,7 +548,7 @@ void calculate_cooling_rates(int modelgridindex)
             double epsilon_upper = epsilon(element,ion+1,upper);
             double epsilon_trans = epsilon_upper - epsilon_current;
             //printout("cooling list: col_ionization\n");
-            C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans) * epsilon_trans;
+            C += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
           }
           C_ion += C;
 

@@ -17,11 +17,9 @@ double rad_recombination(int modelgridindex, int lower);
 double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex);
 double col_deexcitation_ratecoeff(int modelgridindex, int upper, int lower, double epsilon_trans, int lineindex);
 double col_excitation_ratecoeff(int modelgridindex, int lineindex, double epsilon_trans);
-double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans);
 double col_recombination_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans);
 double col_recombination(int modelgridindex, int lower, double epsilon_trans);
 double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lower, int phixstargetindex, double epsilon_trans);
-double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans);
 
 inline double get_individ_rad_deexc(int i)
 {

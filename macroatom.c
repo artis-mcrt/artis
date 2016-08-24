@@ -188,7 +188,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         epsilon_trans = epsilon_target - epsilon_current;
         R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
-        C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
+        C = col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans);
 
         //individ_internal_up_same = (C) * epsilon_current;
         individ_internal_up_same = (R + C) * epsilon_current;
@@ -211,7 +211,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
           upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
           R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-          C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
+          C = col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
           internal_up_higher += (R + C) * epsilon_current;
         }
       }
@@ -255,7 +255,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
           upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
           R += get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-          C += col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
+          C += col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
           printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g, saved_internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current,cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher);
         }
 
@@ -729,7 +729,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
         epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
         R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-        C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
+        C = col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
         rate += (R + C) * epsilon_current;
         if (zrand*internal_up_higher < rate) break;
       }
@@ -793,7 +793,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           epsilon_trans = epsilon_target - epsilon_current;
           R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
-          C = col_excitation(modelgridindex,upper,lineindex,epsilon_trans);
+          C = col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans);
           printout("[debug]    excitation to level %d, epsilon_trans %g, R %g, C %g\n",upper,epsilon_trans,R,C);
         }
 
@@ -807,7 +807,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
             upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
             R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-            C = col_ionization(modelgridindex,phixstargetindex,epsilon_trans);
+            C = col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
             printout("[debug]    ionisation to ion %d, level %d, epsilon_trans %g, R %g, C %g\n",ion+1,upper,epsilon_trans,R,C);
             break;
           }
@@ -856,6 +856,7 @@ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int 
   #endif
 
   const double statweight_target = statw_lower(lineindex);
+  const double statweight = statw_upper(lineindex);
 
   const double n_u = get_levelpop(modelgridindex,element,ion,upper);
   const double n_l = get_levelpop(modelgridindex,element,ion,lower);
@@ -868,14 +869,14 @@ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int 
 
     const double A_ul = einstein_spontaneous_emission(lineindex);
     const double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
-    const double B_lu = mastate[tid].statweight/statweight_target * B_ul;
+    const double B_lu = statweight / statweight_target * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
     if (tau_sobolev > 0)
     {
       const double beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
-      R = A_ul * beta * mastate[tid].nnlevel;
+      R = A_ul * beta;
     }
     else
     {
@@ -933,6 +934,7 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
   }
   #endif
 
+  const double statweight = statw_lower(lineindex);
   const double statweight_target = statw_upper(lineindex);
 
   const double n_u = get_levelpop(modelgridindex,element,ion,upper);
@@ -943,7 +945,7 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
     double nu_trans = epsilon_trans / H;
     double A_ul = einstein_spontaneous_emission(lineindex);
     double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
-    double B_lu = statweight_target / mastate[tid].statweight * B_ul;
+    double B_lu = statweight_target / statweight * B_ul;
 
     double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
@@ -953,7 +955,7 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
       //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
       //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
       //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
-      R = mastate[tid].nnlevel * (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans, modelgridindex);
+      R = (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans, modelgridindex);
     }
     else
     {
@@ -972,7 +974,7 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
     {
       double g_u = statw_upper(lineindex);
       double g_u2 = stat_weight(element,ion,upper);
-      double g_l = mastate[tid].statweight;
+      double g_l = statw_lower(lineindex);
       double g_l2 = stat_weight(element,ion,lower);
       printout("Negative excitation rate from level %d to %d\n",lower,upper);
       printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n",n_l,n_u,g_l,g_l2,g_u,g_u2);
@@ -1071,6 +1073,7 @@ double col_deexcitation_ratecoeff(int modelgridindex, int upper, int lower, doub
   const double T_e = get_Te(modelgridindex);
   const double nne = get_nne(modelgridindex);
   const double coll_str_thisline = get_coll_str(lineindex);
+  const double statweight = statw_upper(lineindex);
   if (coll_str_thisline < 0)
   {
     const double statweight_target = statw_lower(lineindex);
@@ -1095,7 +1098,7 @@ double col_deexcitation_ratecoeff(int modelgridindex, int upper, int lower, doub
       //optimisation
       const double gauntfac = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
 
-      const double g_ratio = statweight_target / mastate[tid].statweight;
+      const double g_ratio = statweight_target / statweight;
 
       C = C_0 * 14.51039491 * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * gauntfac;
     }
@@ -1111,7 +1114,7 @@ double col_deexcitation_ratecoeff(int modelgridindex, int upper, int lower, doub
     //from Osterbrock and Ferland, p51
     //mastate[tid].statweight is UPPER LEVEL stat weight
     //statweight_target is LOWER LEVEL stat weight
-    C = nne * 8.629e-6 * pow(T_e, -0.5) * coll_str_thisline / mastate[tid].statweight;
+    C = nne * 8.629e-6 * pow(T_e, -0.5) * coll_str_thisline / statweight;
     // test test
     //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
   }
@@ -1209,15 +1212,6 @@ double col_excitation_ratecoeff(int modelgridindex, int lineindex, double epsilo
 }
 
 
-double col_excitation(int modelgridindex, int upper, int lineindex, double epsilon_trans)
-/// collisional excitation rate: paperII 3.5.1
-{
-  const double n_l = mastate[tid].nnlevel;
-  // const int lower = mastate[tid].level;
-  return n_l * col_excitation_ratecoeff(modelgridindex, lineindex, epsilon_trans);
-}
-
-
 double col_recombination_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans)
 {
   const int nphixstargets = get_nphixstargets(element,ion-1,lower);
@@ -1282,7 +1276,6 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
 
 double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lower, int phixstargetindex, double epsilon_trans)
 /// collisional ionization rate: paperII 3.5.1
-// no mastate globals in here!
 {
   #ifdef DEBUG_ON
   if (phixstargetindex > get_nphixstargets(element,ion,lower))
@@ -1325,16 +1318,6 @@ double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lo
   return C;
 }
 
-
-double col_ionization(int modelgridindex, int phixstargetindex, double epsilon_trans)
-{
-  const int element = mastate[tid].element;
-  const int ion = mastate[tid].ion;
-  const int lower = mastate[tid].level;
-  const double n_l = mastate[tid].nnlevel;
-
-  return n_l * col_ionization_ratecoeff(modelgridindex, element, ion, lower, phixstargetindex, epsilon_trans);
-}
 
 extern inline double get_individ_rad_deexc(int i);
 extern inline double get_individ_internal_down_same(int i);

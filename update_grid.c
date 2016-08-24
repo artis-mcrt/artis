@@ -718,7 +718,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
 
                             double epsilon_trans = epsilon(element,ion+1,0) - epsilon(element,ion,level);
                             //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-                            Col_ion += calculate_exclevelpop(n,element,ion,level) * col_ionization(n,phixstargetindex,epsilon_trans);
+                            Col_ion += calculate_exclevelpop(n,element,ion,level) * col_ionization_ratecoeff(n, element, ion, level, phixstargetindex, epsilon_trans);
                           }
                         }
                       }
@@ -792,7 +792,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
 
                               double epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
                               //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-                              Col_ion += nnlevel * col_ionization(n,phixstargetindex,epsilon_trans);
+                              Col_ion += nnlevel * col_ionization_ratecoeff(n, element, ion, level, phixstargetindex, epsilon_trans);
                             }
                           }
                           //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
