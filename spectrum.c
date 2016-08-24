@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "exspec.h"
+#include "atomic.h"
 #include "spectrum.h"
 #include "vectors.h"
 
@@ -11,6 +12,36 @@
 
   return 0;
 }*/
+
+#define traceemissionregion
+
+#ifdef traceemissionregion
+  #define traceemiss_nulower (CLIGHT / (6000e-8))  // in Angstroms
+  #define traceemiss_nuupper (CLIGHT / (5600e-8))  // in Angstroms
+  #define traceemiss_timestepmin 70
+  #define traceemiss_timestepmax 90
+
+  typedef struct emissioncontrib {
+    double fluxcontrib;
+    int lineindex;
+  } emissioncontrib;
+
+  struct emissioncontrib *traceemisscontributions;
+  double traceemiss_totalflux = 0.;
+  static int compare_emisscontrib(const void *p1, const void *p2)
+  {
+      const struct emissioncontrib *elem1 = p1;
+      const struct emissioncontrib *elem2 = p2;
+
+     if (elem1->fluxcontrib < elem2->fluxcontrib)
+        return 1;
+     else if (elem1->fluxcontrib > elem2->fluxcontrib)
+        return -1;
+     else
+        return 0;
+  }
+#endif
+
 
 
 void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
@@ -121,6 +152,18 @@ static void add_to_spec(const EPKT *pkt_ptr)
         const int element = linelist[et].elementindex;
         const int ion = linelist[et].ionindex;
         nproc = element*maxion+ion;
+        #ifdef traceemissionregion
+        if (nt >= traceemiss_timestepmin && nt <= traceemiss_timestepmax)
+        {
+          if (pkt_ptr->nu_rf >= traceemiss_nulower && pkt_ptr->nu_rf <= traceemiss_nuupper)
+          {
+            traceemisscontributions[et].fluxcontrib += deltaE;
+            traceemiss_totalflux += deltaE;
+            // printout("packet in range, Z=%d ion_stage %d upperlevel %4d lowerlevel %4d fluxcontrib %g linecontrib %g index %d nlines %d\n",
+                    //  get_element(element), get_ionstage(element, ion), linelist[et].upperlevelindex, linelist[et].lowerlevelindex, deltaE, traceemisscontributions[et].fluxcontrib, et, nlines);
+          }
+        }
+        #endif
       }
       else if (et == -9999999)
       {
@@ -185,7 +228,7 @@ static void init_spectrum(void)
       spectra[n].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
       spectra[n].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - spectra[n].lower_freq[m];
       spectra[n].flux[m] = 0.0;
-      for (int i = 0; i < 2*nelements*maxion+1; i++)
+      for (int i = 0; i < 2 * nelements * maxion + 1; i++)
         spectra[n].stat[m].emission[i] = 0;  ///added
       for (int i = 0; i < nelements*maxion; i++)
         spectra[n].stat[m].absorption[i] = 0;  ///added
@@ -195,13 +238,18 @@ static void init_spectrum(void)
 
 void gather_spectrum(int depth)
 {
-  //void read_packets(FILE *packets_file);
-  //int i,n,m,p;
-  //PKT *pkt_ptr;
-  //int add_to_spec();
-
   /// Set up the spectrum grid and initialise the bins to zero.
   init_spectrum();
+
+  #ifdef traceemissionregion
+  traceemiss_totalflux = 0.;
+  traceemisscontributions = malloc(nlines*sizeof(emissioncontrib));
+  for (int i = 0; i < nlines; i++)
+  {
+    traceemisscontributions[i].fluxcontrib = 0.;
+    traceemisscontributions[i].lineindex = i; // this will be important when the list gets sorted
+  }
+  #endif
 
   if (depth < 0)
   {
@@ -219,7 +267,7 @@ void gather_spectrum(int depth)
     /// Set velocity cut
     double vcut;
     if (depth < 9)
-      vcut = (depth+1.) * vmax / 10.;
+      vcut = (depth + 1.) * vmax / 10.;
     else
       vcut = 100 * vmax;     /// Make sure that all escaping packets are taken for
                              /// depth=9 . For 2d and 3d models the corners of a
@@ -235,11 +283,41 @@ void gather_spectrum(int depth)
         add_to_spec(&epkts[p]);
     }
   }
+
+  #ifdef traceemissionregion
+  qsort(traceemisscontributions, nlines, sizeof(emissioncontrib), compare_emisscontrib);
+  printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] timestep [%d, %d] (flux %g)\n",
+           1e8 * CLIGHT / traceemiss_nuupper, 1e8 * CLIGHT / traceemiss_nulower, traceemiss_timestepmin, traceemiss_timestepmax,
+           traceemiss_totalflux);
+
+  // display the top entries of the sorted list
+  int nlines_limited = nlines;
+  if (nlines > 50)
+    nlines = 50;
+  for (int i = 0; i < nlines_limited; i++)
+  {
+    const double fluxcontrib = traceemisscontributions[i].fluxcontrib;
+    if (fluxcontrib / traceemiss_totalflux > 0.01 || i < 5) // lines that contribute at least 5% of the flux, with a minimum of 5 lines and max of 50
+    {
+      const int lineindex = traceemisscontributions[i].lineindex;
+      const int element = linelist[lineindex].elementindex;
+      const int ion = linelist[lineindex].ionindex;
+      printout("flux %7.2e (%5.1f%%) Z=%d ion_stage %d upperlevel %4d lowerlevel %4d coll_str %g A %8.2e forbidden %d\n",
+               fluxcontrib, 100 * fluxcontrib / traceemiss_totalflux, get_element(element),
+               get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
+             linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden);
+     }
+     else
+      break;
+  }
+
+  free(traceemisscontributions);
+  #endif
 }
 
 
 static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
-/**Routine to add a packet to the outcoming spectrum.*/
+// Routine to add a packet to the outgoing spectrum.
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
@@ -289,7 +367,7 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
       if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
       {
         int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-        double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
+        double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
         spectra[nt].flux[nnu] += deltaE;
 
         if (do_emission_res == 1)
@@ -340,10 +418,6 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
 
 void gather_spectrum_res(int current_abin)
 {
-  //void read_packets(FILE *packets_file);
-  //int i,n,m,nn,p;
-  EPKT *pkt_ptr;
-
   /// Set up the spectrum grid and initialise the bins to zero.
   init_spectrum();
 
@@ -351,8 +425,7 @@ void gather_spectrum_res(int current_abin)
   /// appropriate bins.
   for (int p = 0; p < nepkts; p++)
   {
-    pkt_ptr = &epkts[p];
-    add_to_spec_res(pkt_ptr,current_abin);
+    add_to_spec_res(&epkts[p], current_abin);
   }
 
 }
