@@ -13,8 +13,8 @@ extern inline double radfield2(double nu, double T, double W);
 //#const int RADFIELDBINCOUNT = 1000;
 #define RADFIELDBINCOUNT 32
 
-#define nu_lower_first_initial (CLIGHT / (15000e-8)) // 15000 Angstroms
-#define nu_upper_last_initial (CLIGHT / (200e-8))  // 1000 Angstroms
+#define nu_lower_first_initial (CLIGHT / (15000e-8)) // in Angstroms
+#define nu_upper_last_initial (CLIGHT / (200e-8))  // in Angstroms
 
 static double nu_lower_first = nu_lower_first_initial;
 
@@ -890,14 +890,14 @@ void radfield_broadcast_estimators(int my_rank)
 
 void radfield_write_restart_data(FILE *gridsave_file)
 {
-  fprintf(gridsave_file,"%d %lg %lg %lg %lg %lg %d",
+  fprintf(gridsave_file,"%d %lg %lg %lg %lg %lg %d\n",
           RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, nu_lower_first,
           T_R_min, T_R_max, radfield_initialized);
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d ",
+      fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
               J_normfactor[modelgridindex], radfieldbins[modelgridindex][binindex].nu_upper,
               radfieldbins[modelgridindex][binindex].J_raw,
               radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
@@ -912,7 +912,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
 {
   int bincount_in, radfield_initialized_in;
   double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
-  fscanf(gridsave_file,"%d %lg %lg %lg %lg %lg %d",
+  fscanf(gridsave_file,"%d %lg %lg %lg %lg %lg %d\n",
           &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in, &nu_lower_first,
           &T_R_min_in, &T_R_max_in, &radfield_initialized_in);
   radfield_initialized = radfield_initialized_in;
@@ -930,7 +930,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
       int fit_type_in;
-      fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d ",
+      fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
               &J_normfactor[modelgridindex], &radfieldbins[modelgridindex][binindex].nu_upper,
               &radfieldbins[modelgridindex][binindex].J_raw,
               &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,

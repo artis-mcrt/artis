@@ -29,7 +29,7 @@
                              // instead of interpolating precalculated
                              // values assuming a blackbody radiation field
 
-#define NO_LUT_BFHEATING true
+#define NO_LUT_BFHEATING false
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
