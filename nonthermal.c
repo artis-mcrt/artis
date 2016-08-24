@@ -240,13 +240,12 @@ static double xs_excitation(int lineindex, double epsilon_trans, double energy)
 // excitation cross section in cm^2
 // energies are in erg
 {
-  double sigma = 0.;
   const double coll_str = get_coll_str(lineindex);
   const double A_naught_squared = pow(5.2917721067e-9, 2); // Bohr radius squared in cm^2
 
   if (coll_str >= 0)
   {
-    // collision strength is available, so use that
+    // collision strength is available, so use it
     // Li et al. 2012 equation 11
     return pow(H_ionpot / energy, 2) / statw_lower(lineindex) * coll_str * PI * A_naught_squared;
   }

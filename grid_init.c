@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
+#include "radfield.h"
 #include "rpkt.h"
 #include "vectors.h"
 
@@ -1478,6 +1479,68 @@ static void abundances_1d_read(void)
 }
 
 
+static void read_grid_restart_data(void)
+{
+  FILE *restrict gridsave_file;
+  printout("READIN GRID SNAPSHOT\n");
+  if ((gridsave_file = fopen("gridsave.dat", "r")) == NULL)
+  {
+    printf("[fatal] assign_temperature: Cannot open gridsave.dat.\n");
+    exit(0);
+  }
+
+  for (int n = 0; n < npts_model; n++)
+  {
+    //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
+    //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g %g %d\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy,&dummy,&idummy);
+    double T_R,T_e,W,T_J;
+    int mgi,thick;
+    fscanf(gridsave_file,"%d %lg %lg %lg %lg %d",&mgi,&T_R,&T_e,&W,&T_J,&thick);
+    if (n == mgi)
+    {
+      set_TR(mgi, T_R);
+      set_Te(mgi, T_e);
+      set_W(mgi, W);
+      set_TJ(mgi, T_J);
+      modelgrid[mgi].thick = thick;
+
+      #ifndef FORCE_LTE
+        for (int element = 0; element < nelements; element++)
+        {
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
+          {
+            double Gamma;
+            fscanf(gridsave_file,"%lg ",&Gamma);
+            corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = Gamma;
+          }
+        }
+
+        for (int element = 0; element < nelements; element++)
+        {
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
+          {
+            double Gamma;
+            fscanf(gridsave_file,"%lg ",&Gamma);
+            gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
+          }
+        }
+      #endif
+    }
+    else
+    {
+      printout("[fatal] assign_temperature: cell mismatch in reading input initial_temperatures.dat ... abort\n");
+      printout("[fatal] assign_temperature: read cellnumber %d, expected cellnumber %d\n",mgi,n);
+      abort();
+    }
+  }
+
+  radfield_read_restart_data(gridsave_file);
+  fclose(gridsave_file);
+}
+
+
 static void assign_temperature(void)
 /// Routine for assigning temperatures to the grid cells at the start of the
 /// simulation.
@@ -1542,62 +1605,7 @@ static void assign_temperature(void)
   /// at the end of the simulation and write them to the grid.
   else
   {
-    FILE *restrict gridsave_file;
-    printout("READIN GRID SNAPSHOT\n");
-    if ((gridsave_file = fopen("gridsave.dat", "r")) == NULL)
-    {
-      printf("[fatal] assign_temperature: Cannot open gridsave.dat.\n");
-      exit(0);
-    }
-
-    for (int n = 0; n < npts_model; n++)
-    {
-      //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
-      //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g %g %d\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy,&dummy,&idummy);
-      double T_R,T_e,W,T_J;
-      int mgi,thick;
-      fscanf(gridsave_file,"%d %lg %lg %lg %lg %d",&mgi,&T_R,&T_e,&W,&T_J,&thick);
-      if (n == mgi)
-      {
-        set_TR(mgi, T_R);
-        set_Te(mgi, T_e);
-        set_W(mgi, W);
-        set_TJ(mgi, T_J);
-        modelgrid[mgi].thick = thick;
-
-        #ifndef FORCE_LTE
-          for (int element = 0; element < nelements; element++)
-          {
-            const int nions = get_nions(element);
-            for (int ion = 0; ion < nions; ion++)
-            {
-              double Gamma;
-              fscanf(gridsave_file,"%lg ",&Gamma);
-              corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = Gamma;
-            }
-          }
-
-          for (int element = 0; element < nelements; element++)
-          {
-            const int nions = get_nions(element);
-            for (int ion = 0; ion < nions; ion++)
-            {
-              double Gamma;
-              fscanf(gridsave_file,"%lg ",&Gamma);
-              gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
-            }
-          }
-        #endif
-      }
-      else
-      {
-        printout("[fatal] assign_temperature: cell mismatch in reading input initial_temperatures.dat ... abort\n");
-        printout("[fatal] assign_temperature: read cellnumber %d, expected cellnumber %d\n",mgi,n);
-        abort();
-      }
-    }
-
-    fclose(gridsave_file);
+    read_grid_restart_data();
   }
 }
 
