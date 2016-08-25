@@ -692,7 +692,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
   double *balance_vector;
 
   int ionisinglevels, ndowntrans, nuptrans, i;
-  double statweight, epsilon_current;
+  double epsilon_current;
   double R, C;
   double t_mid;
   double epsilon_target, epsilon_trans;
@@ -783,7 +783,6 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
       for (int level = 0; level < get_nlevels(element,ion); level++)
       {
-        statweight = stat_weight(element,ion,level);
         epsilon_current = epsilon(element,ion,level);
         ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
         nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;

@@ -40,7 +40,7 @@ static inline double get_individ_internal_up_same(int element, int ion, int leve
 }
 
 
-double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
+double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep)
 /// Material for handling activated macro atoms.
 {
   double t_current = t1; // this will keep track of time in the calculation
