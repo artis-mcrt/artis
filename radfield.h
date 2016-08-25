@@ -3,6 +3,8 @@
 
 #include "sn3d.h"
 
+#define RADFIELDBINCOUNT 32
+
 void radfield_zero_estimators(int modelgridindex);
 void radfield_init(void);
 void radfield_write_to_file(int modelgridindex, int timestep);
@@ -16,6 +18,9 @@ void radfield_reduce_estimators(int my_rank);
 void radfield_broadcast_estimators(int my_rank);
 void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);
+int radfield_select_bin(int modelgridindex, double nu);
+double radfield_get_bin_nu_lower(int modelgridindex, int binindex);
+double radfield_get_bin_nu_upper(int modelgridindex, int binindex);
 
 
 inline double radfield2(double nu, double T, double W)
@@ -23,6 +28,8 @@ inline double radfield2(double nu, double T, double W)
 {
   return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) / (exp(HOVERKB * nu / T) - 1);
 }
+
+
 
 
 #endif //RADFIELD_H

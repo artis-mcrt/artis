@@ -10,9 +10,6 @@
 
 extern inline double radfield2(double nu, double T, double W);
 
-//#const int RADFIELDBINCOUNT = 1000;
-#define RADFIELDBINCOUNT 32
-
 #define nu_lower_first_initial (CLIGHT / (15000e-8)) // in Angstroms
 #define nu_upper_last_initial (CLIGHT / (200e-8))  // in Angstroms
 
@@ -72,73 +69,70 @@ static FILE *restrict radfieldfile = NULL;
 
 void radfield_init(void)
 {
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (USE_MULTIBIN_RADFIELD_MODEL && radfield_initialized == false)
   {
-    if (radfield_initialized == false)
+    const char filename[100] = "radfield.out";
+    radfieldfile = fopen(filename, "w");
+    if (radfieldfile == NULL)
     {
-      const char filename[100] = "radfield.out";
-      radfieldfile = fopen(filename, "w");
-      if (radfieldfile == NULL)
-      {
-        printout("Cannot open %s.\n",filename);
-        exit(0);
-      }
-      fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %11s\n",
-              "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
-              "nuJ","J","J_nu_avg","ncontrib","T_R","W");
-      fflush(radfieldfile);
-
-      for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
-      {
-        //radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
-
-        radfield_set_J_normfactor(modelgridindex, -1.0);
-
-        double prev_nu_upper = nu_lower_first_initial;
-        const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
-        //const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
-
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-        {
-          //const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
-          radfieldbins[modelgridindex][binindex].nu_upper = nu_lower_first_initial + (binindex + 1) * delta_nu;
-
-          // Align the bin edges with bound-free edges
-          if (binindex < RADFIELDBINCOUNT - 1)
-          {
-            for (int i = 0; i < nbfcontinua_ground; i++)
-            {
-              const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
-              const int Z = get_element(phixslist[tid].groundcont[i].element);
-              const int ion_stage = get_ionstage(phixslist[tid].groundcont[i].element, phixslist[tid].groundcont[i].ion);
-              const int level = phixslist[tid].groundcont[i].level;
-              //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
-              if (binindex == 0 && ((nu_edge < nu_lower_first) || (nu_edge > nu_upper_last_initial)))
-              {
-                printout("MISSED bf edge at %g Hz (%g eV), nu_lower_first %g Hz, nu_upper_last %g Hz, Z=%d ion_stage %d level %d\n",
-                         nu_edge, H * nu_edge / EV, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
-              }
-
-              if ((nu_edge > prev_nu_upper) && (nu_edge < radfieldbins[modelgridindex][binindex].nu_upper))
-                radfieldbins[modelgridindex][binindex].nu_upper = nu_edge;
-            }
-          }
-
-          radfieldbins[modelgridindex][binindex].prev_J_normed = -1.;
-          radfieldbins[modelgridindex][binindex].prev_nuJ_normed = -1.;
-          radfieldbins[modelgridindex][binindex].prev_contribcount = 0;
-          radfieldbins[modelgridindex][binindex].J_raw = 0.;
-          radfieldbins[modelgridindex][binindex].nuJ_raw = 0.;
-          radfieldbins[modelgridindex][binindex].prev_contribcount = 0;
-          radfieldbins[modelgridindex][binindex].W = -1.;
-          radfieldbins[modelgridindex][binindex].T_R = -1.;
-          radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTED_BLACKBODY;
-
-          prev_nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
-        }
-      }
-      radfield_initialized = true;
+      printout("Cannot open %s.\n",filename);
+      exit(0);
     }
+    fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %11s\n",
+            "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
+            "nuJ","J","J_nu_avg","ncontrib","T_R","W");
+    fflush(radfieldfile);
+
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    {
+      //radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
+
+      radfield_set_J_normfactor(modelgridindex, -1.0);
+
+      double prev_nu_upper = nu_lower_first_initial;
+      const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+      //const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      {
+        //const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
+        radfieldbins[modelgridindex][binindex].nu_upper = nu_lower_first_initial + (binindex + 1) * delta_nu;
+
+        // Align the bin edges with bound-free edges
+        if (binindex < RADFIELDBINCOUNT - 1)
+        {
+          for (int i = 0; i < nbfcontinua_ground; i++)
+          {
+            const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+            const int Z = get_element(phixslist[tid].groundcont[i].element);
+            const int ion_stage = get_ionstage(phixslist[tid].groundcont[i].element, phixslist[tid].groundcont[i].ion);
+            const int level = phixslist[tid].groundcont[i].level;
+            //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
+            if (binindex == 0 && ((nu_edge < nu_lower_first) || (nu_edge > nu_upper_last_initial)))
+            {
+              printout("MISSED bf edge at %g Hz (%g eV), nu_lower_first %g Hz, nu_upper_last %g Hz, Z=%d ion_stage %d level %d\n",
+                       nu_edge, H * nu_edge / EV, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
+            }
+
+            if ((nu_edge > prev_nu_upper) && (nu_edge < radfieldbins[modelgridindex][binindex].nu_upper))
+              radfieldbins[modelgridindex][binindex].nu_upper = nu_edge;
+          }
+        }
+
+        radfieldbins[modelgridindex][binindex].prev_J_normed = -1.;
+        radfieldbins[modelgridindex][binindex].prev_nuJ_normed = -1.;
+        radfieldbins[modelgridindex][binindex].prev_contribcount = 0;
+        radfieldbins[modelgridindex][binindex].J_raw = 0.;
+        radfieldbins[modelgridindex][binindex].nuJ_raw = 0.;
+        radfieldbins[modelgridindex][binindex].prev_contribcount = 0;
+        radfieldbins[modelgridindex][binindex].W = -1.;
+        radfieldbins[modelgridindex][binindex].T_R = -1.;
+        radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTED_BLACKBODY;
+
+        prev_nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
+      }
+    }
+    radfield_initialized = true;
   }
 }
 
@@ -184,7 +178,6 @@ double radfield_get_bin_nu_bar(int modelgridindex, int binindex)
 }
 
 
-static inline
 double radfield_get_bin_nu_lower(int modelgridindex, int binindex)
 {
   if (binindex > 0)
@@ -194,7 +187,6 @@ double radfield_get_bin_nu_lower(int modelgridindex, int binindex)
 }
 
 
-static inline
 double radfield_get_bin_nu_upper(int modelgridindex, int binindex)
 {
   return radfieldbins[modelgridindex][binindex].nu_upper;
@@ -227,7 +219,6 @@ double radfield_get_bin_T_R(int modelgridindex, int binindex)
 }
 
 
-static inline
 int radfield_select_bin(int modelgridindex, double nu)
 {
   // the slow way to search a list, one by one until found
@@ -243,7 +234,7 @@ int radfield_select_bin(int modelgridindex, double nu)
   return -1;
   */
 
-  // binary search
+  // binary search for bin with nu_lower <= nu > nu_upper
   int low = 0;
   int high = RADFIELDBINCOUNT - 1;
   while (low <= high)
@@ -859,14 +850,14 @@ void radfield_reduce_estimators(int my_rank)
       MPI_Reduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &nuJ_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
       int contribcount_reduced = 0;
       MPI_Barrier(MPI_COMM_WORLD);
-      printout("MPI: Pre-reduction, process %d binindex %d has a individual contribcount of %d\n",my_rank,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+      printout("MPI: Pre-reduction, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
       MPI_Reduce(&radfieldbins[modelgridindex][binindex].contribcount, &contribcount_reduced, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
       if (my_rank == 0)
       {
         radfieldbins[modelgridindex][binindex].J_raw = J_raw_reduced;
         radfieldbins[modelgridindex][binindex].nuJ_raw = nuJ_raw_reduced;
         radfieldbins[modelgridindex][binindex].contribcount = contribcount_reduced;
-        printout("MPI: Process %d binindex %d took the reduced contribcount of %d\n",my_rank,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        printout("MPI: Process %d modelgrid %d binindex %d took the reduced contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
       }
     }
   }
@@ -881,7 +872,7 @@ void radfield_broadcast_estimators(int my_rank)
       MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
       MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
       MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, 0, MPI_COMM_WORLD);
-      printout("MPI: After broadcast: Process %d binindex %d has a contribcount of %d\n",my_rank,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+      printout("MPI: After broadcast: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
     }
   }
 }
