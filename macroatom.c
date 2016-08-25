@@ -164,7 +164,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         epsilon_trans = epsilon_current - epsilon_target;
         R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-        C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
+        C = col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex);
 
         const double individ_rad_deexc = R * epsilon_trans;
         const double individ_col_deexc = C * epsilon_trans;
@@ -316,7 +316,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
       rate = 0.;
       int linelistindex = -99;
       int i;
-      for (int i = 1; i <= ndowntrans; i++)
+      for (i = 1; i <= ndowntrans; i++)
       {
         rate += get_individ_rad_deexc(element,ion,level,i);
         if (zrand*rad_deexc < rate)
@@ -807,7 +807,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
           R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-          C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
+          C = col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex);
           printout("[debug]    deexcitation to level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",lower,epsilon_target,epsilon_trans,R,C);
         }
 
@@ -1049,7 +1049,7 @@ double rad_recombination_ratecoeff(int modelgridindex, int element, int upperion
 ///***************************************************************************/
 
 
-double col_deexcitation_ratecoeff(int modelgridindex, int upper, int lower, double epsilon_trans, int lineindex)
+double col_deexcitation_ratecoeff(int modelgridindex, double epsilon_trans, int lineindex)
 {
   double C;
   const double T_e = get_Te(modelgridindex);

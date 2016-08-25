@@ -308,7 +308,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
           const double epsilon_trans = epsilon_current - epsilon_target;
 
           const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-          const double C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
+          const double C = col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex);
 
           const int upper_index = level_index;
           const int lower_index = get_nlte_vector_index(element,ion,lower);
@@ -803,7 +803,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].nnlevel = 1.0;
 
           R = rad_deexcitation_ratecoeff(modelgridindex,element,ion,level,lower,epsilon_trans,lineindex,t_mid);
-          C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
+          C = col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex);
 
           s_renorm = 1.0;
 
