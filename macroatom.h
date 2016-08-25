@@ -16,31 +16,5 @@ double col_excitation_ratecoeff(int modelgridindex, int lineindex, double epsilo
 double col_recombination_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans);
 double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lower, int phixstargetindex, double epsilon_trans);
 
-inline double get_individ_rad_deexc(int i)
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
-
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
-}
-
-inline double get_individ_internal_down_same(int i)
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
-
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
-}
-
-inline double get_individ_internal_up_same(int i)
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
-
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
-}
 
 #endif //MACROATOM_H

@@ -34,6 +34,7 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
   const int upper = linelist[lineindex].upperlevelindex;
 
   const double statweight_target = statw_upper(lineindex);
+  const double statweight_lower = statw_lower(lineindex);
 
   const double n_l = get_levelpop(modelgridindex,element,ion,lower);
   const double n_u = get_levelpop(modelgridindex,element,ion,upper);
@@ -41,7 +42,7 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
   const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
   const double A_ul = einstein_spontaneous_emission(lineindex);
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
-  const double B_lu = statweight_target / mastate[tid].statweight * B_ul;
+  const double B_lu = statweight_target / statweight_lower * B_ul;
 
   const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
   return tau_sobolev;

@@ -320,7 +320,7 @@ void calculate_heating_rates(int modelgridindex)
          const double epsilon_current = epsilon(element,ion,level);
          mastate[tid].level = level;
          mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-         mastate[tid].statweight = stat_weight(element,ion,level);
+        //  mastate[tid].statweight = stat_weight(element,ion,level);
 //
 //
 //         /// Collisional heating: deexcitation to same ionization stage

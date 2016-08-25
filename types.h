@@ -213,7 +213,7 @@ typedef struct mastate_t
 {
   double nnlevel;           /// population number of the active level
   double einstein;
-  double statweight;         /// statistical weight of the active level
+  // double statweight;         /// statistical weight of the active level
   int element;              /// macro atom of type element (this is an element index)
   int ion;                  /// in ionstage ion (this is an ion index)
   int level;                /// and level=level (this is a level index)

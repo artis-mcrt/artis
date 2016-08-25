@@ -800,10 +800,10 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].element = element;
           mastate[tid].ion = ion;
           mastate[tid].level = level;
-          mastate[tid].statweight = statweight;
+          // mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
+          R = rad_deexcitation_ratecoeff(modelgridindex,element,ion,level,lower,epsilon_trans,lineindex,t_mid);
           C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
 
           s_renorm = 1.0;
@@ -845,7 +845,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].element = element;
           mastate[tid].ion = ion;
           mastate[tid].level = level;
-          mastate[tid].statweight = statweight;
+          // mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
           R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
@@ -917,7 +917,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].element = element;
           mastate[tid].ion = ion;
           mastate[tid].level = level;
-          mastate[tid].statweight = statweight;
+          // mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
@@ -940,7 +940,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           {
             int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             mastate[tid].level = upper;
-            mastate[tid].statweight = stat_weight(element,ion+1,upper);
+            // mastate[tid].statweight = stat_weight(element,ion+1,upper);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
             R = rad_recombination_ratecoeff(modelgridindex, element, ion+1, upper, level);
             //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);

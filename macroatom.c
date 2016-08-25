@@ -11,24 +11,52 @@
 // constant for van-Regemorter approximation.
 #define C_0 (5.465e-11)
 
+
+static inline double get_individ_rad_deexc(int element, int ion, int level, int i)
+{
+  // int element = mastate[tid].element;
+  // int ion = mastate[tid].ion;
+  // int level = mastate[tid].level;
+
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
+}
+
+static inline double get_individ_internal_down_same(int element, int ion, int level, int i)
+{
+  // int element = mastate[tid].element;
+  // int ion = mastate[tid].ion;
+  // int level = mastate[tid].level;
+
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
+}
+
+static inline double get_individ_internal_up_same(int element, int ion, int level, int i)
+{
+  // int element = mastate[tid].element;
+  // int ion = mastate[tid].ion;
+  // int level = mastate[tid].level;
+
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
+}
+
+
 double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
 /// Material for handling activated macro atoms.
 {
-  bool end_packet = false;
-  double t_current = t1; ///this will keep track of time in the calculation
-  double t_mid = time_step[timestep].mid;
+  double t_current = t1; // this will keep track of time in the calculation
+  const double t_mid = time_step[timestep].mid;
 
   gslintegration_paras intparas;
   gsl_function F_alpha_sp;
   //F_alpha_sp.function = &alpha_sp_integrand_gsl;
   F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
-  double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
+  const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1024);
 
   //printout("[debug] do MA\n");
 
   const int cellindex = pkt_ptr->where;
-  int modelgridindex = cell[cellindex].modelgridindex;
+  const int modelgridindex = cell[cellindex].modelgridindex;
 
   /// calculate occupation number for active MA level ////////////////////////////////////
   /// general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
@@ -36,7 +64,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
   /// not sure whether this reduces the number of calculations, as number of grid cells
   /// is much larger than number of pellets (next question: connection to number of
   /// photons)
-  int element = mastate[tid].element;
+  const int element = mastate[tid].element;
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
   /// initialization we should see errors
@@ -52,13 +80,12 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
     int jump = -99;
   #endif
 
-
   //debuglevel = 2;
+  bool end_packet = false;
   while (!end_packet)
   {
     double rad_deexc,rad_recomb,col_deexc,col_recomb;
     double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
-    double individ_rad_deexc,individ_col_deexc,individ_internal_down_same,individ_internal_up_same;
 
     double R,C;
     double rate;
@@ -68,7 +95,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
 
     const int ion = mastate[tid].ion;
     const int level = mastate[tid].level;
-    mastate[tid].statweight = stat_weight(element,ion,level);
+    // mastate[tid].statweight = stat_weight(element,ion,level);
     const int ionisinglevels = get_bfcontinua(element,ion);
     //ionisinglevels = get_ionisinglevels(element,ion);
 
@@ -98,9 +125,9 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       if (debuglevel == 2) printout("[debug] do_ma: jumps = %d\n",jumps);
     #endif
 
-    double epsilon_current = epsilon(element,ion,level);
-    int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-    int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    const double epsilon_current = epsilon(element,ion,level);
+    const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+    const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
     //nlevels_nextion  ///not needed as long we only ionise to the ground state
     //nlevels_lowerion ///only needed if level = 0, this won't happen too often
 
@@ -132,16 +159,16 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       for (int i = 1; i <= ndowntrans; i++)
       {
         lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-        double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+        const double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
         //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         epsilon_trans = epsilon_current - epsilon_target;
         R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
         C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
 
-        individ_rad_deexc = R * epsilon_trans;
-        individ_col_deexc = C * epsilon_trans;
-        individ_internal_down_same = (R + C) * epsilon_target;
+        const double individ_rad_deexc = R * epsilon_trans;
+        const double individ_col_deexc = C * epsilon_trans;
+        const double individ_internal_down_same = (R + C) * epsilon_target;
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = individ_rad_deexc;
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = individ_internal_down_same;
 
@@ -166,7 +193,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         //nlevels = get_ionisinglevels(element,ion-1);
         for (lower = 0; lower < nlevels; lower++)
         {
-          double epsilon_target = epsilon(element,ion-1,lower);
+          const double epsilon_target = epsilon(element,ion-1,lower);
           epsilon_trans = epsilon_current - epsilon_target;
           R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
           //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
@@ -183,7 +210,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       for (int i = 1; i <= nuptrans; i++)
       {
         upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-        double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
+        const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
         //double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         epsilon_trans = epsilon_target - epsilon_current;
@@ -191,7 +218,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         C = col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans);
 
         //individ_internal_up_same = (C) * epsilon_current;
-        individ_internal_up_same = (R + C) * epsilon_current;
+        const double individ_internal_up_same = (R + C) * epsilon_current;
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = individ_internal_up_same;
 
         internal_up_same += individ_internal_up_same;
@@ -232,7 +259,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
     //printout("zrand %g\n",zrand);
 
     //internal_down_same = internal_down_lower = internal_up_same = internal_up_higher = 0.; ///DEBUG ONLY
-    double total_transitions = rad_deexc + col_deexc + internal_down_same + rad_recomb + col_recomb + internal_down_lower + internal_up_same + internal_up_higher;
+    const double total_transitions = rad_deexc + col_deexc + internal_down_same + rad_recomb + col_recomb + internal_down_lower + internal_up_same + internal_up_higher;
     #ifdef DEBUG_ON
       if (debuglevel == 2) printout("[debug] do_ma: element %d, ion %d, level %d\n",element,ion,level);
       if (debuglevel == 2) printout("[debug] do_ma:   rad_deexc %g, col_deexc %g, internal_down_same %g, rad_recomb %g, col_recomb %g, internal_down_lower %g, internal_up_same %g, internal_up_higher %g\n",rad_deexc,col_deexc,internal_down_same,rad_recomb,col_recomb, internal_down_lower, internal_up_same,internal_up_higher);
@@ -289,16 +316,16 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       rate = 0.;
       int linelistindex = -99;
       int i;
-      for (i = 1; i <= ndowntrans; i++)
+      for (int i = 1; i <= ndowntrans; i++)
       {
-        rate += get_individ_rad_deexc(i);
+        rate += get_individ_rad_deexc(element,ion,level,i);
         if (zrand*rad_deexc < rate)
         {
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n",lower);
           #endif
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+          const double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
           linelistindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
           //linelistindex = elements[element].ions[ion].levels[level].transitions[level-lower-1].linelistindex;
@@ -354,7 +381,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       {
         resonancescatterings++;
       }
-      else calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      else
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
 
       /// NB: the r-pkt can only interact with lines redder than the current one
       pkt_ptr->next_trans = linelistindex + 1;
@@ -408,7 +436,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       rate = 0.;
       for (int i = 1; i <= ndowntrans; i++)
       {
-        rate += get_individ_internal_down_same(i);
+        rate += get_individ_internal_down_same(element,ion,level,i);
         if (zrand*internal_down_same < rate)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
@@ -651,7 +679,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       //nlevels = get_ionisinglevels(element,ion-1);
       for (lower = 0; lower < nlevels; lower++)
       {
-        double epsilon_target = epsilon(element,ion-1,lower);
+        const double epsilon_target = epsilon(element,ion-1,lower);
         epsilon_trans = epsilon_current - epsilon_target;
         R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
         C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
@@ -659,7 +687,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         if (zrand*internal_down_lower < rate) break;
       }
       /// and set the macroatom's new state
-      mastate[tid].ion = ion-1;
+      mastate[tid].ion = ion - 1;
       mastate[tid].level = lower;
 
       #ifdef DEBUG_ON
@@ -696,7 +724,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       rate = 0.;
       for (int i = 1; i <= nuptrans; i++)
       {
-        rate += get_individ_internal_up_same(i);
+        rate += get_individ_internal_up_same(element,ion,level,i);
         if (zrand*internal_up_same < rate)
         {
           upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
@@ -735,7 +763,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       }
 
       /// and set the macroatom's new state
-      mastate[tid].ion = ion+1;
+      mastate[tid].ion = ion + 1;
       mastate[tid].level = upper;
     }
     #ifdef DEBUG_ON
@@ -761,7 +789,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
           //nlevels = get_ionisinglevels(element,ion-1);
           for (lower = 0; lower < nlevels; lower++)
           {
-            double epsilon_target = epsilon(element,ion-1,lower);
+            const double epsilon_target = epsilon(element,ion-1,lower);
             epsilon_trans = epsilon_current - epsilon_target;
             R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
             C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
@@ -774,7 +802,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         for (int i = 1; i <= ndowntrans; i++)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+          const double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
           //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
@@ -788,7 +816,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         for (int i = 1; i <= nuptrans; i++)
         {
           upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-          double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
+          const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
           //statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           epsilon_trans = epsilon_target - epsilon_current;
@@ -923,12 +951,12 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
   double R = 0.0;
   if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
-    double nu_trans = epsilon_trans / H;
-    double A_ul = einstein_spontaneous_emission(lineindex);
-    double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
-    double B_lu = statweight_target / statweight * B_ul;
+    const double nu_trans = epsilon_trans / H;
+    const double A_ul = einstein_spontaneous_emission(lineindex);
+    const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
+    const double B_lu = statweight_target / statweight * B_ul;
 
-    double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+    const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
     if (tau_sobolev > 0)
     {
@@ -953,10 +981,10 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
     #ifdef DEBUG_ON
     if (R < 0)
     {
-      double g_u = statw_upper(lineindex);
-      double g_u2 = stat_weight(element,ion,upper);
-      double g_l = statw_lower(lineindex);
-      double g_l2 = stat_weight(element,ion,lower);
+      const double g_u = statw_upper(lineindex);
+      const double g_u2 = stat_weight(element,ion,upper);
+      const double g_l = statw_lower(lineindex);
+      const double g_l2 = stat_weight(element,ion,lower);
       printout("Negative excitation rate from level %d to %d\n",lower,upper);
       printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n",n_l,n_u,g_l,g_l2,g_u,g_u2);
       printout("n_u/n_l %g, g_u/g_l %g\n",n_u/n_l,g_u/g_l);
@@ -997,7 +1025,7 @@ double rad_recombination_ratecoeff(int modelgridindex, int element, int upperion
   {
     if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
     {
-      double nne = get_nne(modelgridindex);
+      const double nne = get_nne(modelgridindex);
       R = nne * get_spontrecombcoeff(element,upperion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
       //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
       break;
@@ -1260,7 +1288,3 @@ double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lo
   return C;
 }
 
-
-extern inline double get_individ_rad_deexc(int i);
-extern inline double get_individ_internal_down_same(int i);
-extern inline double get_individ_internal_up_same(int i);
