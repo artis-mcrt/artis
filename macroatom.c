@@ -66,10 +66,10 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
     int lineindex;
     int nlevels;
 
-    int ion = mastate[tid].ion;
-    int level = mastate[tid].level;
+    const int ion = mastate[tid].ion;
+    const int level = mastate[tid].level;
     mastate[tid].statweight = stat_weight(element,ion,level);
-    int ionisinglevels = get_bfcontinua(element,ion);
+    const int ionisinglevels = get_bfcontinua(element,ion);
     //ionisinglevels = get_ionisinglevels(element,ion);
 
     /// Set this here to 1 to overcome problems in cells which have zero population
@@ -137,7 +137,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         epsilon_trans = epsilon_current - epsilon_target;
         R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
-        C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
+        C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
 
         individ_rad_deexc = R * epsilon_trans;
         individ_col_deexc = C * epsilon_trans;
@@ -168,9 +168,9 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
         {
           double epsilon_target = epsilon(element,ion-1,lower);
           epsilon_trans = epsilon_current - epsilon_target;
-          R = rad_recombination(modelgridindex,lower);
+          R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
           //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
-          C = col_recombination(modelgridindex,lower,epsilon_trans);
+          C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
           rad_recomb += R * epsilon_trans;
           col_recomb += C * epsilon_trans;
           internal_down_lower += (R + C) * epsilon_target;
@@ -451,7 +451,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       for (lower = 0; lower < nlevels; lower++)
       {
         epsilon_trans = epsilon_current - epsilon(element,ion-1,lower);
-        R = rad_recombination(modelgridindex,lower);
+        R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
         rate += R * epsilon_trans;
         #ifdef DEBUG_ON
           if (debuglevel == 2)
@@ -653,8 +653,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
       {
         double epsilon_target = epsilon(element,ion-1,lower);
         epsilon_trans = epsilon_current - epsilon_target;
-        R = rad_recombination(modelgridindex,lower);
-        C = col_recombination(modelgridindex,lower,epsilon_trans);
+        R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
+        C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
         rate += (R + C) * epsilon_target;
         if (zrand*internal_down_lower < rate) break;
       }
@@ -763,8 +763,8 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
           {
             double epsilon_target = epsilon(element,ion-1,lower);
             epsilon_trans = epsilon_current - epsilon_target;
-            R = rad_recombination(modelgridindex,lower);
-            C = col_recombination(modelgridindex,lower,epsilon_trans);
+            R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
+            C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
             printout("[debug]    recombination to ion %d, level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",ion-1,lower,epsilon_target,epsilon_trans,R,C);
           }
         }
@@ -779,7 +779,7 @@ double do_ma(PKT *restrict pkt_ptr, double t1, double t2, int timestep)
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
           R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
-          C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
+          C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
           printout("[debug]    deexcitation to level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",lower,epsilon_target,epsilon_trans,R,C);
         }
 
@@ -1007,17 +1007,17 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
 }
 
 
-double rad_recombination_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower)
+double rad_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower)
 ///radiative recombination rate: paperII 3.5.2
 {
   double R = 0.0;
-  const int nphixstargets = get_nphixstargets(element,ion-1,lower);
+  const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
-    if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
+    if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
     {
       double nne = get_nne(modelgridindex);
-      R = nne * get_spontrecombcoeff(element,ion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
+      R = nne * get_spontrecombcoeff(element,upperion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
       //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
       break;
     }
@@ -1036,36 +1036,9 @@ double rad_recombination_ratecoeff(int modelgridindex, int element, int ion, int
 }
 
 
-double rad_recombination(int modelgridindex, int lower)
-///radiative recombination rate: paperII 3.5.2
-{
-  int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int upper = mastate[tid].level;
-
-  return mastate[tid].nnlevel * rad_recombination_ratecoeff(modelgridindex, element, ion, upper, lower);
-}
-
-
 /// Calculation of collisional rates /////////////////////////////////////////////////////
 ///***************************************************************************/
 
-double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, int lineindex)
-/// collisional deexcitation rate: paperII 3.5.1
-{
-  const double n_u = mastate[tid].nnlevel;
-
-  #ifdef DEBUG_ON
-  const int upper = mastate[tid].level;
-  if (upper <= lower)
-  {
-    printout("[fatal] col_deexcitation: tried to calculate upward transition ... abort");
-    abort();
-  }
-  #endif
-
-  return n_u * col_deexcitation_ratecoeff(modelgridindex, upper, lower, epsilon_trans, lineindex);
-}
 
 double col_deexcitation_ratecoeff(int modelgridindex, int upper, int lower, double epsilon_trans, int lineindex)
 {
@@ -1212,17 +1185,17 @@ double col_excitation_ratecoeff(int modelgridindex, int lineindex, double epsilo
 }
 
 
-double col_recombination_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans)
+double col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower, double epsilon_trans)
 {
-  const int nphixstargets = get_nphixstargets(element,ion-1,lower);
+  const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
-    if (get_phixsupperlevel(element,ion-1,lower,phixstargetindex) == upper)
+    if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
     {
       const double T_e = get_Te(modelgridindex);
       const double fac1 = epsilon_trans / KB / T_e;
       const double nne = get_nne(modelgridindex);
-      const int ionstage = get_ionstage(element,ion);
+      const int ionstage = get_ionstage(element,upperion);
 
       ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
       ///select gaunt factor according to ionic charge
@@ -1234,10 +1207,10 @@ double col_recombination_ratecoeff(int modelgridindex, int element, int ion, int
       else
         g = 0.3;
 
-      const float sigma_bf_all_targets = elements[element].ions[ion-1].levels[lower].photoion_xs[0];
-      const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,ion-1,lower,phixstargetindex);
+      const float sigma_bf_all_targets = elements[element].ions[upperion-1].levels[lower].photoion_xs[0];
+      const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,upperion-1,lower,phixstargetindex);
 
-      double C = nne * nne * get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans) *
+      double C = nne * nne * get_sahafact(element,upperion-1,lower,phixstargetindex,T_e,epsilon_trans) *
                  1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
       #ifdef DEBUG_ON
@@ -1259,18 +1232,6 @@ double col_recombination_ratecoeff(int modelgridindex, int element, int ion, int
   }
 
   return 0.0;
-}
-
-
-double col_recombination(int modelgridindex, int lower, double epsilon_trans)
-/// collisional recombination rate: paperII 3.5.1
-{
-  const int element = mastate[tid].element;
-  const int ion = mastate[tid].ion;
-  const int upper = mastate[tid].level;
-  const double n_u = mastate[tid].nnlevel;
-
-  return n_u * col_recombination_ratecoeff(modelgridindex, element, ion, upper, lower, epsilon_trans);
 }
 
 

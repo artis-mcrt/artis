@@ -333,7 +333,7 @@ void calculate_heating_rates(int modelgridindex)
            //double statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
            int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
            double epsilon_trans = epsilon_current - epsilon_target;
-           double C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex) * epsilon_trans;
+           double C = mastate[tid].nnlevel * col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex) * epsilon_trans;
            C_deexc += C;
          }
        }

@@ -804,7 +804,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].nnlevel = 1.0;
 
           R = rad_deexcitation(modelgridindex,lower,epsilon_trans,lineindex,t_mid);
-          C = col_deexcitation(modelgridindex,lower,epsilon_trans,lineindex);
+          C = col_deexcitation_ratecoeff(modelgridindex, level, lower, epsilon_trans, lineindex);
 
           s_renorm = 1.0;
 
