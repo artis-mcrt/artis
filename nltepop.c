@@ -848,7 +848,7 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].statweight = statweight;
           mastate[tid].nnlevel = 1.0;
 
-          R = rad_excitation(modelgridindex,upper,epsilon_trans,lineindex,t_mid);//,T_R,W);
+          R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
           C = col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans);
 
           if ((level == 0) || (is_nlte(element, ion, level) == 1))
@@ -942,10 +942,10 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
             mastate[tid].level = upper;
             mastate[tid].statweight = stat_weight(element,ion+1,upper);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            R = rad_recombination_ratecoeff(modelgridindex, element, ion, upper, level);
+            R = rad_recombination_ratecoeff(modelgridindex, element, ion+1, upper, level);
             //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
             //printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
-            C = col_recombination(modelgridindex,level,epsilon_trans);
+            C = col_recombination_ratecoeff(modelgridindex,element,ion+1,upper,level,epsilon_trans);
             //C=C*1.e-10;
 
             double upper_renorm = calculate_exclevelpop(modelgridindex,element,ion+1,upper) / upperion_partition;
