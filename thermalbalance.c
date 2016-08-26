@@ -30,7 +30,7 @@ static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
 # ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
   const double nntot = calculate_electron_densities(modelgridindex);
 # else
-  const double nntot = calculate_populations(modelgridindex,0);
+  const double nntot = calculate_populations(modelgridindex);
 # endif
 
   /// Then calculate heating and cooling rates

@@ -5,7 +5,7 @@
 
 void update_grid(int m, int my_rank, int nstart, int nblock, int titer);
 void precalculate_partfuncts(int modelgridindex);
-double calculate_populations(int modelgridindex, int first_nonempty_cell);
+double calculate_populations(int modelgridindex);
 double calculate_electron_densities(int modelgridindex);
 void write_grid_restart_data(void);
 

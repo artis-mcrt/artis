@@ -546,7 +546,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
               }
               precalculate_partfuncts(n);
               //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
-              calculate_populations(n,0);
+              calculate_populations(n);
             }
             /// For all other timesteps temperature corrections have to be applied
             else
@@ -613,7 +613,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
                 #endif
 
                 precalculate_partfuncts(n);
-                calculate_populations(n,0);
+                calculate_populations(n);
               }
               #ifndef FORCE_LTE
               else
@@ -837,7 +837,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
 
                   #ifndef NLTE_POPS_ALL_IONS_SIMULTANEOUS
                     /// Store population values to the grid
-                    calculate_populations(n,0);
+                    calculate_populations(n);
                     //calculate_cooling_rates(n);
                     //calculate_heating_rates(n);
                   #endif
@@ -1073,7 +1073,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
 }
 
 
-double calculate_populations(int modelgridindex, int first_nonempty_cell)
+double calculate_populations(int modelgridindex)
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
