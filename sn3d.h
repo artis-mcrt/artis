@@ -9,7 +9,7 @@
 //#define DO_TITER
 //#define FORCE_LTE
 #define NT_ON true       /// Switch on non-thermal ionisation
-#define NT_SOLVE_SPENCERFANO true       /// Use the Spencer-Fano solver instead of Axelrod's work function approximation
+#define NT_SOLVE_SPENCERFANO true       /// Use the Spencer-Fano solver instead of the work function approximation
 
 #define NLTE_POPS_ON
 #define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
