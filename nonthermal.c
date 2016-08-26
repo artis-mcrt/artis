@@ -827,7 +827,7 @@ static void printout_sf_solution(int modelgridindex)
 
       double frac_ionization_ion = 0.;
       printout("Z=%d ion_stage %d:\n", Z, ionstage);
-      printout("  nnion: %g\n", nnion);
+      // printout("  nnion: %g\n", nnion);
       printout("  nnion/nntot: %g\n", nnion / nntot, get_nne(modelgridindex));
       for (int n = 0; n < colliondatacount; n++)
       {
