@@ -107,33 +107,36 @@ void nonthermal_init(void)
     envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
     sourcevec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
 
+    const int source_spread_pts = ceil(SFPTS / 20);
     for (int s = 0; s < SFPTS; s++)
     {
-      const double energy = EMIN + s * DELTA_E;
+      const double energy_ev = EMIN + s * DELTA_E;
 
-      gsl_vector_set(envec, s, energy);
+      gsl_vector_set(envec, s, energy_ev);
 
       // spread the source over some energy width
-      // if (s < SFPTS - 100)
-      //   gsl_vector_set(sourcevec, s, 0.);
-      // else
-      //   gsl_vector_set(sourcevec, s, 1 / (DELTA_E * 100));
+      if (s < SFPTS - source_spread_pts)
+        gsl_vector_set(sourcevec, s, 0.);
+      else
+        gsl_vector_set(sourcevec, s, 1 / (DELTA_E * source_spread_pts));
     }
-    // put all of the source into one point at EMAX
-    gsl_vector_set(sourcevec, SFPTS-1, 1 / DELTA_E);
 
-    E_init_ev = 0.0;
+    double en_dot_yvec;
+    gsl_blas_ddot(envec, sourcevec, &en_dot_yvec);
+    E_init_ev = en_dot_yvec * DELTA_E;
+    printout("E_init: %14.7e eV\n", E_init_ev);
+
+    // or put all of the source into one point at EMAX
+    // gsl_vector_set(sourcevec, SFPTS-1, 1 / DELTA_E);
+    // E_init_ev = EMAX;
+
+    double sourceintegralold = 0.0;
     for (int i = 0; i < SFPTS; i++)
     {
-      E_init_ev += gsl_vector_get(envec, i) * gsl_vector_get(sourcevec, i) * DELTA_E;
+      sourceintegralold += gsl_vector_get(sourcevec, i) * DELTA_E;
     }
-    E_init_ev = EMAX;
-
-    double sourceintegral = 0.0;
-    for (int i = 0; i < SFPTS; i++)
-    {
-      sourceintegral += gsl_vector_get(sourcevec, i) * DELTA_E;
-    }
+    printout("source vector integral: %14.7e\n", sourceintegralold);
+    double sourceintegral = gsl_blas_dasum(sourcevec) * DELTA_E;
     printout("source vector integral: %14.7e\n", sourceintegral);
 
     read_collion_data();
@@ -761,16 +764,23 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
 
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
 {
-  double Y_nt;
   if (NT_SOLVE_SPENCERFANO)
   {
-    Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
+    double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
     if (!isfinite(Y_nt))
-      Y_nt = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+    {
+      return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+    }
+    else if (Y_nt < 0)
+    {
+      const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+      printout("Warning: Spencer-Fano solver gives negative ionization rate (%g) for element %d ion_stage %d. Using WF approx instead = %g\n",
+               Y_nt, get_element(element), get_ionstage(element, ion), Y_nt_wfapprox);
+      return Y_nt_wfapprox;
+    }
   }
   else
-    Y_nt = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-  return Y_nt;
+    return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
 }
 
 
@@ -1031,33 +1041,33 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   // }
   // printout("\n");
 
-  printout("Doing LU decomposition of SF matrix\n");
-
+  // printout("Doing LU decomposition of SF matrix\n");
   // make a copy of the matrix for the LU decomp
-  gsl_matrix *sfmatrix_LU_decomp = gsl_matrix_alloc(SFPTS,SFPTS);
-  gsl_matrix_memcpy(sfmatrix_LU_decomp, sfmatrix);
+  // gsl_matrix *sfmatrix_LU_decomp = gsl_matrix_alloc(SFPTS,SFPTS);
+  // gsl_matrix_memcpy(sfmatrix_LU_decomp, sfmatrix);
+  // int s; //sign of the transformation
+  // gsl_permutation *p = gsl_permutation_alloc(SFPTS);
+  // gsl_linalg_LU_decomp(sfmatrix_LU_decomp, p, &s);
 
-  gsl_permutation *p = gsl_permutation_alloc(SFPTS);
-
-  int s; //sign of the transformation
-  gsl_linalg_LU_decomp(sfmatrix_LU_decomp, p, &s);
+  // instead of LU decompositin above, we know that the
+  // matrix should already be in upper triangular form so is equal to its own LU decompositon!
+  gsl_matrix *sfmatrix_LU_decomp = sfmatrix;
+  gsl_permutation *p = gsl_permutation_calloc(SFPTS); // identity permutation
 
   printout("Solving SF matrix equation\n");
-  // solve matrix equation: sf_matrix * y_vec = constvec for yvec (population vector)
+  // solve matrix equation: sf_matrix * y_vec = constvec for yvec
   gsl_vector_view yvecview = gsl_matrix_row(y, modelgridindex);
   gsl_vector *yvec = &yvecview.vector;
   gsl_linalg_LU_solve(sfmatrix_LU_decomp, p, rhsvec, &yvecview.vector);
 
-  const double TOLERANCE = 1e-20;
-
   printout("Refining solution\n");
 
   double error_best = -1.;
-  gsl_vector *yvec_best = gsl_vector_alloc(SFPTS); //population solution vector with lowest error
+  gsl_vector *yvec_best = gsl_vector_alloc(SFPTS); // solution vector with lowest error
   gsl_vector *gsl_residual_vector = gsl_vector_alloc(SFPTS);
   gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
   int iteration;
-  for (iteration = 0; iteration < 200; iteration++)
+  for (iteration = 0; iteration < 10; iteration++)
   {
     if (iteration > 0)
       gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU_decomp, p, rhsvec, yvec, gsl_residual_vector);
@@ -1072,10 +1082,6 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
       error_best = error;
     }
     // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
-    if (error < TOLERANCE)
-    {
-      break;
-    }
   }
   if (error_best >= 0.)
   {
@@ -1085,8 +1091,10 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   gsl_vector_free(yvec_best);
   gsl_vector_free(gsl_residual_vector);
   gsl_vector_free(residual_vector);
+  gsl_permutation_free(p);
 
-  gsl_matrix_free(sfmatrix_LU_decomp);
+  gsl_matrix_free(sfmatrix);
+  // gsl_matrix_free(sfmatrix_LU_decomp);
   gsl_vector_free(rhsvec);
 
   nonthermal_write_to_file(modelgridindex, timestep);
