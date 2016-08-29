@@ -526,6 +526,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     }
     gsl_vector_free(gsl_residual_vector);
     gsl_vector_free(x_best);
+    gsl_permutation_free(p);
 
     gsl_vector *popvec = gsl_vector_alloc(nlte_dimension); // the true population densities
     gsl_vector_memcpy(popvec, x);                          // are equal to the normed pops multiplied
@@ -634,9 +635,9 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
     {
       // print_level_rates(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 1, 35, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 1, 75, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 1, 76, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(modelgridindex, element, 1, 35, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(modelgridindex, element, 1, 75, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(modelgridindex, element, 1, 76, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(modelgridindex, element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
@@ -649,7 +650,6 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
     free(ion_populations);
 
-    gsl_permutation_free(p);
     gsl_vector_free(x);
     gsl_vector_free(popvec);
 
