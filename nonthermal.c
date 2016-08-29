@@ -3,8 +3,8 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_blas.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_vector_double.h>
+#include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_linalg.h>
 #include "atomic.h"
 #include "grid_init.h"
