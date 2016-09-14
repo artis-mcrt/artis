@@ -3,8 +3,8 @@
 
 // #include "sn3d.h"
 
-void nonthermal_init(void);
-void nonthermal_close_file(void);
+void nonthermal_init(int my_rank);
+void nonthermal_close_file(int my_rank);
 void nt_solve_spencerfano(int modelgridindex, int timestep);
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
 double get_deposition_rate_density(int modelgridindex);

@@ -16,7 +16,7 @@
 #define SFPTS 4000  // number of points in Spencer-Fano solution function
 
 #define EMAX 1000. // eV
-#define EMIN 1 // eV
+#define EMIN 1. // eV
 const double DELTA_E = (EMAX - EMIN) / SFPTS;
 
 #define minionfraction 1.e-3  // minimum number fraction of the total population to include in SF solution
@@ -83,12 +83,13 @@ static void read_collion_data(void)
 }
 
 
-void nonthermal_init(void)
+void nonthermal_init(int my_rank)
 {
   printout("Initializing non-thermal solver\n");
   if (nonthermal_initialized == false)
   {
-    const char filename[100] = "nonthermalspec.out";
+    char filename[100];
+    sprintf(filename,"nonthermalspec-%d.out", my_rank);
     nonthermalfile = fopen(filename, "w");
     if (nonthermalfile == NULL)
     {
@@ -126,12 +127,13 @@ void nonthermal_init(void)
     double en_dot_yvec;
     gsl_blas_ddot(envec, sourcevec, &en_dot_yvec);
     E_init_ev = en_dot_yvec * DELTA_E;
-    printout("E_init: %14.7e eV\n", E_init_ev);
 
     // or put all of the source into one point at EMAX
+    // gsl_vector_set_zero(sourcevec);
     // gsl_vector_set(sourcevec, SFPTS-1, 1 / DELTA_E);
     // E_init_ev = EMAX;
 
+    printout("E_init: %14.7e eV\n", E_init_ev);
     double sourceintegral = gsl_blas_dasum(sourcevec) * DELTA_E;
     printout("source vector integral: %14.7e\n", sourceintegral);
 
@@ -193,7 +195,7 @@ static void nonthermal_write_to_file(int modelgridindex, int timestep)
 }
 
 
-void nonthermal_close_file(void)
+void nonthermal_close_file(int my_rank)
 {
   fclose(nonthermalfile);
   gsl_matrix_free(y);
@@ -221,9 +223,9 @@ static int get_y(int modelgridindex, double energy_ev)
 {
   int index = (energy_ev - EMIN) / DELTA_E;
   if (index <= 0)
-    return 0;
+    return gsl_matrix_get(y, modelgridindex, 0);
   else if (index >= SFPTS - 1)
-    return SFPTS - 1;
+    return gsl_matrix_get(y, modelgridindex, SFPTS - 1);
   else
   {
     const double enbelow = gsl_vector_get(envec, index);
@@ -830,6 +832,8 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
                Y_nt, get_element(element), get_ionstage(element, ion), Y_nt_wfapprox);
       return Y_nt_wfapprox;
     }
+    else
+      return Y_nt;
   }
   else
     return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
@@ -928,7 +932,7 @@ static void analyse_sf_solution(int modelgridindex)
     nne_nt_max += yscalefactor * gsl_matrix_get(y, modelgridindex, i) * oneovervelocity * DELTA_E;
   }
 
-  printout("E_0:         %9.2f eV/s/cm^3\n", nt_solution[modelgridindex].E_0);
+  printout("E_0:         %9.4f eV\n", nt_solution[modelgridindex].E_0);
   printout("E_init:      %9.2f eV/s/cm^3\n", E_init_ev);
   printout("deposition:  %9.2f eV/s/cm^3\n", deposition_rate_density_ev);
   printout("nne:         %9.3e e-/cm^3\n", nne);
@@ -969,9 +973,12 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     nt_solution[modelgridindex].timestep = timestep;
     nt_solution[modelgridindex].frac_heating = 1.0;
     nt_solution[modelgridindex].E_0 = 0.;
+
+    return;
   }
 
-  printout("Setting up Spencer-Fano equation for cell %d at timestep %d with %d energy points from %g eV to %g eV\n", modelgridindex, timestep, SFPTS, EMIN, EMAX);
+  printout("Setting up Spencer-Fano equation for cell %d at timestep %d with %d energy points from %g eV to %g eV\n",
+           modelgridindex, timestep, SFPTS, EMIN, EMAX);
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
@@ -983,16 +990,16 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   {
     const double en = gsl_vector_get(envec, i);
 
-    *gsl_matrix_ptr(sfmatrix, i, i) += (electron_loss_rate(en * EV, nne) / EV);
+    *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
 
-    // double source_integral_to_emax = 0.;
-    // for (int j = i; j < SFPTS; j++) // integral of source function from en to EMAX
-    // {
-    //   source_integral_to_emax += gsl_vector_get(sourcevec, j) * DELTA_E;
-    // }
-    // gsl_vector_set(rhsvec, i, source_integral_to_emax);
+    double source_integral_to_emax = 0.;
+    for (int j = i; j < SFPTS; j++) // integral of source function from en to EMAX
+    {
+      source_integral_to_emax += gsl_vector_get(sourcevec, j) * DELTA_E;
+    }
+    gsl_vector_set(rhsvec, i, source_integral_to_emax);
   }
-  gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at EMAX
+  // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at EMAX
 
   double E_0 = -1.; // reset E_0 so it can be found it again
 
@@ -1061,7 +1068,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
             E_0 = ionpot_ev; // new minimum energy for excitation/ionization
 
           const double J = 0.6 * ionpot_ev;  // valid for elements other than He, Ne, Ar (Kozma & Fransson 1992)
-          printout("Z=%d ion_stage %d n %d l %d ionpot %g eV\n",
+          printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
                    Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
           for (int i = 0; i < SFPTS; i++)

@@ -11,7 +11,7 @@
 extern inline double radfield2(double nu, double T, double W);
 
 #define nu_lower_first_initial (CLIGHT / (15000e-8)) // in Angstroms
-#define nu_upper_last_initial (CLIGHT / (200e-8))  // in Angstroms
+#define nu_upper_last_initial (CLIGHT / (500e-8))  // in Angstroms
 
 static double nu_lower_first = nu_lower_first_initial;
 
@@ -342,7 +342,7 @@ void radfield_zero_estimators(int modelgridindex)
     if (!radfield_initialized)
       radfield_init();
 
-    printout("radfield: zeroing estimators in %d bins in cell %d...",RADFIELDBINCOUNT,modelgridindex);
+    printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
@@ -357,7 +357,6 @@ void radfield_zero_estimators(int modelgridindex)
       radfieldbins[modelgridindex][binindex].contribcount = 0;
     }
     radfield_set_J_normfactor(modelgridindex, -1.0);
-    printout("done.\n");
   }
 }
 
@@ -838,26 +837,29 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 #ifdef MPI_ON
 void radfield_reduce_estimators(int my_rank)
 {
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  if (USE_MULTIBIN_RADFIELD_MODEL)
   {
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
-      double J_raw_reduced = 0.;
-      MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Reduce(&radfieldbins[modelgridindex][binindex].J_raw, &J_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      double nuJ_raw_reduced = 0.;
-      MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Reduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &nuJ_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      int contribcount_reduced = 0;
-      MPI_Barrier(MPI_COMM_WORLD);
-      printout("MPI: Pre-reduction, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
-      MPI_Reduce(&radfieldbins[modelgridindex][binindex].contribcount, &contribcount_reduced, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0)
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        radfieldbins[modelgridindex][binindex].J_raw = J_raw_reduced;
-        radfieldbins[modelgridindex][binindex].nuJ_raw = nuJ_raw_reduced;
-        radfieldbins[modelgridindex][binindex].contribcount = contribcount_reduced;
-        printout("MPI: Process %d modelgrid %d binindex %d took the reduced contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        double J_raw_reduced = 0.;
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Reduce(&radfieldbins[modelgridindex][binindex].J_raw, &J_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        double nuJ_raw_reduced = 0.;
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Reduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &nuJ_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        int contribcount_reduced = 0;
+        MPI_Barrier(MPI_COMM_WORLD);
+        printout("MPI: Pre-reduction, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        MPI_Reduce(&radfieldbins[modelgridindex][binindex].contribcount, &contribcount_reduced, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        if (my_rank == 0)
+        {
+          radfieldbins[modelgridindex][binindex].J_raw = J_raw_reduced;
+          radfieldbins[modelgridindex][binindex].nuJ_raw = nuJ_raw_reduced;
+          radfieldbins[modelgridindex][binindex].contribcount = contribcount_reduced;
+          printout("MPI: Process %d modelgrid %d binindex %d took the reduced contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        }
       }
     }
   }
@@ -865,14 +867,17 @@ void radfield_reduce_estimators(int my_rank)
 
 void radfield_broadcast_estimators(int my_rank)
 {
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  if (USE_MULTIBIN_RADFIELD_MODEL)
   {
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
-      MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, 0, MPI_COMM_WORLD);
-      printout("MPI: After broadcast: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      {
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        printout("MPI: After broadcast: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+      }
     }
   }
 }
@@ -907,8 +912,14 @@ void radfield_read_restart_data(FILE *gridsave_file)
           &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in, &nu_lower_first,
           &T_R_min_in, &T_R_max_in, &radfield_initialized_in);
   radfield_initialized = radfield_initialized_in;
+
+  double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
+  if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+  double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
+  if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
+
   if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
-      nu_lower_first_initial_in != nu_lower_first_initial || nu_upper_last_initial_in != nu_upper_last_initial)
+      nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999)
   {
     printout("ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
              bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);

@@ -472,7 +472,7 @@ int main(int argc, char** argv)
 
     radfield_init();
     if (NT_SOLVE_SPENCERFANO)
-      nonthermal_init();
+      nonthermal_init(my_rank);
     // Initialise virtual packets file and vspecpol
     #ifdef ESTIMATORS_ON
       sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
@@ -1487,7 +1487,7 @@ int main(int argc, char** argv)
   fclose(nlte_file);
   radfield_close_file();
   if (NT_SOLVE_SPENCERFANO)
-    nonthermal_close_file();
+    nonthermal_close_file(my_rank);
 
   #ifdef _OPENMP
     #pragma omp parallel

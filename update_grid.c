@@ -892,7 +892,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
               #endif
             }
 
-            if (NT_SOLVE_SPENCERFANO)
+            if (NT_SOLVE_SPENCERFANO && !(initial_iteration || modelgrid[n].thick == 1))
               nt_solve_spencerfano(n,nts);
 
             double nne = get_nne(n);

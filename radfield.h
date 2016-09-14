@@ -3,7 +3,7 @@
 
 #include "sn3d.h"
 
-#define RADFIELDBINCOUNT 32
+#define RADFIELDBINCOUNT 96
 
 void radfield_zero_estimators(int modelgridindex);
 void radfield_init(void);
