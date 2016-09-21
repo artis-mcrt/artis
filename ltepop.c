@@ -152,24 +152,20 @@ double phi(int element, int ion, int modelgridindex)
       phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
     }
     else
-// #ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
+// elseif (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
 //     {
 //       const double nne = get_nne(modelgridindex);
 //       phi = ionstagepop(modelgridindex,element,ion) / ionstagepop(modelgridindex,element,ion+1) / nne;
 //     }
-// #else
+// else
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
       double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]; //try setting to zero
-      #ifdef NT_ON
-        if (Gamma == 0. && rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.)
-      #else
-        if (Gamma == 0.)
-      #endif
-        {
-          printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
-          exit(0);
-        }
+      if (Gamma == 0. && (!NT_ON || (rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.)))
+      {
+        printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
+        abort();
+      }
 
       //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
       double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
@@ -179,7 +175,7 @@ double phi(int element, int ion, int modelgridindex)
 
       //     if (ion > 0)
       //	{
-      int ionisinglevels = get_bfcontinua(element,ion);
+      const int ionisinglevels = get_bfcontinua(element,ion);
       mastate[tid].element = element;
       mastate[tid].ion = ion+1;
 
@@ -188,13 +184,14 @@ double phi(int element, int ion, int modelgridindex)
       {
         double Alpha_sp_unnormed = 0.;
         double Col_rec_unnormed = 0.;
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+        const int nphixstargets = get_nphixstargets(element,ion,level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
         {
-          int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+          const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           mastate[tid].level = upper;
           const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
           mastate[tid].nnlevel = nnlevel;
-          double epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
+          const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
           Col_rec_unnormed += nnlevel * col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
           Alpha_sp_unnormed += nnlevel * rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
         }
@@ -209,7 +206,8 @@ double phi(int element, int ion, int modelgridindex)
       /* NT TEST LINES */
       double Y_nt = 0.0;
 
-      #ifdef NT_ON
+      if (NT_ON)
+      {
         Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
 
       /*
@@ -264,7 +262,7 @@ double phi(int element, int ion, int modelgridindex)
           }
       */
 
-      #endif
+      }
       /* END OF NT LINES */
 
       // || !isfinite(Gamma))
@@ -423,7 +421,8 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
     {
       double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / get_groundlevelpop(modelgridindex,element,ion);//*stat_weight(element,ion,0);
 
-      //#ifdef NLTE_POPS_ON
+      //if (NLTE_POPS_ON)
+      //{
       //if ((is_nlte(element,ion,level) != 1) || (test = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1]) < -0.9)
       //{
 	  /* Case for when no NLTE level information is available yet */
@@ -446,7 +445,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
       //	    }
 
       //	}
-      //#endif
+      //}
 	     U += nn;//W*stat_weight(element,ion,level) * exp(-(epsilon(element,ion,level)-epsilon_groundlevel)*oneoverkbtexc);
     }
 //   }
@@ -614,10 +613,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   double W = 1;
 
   bool use_lte_pop = false;
-
-#ifdef NLTE_POPS_ON
   int nlte_levels;
-#endif
 
   //  T_exc = MINTEMP;
 
@@ -639,8 +635,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   {
     nn = get_groundlevelpop(modelgridindex,element,ion);
   }
-#ifdef NLTE_POPS_ON
-  else if (is_nlte(element,ion,level))
+  else if (NLTE_POPS_ON && is_nlte(element,ion,level))
   {
     //printout("Using an nlte population!\n");
     double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1];
@@ -664,7 +659,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       return nn;
     }
   }
-  else if ((nlte_levels = get_nlevels_nlte(element,ion)) > 0)
+  else if (NLTE_POPS_ON && (nlte_levels = get_nlevels_nlte(element,ion)) > 0)
   {
     // Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
     double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels];
@@ -688,7 +683,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       return nn;
     }
   }
-#endif
   else
   {
     use_lte_pop = true;

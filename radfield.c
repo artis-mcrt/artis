@@ -10,10 +10,8 @@
 
 extern inline double radfield2(double nu, double T, double W);
 
-#define nu_lower_first_initial (CLIGHT / (15000e-8)) // in Angstroms
-#define nu_upper_last_initial (CLIGHT / (500e-8))  // in Angstroms
-
-static double nu_lower_first = nu_lower_first_initial;
+static const double nu_lower_first_initial = (CLIGHT / (15000e-8)); // in Angstroms
+static const double nu_upper_last_initial = (CLIGHT / (500e-8));  // in Angstroms
 
 static double J_normfactor[MMODELGRID+1];
 
@@ -108,7 +106,7 @@ void radfield_init(void)
             const int ion_stage = get_ionstage(phixslist[tid].groundcont[i].element, phixslist[tid].groundcont[i].ion);
             const int level = phixslist[tid].groundcont[i].level;
             //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
-            if (binindex == 0 && ((nu_edge < nu_lower_first) || (nu_edge > nu_upper_last_initial)))
+            if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
             {
               printout("MISSED bf edge at %g Hz (%g eV), nu_lower_first %g Hz, nu_upper_last %g Hz, Z=%d ion_stage %d level %d\n",
                        nu_edge, H * nu_edge / EV, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
@@ -183,7 +181,7 @@ double radfield_get_bin_nu_lower(int modelgridindex, int binindex)
   if (binindex > 0)
     return radfieldbins[modelgridindex][binindex - 1].nu_upper;
   else
-    return nu_lower_first;
+    return nu_lower_first_initial;
 }
 
 
@@ -416,7 +414,7 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
 {
-  if (USE_MULTIBIN_RADFIELD_MODEL && (nts_global > FIRST_NLTE_RADFIELD_TIMESTEP-1)) // && radfieldbins[modelgridindex] != NULL
+  if (USE_MULTIBIN_RADFIELD_MODEL && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) // && radfieldbins[modelgridindex] != NULL
   {
     int binindex = radfield_select_bin(modelgridindex,nu);
     if (binindex >= 0)
@@ -799,7 +797,7 @@ void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, doub
   }
   else
   {
-    *T_J = pow(PI / STEBO * J,1/4.);
+    *T_J = pow(PI / STEBO * J, 1/4.);
     if (*T_J > MAXTEMP)
     {
       printout("[warning] update_grid: temperature estimator T_J=%g exceeds T_max=%g in cell %d. Set T_J = T_max!\n",*T_J,MAXTEMP,modelgridindex);
@@ -851,14 +849,14 @@ void radfield_reduce_estimators(int my_rank)
         MPI_Reduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &nuJ_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         int contribcount_reduced = 0;
         MPI_Barrier(MPI_COMM_WORLD);
-        printout("MPI: Pre-reduction, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        // printout("MPI: Pre-reduction, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
         MPI_Reduce(&radfieldbins[modelgridindex][binindex].contribcount, &contribcount_reduced, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
         if (my_rank == 0)
         {
           radfieldbins[modelgridindex][binindex].J_raw = J_raw_reduced;
           radfieldbins[modelgridindex][binindex].nuJ_raw = nuJ_raw_reduced;
           radfieldbins[modelgridindex][binindex].contribcount = contribcount_reduced;
-          printout("MPI: Process %d modelgrid %d binindex %d took the reduced contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+          // printout("MPI: Process %d modelgrid %d binindex %d took the reduced contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
         }
       }
     }
@@ -876,7 +874,53 @@ void radfield_broadcast_estimators(int my_rank)
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        printout("MPI: After broadcast: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        // printout("MPI: After broadcast: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+      }
+    }
+  }
+}
+
+void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
+{
+  if (!USE_MULTIBIN_RADFIELD_MODEL)
+    return;
+
+  int sender_nstart;
+  int sender_ndo;
+  double nu_lower_first;
+  if (root == my_rank)
+  {
+    sender_nstart = nstart;
+    sender_ndo = ndo;
+    // if (ndo > 0)
+      // printout("radfield_MPI_Bcast root process %d will send data for cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Bcast(&sender_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&sender_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
+  // if (my_rank != root && sender_ndo > 0)
+    // printout("radfield_MPI_Bcast process %d will recieve data for cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+
+  for (int modelgridindex = sender_nstart; modelgridindex < sender_nstart + sender_ndo; modelgridindex++)
+  {
+    if (modelgrid[modelgridindex].associated_cells > 0)
+    {
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      {
+        MPI_Barrier(MPI_COMM_WORLD);
+        // printout("radfield_MPI_Bcast bin %d T_R before: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
+        MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].nu_upper, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].prev_J_normed, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].prev_nuJ_normed, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].W, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].T_R, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].prev_contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+        // printout("radfield_MPI_Bcast MPI_Bcast radfield bin %d for cell %d from process %d to %d\n", binindex, modelgridindex, root, my_rank);
+        // printout("radfield_MPI_Bcast bin %d T_R after: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
       }
     }
   }
@@ -886,60 +930,66 @@ void radfield_broadcast_estimators(int my_rank)
 
 void radfield_write_restart_data(FILE *gridsave_file)
 {
-  fprintf(gridsave_file,"%d %lg %lg %lg %lg %lg %d\n",
-          RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, nu_lower_first,
-          T_R_min, T_R_max, radfield_initialized);
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  if (USE_MULTIBIN_RADFIELD_MODEL)
   {
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    fprintf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
+            RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
+            T_R_min, T_R_max, radfield_initialized);
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
-      fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
-              J_normfactor[modelgridindex], radfieldbins[modelgridindex][binindex].nu_upper,
-              radfieldbins[modelgridindex][binindex].J_raw,
-              radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
-              radfieldbins[modelgridindex][binindex].prev_nuJ_normed, radfieldbins[modelgridindex][binindex].prev_contribcount,
-              radfieldbins[modelgridindex][binindex].W, radfieldbins[modelgridindex][binindex].T_R,
-              radfieldbins[modelgridindex][binindex].contribcount, radfieldbins[modelgridindex][binindex].fit_type);
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      {
+        fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+                J_normfactor[modelgridindex], radfieldbins[modelgridindex][binindex].nu_upper,
+                radfieldbins[modelgridindex][binindex].J_raw,
+                radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
+                radfieldbins[modelgridindex][binindex].prev_nuJ_normed, radfieldbins[modelgridindex][binindex].prev_contribcount,
+                radfieldbins[modelgridindex][binindex].W, radfieldbins[modelgridindex][binindex].T_R,
+                radfieldbins[modelgridindex][binindex].contribcount, radfieldbins[modelgridindex][binindex].fit_type);
+      }
     }
   }
 }
 
 void radfield_read_restart_data(FILE *gridsave_file)
 {
-  int bincount_in, radfield_initialized_in;
-  double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
-  fscanf(gridsave_file,"%d %lg %lg %lg %lg %lg %d\n",
-          &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in, &nu_lower_first,
-          &T_R_min_in, &T_R_max_in, &radfield_initialized_in);
-  radfield_initialized = radfield_initialized_in;
-
-  double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
-  if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
-  double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
-  if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
-
-  if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
-      nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999)
+  if (USE_MULTIBIN_RADFIELD_MODEL)
   {
-    printout("ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
-             bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
-    printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
-            RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
-    abort();
-  }
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
-  {
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    int bincount_in, radfield_initialized_in;
+    double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
+    fscanf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
+            &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
+            &T_R_min_in, &T_R_max_in, &radfield_initialized_in);
+    radfield_initialized = radfield_initialized_in;
+
+    double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
+    if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+    double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
+    if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
+
+    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
+        nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999)
     {
-      int fit_type_in;
-      fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
-              &J_normfactor[modelgridindex], &radfieldbins[modelgridindex][binindex].nu_upper,
-              &radfieldbins[modelgridindex][binindex].J_raw,
-              &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,
-              &radfieldbins[modelgridindex][binindex].prev_nuJ_normed, &radfieldbins[modelgridindex][binindex].prev_contribcount,
-              &radfieldbins[modelgridindex][binindex].W, &radfieldbins[modelgridindex][binindex].T_R,
-              &radfieldbins[modelgridindex][binindex].contribcount, &fit_type_in);
-      radfieldbins[modelgridindex][binindex].fit_type = fit_type_in;
+      printout("ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
+               bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
+      printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
+              RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
+      abort();
+    }
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    {
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      {
+        int fit_type_in;
+        fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+                &J_normfactor[modelgridindex], &radfieldbins[modelgridindex][binindex].nu_upper,
+                &radfieldbins[modelgridindex][binindex].J_raw,
+                &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,
+                &radfieldbins[modelgridindex][binindex].prev_nuJ_normed, &radfieldbins[modelgridindex][binindex].prev_contribcount,
+                &radfieldbins[modelgridindex][binindex].W, &radfieldbins[modelgridindex][binindex].T_R,
+                &radfieldbins[modelgridindex][binindex].contribcount, &fit_type_in);
+        radfieldbins[modelgridindex][binindex].fit_type = fit_type_in;
+      }
     }
   }
 }

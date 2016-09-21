@@ -131,6 +131,396 @@ static void pkt_action_counters_printout(void)
   printout("downscatterings  = %d\n",downscatter);
 }
 
+#ifdef MPI_ON
+static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int ndo, int nts, int titer, char *buffer, int HUGEE, char* buffer2, int HUGEE2)
+{
+  int position,nlp;
+  for (int n = 0; n < p; n++)
+  {
+    radfield_MPI_Bcast(n, my_rank, nstart, ndo);
+    if (NT_ON && NT_SOLVE_SPENCERFANO && !(initial_iteration || modelgrid[n].thick == 1))
+      nonthermal_MPI_Bcast(n, my_rank, nstart, ndo);
+    if (my_rank == n)
+    {
+      position = 0;
+      MPI_Pack(&ndo, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+      for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
+      //for (int nncl = 0; nncl < ndo; nncl++)
+      {
+        //nn = nonemptycells[my_rank+nncl*nprocs];
+        MPI_Pack(&mgi, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+        //if (cell[nn].rho > MINDENSITY)
+        if (modelgrid[mgi].associated_cells > 0)
+        {
+          MPI_Pack(&modelgrid[mgi].thick, 1, MPI_SHORT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].rho, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].nne, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].nnetot, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].kappagrey, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].TR, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          //MPI_Pack(&cell[nn].T_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].W, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          //MPI_Pack(&cell[nn].W_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          //MPI_Pack(&cell[nn].samplecell, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+
+          for (int element = 0; element < nelements; element++)
+          {
+            MPI_Pack(modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+            MPI_Pack(modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+            MPI_Pack(modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          }
+        }
+      }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(buffer, HUGEE, MPI_PACKED, n, MPI_COMM_WORLD);
+
+    position = 0;
+    MPI_Unpack(buffer, HUGEE, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
+    for (int nn = 0; nn < nlp; nn++)
+    {
+      int mgi;
+      MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+      //if (cell[ncl].rho > MINDENSITY)
+      if (modelgrid[mgi].associated_cells > 0)
+      {
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].T_D, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].W_D, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].samplecell, 1, MPI_INT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+
+        for (int element = 0; element < nelements; element++)
+        {
+          MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
+          MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
+          MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
+        }
+      }
+    }
+  }
+
+  if (NLTE_POPS_ON)
+  {
+    for (int n = 0; n < p; n++)
+    {
+      if (my_rank == n)
+      {
+        position = 0;
+        MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+        for (int mgi = nstart; mgi < (nstart+ndo); mgi++)
+        //for (int nncl = 0; nncl < ndo; nncl++)
+        {
+          //nn = nonemptycells[my_rank+nncl*nprocs];
+          MPI_Pack(&mgi, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+          //if (cell[nn].rho > MINDENSITY)
+          if (modelgrid[mgi].associated_cells > 0)
+          {
+            MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+          }
+        }
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
+
+      position = 0;
+      MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
+      for (int nn = 0; nn < nlp; nn++)
+      {
+        int mgi;
+        MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+        //if (cell[ncl].rho > MINDENSITY)
+        if (modelgrid[mgi].associated_cells > 0)
+        {
+          MPI_Unpack(buffer2, HUGEE2, &position, modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
+        }
+      }
+    }
+  }
+
+  #ifndef FORCE_LTE
+    if (simulation_continued_from_saved && nts-itstep == 0 && titer == 0)
+    {
+      ;
+    }
+    else
+    {
+      /// Reduce the corrphotoionrenorm array.
+      printout("nts %d, titer %d: bcast corr photoionrenorm\n",nts,titer);
+      MPI_Reduce(&corrphotoionrenorm, &redhelper, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0)
+      {
+        for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
+        {
+          corrphotoionrenorm[i] = redhelper[i];
+        }
+      }
+      MPI_Bcast(&corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+      /// Reduce the gammaestimator array. Only needed to write restart data.
+      printout("nts %d, titer %d: bcast gammaestimator\n",nts,titer);
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (my_rank == 0)
+      {
+        for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
+        {
+          gammaestimator[i] = redhelper[i];
+        }
+      }
+      MPI_Bcast(&gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+  #endif
+}
+
+static void mpi_reduce_estimators(int my_rank)
+{
+  /// the following blocks gather all the estimators to the zeroth (Master) thread
+  MPI_Reduce(&J, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (my_rank == 0)
+  {
+    for (int i = 0; i < MMODELGRID; i++)
+    {
+      J[i] = redhelper[i];
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  #ifndef FORCE_LTE
+    MPI_Reduce(&nuJ, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        nuJ[i] = redhelper[i];
+      }
+    }
+    radfield_reduce_estimators(my_rank);
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Reduce(&ffheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        ffheatingestimator[i] = redhelper[i];
+      }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Reduce(&colheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        colheatingestimator[i] = redhelper[i];
+      }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
+      {
+        gammaestimator[i] = redhelper[i];
+      }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Reduce(&bfheatingestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
+      {
+        bfheatingestimator[i] = redhelper[i];
+      }
+    }
+/*          MPI_Reduce(&ionfluxestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
+      {
+        ionfluxestimator[i] = redhelper[i];
+      }
+    }*/
+/*        MPI_Reduce(&twiddle, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
+      {
+        twiddle[i] = redhelper[i];
+      }
+    }*/
+/*          MPI_Reduce(&stimrecombestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
+      {
+        stimrecombestimator[i] = redhelper[i];
+      }
+    }*/
+
+/*          MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        mabfcount[i] = redhelper[i]/p;
+      }
+    }
+    MPI_Reduce(&mabfcount_thermal, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        mabfcount_thermal[i] = redhelper[i]/p;
+      }
+    }
+    MPI_Reduce(&kbfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        kbfcount[i] = redhelper[i]/p;
+      }
+    }
+    MPI_Reduce(&kbfcount_ion, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        kbfcount_ion[i] = redhelper[i]/p;
+      }
+    }
+    MPI_Reduce(&kffcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        kffcount[i] = redhelper[i]/p;
+      }
+    }
+    MPI_Reduce(&kffabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        kffabs[i] = redhelper[i]/p;
+      }
+    }
+    MPI_Reduce(&kbfabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        kbfabs[i] = redhelper[i]/p;
+      }
+    }
+    MPI_Reduce(&kgammadep, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        kgammadep[i] = redhelper[i]/p;
+      }
+    }*/
+  #endif
+
+  #ifdef RECORD_LINESTAT
+    MPI_Reduce(ecounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < nlines; i++)
+      {
+        ecounter[i] = linestat_reduced[i];
+      }
+    }
+    MPI_Reduce(acounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < nlines; i++)
+      {
+        acounter[i] = linestat_reduced[i];
+      }
+    }
+  #endif
+
+  //double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
+  //double deltat = time_step[nts].width;
+  if (do_rlc_est != 0)
+  {
+    MPI_Reduce(&rpkt_emiss, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      for (int i = 0; i < MMODELGRID; i++)
+      {
+        rpkt_emiss[i] = redhelper[i];
+      }
+    }
+  }
+  if (do_comp_est)
+  {
+    MPI_Reduce(&compton_emiss, &redhelper, MMODELGRID*EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      int i = 0;
+      for (int n = 0; n < MMODELGRID; n++)
+      {
+        for (int nn = 0; nn < EMISS_MAX; nn++)
+        {
+          compton_emiss[n][nn] = redhelper[i];
+          i++;
+        }
+      }
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+static void mpi_broadcast_estimators(int my_rank)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Bcast(&J, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  #ifndef FORCE_LTE
+    radfield_broadcast_estimators(my_rank);
+    MPI_Bcast(&nuJ, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&ffheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&colheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    //MPI_Bcast(&photoionestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    //MPI_Bcast(&stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    /*
+    MPI_Bcast(&ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    //MPI_Bcast(&twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&mabfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&mabfcount_thermal, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&kbfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&kbfcount_ion, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&kffcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&kffabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&kbfabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&kgammadep, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    */
+  #endif
+  if (do_rlc_est != 0)
+  {
+    MPI_Bcast(&rpkt_emiss, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  }
+  if (do_comp_est)
+  {
+    MPI_Bcast(&compton_emiss, MMODELGRID*EMISS_MAX, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+#endif
 
 int main(int argc, char** argv)
 // Main - top level routine.
@@ -430,19 +820,19 @@ int main(int argc, char** argv)
       int HUGEE = (4 * ((10+2*includedions)*(nblock+1) + 1) + 8 * ((1+includedions)*(nblock+1))) * 2; // LJS just added factor of two to make this work. What's the minimum space needed?
       printout("reserve HUGEE %d space for MPI communication buffer\n",HUGEE);
       //char buffer[HUGEE];
-      char *buffer;
-      if ((buffer = malloc(HUGEE*sizeof(char))) == NULL)
+      char *buffer  = malloc(HUGEE*sizeof(char));
+      if (buffer == NULL)
       {
         printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
-        exit(0);
+        abort();
       }
       int HUGEE2 = 8*((nblock+1)*total_nlte_levels) + 4*(nblock + 2);
       printout("reserve HUGEE2 %d space for MPI communication buffer2 for NLTE\n", HUGEE2);
-      char *buffer2;
-      if ((buffer2 = malloc(HUGEE2*sizeof(char))) == NULL)
+      char *buffer2 = malloc(HUGEE2*sizeof(char));
+      if (buffer2 == NULL)
       {
         printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
-        exit(0);
+        abort();
       }
 
 
@@ -471,7 +861,7 @@ int main(int argc, char** argv)
     int nts = itstep;
 
     radfield_init();
-    if (NT_SOLVE_SPENCERFANO)
+    if (NT_ON && NT_SOLVE_SPENCERFANO)
       nonthermal_init(my_rank);
     // Initialise virtual packets file and vspecpol
     #ifdef ESTIMATORS_ON
@@ -482,7 +872,7 @@ int main(int argc, char** argv)
         exit(0);
       }
 
-      if (vgrid_flag==1)
+      if (vgrid_flag == 1)
       {
         sprintf(filename,"vpkt_grid_%d-%d.out",my_rank,tid);
         if ((vpkt_grid_file = fopen(filename, "w")) == NULL)
@@ -492,14 +882,12 @@ int main(int argc, char** argv)
         }
       }
 
-
-
       // New simulation
       if (!simulation_continued_from_saved)
       {
         init_vspecpol();
 
-        if (vgrid_flag==1)
+        if (vgrid_flag == 1)
           init_vpkt_grid();
       }
 
@@ -675,150 +1063,7 @@ int main(int argc, char** argv)
 
         /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
         #ifdef MPI_ON
-          int position,nlp;
-          for (int n = 0; n < p; n++)
-          {
-            if (my_rank == n)
-            {
-              position = 0;
-              MPI_Pack(&ndo, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-              for (int mgi = nstart; mgi < (nstart+ndo); mgi++)
-              //for (int nncl = 0; nncl < ndo; nncl++)
-              {
-                //nn = nonemptycells[my_rank+nncl*nprocs];
-                MPI_Pack(&mgi, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                //if (cell[nn].rho > MINDENSITY)
-                if (modelgrid[mgi].associated_cells > 0)
-                {
-                  MPI_Pack(&modelgrid[mgi].thick, 1, MPI_SHORT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].rho, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].nne, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].nnetot, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].kappagrey, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].TR, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  //MPI_Pack(&cell[nn].T_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].W, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  //MPI_Pack(&cell[nn].W_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  //MPI_Pack(&cell[nn].samplecell, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-
-                  for (int element = 0; element < nelements; element++)
-                  {
-                    MPI_Pack(modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                    MPI_Pack(modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                    MPI_Pack(modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-                  }
-                }
-              }
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-            MPI_Bcast(buffer, HUGEE, MPI_PACKED, n, MPI_COMM_WORLD);
-
-            position = 0;
-            MPI_Unpack(buffer, HUGEE, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-            for (int nn = 0; nn < nlp; nn++)
-            {
-              int mgi;
-              MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
-              //if (cell[ncl].rho > MINDENSITY)
-              if (modelgrid[mgi].associated_cells > 0)
-              {
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-                //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].T_D, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-                //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].W_D, 1, MPI_FLOAT, MPI_COMM_WORLD);
-                //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].samplecell, 1, MPI_INT, MPI_COMM_WORLD);
-                MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-
-                for (int element = 0; element < nelements; element++)
-                {
-                  MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
-                  MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
-                  MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
-                }
-              }
-            }
-          }
-
-          #ifdef NLTE_POPS_ON
-            for (int n = 0; n < p; n++)
-            {
-              if (my_rank == n)
-              {
-                position = 0;
-                MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
-                for (int mgi = nstart; mgi < (nstart+ndo); mgi++)
-                //for (int nncl = 0; nncl < ndo; nncl++)
-                {
-                  //nn = nonemptycells[my_rank+nncl*nprocs];
-                  MPI_Pack(&mgi, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
-                  //if (cell[nn].rho > MINDENSITY)
-                  if (modelgrid[mgi].associated_cells > 0)
-                  {
-                    MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
-                  }
-                }
-              }
-              MPI_Barrier(MPI_COMM_WORLD);
-              MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
-
-              position = 0;
-              MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-              for (int nn = 0; nn < nlp; nn++)
-              {
-                int mgi;
-                MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
-                //if (cell[ncl].rho > MINDENSITY)
-                if (modelgrid[mgi].associated_cells > 0)
-                {
-                  MPI_Unpack(buffer2, HUGEE2, &position,modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
-                }
-              }
-            }
-          #endif
-
-          #ifndef FORCE_LTE
-            if (simulation_continued_from_saved && nts-itstep == 0 && titer == 0)
-            {
-              ;
-            }
-            else
-            {
-              /// Reduce the corrphotoionrenorm array.
-              printout("nts %d, titer %d: bcast corr photoionrenorm\n",nts,titer);
-              MPI_Reduce(&corrphotoionrenorm, &redhelper, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
-                {
-                  corrphotoionrenorm[i] = redhelper[i];
-                }
-              }
-              MPI_Bcast(&corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-              /// Reduce the gammaestimator array. Only needed to write restart data.
-              printout("nts %d, titer %d: bcast gammaestimator\n",nts,titer);
-              MPI_Barrier(MPI_COMM_WORLD);
-              MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
-                {
-                  gammaestimator[i] = redhelper[i];
-                }
-              }
-              MPI_Bcast(&gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-            }
-          #endif
+          mpi_communicate_grid_properties(my_rank, p, nstart, ndo, nts, titer, buffer, HUGEE, buffer2, HUGEE2);
         #endif
 
         /// If this is not the 0th time step of the current job step,
@@ -922,210 +1167,15 @@ int main(int argc, char** argv)
           //exit(0);
 
           #ifdef MPI_ON
-            /** All the processes have their own versions of the estimators for this time step now.
-            Since these are going to be needed in the next time step, we will gather all the
-            estimators together now, sum them, normalise on the Master thread and then pass back to the
-            others*/
+            // All the processes have their own versions of the estimators for this time step now.
+            // Since these are going to be needed in the next time step, we will gather all the
+            // estimators together now, sum them, normalise on the Master thread and then pass back to the
+            // others
 
-            /// the following blocks gather all the estimators to the zeroth (Master) thread
-            MPI_Reduce(&J, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-            if (my_rank == 0)
-            {
-              for (int i = 0; i < MMODELGRID; i++)
-              {
-                J[i] = redhelper[i];
-              }
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-            #ifndef FORCE_LTE
-              MPI_Reduce(&nuJ, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  nuJ[i] = redhelper[i];
-                }
-              }
-              radfield_reduce_estimators(my_rank);
-              MPI_Barrier(MPI_COMM_WORLD);
-              MPI_Reduce(&ffheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  ffheatingestimator[i] = redhelper[i];
-                }
-              }
-              MPI_Barrier(MPI_COMM_WORLD);
-              MPI_Reduce(&colheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  colheatingestimator[i] = redhelper[i];
-                }
-              }
-              MPI_Barrier(MPI_COMM_WORLD);
-              MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-                {
-                  gammaestimator[i] = redhelper[i];
-                }
-              }
-              MPI_Barrier(MPI_COMM_WORLD);
-              MPI_Reduce(&bfheatingestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-                {
-                  bfheatingestimator[i] = redhelper[i];
-                }
-              }
-    /*          MPI_Reduce(&ionfluxestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-                {
-                  ionfluxestimator[i] = redhelper[i];
-                }
-              }*/
-      /*        MPI_Reduce(&twiddle, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-                {
-                  twiddle[i] = redhelper[i];
-                }
-              }*/
-    /*          MPI_Reduce(&stimrecombestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-                {
-                  stimrecombestimator[i] = redhelper[i];
-                }
-              }*/
-
-    /*          MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  mabfcount[i] = redhelper[i]/p;
-                }
-              }
-              MPI_Reduce(&mabfcount_thermal, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  mabfcount_thermal[i] = redhelper[i]/p;
-                }
-              }
-              MPI_Reduce(&kbfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  kbfcount[i] = redhelper[i]/p;
-                }
-              }
-              MPI_Reduce(&kbfcount_ion, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  kbfcount_ion[i] = redhelper[i]/p;
-                }
-              }
-              MPI_Reduce(&kffcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  kffcount[i] = redhelper[i]/p;
-                }
-              }
-              MPI_Reduce(&kffabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  kffabs[i] = redhelper[i]/p;
-                }
-              }
-              MPI_Reduce(&kbfabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  kbfabs[i] = redhelper[i]/p;
-                }
-              }
-              MPI_Reduce(&kgammadep, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  kgammadep[i] = redhelper[i]/p;
-                }
-              }*/
-            #endif
-
-            #ifdef RECORD_LINESTAT
-              MPI_Reduce(ecounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < nlines; i++)
-                {
-                  ecounter[i] = linestat_reduced[i];
-                }
-              }
-              MPI_Reduce(acounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < nlines; i++)
-                {
-                  acounter[i] = linestat_reduced[i];
-                }
-              }
-            #endif
-
-            //double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
-            //double deltat = time_step[nts].width;
-            if (do_rlc_est != 0)
-            {
-              MPI_Reduce(&rpkt_emiss, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                for (int i = 0; i < MMODELGRID; i++)
-                {
-                  rpkt_emiss[i] = redhelper[i];
-                }
-              }
-            }
-            if (do_comp_est)
-            {
-              MPI_Reduce(&compton_emiss, &redhelper, MMODELGRID*EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-              if (my_rank == 0)
-              {
-                int i = 0;
-                for (int n = 0; n < MMODELGRID; n++)
-                {
-                  for (int nn = 0; nn < EMISS_MAX; nn++)
-                  {
-                    compton_emiss[n][nn] = redhelper[i];
-                    i++;
-                  }
-                }
-              }
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
+            mpi_reduce_estimators(my_rank);
           #endif
 
-          /** The master thread now knows the estimators (avertaged over the processors). It will now normalise them.
+          /** The master thread now knows the estimators (averaged over the processors). It will now normalise them.
           Then the new values can be sent out to all threads again */
           if (my_rank == 0)
           {
@@ -1146,41 +1196,8 @@ int main(int argc, char** argv)
           }
 
           #ifdef MPI_ON
-            /** The master thread has normalised the rpkt and compton estimators and printed out a bunch of stuff. Now redistribute the estimators ready for the next run. */
-
-            MPI_Barrier(MPI_COMM_WORLD);
-            MPI_Bcast(&J, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-            #ifndef FORCE_LTE
-              radfield_broadcast_estimators(my_rank);
-              MPI_Bcast(&nuJ, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&ffheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&colheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              //MPI_Bcast(&photoionestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              //MPI_Bcast(&stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              /*
-              MPI_Bcast(&ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              //MPI_Bcast(&twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&mabfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&mabfcount_thermal, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&kbfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&kbfcount_ion, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&kffcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&kffabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&kbfabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              MPI_Bcast(&kgammadep, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-              */
-            #endif
-            if (do_rlc_est != 0)
-            {
-              MPI_Bcast(&rpkt_emiss, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-            }
-            if (do_comp_est)
-            {
-              MPI_Bcast(&compton_emiss, MMODELGRID*EMISS_MAX, MPI_FLOAT, 0, MPI_COMM_WORLD);
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
+            // The master thread has normalised the rpkt and compton estimators and printed out a bunch of stuff. Now redistribute the estimators ready for the next run.
+            mpi_broadcast_estimators(my_rank);
           #endif
 
           /// Now printout some statistics on the current timestep
@@ -1486,8 +1503,8 @@ int main(int argc, char** argv)
   fclose(estimators_file);
   fclose(nlte_file);
   radfield_close_file();
-  if (NT_SOLVE_SPENCERFANO)
-    nonthermal_close_file(my_rank);
+  if (NT_ON && NT_SOLVE_SPENCERFANO)
+    nonthermal_close_file();
 
   #ifdef _OPENMP
     #pragma omp parallel

@@ -13,15 +13,15 @@
 #include "nonthermal.h"
 #include "sn3d.h"
 
-#define SFPTS 4000  // number of points in Spencer-Fano solution function
+#define SFPTS 4000  // number of energy points in the Spencer-Fano solution vector
 
 #define EMAX 1000. // eV
 #define EMIN 1. // eV
-const double DELTA_E = (EMAX - EMIN) / SFPTS;
+static const double DELTA_E = (EMAX - EMIN) / SFPTS;
 
-#define minionfraction 1.e-3  // minimum number fraction of the total population to include in SF solution
+static const double minionfraction = 1.e-3;  // minimum number fraction of the total population to include in SF solution
 
-const double A_naught_squared = 2.800285203e-17; // Bohr radius squared in cm^2
+static const double A_naught_squared = 2.800285203e-17; // Bohr radius squared in cm^2
 
 struct collionrow {
   int Z;
@@ -35,17 +35,17 @@ struct collionrow {
   double D;
 };
 
-struct collionrow *colliondata = NULL;
-int colliondatacount = 0;
+static struct collionrow *colliondata = NULL;
+static int colliondatacount = 0;
 
 static FILE *restrict nonthermalfile = NULL;
-bool nonthermal_initialized = false;
+static bool nonthermal_initialized = false;
 
-gsl_vector *envec;            // energy grid on which solution is sampled
-gsl_vector *sourcevec;        // samples of the source function
-gsl_matrix *y;                // Spencer-Fano solution function samples for each modelgrid cell. multiply by energy to get flux
-                              // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
-double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
+static gsl_vector *envec;            // energy grid on which solution is sampled
+static gsl_vector *sourcevec;        // samples of the source function
+static gsl_matrix *y;                // Spencer-Fano solution function samples for each modelgrid cell. multiply by energy to get flux
+                                     // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
+static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
 struct nt_solution_struct {
   int timestep;
@@ -53,7 +53,7 @@ struct nt_solution_struct {
   double E_0; // the lowest energy ionization or excitation in eV
 };
 
-struct nt_solution_struct nt_solution[MMODELGRID+1];
+static struct nt_solution_struct nt_solution[MMODELGRID+1];
 
 static void read_collion_data(void)
 {
@@ -195,7 +195,7 @@ static void nonthermal_write_to_file(int modelgridindex, int timestep)
 }
 
 
-void nonthermal_close_file(int my_rank)
+void nonthermal_close_file(void)
 {
   fclose(nonthermalfile);
   gsl_matrix_free(y);
@@ -818,12 +818,15 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
 
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
 {
-  if (NT_SOLVE_SPENCERFANO)
+  if (NT_ON && NT_SOLVE_SPENCERFANO)
   {
     double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
     if (!isfinite(Y_nt))
     {
-      return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+      const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
+      printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ion_stage %d. Using WF approx instead = %g\n",
+               Y_nt, get_element(element), get_ionstage(element, ion), Y_nt_wfapprox);
+      return Y_nt_wfapprox;
     }
     else if (Y_nt < 0)
     {
@@ -968,7 +971,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     gsl_vector_view yvecview = gsl_matrix_row(y, modelgridindex);
     gsl_vector_set_zero(&yvecview.vector);
 
-    // nonthermal_write_to_file(modelgridindex, timestep);
+    nonthermal_write_to_file(modelgridindex, timestep);
 
     nt_solution[modelgridindex].timestep = timestep;
     nt_solution[modelgridindex].frac_heating = 1.0;
@@ -1192,3 +1195,44 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   nt_solution[modelgridindex].E_0 = E_0;
   analyse_sf_solution(modelgridindex);
 }
+
+
+#ifdef MPI_ON
+void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
+{
+  if (!nonthermal_initialized)
+    return;
+
+  int sender_nstart;
+  int sender_ndo;
+  if (root == my_rank)
+  {
+    sender_nstart = nstart;
+    sender_ndo = ndo;
+    if (ndo > 0)
+      printout("nonthermal_MPI_Bcast root process %d will send cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Bcast(&sender_nstart, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast(&sender_ndo, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  if (my_rank != root && sender_ndo > 0)
+    printout("nonthermal_MPI_Bcast process %d will recieve cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+
+  for (int modelgridindex = sender_nstart; modelgridindex < sender_nstart + sender_ndo; modelgridindex++)
+  {
+    if (modelgrid[modelgridindex].associated_cells > 0)
+    {
+      gsl_vector_view yvecview = gsl_matrix_row(y, modelgridindex);
+      printout("nonthermal_MPI_Bcast ratecoeff before: %g\n", nt_ionization_ratecoeff_sf(modelgridindex, 0, 1));
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Bcast(yvecview.vector.data, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
+      printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
+      MPI_Bcast(&nt_solution[modelgridindex].timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].E_0, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+      printout("nonthermal_MPI_Bcast ratecoeff after: %g\n", nt_ionization_ratecoeff_sf(modelgridindex, 0, 1));
+    }
+  }
+
+}
+#endif

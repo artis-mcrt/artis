@@ -8,33 +8,29 @@
 #define DEBUG_ON
 //#define DO_TITER
 //#define FORCE_LTE
-#define NT_ON true       /// Switch on non-thermal ionisation
-#define NT_SOLVE_SPENCERFANO true       /// Use the Spencer-Fano solver instead of the work function approximation
+static const bool NT_ON = true;                      /// Switch on non-thermal ionisation
+static const bool NT_SOLVE_SPENCERFANO = true;       /// Use the Spencer-Fano solver instead of the work function approximation
 
-#define NLTE_POPS_ON
-#define NLTE_POPS_ALL_IONS_SIMULTANEOUS // solve the population matrix
-                                          // equation simultaneously for levels
-                                          // in all ions
+static const bool NLTE_POPS_ON = true;
+static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;  // solve the population matrix
+                                                            // equation simultaneously for levels in all ions
 #define NLTEITER 30
 
-#ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
-  #define NLTE_POPS_ON
-#endif
+static const bool USE_MULTIBIN_RADFIELD_MODEL = true;  // if using this, should avoid look up tables and switch on
+                                                       // direct integration options below
+                                                       // (since they assume J_nu is Planck function)
+static const int FIRST_NLTE_RADFIELD_TIMESTEP = 14;
+static const bool NO_LUT_PHOTOION = true; // dynamically calculate photoionization
+                                           // rates for the current radiation field
+                                           // instead of interpolating values from a
+                                           // lookup table for a blackbody radiation field
 
-#define USE_MULTIBIN_RADFIELD_MODEL true // if using this, should avoid look up tables below
-                                         // (since they assume J_nu is Planck function)
-#define FIRST_NLTE_RADFIELD_TIMESTEP 14
-#define NO_LUT_PHOTOION true // dynamically calculate photoionization
-                             // rates for the current radiation field
-                             // instead of interpolating precalculated
-                             // values assuming a blackbody radiation field
-
-#define NO_LUT_BFHEATING true
+static const bool NO_LUT_BFHEATING = true;
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
-#define SKIPRATECOEFFVALIDATION false
+static const bool SKIPRATECOEFFVALIDATION = false;
 
 // Polarisation for real packets
 //#define DIPOLE
@@ -44,7 +40,10 @@
 //#define ESTIMATORS_ON
 
 
-//#define MPI_ON
+#ifndef MPI_ON
+  #define MPI_ON
+#endif
+
 #ifdef MPI_ON
   #include "mpi.h"
 #endif
@@ -113,7 +112,11 @@ struct vgrid
     double zvel[MRANGE_GRID][MOBS];
 } vgrid_i[NY_VGRID][NZ_VGRID], vgrid_q[NY_VGRID][NZ_VGRID], vgrid_u[NY_VGRID][NZ_VGRID];
 
-double Nrange_grid, tmin_grid, tmax_grid, nu_grid_min[MRANGE_GRID], nu_grid_max[MRANGE_GRID];
+double Nrange_grid;
+double tmin_grid;
+double tmax_grid;
+double nu_grid_min[MRANGE_GRID];
+double nu_grid_max[MRANGE_GRID];
 int vgrid_flag;
 
 

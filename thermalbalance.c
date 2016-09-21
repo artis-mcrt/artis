@@ -27,11 +27,11 @@ static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
   /// Set new T_e guess for the current cell and update populations
   //cell[cellnumber].T_e = T_e;
   set_Te(modelgridindex,T_e);
-# ifdef NLTE_POPS_ALL_IONS_SIMULTANEOUS
-  const double nntot = calculate_electron_densities(modelgridindex);
-# else
-  const double nntot = calculate_populations(modelgridindex);
-# endif
+  double nntot;
+  if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
+    nntot = calculate_electron_densities(modelgridindex);
+  else
+    nntot = calculate_populations(modelgridindex);
 
   /// Then calculate heating and cooling rates
   calculate_cooling_rates(modelgridindex);

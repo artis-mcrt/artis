@@ -212,7 +212,7 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
 }
 
 
-void nlte_pops_element(int element, int modelgridindex, int timestep)
+void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels in all ions of an element
 {
   const double t_mid = time_step[timestep].mid;
@@ -683,7 +683,7 @@ void nlte_pops_element(int element, int modelgridindex, int timestep)
 
 
 // this does single ion solving and will be deprecated at some point
-double nlte_pops(int element, int ion, int modelgridindex, int timestep)
+double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
 {
   int lower, level_use, lower_use, upper_use;
@@ -874,27 +874,25 @@ double nlte_pops(int element, int ion, int modelgridindex, int timestep)
           //printout("Fourth using %d of %d\n", upper_use*(nlte_size) + level_use, nlte_size*nlte_size);
         }
 
-        #if NT_ON == true
-          if (ion < get_nions(element)-1)
+        if (NT_ON && ion < get_nions(element)-1)
+        {
+          double Y = nt_ionization_ratecoeff(modelgridindex,element,ion);
+
+          if ((level == 0) || (is_nlte(element, ion, level) == 1))
           {
-            double Y = nt_ionization_ratecoeff(modelgridindex,element,ion);
-
-            if ((level == 0) || (is_nlte(element, ion, level) == 1))
-            {
-              level_use = level;
-              s_renorm = 1.0;
-            }
-            else
-            {
-              level_use = nlevels_nlte + 1; //the super level
-              s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level) / superlevel_partition;
-            }
-
-            upper_use = nlte_size - 1; //the continuum
-            rate_matrix[level_use*(nlte_size) + level_use] -= Y * s_renorm;
-            rate_matrix[upper_use*(nlte_size) + level_use] += Y * s_renorm;
+            level_use = level;
+            s_renorm = 1.0;
           }
-        #endif
+          else
+          {
+            level_use = nlevels_nlte + 1; //the super level
+            s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level) / superlevel_partition;
+          }
+
+          upper_use = nlte_size - 1; //the continuum
+          rate_matrix[level_use*(nlte_size) + level_use] -= Y * s_renorm;
+          rate_matrix[upper_use*(nlte_size) + level_use] += Y * s_renorm;
+        }
 
         //now put in the photoionization/recombination processes
         ionisinglevels = get_bfcontinua(element,ion);

@@ -1680,41 +1680,42 @@ static void read_atomicdata(void)
   total_nlte_levels = 0;
   n_super_levels = 0;
 
-#ifdef NLTE_POPS_ON
-  for (int element = 0; element < nelements; element++)
-  {
-    const int nions = get_nions(element);
-    //includedions += nions;
-    for (int ion = 0; ion < nions; ion++)
+ if (NLTE_POPS_ON)
+ {
+    for (int element = 0; element < nelements; element++)
     {
-      elements[element].ions[ion].first_nlte = total_nlte_levels;
-      const int nlevels = get_nlevels(element,ion);
-      int count = 0;
-      if (nlevels > 1)
+      const int nions = get_nions(element);
+      //includedions += nions;
+      for (int ion = 0; ion < nions; ion++)
       {
-        for (int level = 1; level < nlevels; level++)
+        elements[element].ions[ion].first_nlte = total_nlte_levels;
+        const int nlevels = get_nlevels(element,ion);
+        int count = 0;
+        if (nlevels > 1)
         {
-          if (is_nlte(element,ion,level))
+          for (int level = 1; level < nlevels; level++)
           {
-            count++;
-            total_nlte_levels++;
+            if (is_nlte(element,ion,level))
+            {
+              count++;
+              total_nlte_levels++;
+            }
           }
         }
+
+        if (count < (nlevels - 1))
+        {
+          /* If there are more levels that the ground state + the number of NLTE levels then we need an extra slot to store data for the "superlevel", which is a representation of all the other levels that are not treated in detail. */
+          total_nlte_levels++;
+          n_super_levels++;
+        }
+
+        elements[element].ions[ion].nlevels_nlte = count;
+
+        printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element),get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
       }
-
-      if (count < (nlevels - 1))
-      {
-        /* If there are more levels that the ground state + the number of NLTE levels then we need an extra slot to store data for the "superlevel", which is a representation of all the other levels that are not treated in detail. */
-        total_nlte_levels++;
-        n_super_levels++;
-      }
-
-      elements[element].ions[ion].nlevels_nlte = count;
-
-      printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element),get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
     }
   }
-#endif
 
   printout("[input.c]....total nlte levels: %d of which %d are superlevels\n", total_nlte_levels, n_super_levels);
 }
@@ -2525,20 +2526,20 @@ void read_parameterfile(int rank)
   float dum4;
   fscanf(input_file, "%g %g %g", &dum2, &dum3, &dum4); ///components of syn_dir
 
-  double rr;
-  if ((rr =(dum2*dum2) + (dum3*dum3) + (dum4*dum4)) > 1.e-6)
+  double rr = (dum2 * dum2) + (dum3 * dum3) + (dum4 * dum4);
+  if (rr > 1.e-6)
   {
-    syn_dir[0] = dum2 / sqrt( rr );
-    syn_dir[1] = dum3 / sqrt( rr );
-    syn_dir[2] = dum4 / sqrt( rr );
+    syn_dir[0] = dum2 / sqrt(rr);
+    syn_dir[1] = dum3 / sqrt(rr);
+    syn_dir[2] = dum4 / sqrt(rr);
   }
   else
   {
-    double z1 = 1. - (2.*gsl_rng_uniform(rng));
+    double z1 = 1. - (2 * gsl_rng_uniform(rng));
     double z2 = gsl_rng_uniform(rng) * 2.0 * PI;
     syn_dir[2] = z1;
-    syn_dir[0] = sqrt( (1. - (z1*z1))) * cos(z2);
-    syn_dir[1] = sqrt( (1. - (z1*z1))) * sin(z2);
+    syn_dir[0] = sqrt( (1. - (z1 * z1))) * cos(z2);
+    syn_dir[1] = sqrt( (1. - (z1 * z1))) * sin(z2);
   }
 
   /// ensure that this vector is normalised.
@@ -2583,10 +2584,13 @@ void read_parameterfile(int rank)
 
   if (NT_ON)
   {
-    printout("input: Non-thermal ionisation is switched on for this run.\n");
+    if (NT_SOLVE_SPENCERFANO)
+      printout("input: Non-thermal ionisation with the work function approximation is switched on for this run.\n");
+    else
+      printout("input: Non-thermal ionisation with a full Spencer-Fano solution is switched on for this run.\n");
     #ifdef FORCE_LTE
       printout("input: Non-thermal ionisation requires the code to run in non-LTE mode. Remove macro FORCE_LTE and recompile!\n");
-      exit(0);
+      abort();
     #endif
   }
   else
@@ -2594,14 +2598,18 @@ void read_parameterfile(int rank)
 
   if (NO_LUT_PHOTOION)
     printout("Corrphotoioncoeff is calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
+  else
+    printout("Corrphotoioncoeff is calculated from lookup tables (ratecoeff.dat).\n");
 
   if (NO_LUT_BFHEATING)
     printout("bfheating coefficients are calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
+    else
+      printout("bfheating coefficients are calculated from lookup tables (ratecoeff.dat).\n");
 
   if (USE_MULTIBIN_RADFIELD_MODEL)
-    printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n",FIRST_NLTE_RADFIELD_TIMESTEP);
+    printout("The radiation field models is using binned estimators instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
   else
-  printout("The radiation field model is a whole-spectrum fit to a diluted blackbody.\n");
+    printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
 
   /// Set up initial grey approximation?
   fscanf(input_file, "%lg %d", &cell_is_optically_thick, &n_grey_timesteps);
@@ -2616,7 +2624,7 @@ void read_parameterfile(int rank)
   }
   else
   {
-    printout("input: use only %d bf-continua per ion\n",max_bf_continua);
+    printout("input: use only %d bf-continua per ion\n", max_bf_continua);
   }
 
   /// The following parameters affect the DO_EXSPEC mode only /////////////////
@@ -2647,7 +2655,7 @@ void read_parameterfile(int rank)
   /// kpkts live. Parameter two (an int) gives the number of time steps for which we
   /// want to use this approximation
   fscanf(input_file, "%g %d", &kpktdiffusion_timescale, &n_kpktdiffusion_timesteps);
-  printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n",kpktdiffusion_timescale, n_kpktdiffusion_timesteps);
+  printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale, n_kpktdiffusion_timesteps);
 
   fclose(input_file);
 }

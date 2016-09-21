@@ -10,7 +10,7 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  CC = icc
   INCLUDE = -I/usr/local/Cellar/gsl/2.2.1/include -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/opt/gperftools/include
   LIB = -L/usr/local/Cellar/gsl/2.2.1/lib -L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp 
+  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
 
 #in GCC6, -Wmisleading-indentation will be useful
 #also -fopenmp after -I$(INCLUDE)
@@ -230,6 +230,9 @@ sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_
 
 sn3d: clean version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
+
+sn3dmpi: clean version
+		mpicc $(CFLAGS) -DMPI_ON $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
