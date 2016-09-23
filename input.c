@@ -2553,7 +2553,7 @@ void read_parameterfile_vpkt()
     }
 
 
-    // nz_obs_vpkt
+    // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
     for (i=0;i<Nobs;i++) {
 
         fscanf(input_file, "%g", &dum2);
@@ -2571,7 +2571,7 @@ void read_parameterfile_vpkt()
     }
 
 
-    // phiobs
+    // phi to the observer (degrees). A list in the case of many observers
     for (i=0;i<Nobs;i++) {
 
         fscanf(input_file, "%g \n", &dum3);
@@ -2579,7 +2579,7 @@ void read_parameterfile_vpkt()
 
     }
 
-    // time window
+    // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
     fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
 
     if (dum4==1) {
@@ -2609,7 +2609,8 @@ void read_parameterfile_vpkt()
 
     }
 
-    // frequency window
+    // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
+    // followed by a list of ranges (dum6,dum7)
     fscanf(input_file, "%g ", &dum4);
 
     if (dum4==1) {
@@ -2646,26 +2647,28 @@ void read_parameterfile_vpkt()
 
     }
 
-    // Cut for virtual packets??
+    // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
     fscanf(input_file, "%g %lg \n", &dum7, &cell_is_optically_thick_vpkt);
 
     if (dum7!=1) cell_is_optically_thick_vpkt = cell_is_optically_thick ;
 
-    // Maximum optical depth in vpkt.c
+    // Maximum optical depth. If a vpkt reaches dum7 is thrown away
     fscanf(input_file, "%g \n", &dum7);
     tau_max_vpkt = dum7 ;
 
 
-    // Grid map
+    // Produce velocity grid map if dum8=1
     fscanf(input_file, "%d \n", &dum8);
     vgrid_flag = dum8 ;
 
     if (dum8==1) {
-
+        
+        // Specify time range for velocity grid map
         fscanf(input_file, "%g %g \n", &dum9,&dum10);
         tmin_grid = dum9 * DAY;
         tmax_grid = dum10 * DAY;
 
+        // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
         fscanf(input_file, "%g ", &dum9);
         Nrange_grid = dum9 ;
 

@@ -1,4 +1,4 @@
-SHELL = /bin/sh
+open SHELL = /bin/sh
 
 INCLUDE=/usr/local/opt/gsl/include
 LIB=/usr/local/opt/gsl/lib

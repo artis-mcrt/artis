@@ -58,7 +58,7 @@ gather_gamma_light_curve(my_rank)
     {
       /// Read in the next bunch of packets to work on
       //sprintf(filename,"packets%d_%d.tmp",i,0);
-      sprintf(filename,"packets%.2d_%.4d.out",0,i);
+      sprintf(filename,"packets%.2d_%.4d.out",i,0);
       //if ((packets_file = fopen(filename, "rb")) == NULL)
       if ((packets_file = fopen(filename, "r")) == NULL)
       {
