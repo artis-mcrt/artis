@@ -72,7 +72,6 @@ void update_packets(int nts)
         time_of_last_packet_printout = time(NULL);
         printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
       }
-      //if (n == 5000) exit(0);
 
       PKT *restrict pkt_ptr = &pkt[n];
       pkt_ptr->interactions = 0;
@@ -182,7 +181,7 @@ void update_packets(int nts)
         else
         {
           printout("Something gone wrong with decaying pellets. Abort.\n");
-          exit(0);
+          abort();
         }
       }
       else if (pkt_ptr->type == TYPE_GAMMA || pkt_ptr->type == TYPE_RPKT || pkt_ptr->type == TYPE_KPKT)
@@ -196,7 +195,7 @@ void update_packets(int nts)
       else if (pkt_ptr->type != TYPE_ESCAPE)
       {
         printout("Unknown packet type %d %d. Abort.\n", pkt_ptr->type, n);
-        exit(0);
+        abort();
       }
 
       if (debuglevel == 10 || debuglevel == 2) printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",n,pkt_ptr->interactions,nts);
@@ -334,7 +333,7 @@ void update_cell(int cellnumber)
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        double population = calculate_exclevelpop(cellnumber,element,ion,level);
+        const double population = calculate_exclevelpop(cellnumber,element,ion,level);
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
 
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)

@@ -124,7 +124,7 @@ extern inline void set_W(int modelgridindex, double x);
       else if (cell[n].rho_init < 0)
       {
         printout("Error: negative density. Abort.\n");
-        exit(0);
+        abort();
       }
       opcase3_sum += cell[n].kappa_grey*cell[n].rho_init;
     }
@@ -161,7 +161,7 @@ extern inline void set_W(int modelgridindex, double x);
       else
       {
         printout("Unknown opacity case. Abort.\n");
-        exit(0);
+        abort();
       }
     }
     else if (cell[n].rho_init == 0)
@@ -171,7 +171,7 @@ extern inline void set_W(int modelgridindex, double x);
     else if (cell[n].rho_init < 0)
     {
       printout("Error: negative density. Abort.\n");
-      exit(0);
+      abort();
     }
 
     check1 = check1 + (cell[n].kappa_grey  * cell[n].rho_init);
@@ -313,7 +313,7 @@ static void density_1d_read(void)
     if (get_rhoinit(mgi) < 0)
     {
       printout("Error: negative density. Abort.\n");
-      exit(0);
+      abort();
     }
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffe(mgi);
@@ -418,7 +418,7 @@ static void density_1d_read(void)
       if (get_rhoinit(mgi) < 0)
       {
         printout("Error: negative density. Abort.\n");
-        exit(0);
+        abort();
       }
     }
   }
@@ -465,7 +465,7 @@ static void density_1d_read(void)
       else if (get_rhoinit(mgi) < 0.)
       {
         printout("Error: negative density. Abort.\n");
-        exit(0);
+        abort();
       }
       opcase3_sum += get_kappagrey(mgi)*get_rhoinit(mgi);
     }
@@ -477,7 +477,7 @@ static void density_1d_read(void)
     if ((grid_file = fopen("grid.out", "w")) == NULL)
     {
       printf("Cannot open grid file.\n");
-      exit(0);
+      abort();
     }
   }
 
@@ -517,7 +517,7 @@ static void density_1d_read(void)
       else
       {
         printout("Unknown opacity case. Abort.\n");
-        exit(0);
+        abort();
       }
     }
     else if (get_rhoinit(mgi) == 0.)
@@ -527,7 +527,7 @@ static void density_1d_read(void)
     else if (get_rhoinit(mgi) < 0.)
     {
       printout("Error: negative density. Abort.\n");
-      exit(0);
+      abort();
     }
 
     check1 = check1 + (get_kappagrey(mgi)  * get_rhoinit(mgi));
@@ -566,7 +566,7 @@ static void density_1d_read(void)
   else
   {
   printout("Unknown opacity case. Abort.\n");
-  exit(0);
+  abort();
 }
   for (m = 0; m < (npts_model-1); m++)
   {
@@ -590,7 +590,7 @@ static void density_1d_read(void)
   else
   {
   printout("Unknown opacity case. Abort.\n");
-  exit(0);
+  abort();
 }
 }
 }
@@ -608,7 +608,7 @@ static void density_1d_read(void)
   if (cell[n].rho_init < 0)
   {
   printout("Error: negative density. Abort.\n");
-  exit(0);
+  abort();
 }
 
 }
@@ -691,7 +691,7 @@ static void density_1d_read(void)
   if (cell[n].rho_init < 0)
   {
   printout("Error: negative density. Abort.\n");
-  exit(0);
+  abort();
 }
 
 }
@@ -845,7 +845,7 @@ static void density_2d_read(void)
       if (get_rhoinit(mgi) < 0)
       {
         printout("Error: negative density. Abort.\n");
-        exit(0);
+        abort();
       }
     }
   }
@@ -894,7 +894,7 @@ static void density_2d_read(void)
       else if (get_rhoinit(mgi) < 0.)
       {
         printout("Error: negative density. Abort.\n");
-        exit(0);
+        abort();
       }
       opcase3_sum += get_kappagrey(mgi)*get_rhoinit(mgi);
     }
@@ -907,7 +907,7 @@ static void density_2d_read(void)
     if ((grid_file = fopen("grid.out", "w")) == NULL)
     {
       printf("Cannot open grid file.\n");
-      exit(0);
+      abort();
     }
   }
 
@@ -945,7 +945,7 @@ static void density_2d_read(void)
       else
       {
         printout("Unknown opacity case. Abort.\n");
-        exit(0);
+        abort();
       }
     }
     else if (get_rhoinit(mgi) == 0.)
@@ -955,7 +955,7 @@ static void density_2d_read(void)
     else if (get_rhoinit(mgi) < 0.)
     {
       printout("Error: negative density. Abort.\n");
-      exit(0);
+      abort();
     }
 
     check1 = check1 + (get_kappagrey(mgi)  * get_rhoinit(mgi));
@@ -1050,7 +1050,7 @@ static void density_3d_read(void)
       else if (get_rhoinit(mgi) < 0.)
       {
         printout("Error: negative density. Abort.\n");
-        exit(0);
+        abort();
       }
       opcase3_sum += get_kappagrey(mgi)*get_rhoinit(mgi);
     }
@@ -1062,7 +1062,7 @@ static void density_3d_read(void)
     if ((grid_file = fopen("grid.out", "w")) == NULL)
     {
       printf("Cannot open grid file.\n");
-      exit(0);
+      abort();
     }
   }
 
@@ -1102,7 +1102,7 @@ static void density_3d_read(void)
       else
       {
         printout("Unknown opacity case. Abort.\n");
-        exit(0);
+        abort();
       }
     }
     else if (get_rhoinit(mgi) == 0.)
@@ -1112,7 +1112,7 @@ static void density_3d_read(void)
     else if (get_rhoinit(mgi) < 0.)
     {
       printout("Error: negative density. Abort.\n");
-      exit(0);
+      abort();
     }
 
     check1 = check1 + (get_kappagrey(mgi)  * get_rhoinit(mgi));
@@ -1144,7 +1144,7 @@ static void density_3d_read(void)
       else if (cell[n].rho_init < 0)
       {
         printout("Error: negative density. Abort.\n");
-        exit(0);
+        abort();
       }
       opcase3_sum += cell[n].kappa_grey*cell[n].rho_init;
     }
@@ -1187,7 +1187,7 @@ static void density_3d_read(void)
         else
         {
           printout("Unknown opacity case. Abort.\n");
-          exit(0);
+          abort();
         }
       }
       else if (cell[n].rho_init == 0)
@@ -1197,7 +1197,7 @@ static void density_3d_read(void)
       else if (cell[n].rho_init < 0)
       {
         printout("Error: negative density. Abort.\n");
-        exit(0);
+        abort();
       }
 
       check1 = check1 + (cell[n].kappa_grey  * cell[n].rho_init);
@@ -1220,13 +1220,13 @@ void allocate_compositiondata(int modelgridindex)
   if ((modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements*sizeof(compositionlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
-    exit(0);
+    abort();
   }
 
   if ((modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels*sizeof(double))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
-    exit(0);
+    abort();
   }
 
   for (int element = 0; element < total_nlte_levels; element++)
@@ -1246,7 +1246,7 @@ void allocate_compositiondata(int modelgridindex)
     if ((modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) malloc(get_nions(element)*sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
-      exit(0);
+      abort();
     }
     for (int ion_index = 0; ion_index < get_nions(element); ion_index++)
     {
@@ -1256,13 +1256,13 @@ void allocate_compositiondata(int modelgridindex)
     if ((modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element)*sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
-      exit(0);
+      abort();
     }
     /*
     if ((modelgrid[n].composition[element].ltepartfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize lte partfunctlist for element %d in cell %d... abort\n",element,n);
-      exit(0);
+      abort();
     }
     */
   }
@@ -1275,7 +1275,7 @@ void allocate_cooling(int modelgridindex)
   if ((modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(nelements*sizeof(mgicooling_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
-    exit(0);
+    abort();
   }
 
   for (int element = 0; element < nelements; element++)
@@ -1284,7 +1284,7 @@ void allocate_cooling(int modelgridindex)
     if ((modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element)*sizeof(double))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize coolinglist for element %d in cell %d... abort\n",element,modelgridindex);
-      exit(0);
+      abort();
     }
   }
 }
@@ -1378,7 +1378,7 @@ static void abundances_3d_read(void)
   if ((abundance_file = fopen("abundances.txt", "r")) == NULL)
   {
     printout("Cannot open abundances.txt.\n");
-    exit(0);
+    abort();
   }
 
   /// and process through the grid to read in the abundances per cell
@@ -1445,7 +1445,7 @@ static void abundances_1d_read(void)
   if ((abundance_file = fopen("abundances.txt", "r")) == NULL)
   {
     printout("Cannot open abundances.txt.\n");
-    exit(0);
+    abort();
   }
 
   /// and process through the grid to read in the abundances per cell
@@ -1486,7 +1486,7 @@ static void read_grid_restart_data(void)
   if ((gridsave_file = fopen("gridsave.dat", "r")) == NULL)
   {
     printf("[fatal] assign_temperature: Cannot open gridsave.dat.\n");
-    exit(0);
+    abort();
   }
 
   for (int n = 0; n < npts_model; n++)
@@ -1659,7 +1659,7 @@ static int uniform_grid_setup(void)
   if ((cell[n].composition = malloc(nelements*sizeof(compositionlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",n);
-    exit(0);
+    abort();
   }
   for (element = 0; element < nelements; element++)
   {
@@ -1669,17 +1669,17 @@ static int uniform_grid_setup(void)
     if ((cell[n].composition[element].groundlevelpop = malloc(get_nions(element)*sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,n);
-      exit(0);
+      abort();
     }
     if ((cell[n].composition[element].partfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,n);
-      exit(0);
+      abort();
     }
 //     if ((cell[n].composition[element].ltepartfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
 //     {
 //       printout("[fatal] input: not enough memory to initialize lte partfunctlist for element %d in cell %d... abort\n",element,n);
-//       exit(0);
+//       abort();
 //     }
   }
   */
@@ -1697,7 +1697,7 @@ void grid_init(void)
   //if (ngrid > MGRID)
   //{
   //  printout("[fatal] grid_init: Error: too many grid cells. Abort.");
-  //  exit(0);
+  //  abort();
   //}
   for (int n = 0; n <= MMODELGRID; n++)
   {
@@ -1713,7 +1713,7 @@ void grid_init(void)
   else
   {
     printout("[fatal] grid_init: Error: Unknown grid type. Abort.");
-    exit(0);
+    abort();
   }
 
   /// Now set up the density in each cell.
@@ -1740,7 +1740,7 @@ void grid_init(void)
   else
   {
     printout("[fatal] grid_init: Error: Unknown density type. Abort.");
-    exit(0);
+    abort();
   }
 
   /// and assign a temperature to the cells
@@ -1750,7 +1750,7 @@ void grid_init(void)
   /*if ((nonemptycells = malloc(ngrid*sizeof(int))) == NULL)
   {
     printout("[fatal] grid_init: not enough memory to initialize the list of non-empty cells\n");
-    exit(0);
+    abort();
   }
   i = 0;
   for (n = 0; n < ngrid; n++)
@@ -1765,7 +1765,7 @@ void grid_init(void)
   /*  if ((nonemptycells = realloc(nonemptycells, nnonemptycells*sizeof(int))) == NULL)
   {
     printout("[fatal] grid_init: problem during reallocation of list of non-empty cells\n");
-    exit(0);
+    abort();
   }
   */
 }

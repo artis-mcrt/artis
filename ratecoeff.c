@@ -175,7 +175,7 @@ static void write_ratecoeff_dat(void)
   if ((ratecoeff_file = fopen("ratecoeff.dat", "w")) == NULL)
   {
     printout("Cannot open ratecoeff.dat\n");
-    exit(0);
+    abort();
   }
   fprintf(ratecoeff_file,"%32s\n",adatafile_hash);
   fprintf(ratecoeff_file,"%32s\n",compositionfile_hash);
@@ -984,7 +984,7 @@ static double integrand_corrphotoioncoeff_current_radfield(double nu, void *rest
 }
 
 
-static double integrand_bfheating_current_radfield(double nu, void *restrict voidparas)
+static double integrand_bfheating_custom_radfield(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
   const gsl_integral_paras_bfheating *restrict const params = (gsl_integral_paras_bfheating *) voidparas;
@@ -1070,7 +1070,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
   double bfheating = 0.0;
   gsl_function F_bfheating;
-  F_bfheating.function = &integrand_bfheating_current_radfield;
+  F_bfheating.function = &integrand_bfheating_custom_radfield;
   F_bfheating.params = &intparas;
 
   gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler_off();
@@ -1311,19 +1311,19 @@ void check_interpolation(double T_min, double T_max)
   if ((alpha_sp_file = fopen("alpha_sp.out", "w")) == NULL)
   {
     printf("Cannot open alpha_sp.out.\n");
-    exit(0);
+    abort();
   }
   setvbuf(alpha_sp_file, NULL, _IOLBF, 1);
   if ((alpha_st_file = fopen("alpha_st.out", "w")) == NULL)
   {
     printf("Cannot open alpha_st.out.\n");
-    exit(0);
+    abort();
   }
   setvbuf(alpha_st_file, NULL, _IOLBF, 1);
   if ((gamma_file = fopen("gamma.out", "w")) == NULL)
   {
     printf("Cannot open gamma.out.\n");
-    exit(0);
+    abort();
   }
   setvbuf(gamma_file, NULL, _IOLBF, 1);
 
@@ -1396,6 +1396,6 @@ void check_interpolation(double T_min, double T_max)
   fclose(alpha_sp_file);
   fclose(alpha_st_file);
   fclose(gamma_file);
-  exit(0);
+  abort();
 }
 */

@@ -16,8 +16,8 @@
 #define traceemissionregion
 
 #ifdef traceemissionregion
-  #define traceemiss_nulower (CLIGHT / (4450e-8))  // in Angstroms
-  #define traceemiss_nuupper (CLIGHT / (4300e-8))  // in Angstroms
+  #define traceemiss_nulower (CLIGHT / (4550e-8))  // in Angstroms
+  #define traceemiss_nuupper (CLIGHT / (4200e-8))  // in Angstroms
   #define traceemiss_timestepmin 70
   #define traceemiss_timestepmax 90
 
@@ -56,7 +56,7 @@ void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
     if ((spec_file = fopen("spec.out", "r")) == NULL)
     {
       printout("Cannot open spec_file.txt.\n");
-      exit(0);
+      abort();
     }
     fscanf(spec_file, "%g ", &dum1);
 
@@ -83,12 +83,12 @@ void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
   if ((emission_file = fopen("emission.out", "w")) == NULL)
   {
     printf("Cannot open emission file\n");
-    exit(0);
+    abort();
   }
   /// write to file
   if ((spec_file = fopen("spec.out", "w+")) == NULL){
     printout("Cannot open spec_file.txt.\n");
-    exit(0);
+    abort();
   }
   */
 
@@ -135,10 +135,10 @@ static void add_to_spec(const EPKT *pkt_ptr)
   int nproc;
 
   /// Put this into the time grid.
-  double t_arrive = pkt_ptr->arrive_time;
+  const double t_arrive = pkt_ptr->arrive_time;
   if (t_arrive > tmin && t_arrive < tmax)
   {
-    int nt = (log(t_arrive) - log(tmin)) / dlogt;
+    const int nt = (log(t_arrive) - log(tmin)) / dlogt;
     if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
     {
       int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
@@ -291,7 +291,7 @@ void gather_spectrum(int depth)
            traceemiss_totalflux);
 
   // display the top entries of the sorted list
-  int nlines_limited = nlines;
+  const int nlines_limited = nlines;
   if (nlines > 50)
     nlines = 50;
   for (int i = 0; i < nlines_limited; i++)
@@ -302,10 +302,12 @@ void gather_spectrum(int depth)
       const int lineindex = traceemisscontributions[i].lineindex;
       const int element = linelist[lineindex].elementindex;
       const int ion = linelist[lineindex].ionindex;
-      printout("flux %7.2e (%5.1f%%) Z=%d ion_stage %d upperlevel %4d lowerlevel %4d coll_str %g A %8.2e forbidden %d\n",
+      const double linelambda = 1e8 * CLIGHT / linelist[lineindex].nu;
+      printout("flux %7.2e (%5.1f%%) Z=%d ion_stage %d upperlevel %4d lowerlevel %4d coll_str %5.1f A %8.2e forbidden %d lambda %5.1f\n",
                fluxcontrib, 100 * fluxcontrib / traceemiss_totalflux, get_element(element),
                get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
-             linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden);
+               linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden,
+               linelambda);
      }
      else
       break;

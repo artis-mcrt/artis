@@ -359,7 +359,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
   if ((thermal_file = fopen(tempfilename, "w")) == NULL)
   {
     printf("Cannot open %s.\n",tempfilename);
-    exit(0);
+    abort();
   }
   setvbuf(thermal_file, NULL, _IOLBF, 1);
   */
@@ -370,7 +370,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
   //  if ((heating_file = fopen(filename, "w")) == NULL)
   //  {
   //    printf("Cannot open %s.\n",filename);
-  //    exit(0);
+  //    abort();
   //  }
   //  setvbuf(heating_file, NULL, _IOLBF, 1);
   //#endif
@@ -446,14 +446,14 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
     if ((photoion_file = fopen(photoion_filename, "w")) == NULL)
     {
       printf("Cannot open %s.\n",photoion_filename);
-      exit(0);
+      abort();
     }
     setvbuf(photoion_file, NULL, _IOLBF, 1);
     sprintf(bf_filename,"bf_%.2d.out",m);
     if ((bf_file = fopen(bf_filename, "w")) == NULL)
     {
       printf("Cannot open %s.\n",bf_filename);
-      exit(0);
+      abort();
     }
     setvbuf(bf_file, NULL, _IOLBF, 1);
 
@@ -486,7 +486,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
 //     if ((bfcount_file = fopen(Alphaspfilename, "w")) == NULL)
 //     {
 //       printf("Cannot open %s.\n",Alphaspfilename);
-//       exit(0);
+//       abort();
 //     }
 //     setvbuf(bfcount_file, NULL, _IOLBF, 1);
 //   #endif
@@ -880,11 +880,11 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
             if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
               nt_solve_spencerfano(n,nts);
 
-            double nne = get_nne(n);
-            double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
+            const double nne = get_nne(n);
+            const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
 
-            double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init * tratmid;
-            double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
+            const double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init * tratmid;
+            const double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
             if (log_this_cell)
             {
               printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
@@ -1063,8 +1063,7 @@ double calculate_populations(int modelgridindex)
 /// libgsl's root_solvers and calculates the depending level populations.
 {
   /// Initialise the gsl solver
-  const gsl_root_fsolver_type *solvertype;
-  solvertype = gsl_root_fsolver_brent;
+  const gsl_root_fsolver_type *const solvertype = gsl_root_fsolver_brent;
   gsl_root_fsolver *solver;
   solver = gsl_root_fsolver_alloc(solvertype);
 
@@ -1155,7 +1154,7 @@ double calculate_populations(int modelgridindex)
     /// iteration step.
     neutral_flag = true;
     //printout("[warning] calculate_poulations: only neutral ions in cell %d modelgridindex\n",modelgridindex);
-    //exit(0);
+    //abort();
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
 
     for (int element = 0; element < nelements; element++)
@@ -1475,7 +1474,7 @@ void write_grid_restart_data(void)
   if ((gridsave_file = fopen("gridsave.dat", "w")) == NULL)
   {
     printout("Cannot open gridsave.dat.\n");
-    exit(0);
+    abort();
   }
 
   for (int n = 0; n < npts_model; n++)
@@ -1554,32 +1553,32 @@ void write_grid_restart_data(void)
   if (x < cell[n].pos_init[0] * trat)
   {
     printout("Problem with get_cell (1).\n");
-    exit(0);
+    abort();
   }
   if (x > (cell[n].pos_init[0]+wid_init) * trat)
   {
     printout("Problem with get_cell (2).\n");
-    exit(0);
+    abort();
   }
   if (y < cell[n].pos_init[1] * trat)
   {
     printout("Problem with get_cell (3).\n");
-    exit(0);
+    abort();
   }
   if (y > (cell[n].pos_init[1]+wid_init) * trat)
   {
     printout("Problem with get_cell (4).\n");
-    exit(0);
+    abort();
   }
   if (z < cell[n].pos_init[2] * trat)
   {
     printout("Problem with get_cell (5).\n");
-    exit(0);
+    abort();
   }
   if (z > (cell[n].pos_init[2]+wid_init) * trat)
   {
     printout("Problem with get_cell (6).\n");
-    exit(0);
+    abort();
   }
   return(n);
 
@@ -1609,5 +1608,5 @@ void write_grid_restart_data(void)
   printout("xend %g yend %g zend %g\n", (cell[0].pos_init[0]+wid_init) * trat, (cell[0].pos_init[1]+wid_init) * trat,(cell[0].pos_init[2]+wid_init) * trat);
   printout("xwid %g ywid %g zwid %g\n", (wid_init) * trat, (wid_init) * trat,(wid_init) * trat);
 
-  exit(0);
+  abort();
 }*/

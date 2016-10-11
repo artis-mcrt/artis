@@ -53,19 +53,19 @@ void calculate_kpkt_rates(int modelgridindex)
         C_ion = 0.;
         //printout("[debug] do_kpkt: ion %d\n",ion);
         mastate[tid].ion = ion;
-        int nlevels_currention = get_nlevels(element,ion);
+        const int nlevels_currention = get_nlevels(element,ion);
         //ionisinglevels = get_ionisinglevels(element,ion);
-        int ionisinglevels = get_bfcontinua(element,ion);
+        const int ionisinglevels = get_bfcontinua(element,ion);
         //double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
-        double nncurrention = ionstagepop(modelgridindex,element,ion);
+        const double nncurrention = ionstagepop(modelgridindex, element, ion);
 
         /// ff creation of rpkt
         /// -------------------
-        int ioncharge = get_ionstage(element,ion) - 1;
+        const int ioncharge = get_ionstage(element,ion) - 1;
         //printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
         if (ioncharge > 0)
         {
-          C = 1.426e-27 * sqrt(T_e) * pow(ioncharge,2) * nncurrention * nne;
+          C = 1.426e-27 * sqrt(T_e) * pow(ioncharge, 2) * nncurrention * nne;
           //C_ff += C;
           C_ion += C;
           //cellhistory[tid].coolinglist[i].contribution = C;
@@ -247,8 +247,8 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   //double alpha_sp,modified_alpha_sp;
   //double totalcooling;//partialcoolingsum;
 
-  double nne = get_nne(modelgridindex);
-  double T_e = get_Te(modelgridindex);
+  const double nne = get_nne(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
   //double T_R = get_TR(modelgridindex);
   //double W = get_W(modelgridindex);
 
@@ -265,15 +265,15 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   const int nions = get_nions(element);
   mastate[tid].element = element;
   mastate[tid].ion = ion;
-  int nlevels_currention = get_nlevels(element,ion);
+  const int nlevels_currention = get_nlevels(element,ion);
   //ionisinglevels = get_ionisinglevels(element,ion);
-  int ionisinglevels = get_bfcontinua(element,ion);
+  const int ionisinglevels = get_bfcontinua(element,ion);
   //double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
-  double nncurrention = ionstagepop(modelgridindex,element,ion);
+  const double nncurrention = ionstagepop(modelgridindex,element,ion);
 
   /// ff creation of rpkt
   /// -------------------
-  int ioncharge = get_ionstage(element,ion) - 1;
+  const int ioncharge = get_ionstage(element,ion) - 1;
   //printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
   if (ioncharge > 0)
   {
@@ -295,7 +295,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   for (int level = 0; level < nlevels_currention; level++)
   {
     //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
-    double epsilon_current = epsilon(element,ion,level);
+    const double epsilon_current = epsilon(element,ion,level);
     mastate[tid].level = level;
     ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
@@ -307,12 +307,12 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
     for (int ii = 1; ii <= nuptrans; ii++)
     {
-      int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
-      int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+      const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
+      const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
       //printout("    excitation to level %d possible\n",upper);
       //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-      double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon - epsilon_current;
-      double C = nnlevel * col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans) * epsilon_trans;
+      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon - epsilon_current;
+      const double C = nnlevel * col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans) * epsilon_trans;
       //C = 0.;
       //C_exc += C;
       //C_ion += C;
@@ -342,11 +342,12 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       /// here explicitly
       C = 0.0;
       int upper = 0;
-      for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+      const int nphixstargets = get_nphixstargets(element, ion, level);
+      for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
       {
-        upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-        double epsilon_upper = epsilon(element,ion+1,upper);
-        double epsilon_trans = epsilon_upper - epsilon_current;
+        upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+        const double epsilon_upper = epsilon(element, ion + 1, upper);
+        const double epsilon_trans = epsilon_upper - epsilon_current;
         //printout("cooling list: col_ionization\n");
         C += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans)  * epsilon_trans;
       }
@@ -425,23 +426,23 @@ static double sample_planck(double T)
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
 {
-  double nu_peak = 5.879e10 * T;
+  const double nu_peak = 5.879e10 * T;
   if (nu_peak > nu_max_r || nu_peak < nu_min_r)
     printout("[warning] sample_planck: intensity peaks outside frequency range\n");
 
-  double B_peak = planck(nu_peak,T);
+  const double B_peak = planck(nu_peak, T);
 
   double nu;
-  int endloop = 0;
+  bool endloop = false;
   int i = 0;
-  while (endloop == 0)
+  while (!endloop)
   {
     i++;
     double zrand = gsl_rng_uniform(rng);
     double zrand2 = gsl_rng_uniform(rng);
     nu = nu_min_r + zrand * (nu_max_r - nu_min_r);
     if (zrand2 * B_peak <= planck(nu,T))
-      endloop = 1;
+      endloop = true;
     //printout("[debug] sample_planck: planck_sampling %d\n",i);
   }
 
@@ -454,7 +455,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
 {
   //double nne = cell[pkt_ptr->where].nne ;
   int cellindex = pkt_ptr->where;
-  double T_e = get_Te(cell[cellindex].modelgridindex);
+  const double T_e = get_Te(cell[cellindex].modelgridindex);
   double t_current = t1;
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
@@ -510,7 +511,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   gsl_function F_bfcooling;
   //F_bfcooling.function = &bfcooling_integrand_gsl_2;
   F_bfcooling.function = &alpha_sp_E_integrand_gsl;
-  double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
+  const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_lower,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
   double rndcool;
@@ -551,7 +552,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
 
   //double nne = get_nne(modelgridindex);
-  double T_e = get_Te(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
   double deltat = 0.;
   if (nts < n_kpktdiffusion_timesteps) deltat = kpktdiffusion_timescale * time_step[nts].width;
   //double deltat = 1./(nne*1.02e-12*pow(T_e/1e4,0.843));
@@ -581,7 +582,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
     rndcool = zrand * modelgrid[modelgridindex].totalcooling;
     //printout("rndcool %g\n",rndcool);
-    int element,ion;
+    int element;
+    int ion;
     for (element = 0; element < nelements; element++)
     {
       const int nions = get_nions(element);
@@ -716,8 +718,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       /// co-moving frame.
       element = cellhistory[tid].coolinglist[i].element;
       ion = cellhistory[tid].coolinglist[i].ion;
-      int level = cellhistory[tid].coolinglist[i].level;
-      int upper = cellhistory[tid].coolinglist[i].upperlevel;
+      const int level = cellhistory[tid].coolinglist[i].level;
+      const int upper = cellhistory[tid].coolinglist[i].upperlevel;
       nu_threshold = (epsilon(element,ion+1,upper) - epsilon(element,ion,level)) / H;
 
       #ifdef DEBUG_ON
@@ -746,8 +748,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         intparas.T = T_e;
         intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
         F_bfcooling.params = &intparas;
-        double deltanu = nu_threshold * NPHIXSNUINCREMENT * 0.9;
-        double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+        const double deltanu = nu_threshold * NPHIXSNUINCREMENT * 0.9;
+        const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
         gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_bfcooling_coeff, &error);
         bfcooling_coeff = total_bfcooling_coeff;
         int ii;
@@ -834,7 +836,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
       element = cellhistory[tid].coolinglist[i].element;
       ion = cellhistory[tid].coolinglist[i].ion;
-      int upper = cellhistory[tid].coolinglist[i].upperlevel;
+      const int upper = cellhistory[tid].coolinglist[i].upperlevel;
       mastate[tid].element = element;
       mastate[tid].ion = ion;
       mastate[tid].level = upper;
@@ -858,7 +860,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
       element = cellhistory[tid].coolinglist[i].element;
       ion = cellhistory[tid].coolinglist[i].ion+1;
-      int upper = cellhistory[tid].coolinglist[i].upperlevel;
+      const int upper = cellhistory[tid].coolinglist[i].upperlevel;
       mastate[tid].element = element;
       mastate[tid].ion = ion;
       mastate[tid].level = upper;

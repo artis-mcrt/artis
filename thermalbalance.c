@@ -318,8 +318,7 @@ void calculate_heating_rates(int modelgridindex)
        for (int level = 0; level < nlevels_currention; level++)
        {
          const double epsilon_current = epsilon(element,ion,level);
-         mastate[tid].level = level;
-         mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+         const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
         //  mastate[tid].statweight = stat_weight(element,ion,level);
 //
 //
@@ -332,7 +331,7 @@ void calculate_heating_rates(int modelgridindex)
            //double statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
            const int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
            const double epsilon_trans = epsilon_current - epsilon_target;
-           const double C = mastate[tid].nnlevel * col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex) * epsilon_trans;
+           const double C = nnlevel * col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex) * epsilon_trans;
            C_deexc += C;
          }
        }

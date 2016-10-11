@@ -40,7 +40,7 @@ double doppler (const double *restrict dir1, const double *restrict vel)
   if (fabs(fact1 - 1) > 0.5)
   {
     printout("Dopper factor > 1.05?? Abort.\n");
-    exit(0);
+    abort();
   }
   #endif
 

@@ -28,7 +28,7 @@ inline int get_elementindex(int Z)
 
   //printout("[debug] get_elementindex: element Z=%d was not found in atomic data ... skip readin of cross sections for this element\n",Z);
   //printout("[fatal] get_elementindex: element Z=%d was not found in atomic data ... abort\n");
-  //exit(0);
+  //abort();;
   return -100;
 }
 
@@ -87,7 +87,7 @@ inline double stat_weight(int element, int ion, int level)
   if (level > elements[element].ions[ion].nlevels)
   {
     printout("[fatal] stat_weight: level %d greater than nlevels=%d ... abort\n",level,elements[element].ions[ion].nlevels);
-    exit(0);
+    abort();
   }
   #endif
   return elements[element].ions[ion].levels[level].stat_weight;

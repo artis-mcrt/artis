@@ -328,7 +328,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
     printout("vx %g vy %g vy %g \n", vx, vy, vz);
     printout("tstart %g\n", tstart);
 
-    exit(0);
+    abort();
   }
 
 

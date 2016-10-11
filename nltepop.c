@@ -166,6 +166,7 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
   const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bf, popvec);
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_ntcoll_bf, popvec);
+  const double total_rate_in = rad_bb_in_total + coll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
   printout("  TOTAL rates in:             rad_bb_in  %8.2e coll_bb_in  %8.2e rad_bf_in  %8.2e coll_bf_in  %8.2e ntcoll_bf_in  %8.2e\n",
            rad_bb_in_total, coll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total);
 
@@ -174,6 +175,7 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
   const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrix_rad_bf, popvec);
   const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_coll_bf, popvec);
   const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_ntcoll_bf, popvec);
+  const double total_rate_out = rad_bb_out_total + coll_bb_out_total + rad_bf_out_total + coll_bf_out_total + ntcoll_bf_out_total;
   printout("  TOTAL rates out:            rad_bb_out %8.2e coll_bb_out %8.2e rad_bf_out %8.2e coll_bf_out %8.2e ntcoll_bf_out %8.2e\n",
           rad_bb_out_total, coll_bb_out_total, rad_bf_out_total, coll_bf_out_total, ntcoll_bf_out_total);
 
@@ -185,7 +187,7 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
     int level;
     get_ion_level_of_nlte_vector_index(index, element, &ion, &level);
     const int ionstage = get_ionstage(element, ion);
-
+    // in means populating the selected level, out means depopulating the selected level
     const double pop = gsl_vector_get(popvec, index);
     const double rad_bb_in = gsl_matrix_get(rate_matrix_rad_bb, selected_index, index) * pop;
     const double rad_bb_out = gsl_matrix_get(rate_matrix_rad_bb, index, selected_index) * pop_selectedlevel;
@@ -202,10 +204,18 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
     const bool nonzero_rate_out = (fabs(rad_bb_out) > 0. || fabs(coll_bb_out) > 0. || fabs(rad_bf_out) > 0. || fabs(coll_bf_out) > 0. || fabs(ntcoll_bf_out) > 0.);
     if (nonzero_rate_in || nonzero_rate_out)
     {
-      printout("  from ion_stage %d level %4d rad_bb_in  %8.2e coll_bb_in  %8.2e rad_bf_in  %8.2e coll_bf_in  %8.2e ntcoll_bf_in  %8.2e\n",
-               ionstage, level, rad_bb_in, coll_bb_in, rad_bf_in, coll_bf_in, ntcoll_bf_in);
-      printout("    to ion_stage %d level %4d rad_bb_out %8.2e coll_bb_out %8.2e rad_bf_out %8.2e coll_bf_out %8.2e ntcoll_bf_out %8.2e\n",
-                ionstage, level, rad_bb_out, coll_bb_out, rad_bf_out, coll_bf_out, ntcoll_bf_out);
+      const double epsilon_trans = fabs(epsilon(element,ion,level) - epsilon(element,selected_ion,selected_level));
+      const double nu_trans = epsilon_trans / H;
+      const double lambda = 1e8 * CLIGHT / nu_trans; // should be in Angstroms
+      const double level_rate_in = rad_bb_in + coll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in;
+      const double level_rate_out = rad_bb_out + coll_bb_out + rad_bf_out + coll_bf_out + ntcoll_bf_out;
+      const int level_percent_in = round(level_rate_in / total_rate_in * 100);
+      const int level_percent_out = round(level_rate_out / total_rate_out * 100);
+
+      printout("  ion_stage %d level %4d (%3d%% rate in)  rad_bb_in  %8.2e coll_bb_in  %8.2e rad_bf_in  %8.2e coll_bf_in  %8.2e ntcoll_bf_in  %8.2e lambda %5.1f\n",
+               ionstage, level, level_percent_in, rad_bb_in, coll_bb_in, rad_bf_in, coll_bf_in, ntcoll_bf_in, lambda);
+      printout("  ion_stage %d level %4d (%3d%% rate out) rad_bb_out %8.2e coll_bb_out %8.2e rad_bf_out %8.2e coll_bf_out %8.2e ntcoll_bf_out %8.2e lambda %5.1f\n",
+               ionstage, level, level_percent_out, rad_bb_out, coll_bb_out, rad_bf_out, coll_bf_out, ntcoll_bf_out, lambda);
     }
   }
   printout("\n");
@@ -635,9 +645,9 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     {
       // print_level_rates(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      // print_level_rates(modelgridindex, element, 1, 35, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      // print_level_rates(modelgridindex, element, 1, 75, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      // print_level_rates(modelgridindex, element, 1, 76, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 1, 35, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 1, 75, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(modelgridindex, element, 1, 76, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(modelgridindex, element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
@@ -977,7 +987,7 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
             printout("[fatal]: NLTE matrix with non-finite element: %d %d %g\n", level, level_use, rate_matrix[level*nlte_size + level_use]);
             printout("[fatal]: found when handling element %d and ion %d\n", element, ion);
             printout("[fatal]: the relevant ground state populations are %g and %g\n",get_groundlevelpop(modelgridindex,element,ion),get_groundlevelpop(modelgridindex,element,ion+1));
-            exit(0);
+            abort();
           }
         }
         // printout("\n");
@@ -992,7 +1002,7 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
           printout("[fatal]: NLTE balance with non-finite element: %d %g\n", level, balance_vector[level]);
           printout("[fatal]: found when handling element %d and ion %d\n", element, ion);
           printout("[fatal]: the relevant ground state populations are %g and %g\n",get_groundlevelpop(modelgridindex,element,ion), get_groundlevelpop(modelgridindex,element,ion+1));
-          exit(0);
+          abort();
         }
       }
       // printout("\n");
@@ -1162,7 +1172,7 @@ void nltepop_open_file(int my_rank)
   if ((nlte_file = fopen(filename, "w")) == NULL)
   {
     printout("Cannot open %s.\n",filename);
-    exit(0);
+    abort();
   }
 }
 

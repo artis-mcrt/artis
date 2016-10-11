@@ -64,7 +64,7 @@ int pellet_decay(int nts, PKT *pkt_ptr)
   if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
   {
     printout("Not a unit vector. Abort.\n");
-    exit(0);
+    abort();
   }
 
   /* Now need to assign the frequency of the packet in the co-moving frame.*/
@@ -193,7 +193,7 @@ int choose_gamma_ray(PKT *pkt_ptr)
    else
   {
     printout("Unrecognised pellet. Abort.\n");
-    exit(0);
+    abort();
   }
 
   return 0;
@@ -226,7 +226,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     if (sdist > (rmax * t_current/tmin))
     {
       printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
-      exit(0);
+      abort();
     }
 
     if (sdist < 1)
@@ -239,7 +239,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     {
       printout("Heading for inappropriate grid cell. Abort.\n");
       printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-      exit(0);
+      abort();
     }
 
     if (sdist > max_path_step)
@@ -269,7 +269,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     if (edist < 0)
     {
       printout("Negative distance (edist). Abort. \n");
-      exit(0);
+      abort();
     }
 
     /* Find how far it can travel during the time inverval. */
@@ -279,7 +279,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     if (tdist < 0)
     {
       printout("Negative distance (tdist). Abort. \n");
-      exit(0);
+      abort();
     }
 
       //printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
@@ -411,13 +411,13 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
         const int cellindex = pkt_ptr->where;
         printout(" /*cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(cell[cellindex].modelgridindex), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
 
-        exit(0);
+        abort();
       }
     }
     else
     {
       printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-      exit(0);
+      abort();
     }
   }
   return PACKET_SAME;
@@ -458,7 +458,7 @@ double get_gam_freq(const LIST *restrict line_list, int n)
     printout("Unknown line. %d Abort.\n", n);
     printout("line_list->type[n] %d line_list->index[n] %d\n", line_list->type[n], line_list->index[n]);
     printout(" %d %d \n", gam_line_list.type[n], gam_line_list.index[n]);
-    exit(0);
+    abort();
   }
 
   return freq;

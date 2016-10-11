@@ -138,7 +138,7 @@ int main(int argc, char** argv)
       /// Close the current file.
       fclose(packets_file);
     }
-    exit(0);
+    abort();
     */
 
     /// Override some variables with values appropriate for gamma-ray spectra
@@ -155,7 +155,7 @@ int main(int argc, char** argv)
       if ((epkts = malloc((nprocs*npkts)*sizeof(EPKT))) == NULL)
       {
         printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
-        exit(0);
+        abort();
       }
 
       /// Loop over all packets in all the packets files of the simulation and check if
@@ -214,12 +214,12 @@ int main(int argc, char** argv)
       if ((lc_file = fopen("gamma_light_curve.out", "w")) == NULL)
       {
         printout("Cannot open gamma_light_curve.out\n");
-        exit(0);
+        abort();
       }
       if ((spec_file = fopen("gamma_spec.out", "w")) == NULL)
       {
         printout("Cannot open spec.out\n");
-        exit(0);
+        abort();
       }
 
       gather_spectrum(-1);
@@ -238,12 +238,12 @@ int main(int argc, char** argv)
         if ((lc_file = fopen("gamma_light_curve_res.out", "w")) == NULL)
         {
           printout("Cannot open gamma_light_curve_res.out\n");
-          exit(0);
+          abort();
         }
         if ((spec_file = fopen("gamma_spec_res.out", "w")) == NULL)
         {
           printout("Cannot open gamma_spec_res.out\n");
-          exit(0);
+          abort();
         }
         for (i = 0; i < MABINS; i++)
         {

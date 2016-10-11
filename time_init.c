@@ -11,7 +11,7 @@ void time_init(void)
   if (ntstep + 1 > MTSTEP)
   {
     printout("Error: too many timesteps. (%d) Abort.\n", ntstep);
-    exit(0);
+    abort();
   }
 
   /// For logarithmic steps, the logarithmic inverval will be

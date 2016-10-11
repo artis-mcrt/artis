@@ -241,7 +241,7 @@ double phi(int element, int ion, int modelgridindex)
             if (K_nt < 0.0)
               {
                 printout("negative K_nt?\n");
-                exit(0);
+                abort();
               }
 
             if (K_nt > 0.0)
@@ -441,7 +441,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
       //	      printout("element %d ion %d level %d\n", element, ion, level);
       //	      printout("nn %g test %g rho %g\n", nn, test, modelgrid[modelgridindex].rho);
       //	      printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
-      //	      exit(0);
+      //	      abort();
       //	    }
 
       //	}
@@ -654,7 +654,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
         printout("element %d ion %d level %d\n", element, ion, level);
         printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, modelgrid[modelgridindex].rho);
         printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
-        exit(0);
+        abort();
       }
       return nn;
     }
@@ -678,7 +678,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
         printout("element %d ion %d level %d\n", element, ion, level);
         printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, modelgrid[modelgridindex].rho);
         printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
-        exit(0);
+        abort();
       }
       return nn;
     }

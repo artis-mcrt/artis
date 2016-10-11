@@ -40,7 +40,7 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 //#define ESTIMATORS_ON
 
 
-#ifndef MPI_ON
+#if !defined DO_EXSPEC && !defined MPI_ON
   #define MPI_ON
 #endif
 

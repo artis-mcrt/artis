@@ -79,7 +79,7 @@ int write_light_curve(FILE *lc_file, int current_abin)
     if ((lc_file = fopen("light_curve.out", "r")) == NULL)
     {
       printout("Cannot open lc_file.txt.\n");
-      exit(0);
+      abort();
     }
     for (int m = 0; m < ntlcbins; m++)
     {
@@ -114,7 +114,7 @@ int write_light_curve(FILE *lc_file, int current_abin)
 
   if ((lc_file = fopen("light_curve.out", "w+")) == NULL){
     printout("Cannot open lc_file.txt.\n");
-    exit(0);
+    abort();
   }
 
   for (int m = 0; m < ntlcbins; m++)

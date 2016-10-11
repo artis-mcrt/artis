@@ -36,7 +36,7 @@ static FILE *initialise_linestat_file(void)
   if ((linestat_file = fopen("linestat.out", "w")) == NULL)
   {
     printout("Cannot open line_stat.out.\n");
-    exit(0);
+    abort();
   }
 
   for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
@@ -578,7 +578,7 @@ int main(int argc, char** argv)
     if (nthreads > MTHREADS)
     {
       printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n",MTHREADS,nthreads);
-      exit(0);
+      abort();
     }
 #   ifdef _OPENMP
     printout("OpenMP parallelisation active with %d threads\n",nthreads);
@@ -603,22 +603,22 @@ int main(int argc, char** argv)
   if ((mastate = calloc(nthreads,sizeof(mastate_t))) == NULL)
   {
     printout("[fatal] input: error initializing macro atom state variables ... abort\n");
-    exit(0);
+    abort();
   }
   if ((kappa_rpkt_cont = calloc(nthreads,sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
-    exit(0);
+    abort();
   }
   if ((coolingrates = calloc(nthreads,sizeof(coolingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing coolingrates communication variables ... abort\n");
-    exit(0);
+    abort();
   }
   if ((heatingrates = calloc(nthreads,sizeof(heatingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing heatingrates communication variables ... abort\n");
-    exit(0);
+    abort();
   }
 
 
@@ -631,7 +631,7 @@ int main(int argc, char** argv)
   //if ((test = calloc(100, sizeof(float))) == NULL)
   //{
   //  printout("[fatal] input: not enough memory to initialise 100 floats ... abort\n");
-  //  exit(0);
+  //  abort();
   //}
 
   //printout("allocate 2500MB of floats\n");
@@ -657,7 +657,7 @@ int main(int argc, char** argv)
 
   printout("test finished\n");
   MPI_Finalize();
-  exit(0);
+  abort();
   */
 
 
@@ -670,7 +670,7 @@ int main(int argc, char** argv)
   if ((output_file = fopen("output.txt", "w")) == NULL)
   {
   printf("Cannot open output.txt.\n");
-  exit(0);
+  abort();
 }
   /// Makes sure that the output_file is written line-by-line
   setvbuf(output_file, NULL, _IOLBF, 1);
@@ -679,7 +679,7 @@ int main(int argc, char** argv)
   /*
   if ((ldist_file = fopen("ldist.out", "w")) == NULL){
   printout("Cannot open ldist.out.\n");
-  exit(0);
+  abort();
 }
   */
 
@@ -696,11 +696,12 @@ int main(int argc, char** argv)
   if ((estimators_file = fopen(filename, "w")) == NULL)
   {
     printout("Cannot open %s.\n",filename);
-    exit(0);
+    abort();
   }
   //setvbuf(estimators_file, NULL, _IOLBF, 1);
 
-  nltepop_open_file(my_rank);
+  if (NLTE_POPS_ON)
+    nltepop_open_file(my_rank);
 
   printout("Beginning.\n");
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
@@ -734,7 +735,7 @@ int main(int argc, char** argv)
   //abort();
 
   /// As a precaution, explicitly zero all the estimators here
-  zero_estimators();
+  zero_estimators(my_rank);
   printout("time after zero estimators %d\n",time(NULL));
 
   /// Record the chosen syn_dir
@@ -742,7 +743,7 @@ int main(int argc, char** argv)
   if ((syn_file = fopen("syn_dir.txt", "w")) == NULL)
   {
     printout("Cannot open syn_dir.txt.\n");
-    exit(0);
+    abort();
   }
   fprintf(syn_file, "%g %g %g", syn_dir[0], syn_dir[1], syn_dir[2]);
   fclose(syn_file);
@@ -860,7 +861,7 @@ int main(int argc, char** argv)
     do_this_full_loop = 1;
     int nts = itstep;
 
-    radfield_init();
+    radfield_init(my_rank);
     if (NT_ON && NT_SOLVE_SPENCERFANO)
       nonthermal_init(my_rank);
     // Initialise virtual packets file and vspecpol
@@ -869,7 +870,7 @@ int main(int argc, char** argv)
       if ((vspecpol_file = fopen(filename, "w")) == NULL)
       {
         printout("Cannot open %s.\n",filename);
-        exit(0);
+        abort();
       }
 
       if (vgrid_flag == 1)
@@ -878,7 +879,7 @@ int main(int argc, char** argv)
         if ((vpkt_grid_file = fopen(filename, "w")) == NULL)
         {
           printout("Cannot open %s.\n",filename);
-          exit(0);
+          abort();
         }
       }
 
@@ -903,7 +904,7 @@ int main(int argc, char** argv)
         if ((packets_file = fopen(filename, "rb")) == NULL)
         {
           printout("Cannot read temporary packets file %s\n",filename);
-          exit(0);
+          abort();
         }
 
         read_vspecpol(packets_file);
@@ -918,7 +919,7 @@ int main(int argc, char** argv)
           if ((packets_file = fopen(filename, "rb")) == NULL)
           {
             printout("Cannot read temporary vpkt_grid file %s\n",filename);
-            exit(0);
+            abort();
           }
 
           read_vpkt_grid(packets_file);
@@ -994,7 +995,7 @@ int main(int argc, char** argv)
         if ((packets_file = fopen(filename, "rb")) == NULL)
         {
           printout("Cannot read temporary packets file %s\n",filename);
-          exit(0);
+          abort();
         }
         fread(&pkt[0], sizeof(PKT), npkts, packets_file);
         //read_packets(packets_file);
@@ -1093,7 +1094,7 @@ int main(int argc, char** argv)
         /** set all the estimators to zero before moving packets. This is now done
         after update_grid so that, if requires, the gamma-ray heating estimator is known there
         and also the photoion and stimrecomb estimators */
-        zero_estimators();
+        zero_estimators(my_rank);
 
         if ((nts < ftstep) && (do_this_full_loop == 1))
         {
@@ -1112,7 +1113,7 @@ int main(int argc, char** argv)
               if ((packets_file = fopen(filename, "rb")) == NULL)
               {
                 printf("Cannot open packets file\n");
-                exit(0);
+                abort();
               }
               fread(&pkt[0], sizeof(PKT), npkts, packets_file);
               //read_packets(packets_file);
@@ -1136,7 +1137,7 @@ int main(int argc, char** argv)
               if ((packets_file = fopen(filename, "wb")) == NULL)
               {
                 printf("Cannot open packets file\n");
-                exit(0);
+                abort();
               }
               fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
               fclose(packets_file);
@@ -1149,7 +1150,7 @@ int main(int argc, char** argv)
               if ((packets_file = fopen(filename, "w")) == NULL)
               {
                 printf("Cannot open packets file\n");
-                exit(0);
+                abort();
               }
               write_packets(packets_file);
               fclose(packets_file);
@@ -1164,7 +1165,7 @@ int main(int argc, char** argv)
             MPI_Barrier(MPI_COMM_WORLD); ///hold all processes once the packets are updated
           #endif
           printout("time after update packets %d\n",time(NULL));
-          //exit(0);
+          //abort();
 
           #ifdef MPI_ON
             // All the processes have their own versions of the estimators for this time step now.
@@ -1244,7 +1245,7 @@ int main(int argc, char** argv)
           if ((packets_file = fopen(filename, "wb")) == NULL)
           {
             printout("Cannot write to temporary packets file %s\n",filename);
-            exit(0);
+            abort();
           }
 
           fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
@@ -1259,7 +1260,7 @@ int main(int argc, char** argv)
           if ((packets_file = fopen(filename, "wb")) == NULL)
           {
             printout("Cannot write to temporary packets file %s\n",filename);
-            exit(0);
+            abort();
           }
 
           write_vspecpol(packets_file);
@@ -1277,7 +1278,7 @@ int main(int argc, char** argv)
             if ((packets_file = fopen(filename, "wb")) == NULL)
             {
               printout("Cannot write to vpkt_grid file %s\n",filename);
-              exit(0);
+              abort();
             }
 
             write_vpkt_grid(packets_file);
@@ -1296,7 +1297,7 @@ int main(int argc, char** argv)
             if ((packets_file = fopen(filename, "w")) == NULL)
             {
               printf("Cannot write to final packets file %s\n",filename);
-              exit(0);
+              abort();
             }
             write_packets(packets_file);
             fclose(packets_file);
@@ -1322,7 +1323,7 @@ int main(int argc, char** argv)
             if ((packets_file = fopen(filename, "w")) == NULL)
             {
               printf("Cannot open packets file\n");
-              exit(0);
+              abort();
             }
             write_packets(packets_file);
             fclose(packets_file);
@@ -1359,7 +1360,7 @@ int main(int argc, char** argv)
       if ((packets_file = fopen(filename, "w")) == NULL)
       {
         printf("Cannot open packets file\n");
-        exit(0);
+        abort();
       }
       write_finalpackets(packets_file);
       fclose(packets_file);
@@ -1420,7 +1421,7 @@ int main(int argc, char** argv)
       if ((temperature_file = fopen("final_temperatures.dat", "w")) == NULL)
       {
         printf("Cannot open final_temperatures.dat\n");
-        exit(0);
+        abort();
       }
       for (n = 0; n < ngrid; n++)
       {

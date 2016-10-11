@@ -895,6 +895,7 @@ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int 
     if (tau_sobolev > 0)
     {
       const double beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
+      // const double beta = 1.0;
       R = A_ul * beta;
     }
     else

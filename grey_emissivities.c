@@ -159,14 +159,14 @@ int write_grey(int nts)
   if ((dummy = fopen("dummy", "w+")) == NULL)
   {
     printout("Cannot open dummy.\n");
-    exit(0);
+    abort();
   }
   fprintf(dummy, "%d", nts);
   fclose(dummy);
   if ((dummy = fopen("dummy", "r")) == NULL)
   {
     printout("Cannot open dummy.\n");
-    exit(0);
+    abort();
   }
   int i = 0;
   while ((chch=fgetc(dummy)) != EOF)
@@ -185,7 +185,7 @@ int write_grey(int nts)
     if ((est_file = fopen(filename, "r")) == NULL)
     {
       printout("Cannot open grey_est_file.txt.\n");
-      exit(0);
+      abort();
     }
 
     //for (n=0; n < ngrid; n++)
@@ -201,7 +201,7 @@ int write_grey(int nts)
   if ((est_file = fopen(filename, "w+")) == NULL)
   {
     printout("Cannot open grey_est_file.txt.\n");
-    exit(0);
+    abort();
   }
 
   //for (n=0; n < ngrid; n++)
@@ -226,14 +226,14 @@ int write_grey(int nts)
   if ((dummy = fopen("dummy", "w+")) == NULL)
   {
     printout("Cannot open dummy.\n");
-    exit(0);
+    abort();
   }
   fprintf(dummy, "%d", nts);
   fclose(dummy);
   if ((dummy = fopen("dummy", "r")) == NULL)
   {
     printout("Cannot open dummy.\n");
-    exit(0);
+    abort();
   }
   int i = 0;
   while ((chch=fgetc(dummy)) != EOF)
@@ -250,7 +250,7 @@ int write_grey(int nts)
   if ((est_file = fopen(filename, "r")) == NULL)
   {
     printout("Cannot open est_file.txt.\n");
-    exit(0);
+    abort();
   }
 
   //for (n=0; n < ngrid; n++)
@@ -302,7 +302,7 @@ int write_grey(int nts)
   else
   {
     printout("Unknown rlc type. Abort.\n");
-    exit(0);
+    abort();
   }
 
    // Now adding the emissivity term.

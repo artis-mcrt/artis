@@ -8,10 +8,17 @@
 #include "radfield.h"
 #include "sn3d.h"
 
+#define RADFIELDBINCOUNT 64
+
 extern inline double radfield2(double nu, double T, double W);
 
 static const double nu_lower_first_initial = (CLIGHT / (15000e-8)); // in Angstroms
-static const double nu_upper_last_initial = (CLIGHT / (500e-8));  // in Angstroms
+static const double nu_upper_last_initial = (CLIGHT /   (1000e-8));  // in Angstroms
+
+static const double boost_region_nu_lower = (CLIGHT / (2500e-8)); // in Angstroms
+static const double boost_region_nu_upper = (CLIGHT / (2100e-8));  // in Angstroms
+static const double boost_region_factor = 0.2;
+static const bool boost_region_on = true;
 
 static double J_normfactor[MMODELGRID+1];
 
@@ -65,16 +72,17 @@ typedef struct
 static FILE *restrict radfieldfile = NULL;
 
 
-void radfield_init(void)
+void radfield_init(int my_rank)
 {
   if (USE_MULTIBIN_RADFIELD_MODEL && radfield_initialized == false)
   {
-    const char filename[100] = "radfield.out";
+    char filename[100];
+    sprintf(filename,"radfield_%.4d.out", my_rank);
     radfieldfile = fopen(filename, "w");
     if (radfieldfile == NULL)
     {
       printout("Cannot open %s.\n",filename);
-      exit(0);
+      abort();
     }
     fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %11s\n",
             "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
@@ -108,8 +116,8 @@ void radfield_init(void)
             //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
             if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
             {
-              printout("MISSED bf edge at %g Hz (%g eV), nu_lower_first %g Hz, nu_upper_last %g Hz, Z=%d ion_stage %d level %d\n",
-                       nu_edge, H * nu_edge / EV, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
+              printout("Missed bf edge at %11.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e Hz, Z=%d ion_stage %d level %d\n",
+                       nu_edge, H * nu_edge / EV, 1e8 * CLIGHT / nu_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
             }
 
             if ((nu_edge > prev_nu_upper) && (nu_edge < radfieldbins[modelgridindex][binindex].nu_upper))
@@ -148,6 +156,18 @@ static double radfield_get_bin_J(int modelgridindex, int binindex, bool averaged
     return J_current;
   else
     return (J_current + radfieldbins[modelgridindex][binindex].prev_J_normed) / 2;
+}
+
+
+static void radfield_set_bin_J(int modelgridindex, int binindex, double value)
+// get the normalised J_nu, from the current or current and previous timestep (averaged)
+{
+  if (J_normfactor[modelgridindex] <= 0.0)
+  {
+    printout("radfield: Fatal error: radfield_set_bin_J called before J_normfactor set for modelgridindex %d",modelgridindex);
+    abort();
+  }
+  radfieldbins[modelgridindex][binindex].J_raw = value / J_normfactor[modelgridindex];
 }
 
 
@@ -329,7 +349,7 @@ void radfield_close_file(void)
 }
 
 
-void radfield_zero_estimators(int modelgridindex)
+void radfield_zero_estimators(int modelgridindex, int my_rank)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
 {
@@ -338,7 +358,7 @@ void radfield_zero_estimators(int modelgridindex)
   if (USE_MULTIBIN_RADFIELD_MODEL)
   {
     if (!radfield_initialized)
-      radfield_init();
+      radfield_init(my_rank);
 
     printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
@@ -592,6 +612,13 @@ static double delta_nu_bar(double T_R, void *restrict paras)
   }*/
 
   double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
+
+  if (!isfinite(delta_nu_bar))
+  {
+    printout("delta_nu_bar is %g. nu_bar_planck_T_R %g nu_times_planck_numerical %g planck_integral_numerical %g nu_bar_estimator %g\n",
+             nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
+  }
+
   //double delta_nu_bar = nu_bar_planck_T_R / nu_bar_estimator - 1.0;
 
   //printout("delta_nu_bar %g nu_bar_planck %g\n",delta_nu_bar,nu_bar_planck);
@@ -709,14 +736,28 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
              J_bin_sum,J[modelgridindex],100.*J_bin_sum/J[modelgridindex]);
     printout("radfield: Finding parameters for %d bins...\n",RADFIELDBINCOUNT);
 
+    double J_bin_max = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      double J_bin = radfield_get_bin_J(modelgridindex,binindex,true);
-      double nu_lower = radfield_get_bin_nu_lower(modelgridindex,binindex);
-      double nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
+      const double J_bin = radfield_get_bin_J(modelgridindex,binindex,true);
+      if (J_bin > J_bin_max)
+        J_bin_max = J_bin;
+    }
+
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    {
+      const double nu_lower = radfield_get_bin_nu_lower(modelgridindex,binindex);
+      const double nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
+      if (boost_region_on && boost_region_nu_lower < nu_upper && boost_region_nu_upper > nu_lower)
+      {
+        printout("Artificially boosting bin %d\n",binindex);
+        radfield_set_bin_J(modelgridindex, binindex, J_bin_max * boost_region_factor);
+      }
+      const double J_bin = radfield_get_bin_J(modelgridindex,binindex,true);
       double T_R_bin = -1.0;
       double W_bin = -1.0;
       int contribcount = radfield_get_bin_contribcount(modelgridindex,binindex,true);
+
       if (contribcount > 10)
       {
         enum_bin_fit_type bin_fit_type = radfieldbins[modelgridindex][binindex].fit_type;
@@ -730,7 +771,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
 
           if (W_bin > 1e4)
           {
-            printout("W %g too high, try setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",W_bin,binindex,T_R_max,planck_integral_result);
+            printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",W_bin,binindex,T_R_max,planck_integral_result);
             planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
             W_bin = J_bin / planck_integral_result;
             if (W_bin > 1e4)
@@ -741,9 +782,10 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
             }
             else
             {
-              printout("new W is %g. Much better :)\n",W_bin);
+              printout("new W is %g. Continuing with this value\n",W_bin);
             }
           }
+
         }
         else if (bin_fit_type == FIT_CONSTANT)
         {
@@ -887,7 +929,7 @@ void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 
   int sender_nstart;
   int sender_ndo;
-  double nu_lower_first;
+  // double nu_lower_first;
   if (root == my_rank)
   {
     sender_nstart = nstart;

@@ -99,7 +99,7 @@ int write_gamma_light_curve(void)
     if ((lc_gamma_file = fopen("gamma_light_curve.out", "r")) == NULL)
     {
       printout("Cannot open lc_gamma_file.txt.\n");
-      exit(0);
+      abort();
     }
     for (int m = 0; m < ntlcbins; m++)
     {
@@ -128,7 +128,7 @@ int write_gamma_light_curve(void)
   if ((lc_gamma_file = fopen("gamma_light_curve.out", "w+")) == NULL)
   {
     printout("Cannot open lc_gamma_file.txt.\n");
-    exit(0);
+    abort();
   }
 
   for (int m = 0; m < ntlcbins; m++)

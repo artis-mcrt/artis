@@ -114,7 +114,7 @@ static double thomson_angle(void)
   if (fabs(mu) > 1)
   {
     printout("Error in Thomson. Abort.\n");
-    exit(0);
+    abort();
   }
 
   return mu;
@@ -161,7 +161,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
     if ((f < 1) || (f > (2*xx + 1)))
     {
       printout("Compton f out of bounds. Abort.\n");
-      exit(0);
+      abort();
     }
 
     /* Prob of keeping gamma ray is...*/
@@ -208,7 +208,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
       printout("new_dir %g %g %g\n",new_dir[0],new_dir[1],new_dir[2]);
       printout("cmf_dir %g %g %g\n",cmf_dir[0],cmf_dir[1],cmf_dir[2]);
       printout("cos_theta %g",cos_theta);
-      exit(0);
+      abort();
     }
 
     test = dot(new_dir,cmf_dir);
@@ -216,7 +216,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
     if (fabs(test - cos_theta) > 1.e-8)
     {
       printout("Problem with angle - Compton. Abort.\n");
-      exit(0);
+      abort();
     }
 
     /* Now convert back again.*/

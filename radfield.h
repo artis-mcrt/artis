@@ -3,10 +3,8 @@
 
 #include "sn3d.h"
 
-#define RADFIELDBINCOUNT 96
-
-void radfield_zero_estimators(int modelgridindex);
-void radfield_init(void);
+void radfield_zero_estimators(int modelgridindex, int my_rank);
+void radfield_init(int my_rank);
 void radfield_write_to_file(int modelgridindex, int timestep);
 void radfield_close_file(void);
 void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf);

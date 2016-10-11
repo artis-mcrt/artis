@@ -19,7 +19,7 @@ void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, 
   {
     /* Start by sorting out what sort of packet it is.*/
     //printout("start of packet_prop loop %d\n", pkt_ptr->type );
-    int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
+    const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
 
     if (pkt_type == TYPE_GAMMA)
     {
@@ -98,7 +98,7 @@ void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, 
     else
     {
       printout("Unknown packet type - abort\n");
-      exit(0);
+      abort();
     }
 
   }

@@ -12,7 +12,7 @@ double sig_photo_electric(const PKT *pkt_ptr, double t_current)
 
   const int cellindex = pkt_ptr->where;
   const int mgi = cell[cellindex].modelgridindex;
-  double rho = get_rho(mgi);
+  const double rho = get_rho(mgi);
 
   if (gamma_grey < 0)
   {
@@ -35,7 +35,7 @@ double sig_photo_electric(const PKT *pkt_ptr, double t_current)
     sigma_cmf_fe *= rho / MH / 56;
     /* Assumes Z = 28. So mass = 56. */
 
-    double f_fe = get_ffe(mgi);
+    const double f_fe = get_ffe(mgi);
 
     sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
   }
@@ -48,7 +48,7 @@ double sig_photo_electric(const PKT *pkt_ptr, double t_current)
 
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
+  const double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
   return sigma_rf;
 }
 
@@ -71,8 +71,10 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 
     if (pkt_ptr->nu_cmf > 2.46636e+20)
     {
-      double sigma_cmf_si, sigma_cmf_cno, sigma_cmf_fe;
-      double f_fe = get_ffe(mgi);
+      double sigma_cmf_si;
+      double sigma_cmf_cno;
+      double sigma_cmf_fe;
+      const double f_fe = get_ffe(mgi);
       if (pkt_ptr->nu_cmf > 3.61990e+20)
       {
         sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
@@ -139,39 +141,39 @@ void pair_prod(PKT *restrict pkt_ptr, double t_current)
      at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
      immediately and the remainder goes into gamma-rays at 0.511 MeV. */
 
-  double prob_gamma = 1.022 * MEV / (H * pkt_ptr->nu_cmf);
+  const double prob_gamma = 1.022 * MEV / (H * pkt_ptr->nu_cmf);
 
   if (prob_gamma < 0)
   {
     printout("prob_gamma < 0. pair_prod. Abort. %g\n", prob_gamma);
-    exit(0);
+    abort();
   }
 
-  double zrand = gsl_rng_uniform(rng);
+  const double zrand = gsl_rng_uniform(rng);
 
   if (zrand > prob_gamma)
   {
-    /* Convert it to an e-minus packet - actually it could be positron EK too, but this works
-       for consistency with com_sca.*/
+    // Convert it to an e-minus packet - actually it could be positron EK too, but this works
+    // for consistency with com_sca.
     pkt_ptr->type = TYPE_EMINUS;
     pkt_ptr->absorptiontype = -5;
   }
   else
   {
-    /* The energy goes into emission at 511 keV. */
+    // The energy goes into emission at 511 keV.
     pkt_ptr->nu_cmf = 0.511 * MEV / H;
 
-    /*Now let's give the gamma ray a direction. */
+    // Now let's give the gamma ray a direction.
 
-    double zrand2 = gsl_rng_uniform(rng);
-    double zrand3 = gsl_rng_uniform(rng);
+    const double zrand2 = gsl_rng_uniform(rng);
+    const double zrand3 = gsl_rng_uniform(rng);
 
-    /*Assuming isotropic emission in cmf, use these two random numbers to set
-up a cmf direction in cos(theta) and phi. */
+    // Assuming isotropic emission in cmf, use these two random numbers to set
+    // up a cmf direction in cos(theta) and phi.
 
-    double mu = -1 + (2.*zrand2);
-    double phi = zrand3 * 2 * PI;
-    double sintheta = sqrt(1. - (mu * mu));
+    const double mu = -1 + (2.*zrand2);
+    const double phi = zrand3 * 2 * PI;
+    const double sintheta = sqrt(1. - (mu * mu));
 
     pkt_ptr->dir[0] = sintheta * cos(phi);
     pkt_ptr->dir[1] = sintheta * sin(phi);
@@ -182,7 +184,7 @@ up a cmf direction in cos(theta) and phi. */
        rest so need -ve velocity. */
     double vel_vec[3];
     get_velocity(pkt_ptr->pos, vel_vec, (-1*(t_current)));
-    //negative time since we want the backwards transformation here
+    // negative time since we want the backwards transformation here
     double dummy_dir[3];
     angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
 
@@ -190,15 +192,15 @@ up a cmf direction in cos(theta) and phi. */
     pkt_ptr->dir[1] = dummy_dir[1];
     pkt_ptr->dir[2] = dummy_dir[2];
 
-    /*Check unit vector.*/
+    // Check unit vector.
     if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
     {
       printout("Not a unit vector. Abort.\n");
-      exit(0);
+      abort();
     }
 
     get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
-    double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
+    const double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfac;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfac;
 

@@ -89,12 +89,12 @@ void nonthermal_init(int my_rank)
   if (nonthermal_initialized == false)
   {
     char filename[100];
-    sprintf(filename,"nonthermalspec-%d.out", my_rank);
+    sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
     nonthermalfile = fopen(filename, "w");
     if (nonthermalfile == NULL)
     {
       printout("Cannot open %s.\n",filename);
-      exit(0);
+      abort();
     }
     fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
             "timestep","modelgridindex","index","energy_ev","source","y");
@@ -579,7 +579,7 @@ static double get_mean_binding_energy(int element, int ion)
         else
         {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          exit(0);
+          abort();
         }
       }
       else if (ioncharge == 1)
@@ -599,7 +599,7 @@ static double get_mean_binding_energy(int element, int ion)
         else
         {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          exit(0);
+          abort();
         }
       }
       else if (ioncharge > 1)
@@ -615,7 +615,7 @@ static double get_mean_binding_energy(int element, int ion)
         else
         {
           printout("Going beyond the 4s shell in NT calculation. Abort!\n");
-          exit(0);
+          abort();
         }
       }
     }
@@ -659,7 +659,7 @@ static double get_mean_binding_energy(int element, int ion)
             //For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
             //is for 8 (corresponding to that shell) then just use the M4 value
             printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n",element,ion);
-            exit(0);
+            abort();
           }
         }
       }
@@ -1210,7 +1210,7 @@ void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
     sender_nstart = nstart;
     sender_ndo = ndo;
     if (ndo > 0)
-      printout("nonthermal_MPI_Bcast root process %d will send cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+      printout("nonthermal_MPI_Bcast root process %d will broadcast cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
   }
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Bcast(&sender_nstart, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);

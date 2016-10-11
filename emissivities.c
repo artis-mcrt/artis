@@ -39,7 +39,7 @@ motion and the local velocity vectors to the cmf.*/
   if (mu_cmf > 1 || mu_cmf < -1)
   {
     printout("problem with Compton emissivity. Abort.\n");
-    exit(0);
+    abort();
   }
 
   /* Now get the factor by which the frequency will change, f, for going
@@ -152,14 +152,14 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 }
 
 
-void zero_estimators()
+void zero_estimators(int my_rank)
 {
   //for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
     J[n] = 0.;
     #ifndef FORCE_LTE
-      radfield_zero_estimators(n);
+      radfield_zero_estimators(n, my_rank);
       ffheatingestimator[n] = 0.;
       colheatingestimator[n] = 0.;
       /*
@@ -207,12 +207,11 @@ void normalise_estimators(int nts)
 
   for (int m = 0; m < emiss_max; m++)
   {
-    dfreq[m] = get_gam_freq(&gam_line_list, m + emiss_offset+1) -
-      get_gam_freq(&gam_line_list, m + emiss_offset);
+    dfreq[m] = get_gam_freq(&gam_line_list, m + emiss_offset+1) - get_gam_freq(&gam_line_list, m + emiss_offset);
     if (dfreq[m] < 0)
     {
       printout("Problem with normalisation of estimators. Abort.\n");
-      exit(0);
+      abort();
     }
     dfreq[m] = 1./dfreq[m];
   }
@@ -246,14 +245,14 @@ void write_estimators(int nts)
   if ((dummy = fopen("dummy", "w+")) == NULL)
   {
     printout("Cannot open dummy.\n");
-    exit(0);
+    abort();
   }
   fprintf(dummy, "%d", nts);
   fclose(dummy);
   if ((dummy = fopen("dummy", "r")) == NULL)
   {
     printout("Cannot open dummy.\n");
-    exit(0);
+    abort();
   }
   int i = 0;
   while ((chch=fgetc(dummy)) != EOF)
@@ -272,7 +271,7 @@ void write_estimators(int nts)
     if ((est_file = fopen(filename, "rb")) == NULL)
     {
       printout("Cannot open est_file.txt.\n");
-      exit(0);
+      abort();
     }
 
       //for (n=0; n < ngrid; n++)
@@ -292,7 +291,7 @@ void write_estimators(int nts)
   if ((est_file = fopen(filename, "wb+")) == NULL)
   {
     printout("Cannot open est_file.txt.\n");
-    exit(0);
+    abort();
   }
 
 
@@ -343,14 +342,14 @@ bool estim_switch(int nts)
 //   if ((dummy = fopen("dummy", "w+")) == NULL)
 //   {
 //     printout("Cannot open dummy.\n");
-//     exit(0);
+//     abort();
 //   }
 //   fprintf(dummy, "%d", nts);
 //   fclose(dummy);
 //   if ((dummy = fopen("dummy", "r")) == NULL)
 //   {
 //     printout("Cannot open dummy.\n");
-//     exit(0);
+//     abort();
 //   }
 //   int i = 0;
 //   while ((chch=fgetc(dummy)) != EOF)
@@ -367,7 +366,7 @@ bool estim_switch(int nts)
 //   if ((est_file = fopen(filename, "r")) == NULL)
 //   {
 //     printout("Cannot open est_file.txt.\n");
-//     exit(0);
+//     abort();
 //   }
 //
 //
@@ -495,7 +494,7 @@ bool estim_switch(int nts)
 //   else
 //   {
 //     printout("unknown line??\n");
-//     exit(0);
+//     abort();
 //   }
 //
 //   /* I'm changing the next bit here (Jan 06) because I think what was

@@ -130,7 +130,7 @@ int main(int argc, char** argv)
       /// Close the current file.
       fclose(packets_file);
     }
-    exit(0);
+    abort();
     */
 
     for (outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
@@ -143,7 +143,7 @@ int main(int argc, char** argv)
       if ((epkts = (EPKT *) malloc((nprocs*npkts)*sizeof(EPKT))) == NULL)
       {
         printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
-        exit(0);
+        abort();
       }
 
       /// Loop over all packets in all the packets files of the simulation and check if
@@ -207,7 +207,7 @@ int main(int argc, char** argv)
       if ((lc_file = fopen("light_curve.out", "w")) == NULL)
       {
         printout("Cannot open light_curve.out\n");
-        exit(0);
+        abort();
       }
       gather_light_curve();
       write_light_curve(lc_file,-1);
@@ -223,7 +223,7 @@ int main(int argc, char** argv)
         if ((spec_file = fopen(filename, "w")) == NULL)
         {
           printout("Cannot open spec.out\n");
-          exit(0);
+          abort();
         }
 
         sprintf(filename,"emission%d.out",i);
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
         if ((emission_file = fopen(filename, "w")) == NULL)
         {
           printf("Cannot open emission_res.out\n");
-          exit(0);
+          abort();
         }
 
         sprintf(filename,"absorption%d.out",i);
@@ -239,7 +239,7 @@ int main(int argc, char** argv)
         if ((absorption_file = fopen(filename, "w")) == NULL)
         {
           printf("Cannot open absorption_res.out\n");
-          exit(0);
+          abort();
         }
 
         gather_spectrum(i);
@@ -259,12 +259,12 @@ int main(int argc, char** argv)
         if ((lc_file = fopen("light_curve_res.out", "w")) == NULL)
         {
           printout("Cannot open light_curve_res.out\n");
-          exit(0);
+          abort();
         }
         if ((spec_file = fopen("spec_res.out", "w")) == NULL)
         {
           printout("Cannot open spec_res.out\n");
-          exit(0);
+          abort();
         }
         for (i = 0; i < MABINS; i++)
         {
@@ -275,7 +275,7 @@ int main(int argc, char** argv)
             if ((emission_file = fopen(filename, "w")) == NULL)
             {
               printf("Cannot open emission_res.out\n");
-              exit(0);
+              abort();
             }
 
             sprintf(filename,"absorption_res_%.2d.out",i);
@@ -283,7 +283,7 @@ int main(int argc, char** argv)
             if ((absorption_file = fopen(filename, "w")) == NULL)
             {
               printf("Cannot open absorption_res.out\n");
-              exit(0);
+              abort();
             }
           }
           gather_spectrum_res(i);

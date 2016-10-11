@@ -148,7 +148,7 @@ static void setup_packets(int pktnumberoffset)
   if (npkts > MPKTS)
   {
     printout("Too many packets. Abort.\n");
-    exit(0);
+    abort();
   }
 
   int n = 0;
@@ -179,17 +179,17 @@ static void setup_packets(int pktnumberoffset)
     if (cont[mbelow] > (zrand * norm))
     {
       printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand*norm);
-      exit(0);
+      abort();
     }
     if ((cont[mabove] < (zrand * norm)) && (mabove != ngrid))
     {
       printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand*norm);
-      exit(0);
+      abort();
     }
 
     int m = mbelow;
     //printout("chosen cell %d (%d, %g, %g)\n", m, ngrid, zrand, norm);
-    //exit(0);
+    //abort();
     /*
     m=0;
     double runtot = 0.0;
@@ -206,7 +206,7 @@ static void setup_packets(int pktnumberoffset)
     if (m >= ngrid)
     {
       printout("Failed to place pellet. Abort.\n");
-      exit(0);
+      abort();
     }
 
     /// Pellet is in cell m, pointer is grid_ptr.
@@ -247,7 +247,7 @@ void packet_init(int middle_iteration, int my_rank)
     if ((packets_file = fopen(filename, "wb")) == NULL)
     {
       printf("[fatal]: packet_init: Cannot open packets file\n");
-      exit(0);
+      abort();
     }
     fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
     //write_packets(packets_file);
@@ -262,7 +262,7 @@ void packet_init(int middle_iteration, int my_rank)
     if ((packets_file = fopen(filename, "rb")) == NULL)
     {
     printf("Cannot open packets file\n");
-    exit(0);
+    abort();
   }
     fread(&testpkt, sizeof(PKT), npkts, packets_file);
     fclose(packets_file);
@@ -355,7 +355,7 @@ double fni(const CELL *restrict grid_ptr)
   else
   {
     printout("Unknown model_type (packet_init). Abort.\n");
-    exit(0);
+    abort();
   }
 
   return -99;
@@ -384,7 +384,7 @@ double f52fe(const CELL *restrict grid_ptr)
   else
   {
     printout("Unknown model_type (packet_init). Abort.\n");
-    exit(0);
+    abort();
   }
 
   return -99;
@@ -413,7 +413,7 @@ double f48cr(const CELL *restrict grid_ptr)
   else
   {
     printout("Unknown model_type (packet_init). Abort.\n");
-    exit(0);
+    abort();
   }
 
   return -99;

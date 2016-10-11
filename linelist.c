@@ -32,7 +32,7 @@ static void identify_gam_line(int ele_type, int ele_index, double *eret, double 
   else
   {
     printout("Identify_gam_line failed. Abort.\n");
-    exit(0);
+    abort();
   }
 }
 
@@ -122,14 +122,16 @@ void get_gam_ll(void)
   }
 
   FILE *line_list;
-  if ((line_list = fopen("line_list.txt", "w+")) == NULL){
+  if ((line_list = fopen("line_list.txt", "w+")) == NULL)
+  {
     printout("Cannot open line_list.txt.\n");
-    exit(0);
+    abort();
   }
 
   for (int i = 0; i < total_lines; i++)
   {
-    double a, b;
+    double a;
+    double b;
     identify_gam_line(gam_line_list.type[i], gam_line_list.index[i], &a, &b);
     fprintf(line_list, "%d %d %d %g %g \n", i, gam_line_list.type[i], gam_line_list.index[i], a/MEV, b);
   }
