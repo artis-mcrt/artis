@@ -119,7 +119,7 @@ int main(int argc, char** argv)
         /// Read in the next bunch of packets to work on
         //sprintf(filename,"packets%d_%d.tmp",0,i);
         sprintf(filename,"packets%.2d_%.4d.out",0,i);
-        printout("%s, %d %d\n",filename,i,nprocs);
+        printout("reading %s, id %5d of %d procs\n",filename,i,nprocs);
         //if ((packets_file = fopen(filename, "rb")) == NULL)
         FILE *packets_file;
         if ((packets_file = fopen(filename, "r")) == NULL)

@@ -55,6 +55,7 @@ struct nt_solution_struct {
 
 static struct nt_solution_struct nt_solution[MMODELGRID+1];
 
+
 static void read_collion_data(void)
 {
   printout("Reading collisional ionization data...\n");
@@ -67,7 +68,7 @@ static void read_collion_data(void)
   }
 
   fscanf(cifile, "%d", &colliondatacount);
-  printout("Reading %d lines\n", colliondatacount);
+  printout("Reading %d collisional transition rows\n", colliondatacount);
   colliondata = calloc(colliondatacount, sizeof(struct collionrow));
   for (int n = 0; n < colliondatacount; n++)
   {
@@ -110,7 +111,7 @@ void nonthermal_init(int my_rank)
     envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
     sourcevec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
 
-    const int source_spread_pts = ceil(SFPTS / 10);
+    const int source_spread_pts = ceil(SFPTS / 20);
     for (int s = 0; s < SFPTS; s++)
     {
       const double energy_ev = EMIN + s * DELTA_E;
@@ -270,7 +271,7 @@ static double xs_excitation(int lineindex, double epsilon_trans, double energy)
 }
 
 
-static void set_xs_excitation_vector(gsl_vector *xs_excitation_vec, int lineindex, double epsilon_trans)
+static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, int lineindex, double epsilon_trans)
 // excitation cross section in cm^2
 // energies are in erg
 {
@@ -963,6 +964,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
+  // set_nne(modelgridindex, get_tot_nion(modelgridindex)*1.e-2); //TODO: MUST REMOVE
+
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   if (deposition_rate_density_ev < 1e-2)
   {
@@ -1036,7 +1039,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
           if (epsilon_trans / EV < E_0 || E_0 < 0.)
             E_0 = epsilon_trans / EV;
 
-          set_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans);
+          get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans);
           gsl_vector_scale(vec_xs_excitation_nnion_deltae, nnion * DELTA_E);
 
           for (int i = 0; i < SFPTS; i++)

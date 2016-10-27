@@ -120,7 +120,7 @@ void move_pkt(PKT *restrict pkt_ptr, double distance, double time)
   /// But need to update the co-moving ones.
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, time);
-  double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
+  const double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfac;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfac;
 

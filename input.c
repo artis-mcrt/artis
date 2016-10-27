@@ -44,7 +44,11 @@ static void read_phixs_data(void)
 
   fscanf(phixsdata,"%d\n",&NPHIXSPOINTS);
   fscanf(phixsdata,"%lg\n",&NPHIXSNUINCREMENT);
-  int Z,upperion,upperlevel,lowerion,lowerlevel;
+  int Z;
+  int upperion;
+  int upperlevel;
+  int lowerion;
+  int lowerlevel;
   while (fscanf(phixsdata,"%d %d %d %d %d\n",&Z,&upperion,&upperlevel,&lowerion,&lowerlevel) != EOF)
   {
     bool skip_this_phixs_table = false;
@@ -57,7 +61,7 @@ static void read_phixs_data(void)
     {
       /// translate readin ionstages to ion indices
       //printout("[debug] element %d, lowermost_ionstage %d\n",element,elements[element].ions[0].ionstage);
-      int lowermost_ionstage = elements[element].ions[0].ionstage;
+      const int lowermost_ionstage = elements[element].ions[0].ionstage;
       upperion -= lowermost_ionstage;
       upperlevel--;
       lowerion -= lowermost_ionstage;
@@ -693,14 +697,14 @@ static void read_unprocessed_atomicdata(void)
             else
             {
               // This is a new branch to deal with lines that have different types of transition. It should trip after a transition is already known.
-              int linelistindex = transitions[level].to[level-targetlevel-1];
-              double A_ul = transitiontable[ii].A;
-              double coll_str = transitiontable[ii].coll_str;
+              const int linelistindex = transitions[level].to[level-targetlevel-1];
+              const double A_ul = transitiontable[ii].A;
+              const double coll_str = transitiontable[ii].coll_str;
               //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
-              double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
-              double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
-              double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI,2)) * A_ul;
+              const double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
+              const double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
+              const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI,2)) * A_ul;
               //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
               //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
@@ -786,7 +790,6 @@ static void read_unprocessed_atomicdata(void)
   printout("coolingcheck %d\n",coolingcheck);
 
 
-
   ///debug output
   /*
   FILE *linelist_file;
@@ -800,9 +803,8 @@ static void read_unprocessed_atomicdata(void)
   //abort();
   */
 
-  ///then sort the linelist by decreasing frequency
+  /// then sort the linelist by decreasing frequency
   qsort(linelist,nlines,sizeof(linelist_entry),compare_linelistentry);
-
 
   /// Save sorted linelist into a file
   // if (rank_global == 0)
@@ -831,10 +833,10 @@ static void read_unprocessed_atomicdata(void)
   printout("establish connection between transitions and sorted linelist\n");
   for (int i = 0; i < nlines; i++)
   {
-    int element = linelist[i].elementindex;
-    int ion = linelist[i].ionindex;
-    int lowerlevel = linelist[i].lowerlevelindex;
-    int upperlevel = linelist[i].upperlevelindex;
+    const int element = linelist[i].elementindex;
+    const int ion = linelist[i].ionindex;
+    const int lowerlevel = linelist[i].lowerlevelindex;
+    const int upperlevel = linelist[i].upperlevelindex;
     for (int ii = 1; ii <= elements[element].ions[ion].levels[upperlevel].downtrans[0].targetlevel; ii++)
     {
       if (elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevel == lowerlevel)
@@ -1609,9 +1611,7 @@ static void read_atomicdata(void)
   //}
   last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
 
-
   printout("included ions %d\n",includedions);
-
 
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   ///======================================================
@@ -1636,7 +1636,6 @@ static void read_atomicdata(void)
   setup_coolinglist();
 
   setup_cellhistory();
-
 
   /// Printout some information about the read-in model atom
   ///======================================================
@@ -2105,10 +2104,12 @@ static void read_binding_energies(void)
   for (int index1 = 0; index1 < dum2; index1++)
   {
     float dum[10];
-    fscanf(binding, "%g %g %g %g %g %g %g %g %g %g", &dum[0],&dum[1], &dum[2],&dum[3],&dum[4],&dum[5],&dum[6],&dum[7],&dum[8],&dum[9]);
+    fscanf(binding, "%g %g %g %g %g %g %g %g %g %g",
+           &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9]);
+
     for (int index2 = 0; index2 < 10; index2++)
     {
-      electron_binding[index1][index2] = dum[index2]*EV;
+      electron_binding[index1][index2] = dum[index2] * EV;
     }
   }
 
@@ -2188,9 +2189,7 @@ int input(int rank)
   do_r_lc = false;    /// default to no lc = gamma-ray spectrum
   do_rlc_est = 0; /// ^^
 
-
   nfake_gam = 1; ///# of fake gamma ray lines for syn
-
 
   /// Read in parameters from input.txt
   ///======================================================
@@ -2335,8 +2334,8 @@ int input(int rank)
 
   /// Now that the list exists use it to find values for spectral synthesis
   /// stuff.
-  int lindex_max = get_nul(nusyn_max);
-  int lindex_min = get_nul(nusyn_min);
+  const int lindex_max = get_nul(nusyn_max);
+  const int lindex_min = get_nul(nusyn_min);
   printout("lindex_max %d, lindex_min %d\n", lindex_max, lindex_min);
 
   emiss_offset = lindex_min;
@@ -2448,19 +2447,19 @@ void read_parameterfile(int rank)
     }
   #endif
 
-
   fscanf(input_file, "%d", &dum1); ///number of time steps
   ntstep = dum1;
   int dum5;
+
   fscanf(input_file, "%d %d", &dum1, &dum5); ///number of start and end time step
   itstep = dum1;
   ftstep = dum5;
   float dum2, dum3;
+
   fscanf(input_file, "%g %g", &dum2, &dum3); ///start and end times
   tmin = dum2 * DAY;
   tmax = dum3 * DAY;
   //tlimit = dum4 * DAY;
-
 
   fscanf(input_file, "%g %g", &dum2, &dum3);
   nusyn_min = dum2 * MEV / H; ///lowest frequency to synthesise
@@ -2468,7 +2467,8 @@ void read_parameterfile(int rank)
 
   fscanf(input_file, "%d", &dum1); ///number of times for synthesis
   nsyn_time = dum1;
-  fscanf(input_file, "%g %g", &dum2, &dum3);///start and end times for synthesis
+
+  fscanf(input_file, "%g %g", &dum2, &dum3); ///start and end times for synthesis
   for (int i = 0; i < nsyn_time; i++)
   {
     time_syn[i] = exp(log(dum2) + (dum3*i)) * DAY;
@@ -2527,7 +2527,8 @@ void read_parameterfile(int rank)
   float dum4;
   fscanf(input_file, "%g %g %g", &dum2, &dum3, &dum4); ///components of syn_dir
 
-  double rr = (dum2 * dum2) + (dum3 * dum3) + (dum4 * dum4);
+  const double rr = (dum2 * dum2) + (dum3 * dum3) + (dum4 * dum4);
+  /// ensure that this vector is normalised.
   if (rr > 1.e-6)
   {
     syn_dir[0] = dum2 / sqrt(rr);
@@ -2536,14 +2537,12 @@ void read_parameterfile(int rank)
   }
   else
   {
-    double z1 = 1. - (2 * gsl_rng_uniform(rng));
-    double z2 = gsl_rng_uniform(rng) * 2.0 * PI;
+    const double z1 = 1. - (2 * gsl_rng_uniform(rng));
+    const double z2 = gsl_rng_uniform(rng) * 2.0 * PI;
     syn_dir[2] = z1;
     syn_dir[0] = sqrt( (1. - (z1 * z1))) * cos(z2);
     syn_dir[1] = sqrt( (1. - (z1 * z1))) * sin(z2);
   }
-
-  /// ensure that this vector is normalised.
 
   fscanf(input_file, "%d", &dum1); ///opacity choice
   opacity_case = dum1;
@@ -2572,7 +2571,6 @@ void read_parameterfile(int rank)
   fscanf(input_file, "%g", &dum2); ///free parameter for calculation of rho_crit
   nu_rfcut = CLIGHT/(dum2*1e-8);
   printout("input: nu_rfcut %g\n",nu_rfcut);
-
 
   /// Sets the number of initial LTE timesteps for NLTE runs
   fscanf(input_file, "%d", &n_lte_timesteps);

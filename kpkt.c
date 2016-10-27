@@ -21,8 +21,8 @@ void calculate_kpkt_rates(int modelgridindex)
   double C_ion;
   //double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
-  double nne = get_nne(modelgridindex);
-  double T_e = get_Te(modelgridindex);
+  const double nne = get_nne(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
   //double T_R = get_TR(modelgridindex);
   //double W = get_W(modelgridindex);
   //if (!SILENT) printout("[info] kpkt_cuts: sampling cell %d, T_e %g, T_R %g, W %g, nne %g\n",modelgridindex,T_e,T_R,W,nne);
@@ -82,7 +82,7 @@ void calculate_kpkt_rates(int modelgridindex)
         for (int level = 0; level < nlevels_currention; level++)
         {
           //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
-          double epsilon_current = epsilon(element,ion,level);
+          const double epsilon_current = epsilon(element,ion,level);
           mastate[tid].level = level;
           ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
@@ -91,14 +91,14 @@ void calculate_kpkt_rates(int modelgridindex)
 
           /// excitation to same ionization stage
           /// -----------------------------------
-          int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+          const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
           for (int ii = 1; ii <= nuptrans; ii++)
           {
             // int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
-            int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+            const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
             //printout("    excitation to level %d possible\n",upper);
             //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-            double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon - epsilon_current;
+            const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon - epsilon_current;
             C = nnlevel * col_excitation_ratecoeff(modelgridindex, lineindex, epsilon_trans) * epsilon_trans;
             //C = 0.;
             //C_exc += C;
@@ -126,9 +126,9 @@ void calculate_kpkt_rates(int modelgridindex)
             C = 0.0;
             for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
-              int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-              double epsilon_upper = epsilon(element,ion+1,upper);
-              double epsilon_trans = epsilon_upper - epsilon_current;
+              const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+              const double epsilon_upper = epsilon(element,ion+1,upper);
+              const double epsilon_trans = epsilon_upper - epsilon_current;
               //printout("cooling list: col_ionization\n");
               C += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
             }
@@ -418,7 +418,7 @@ static double planck(double nu, double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
 {
-  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / (expm1(HOVERKB*nu/T));
+  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / expm1(HOVERKB*nu/T);
 }
 
 
@@ -518,7 +518,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   double oldcoolingsum;
 
   const int cellindex = pkt_ptr->where;
-  int modelgridindex = cell[cellindex].modelgridindex;
+  const int modelgridindex = cell[cellindex].modelgridindex;
 
   /// Instead of doing the following, it is now made sure that kpkts in optically
   /// thick cells are treated by do_kpkt_bb in packet_prop

@@ -13,35 +13,36 @@
 
 int pellet_decay(int nts, PKT *pkt_ptr)
 {
-  double dummy_dir[3], vel_vec[3];
+  double dummy_dir[3];
+  double vel_vec[3];
 
-  /*Subroutine to convert a pellet to a gamma ray. */
-  /*nts defines the time step we are in. pkt_ptr is a pointer to the packet
-  that is decaying. */
-  /* Record decay. */
+  // Subroutine to convert a pellet to a gamma ray.
+  // nts defines the time step we are in. pkt_ptr is a pointer to the packet
+  // that is decaying.
+  // Record decay.
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
   time_step[nts].pellet_decays++;
 
-  /*Start by getting the position of the pellet at the point of decay. Pellet
-  is moving with the matter.*/
+  // Start by getting the position of the pellet at the point of decay. Pellet
+  // is moving with the matter.
 
   pkt_ptr->pos[0] = pkt_ptr->pos[0] * pkt_ptr->tdecay / time_step[nts].start;
   pkt_ptr->pos[1] = pkt_ptr->pos[1] * pkt_ptr->tdecay / time_step[nts].start;
   pkt_ptr->pos[2] = pkt_ptr->pos[2] * pkt_ptr->tdecay / time_step[nts].start;
 
-  /*Now let's give the gamma ray a direction. */
+  // Now let's give the gamma ray a direction.
 
-  double zrand = gsl_rng_uniform(rng);
-  double zrand2 = gsl_rng_uniform(rng);
+  const double zrand = gsl_rng_uniform(rng);
+  const double zrand2 = gsl_rng_uniform(rng);
 
-  /*Assuming isotropic emission in cmf, use these two random numbers to set
-  up a cmf direction in cos(theta) and phi. */
+  // Assuming isotropic emission in cmf, use these two random numbers to set
+  // up a cmf direction in cos(theta) and phi.
 
-  double mu = -1 + (2.*zrand);
-  double phi = zrand2 * 2 * PI;
-  double sintheta = sqrt(1. - (mu * mu));
+  const double mu = -1 + (2.*zrand);
+  const double phi = zrand2 * 2 * PI;
+  const double sintheta = sqrt(1. - (mu * mu));
 
   pkt_ptr->dir[0] = sintheta * cos(phi);
   pkt_ptr->dir[1] = sintheta * sin(phi);
@@ -110,7 +111,7 @@ int choose_gamma_ray(PKT *pkt_ptr)
   {
     int n = 0;
     double runtot = 0.0;
-    double zrand = gsl_rng_uniform(rng);
+    const double zrand = gsl_rng_uniform(rng);
     while (zrand > runtot)
     {
       runtot += nickel_spec.probability[n] * nickel_spec.energy[n] / ENICKEL;
@@ -131,7 +132,7 @@ int choose_gamma_ray(PKT *pkt_ptr)
   {
     int n = 0;
     double runtot = 0.0;
-    double zrand = gsl_rng_uniform(rng);
+    const double zrand = gsl_rng_uniform(rng);
     while (zrand > runtot)
     {
       runtot += cobalt_spec.probability[n] * cobalt_spec.energy[n] / ECOBALT_GAMMA;
@@ -152,7 +153,7 @@ int choose_gamma_ray(PKT *pkt_ptr)
   {
     int n = 0;
     double runtot = 0.0;
-    double zrand = gsl_rng_uniform(rng);
+    const double zrand = gsl_rng_uniform(rng);
     while (zrand > runtot)
     {
       runtot += cr48_spec.probability[n] * cr48_spec.energy[n] / E48CR;
@@ -173,7 +174,7 @@ int choose_gamma_ray(PKT *pkt_ptr)
   {
     int n = 0;
     double runtot = 0.0;
-    double zrand = gsl_rng_uniform(rng);
+    const double zrand = gsl_rng_uniform(rng);
     while (zrand > runtot)
     {
       runtot += v48_spec.probability[n] * v48_spec.energy[n] / E48V;
@@ -190,7 +191,7 @@ int choose_gamma_ray(PKT *pkt_ptr)
       pkt_ptr->nu_cmf = v48_spec.energy[n] / H;
     }
   }
-   else
+  else
   {
     printout("Unrecognised pellet. Abort.\n");
     abort();
@@ -210,15 +211,15 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
   bool end_packet = false; //tells us when to stop working on this packet
   while (!end_packet)
   {
-    /* Assign optical depth to next physical event. And start counter of
-    optical depth for this path.*/
+    // Assign optical depth to next physical event. And start counter of
+    // optical depth for this path.
     double zrand = gsl_rng_uniform(rng);
-    double tau_next = -1. * log(zrand);
-    double tau_current = 0.0;
+    const double tau_next = -1. * log(zrand);
+    const double tau_current = 0.0;
 
-      /* Start by finding the distance to the crossing of the grid cell
-    boundaries. sdist is the boundary distance and snext is the
-    grid cell into which we pass.*/
+    // Start by finding the distance to the crossing of the grid cell
+    // boundaries. sdist is the boundary distance and snext is the
+    // grid cell into which we pass.
 
     int snext;
     double sdist = boundary_cross(pkt_ptr, t_current, &snext);
@@ -258,11 +259,11 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       kap_compton = sig_comp(pkt_ptr,t_current);
     }
 
-    double kap_photo_electric = sig_photo_electric(pkt_ptr, t_current);
-    double kap_pair_prod = sig_pair_prod(pkt_ptr, t_current);
-    double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
+    const double kap_photo_electric = sig_photo_electric(pkt_ptr, t_current);
+    const double kap_pair_prod = sig_pair_prod(pkt_ptr, t_current);
+    const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
 
-    /* So distance before physical event is...*/
+    // So distance before physical event is...
 
     double edist = (tau_next - tau_current) / kap_tot;
 
@@ -272,7 +273,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       abort();
     }
 
-    /* Find how far it can travel during the time inverval. */
+    // Find how far it can travel during the time inverval.
 
     double tdist = (t2 - t_current) * CLIGHT_PROP;
 
@@ -282,7 +283,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       abort();
     }
 
-      //printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
+    //printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
 
     if ((sdist < tdist) && (sdist < edist))
     {
@@ -290,7 +291,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       t_current += sdist / CLIGHT_PROP;
       move_pkt(pkt_ptr,sdist,t_current);
 
-      /* Move it into the new cell. */
+      // Move it into the new cell.
       if (kap_tot > 0)
       {
         if (do_comp_est)
@@ -318,7 +319,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     }
     else if ((tdist < sdist) && (tdist < edist))
     {
-      /* Doesn't reach boundary. */
+      // Doesn't reach boundary.
       tdist = tdist / 2.;
       t_current += tdist  / CLIGHT_PROP;
       move_pkt(pkt_ptr,tdist,t_current);
@@ -369,21 +370,21 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       move_pkt(pkt_ptr,edist,t_current);
       edist = edist * 2.;
 
-      /* event occurs. Choose which event and call the appropriate subroutine.*/
+      // event occurs. Choose which event and call the appropriate subroutine.
       zrand = gsl_rng_uniform(rng);
       if (kap_compton > (zrand*kap_tot))
       {
-        /* Compton scattering. */
+        // Compton scattering.
         com_sca(pkt_ptr,t_current);
         if (pkt_ptr->type != TYPE_GAMMA)
         {
-          /* It's not a gamma ray any more - return.*/
+          // It's not a gamma ray any more - return.
           return t_current;
         }
       }
       else if ((kap_compton + kap_photo_electric) > (zrand*kap_tot))
       {
-        /* Photo electric effect - makes it a k-packet for sure.*/
+        // Photo electric effect - makes it a k-packet for sure.
         pkt_ptr->type = TYPE_KPKT;
         pkt_ptr->absorptiontype = -4;
         #ifndef FORCE_LTE
@@ -397,11 +398,11 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       }
       else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand*kap_tot))
       {
-        /*It's a pair production */
+        // It's a pair production
         pair_prod(pkt_ptr,t_current);
         if (pkt_ptr->type != TYPE_GAMMA)
         {
-          /* It's not a gamma ray any more - return.*/
+          // It's not a gamma ray any more - return.
           return t_current;
         }
       }
@@ -432,7 +433,7 @@ double get_gam_freq(const LIST *restrict line_list, int n)
   {
     return 0.0;
   }
-  /* returns the frequency of line n */
+  // returns the frequency of line n
   else if (line_list->type[n] == NI_GAM_LINE_ID)
   {
     freq = nickel_spec.energy[line_list->index[n]] / H;
@@ -467,16 +468,16 @@ double get_gam_freq(const LIST *restrict line_list, int n)
 
 int get_nul(double freq)
 {
-  double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
-  double freq_min = get_gam_freq(&gam_line_list, 0);
+  const double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
+  const double freq_min = get_gam_freq(&gam_line_list, 0);
 
   if (freq > freq_max)
   {
-    return(gam_line_list.total-1);
+    return (gam_line_list.total-1);
   }
   else if (freq < freq_min)
   {
-    return(RED_OF_LIST);
+    return RED_OF_LIST;
   }
   else
   {
@@ -485,8 +486,8 @@ int get_nul(double freq)
 
     while (too_high != too_low + 1)
   	{
-  	  int try = (too_high + too_low)/2;
-  	  double freq_try = get_gam_freq(&gam_line_list, try);
+  	  const int try = (too_high + too_low)/2;
+  	  const double freq_try = get_gam_freq(&gam_line_list, try);
   	  if (freq_try >= freq)
 	    {
 	      too_high = try;

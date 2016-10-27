@@ -17,20 +17,20 @@ double nne_solution_f(double x, void *restrict paras)
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)
 {
-  int n = ((nne_solution_paras *) paras)->cellnumber;
-  double rho = modelgrid[n].rho;
+  const int n = ((nne_solution_paras *) paras)->cellnumber;
+  const double rho = modelgrid[n].rho;
 
   double outersum = 0.;
   //printout("debug nelements %d =========================\n",nelements);
   for (int element = 0; element < nelements; element++)
   {
-    double abundance = modelgrid[n].composition[element].abundance;
+    const double abundance = modelgrid[n].composition[element].abundance;
     if (abundance > 0)
     {
       double innersum = 0.;
       //printout("debug get_nions (element %d) %d =========================\n",element,get_nions(element));
       //uppermost_ion = elements[element].uppermost_ion;
-      int uppermost_ion = elements_uppermost_ion[tid][element];
+      const int uppermost_ion = elements_uppermost_ion[tid][element];
       /*
       #ifdef FORCE_LTE
         uppermost_ion = get_nions(element)-1;
@@ -69,7 +69,7 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
   //const int nions = get_nions(element);
 
   //int uppermost_ion = elements[element].uppermost_ion;
-  int uppermost_ion = elements_uppermost_ion[tid][element];
+  const int uppermost_ion = elements_uppermost_ion[tid][element];
   /*#ifdef FORCE_LTE
     uppermost_ion = get_nions(element)-1;
   #else
@@ -127,9 +127,9 @@ double phi(int element, int ion, int modelgridindex)
   //int element_in, ion_in, nions_in;
   //double rate_use;
 
-  double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
+  const double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
-  double T_e = get_Te(modelgridindex);
+  const double T_e = get_Te(modelgridindex);
   //double T_R = get_TR(modelgridindex);
 
   //double W = cell[cellnumber].W;
@@ -143,7 +143,7 @@ double phi(int element, int ion, int modelgridindex)
   //phi = 1./W * 1./(zeta+W*(1-zeta)) * sqrt(T_R/T_e) * partfunct_ratio * SAHACONST * pow(T_R,-1.5) * exp(ionpot/KB/T_R);
 
   /// Newest ionisation formula
-  double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion]/modelgrid[modelgridindex].composition[element].partfunct[ion+1];
+  const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion]/modelgrid[modelgridindex].composition[element].partfunct[ion+1];
   #ifdef FORCE_LTE
     phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
   #else
@@ -160,7 +160,7 @@ double phi(int element, int ion, int modelgridindex)
 // else
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
-      double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]; //try setting to zero
+      const double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]; //try setting to zero
       if (Gamma == 0. && (!NT_ON || (rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.)))
       {
         printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
@@ -201,7 +201,7 @@ double phi(int element, int ion, int modelgridindex)
 
 	  //	}
 
-      double recomb_total = Alpha_sp + Alpha_st + Col_rec;
+      const double recomb_total = Alpha_sp + Alpha_st + Col_rec;
 
       /* NT TEST LINES */
       double Y_nt = 0.0;
@@ -419,7 +419,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   {*/
     for (int level = 1; level < nlevels; level++)
     {
-      double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / get_groundlevelpop(modelgridindex,element,ion);//*stat_weight(element,ion,0);
+      const double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / get_groundlevelpop(modelgridindex,element,ion);//*stat_weight(element,ion,0);
 
       //if (NLTE_POPS_ON)
       //{
@@ -499,15 +499,16 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
   //if (nn < MINPOP) nn = MINPOP;
   //return nn;
 
-  double nn = modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
+  const double nn = modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
   if (nn < MINPOP)
   {
     if (get_abundance(modelgridindex,element) > 0)
-      nn = MINPOP;
+      return MINPOP;
     else
-      nn = 0.;
+      return 0.;
   }
-  return nn;
+  else
+    return nn;
 }
 
 
@@ -571,12 +572,12 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
 {
   double nn;
 
-  double T_exc = get_TJ(modelgridindex);
-  double W = 1.;
+  const double T_exc = get_TJ(modelgridindex);
+  const double W = 1.;
 
-  double E_level = epsilon(element,ion,level);
-  double E_ground = epsilon(element,ion,0);
-  double nnground = get_groundlevelpop(modelgridindex,element,ion);
+  const double E_level = epsilon(element,ion,level);
+  const double E_ground = epsilon(element,ion,0);
+  const double nnground = get_groundlevelpop(modelgridindex,element,ion);
 
   /*if (nnground < MINPOP)
   {
@@ -609,8 +610,8 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 {
   double nn;
 
-  double T_exc = get_TJ(modelgridindex);
-  double W = 1;
+  const double T_exc = get_TJ(modelgridindex);
+  const double W = 1;
 
   bool use_lte_pop = false;
   int nlte_levels;
@@ -638,7 +639,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   else if (NLTE_POPS_ON && is_nlte(element,ion,level))
   {
     //printout("Using an nlte population!\n");
-    double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1];
+    const double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1];
     if (nltepop_over_rho < -0.9)
     {
       // Case for when no NLTE level information is available yet
@@ -662,7 +663,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   else if (NLTE_POPS_ON && (nlte_levels = get_nlevels_nlte(element,ion)) > 0)
   {
     // Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
-    double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels];
+    const double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels];
     if (nltepop_over_rho < -0.9) //TODO: should change this to less than zero?
     {
       // Case for when no NLTE level information is available yet
@@ -788,7 +789,7 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 
     if (sf < 0)
     {
-      int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+      const int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
       sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
       if (use_cellhist)
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
@@ -797,7 +798,7 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
   }
   else
   {
-    int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+    const int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
     return (stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T));
   }
 

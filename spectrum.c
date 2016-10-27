@@ -16,12 +16,13 @@
 #define traceemissionregion
 
 #ifdef traceemissionregion
-  #define traceemiss_nulower (CLIGHT / (4550e-8))  // in Angstroms
+  #define traceemiss_nulower (CLIGHT / (4500e-8))  // in Angstroms
   #define traceemiss_nuupper (CLIGHT / (4200e-8))  // in Angstroms
   #define traceemiss_timestepmin 70
   #define traceemiss_timestepmax 90
 
-  typedef struct emissioncontrib {
+  typedef struct emissioncontrib
+  {
     double fluxcontrib;
     int lineindex;
   } emissioncontrib;

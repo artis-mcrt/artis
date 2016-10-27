@@ -656,7 +656,7 @@ static void calculate_ion_alpha_sp(void)
 {
   for (int iter = 0; iter < TABLESIZE; iter++)
   {
-    double T_e = MINTEMP * exp(iter*T_step_log);
+    const double T_e = MINTEMP * exp(iter*T_step_log);
     //T_e = MINTEMP + iter*T_step;
     for (int element = 0; element < nelements; element++)
     {
@@ -666,30 +666,34 @@ static void calculate_ion_alpha_sp(void)
         //nlevels = get_nlevels(element,ion);
         //nlevels = get_ionisinglevels(element,ion); ///number of levels of the current ion which have an associated photoion cross section
         const int nlevels = get_bfcontinua(element,ion); /// number of ionising levels used in the simulation
-        int nlevelsupperion = get_nlevels(element,ion+1);
+        const int nlevelsupperion = get_nlevels(element,ion+1);
         double zeta = 0.;
         double pfunc = 0.;
         for (int upperlevel = 0; upperlevel < nlevelsupperion; upperlevel++)
         {
-          double bfac = exp(-(epsilon(element,ion+1,upperlevel) - epsilon(element,ion+1,0))/KB/T_e); // Boltzmann factor
-          pfunc += stat_weight(element,ion+1,upperlevel) * bfac; // partition function
+          const double energy_diff = epsilon(element,ion+1,upperlevel) - epsilon(element,ion+1,0);
+          const double boltzfac = exp(-energy_diff / KB / T_e); // Boltzmann factor
+          pfunc += stat_weight(element,ion+1,upperlevel) * boltzfac; // partition function
         }
         for (int level = 0; level < nlevels; level++)
         {
           const int nphixstargets = get_nphixstargets(element,ion,level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
           {
-            int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            double bfac = exp(-(epsilon(element,ion+1,upperlevel) - epsilon(element,ion+1,0))/KB/T_e); // Boltzmann factor
-            zeta += interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e) * bfac *
+            const int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            const double energy_diff = epsilon(element,ion+1,upperlevel) - epsilon(element,ion+1,0);
+            const double boltzfac = exp(-energy_diff / KB / T_e); // Boltzmann factor
+            zeta += interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e) * boltzfac *
                     stat_weight(element,ion+1,upperlevel);
           }
         }
         zeta /= pfunc;
         elements[element].ions[ion].Alpha_sp[iter] = zeta;
-//        zeta = interpolate_spontrecombcoeff(element,ion,0,T_e) / zeta;
-//        elements[element].ions[ion].zeta[iter] = zeta;
-        //printout("Alpha result: element %d ion %d temperature %g Alpha %g\n",element,ion,T_e,zeta);
+
+        // recomb from ground state only
+        // zeta = interpolate_spontrecombcoeff(element,ion,0,T_e) / zeta;
+        // elements[element].ions[ion].zeta[iter] = zeta;
+        printout("Alpha result: element %d ion %d temperature %g Alpha %g\n",element,ion,T_e,zeta);
       }
     }
   }

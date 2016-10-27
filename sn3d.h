@@ -12,8 +12,8 @@ static const bool NT_ON = true;                      /// Switch on non-thermal i
 static const bool NT_SOLVE_SPENCERFANO = true;       /// Use the Spencer-Fano solver instead of the work function approximation
 
 static const bool NLTE_POPS_ON = true;
-static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;  // solve the population matrix
-                                                            // equation simultaneously for levels in all ions
+static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;  // solve the population matrix equation
+                                                           // simultaneously for levels in all ions
 #define NLTEITER 30
 
 static const bool USE_MULTIBIN_RADFIELD_MODEL = true;  // if using this, should avoid look up tables and switch on
@@ -41,7 +41,7 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 
 
 #if !defined DO_EXSPEC && !defined MPI_ON
-  #define MPI_ON
+  // #define MPI_ON
 #endif
 
 #ifdef MPI_ON

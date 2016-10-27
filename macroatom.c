@@ -21,6 +21,7 @@ static inline double get_individ_rad_deexc(int element, int ion, int level, int 
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
 }
 
+
 static inline double get_individ_internal_down_same(int element, int ion, int level, int i)
 {
   // int element = mastate[tid].element;
@@ -29,6 +30,7 @@ static inline double get_individ_internal_down_same(int element, int ion, int le
 
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
 }
+
 
 static inline double get_individ_internal_up_same(int element, int ion, int level, int i)
 {
@@ -295,11 +297,10 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         double renorm  = corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
         printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
 
-
         //abort();
       }
     #endif
-    if (zrand*total_transitions < rad_deexc)
+    if (zrand * total_transitions < rad_deexc)
     {
       ///radiative deexcitation of MA: emitt rpkt
       #ifdef DEBUG_ON
@@ -492,7 +493,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         if (zrand*rad_recomb < rate) break;
       }
       /// and set its threshold frequency
-      double nu_threshold = epsilon_trans/H;
+      const double nu_threshold = epsilon_trans/H;
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   going to level %d of ion %d of element %d\n",lower,ion-1,element);
       #endif
@@ -513,8 +514,8 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
       intparas.T = get_Te(modelgridindex);
       intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
       F_alpha_sp.params = &intparas;
-      double deltanu = nu_threshold * NPHIXSNUINCREMENT;
-      double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+      const double deltanu = nu_threshold * NPHIXSNUINCREMENT;
+      const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
       double error;
       double total_alpha_sp;
       gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_alpha_sp, &error);
@@ -535,7 +536,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
         if (zrand >= alpha_sp / total_alpha_sp)
         {
-          double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
+          const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
           nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
           break;
         }
