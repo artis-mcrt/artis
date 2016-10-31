@@ -8,7 +8,7 @@
 #include "radfield.h"
 #include "sn3d.h"
 
-#define RADFIELDBINCOUNT 64
+#define RADFIELDBINCOUNT 96
 
 extern inline double radfield2(double nu, double T, double W);
 
@@ -18,7 +18,7 @@ static const double nu_upper_last_initial = (CLIGHT /   (1000e-8));  // in Angst
 static const double boost_region_nu_lower = (CLIGHT / (2500e-8)); // in Angstroms
 static const double boost_region_nu_upper = (CLIGHT / (2100e-8));  // in Angstroms
 static const double boost_region_factor = 0.2;
-static const bool boost_region_on = true;
+static const bool boost_region_on = false;
 
 static double J_normfactor[MMODELGRID+1];
 
