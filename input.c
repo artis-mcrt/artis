@@ -167,13 +167,20 @@ static void read_phixs_data(void)
             printout("[fatal] input: not enough memory to initialize photoion_xslist... abort\n");
             abort();
           }
+          // const double factor = 2.0; // TESTING: REMOVE!!!
+          // if (get_element(element) == 26 && get_ionstage(element, lowerion) == 2) // TESTING FOR FE II
+            // printout("multiplying phixs for Fe II transition level %d by %g\n", lowerlevel, factor);
           for (int i = 0; i < NPHIXSPOINTS; i++)
           {
             float phixs;
             fscanf(phixsdata,"%g\n",&phixs);
+            // if (get_element(element) == 26 && get_ionstage(element, lowerion) == 2) // TESTING FOR FE II
+            // {
+            //   phixs *= factor; // TESTING: REMOVE!!!
+            // }
             ///the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
             ///to convert to cgs units multiply by 1e-18
-            elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs*1e-18;
+            elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs * 1e-18;
             //fprintf(database_file,"%g %g\n", nutable[i], phixstable[i]);
           }
 
@@ -460,6 +467,19 @@ static void read_unprocessed_atomicdata(void)
             fscanf(transitiondata,"%d %d %lg %lg %d\n",&lower_in,&upper_in,&A,&coll_str,&intforbidden);
             const int lower = lower_in - 1; // TODO: remove the minus after we change the level indicies to start at zero in transitiondata.txt
             const int upper = upper_in - 1;
+
+            if (Z == 26 && ionstage == 2) // TESTING FOR FE II
+            {
+              // const double factor = 2.0;
+              // if (coll_str >= 0.) // don't mess up the negative ones!
+              // {
+              //   printout("multiplying coll_str for Fe II transition level %d to %d by %g\n", lower, upper, factor);
+              //   coll_str *= factor; // TESTING: REMOVE!!!
+              // }
+              // printout("multiplying A value for Fe II transition level %d to %d by %g\n", lower, upper, factor);
+              // coll_str *= factor; // TESTING: REMOVE!!!
+            }
+
             if (prev_lower < nlevels_requiretransitions && prev_upper < nlevelsmax - 1)
             {
               if (lower == prev_lower && upper > prev_upper + 1) // same lower level, but skipped some upper levels
@@ -1647,7 +1667,7 @@ static void read_atomicdata(void)
   printout("----------------------------------\n");
   for (int element = 0; element < nelements; element++)
   {
-    printout("[input.c]   element Z = %d\n",get_element(element));
+    printout("[input.c]   element %d (Z=%2d)\n", element, get_element(element));
     const int nions = get_nions(element);
     //includedions += nions;
     for (int ion = 0; ion < nions; ion++)
@@ -1712,12 +1732,14 @@ static void read_atomicdata(void)
 
         elements[element].ions[ion].nlevels_nlte = count;
 
-        printout("[input.c]  element Z = %d   ion %d with %d NLTE levels. Starting at %d. \n",get_element(element),get_ionstage(element,ion),get_nlevels_nlte(element,ion),elements[element].ions[ion].first_nlte);
+        printout("[input.c]  element %2d Z=%2d ion_stage %5d has %d NLTE levels. Starting at %d\n",
+                 element, get_element(element), get_ionstage(element,ion),
+                 get_nlevels_nlte(element,ion), elements[element].ions[ion].first_nlte);
       }
     }
   }
 
-  printout("[input.c]....total nlte levels: %d of which %d are superlevels\n", total_nlte_levels, n_super_levels);
+  printout("[input.c] Total NLTE levels: %d, of which %d are superlevels\n", total_nlte_levels, n_super_levels);
 }
 
 
@@ -2602,8 +2624,8 @@ void read_parameterfile(int rank)
 
   if (NO_LUT_BFHEATING)
     printout("bfheating coefficients are calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
-    else
-      printout("bfheating coefficients are calculated from lookup tables (ratecoeff.dat).\n");
+  else
+    printout("bfheating coefficients are calculated from lookup tables (ratecoeff.dat).\n");
 
   if (USE_MULTIBIN_RADFIELD_MODEL)
     printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);

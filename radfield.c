@@ -13,11 +13,11 @@
 extern inline double radfield2(double nu, double T, double W);
 
 static const double nu_lower_first_initial = (CLIGHT / (15000e-8)); // in Angstroms
-static const double nu_upper_last_initial = (CLIGHT /   (1000e-8));  // in Angstroms
+static const double nu_upper_last_initial = (CLIGHT /   (500e-8));  // in Angstroms
 
 static const double boost_region_nu_lower = (CLIGHT / (2500e-8)); // in Angstroms
 static const double boost_region_nu_upper = (CLIGHT / (2100e-8));  // in Angstroms
-static const double boost_region_factor = 0.2;
+static const double boost_region_factor = 1.0;
 static const bool boost_region_on = false;
 
 static double J_normfactor[MMODELGRID+1];
@@ -76,6 +76,9 @@ void radfield_init(int my_rank)
 {
   if (USE_MULTIBIN_RADFIELD_MODEL && radfield_initialized == false)
   {
+    printout("Initialising radiation field with %d bins from (%6.2f eV, %f A) to (%6.2f eV, %f A)",
+             RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
+             H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
     char filename[100];
     sprintf(filename,"radfield_%.4d.out", my_rank);
     radfieldfile = fopen(filename, "w");
@@ -116,7 +119,7 @@ void radfield_init(int my_rank)
             //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
             if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
             {
-              printout("Missed bf edge at %11.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e Hz, Z=%d ion_stage %d level %d\n",
+              printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e Hz, Z=%d ion_stage %d level %d\n",
                        nu_edge, H * nu_edge / EV, 1e8 * CLIGHT / nu_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
             }
 
@@ -360,7 +363,7 @@ void radfield_zero_estimators(int modelgridindex, int my_rank)
     if (!radfield_initialized)
       radfield_init(my_rank);
 
-    printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
+    // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {

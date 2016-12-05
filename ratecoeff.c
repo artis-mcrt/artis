@@ -693,7 +693,8 @@ static void calculate_ion_alpha_sp(void)
         // recomb from ground state only
         // zeta = interpolate_spontrecombcoeff(element,ion,0,T_e) / zeta;
         // elements[element].ions[ion].zeta[iter] = zeta;
-        printout("Alpha result: element %d ion %d temperature %g Alpha %g\n",element,ion,T_e,zeta);
+        printout("Alpha result: Z=%2d element %d ion %d temperature %g Alpha %g\n",
+                 get_element(element), element, ion, T_e, zeta);
       }
     }
   }
@@ -1232,7 +1233,8 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
     #ifdef DEBUG_ON
       if (!isfinite(bfcooling))
       {
-        printout("[fatal] get_bfcooling: bfcooling infinite (%g) for element %d, ion %d, level %d in modelgridcell %d\n",bfcooling,element,ion,level,modelgridindex);
+        printout("[fatal] get_bfcooling: bfcooling infinite (%g) for element Z=%d, ion_stage %d, level %d in modelgridcell %d\n",
+                 bfcooling,get_element(element),get_ionstage(element, ion),level,modelgridindex);
         //printout("[fatal] get_bfcooling: bfcoolingcoeff %g, nnion %g, nne %g, T_e %g\n",interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e),nnion,nne,T_e);
       }
     #endif

@@ -14,9 +14,18 @@
 #include "sn3d.h"
 
 #define SFPTS 4000  // number of energy points in the Spencer-Fano solution vector
-
 #define EMAX 1000. // eV
 #define EMIN 1. // eV
+
+// TESTING THE SOLVER! // KF92 pure-oxygen plasma, nne = 1e8, x_e = 0.01
+// #define yscalefactoroverride(mgi) (1e10)
+// #define get_tot_nion(x) (1e10)
+// #define ionstagepop(modelgridindex, element, ion) ionstagepop_override(modelgridindex, element, ion)
+// #define get_nne(x) (1e8)
+// #define SFPTS 10000  // number of energy points in the Spencer-Fano solution vector
+// #define EMAX 3000. // eV
+// #define EMIN 1. // eV
+
 static const double DELTA_E = (EMAX - EMIN) / SFPTS;
 
 static const double minionfraction = 1.e-3;  // minimum number fraction of the total population to include in SF solution
@@ -54,6 +63,27 @@ struct nt_solution_struct {
 };
 
 static struct nt_solution_struct nt_solution[MMODELGRID+1];
+
+
+
+#ifndef get_tot_nion
+static double get_tot_nion(int modelgridindex)
+{
+  double result = 0.;
+  for (int element = 0; element < nelements; element++)
+  {
+    result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
+
+    //const int nions = get_nions(element);
+    //for (ion = 0; ion < nions; ion++)
+    //{
+    //  result += ionstagepop(modelgridindex,element,ion);
+    //}
+  }
+
+  return result;
+}
+#endif
 
 
 static void read_collion_data(void)
@@ -111,7 +141,8 @@ void nonthermal_init(int my_rank)
     envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
     sourcevec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
 
-    const int source_spread_pts = ceil(SFPTS / 20);
+    // const int source_spread_pts = ceil(SFPTS / 20);
+    const int source_spread_pts = ceil(SFPTS * 0.03333); // KF92 OXYGEN TEST
     for (int s = 0; s < SFPTS; s++)
     {
       const double energy_ev = EMIN + s * DELTA_E;
@@ -122,12 +153,12 @@ void nonthermal_init(int my_rank)
       if (s < SFPTS - source_spread_pts)
         gsl_vector_set(sourcevec, s, 0.);
       else
-        gsl_vector_set(sourcevec, s, 1 / (DELTA_E * source_spread_pts));
+        gsl_vector_set(sourcevec, s, 1. / (DELTA_E * source_spread_pts));
     }
 
-    double en_dot_yvec;
-    gsl_blas_ddot(envec, sourcevec, &en_dot_yvec);
-    E_init_ev = en_dot_yvec * DELTA_E;
+    double en_dot_sourcevec;
+    gsl_blas_ddot(envec, sourcevec, &en_dot_sourcevec);
+    E_init_ev = en_dot_sourcevec * DELTA_E;
 
     // or put all of the source into one point at EMAX
     // gsl_vector_set_zero(sourcevec);
@@ -183,7 +214,12 @@ static void nonthermal_write_to_file(int modelgridindex, int timestep)
     abort();
   }
 
+#ifndef yscalefactoroverride // manual override can be defined
   const double yscalefactor = (get_deposition_rate_density(modelgridindex) / (E_init_ev * EV));
+#else
+  const double yscalefactor = yscalefactoroverride(modelgridindex);
+#endif
+
   for (int s = 0; s < SFPTS; s++)
   {
     fprintf(nonthermalfile,"%8d %15d %8d %11.5e %11.5e %11.5e\n",
@@ -375,21 +411,19 @@ static double Psecondary(double e_p, double epsilon, double I, double J)
 }
 
 
-static double get_tot_nion(int modelgridindex)
+// Fake the composition to test the NT solver
+static double ionstagepop_override(const int modelgridindex, const int element, const int ion)
 {
-  double result = 0.;
-  for (int element = 0; element < nelements; element++)
+  const double nntot = get_tot_nion(modelgridindex);
+  if (get_element(element) == 8)
   {
-    result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
-
-    //const int nions = get_nions(element);
-    //for (ion = 0; ion < nions; ion++)
-    //{
-    //  result += ionstagepop(modelgridindex,element,ion);
-    //}
+    const int ion_stage = get_ionstage(element, ion);
+    if (ion_stage == 1)
+      return 0.99 * nntot;
+    else if (ion_stage == 2)
+      return 0.01 * nntot;
   }
-
-  return result;
+  return 0.;
 }
 
 
@@ -410,7 +444,7 @@ static double N_e(int modelgridindex, double energy)
     {
       double N_e_ion = 0.;
       const int ionstage = get_ionstage(element, ion);
-      const double nnion = ionstagepop(modelgridindex,element,ion);
+      const double nnion = ionstagepop(modelgridindex, element, ion);
 
       if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
         continue;
@@ -528,9 +562,9 @@ static double get_mean_binding_energy(int element, int ion)
 
   if (nbound > 0)
   {
-    for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
+    for (int i = 0; i < M_NT_SHELLS; i++)
     {
-      q[electron_loop] = 0;
+      q[i] = 0;
     }
 
     for (int electron_loop = 0; electron_loop < nbound; electron_loop++)
@@ -627,41 +661,32 @@ static double get_mean_binding_energy(int element, int ion)
     total = 0.0;
     for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
     {
-      const double use1 = q[electron_loop];
-      if ((use1) > 0)
+      const double electronsinshell = q[electron_loop];
+      if ((electronsinshell) > 0)
       {
-        double use2 = electron_binding[elements[element].anumber-1][electron_loop];
+        double use2 = electron_binding[elements[element].anumber - 1][electron_loop];
         const double use3 = elements[element].ions[ion].ionpot;
-        if (use2 > 0)
+        if (use2 <= 0)
         {
-          if (use2 < use3)
-          {
-            total += use1 / use3;
-          }
-          else
-          {
-            total += use1 / use2;
-          }
-        }
-        else
-        {
-          use2 = electron_binding[elements[element].anumber-1][electron_loop-1];
-          if (use2 < use3)
-          {
-            total += use1 / use3;
-          }
-          else
-          {
-            total += use1 / use2;
-          }
-          //		  total += use1/electron_binding[elements[element].anumber-1][electron_loop-1];
+          use2 = electron_binding[elements[element].anumber - 1][electron_loop-1];
+          //  to get total += electronsinshell/electron_binding[elements[element].anumber-1][electron_loop-1];
+          //  set use3 = 0.
           if (electron_loop != 8)
           {
             //For some reason in the Lotz data, this is no energy for the M5 shell before Ni. So if the complaint
             //is for 8 (corresponding to that shell) then just use the M4 value
             printout("Huh? I'm trying to use a binding energy when I have no data. element %d ion %d\n",element,ion);
+            printout("Z = %d, ion_stage = %d\n", get_element(element), get_ionstage(element, ion));
             abort();
           }
+        }
+        if (use2 < use3)
+        {
+          total += electronsinshell / use3;
+        }
+        else
+        {
+          total += electronsinshell / use2;
         }
       }
       //printout("total %g\n", total);
@@ -983,13 +1008,13 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     return;
   }
 
-  printout("Setting up Spencer-Fano equation for cell %d at timestep %d with %d energy points from %g eV to %g eV\n",
-           modelgridindex, timestep, SFPTS, EMIN, EMAX);
+  const double nne = get_nne(modelgridindex); // electrons per cm^3
+
+  printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV at timestep %d in cell %d (nne=%g e-/cm^3)\n",
+           SFPTS, EMIN, EMAX, timestep, modelgridindex, nne);
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
-
-  const double nne = get_nne(modelgridindex); // electrons per cm^3
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++)
@@ -1018,7 +1043,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     for (int ion = 0; ion < nions; ion++)
     {
       const int ionstage = get_ionstage(element, ion);
-      const double nnion = ionstagepop(modelgridindex,element,ion); // hopefully ions per cm^3?
+      const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
 
       if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
         continue;
@@ -1199,7 +1224,6 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   analyse_sf_solution(modelgridindex);
 }
 
-
 #ifdef MPI_ON
 void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 {
@@ -1219,7 +1243,10 @@ void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
   MPI_Bcast(&sender_nstart, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
   MPI_Bcast(&sender_ndo, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
   if (my_rank != root && sender_ndo > 0)
-    printout("nonthermal_MPI_Bcast process %d will recieve cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+  {
+    printout("nonthermal_MPI_Bcast process %d will recieve cells %d to %d from process %d\n",
+             my_rank, sender_nstart, sender_nstart + sender_ndo - 1, root);
+  }
 
   for (int modelgridindex = sender_nstart; modelgridindex < sender_nstart + sender_ndo; modelgridindex++)
   {
