@@ -693,8 +693,9 @@ static void calculate_ion_alpha_sp(void)
         // recomb from ground state only
         // zeta = interpolate_spontrecombcoeff(element,ion,0,T_e) / zeta;
         // elements[element].ions[ion].zeta[iter] = zeta;
-        printout("Alpha result: Z=%2d element %d ion %d temperature %g Alpha %g\n",
-                 get_element(element), element, ion, T_e, zeta);
+
+        // printout("Alpha result: Z=%2d element %d ion %d temperature %g Alpha %g\n",
+        //          get_element(element), element, ion, T_e, zeta);
       }
     }
   }
