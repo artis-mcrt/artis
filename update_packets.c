@@ -67,7 +67,7 @@ void update_packets(int nts)
     for (int n = 0; n < npkts; n++)
     {
       //printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
-      if (time(NULL) - time_of_last_packet_printout > 2)
+      if (time(NULL) - time_of_last_packet_printout > 5 || n == npkts - 1)
       {
         time_of_last_packet_printout = time(NULL);
         printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
