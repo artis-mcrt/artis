@@ -101,7 +101,7 @@ static void filter_nlte_matrix(int element, gsl_matrix *const rate_matrix, gsl_v
     {
       if (level == 0)
       {
-        printout("(Would eliminate but it's a ground state, so keeping it)");
+        // printout("(Would eliminate but it's a ground state, so keeping it)");
         //printout("(Would eliminate but it's a ground state, so forcing pop=MINPOP=%g)",MINPOP);
         //gsl_vector_set(balance_vector, index, MINPOP / get_vector_get(pop_norm_factor_vec, index));
         //printout("(Eliminating this ground state)");
@@ -110,7 +110,7 @@ static void filter_nlte_matrix(int element, gsl_matrix *const rate_matrix, gsl_v
       {
         double gs_index = get_nlte_vector_index(element,ion,0);
         eliminate_nlte_matrix_rowcol(index,gs_index,rate_matrix,balance_vector);
-        printout("(forcing LTE population)");
+        // printout("(forcing LTE population)");
       }
     }
     // printout("\n");
