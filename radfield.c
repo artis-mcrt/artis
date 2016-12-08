@@ -76,7 +76,7 @@ void radfield_init(int my_rank)
 {
   if (USE_MULTIBIN_RADFIELD_MODEL && radfield_initialized == false)
   {
-    printout("Initialising radiation field with %d bins from (%6.2f eV, %f A) to (%6.2f eV, %f A)",
+    printout("Initialising radiation field with %d bins from (%6.2f eV, %f A) to (%6.2f eV, %f A)\n",
              RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
              H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
     char filename[100];
