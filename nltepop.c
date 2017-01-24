@@ -506,13 +506,13 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 
     double error_best = -1.;
     gsl_vector *x_best = gsl_vector_alloc(nlte_dimension); //population solution vector with lowest error
-    gsl_vector *gsl_residual_vector = gsl_vector_alloc(nlte_dimension);
+    gsl_vector *gsl_work_vector = gsl_vector_alloc(nlte_dimension);
     gsl_vector *residual_vector = gsl_vector_alloc(nlte_dimension);
     int iteration;
     for (iteration = 0; iteration < 10; iteration++)
     {
       if (iteration > 0)
-        gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_residual_vector);
+        gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_work_vector);
 
       gsl_vector_memcpy(residual_vector, balance_vector);
       gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, x, -1.0, residual_vector); // calculate Ax - b = residual
@@ -534,7 +534,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       printout("NLTE solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",iteration,error_best);
       gsl_vector_memcpy(x,x_best);
     }
-    gsl_vector_free(gsl_residual_vector);
+    gsl_vector_free(gsl_work_vector);
     gsl_vector_free(x_best);
     gsl_permutation_free(p);
 

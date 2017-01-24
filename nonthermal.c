@@ -52,7 +52,7 @@ static bool nonthermal_initialized = false;
 
 static gsl_vector *envec;            // energy grid on which solution is sampled
 static gsl_vector *sourcevec;        // samples of the source function
-static gsl_matrix *y;          // Spencer-Fano solution function samples for each modelgrid cell. multiply by energy to get flux
+static gsl_matrix *y;                // Spencer-Fano solution function samples for each modelgrid cell. multiply by energy to get flux
                                      // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
 static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
@@ -1178,13 +1178,13 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
   double error_best = -1.;
   gsl_vector *yvec_best = gsl_vector_alloc(SFPTS); // solution vector with lowest error
-  gsl_vector *gsl_residual_vector = gsl_vector_alloc(SFPTS);
+  gsl_vector *gsl_work_vector = gsl_vector_alloc(SFPTS);
   gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
   int iteration;
   for (iteration = 0; iteration < 10; iteration++)
   {
     if (iteration > 0)
-      gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU_decomp, p, rhsvec, yvec, gsl_residual_vector);
+      gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU_decomp, p, rhsvec, yvec, gsl_work_vector);
 
     gsl_vector_memcpy(residual_vector, rhsvec);
     gsl_blas_dgemv(CblasNoTrans, 1.0, sfmatrix, yvec, -1.0, residual_vector); // calculate Ax - b = residual
@@ -1203,7 +1203,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     gsl_vector_memcpy(yvec,yvec_best);
   }
   gsl_vector_free(yvec_best);
-  gsl_vector_free(gsl_residual_vector);
+  gsl_vector_free(gsl_work_vector);
   gsl_vector_free(residual_vector);
   gsl_permutation_free(p);
 
