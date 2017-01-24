@@ -13,7 +13,7 @@
 #include "nonthermal.h"
 #include "sn3d.h"
 
-#define SFPTS 4000  // number of energy points in the Spencer-Fano solution vector
+#define SFPTS 1000  // number of energy points in the Spencer-Fano solution vector
 #define EMAX 1000. // eV
 #define EMIN 1. // eV
 
@@ -52,7 +52,7 @@ static bool nonthermal_initialized = false;
 
 static gsl_vector *envec;            // energy grid on which solution is sampled
 static gsl_vector *sourcevec;        // samples of the source function
-static gsl_matrix *y;                // Spencer-Fano solution function samples for each modelgrid cell. multiply by energy to get flux
+static gsl_matrix *y;          // Spencer-Fano solution function samples for each modelgrid cell. multiply by energy to get flux
                                      // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
 static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
@@ -116,9 +116,9 @@ static void read_collion_data(void)
 
 void nonthermal_init(int my_rank)
 {
-  printout("Initializing non-thermal solver\n");
   if (nonthermal_initialized == false)
   {
+    printout("Initializing non-thermal solver\n");
     char filename[100];
     sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
     nonthermalfile = fopen(filename, "w");
@@ -172,8 +172,10 @@ void nonthermal_init(int my_rank)
     read_collion_data();
 
     nonthermal_initialized = true;
+    printout("Finished initializing non-thermal solver\n");
   }
-  printout("Finished initializing non-thermal solver\n");
+  else
+    printout("Tried to initialize the non-thermal solver again!\n");
 }
 
 
@@ -989,8 +991,6 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
-  // set_nne(modelgridindex, get_tot_nion(modelgridindex)*1.e-2); //TODO: MUST REMOVE
-
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   if (deposition_rate_density_ev < 1e-2)
   {

@@ -509,7 +509,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     gsl_vector *gsl_residual_vector = gsl_vector_alloc(nlte_dimension);
     gsl_vector *residual_vector = gsl_vector_alloc(nlte_dimension);
     int iteration;
-    for (iteration = 0; iteration < 300; iteration++)
+    for (iteration = 0; iteration < 10; iteration++)
     {
       if (iteration > 0)
         gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_residual_vector);
@@ -558,7 +558,9 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
                gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
       if (gsl_vector_get(popvec, row) < 0.0)
       {
-        printout("WARNING: NLTE solver gave negative population to index %d (ion_stage %d level %d), pop = %g\n",row,get_ionstage(element,ion),level,gsl_vector_get(x,row)*gsl_vector_get(pop_norm_factor_vec,row));
+        printout("WARNING: NLTE solver gave negative population to index %d (ion_stage %d level %d), pop = %g. Forcing departure coeff to 1.0\n",
+                 row, get_ionstage(element,ion), level, gsl_vector_get(x,row) * gsl_vector_get(pop_norm_factor_vec,row));
+        gsl_vector_set(popvec, row, 1.);
       }
     }
 

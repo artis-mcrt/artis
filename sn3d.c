@@ -175,6 +175,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
         }
       }
     }
+    printout("MPI_BUFFER: used %d bytes of MPI buffer which has size %d\n", position, HUGEE);
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(buffer, HUGEE, MPI_PACKED, n, MPI_COMM_WORLD);
 
@@ -231,6 +232,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
           }
         }
       }
+      printout("MPI_BUFFER: used %d bytes of MPI buffer2 which has size %d\n", position, HUGEE2);
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
 
@@ -816,9 +818,7 @@ int main(int argc, char** argv)
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-      //int HUGEE = 4 * ((9+2*includedions)*(nblock+1) + 1);
-      //int HUGEE = 4 * ((8+2*includedions)*(nblock+1) + 1);
-      int HUGEE = (4 * ((10+2*includedions)*(nblock+1) + 1) + 8 * ((1+includedions)*(nblock+1))) * 2; // LJS just added factor of two to make this work. What's the minimum space needed?
+      int HUGEE = 4 * ((16 + 4 * includedions) * (nblock + 1) + 1); // LJS: what's the minimum space needed?
       printout("reserve HUGEE %d space for MPI communication buffer\n",HUGEE);
       //char buffer[HUGEE];
       char *buffer  = malloc(HUGEE*sizeof(char));
@@ -827,7 +827,7 @@ int main(int argc, char** argv)
         printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
         abort();
       }
-      int HUGEE2 = 8*((nblock+1)*total_nlte_levels) + 4*(nblock + 2);
+      int HUGEE2 = 8 * ((nblock + 1) * total_nlte_levels) + 4 * (nblock + 2);
       printout("reserve HUGEE2 %d space for MPI communication buffer2 for NLTE\n", HUGEE2);
       char *buffer2 = malloc(HUGEE2*sizeof(char));
       if (buffer2 == NULL)

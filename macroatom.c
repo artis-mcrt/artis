@@ -1279,7 +1279,7 @@ double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lo
 
   #ifdef DEBUG_ON
     if (debuglevel == 777)
-    printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
+      printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
     if (!isfinite(C))
     {
       printout("fatal a6: abort\n");
