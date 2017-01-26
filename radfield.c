@@ -49,9 +49,7 @@ struct radfieldbin
 };
 
 //static struct radfieldbin *restrict radfieldbins[MMODELGRID+1]; // heap allocated alterative
-#ifdef USE_MULTIBIN_RADFIELD_MODEL
-static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT];
-#endif
+static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT]; // THIS IS ALLOCATED EVEN IF USE_MULTIBIN_RADFIELD_MODEL IS FALSE!
 
 typedef enum
 {
