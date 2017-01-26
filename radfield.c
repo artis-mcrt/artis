@@ -48,8 +48,10 @@ struct radfieldbin
   enum_bin_fit_type fit_type;
 };
 
-//static struct radfieldbin *restrict radfieldbins[MMODELGRID+1]; //heap allocated alterative
+//static struct radfieldbin *restrict radfieldbins[MMODELGRID+1]; // heap allocated alterative
+#ifdef USE_MULTIBIN_RADFIELD_MODEL
 static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT];
+#endif
 
 typedef enum
 {
