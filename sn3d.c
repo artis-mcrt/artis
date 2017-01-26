@@ -134,7 +134,7 @@ static void pkt_action_counters_printout(void)
 #ifdef MPI_ON
 static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int ndo, int nts, int titer, char *buffer, int HUGEE, char* buffer2, int HUGEE2)
 {
-  int position,nlp;
+  int position = 0;
   for (int n = 0; n < p; n++)
   {
     radfield_MPI_Bcast(n, my_rank, nstart, ndo);
@@ -174,12 +174,13 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
           }
         }
       }
+      printout("MPI_BUFFER: used %d bytes of MPI buffer which has size %d\n", position, HUGEE);
     }
-    printout("MPI_BUFFER: used %d bytes of MPI buffer which has size %d\n", position, HUGEE);
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(buffer, HUGEE, MPI_PACKED, n, MPI_COMM_WORLD);
 
     position = 0;
+    int nlp;
     MPI_Unpack(buffer, HUGEE, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
     for (int nn = 0; nn < nlp; nn++)
     {
@@ -220,7 +221,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
       {
         position = 0;
         MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
-        for (int mgi = nstart; mgi < (nstart+ndo); mgi++)
+        for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
         //for (int nncl = 0; nncl < ndo; nncl++)
         {
           //nn = nonemptycells[my_rank+nncl*nprocs];
@@ -231,12 +232,13 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
             MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
           }
         }
+        printout("MPI_BUFFER: used %d bytes of MPI buffer2 which has size %d\n", position, HUGEE2);
       }
-      printout("MPI_BUFFER: used %d bytes of MPI buffer2 which has size %d\n", position, HUGEE2);
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
 
       position = 0;
+      int nlp;
       MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
       for (int nn = 0; nn < nlp; nn++)
       {
@@ -827,7 +829,7 @@ int main(int argc, char** argv)
         printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
         abort();
       }
-      int HUGEE2 = 8 * ((nblock + 1) * total_nlte_levels) + 4 * (nblock + 2);
+      int HUGEE2 = 4 + 4 * (nblock + 1) + 8 * (nblock + 1) * total_nlte_levels;
       printout("reserve HUGEE2 %d space for MPI communication buffer2 for NLTE\n", HUGEE2);
       char *buffer2 = malloc(HUGEE2*sizeof(char));
       if (buffer2 == NULL)
@@ -935,7 +937,7 @@ int main(int argc, char** argv)
       #endif
 
       #ifdef TIMED_RESTARTS
-        if ((time(NULL) - real_time_start) > 10800)
+        if ((time(NULL) - real_time_start) > 3 * 3600)
         {
           do_this_full_loop = 0; //This flag will make it do a write out then quit, hopefully
           printout("Going to terminate since remaining time is too short. %d\n", time(NULL) - real_time_start);
