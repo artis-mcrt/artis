@@ -9,6 +9,7 @@
 #include "sn3d.h"
 
 #define RADFIELDBINCOUNT 96
+// static const int RADFIELDBINCOUNT = 96;
 
 extern inline double radfield2(double nu, double T, double W);
 
