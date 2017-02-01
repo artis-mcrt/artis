@@ -551,11 +551,12 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       int ion, level;
       get_ion_level_of_nlte_vector_index(row,element,&ion,&level);
 
-      printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e departure ratio %.4f\n",
-               row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
-               recovered_balance_vector_elem, gsl_vector_get(x,row),
-               gsl_vector_get(popvec, row),
-               gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
+      // printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e departure ratio %.4f\n",
+      //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
+      //          recovered_balance_vector_elem, gsl_vector_get(x,row),
+      //          gsl_vector_get(popvec, row),
+      //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
+
       if (gsl_vector_get(popvec, row) < 0.0)
       {
         printout("WARNING: NLTE solver gave negative population to index %d (ion_stage %d level %d), pop = %g. Forcing departure coeff to 1.0\n",
