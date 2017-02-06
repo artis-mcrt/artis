@@ -49,7 +49,7 @@ struct radfieldbin
   enum_bin_fit_type fit_type;
 };
 
-//static struct radfieldbin *restrict radfieldbins[MMODELGRID+1]; // heap allocated alterative
+//static struct *radfieldbin *restrict radfieldbins[MMODELGRID+1]; // heap allocated alterative
 static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT]; // THIS IS ALLOCATED EVEN IF USE_MULTIBIN_RADFIELD_MODEL IS FALSE!
 
 typedef enum
@@ -665,7 +665,7 @@ static double find_T_R(int modelgridindex, int binindex)
     gsl_root_fsolver *T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
     gsl_root_fsolver_set(T_R_solver, &find_T_R_f, T_R_min, T_R_max);
     int iteration_num = 0;
-    int status = GSL_CONTINUE;
+    int status;
     do
     {
       iteration_num++;
