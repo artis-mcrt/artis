@@ -1038,12 +1038,12 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
       //printout("The partition functions (and ratios to gs) were: %g (%g) %g (%g)\n", modelgrid[modelgridindex].composition[element].partfunct[ion], modelgrid[modelgridindex].composition[element].partfunct[ion]/stat_weight(element,ion,0),modelgrid[modelgridindex].composition[element].partfunct[ion+1], modelgrid[modelgridindex].composition[element].partfunct[ion+1]/stat_weight(element,ion+1,0));
 
 
-      if ((get_groundlevelpop(modelgridindex,element,ion) > (1.1*MINPOP)) && (gsl_vector_get(x,0) > (1.1*MINPOP)))
+      if ((get_groundlevelpop(modelgridindex,element,ion) > (1.1 * MINPOP)) && (gsl_vector_get(x,0) > (1.1 * MINPOP)))
       {
         test_ratio = get_groundlevelpop(modelgridindex,element,ion)/gsl_vector_get(x,0);
         if (test_ratio < 1)
         {
-          test_ratio = 1./test_ratio;
+          test_ratio = 1. / test_ratio;
         }
       }
       else
@@ -1051,13 +1051,13 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
         test_ratio = 0.0;
       }
 
-      if ((get_groundlevelpop(modelgridindex,element,ion+1) > (1.1*MINPOP)) && (gsl_vector_get(x,nlte_size-1) > (1.1*MINPOP)))
+      if ((get_groundlevelpop(modelgridindex,element,ion+1) > (1.1 * MINPOP)) && (gsl_vector_get(x,nlte_size-1) > (1.1 * MINPOP)))
       {
         test_ratio_upper = get_groundlevelpop(modelgridindex,element,ion+1) * modelgrid[modelgridindex].composition[element].partfunct[ion+1]
           / stat_weight(element,ion+1,0) / gsl_vector_get(x,nlte_size-1);
         if (test_ratio_upper < 1)
         {
-          test_ratio_upper = 1./test_ratio_upper;
+          test_ratio_upper = 1. / test_ratio_upper;
         }
       }
       else
