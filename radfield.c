@@ -825,7 +825,8 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       printout("bin %4d: J %g, T_R %7.1f, W %12.5e\n",
              binindex, J_bin, T_R_bin, W_bin);
     }*/
-    radfield_write_to_file(modelgridindex,timestep);
+    if (timestep % 10 == 0)
+      radfield_write_to_file(modelgridindex, timestep);
   }
 }
 
