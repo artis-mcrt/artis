@@ -644,7 +644,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     printout("The element population is: %g (from abundance) and %g (from matrix solution)\n",
              get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex), gsl_blas_dasum(popvec));
 
-    if (atomic_number == 26)
+    if (atomic_number == 26 && timestep % 10 == 0)
     {
       // print_level_rates(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
