@@ -983,15 +983,18 @@ void radfield_write_restart_data(FILE *gridsave_file)
             T_R_min, T_R_max, radfield_initialized);
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      if (modelgrid[modelgridindex].associated_cells > 0)
       {
-        fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
-                J_normfactor[modelgridindex], radfieldbins[modelgridindex][binindex].nu_upper,
-                radfieldbins[modelgridindex][binindex].J_raw,
-                radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
-                radfieldbins[modelgridindex][binindex].prev_nuJ_normed, radfieldbins[modelgridindex][binindex].prev_contribcount,
-                radfieldbins[modelgridindex][binindex].W, radfieldbins[modelgridindex][binindex].T_R,
-                radfieldbins[modelgridindex][binindex].contribcount, radfieldbins[modelgridindex][binindex].fit_type);
+        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+        {
+          fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+                  J_normfactor[modelgridindex], radfieldbins[modelgridindex][binindex].nu_upper,
+                  radfieldbins[modelgridindex][binindex].J_raw,
+                  radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
+                  radfieldbins[modelgridindex][binindex].prev_nuJ_normed, radfieldbins[modelgridindex][binindex].prev_contribcount,
+                  radfieldbins[modelgridindex][binindex].W, radfieldbins[modelgridindex][binindex].T_R,
+                  radfieldbins[modelgridindex][binindex].contribcount, radfieldbins[modelgridindex][binindex].fit_type);
+        }
       }
     }
   }
@@ -1024,17 +1027,20 @@ void radfield_read_restart_data(FILE *gridsave_file)
     }
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      if (modelgrid[modelgridindex].associated_cells > 0)
       {
-        int fit_type_in;
-        fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
-                &J_normfactor[modelgridindex], &radfieldbins[modelgridindex][binindex].nu_upper,
-                &radfieldbins[modelgridindex][binindex].J_raw,
-                &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,
-                &radfieldbins[modelgridindex][binindex].prev_nuJ_normed, &radfieldbins[modelgridindex][binindex].prev_contribcount,
-                &radfieldbins[modelgridindex][binindex].W, &radfieldbins[modelgridindex][binindex].T_R,
-                &radfieldbins[modelgridindex][binindex].contribcount, &fit_type_in);
-        radfieldbins[modelgridindex][binindex].fit_type = fit_type_in;
+        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+        {
+          int fit_type_in;
+          fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+                  &J_normfactor[modelgridindex], &radfieldbins[modelgridindex][binindex].nu_upper,
+                  &radfieldbins[modelgridindex][binindex].J_raw,
+                  &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,
+                  &radfieldbins[modelgridindex][binindex].prev_nuJ_normed, &radfieldbins[modelgridindex][binindex].prev_contribcount,
+                  &radfieldbins[modelgridindex][binindex].W, &radfieldbins[modelgridindex][binindex].T_R,
+                  &radfieldbins[modelgridindex][binindex].contribcount, &fit_type_in);
+          radfieldbins[modelgridindex][binindex].fit_type = fit_type_in;
+        }
       }
     }
   }
