@@ -877,7 +877,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
               #endif
             }
 
-            if (NT_ON && NT_SOLVE_SPENCERFANO)
+            if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
               nt_solve_spencerfano(n,nts);
 
             const double nne = get_nne(n);
