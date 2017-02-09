@@ -1530,8 +1530,8 @@ static void read_grid_restart_data(void)
     }
     else
     {
-      printout("[fatal] assign_temperature: cell mismatch in reading input initial_temperatures.dat ... abort\n");
-      printout("[fatal] assign_temperature: read cellnumber %d, expected cellnumber %d\n",mgi,n);
+      printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
+      printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n",mgi,n);
       abort();
     }
   }

@@ -1053,7 +1053,7 @@ int main(int argc, char** argv)
         update_grid(nts,my_rank,nstart,ndo,titer);
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
-          if (nts==0)
+          if (nts == 0)
             titer = n_titer + 1;
         #endif
         #ifdef MPI_ON
@@ -1240,8 +1240,10 @@ int main(int argc, char** argv)
 
           printout("time before write temporary packets file %d\n",time(NULL));
 
-          if (nts % 2 == 0) sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
-          else sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
+          if (nts % 2 == 0)
+            sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
+          else
+            sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
 
           if ((packets_file = fopen(filename, "wb")) == NULL)
           {
