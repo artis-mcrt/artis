@@ -712,16 +712,16 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
 // using J and nuJ
 {
   double T_J, T_R, W;
-  get_radfield_params_fullspec(J[modelgridindex],nuJ[modelgridindex],modelgridindex,&T_J,&T_R,&W);
-  set_TJ(modelgridindex,T_J);
-  set_TR(modelgridindex,T_R);
-  set_W(modelgridindex,W);
+  get_radfield_params_fullspec(J[modelgridindex], nuJ[modelgridindex], modelgridindex, &T_J, &T_R, &W);
+  set_TJ(modelgridindex, T_J);
+  set_TR(modelgridindex, T_R);
+  set_W(modelgridindex, W);
 
   if (USE_MULTIBIN_RADFIELD_MODEL)
   {
     if (J_normfactor[modelgridindex] <= 0)
     {
-      printout("radfield: FATAL J_normfactor = %g in cell %d at call to radfield_fit_parameters",J_normfactor[modelgridindex],modelgridindex);
+      printout("radfield: FATAL J_normfactor = %g in cell %d at call to radfield_fit_parameters", J_normfactor[modelgridindex], modelgridindex);
       abort();
     }
 
@@ -734,33 +734,33 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
 
     double J_bin_sum = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-      J_bin_sum += radfield_get_bin_J(modelgridindex,binindex,true);
+      J_bin_sum += radfield_get_bin_J(modelgridindex, binindex, true);
 
     printout("radfield bins sum to J of %g out of total J %g (%.1f%%).\n",
-             J_bin_sum,J[modelgridindex],100.*J_bin_sum/J[modelgridindex]);
-    printout("radfield: Finding parameters for %d bins...\n",RADFIELDBINCOUNT);
+             J_bin_sum, J[modelgridindex], 100. * J_bin_sum / J[modelgridindex]);
+    printout("radfield: Finding parameters for %d bins...\n", RADFIELDBINCOUNT);
 
     double J_bin_max = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      const double J_bin = radfield_get_bin_J(modelgridindex,binindex,true);
+      const double J_bin = radfield_get_bin_J(modelgridindex, binindex, true);
       if (J_bin > J_bin_max)
         J_bin_max = J_bin;
     }
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      const double nu_lower = radfield_get_bin_nu_lower(modelgridindex,binindex);
+      const double nu_lower = radfield_get_bin_nu_lower(modelgridindex, binindex);
       const double nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
       if (boost_region_on && boost_region_nu_lower < nu_upper && boost_region_nu_upper > nu_lower)
       {
         printout("Artificially boosting bin %d\n",binindex);
         radfield_set_bin_J(modelgridindex, binindex, J_bin_max * boost_region_factor);
       }
-      const double J_bin = radfield_get_bin_J(modelgridindex,binindex,true);
+      const double J_bin = radfield_get_bin_J(modelgridindex, binindex, true);
       double T_R_bin = -1.0;
       double W_bin = -1.0;
-      int contribcount = radfield_get_bin_contribcount(modelgridindex,binindex,true);
+      int contribcount = radfield_get_bin_contribcount(modelgridindex, binindex, true);
 
       if (contribcount > 10)
       {

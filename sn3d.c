@@ -1103,7 +1103,6 @@ int main(int argc, char** argv)
           printout("time before update packets %d\n",time(NULL));
           update_packets(nts);
 
-
           /*
           for (middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
           {
@@ -1163,7 +1162,7 @@ int main(int argc, char** argv)
 
 
           #ifdef MPI_ON
-            MPI_Barrier(MPI_COMM_WORLD); ///hold all processes once the packets are updated
+            MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
           #endif
           printout("time after update packets %d\n",time(NULL));
           //abort();
@@ -1177,8 +1176,8 @@ int main(int argc, char** argv)
             mpi_reduce_estimators(my_rank);
           #endif
 
-          /** The master thread now knows the estimators (averaged over the processors). It will now normalise them.
-          Then the new values can be sent out to all threads again */
+          // The master thread now knows the estimators (averaged over the processors). It will now normalise them.
+          // Then the new values can be sent out to all threads again
           if (my_rank == 0)
           {
             if (do_comp_est)
@@ -1207,7 +1206,6 @@ int main(int argc, char** argv)
           printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %g)\n",outer_iteration,nts,my_rank,time_step[nts].pellet_decays,nesc,time_step[nts].mid/DAY);
 
           #ifdef ESTIMATORS_ON
-
             printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",outer_iteration,nts,my_rank,nvpkt,nvpkt_esc1+nvpkt_esc2+nvpkt_esc3);
             printout("%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a macroatom deactivation. \n",nvpkt_esc1,nvpkt_esc2,nvpkt_esc3);
 
@@ -1215,7 +1213,6 @@ int main(int argc, char** argv)
             nvpkt_esc1 = 0;
             nvpkt_esc2 = 0;
             nvpkt_esc3 = 0;
-
           #endif
 
 
@@ -1226,11 +1223,11 @@ int main(int argc, char** argv)
               /// Currently linestat information is only properly implemented for MPI only runs
               /// For hybrid runs only data from thread 0 is recorded
               for (int i = 0; i < nlines; i++)
-                fprintf(linestat_file,"%d ", ecounter[i]);
-              fprintf(linestat_file,"\n");
+                fprintf(linestat_file, "%d ", ecounter[i]);
+              fprintf(linestat_file, "\n");
               for (int i = 0; i < nlines; i++)
-                fprintf(linestat_file,"%d ", acounter[i]);
-              fprintf(linestat_file,"\n");
+                fprintf(linestat_file, "%d ", acounter[i]);
+              fprintf(linestat_file, "\n");
               fflush(linestat_file);
 
               ///Old style
@@ -1338,7 +1335,7 @@ int main(int argc, char** argv)
       nts++;
       if (do_this_full_loop == 0)
       {
-        nts += last_loop + 1; ///this will break the loop and terminate the code
+        nts += last_loop + 1; // this will break the loop and terminate the code
       }
 
     }
