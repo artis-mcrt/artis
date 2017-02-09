@@ -35,12 +35,6 @@ static void read_phixs_data(void)
     printout("Cannot open phixsdata_v2.txt.\n");
     abort();
   }
-  extern FILE *popen();
-
-  FILE *popenphixshash = popen("openssl md5 -binary phixsdata_v2.txt | xxd -p", "r");
-  fgets(phixsfile_hash, 33, popenphixshash);
-  printout("MD5 hash of phixsdata_v2.txt: %s\n",phixsfile_hash);
-  pclose(popenphixshash);
 
   fscanf(phixsdata,"%d\n",&NPHIXSPOINTS);
   fscanf(phixsdata,"%lg\n",&NPHIXSNUINCREMENT);
@@ -282,12 +276,6 @@ static void read_unprocessed_atomicdata(void)
     printout("Cannot open compositiondata.txt.\n");
     abort();
   }
-  extern FILE *popen();
-
-  FILE *popencomphash = popen("openssl md5 -binary compositiondata.txt | xxd -p", "r");
-  fgets(compositionfile_hash, 33, popencomphash);
-  printout("MD5 hash of compositiondata.txt: %s\n",compositionfile_hash);
-  pclose(popencomphash);
 
   FILE *restrict adata = fopen("adata.txt", "r");
   if (adata == NULL)
@@ -295,11 +283,6 @@ static void read_unprocessed_atomicdata(void)
     printout("Cannot open adata.txt.\n");
     abort();
   }
-
-  FILE *popenadatahash = popen("openssl md5 -binary adata.txt | xxd -p", "r");
-  fgets(adatafile_hash, 33, popenadatahash);
-  printout("MD5 hash of adata.txt: %s\n",adatafile_hash);
-  pclose(popenadatahash);
 
   /// initialize atomic data structure to number of elements
   fscanf(compositiondata,"%d",&nelements);
@@ -374,25 +357,33 @@ static void read_unprocessed_atomicdata(void)
       energyoffset += ionpot;
 
       /// read information for the elements next ionstage
-      int Zcheck2,ionstage,nlevels;
-      fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
-      printout("readin level information for adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
-      while (Zcheck2 != Z || ionstage != lowermost_ionstage + ion) // skip over this ion block
+      int adata_Z_in = -1;
+      int ionstage = -1;
+      int nlevels = 0;
+      // fscanf(adata,"%d %d %d %lg\n",&adata_Z_in,&ionstage,&nlevels,&ionpot);
+      while (adata_Z_in != Z || ionstage != lowermost_ionstage + ion) // skip over this ion block
       {
-        if (Zcheck2 == Z)
+        if (adata_Z_in == Z)
         {
-          printout("increasing energyoffset by ionpot %g\n",ionpot);
+          printout("increasing energyoffset by ionpot %g\n", ionpot);
           energyoffset += ionpot;
         }
         for (int i = 0; i < nlevels; i++)
         {
-          double levelenergy,statweight;
-          int levelindex,ntransitions;
-          fscanf(adata,"%d %lg %lg %d%*[^\n]\n",&levelindex,&levelenergy,&statweight,&ntransitions);
+          double levelenergy;
+          double statweight;
+          int levelindex;
+          int ntransitions;
+          fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions);
         }
-        fscanf(adata,"%d %d %d %lg\n",&Zcheck2,&ionstage,&nlevels,&ionpot);
-        printout("proceed through adata: Z %d, ionstage %d, nlevels %d\n",Zcheck2,ionstage,nlevels);
+        int fscanfadata = fscanf(adata, "%d %d %d %lg\n", &adata_Z_in,&ionstage,&nlevels,&ionpot);
+        if (fscanfadata == EOF)
+        {
+          printout("End of file in adata");
+          abort();
+        }
       }
+      printout("adata header matched: Z %d, ionstage %d, nlevels %d\n",adata_Z_in,ionstage,nlevels);
       if (nlevelsmax < 0)
       {
         nlevelsmax = nlevels;
@@ -410,30 +401,39 @@ static void read_unprocessed_atomicdata(void)
 
 
       /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
-      int Zcheck,ionstagecheck,tottransitions;
-      fscanf(transitiondata,"%d %d %d\n",&Zcheck,&ionstagecheck,&tottransitions);
-      printout("readin transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
-      while (Zcheck != Z || ionstagecheck != ionstage)
+      int transdata_Z_in = -1;
+      int transdata_ionstage_in = -1;
+      int tottransitions = 0;
+      while (transdata_Z_in != Z || transdata_ionstage_in != ionstage)
       {
         for (int i = 0; i < tottransitions; i++)
         {
-          double A,coll_str;
-          int lower,upper,intforbidden;
+          int lower;
+          int upper;
+          double A;
+          double coll_str;
+          int intforbidden;
           fscanf(transitiondata,"%d %d %lg %lg %d\n",&lower,&upper,&A,&coll_str,&intforbidden);
         }
-        fscanf(transitiondata,"%d %d %d",&Zcheck,&ionstagecheck,&tottransitions);
-        printout("proceed through transdata: Zcheck %d, ionstagecheck %d, tottransitions %d\n",Zcheck,ionstagecheck,tottransitions);
+        int readtransdata = fscanf(transitiondata,"%d %d %d",&transdata_Z_in,&transdata_ionstage_in,&tottransitions);
+        if (readtransdata == EOF)
+        {
+          printout("End of file in transition data");
+          abort();
+        }
       }
+      printout("transdata header matched: transdata_Z_in %d, transdata_ionstage_in %d, tottransitions %d\n",
+                 transdata_Z_in, transdata_ionstage_in, tottransitions);
 
       int tottransitions_all = tottransitions;
-      if (ion == nions-1) // limit the top ion to one level and no transitions
+      if (ion == nions - 1) // limit the top ion to one level and no transitions
       {
         nlevelsmax = 1;
         tottransitions = 0;
       }
 
       /// then read in its level and transition data
-      if (Zcheck == Z && ionstagecheck == ionstage)
+      if (transdata_Z_in == Z && transdata_ionstage_in == ionstage)
       {
         transitiontable_entry *transitiontable = calloc(tottransitions, sizeof(transitiontable_entry));
 
@@ -462,10 +462,13 @@ static void read_unprocessed_atomicdata(void)
           int prev_lower = 0;
           for (int i = 0; i < tottransitions; i++)
           {
-            double A,coll_str;
-            int lower_in,upper_in,intforbidden;
+            int lower_in;
+            int upper_in;
+            double A;
+            double coll_str;
+            int intforbidden;
             fscanf(transitiondata,"%d %d %lg %lg %d\n",&lower_in,&upper_in,&A,&coll_str,&intforbidden);
-            const int lower = lower_in - 1; // TODO: remove the minus after we change the level indicies to start at zero in transitiondata.txt
+            const int lower = lower_in - 1; // TODO: remove the minus one after we change the level indicies to start at zero in transitiondata.txt
             const int upper = upper_in - 1;
 
             if (Z == 26 && ionstage == 2) // TESTING FOR FE II
@@ -571,9 +574,11 @@ static void read_unprocessed_atomicdata(void)
         }
         for (int level = 0; level < nlevels; level++)
         {
-          double levelenergy,statweight;
-          int levelindex,ntransitions;
-          fscanf(adata,"%d %lg %lg %d%*[^\n]\n",&levelindex,&levelenergy,&statweight,&ntransitions);
+          int levelindex;
+          double levelenergy;
+          double statweight;
+          int ntransitions;
+          fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions);
           //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
           if (level < nlevelsmax)
           {
@@ -599,7 +604,7 @@ static void read_unprocessed_atomicdata(void)
             /// is below the ionization potential and the level doesn't
             /// belong to the topmost ion included.
             /// Rate coefficients are only available for ionising levels.
-            if (levelenergy < ionpot && ion < nions-1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
+            if (levelenergy < ionpot && ion < nions - 1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
             {
               elements[element].ions[ion].ionisinglevels++;
 
@@ -703,8 +708,10 @@ static void read_unprocessed_atomicdata(void)
               ndownarr[level]++;
 
               elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
-              if ((elements[element].ions[ion].levels[targetlevel].uptrans
-                  = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel]+1)*sizeof(transitionlist_entry))) == NULL)
+              elements[element].ions[ion].levels[targetlevel].uptrans = realloc(
+                  elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel]+1)*sizeof(transitionlist_entry));
+
+              if (elements[element].ions[ion].levels[targetlevel].uptrans == NULL)
               {
                 printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
                 abort();
@@ -762,7 +769,7 @@ static void read_unprocessed_atomicdata(void)
         free(transitions);
 
         /// Also the phixslist
-        if (ion < nions-1)
+        if (ion < nions - 1)
         {
 //            elements[element].ions[ion].nbfcontinua = elements[element].ions[ion].ionisinglevels;//nlevelsmax;
           nbfcheck += elements[element].ions[ion].ionisinglevels; //nlevelsmax;
@@ -1732,7 +1739,7 @@ static void read_atomicdata(void)
 
         elements[element].ions[ion].nlevels_nlte = count;
 
-        printout("[input.c]  element %2d Z=%2d ion_stage %5d has %d NLTE levels. Starting at %d\n",
+        printout("[input.c]  element %2d Z=%2d ion_stage %2d has %5d NLTE levels. Starting at %d\n",
                  element, get_element(element), get_ionstage(element,ion),
                  get_nlevels_nlte(element,ion), elements[element].ions[ion].first_nlte);
       }
@@ -2437,12 +2444,12 @@ void read_parameterfile(int rank)
   fscanf(input_file, "%d", &dum1);
   if (dum1 > 0)
   {
-    pre_zseed = dum1; ///random number seed
+    pre_zseed = dum1; // random number seed
   }
   else
   {
     pre_zseed = time(NULL);
-    printout("[debug] random number seed was %d\n",pre_zseed);
+    printout("[debug] randomly-generated random number seed is %d\n", pre_zseed);
   }
 
   #ifdef _OPENMP
@@ -2464,39 +2471,34 @@ void read_parameterfile(int rank)
         //printout("zrand %g\n", x);
         gsl_rng_uniform(rng);
       }
-      printout("rng is a '%s' generator\n",gsl_rng_name(rng));
+      printout("rng is a '%s' generator\n", gsl_rng_name(rng));
   #ifdef _OPENMP
     }
   #endif
 
-  fscanf(input_file, "%d", &dum1); ///number of time steps
-  ntstep = dum1;
-  int dum5;
+  fscanf(input_file, "%d", &ntstep); // number of time steps
 
-  fscanf(input_file, "%d %d", &dum1, &dum5); ///number of start and end time step
-  itstep = dum1;
-  ftstep = dum5;
+  fscanf(input_file, "%d %d", &itstep, &ftstep); // number of start and end time step
+
   float dum2, dum3;
-
-  fscanf(input_file, "%g %g", &dum2, &dum3); ///start and end times
+  fscanf(input_file, "%g %g", &dum2, &dum3); // start and end times
   tmin = dum2 * DAY;
   tmax = dum3 * DAY;
   //tlimit = dum4 * DAY;
 
   fscanf(input_file, "%g %g", &dum2, &dum3);
-  nusyn_min = dum2 * MEV / H; ///lowest frequency to synthesise
-  nusyn_max = dum3 * MEV / H; ///highest frequecnt to synthesise
+  nusyn_min = dum2 * MEV / H; // lowest frequency to synthesise
+  nusyn_max = dum3 * MEV / H; // highest frequency to synthesise
 
-  fscanf(input_file, "%d", &dum1); ///number of times for synthesis
-  nsyn_time = dum1;
+  fscanf(input_file, "%d", &nsyn_time); // number of times for synthesis
 
-  fscanf(input_file, "%g %g", &dum2, &dum3); ///start and end times for synthesis
+  fscanf(input_file, "%g %g", &dum2, &dum3); // start and end times for synthesis
   for (int i = 0; i < nsyn_time; i++)
   {
-    time_syn[i] = exp(log(dum2) + (dum3*i)) * DAY;
+    time_syn[i] = exp(log(dum2) + (dum3 * i)) * DAY;
   }
 
-  fscanf(input_file, "%d", &dum1); ///model type
+  fscanf(input_file, "%d", &dum1); // model type
   if (dum1 == 1)
   {
     model_type = RHO_1D_READ;
@@ -2511,7 +2513,7 @@ void read_parameterfile(int rank)
   }
 
   fscanf(input_file, "%d", &dum1); ///compute the r-light curve?
-  if (dum1 == 1) ///lc no estimators
+  if (dum1 == 1) /// lc no estimators
   {
     do_r_lc = true;
     do_rlc_est = 0;
@@ -2537,17 +2539,16 @@ void read_parameterfile(int rank)
     abort();
   }
 
-  fscanf(input_file, "%d", &dum1); ///number of iterations
-  n_out_it = dum1;
+  fscanf(input_file, "%d", &n_out_it); // number of iterations
 
-  fscanf(input_file, "%g", &dum2); ///change speed of light?
+  fscanf(input_file, "%g", &dum2); // change speed of light?
   CLIGHT_PROP = dum2 * CLIGHT;
 
   fscanf(input_file, "%g", &dum2); ///use grey opacity for gammas?
   gamma_grey = dum2;
 
   float dum4;
-  fscanf(input_file, "%g %g %g", &dum2, &dum3, &dum4); ///components of syn_dir
+  fscanf(input_file, "%g %g %g", &dum2, &dum3, &dum4); // components of syn_dir
 
   const double rr = (dum2 * dum2) + (dum3 * dum3) + (dum4 * dum4);
   /// ensure that this vector is normalised.
@@ -2566,32 +2567,32 @@ void read_parameterfile(int rank)
     syn_dir[1] = sqrt( (1. - (z1 * z1))) * sin(z2);
   }
 
-  fscanf(input_file, "%d", &dum1); ///opacity choice
-  opacity_case = dum1;
+  fscanf(input_file, "%d", &opacity_case); // opacity choice
 
   ///MK: begin
   fscanf(input_file, "%g", &dum2); ///free parameter for calculation of rho_crit
   rho_crit_para = dum2;
-  printout("input: rho_crit_para %g\n",rho_crit_para);
+  printout("input: rho_crit_para %g\n", rho_crit_para);
   ///the calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
 
-  fscanf(input_file, "%d", &dum1); /// activate debug output for packet
-  debug_packet =  dum1;            /// select a negative value to deactivate
+  fscanf(input_file, "%d", &debug_packet); /// activate debug output for packet
+                                           /// select a negative value to deactivate
   ///MK: end
 
   /// Do we start a new simulation or, continue another one?
-  simulation_continued_from_saved = false;          /// Preselection is to start a new simulation
   fscanf(input_file, "%d", &dum1);
   if (dum1 == 1)
   {
-    simulation_continued_from_saved = true;        /// Continue simulation if dum1 = 1
+    simulation_continued_from_saved = true;        /// Continue simulation
     printout("input: continue simulation\n");
   }
+  else
+    simulation_continued_from_saved = false;          /// Start a new simulation
 
   /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
   /// switches from the nebular approximation to LTE.
-  fscanf(input_file, "%g", &dum2); ///free parameter for calculation of rho_crit
-  nu_rfcut = CLIGHT/(dum2*1e-8);
+  fscanf(input_file, "%g", &dum2);  // free parameter for calculation of rho_crit
+  nu_rfcut = CLIGHT / (dum2 * 1e-8);
   printout("input: nu_rfcut %g\n",nu_rfcut);
 
   /// Sets the number of initial LTE timesteps for NLTE runs
@@ -2600,7 +2601,7 @@ void read_parameterfile(int rank)
     printout("input: this is a pure LTE run\n");
   #else
     printout("input: this is a NLTE run\n");
-    printout("input: do the first %d timesteps in LTE\n",n_lte_timesteps);
+    printout("input: do the first %d timesteps in LTE\n", n_lte_timesteps);
   #endif
 
   if (NT_ON)
@@ -2618,14 +2619,14 @@ void read_parameterfile(int rank)
     printout("input: No non-thermal ionisation is used in this run.\n");
 
   if (NO_LUT_PHOTOION)
-    printout("Corrphotoioncoeff is calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
+    printout("Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no LUT).\n");
   else
-    printout("Corrphotoioncoeff is calculated from lookup tables (ratecoeff.dat).\n");
+    printout("Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat).\n");
 
   if (NO_LUT_BFHEATING)
-    printout("bfheating coefficients are calculated from the radiation field at each timestep on each modelgrid cell (no LUT).\n");
+    printout("bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no LUT).\n");
   else
-    printout("bfheating coefficients are calculated from lookup tables (ratecoeff.dat).\n");
+    printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat).\n");
 
   if (USE_MULTIBIN_RADFIELD_MODEL)
     printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
@@ -2665,7 +2666,7 @@ void read_parameterfile(int rank)
   fscanf(input_file, "%d", &dum1);
   #ifdef DO_EXSPEC
     do_emission_res = dum1;
-    if (do_emission_res == 1) printout("input: DO_EXSPEC ... extract los dependent emission information\n");
+    if (do_emission_res == 1) printout("input: DO_EXSPEC ... extract LOS dependent emission information\n");
   #endif
 
   /// To reduce the work imbalance between different MPI tasks I introduced a diffusion

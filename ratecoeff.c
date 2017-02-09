@@ -42,74 +42,97 @@ static bool read_ratecoeff_dat(void)
 /// Try to readin the precalculated rate coefficients from file
 /// returns true if successful or false otherwise
 {
+  extern FILE *popen();
+  FILE *popenadatahash = popen("openssl md5 -binary adata.txt | xxd -p", "r");
+  fgets(adatafile_hash, 33, popenadatahash);
+  printout("MD5(adata.txt) = %s\n", adatafile_hash);
+  pclose(popenadatahash);
+
+  FILE *popencomphash = popen("openssl md5 -binary compositiondata.txt | xxd -p", "r");
+  fgets(compositionfile_hash, 33, popencomphash);
+  printout("MD5(compositiondata.txt) = %s\n", compositionfile_hash);
+  pclose(popencomphash);
+
+  FILE *popenphixshash = popen("openssl md5 -binary phixsdata_v2.txt | xxd -p", "r");
+  fgets(phixsfile_hash, 33, popenphixshash);
+  printout("MD5(phixsdata_v2.txt) = %s\n", phixsfile_hash);
+  pclose(popenphixshash);
+
   FILE *ratecoeff_file;
   if ((ratecoeff_file = fopen("ratecoeff.dat", "r")) != NULL)
   {
-    /// Check whether current temperature range and atomic data match
+    /// Check whether current atomic data and temperature range match
     /// the precalculated rate coefficients
-    bool fileisamatch = true;
+    bool fileisamatch = true; // assume true until a mismatch is detected
 
     char adatafile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",adatafile_hash_in);
-    printout("ratecoeff.dat: adata file should have MD5 of %s\n",adatafile_hash_in);
+    printout("ratecoeff.dat: require MD5(adata.txt) = %s ",adatafile_hash_in);
+    if (strcmp(adatafile_hash, adatafile_hash_in) == 0)
+      printout("(pass)\n");
+    else
+    {
+      printout("MISMATCH: MD5(adata.txt) = %s\n", adatafile_hash);
+      fileisamatch = false;
+    }
 
     char compositionfile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",compositionfile_hash_in);
-    printout("ratecoeff.dat: composition file should have MD5 of %s\n",compositionfile_hash_in);
+    printout("ratecoeff.dat: require MD5(compositiondata.txt) %s ",compositionfile_hash_in);
+    if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0)
+      printout("(pass)\n");
+    else
+    {
+      printout("Hash mismatch: MD5(compositiondata.txt) = %s\n",compositionfile_hash);
+      fileisamatch = false;
+    }
 
     char phixsfile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",phixsfile_hash_in);
-    printout("ratecoeff.dat: phixs file should have MD5 of %s\n",phixsfile_hash_in);
-
-    if (strcmp(adatafile_hash,adatafile_hash_in) == 0)
+    printout("ratecoeff.dat: require MD5(phixsdata_v2.txt) = %s ",phixsfile_hash_in);
+    if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0)
+      printout("(pass)\n");
+    else
     {
-      if (strcmp(compositionfile_hash,compositionfile_hash_in) == 0)
-      {
-        if (strcmp(phixsfile_hash,phixsfile_hash_in) == 0)
-        {
-          float T_min,T_max;
-          int in_tablesize;
-          fscanf(ratecoeff_file,"%g %g %d\n",&T_min,&T_max,&in_tablesize);
-          printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d \n",T_min,T_max,in_tablesize);
+      printout("Hash mismatch: MD5(phixsdata_v2.txt) = %s\n",phixsfile_hash);
+      fileisamatch = false;
+    }
 
-          if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE)
+    if (fileisamatch)
+    {
+      float T_min,T_max;
+      int in_tablesize;
+      fscanf(ratecoeff_file,"%g %g %d\n",&T_min,&T_max,&in_tablesize);
+      printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d ", T_min, T_max, in_tablesize);
+
+      if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE)
+      {
+        printout("(pass)\n");
+        // this is redundant if the adata and composition data matches, but have
+        // to read through to maintain consistency with older files
+        for (int element = 0; element < nelements; element++)
+        {
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
           {
-            for (int element = 0; element < nelements; element++)
+            int in_element,in_ionstage,in_levels,in_ionisinglevels;
+            fscanf(ratecoeff_file,"%d %d %d %d\n",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
+            const int nlevels = get_nlevels(element,ion);
+            int ionisinglevels = get_ionisinglevels(element,ion);
+            if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
             {
-              const int nions = get_nions(element);
-              for (int ion = 0; ion < nions; ion++)
-              {
-                int in_element,in_ionstage,in_levels,in_ionisinglevels;
-                fscanf(ratecoeff_file,"%d %d %d %d\n",&in_element,&in_ionstage,&in_levels,&in_ionisinglevels);
-                const int nlevels = get_nlevels(element,ion);
-                int ionisinglevels = get_ionisinglevels(element,ion);
-                if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
-                {
-                  fileisamatch = false;
-                  break;
-                }
-              }
+              printout("Levels or ionising levels count mismatch!\n");
+              fileisamatch = false;
+              break;
             }
           }
-          else
-          fileisamatch = false;
-        }
-        else
-        {
-          printout("Hash mismatch: phixs file has an MD5 of %s\n",phixsfile_hash);
-          fileisamatch = false;
         }
       }
       else
       {
-        printout("Hash mismatch: composition file has an MD5 of %s\n",compositionfile_hash);
+        printout("FAIL: Tmin %g Tmax %g TABLESIZE %d\n", MINTEMP, MAXTEMP, TABLESIZE);
         fileisamatch = false;
       }
-    }
-    else
-    {
-      printout("Hash mismatch: adata file has an MD5 of %s\n",adatafile_hash);
-      fileisamatch = false;
     }
 
     if (fileisamatch || SKIPRATECOEFFVALIDATION)
@@ -711,12 +734,14 @@ void ratecoefficients_init(void)
 /// T_e = T_R for this precalculation.
 {
   /// Determine the temperture grids gridsize
-  T_step = (1.*MAXTEMP-MINTEMP) / (TABLESIZE-1.);               /// global variables
-  T_step_log = (log(MAXTEMP)-log(MINTEMP)) / (TABLESIZE-1.);
+  T_step = (1. * MAXTEMP - MINTEMP) / (TABLESIZE - 1.);               /// global variables
+  T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   if (!read_ratecoeff_dat())
+  {
     precalculate_rate_coefficient_integrals();
+  }
 
   calculate_ion_alpha_sp();
 }
