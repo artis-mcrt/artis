@@ -174,7 +174,7 @@ int vgrid_flag;
 #define MZGRID 50        // Max number of grid cells in z-direction.
 //#define MGRID 1000000  // Max number of grid cells.
 #define MTSTEP 200       // Max number of time steps.
-#define MLINES 500000    // Increase linelist by this blocksize
+#define MLINES 524288    // Increase linelist by this blocksize
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
 
@@ -532,7 +532,7 @@ int debuglevel;
 /// Rate coefficients
 ///============================================================================
 #define TABLESIZE 100 //200 //100
-#define MINTEMP 3000.
+#define MINTEMP 2000.
 #define MAXTEMP 140000. //1000000.
 double T_step;
 double T_step_log;
