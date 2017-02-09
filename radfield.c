@@ -49,8 +49,8 @@ struct radfieldbin
   enum_bin_fit_type fit_type;
 };
 
-//static struct *radfieldbin *restrict radfieldbins[MMODELGRID+1]; // heap allocated alterative
-static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT]; // THIS IS ALLOCATED EVEN IF USE_MULTIBIN_RADFIELD_MODEL IS FALSE!
+static struct radfieldbin *radfieldbins[MMODELGRID+1]; // heap allocated alterative
+// static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT]; // THIS IS ALLOCATED EVEN IF USE_MULTIBIN_RADFIELD_MODEL IS FALSE!
 
 typedef enum
 {
@@ -75,27 +75,31 @@ static FILE *restrict radfieldfile = NULL;
 
 void radfield_init(int my_rank)
 {
-  if (USE_MULTIBIN_RADFIELD_MODEL && radfield_initialized == false)
-  {
-    printout("Initialising radiation field with %d bins from (%6.2f eV, %f A) to (%6.2f eV, %f A)\n",
-             RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
-             H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
-    char filename[100];
-    sprintf(filename,"radfield_%.4d.out", my_rank);
-    radfieldfile = fopen(filename, "w");
-    if (radfieldfile == NULL)
-    {
-      printout("Cannot open %s.\n",filename);
-      abort();
-    }
-    fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %11s\n",
-            "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
-            "nuJ","J","J_nu_avg","ncontrib","T_R","W");
-    fflush(radfieldfile);
+  if (!USE_MULTIBIN_RADFIELD_MODEL || radfield_initialized == true)
+    return;
 
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  printout("Initialising radiation field with %d bins from (%6.2f eV, %f A) to (%6.2f eV, %f A)\n",
+           RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
+           H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
+  char filename[100];
+  sprintf(filename,"radfield_%.4d.out", my_rank);
+  radfieldfile = fopen(filename, "w");
+  if (radfieldfile == NULL)
+  {
+    printout("Cannot open %s.\n",filename);
+    abort();
+  }
+  fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %11s\n",
+          "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
+          "nuJ","J","J_nu_avg","ncontrib","T_R","W");
+  fflush(radfieldfile);
+
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, modelgrid[modelgridindex].associated_cells);
+    if (modelgrid[modelgridindex].associated_cells > 0)
     {
-      //radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
+      radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
 
       radfield_set_J_normfactor(modelgridindex, -1.0);
 
@@ -142,8 +146,8 @@ void radfield_init(int my_rank)
         prev_nu_upper = radfieldbins[modelgridindex][binindex].nu_upper;
       }
     }
-    radfield_initialized = true;
   }
+  radfield_initialized = true;
 }
 
 
@@ -216,11 +220,11 @@ double radfield_get_bin_nu_upper(int modelgridindex, int binindex)
 
 
 static inline
-int radfield_get_bin_contribcount(int modelgridindex, int binindex, bool combined)
-// combined with the previous timestep
+int radfield_get_bin_contribcount(int modelgridindex, int binindex, bool averaged)
+// averaged with the previous timestep
 {
   const int contribcount = radfieldbins[modelgridindex][binindex].contribcount;
-  if (!combined)
+  if (!averaged)
     return contribcount;
   else
     return contribcount + radfieldbins[modelgridindex][binindex].prev_contribcount;
@@ -345,25 +349,25 @@ void radfield_close_file(void)
   {
     fclose(radfieldfile);
 
-    // for (int dmgi = 0; dmgi < MMODELGRID; dmgi++)
-    //   free(radfieldbins[dmgi]);
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    if (modelgrid[modelgridindex].associated_cells > 0)
+      free(radfieldbins[modelgridindex]);
+  }
 
     //free(radfieldbins);
   }
 }
 
 
-void radfield_zero_estimators(int modelgridindex, int my_rank)
+void radfield_zero_estimators(int modelgridindex)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
 {
   nuJ[modelgridindex] = 0.;
 
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (USE_MULTIBIN_RADFIELD_MODEL & radfield_initialized)
   {
-    if (!radfield_initialized)
-      radfield_init(my_rank);
-
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -775,18 +779,19 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
 
           if (W_bin > 1e4)
           {
-            printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",W_bin,binindex,T_R_max,planck_integral_result);
+            printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",
+                     W_bin, binindex, T_R_max, planck_integral_result);
             planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
             W_bin = J_bin / planck_integral_result;
             if (W_bin > 1e4)
             {
-              printout("W still very high, W=%g. Zeroing bin...\n",W_bin);
+              printout("W still very high, W=%g. Zeroing bin...\n", W_bin);
               T_R_bin = -99.0;
               W_bin = 0.;
             }
             else
             {
-              printout("new W is %g. Continuing with this value\n",W_bin);
+              printout("new W is %g. Continuing with this value\n", W_bin);
             }
           }
 
@@ -798,7 +803,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         }
         else
         {
-          printout("radfield_fit_parameters: unknown fit type %d for bin %d\n",bin_fit_type,binindex);
+          printout("radfield_fit_parameters: unknown fit type %d for bin %d\n", bin_fit_type, binindex);
           T_R_bin = -1.;
           W_bin = -1.;
         }
@@ -911,6 +916,7 @@ void radfield_reduce_estimators(int my_rank)
 
 void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 // broadcast computed radfield results including parameters
+// from the cells belonging to root process to all processes
 {
   if (!USE_MULTIBIN_RADFIELD_MODEL)
     return;

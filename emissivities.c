@@ -152,14 +152,14 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 }
 
 
-void zero_estimators(int my_rank)
+void zero_estimators(void)
 {
   //for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
     J[n] = 0.;
     #ifndef FORCE_LTE
-      radfield_zero_estimators(n, my_rank);
+      radfield_zero_estimators(n);
       ffheatingestimator[n] = 0.;
       colheatingestimator[n] = 0.;
       /*

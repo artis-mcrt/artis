@@ -738,7 +738,7 @@ int main(int argc, char** argv)
   //abort();
 
   /// As a precaution, explicitly zero all the estimators here
-  zero_estimators(my_rank);
+  zero_estimators();
   printout("time after zero estimators %d\n",time(NULL));
 
   /// Record the chosen syn_dir
@@ -1095,7 +1095,7 @@ int main(int argc, char** argv)
         /** set all the estimators to zero before moving packets. This is now done
         after update_grid so that, if requires, the gamma-ray heating estimator is known there
         and also the photoion and stimrecomb estimators */
-        zero_estimators(my_rank);
+        zero_estimators();
 
         if ((nts < ftstep) && (do_this_full_loop == 1))
         {
@@ -1202,8 +1202,9 @@ int main(int argc, char** argv)
           #endif
 
           /// Now printout some statistics on the current timestep
-          printout("time after estimators have been communicated %d\n",time(NULL));
-          printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %g)\n",outer_iteration,nts,my_rank,time_step[nts].pellet_decays,nesc,time_step[nts].mid/DAY);
+          printout("time after estimators have been communicated %d\n", time(NULL));
+          printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %g)\n",
+                   outer_iteration, nts, my_rank, time_step[nts].pellet_decays, nesc, time_step[nts].mid / DAY);
 
           #ifdef ESTIMATORS_ON
             printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",outer_iteration,nts,my_rank,nvpkt,nvpkt_esc1+nvpkt_esc2+nvpkt_esc3);
