@@ -1119,6 +1119,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   {
     const int Z = get_element(element);
     const int nions = get_nions(element);
+    printout("Z=%2d ion_stages: ", Z);
     for (int ion = 0; ion < nions; ion++)
     {
       const int ionstage = get_ionstage(element, ion);
@@ -1126,6 +1127,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
       if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
         continue;
+
+      printout("%d ", ionstage);
 
       // excitation terms
       // for (int level = 0; level < get_nlevels(element,ion); level++)
@@ -1178,8 +1181,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
             E_0 = ionpot_ev; // new minimum energy for excitation/ionization
 
           const double J = 0.6 * ionpot_ev;  // valid for elements other than He, Ne, Ar (Kozma & Fransson 1992)
-          printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
-                   Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
+          // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
+          //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
           for (int i = 0; i < SFPTS; i++)
           {
@@ -1215,6 +1218,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
       }
     }
   }
+  printout("\n");
 
   gsl_vector_free(vec_xs_excitation_nnion_deltae);
 
