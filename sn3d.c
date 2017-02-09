@@ -174,7 +174,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
           }
         }
       }
-      printout("MPI_BUFFER: used %d bytes of MPI buffer which has size %d\n", position, HUGEE);
+      printout("MPI_BUFFER: used %d of %d bytes of MPI buffer\n", position, HUGEE);
     }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(buffer, HUGEE, MPI_PACKED, n, MPI_COMM_WORLD);
@@ -232,7 +232,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
             MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
           }
         }
-        printout("MPI_BUFFER: used %d bytes of MPI buffer2 which has size %d\n", position, HUGEE2);
+        printout("MPI_BUFFER: used %d of %d bytes of MPI buffer2\n", position, HUGEE2);
       }
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
