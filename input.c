@@ -2606,9 +2606,9 @@ void read_parameterfile(int rank)
   if (NT_ON)
   {
     if (NT_SOLVE_SPENCERFANO)
-      printout("input: Non-thermal ionisation with the work function approximation is switched on for this run.\n");
+      printout("input: Non-thermal ionisation with a Spencer-Fano solution is switched on for this run.\n");
     else
-      printout("input: Non-thermal ionisation with a full Spencer-Fano solution is switched on for this run.\n");
+      printout("input: Non-thermal ionisation with the work function approximation is switched on for this run.\n");
     #ifdef FORCE_LTE
       printout("input: Non-thermal ionisation requires the code to run in non-LTE mode. Remove macro FORCE_LTE and recompile!\n");
       abort();
