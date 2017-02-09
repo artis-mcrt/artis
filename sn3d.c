@@ -493,7 +493,6 @@ static void mpi_broadcast_estimators(int my_rank)
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Bcast(&J, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   #ifndef FORCE_LTE
-    radfield_broadcast_estimators(my_rank);
     MPI_Bcast(&nuJ, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&ffheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&colheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
