@@ -982,7 +982,7 @@ static void analyse_sf_solution(int modelgridindex)
     for (int ion = 0; ion < get_nions(element); ion++)
     {
       nt_solution[modelgridindex].eff_ionpot[element][ion] = calculate_eff_ionpot(modelgridindex, element, ion);
-      
+
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
       // if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
@@ -1313,6 +1313,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     free(nt_solution[modelgridindex].yfunc);
   }
 }
+
 
 #ifdef MPI_ON
 void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
