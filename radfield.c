@@ -372,7 +372,7 @@ void radfield_zero_estimators(int modelgridindex, int my_rank)
       {
         radfieldbins[modelgridindex][binindex].prev_J_normed = radfield_get_bin_J(modelgridindex, binindex, false);
         radfieldbins[modelgridindex][binindex].prev_nuJ_normed = radfield_get_bin_nuJ(modelgridindex, binindex, false);
-        radfieldbins[modelgridindex][binindex].prev_contribcount = radfield_get_bin_contribcount(modelgridindex, binindex, true);
+        radfieldbins[modelgridindex][binindex].prev_contribcount = radfield_get_bin_contribcount(modelgridindex, binindex, false);
       }
       radfieldbins[modelgridindex][binindex].J_raw = 0.0;
       radfieldbins[modelgridindex][binindex].nuJ_raw = 0.0;
