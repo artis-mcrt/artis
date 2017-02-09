@@ -974,14 +974,6 @@ static void analyse_sf_solution(int modelgridindex)
   // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
   nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
 
-  for (int element = 0; element < nelements; element++)
-  {
-    for (int ion = 0; ion < get_nions(element); ion++)
-    {
-      nt_solution[modelgridindex].eff_ionpot[element][ion] = calculate_eff_ionpot(modelgridindex, element, ion);
-    }
-  }
-
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
   for (int element = 0; element < nelements; element++)
@@ -989,6 +981,8 @@ static void analyse_sf_solution(int modelgridindex)
     const int Z = get_element(element);
     for (int ion = 0; ion < get_nions(element); ion++)
     {
+      nt_solution[modelgridindex].eff_ionpot[element][ion] = calculate_eff_ionpot(modelgridindex, element, ion);
+      
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
       // if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
