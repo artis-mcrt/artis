@@ -50,7 +50,7 @@ struct radfieldbin
 };
 
 static struct radfieldbin *radfieldbins[MMODELGRID+1]; // heap allocated alterative
-// static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT]; // THIS IS ALLOCATED EVEN IF USE_MULTIBIN_RADFIELD_MODEL IS FALSE!
+// static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT]; // THIS IS ALLOCATED EVEN IF MULTIBIN_RADFIELD_MODEL_ON IS FALSE!
 
 typedef enum
 {
@@ -75,7 +75,7 @@ static FILE *restrict radfieldfile = NULL;
 
 void radfield_init(int my_rank)
 {
-  if (!USE_MULTIBIN_RADFIELD_MODEL || radfield_initialized == true)
+  if (!MULTIBIN_RADFIELD_MODEL_ON || radfield_initialized == true)
     return;
 
   printout("Initialising radiation field with %d bins from (%6.2f eV, %f A) to (%6.2f eV, %f A)\n",
@@ -285,7 +285,7 @@ int radfield_select_bin(int modelgridindex, double nu)
 
 void radfield_write_to_file(int modelgridindex, int timestep)
 {
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
 # ifdef _OPENMP
 # pragma omp critical (radfield_out_file)
@@ -345,7 +345,7 @@ void radfield_write_to_file(int modelgridindex, int timestep)
 
 void radfield_close_file(void)
 {
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     fclose(radfieldfile);
 
@@ -366,7 +366,7 @@ void radfield_zero_estimators(int modelgridindex)
 {
   nuJ[modelgridindex] = 0.;
 
-  if (USE_MULTIBIN_RADFIELD_MODEL & radfield_initialized)
+  if (MULTIBIN_RADFIELD_MODEL_ON & radfield_initialized)
   {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
@@ -442,7 +442,7 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
 {
-  if (USE_MULTIBIN_RADFIELD_MODEL && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) // && radfieldbins[modelgridindex] != NULL
+  if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) // && radfieldbins[modelgridindex] != NULL
   {
     int binindex = radfield_select_bin(modelgridindex,nu);
     if (binindex >= 0)
@@ -721,7 +721,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
   set_TR(modelgridindex, T_R);
   set_W(modelgridindex, W);
 
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     if (J_normfactor[modelgridindex] <= 0)
     {
@@ -886,28 +886,28 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 
 #ifdef MPI_ON
 void radfield_reduce_estimators(int my_rank)
-// reduce and broadcast (allreduce) the estimators for J and nuJ
+// reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
   printout("radfield_reduce_estimators starting\n");
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (!MULTIBIN_RADFIELD_MODEL_ON)
+    return;
+
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, modelgrid[modelgridindex].associated_cells);
+    if (modelgrid[modelgridindex].associated_cells > 0)
     {
-      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, modelgrid[modelgridindex].associated_cells);
-      if (modelgrid[modelgridindex].associated_cells > 0)
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-        {
-          MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
 
-          // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
 
-          MPI_Allreduce(&radfieldbins[modelgridindex][binindex].J_raw, &radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-          MPI_Allreduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-          MPI_Allreduce(&radfieldbins[modelgridindex][binindex].contribcount, &radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].J_raw, &radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].contribcount, &radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-          // printout("MPI: After MPI_Allreduce: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
-        }
+        // printout("MPI: After MPI_Allreduce: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
       }
     }
   }
@@ -918,7 +918,7 @@ void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 {
-  if (!USE_MULTIBIN_RADFIELD_MODEL)
+  if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
 
   int sender_nstart;
@@ -966,7 +966,7 @@ void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 
 void radfield_write_restart_data(FILE *gridsave_file)
 {
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     fprintf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
             RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
@@ -992,7 +992,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
 
 void radfield_read_restart_data(FILE *gridsave_file)
 {
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     int bincount_in, radfield_initialized_in;
     double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;

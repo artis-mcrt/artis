@@ -10,7 +10,7 @@
 
 extern inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
 extern inline double ionstagepop(int modelgridindex, int element, int ion);
-extern inline double get_levelpop(int modelgridindex, int element, int ion, int level);
+
 
 double nne_solution_f(double x, void *restrict paras)
 /// For libgsl bracketing type solver
@@ -567,6 +567,38 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 }*/
 
 
+double get_levelpop(int modelgridindex, int element, int ion, int level)
+/// Returns the given levels occupation number, which are stored in the active
+/// entry of the cellhistory.
+{
+//printout("get_levelpop histindex %d\n",histindex);
+  if (use_cellhist)
+  {
+    const double pop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
+    if (pop > -1)
+      return pop;
+    else
+    {
+      printout("Abort: get_levelpop called, but no population in cellhistory for element %d ion %d level %d",
+               element,ion,level);
+      abort();
+    }
+    const int cellmgi = cell[cellhistory[tid].cellnumber].modelgridindex;
+
+    if (cellmgi != modelgridindex)
+    {
+      printout("Abort: get_levelpop called, but cellhistory mgi %d != argument modelgridindex %d",
+               cellmgi,modelgridindex);
+      abort();
+    }
+  }
+  else
+  {
+    return calculate_exclevelpop(modelgridindex,element,ion,level);
+  }
+}
+
+
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation population of a level assuming LTE excitation
 {
@@ -826,7 +858,7 @@ void initialise_photoionestimators(void)
       for (int element = 0; element < nelements; element++)
       {
         const int nions = get_nions(element);
-        for (int ion = 0; ion < nions-1; ion++)
+        for (int ion = 0; ion < nions - 1; ion++)
         {
           //  double ionpot,Alpha_sp,sw_ratio,Gamma;
           //ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);

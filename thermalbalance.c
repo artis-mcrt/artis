@@ -121,7 +121,7 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
   }
 
   //double thermalmax = find_T_e(T_max,find_T_e_f.params);
-  if (thermalmin*thermalmax < 0)
+  if (thermalmin * thermalmax < 0)
   {
     /// If it has, then solve for the root T_e
     /// but first of all printout heating and cooling rates if the tb_info switch is set
@@ -147,16 +147,13 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
     fdf.df = &nne_solution_deriv;
     fdf.fdf = &nne_solution_fdf;*/
 
+    // one-dimensional gsl root solver, bracketing type
+    const gsl_root_fsolver_type *solvertype = gsl_root_fsolver_brent;
+    gsl_root_fsolver *restrict T_e_solver = gsl_root_fsolver_alloc(solvertype);
 
-    ///onedimensional gsl root solver, bracketing type
-    const gsl_root_fsolver_type *solvertype;
-    gsl_root_fsolver *restrict T_e_solver;
-    solvertype = gsl_root_fsolver_brent;
-
-    T_e_solver = gsl_root_fsolver_alloc(solvertype);
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
     int iter2 = 0;
-    double fractional_accuracy = 1e-2;
+    const double fractional_accuracy = 1e-2;
     const int maxit = 100;
     int status;
     do
@@ -166,8 +163,8 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
       T_e = gsl_root_fsolver_root(T_e_solver);
       //cell[cellnumber].T_e = T_e;
       set_Te(modelgridindex,T_e);
-      double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
-      double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
+      const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
+      const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
       status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
       printout("[debug] find T_e:   iter %d, interval [%g, %g], guess %g, status %d\n",iter2,T_e_min,T_e_max,T_e,status);
     }
@@ -266,7 +263,9 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
 
   //fprintf(heating_file,"%d %g %g %g %g %g %g %g %g\n",modelgridindex,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
 
-  if (neutral_flag) printout("[info] call_T_e_finder: cell %d contains only neutral ions\n",modelgridindex);
+  if (neutral_flag)
+    printout("[info] call_T_e_finder: cell %d contains only neutral ions\n",modelgridindex);
+
   return T_e;
 }
 
@@ -457,17 +456,16 @@ void calculate_heating_rates(int modelgridindex)
   heatingrates[tid].collisional = C_deexc;
 #else
   /// Collisional heating (from estimators)
-  /// -------------------------------------
   heatingrates[tid].collisional = colheatingestimator[modelgridindex];//C_deexc + C_recomb;
 #endif
 
-//  heatingrates[tid].collbb = C_deexc;
-//  heatingrates[tid].collbf = C_recomb;
+  // heatingrates[tid].collbb = C_deexc;
+  // heatingrates[tid].collbf = C_recomb;
   heatingrates[tid].bf = bfheating;
   heatingrates[tid].ff = ffheating;
-  //printout("ffheating %g, bfheating %g, colheating %g\n",ffheating,bfheating,C_deexc+C_recomb);
+  // printout("ffheating %g, bfheating %g, colheating %g\n",ffheating,bfheating,C_deexc+C_recomb);
 
-  //gsl_integration_workspace_free(wspace);
+  // gsl_integration_workspace_free(wspace);
 }
 
 
@@ -542,9 +540,8 @@ void calculate_cooling_rates(int modelgridindex)
           C = 0.0;
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            double epsilon_upper = epsilon(element,ion+1,upper);
-            double epsilon_trans = epsilon_upper - epsilon_current;
+            const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
             //printout("cooling list: col_ionization\n");
             C += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
           }

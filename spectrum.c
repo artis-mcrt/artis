@@ -31,15 +31,15 @@
   double traceemiss_totalflux = 0.;
   static int compare_emisscontrib(const void *p1, const void *p2)
   {
-      const struct emissioncontrib *elem1 = p1;
-      const struct emissioncontrib *elem2 = p2;
+    const struct emissioncontrib *elem1 = p1;
+    const struct emissioncontrib *elem2 = p2;
 
-     if (elem1->fluxcontrib < elem2->fluxcontrib)
-        return 1;
-     else if (elem1->fluxcontrib > elem2->fluxcontrib)
-        return -1;
-     else
-        return 0;
+   if (elem1->fluxcontrib < elem2->fluxcontrib)
+      return 1;
+   else if (elem1->fluxcontrib > elem2->fluxcontrib)
+      return -1;
+   else
+      return 0;
   }
 #endif
 
@@ -130,10 +130,9 @@ void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
 
 
 static void add_to_spec(const EPKT *pkt_ptr)
-/*Routine to add a packet to the outcoming spectrum.*/
+// Routine to add a packet to the outgoing spectrum.
 {
-  /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
-  int nproc;
+  // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
   /// Put this into the time grid.
   const double t_arrive = pkt_ptr->arrive_time;
@@ -147,6 +146,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
       spectra[nt].flux[nnu] += deltaE;
 
       int et = pkt_ptr->emissiontype;
+      int nproc;
       if (et >= 0)
       {
         /// bb-emission
@@ -169,12 +169,12 @@ static void add_to_spec(const EPKT *pkt_ptr)
       else if (et == -9999999)
       {
         /// ff-emission
-        nproc = 2*nelements*maxion;
+        nproc = 2 * nelements * maxion;
       }
       else
       {
         /// bf-emission
-        et = -1*et - 1;
+        et = -1 * et - 1;
         const int element = bflist[et].elementindex;
         const int ion = bflist[et].ionindex;
         nproc = nelements*maxion + element*maxion+ion;
@@ -191,7 +191,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
           /// bb-emission
           const int element = linelist[at].elementindex;
           const int ion = linelist[at].ionindex;
-          nproc = element*maxion+ion;
+          nproc = element * maxion + ion;
           spectra[nt].stat[nnu].absorption[nproc] += deltaE;
         }
       }
@@ -223,15 +223,15 @@ static void init_spectrum(void)
   for (int n = 0; n < ntbins; n++)
   {
     spectra[n].lower_time = exp( log(tmin) + (n * (dlogt)));
-    spectra[n].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - spectra[n].lower_time;
+    spectra[n].delta_t = exp( log(tmin) + ((n + 1) * (dlogt))) - spectra[n].lower_time;
     for (int m = 0; m < nnubins; m++)
     {
       spectra[n].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
-      spectra[n].delta_freq[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - spectra[n].lower_freq[m];
+      spectra[n].delta_freq[m] = exp( log(nu_min_r) + ((m + 1) * (dlognu))) - spectra[n].lower_freq[m];
       spectra[n].flux[m] = 0.0;
       for (int i = 0; i < 2 * nelements * maxion + 1; i++)
         spectra[n].stat[m].emission[i] = 0;  ///added
-      for (int i = 0; i < nelements*maxion; i++)
+      for (int i = 0; i < nelements * maxion; i++)
         spectra[n].stat[m].absorption[i] = 0;  ///added
     }
   }
@@ -278,7 +278,7 @@ void gather_spectrum(int depth)
     /// appropriate bins.
     for (int p = 0; p < nepkts; p++)
     {
-      double vem = sqrt(pow(epkts[p].em_pos[0],2) + pow(epkts[p].em_pos[1],2) + pow(epkts[p].em_pos[2],2)) / (epkts[p].em_time);
+      const double vem = sqrt(pow(epkts[p].em_pos[0],2) + pow(epkts[p].em_pos[1],2) + pow(epkts[p].em_pos[2],2)) / (epkts[p].em_time);
       //printout("vem %g, vcut %g, vmax %g, time %d\n",vem,vcut,vmax,pkt_ptr->em_time);
       if (vem < vcut)
         add_to_spec(&epkts[p]);
@@ -329,8 +329,6 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
      The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
   */
 
-  int nproc;
-
   double xhat[3] = {1.0, 0.0, 0.0};
 
   /// Angle resolved case: need to work out the correct angle bin
@@ -375,23 +373,24 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
 
         if (do_emission_res == 1)
         {
+          int nproc;
           int et = pkt_ptr->emissiontype;
           if (et >= 0)
           {
             /// bb-emission
             const int element = linelist[et].elementindex;
             const int ion = linelist[et].ionindex;
-            nproc = element*maxion+ion;
+            nproc = element * maxion + ion;
           }
           else if (et == -9999999)
           {
             /// ff-emission
-            nproc = 2*nelements*maxion;
+            nproc = 2 * nelements * maxion;
           }
           else
           {
             /// bf-emission
-            et = -1*et - 1;
+            et = -1 * et - 1;
             const int element = bflist[et].elementindex;
             const int ion = bflist[et].ionindex;
             nproc = nelements*maxion + element*maxion+ion;
@@ -408,7 +407,7 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
               /// bb-emission
               const int element = linelist[at].elementindex;
               const int ion = linelist[at].ionindex;
-              nproc = element*maxion+ion;
+              nproc = element * maxion + ion;
               spectra[nt].stat[nnu].absorption[nproc] += deltaE;
             }
           }

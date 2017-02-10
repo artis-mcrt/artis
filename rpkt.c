@@ -16,13 +16,9 @@ static double min(double a, double b)
 // returns minimum of a and b
 {
   if (a >= b)
-  {
     return b;
-  }
   else
-  {
     return a;
-  }
 }
 
 

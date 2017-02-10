@@ -938,7 +938,8 @@ static void density_2d_read(void)
     check1 = check1 + (get_kappagrey(mgi)  * get_rhoinit(mgi));
     check2 = check2 + get_rhoinit(mgi);
   }
-  if (rank_global == 0) fclose(grid_file);
+  if (rank_global == 0)
+    fclose(grid_file);
 
 
   printout("Grey normalisation check: %g\n", check1/check2);
