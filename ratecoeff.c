@@ -139,6 +139,7 @@ static bool read_ratecoeff_dat(void)
     {
       if (SKIPRATECOEFFVALIDATION && !fileisamatch)
         printout("SKIPRATECOEFFVALIDATION on, ignoring checks and forcing use ratecoeff.dat\n");
+
       printout("[info] ratecoefficients_init:  Matching ratecoeff.dat file found. Readin this file ...\n");
       for (int element = 0; element < nelements; element++)
       {

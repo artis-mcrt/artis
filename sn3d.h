@@ -16,7 +16,7 @@ static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;  // solve the populati
                                                            // simultaneously for levels in all ions
 #define NLTEITER 30
 
-static const bool USE_MULTIBIN_RADFIELD_MODEL = true;  // if using this, should avoid look up tables and switch on
+static const bool MULTIBIN_RADFIELD_MODEL_ON = true;  // if using this, should avoid look up tables and switch on
                                                        // direct integration options below
                                                        // (since they assume J_nu is Planck function)
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 14;

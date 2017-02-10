@@ -192,13 +192,6 @@ static void density_1d_read(void)
   //int renorm[MMODELGRID];
   //double den_norm[MMODELGRID];
 
-  // Calculate the critical opacity at which opacity_case 3 switches from a
-  // regime proportional to the density to a regime independent of the density
-  // This is done by solving for tau_sobolev == 1
-  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
-  rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
-  printout("grid_init: rho_crit = %g\n", rho_crit);
-
   // for (n=0;n<MMODELGRID;n++)
   // {
   //   renorm[n]=0;
@@ -371,7 +364,7 @@ static void density_1d_read(void)
   {
     if (modelgrid[mgi].associated_cells > 0)
     {
-      double helper = rho_model[mgi] * pow( (t_model/tmin), 3);
+      const double helper = rho_model[mgi] * pow( (t_model/tmin), 3);
       set_rhoinit(mgi,helper);
       set_rho(mgi,helper);
       set_ffe(mgi,ffegrp_model[mgi]);
@@ -385,8 +378,8 @@ static void density_1d_read(void)
       {
         ///now set the abundances (by mass) of included elements, i.e.
         ///read out the abundances specified in the atomic data file
-        int anumber = get_element(element);
-        float abundance = abund_model[mgi][anumber-1];
+        const int anumber = get_element(element);
+        const float abundance = abund_model[mgi][anumber-1];
         //cell[n].composition[element].abundance = abundance;
         modelgrid[mgi].composition[element].abundance = abundance;
         //if (anumber == 8)
@@ -506,7 +499,7 @@ static void density_1d_read(void)
       }
       else if (opacity_case == 3)
       {
-        const double opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
+        opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
         set_kappagrey(mgi, get_kappagrey(mgi) * opcase3_normal);
       }
       else if (opacity_case == 4)
@@ -707,21 +700,10 @@ static void density_1d_read(void)
 static void density_2d_read(void)
 // Routine for doing a density grid read from a 2-D model.
 {
-  double radial_pos;
   int mkeep1, mkeep2;
   // int renorm[MMODELGRID];
   // double den_norm[MMODELGRID];
-  double opcase2_normal;
-  int anumber;
-  float abundance;
   double zcylindrical, rcylindrical;
-
-  // Calculate the critical opacity at which opacity_case 3 switches from a
-  // regime proportional to the density to a regime independent of the density
-  // This is done by solving for tau_sobolev == 1
-  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
-  rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
-  printout("grid_init: rho_crit = %g\n", rho_crit);
 
   double check1 = 0.0;
   double check2 = 0.0;
@@ -738,7 +720,7 @@ static void density_2d_read(void)
     dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
 
-    radial_pos = vec_len(dcen);
+    double radial_pos = vec_len(dcen);
 
     if (radial_pos < rmax)
     {
@@ -777,6 +759,7 @@ static void density_2d_read(void)
     }
   }
 
+
   // Determine the number of simulation cells associated with the model cells
   for (int i = 0; i < npts_model; i++)
   {
@@ -788,6 +771,7 @@ static void density_2d_read(void)
     modelgrid[i].associated_cells = count;
   }
 
+
 //  for (n=0;n < ngrid; n++)
 //  {
 //    mgi = cell[n].modelgridindex;
@@ -795,7 +779,7 @@ static void density_2d_read(void)
   {
     if (modelgrid[mgi].associated_cells > 0)
     {
-      double helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
+      const double helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
       set_rhoinit(mgi,helper);
       set_rho(mgi,helper);
       set_ffe(mgi,ffegrp_model[mgi]);
@@ -809,8 +793,8 @@ static void density_2d_read(void)
       {
         ///now set the abundances (by mass) of included elements, i.e.
         ///read out the abundances specified in the atomic data file
-        anumber = get_element(element);
-        abundance = abund_model[mgi][anumber-1];
+        const int anumber = get_element(element);
+        const float abundance = abund_model[mgi][anumber-1];
         //cell[n].composition[element].abundance = abundance;
         modelgrid[mgi].composition[element].abundance = abundance;
         //if (anumber == 8)
@@ -822,23 +806,17 @@ static void density_2d_read(void)
 
         if (anumber == 28)
           set_fnistable(mgi,abundance - get_f56ni(mgi));
-
-        if (anumber == 27)
+        else if (anumber == 27)
           set_fcostable(mgi,abundance - get_fco(mgi));
-
-        if (anumber == 26)
+        else if (anumber == 26)
           set_ffestable(mgi,abundance - get_f52fe(mgi));
-
-        if (anumber == 25)
+        else if (anumber == 25)
           set_fmnstable(mgi,abundance);
-
-        if (anumber == 24)
+        else if (anumber == 24)
           set_fcrstable(mgi,abundance - get_f48cr(mgi));
-
-        if (anumber == 23)
+        else if (anumber == 23)
           set_fvstable(mgi,abundance);
-
-        if (anumber == 22)
+        else if (anumber == 22)
           set_ftistable(mgi,abundance);
       }
 
@@ -849,7 +827,6 @@ static void density_2d_read(void)
       }
     }
   }
-
 
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
@@ -865,7 +842,6 @@ static void density_2d_read(void)
   set_TJ(MMODELGRID,MINTEMP);
   set_TR(MMODELGRID,MINTEMP);
   allocate_compositiondata(MMODELGRID);
-
 
   /// First pass through to get normalisation coefficients
   for (int n = 0; n < ngrid; n++)
@@ -915,7 +891,8 @@ static void density_2d_read(void)
   for (int n = 0; n < ngrid; n++)
   {
     int mgi = cell[n].modelgridindex;
-    if (rank_global == 0 && mgi != MMODELGRID) fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
+    if (rank_global == 0 && mgi != MMODELGRID)
+      fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
     if (get_rhoinit(mgi) > 0)
     {
       if (opacity_case == 0)
@@ -928,12 +905,12 @@ static void density_2d_read(void)
       }
       else if (opacity_case == 2)
       {
-        opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
+        const double opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
         set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffe(mgi)) + 0.1));
       }
       else if (opacity_case == 3)
       {
-        opcase3_normal = GREY_OP*rho_sum / opcase3_sum;
+        opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
         set_kappagrey(mgi, get_kappagrey(mgi) * opcase3_normal);
       }
       else if (opacity_case == 4)
@@ -976,13 +953,6 @@ static void density_3d_read(void)
   fe_sum = 0.0;
   int empty_cells = 0;
   double opcase3_sum = 0;
-
-  //Calculate the critical opacity at which opacity_case 3 switches from a
-  //regime proportional to the density to a regime independent of the density
-  //This is done by solving for tau_sobolev == 1
-  //tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
-  rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
-  printout("grid_init: rho_crit = %g\n", rho_crit);
 
   for (int n = 0; n < ngrid; n++)
   {
@@ -1034,14 +1004,12 @@ static void density_3d_read(void)
     {
       if (get_rhoinit(mgi) > 0.)
       {
+        double kappagrey = (0.9 * get_ffe(mgi) + 0.1);
+
         if (get_rhoinit(mgi) > rho_crit)
-        {
-          set_kappagrey(mgi, (0.9 * get_ffe(mgi) + 0.1) * rho_crit/get_rhoinit(mgi));
-        }
-        else
-        {
-          set_kappagrey(mgi, (0.9 * get_ffe(mgi) + 0.1));;
-        }
+          kappagrey *= rho_crit / get_rhoinit(mgi);
+
+        set_kappagrey(mgi, kappagrey);
       }
       else if (get_rhoinit(mgi) == 0.)
       {
@@ -1052,14 +1020,15 @@ static void density_3d_read(void)
         printout("Error: negative density. Abort.\n");
         abort();
       }
-      opcase3_sum += get_kappagrey(mgi)*get_rhoinit(mgi);
+      opcase3_sum += get_kappagrey(mgi) * get_rhoinit(mgi);
     }
   }
 
   FILE *grid_file;
   if (rank_global == 0)
   {
-    if ((grid_file = fopen("grid.out", "w")) == NULL)
+    grid_file = fopen("grid.out", "w");
+    if (grid_file == NULL)
     {
       printf("Cannot open grid file.\n");
       abort();
@@ -1072,7 +1041,9 @@ static void density_3d_read(void)
   for (int n = 0; n < ngrid; n++)
   {
     int mgi = cell[n].modelgridindex;
-    if (rank_global == 0 && mgi != MMODELGRID) fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
+    if (rank_global == 0 && mgi != MMODELGRID)
+      fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
+
     if (get_rhoinit(mgi) > 0)
     {
       if (opacity_case == 0)
@@ -1085,7 +1056,7 @@ static void density_3d_read(void)
       }
       else if (opacity_case == 2)
       {
-        double opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
+        const double opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
         set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffe(mgi)) + 0.1));
       }
       else if (opacity_case == 3)
@@ -1118,7 +1089,8 @@ static void density_3d_read(void)
     check1 = check1 + (get_kappagrey(mgi)  * get_rhoinit(mgi));
     check2 = check2 + get_rhoinit(mgi);
   }
-  if (rank_global == 0) fclose(grid_file);
+  if (rank_global == 0)
+    fclose(grid_file);
 
 
   /*
@@ -1720,25 +1692,35 @@ void grid_init(void)
     //uniform_density_setup ();
     //abundances_setup();
   }
-  else if (model_type == RHO_1D_READ)
-  {
-    abundances_1d_read();
-    density_1d_read();
-  }
-  else if (model_type == RHO_2D_READ)
-  {
-    abundances_1d_read(); //for 2d can handle abundances exactly as for 1D
-    density_2d_read();
-  }
-  else if (model_type == RHO_3D_READ)
-  {
-    density_3d_read();
-    abundances_3d_read();
-  }
   else
   {
-    printout("[fatal] grid_init: Error: Unknown density type. Abort.");
-    abort();
+    // Calculate the critical opacity at which opacity_case 3 switches from a
+    // regime proportional to the density to a regime independent of the density
+    // This is done by solving for tau_sobolev == 1
+    // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
+    rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
+    printout("grid_init: rho_crit = %g\n", rho_crit);
+
+    if (model_type == RHO_1D_READ)
+    {
+      abundances_1d_read();
+      density_1d_read();
+    }
+    else if (model_type == RHO_2D_READ)
+    {
+      abundances_1d_read(); // for 2D can handle abundances exactly as for 1D
+      density_2d_read();
+    }
+    else if (model_type == RHO_3D_READ)
+    {
+      density_3d_read();
+      abundances_3d_read();
+    }
+    else
+    {
+      printout("[fatal] grid_init: Error: Unknown density type. Abort.");
+      abort();
+    }
   }
 
   /// and assign a temperature to the cells

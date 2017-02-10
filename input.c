@@ -2628,7 +2628,7 @@ void read_parameterfile(int rank)
   else
     printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat).\n");
 
-  if (USE_MULTIBIN_RADFIELD_MODEL)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
     printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
   else
     printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");

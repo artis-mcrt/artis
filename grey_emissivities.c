@@ -10,12 +10,12 @@ static double meanf_sigma(double x)
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
-  double f = 1+(2*x);
+  double f = 1 + (2 * x);
 
   double term0 = 2/x;
-  double term1 = ( 1 - (2/x) - (3/(x*x)) ) * log(f);
+  double term1 = ( 1 - (2 / x) - (3/(x*x)) ) * log(f);
   double term2 = ( (4 / x) + (3/(x*x)) - 1) * 2 * x / f;
-  double term3 = ( 1 - (2/x) - (1/(x*x))) * 2 * x *(1 + x) / f / f;
+  double term3 = ( 1 - (2 / x) - (1/(x*x))) * 2 * x *(1 + x) / f / f;
   double term4 =  -2. * x * ((4*x*x) + (6*x) + 3) / 3 / f / f / f;
 
   double tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
@@ -167,10 +167,10 @@ void write_grey(int nts)
     abort();
   }
   int i = 0;
-  while ((chch=fgetc(dummy)) != EOF)
+  while ((chch = fgetc(dummy)) != EOF)
   {
     junk[i] = chch;
-    i = i+1;
+    i = i + 1;
   }
   junk[i] = '\0';
   fclose(dummy);
