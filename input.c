@@ -2008,7 +2008,7 @@ static int read_3d_model(void)
     if (rho_model > 0)
     {
       set_ffe(mgi,dum2);
-      set_fni56(mgi,dum3);
+      set_f56ni(mgi,dum3);
       set_fco(mgi,dum4);
       set_f52fe(mgi,dum5);
       set_f48cr(mgi,dum6);
@@ -2035,7 +2035,7 @@ static int read_3d_model(void)
   set_nne(MMODELGRID,0.);
   set_ffe(MMODELGRID,0.);
   set_fco(MMODELGRID,0.);
-  set_fni56(MMODELGRID,0.);
+  set_f56ni(MMODELGRID,0.);
   set_f52fe(MMODELGRID,0.);
   set_f48cr(MMODELGRID,0.);
   set_Te(MMODELGRID,MINTEMP);
@@ -2059,7 +2059,7 @@ static int read_3d_model(void)
     double mass_in_shell = get_rhoinit(mgi);
     //printout("n %d, mgi %d, rho_init %g\n",n,mgi,mass_in_shell);
     mtot += mass_in_shell;
-    mni56 += mass_in_shell * get_fni56(mgi);
+    mni56 += mass_in_shell * get_f56ni(mgi);
     mfe52 += mass_in_shell * get_f52fe(mgi);
     mcr48 += mass_in_shell * get_f48cr(mgi);
     mfeg += mass_in_shell * get_ffe(mgi);

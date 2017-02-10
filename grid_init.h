@@ -33,7 +33,7 @@ inline float get_nnetot(int modelgridindex)
   return modelgrid[modelgridindex].nnetot;
 }
 
-inline float get_fni56(int modelgridindex)
+inline float get_f56ni(int modelgridindex)
 {
   return modelgrid[modelgridindex].fni;
 }
@@ -138,7 +138,7 @@ inline void set_nnetot(int modelgridindex, float x)
   modelgrid[modelgridindex].nnetot = x;
 }
 
-inline void set_fni56(int modelgridindex, float x)
+inline void set_f56ni(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].fni = x;
 }

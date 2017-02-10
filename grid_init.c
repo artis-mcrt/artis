@@ -11,7 +11,7 @@ extern inline float get_rhoinit(int modelgridindex);
 extern inline float get_rho(int modelgridindex);
 extern inline float get_nne(int modelgridindex);
 extern inline float get_nnetot(int modelgridindex);
-extern inline float get_fni56(int modelgridindex);
+extern inline float get_f56ni(int modelgridindex);
 extern inline float get_fco(int modelgridindex);
 extern inline float get_f52fe(int modelgridindex);
 extern inline float get_f48cr(int modelgridindex);
@@ -32,7 +32,7 @@ extern inline void set_rhoinit(int modelgridindex, float x);
 extern inline void set_rho(int modelgridindex, float x);
 extern inline void set_nne(int modelgridindex, float x);
 extern inline void set_nnetot(int modelgridindex, float x);
-extern inline void set_fni56(int modelgridindex, float x);
+extern inline void set_f56ni(int modelgridindex, float x);
 extern inline void set_fco(int modelgridindex, float x);
 extern inline void set_f48cr(int modelgridindex, float x);
 extern inline void set_f52fe(int modelgridindex, float x);
@@ -56,7 +56,7 @@ extern inline void set_W(int modelgridindex, double x);
   int n;
   double vec_len();
   double dcen[3];
-  double fni56(CELL *grid_ptr);
+  double f56ni(CELL *grid_ptr);
   void allocate_compositiondata(int cellnumber);
   double opcase2_normal, opcase3_sum, check1, check2;
   int empty_cells;
@@ -85,7 +85,7 @@ extern inline void set_W(int modelgridindex, double x);
     if (vec_len(dcen) < rmax)
     {
       cell[n].rho_init = cell[n].rho = 3 * mtot / 4 / PI / rmax /rmax /rmax;
-      cell[n].f_ni = cell[n].f_fe = fni56(&cell[n]);
+      cell[n].f_ni = cell[n].f_fe = f56ni(&cell[n]);
       cell[n].f_co = 0.;
       allocate_compositiondata(n);
     //printout("[debug] uniform_density_setup: cell[%d].rho_init: %g\n",n,cell[n].rho_init);
@@ -98,7 +98,7 @@ extern inline void set_W(int modelgridindex, double x);
       empty_cells++;
     }
     rho_sum += cell[n].rho_init;
-    fe_sum += fni56(&cell[n]);  //MK: use for this model fni as values for iron group mass fractions
+    fe_sum += f56ni(&cell[n]);  //MK: use for this model fni as values for iron group mass fractions
   }
 
 
@@ -110,11 +110,11 @@ extern inline void set_W(int modelgridindex, double x);
       {
         if (cell[n].rho_init > rho_crit)
         {
-          cell[n].kappa_grey = (0.9 * fni56(&cell[n]) + 0.1) * rho_crit/cell[n].rho_init;
+          cell[n].kappa_grey = (0.9 * f56ni(&cell[n]) + 0.1) * rho_crit/cell[n].rho_init;
         }
         else
         {
-          cell[n].kappa_grey = (0.9 * fni56(&cell[n]) + 0.1);
+          cell[n].kappa_grey = (0.9 * f56ni(&cell[n]) + 0.1);
         }
       }
       else if (cell[n].rho_init == 0)
@@ -142,12 +142,12 @@ extern inline void set_W(int modelgridindex, double x);
       }
       else if (opacity_case == 1)
       {
-        cell[n].kappa_grey = ((0.9 * fni56(&cell[n])) + 0.1) * GREY_OP / ((0.9 *  mni56 / mtot) + 0.1);
+        cell[n].kappa_grey = ((0.9 * f56ni(&cell[n])) + 0.1) * GREY_OP / ((0.9 *  mni56 / mtot) + 0.1);
       }
       else if (opacity_case == 2)
       {
         opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-        cell[n].kappa_grey = opcase2_normal/cell[n].rho_init * ((0.9 * fni56(&cell[n])) + 0.1);
+        cell[n].kappa_grey = opcase2_normal/cell[n].rho_init * ((0.9 * f56ni(&cell[n])) + 0.1);
       }
       else if (opacity_case == 3)
       {
@@ -227,7 +227,7 @@ static void density_1d_read(void)
       set_rhoinit(0,helper);
       set_rho(0,helper);
       set_ffe(0,ffegrp_model[0]);
-      set_fni56(0,fni_model[0]);
+      set_f56ni(0,fni_model[0]);
       set_fco(0,fco_model[0]);
       //allocate_compositiondata(0);
       for (element = 0; element < nelements; element++)
@@ -246,7 +246,7 @@ static void density_1d_read(void)
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
 
         if (anumber == 28)
-          set_fnistable(0,abundance - get_fni56(n));
+          set_fnistable(0,abundance - get_f56ni(n));
         if (anumber == 27)
           set_fcostable(0,abundance - get_fco(n));
         if (anumber == 26)
@@ -264,7 +264,7 @@ static void density_1d_read(void)
           set_rhoinit(m+1,helper);
           set_rho(m+1,helper);
           set_ffe(m+1,ffegrp_model[m+1]);
-          set_fni56(m+1,fni_model[m+1]);
+          set_f56ni(m+1,fni_model[m+1]);
           set_fco(m+1,fco_model[m+1]);
           //allocate_compositiondata(m+1);
     for (element = 0; element < nelements; element++)
@@ -281,7 +281,7 @@ static void density_1d_read(void)
             //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
 
             if (anumber == 28)
-              set_fnistable(m+1,abundance - get_fni56(n));
+              set_fnistable(m+1,abundance - get_f56ni(n));
             if (anumber == 27)
               set_fcostable(m+1,abundance - get_fco(n));
             if (anumber == 26)
@@ -301,7 +301,7 @@ static void density_1d_read(void)
       set_nne(MMODELGRID,0.);
       set_ffe(MMODELGRID,0.);
       set_fco(MMODELGRID,0.);
-      set_fni56(MMODELGRID,0.);
+      set_f56ni(MMODELGRID,0.);
       set_Te(MMODELGRID,MINTEMP);
       set_TJ(MMODELGRID,MINTEMP);
       set_TR(MMODELGRID,MINTEMP);
@@ -375,7 +375,7 @@ static void density_1d_read(void)
       set_rhoinit(mgi,helper);
       set_rho(mgi,helper);
       set_ffe(mgi,ffegrp_model[mgi]);
-      set_fni56(mgi,fni_model[mgi]);
+      set_f56ni(mgi,fni_model[mgi]);
       set_fco(mgi,fco_model[mgi]);
       set_f52fe(mgi,f52fe_model[mgi]);
       set_f48cr(mgi,f48cr_model[mgi]);
@@ -398,8 +398,8 @@ static void density_1d_read(void)
 
         if (anumber == 28)
         {
-          set_fnistable(mgi,abundance - get_fni56(mgi));
-          //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_fni56(mgi),abundance - get_fni56(mgi));
+          set_fnistable(mgi,abundance - get_f56ni(mgi));
+          //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
         }
         else if (anumber == 27)
           set_fcostable(mgi,abundance - get_fco(mgi));
@@ -430,7 +430,7 @@ static void density_1d_read(void)
   set_nne(MMODELGRID,0.);
   set_ffe(MMODELGRID,0.);
   set_fco(MMODELGRID,0.);
-  set_fni56(MMODELGRID,0.);
+  set_f56ni(MMODELGRID,0.);
   set_f48cr(MMODELGRID,0.);
   set_f52fe(MMODELGRID,0.);
   set_Te(MMODELGRID,MINTEMP);
@@ -799,7 +799,7 @@ static void density_2d_read(void)
       set_rhoinit(mgi,helper);
       set_rho(mgi,helper);
       set_ffe(mgi,ffegrp_model[mgi]);
-      set_fni56(mgi,fni_model[mgi]);
+      set_f56ni(mgi,fni_model[mgi]);
       set_fco(mgi,fco_model[mgi]);
       set_f52fe(mgi,f52fe_model[mgi]);
       set_f48cr(mgi,f48cr_model[mgi]);
@@ -821,7 +821,7 @@ static void density_2d_read(void)
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
 
         if (anumber == 28)
-          set_fnistable(mgi,abundance - get_fni56(mgi));
+          set_fnistable(mgi,abundance - get_f56ni(mgi));
 
         if (anumber == 27)
           set_fcostable(mgi,abundance - get_fco(mgi));
@@ -858,7 +858,7 @@ static void density_2d_read(void)
   set_nne(MMODELGRID,0.);
   set_ffe(MMODELGRID,0.);
   set_fco(MMODELGRID,0.);
-  set_fni56(MMODELGRID,0.);
+  set_f56ni(MMODELGRID,0.);
   set_f48cr(MMODELGRID,0.);
   set_f52fe(MMODELGRID,0.);
   set_Te(MMODELGRID,MINTEMP);
@@ -1411,8 +1411,8 @@ static void abundances_3d_read(void)
 
       if (anumber == 28)
       {
-        set_fnistable(mgi,abundance - get_fni56(mgi));
-        //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_fni56(mgi),abundance - get_fni56(mgi));
+        set_fnistable(mgi,abundance - get_f56ni(mgi));
+        //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
       }
       if (anumber == 27)
         set_fcostable(mgi,abundance - get_fco(mgi));
@@ -1574,7 +1574,7 @@ static void assign_temperature(void)
     for (int n = 0; n < npts_model; n++)
     {
       //mgi = cell[n].modelgridindex;
-      double T_initial = pow(((factor * get_fni56(n) * get_rhoinit(n))
+      double T_initial = pow(((factor * get_f56ni(n) * get_rhoinit(n))
            + (factor52fe * get_f52fe(n) * get_rhoinit(n))
            + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1./4.);
       //T_initial = pow(factor * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
