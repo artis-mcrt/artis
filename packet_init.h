@@ -4,7 +4,7 @@
 #include "types.h"
 
 void packet_init(int middle_iteration, int my_rank);
-double fni(const CELL *restrict grid_ptr);
+double fni56(const CELL *restrict grid_ptr);
 double f52fe(const CELL *restrict grid_ptr);
 double f48cr(const CELL *restrict grid_ptr);
 void write_packets(FILE *restrict packets_file);

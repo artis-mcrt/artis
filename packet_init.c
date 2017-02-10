@@ -21,7 +21,7 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
 
   // first choose which of the decay chains to sample
   double prob_chain[3];
-  prob_chain[0] = fni(grid_ptr) * (ENICKEL + ECOBALT) / MNI56;
+  prob_chain[0] = fni56(grid_ptr) * (ENICKEL + ECOBALT) / MNI56;
   prob_chain[1] = f52fe(grid_ptr) * (E52FE + E52MN) / MFE52;
   prob_chain[2] = f48cr(grid_ptr) * (E48V + E48CR) / MCR48;
 
@@ -136,10 +136,10 @@ static void setup_packets(int pktnumberoffset)
   {
     const CELL *grid_ptr = &cell[m];
     cont[m] = norm;
-    //printf("%g %g %g\n", (fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
+    //printf("%g %g %g\n", (fni56(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     const int mgi = grid_ptr->modelgridindex;
     norm += get_rhoinit(mgi) * vol_init() * //vol_init(grid_ptr)
-              ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
+              ((fni56(grid_ptr)*(ENICKEL + ECOBALT)/56.)
                +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
                +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
   }
@@ -196,7 +196,7 @@ static void setup_packets(int pktnumberoffset)
     while (runtot < (zrand))
     {
       grid_ptr = &cell[m];
-      runtot += grid_ptr->rho_init * fni(grid_ptr) * vol_init() / norm;
+      runtot += grid_ptr->rho_init * fni56(grid_ptr) * vol_init() / norm;
       m++;
     }
     m = m - 1;
@@ -297,7 +297,7 @@ void packet_init(int middle_iteration, int my_rank)
 }
 
 
-double fni(const CELL *restrict grid_ptr)
+double fni56(const CELL *restrict grid_ptr)
 /// Subroutine that gives the Ni56 mass fraction.
 {
   if (model_type == RHO_UNIFORM)
@@ -343,14 +343,14 @@ double fni(const CELL *restrict grid_ptr)
       fraction = 0.0;
     }*/
     const int mgi = grid_ptr->modelgridindex;
-    return get_fni(mgi);
+    return get_fni56(mgi);
   }
   else if (model_type == RHO_3D_READ)
   {
     /* This is a 3-D model read in. Just return input value. */
     //fraction = grid_ptr->f_ni;
     const int mgi = grid_ptr->modelgridindex;
-    return get_fni(mgi);
+    return get_fni56(mgi);
   }
   else
   {
