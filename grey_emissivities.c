@@ -24,33 +24,33 @@ static double meanf_sigma(double x)
 }
 
 
-int rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current)
+void rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current)
 {
-  /* Subroutine to record the heating rate in a cell due to gamma rays.
-By heating rate I mean, for now, really the rate at which the code is making
-k-packets in that cell which will then convert into r-packets. This is (going
-to be) used for the new light_curve syn-style calculation. */
+  // Subroutine to record the heating rate in a cell due to gamma rays.
+  // By heating rate I mean, for now, really the rate at which the code is making
+  // k-packets in that cell which will then convert into r-packets. This is (going
+  // to be) used for the new light_curve syn-style calculation.
 
-  /* The intention is that rpkt_emiss will contain the emissivity of r-packets
-     in the co-moving frame (which is going to be isotropic). */
+  // The intention is that rpkt_emiss will contain the emissivity of r-packets
+  // in the co-moving frame (which is going to be isotropic).
 
-  /* This is only done to order v/c for now. */
+  // This is only done to order v/c for now.
 
-  /* Called with a packet that is about to travel a
-distance dist in the lab frame. Time at start of distance is t_current.*/
+  // Called with a packet that is about to travel a
+  // distance dist in the lab frame. Time at start of distance is t_current.
 
 
   //printout("[debug] Execution of rlc_emiss_gamma\n");
 
-  /*PKT dummy;
-  dummy.pos[0] = pkt_ptr->pos[0];
-  dummy.pos[1] = pkt_ptr->pos[1];
-  dummy.pos[2] = pkt_ptr->pos[2];
-  dummy.dir[0] = syn_dir[0];
-  dummy.dir[1] = syn_dir[1];
-  dummy.dir[2] = syn_dir[2];
-  dummy.where = pkt_ptr->where;
-  dummy.last_cross = NONE;*/
+  // PKT dummy;
+  // dummy.pos[0] = pkt_ptr->pos[0];
+  // dummy.pos[1] = pkt_ptr->pos[1];
+  // dummy.pos[2] = pkt_ptr->pos[2];
+  // dummy.dir[0] = syn_dir[0];
+  // dummy.dir[1] = syn_dir[1];
+  // dummy.dir[2] = syn_dir[2];
+  // dummy.where = pkt_ptr->where;
+  // dummy.last_cross = NONE;
 
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
@@ -64,25 +64,25 @@ distance dist in the lab frame. Time at start of distance is t_current.*/
     double heating_cont = ((meanf_sigma(xx)*get_nnetot(mgi)) + sig_photo_electric(pkt_ptr,t_current) + (sig_pair_prod(pkt_ptr, t_current) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
     heating_cont = heating_cont * pkt_ptr->e_rf * dist * (1. - (2.*dot(vel_vec, pkt_ptr->dir)/CLIGHT));
 
-    /* The terms in the above are for Compton, photoelectric and pair production. The pair production  one assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised. The remaining 1.022 MeV is made into gamma rays */
+    // The terms in the above are for Compton, photoelectric and pair production. The pair production one
+    // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
+    // The remaining 1.022 MeV is made into gamma rays
 
-    /* For normalisation this needs to be
-       1) divided by volume
-       2) divided by the length of the time step
-       3) divided by 4 pi sr
-       This will all be done later
-    */
+    // For normalisation this needs to be
+    //  1) divided by volume
+    //  2) divided by the length of the time step
+    //  3) divided by 4 pi sr
+    //  This will all be done later
 
     #ifdef _OPENMP
       #pragma omp atomic
     #endif
     rpkt_emiss[mgi] += 1.e-20 * heating_cont;
   }
-  return 0;
 }
 
 
-int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
+void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 {
   // Subroutine to record the rate of destruction (and re-creation) of
   // r-packets by the grey opacity.
@@ -129,11 +129,10 @@ int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
     #endif
     rpkt_emiss[mgi] += 1.e-20 * cont;
   }
-  return 0;
 }
 
 
-int normalise_grey(int nts)
+void normalise_grey(int nts)
 {
   //for (n=0; n < ngrid; n++)
   double dt = time_step[nts].width;
@@ -145,11 +144,10 @@ int normalise_grey(int nts)
 
     rpkt_emiss[n] = rpkt_emiss[n] * ONEOVER4PI / dV / dt / nprocs / assoc_cells;
   }
-  return 0;
 }
 
 
-int write_grey(int nts)
+void write_grey(int nts)
 {
   FILE *est_file, *dummy;
   char chch;
@@ -210,7 +208,6 @@ int write_grey(int nts)
     fprintf(est_file, " %g\n ", rpkt_emiss[n]);
   }
   fclose(est_file);
-  return 0;
 }
 
 

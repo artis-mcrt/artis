@@ -3,9 +3,9 @@
 
 #include "types.h"
 
-int rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current);
-int rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current);
-int normalise_grey(int nts);
-int write_grey(int nts);
+void rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current);
+void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current);
+void normalise_grey(int nts);
+void write_grey(int nts);
 
 #endif //GREY_EMISSIVITIES_H
