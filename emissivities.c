@@ -12,16 +12,16 @@
 
 void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 {
-  /* Subroutine to add contriubtion to the MC estimator for the
-compton emissivity. Called with a packet that is about to travel a
-distance dist in the lab frame. Time at start of distance is t_current.*/
+  // Subroutine to add contribution to the MC estimator for the
+  // compton emissivity. Called with a packet that is about to travel a
+  // distance dist in the lab frame. Time at start of distance is t_current.
 
   double vel_vec[3], cmf_dir[3], cmf_syn_dir[3];
 
-  /* First we need to know the scattering angle needed from the
-packet's direction of motion to the desired observer. Call this angle
-mu_cmf (it's a cosine). To get it convert both the direction of
-motion and the local velocity vectors to the cmf.*/
+  // First we need to know the scattering angle needed from the
+  // packet's direction of motion to the desired observer. Call this angle
+  // mu_cmf (it's a cosine). To get it convert both the direction of
+  // motion and the local velocity vectors to the cmf.
 
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
   angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
@@ -34,7 +34,7 @@ motion and the local velocity vectors to the cmf.*/
   //  printout("syn_dir %g %g %g\n", syn_dir[0], syn_dir[1], syn_dir[2]);
   //  printout("cmf_syn_dir %g %g %g\n", cmf_syn_dir[0], cmf_syn_dir[1], cmf_syn_dir[2]);
 
-  double mu_cmf = dot(cmf_dir,cmf_syn_dir);
+  double mu_cmf = dot(cmf_dir, cmf_syn_dir);
 
   if (mu_cmf > 1 || mu_cmf < -1)
   {
@@ -73,8 +73,7 @@ motion and the local velocity vectors to the cmf.*/
     /* Then get partial crossection dsigma_domega in cmf */
     /* Coeff is 3 / 16 / PI */
 
-    double dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f *
-        (f + (1./f) + (mu_cmf*mu_cmf) - 1.);
+    double dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f * (f + (1./f) + (mu_cmf*mu_cmf) - 1.);
 
     //speed = vec_len(vel_vec);
     //solid_angle_factor =  doppler(pkt_ptr->dir, vel_vec) * doppler(pkt_ptr->dir, vel_vec);
@@ -121,23 +120,22 @@ motion and the local velocity vectors to the cmf.*/
 
 void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 {
-  /* New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
-     emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something
-     which, when normalised by the volume and time step, will give the energy going into the .511 MeV
-     gamma rays from pair production per unit volume per unit time in the cmf. */
-  /* Called with a packet that is about to travel a
-     distance dist in the lab frame. Time at start of distance is t_current.*/
+  // New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
+  // emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something
+  // which, when normalised by the volume and time step, will give the energy going into the .511 MeV
+  // gamma rays from pair production per unit volume per unit time in the cmf.
 
+  // Called with a packet that is about to travel a
+  // distance dist in the lab frame. Time at start of distance is t_current.
 
   double emiss_cont;
 
   emiss_cont = sig_pair_prod(pkt_ptr, t_current) * (2.46636e+20 / pkt_ptr->nu_cmf) * pkt_ptr->e_rf * dist;
 
-  /* For normalisation this needs to be
-     1) divided by volume
-     2) divided by the length of the time step
-     This will all be done later
-  */
+  // For normalisation this needs to be
+  //  1) divided by volume
+  //  2) divided by the length of the time step
+  //  This will all be done later
 
   const int cellindex = pkt_ptr->where;
   #ifdef _OPENMP
@@ -147,14 +145,14 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 
   //  printf("emiss_cont %g\n", emiss_cont);
 
-  /* Note (SS May 07) - the Doppler factors are not all sorted out yet - the expression used above needs to be
-     consistent with what syn_lc does. */
+  // Note (SS May 07) - the Doppler factors are not all sorted out yet - the expression used above needs to be
+  // consistent with what syn_lc does.
 }
 
 
 void zero_estimators(void)
 {
-  //for (n=0; n < ngrid; n++)
+  // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
     J[n] = 0.;
@@ -162,30 +160,29 @@ void zero_estimators(void)
       radfield_zero_estimators(n);
       ffheatingestimator[n] = 0.;
       colheatingestimator[n] = 0.;
-      /*
-      mabfcount[n] = 0.;
-      mabfcount_thermal[n] = 0.;
-      matotem[n] = 0.;
-      maabs[n] = 0.;
-      kbfcount[n] = 0.;
-      kbfcount_ion[n] = 0.;
-      kffcount[n] = 0.;
-      kffabs[n] = 0.;
-      kbfabs[n] = 0.;
-      kgammadep[n] = 0.;
-      */
+
+      // mabfcount[n] = 0.;
+      // mabfcount_thermal[n] = 0.;
+      // matotem[n] = 0.;
+      // maabs[n] = 0.;
+      // kbfcount[n] = 0.;
+      // kbfcount_ion[n] = 0.;
+      // kffcount[n] = 0.;
+      // kffabs[n] = 0.;
+      // kbfabs[n] = 0.;
+      // kgammadep[n] = 0.;
+
       for (int element = 0; element < nelements; element++)
       {
         for (int ion = 0; ion < maxion; ion++)
         {
           gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
           bfheatingestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-          /*
-          photoionestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-          stimrecombestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-          ionfluxestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-          //twiddle[n*nelements*maxion+element*maxion+ion] = 0.;
-          */
+
+          // photoionestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          // stimrecombestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          // ionfluxestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          // twiddle[n*nelements*maxion+element*maxion+ion] = 0.;
         }
       }
     #endif
@@ -216,17 +213,17 @@ void normalise_estimators(int nts)
     dfreq[m] = 1./dfreq[m];
   }
 
-  //for (n=0; n < ngrid; n++)
+  // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
     int assoc_cells = modelgrid[n].associated_cells;
-    double volume = 1. / vol_init();  ///That's not going to work if the cell number matters! i.e. vol_init(&cell[n])
+    double volume = 1. / vol_init();  // That's not going to work if the cell number matters! i.e. vol_init(&cell[n])
     for (int m = 0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = compton_emiss[n][m] * time_factor * volume / nprocs / assoc_cells;
 
       if (m < emiss_max - 1)
-      /** (emiss_max - 1) contains the pair production case so it doesn't need the nne nor the dfreq */
+      // (emiss_max - 1) contains the pair production case so it doesn't need the nne nor the dfreq
       {
         compton_emiss[n][m] = compton_emiss[n][m] * get_nne(n) * dfreq[m];
       }

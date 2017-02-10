@@ -254,9 +254,9 @@ inline void set_ftistable(int modelgridindex, float x)
   }
 }
 
-inline void set_kappagrey(int modelgridindex, float x)
+inline void set_kappagrey(int modelgridindex, float kappagrey)
 {
-  modelgrid[modelgridindex].kappagrey = x;
+  modelgrid[modelgridindex].kappagrey = kappagrey;
 }
 
 inline void set_Te(int modelgridindex, double Te)

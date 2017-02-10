@@ -22,7 +22,7 @@
 #include "vectors.h"
 #include <stdarg.h>  // needed for printout()
 
-/* Main - top level routine. */
+
 int main(int argc, char** argv)
 {
   int my_rank;
@@ -45,7 +45,8 @@ int main(int argc, char** argv)
     nthreads = 1;
     char filename[100];
     sprintf(filename,"exspec_%d-%d.txt",my_rank,tid);
-    if ((output_file = fopen(filename, "w")) == NULL)
+    output_file = fopen(filename, "w");
+    if (output_file == NULL)
     {
       printf("Cannot open %s.\n",filename);
       abort();
@@ -56,7 +57,7 @@ int main(int argc, char** argv)
 
     /// Get input stuff
     printout("time before input %d\n",time(NULL));
-    input(0);
+    input(my_rank);
     printout("time after input %d\n",time(NULL));
     nprocs = nprocs_exspec;
 
@@ -164,23 +165,26 @@ int main(int argc, char** argv)
 
 
       /// Extract angle-averaged spectra and light curves
-      FILE *emission_file,*lc_file,*spec_file,*absorption_file;
-      if ((lc_file = fopen("light_curve.out", "w")) == NULL)
+      FILE *lc_file = fopen("light_curve.out", "w");
+      if (lc_file == NULL)
       {
         printout("Cannot open light_curve.out\n");
         abort();
       }
-      if ((spec_file = fopen("spec.out", "w")) == NULL)
+      FILE *spec_file = fopen("spec.out", "w");
+      if (spec_file == NULL)
       {
         printout("Cannot open spec.out\n");
         abort();
       }
-      if ((emission_file = fopen("emission.out", "w")) == NULL)
+      FILE *emission_file = fopen("emission.out", "w");
+      if (emission_file == NULL)
       {
         printf("Cannot open emission.out\n");
         abort();
       }
-      if ((absorption_file = fopen("absorption.out", "w")) == NULL)
+      FILE *absorption_file = fopen("absorption.out", "w");
+      if (absorption_file == NULL)
       {
         printf("Cannot open absorption.out\n");
         abort();

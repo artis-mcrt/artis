@@ -13,9 +13,9 @@
   return 0;
 }*/
 
-#define traceemissionregion
+#define TRACE_EMISSION_REGION_ON
 
-#ifdef traceemissionregion
+#ifdef TRACE_EMISSION_REGION_ON
   #define traceemiss_nulower (CLIGHT / (4500e-8))  // in Angstroms
   #define traceemiss_nuupper (CLIGHT / (4200e-8))  // in Angstroms
   #define traceemiss_timestepmin 70
@@ -153,7 +153,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
         const int element = linelist[et].elementindex;
         const int ion = linelist[et].ionindex;
         nproc = element*maxion+ion;
-        #ifdef traceemissionregion
+        #ifdef TRACE_EMISSION_REGION_ON
         if (nt >= traceemiss_timestepmin && nt <= traceemiss_timestepmax)
         {
           if (pkt_ptr->nu_rf >= traceemiss_nulower && pkt_ptr->nu_rf <= traceemiss_nuupper)
@@ -242,7 +242,7 @@ void gather_spectrum(int depth)
   /// Set up the spectrum grid and initialise the bins to zero.
   init_spectrum();
 
-  #ifdef traceemissionregion
+  #ifdef TRACE_EMISSION_REGION_ON
   traceemiss_totalflux = 0.;
   traceemisscontributions = malloc(nlines*sizeof(emissioncontrib));
   for (int i = 0; i < nlines; i++)
@@ -285,7 +285,7 @@ void gather_spectrum(int depth)
     }
   }
 
-  #ifdef traceemissionregion
+  #ifdef TRACE_EMISSION_REGION_ON
   qsort(traceemisscontributions, nlines, sizeof(emissioncontrib), compare_emisscontrib);
   printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] timestep [%d, %d] (flux %g)\n",
            1e8 * CLIGHT / traceemiss_nuupper, 1e8 * CLIGHT / traceemiss_nulower, traceemiss_timestepmin, traceemiss_timestepmax,

@@ -190,8 +190,6 @@ static bool read_ratecoeff_dat(void)
 }
 
 
-
-
 static void write_ratecoeff_dat(void)
 {
   FILE *ratecoeff_file;
