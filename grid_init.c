@@ -1599,9 +1599,9 @@ static void uniform_grid_setup(void)
   int nz = 0;
   for (int n = 0; n < ngrid; n++)
   {
-    cell[n].pos_init[0] = -xmax + (2 * nx * xmax / nxgrid);
-    cell[n].pos_init[1] = -ymax + (2 * ny * ymax / nygrid);
-    cell[n].pos_init[2] = -zmax + (2 * nz * zmax / nzgrid);
+    cell[n].pos_init[0] = - xmax + (2 * nx * xmax / nxgrid);
+    cell[n].pos_init[1] = - ymax + (2 * ny * ymax / nygrid);
+    cell[n].pos_init[2] = - zmax + (2 * nz * zmax / nzgrid);
 
     wid_init = 2 * xmax / nxgrid;
     wid_init = 2 * ymax / nygrid;
