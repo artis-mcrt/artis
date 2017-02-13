@@ -317,9 +317,9 @@ static void density_1d_read(void)
   for (int n = 0; n < ngrid; n++)
   {
     double dcen[3];
-    dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
-    dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
-    dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
+    dcen[0] = cell[n].pos_init[0] + (0.5 * wid_init);
+    dcen[1] = cell[n].pos_init[1] + (0.5 * wid_init);
+    dcen[2] = cell[n].pos_init[2] + (0.5 * wid_init);
 
     double radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
@@ -327,7 +327,7 @@ static void density_1d_read(void)
       //int mkeep = 0;
       cell[n].modelgridindex = 0;
 
-      for (int m = 0; m < (npts_model-1); m++)
+      for (int m = 0; m < (npts_model - 1); m++)
       {
         if (radial_pos > (vout_model[m] * tmin))
         {
@@ -364,7 +364,7 @@ static void density_1d_read(void)
   {
     if (modelgrid[mgi].associated_cells > 0)
     {
-      const double helper = rho_model[mgi] * pow( (t_model/tmin), 3);
+      const double helper = rho_model[mgi] * pow(t_model / tmin, 3);
       set_rhoinit(mgi,helper);
       set_rho(mgi,helper);
       set_ffe(mgi,ffegrp_model[mgi]);
@@ -379,7 +379,7 @@ static void density_1d_read(void)
         ///now set the abundances (by mass) of included elements, i.e.
         ///read out the abundances specified in the atomic data file
         const int anumber = get_element(element);
-        const float abundance = abund_model[mgi][anumber-1];
+        const float abundance = abund_model[mgi][anumber - 1];
         //cell[n].composition[element].abundance = abundance;
         modelgrid[mgi].composition[element].abundance = abundance;
         //if (anumber == 8)
@@ -1527,50 +1527,58 @@ static void assign_temperature(void)
     /// according to the local energy density resulting from the 56Ni decay.
     /// The dilution factor is W=1 in LTE.
 
-    double tstart = time_step[0].mid;
-    double factor = CLIGHT/4/STEBO * 1./56/MH * pow(tmin/tstart,3);
-    factor *= -1./(tstart*(-TCOBALT+TNICKEL));
-    factor *= (-ENICKEL*exp(-tstart/TNICKEL)*tstart*TCOBALT - ENICKEL*exp(-tstart/TNICKEL)*TNICKEL*TCOBALT + ENICKEL*exp(-tstart/TNICKEL)*tstart*TNICKEL + pow(TNICKEL,2)*ENICKEL*exp(-tstart/TNICKEL) - TCOBALT*tstart*ECOBALT*exp(-tstart/TCOBALT) - pow(TCOBALT,2)*ECOBALT*exp(-tstart/TCOBALT) + ECOBALT*tstart*TNICKEL*exp(-tstart/TNICKEL) + pow(TNICKEL,2)*ECOBALT*exp(-tstart/TNICKEL) + ENICKEL*TCOBALT*TNICKEL - ENICKEL*pow(TNICKEL,2) - pow(TNICKEL,2)*ECOBALT + ECOBALT*pow(TCOBALT,2));
+    const double tstart = time_step[0].mid;
 
-    double factor52fe = CLIGHT/4/STEBO * 1./52/MH * pow(tmin/tstart,3);
-    factor52fe *= -1./(tstart*(-T52MN+T52FE));
-    factor52fe *= (-E52FE*exp(-tstart/T52FE)*tstart*T52MN - E52FE*exp(-tstart/T52FE)*T52FE*T52MN + E52FE*exp(-tstart/T52FE)*tstart*T52FE + pow(T52FE,2)*E52FE*exp(-tstart/T52FE) - T52MN*tstart*E52MN*exp(-tstart/T52MN) - pow(T52MN,2)*E52MN*exp(-tstart/T52MN) + E52MN*tstart*T52FE*exp(-tstart/T52FE) + pow(T52FE,2)*E52MN*exp(-tstart/T52FE) + E52FE*T52MN*T52FE - E52FE*pow(T52FE,2) - pow(T52FE,2)*E52MN + E52MN*pow(T52MN,2));
+    const double factor56ni = CLIGHT / 4 / STEBO * 1. / 56 / MH * pow(tmin / tstart, 3)
+      * (-1. / (tstart * (- TCOBALT + TNICKEL)))
+      * (- ENICKEL * exp(- tstart / TNICKEL) * tstart * TCOBALT - ENICKEL * exp(- tstart / TNICKEL) * TNICKEL * TCOBALT
+         + ENICKEL * exp(- tstart / TNICKEL) * tstart * TNICKEL + pow(TNICKEL, 2) * ENICKEL * exp(- tstart / TNICKEL)
+         - TCOBALT * tstart * ECOBALT * exp(- tstart / TCOBALT) - pow(TCOBALT, 2) * ECOBALT * exp(- tstart / TCOBALT)
+         + ECOBALT * tstart * TNICKEL * exp(- tstart / TNICKEL) + pow(TNICKEL, 2) * ECOBALT * exp(- tstart / TNICKEL)
+         + ENICKEL * TCOBALT * TNICKEL - ENICKEL * pow(TNICKEL, 2) - pow(TNICKEL, 2) * ECOBALT + ECOBALT * pow(TCOBALT, 2));
 
-    double factor48cr = CLIGHT/4/STEBO * 1./48/MH * pow(tmin/tstart,3);
-    factor48cr *= -1./(tstart*(-T48V+T48CR));
-    factor48cr *= (-E48CR*exp(-tstart/T48CR)*tstart*T48V - E48CR*exp(-tstart/T48CR)*T48CR*T48V + E48CR*exp(-tstart/T48CR)*tstart*T48CR + pow(T48CR,2)*E48CR*exp(-tstart/T48CR) - T48V*tstart*E48V*exp(-tstart/T48V) - pow(T48V,2)*E48V*exp(-tstart/T48V) + E48V*tstart*T48CR*exp(-tstart/T48CR) + pow(T48CR,2)*E48V*exp(-tstart/T48CR) + E48CR*T48V*T48CR - E48CR*pow(T48CR,2) - pow(T48CR,2)*E48V + E48V*pow(T48V,2));
+    const double factor52fe = CLIGHT / 4 / STEBO * 1. / 52 / MH * pow(tmin / tstart, 3)
+      * (-1. / (tstart * (- T52MN + T52FE)))
+      * (- E52FE * exp(- tstart / T52FE) * tstart * T52MN - E52FE * exp(- tstart / T52FE) * T52FE * T52MN
+         + E52FE * exp(- tstart / T52FE) * tstart * T52FE + pow(T52FE, 2) * E52FE * exp(- tstart / T52FE)
+         - T52MN * tstart * E52MN * exp(- tstart / T52MN) - pow(T52MN, 2) * E52MN * exp(- tstart / T52MN)
+         + E52MN * tstart * T52FE * exp(- tstart / T52FE) + pow(T52FE, 2) * E52MN * exp(- tstart / T52FE)
+         + E52FE * T52MN * T52FE - E52FE * pow(T52FE, 2) - pow(T52FE, 2) * E52MN + E52MN * pow(T52MN, 2));
 
-    //factor = CLIGHT/4/STEBO * ENICKEL/56/MH;
+    const double factor48cr = CLIGHT / 4 / STEBO * 1. / 48 / MH * pow(tmin / tstart, 3)
+      * (-1. / (tstart * (- T48V + T48CR)))
+      * (- E48CR * exp(- tstart / T48CR) * tstart * T48V - E48CR * exp(- tstart / T48CR) * T48CR * T48V
+         + E48CR * exp(- tstart / T48CR) * tstart * T48CR + pow(T48CR, 2) * E48CR * exp(- tstart / T48CR)
+         - T48V * tstart * E48V * exp(- tstart / T48V) - pow(T48V, 2) * E48V * exp(- tstart / T48V)
+         + E48V * tstart * T48CR * exp(- tstart / T48CR) + pow(T48CR, 2) * E48V * exp(- tstart / T48CR)
+         + E48CR * T48V * T48CR - E48CR * pow(T48CR, 2) - pow(T48CR, 2) * E48V + E48V * pow(T48V, 2));
+
+    //factor56ni = CLIGHT/4/STEBO * ENICKEL/56/MH;
     /// This works only for the inbuilt Lucy model
-    //factor = CLIGHT/4/STEBO * 3*mtot/4/PI * ENICKEL/56/MH  / pow(vmax,3);
+    //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * ENICKEL/56/MH  / pow(vmax,3);
     //for (n = 0; n < ngrid; n++)
     for (int n = 0; n < npts_model; n++)
     {
       //mgi = cell[n].modelgridindex;
-      double T_initial = pow(((factor * get_f56ni(n) * get_rhoinit(n))
+      double T_initial = pow(((factor56ni * get_f56ni(n) * get_rhoinit(n))
            + (factor52fe * get_f52fe(n) * get_rhoinit(n))
-           + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1./4.);
-      //T_initial = pow(factor * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
-      //T_initial = pow(factor * cell[n].f_ni * (1.-exp(-tmin/TNICKEL))/pow(tmin,3), 1./4.);
+           + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1 / 4);
+      //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
+      //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/TNICKEL))/pow(tmin,3), 1./4.);
       //T_initial = 30615.5;
       if (T_initial < MINTEMP)
       {
-        set_Te(n, MINTEMP);
-        set_TJ(n, MINTEMP);
-        set_TR(n, MINTEMP);
+        T_initial = MINTEMP;
       }
       else if (T_initial > MAXTEMP)
       {
-        set_Te(n, MAXTEMP);
-        set_TJ(n, MAXTEMP);
-        set_TR(n, MAXTEMP);
+        T_initial = MAXTEMP;
       }
-      else
-      {
-        set_Te(n, T_initial);
-        set_TJ(n, T_initial);
-        set_TR(n, T_initial);
-      }
+
+      set_Te(n, T_initial);
+      set_TJ(n, T_initial);
+      set_TR(n, T_initial);
+
       set_W(n, 1.);
     }
   }
@@ -1699,7 +1707,7 @@ void grid_init(void)
     // regime proportional to the density to a regime independent of the density
     // This is done by solving for tau_sobolev == 1
     // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
-    rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
+    rho_crit = ME * CLIGHT * MNI56 / (PI * QE * QE * rho_crit_para * 3000e-8 * tmin);
     printout("grid_init: rho_crit = %g\n", rho_crit);
 
     if (model_type == RHO_1D_READ)

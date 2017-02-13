@@ -28,6 +28,4 @@ inline double radfield2(double nu, double T, double W)
 }
 
 
-
-
 #endif //RADFIELD_H

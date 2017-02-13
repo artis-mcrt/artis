@@ -400,8 +400,8 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
           nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
           if (nnu >= 0 && nnu < MNUBINS)
           {
-            deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
-            int at = pkt_ptr->absorptiontype;
+            deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
+            const int at = pkt_ptr->absorptiontype;
             if (at >= 0)
             {
               /// bb-emission

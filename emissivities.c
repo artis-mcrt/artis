@@ -16,7 +16,9 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
   // compton emissivity. Called with a packet that is about to travel a
   // distance dist in the lab frame. Time at start of distance is t_current.
 
-  double vel_vec[3], cmf_dir[3], cmf_syn_dir[3];
+  double vel_vec[3];
+  double cmf_dir[3];
+  double cmf_syn_dir[3];
 
   // First we need to know the scattering angle needed from the
   // packet's direction of motion to the desired observer. Call this angle
@@ -34,7 +36,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
   //  printout("syn_dir %g %g %g\n", syn_dir[0], syn_dir[1], syn_dir[2]);
   //  printout("cmf_syn_dir %g %g %g\n", cmf_syn_dir[0], cmf_syn_dir[1], cmf_syn_dir[2]);
 
-  double mu_cmf = dot(cmf_dir, cmf_syn_dir);
+  const double mu_cmf = dot(cmf_dir, cmf_syn_dir);
 
   if (mu_cmf > 1 || mu_cmf < -1)
   {
@@ -42,10 +44,10 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
     abort();
   }
 
-  /* Now get the factor by which the frequency will change, f, for going
-     in this direction. f = old energy / new eneregy - always should be > 1*/
+  // Now get the factor by which the frequency will change, f, for going
+  // in this direction. f = old energy / new energy - always should be > 1
 
-  double f = 1 + (H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT * (1. - mu_cmf));
+  const double f = 1 + (H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT * (1. - mu_cmf));
 
   //  printout("compton reducion factor %g freq %g mu %g\n", f, H*pkt_ptr->nu_cmf/MEV, mu_cmf );
 
@@ -53,16 +55,16 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
      light will have frequency (nu_cmf / f) in the cmf frame. And it
      travels in direction syn_dir in the rf. */
 
-  double freq_out = pkt_ptr->nu_cmf /f; /// doppler(syn_dir, vel_vec);
+  const double freq_out = pkt_ptr->nu_cmf / f; /// doppler(syn_dir, vel_vec);
   // do we want ?/ doppler(syn_dir, vel_vec)
 
-  int lindex = get_nul(freq_out); // This is the index of the next line to
-                              // the red. The emissivity will go in this
-                              // bin. However, since there's an offset
-                              // in the emissivities, we shift the
-                              // index by that
+  const int lindex = get_nul(freq_out); // This is the index of the next line to
+                                        // the red. The emissivity will go in this
+                                        // bin. However, since there's an offset
+                                        // in the emissivities, we shift the
+                                        // index by that
 
-  /* If it's gonna be in a bin of interest carry on - otherwise leave it. */
+  // If it's gonna be in a bin of interest, carry on - otherwise leave it.
 
   // printout("frequency %g\n", freq_out*H/MEV);
   // printout("lindex %d, emiss_max %d, emiss_offset %d\n", lindex, emiss_max, emiss_offset);
@@ -73,7 +75,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
     /* Then get partial crossection dsigma_domega in cmf */
     /* Coeff is 3 / 16 / PI */
 
-    double dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f * (f + (1./f) + (mu_cmf*mu_cmf) - 1.);
+    const double dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f * (f + (1./f) + (mu_cmf * mu_cmf) - 1.);
 
     //speed = vec_len(vel_vec);
     //solid_angle_factor =  doppler(pkt_ptr->dir, vel_vec) * doppler(pkt_ptr->dir, vel_vec);
@@ -89,9 +91,9 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
     /* so now determine the contribution to the emissivity and which
  frequency bin it should be in */
 
-    double dop_fac = doppler(pkt_ptr->dir, vel_vec);
+    const double dop_fac = doppler(pkt_ptr->dir, vel_vec);
 
-    double emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
+    const double emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
 
     /* For normalisation this needs to be
        1) divided by volume
@@ -128,9 +130,7 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
   // Called with a packet that is about to travel a
   // distance dist in the lab frame. Time at start of distance is t_current.
 
-  double emiss_cont;
-
-  emiss_cont = sig_pair_prod(pkt_ptr, t_current) * (2.46636e+20 / pkt_ptr->nu_cmf) * pkt_ptr->e_rf * dist;
+  const double emiss_cont = sig_pair_prod(pkt_ptr, t_current) * (2.46636e+20 / pkt_ptr->nu_cmf) * pkt_ptr->e_rf * dist;
 
   // For normalisation this needs to be
   //  1) divided by volume
@@ -155,7 +155,7 @@ void zero_estimators(void)
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
-    J[n] = 0.;
+    J[n] = 0.; // this is required even if FORCE_LTE is on
     #ifndef FORCE_LTE
       radfield_zero_estimators(n);
       ffheatingestimator[n] = 0.;
@@ -252,7 +252,7 @@ void write_estimators(int nts)
     abort();
   }
   int i = 0;
-  while ((chch=fgetc(dummy)) != EOF)
+  while ((chch = fgetc(dummy)) != EOF)
   {
     junk[i] = chch;
     i = i+1;
@@ -308,18 +308,13 @@ bool estim_switch(int nts)
 {
   int on_or_off = true; //on
 
-  double tstart = time_step[nts].start;
-  double tend = time_step[nts].start + time_step[nts].width;
+  const double tstart = time_step[nts].start;
+  const double tend = time_step[nts].start + time_step[nts].width;
 
-  double ts_want = time_syn[0] * ((1. - rmax/tmin/CLIGHT_PROP));
-  double te_want = time_syn[nsyn_time-1] * (1. + rmax/tmin/CLIGHT_PROP);
+  const double ts_want = time_syn[0] * ((1. - rmax / tmin / CLIGHT_PROP));
+  const double te_want = time_syn[nsyn_time - 1] * (1. + rmax / tmin / CLIGHT_PROP);
 
-  if (tstart > te_want)
-  {
-    on_or_off = false;
-  }
-
-  if (tend < ts_want)
+  if ((tstart > te_want) || (tend < ts_want))
   {
     on_or_off = false;
   }

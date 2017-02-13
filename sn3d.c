@@ -950,11 +950,8 @@ int main(int argc, char** argv)
         #endif
       #endif
 
-      /// The first time step must solve the ionisation balance in LTE
-      if (nts == 0)
-        initial_iteration = true;
-      else
-        initial_iteration = false;
+      // The first time step must solve the ionisation balance in LTE
+      initial_iteration = (nts == 0);
 
       #ifndef DO_TITER
         /// Do 3 iterations on timestep 0-9
@@ -974,26 +971,20 @@ int main(int argc, char** argv)
           initial_iteration = false;
         }*/
         n_titer = 1;
-        if (nts < n_lte_timesteps)
-        {
-          initial_iteration = true;
-        }
-        else
-        {
-          initial_iteration = false;
-        }
+        initial_iteration = (nts < n_lte_timesteps);
       #endif
 
       for (int titer = 0; titer < n_titer; titer++)
       {
         /// Read the packets file for each iteration on the timestep
         if (nts % 2 == 0)
-          sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
+          sprintf(filename,"packets%d_%d_odd.tmp", 0, my_rank);
         else
-          sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
+          sprintf(filename,"packets%d_%d_even.tmp", 0, my_rank);
 
         //sprintf(filename,"packets%d_%d.tmp",0,my_rank);
-        if ((packets_file = fopen(filename, "rb")) == NULL)
+        packets_file = fopen(filename, "rb");
+        if (packets_file == NULL)
         {
           printout("Cannot read temporary packets file %s\n",filename);
           abort();
@@ -1005,11 +996,12 @@ int main(int argc, char** argv)
         /// Some counters on pkt-actions need to be reset to do statistics
         pkt_action_counters_reset();
 
-        if (nts == 0) initialise_photoionestimators();
+        if (nts == 0)
+          initialise_photoionestimators();
         //if (nts > 0) debuglevel = 2000;
 
         #ifdef RECORD_LINESTAT
-          /// The same for absorption/emission of r-pkts in lines
+          // The same for absorption/emission of r-pkts in lines
           for (int i = 0; i < nlines; i++)
           {
             acounter[i] = 0;
@@ -1028,13 +1020,15 @@ int main(int argc, char** argv)
 
         nesc = 0;
 
-        /// Update the matter quantities in the grid for the new timestep. */
-        printout("\ntimestep %d: time before update grid %d (tstart + %d)\n",nts,time(NULL),time(NULL)-real_time_start);
+        // Update the matter quantities in the grid for the new timestep.
+
+        printout("\ntimestep %d: time before update grid %d (tstart + %d)\n",
+                 nts, time(NULL), time(NULL) - real_time_start);
 
         #ifndef FORCE_LTE
           /// Initialise corrphotoionrenorm[i] to zero before update_grid is called
           /// This allows reduction after update_grid has finished
-          if (simulation_continued_from_saved && nts-itstep == 0 && titer == 0)
+          if (simulation_continued_from_saved && nts - itstep == 0 && titer == 0)
           {
             /// In this case they have been read from file and must neither be touched
             /// nor broadcasted after update_grid
@@ -1050,7 +1044,8 @@ int main(int argc, char** argv)
           }
         #endif
 
-        update_grid(nts,my_rank,nstart,ndo,titer);
+        update_grid(nts, my_rank, nstart, ndo, titer);
+
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
           if (nts == 0)
@@ -1059,7 +1054,7 @@ int main(int argc, char** argv)
         #ifdef MPI_ON
           MPI_Barrier(MPI_COMM_WORLD);
         #endif
-        printout("time after update grid %d\n",time(NULL));
+        printout("time after update grid %d\n", time(NULL));
         //printout("histindex %d\n",histindex);
 
 
@@ -1071,13 +1066,13 @@ int main(int argc, char** argv)
         /// If this is not the 0th time step of the current job step,
         /// write out a snapshot of the grid properties for further restarts
         /// and update input.txt accordingly
-        if (nts-itstep != 0)
+        if (nts - itstep != 0)
         {
           if (my_rank == 0)
           {
             printout("Write grid restart data\n");
             write_grid_restart_data();
-            printout("Update input.txt for restart at time step %d\n",nts);
+            printout("Update input.txt for restart at time step %d\n", nts);
             update_parameterfile(nts);
             printout("input.txt successfully updated\n");
           }
@@ -1089,12 +1084,12 @@ int main(int argc, char** argv)
         {
           modelgrid[n].totalcooling = COOLING_UNDEFINED;
         }*/
-        printout("time after grid properties have been communicated %d\n",time(NULL));
+        printout("time after grid properties have been communicated %d\n", time(NULL));
 
 
-        /** set all the estimators to zero before moving packets. This is now done
-        after update_grid so that, if requires, the gamma-ray heating estimator is known there
-        and also the photoion and stimrecomb estimators */
+        // set all the estimators to zero before moving packets. This is now done
+        // after update_grid so that, if requires, the gamma-ray heating estimator is known there
+        // and also the photoion and stimrecomb estimators
         zero_estimators();
 
         if ((nts < ftstep) && (do_this_full_loop == 1))
@@ -1207,8 +1202,10 @@ int main(int argc, char** argv)
                    outer_iteration, nts, my_rank, time_step[nts].pellet_decays, nesc, time_step[nts].mid / DAY);
 
           #ifdef ESTIMATORS_ON
-            printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",outer_iteration,nts,my_rank,nvpkt,nvpkt_esc1+nvpkt_esc2+nvpkt_esc3);
-            printout("%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a macroatom deactivation. \n",nvpkt_esc1,nvpkt_esc2,nvpkt_esc3);
+            printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",
+                     outer_iteration, nts, my_rank, nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
+            printout("%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a macroatom deactivation. \n",
+                     nvpkt_esc1, nvpkt_esc2, nvpkt_esc3);
 
             nvpkt = 0;
             nvpkt_esc1 = 0;
@@ -1239,11 +1236,12 @@ int main(int argc, char** argv)
           printout("time before write temporary packets file %d\n",time(NULL));
 
           if (nts % 2 == 0)
-            sprintf(filename,"packets%d_%d_even.tmp",0,my_rank);
+            sprintf(filename,"packets%d_%d_even.tmp", 0, my_rank);
           else
-            sprintf(filename,"packets%d_%d_odd.tmp",0,my_rank);
+            sprintf(filename,"packets%d_%d_odd.tmp", 0, my_rank);
 
-          if ((packets_file = fopen(filename, "wb")) == NULL)
+          packets_file = fopen(filename, "wb");
+          if (packets_file == NULL)
           {
             printout("Cannot write to temporary packets file %s\n",filename);
             abort();
@@ -1258,7 +1256,8 @@ int main(int argc, char** argv)
           else
             sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
 
-          if ((packets_file = fopen(filename, "wb")) == NULL)
+          packets_file = fopen(filename, "wb");
+          if (packets_file == NULL)
           {
             printout("Cannot write to temporary packets file %s\n",filename);
             abort();
@@ -1272,13 +1271,13 @@ int main(int argc, char** argv)
           if (vgrid_flag == 1)
           {
             if (nts % 2 == 0)
-              sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
+              sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
             else
-              sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
+              sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
 
             if ((packets_file = fopen(filename, "wb")) == NULL)
             {
-              printout("Cannot write to vpkt_grid file %s\n",filename);
+              printout("Cannot write to vpkt_grid file %s\n", filename);
               abort();
             }
 
@@ -1291,13 +1290,13 @@ int main(int argc, char** argv)
 
           printout("time after write temporary packets file %d\n",time(NULL));
 
-          if (nts == ftstep-1)
+          if (nts == ftstep - 1)
           {
-            sprintf(filename,"packets%.2d_%.4d.out",0,my_rank);
-            //sprintf(filename,"packets%.2d_%.4d.out",middle_iteration,my_rank);
+            sprintf(filename,"packets%.2d_%.4d.out", 0, my_rank);
+            //sprintf(filename,"packets%.2d_%.4d.out", middle_iteration, my_rank);
             if ((packets_file = fopen(filename, "w")) == NULL)
             {
-              printf("Cannot write to final packets file %s\n",filename);
+              printf("Cannot write to final packets file %s\n", filename);
               abort();
             }
             write_packets(packets_file);
@@ -1474,11 +1473,14 @@ int main(int argc, char** argv)
     {
       double depvalue = 0.;
       MPI_Reduce(&time_step[i].gamma_dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].gamma_dep = depvalue / nprocs;
+      if (my_rank == 0)
+        time_step[i].gamma_dep = depvalue / nprocs;
       MPI_Reduce(&time_step[i].positron_dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].positron_dep = depvalue / nprocs;
+      if (my_rank == 0)
+        time_step[i].positron_dep = depvalue / nprocs;
       MPI_Reduce(&time_step[i].dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0) time_step[i].dep = depvalue / nprocs;
+      if (my_rank == 0)
+        time_step[i].dep = depvalue / nprocs;
     }
   #endif
   if (my_rank == 0)
@@ -1491,16 +1493,15 @@ int main(int argc, char** argv)
     }
     for (int i = 0; i < ntstep; i++)
     {
-      fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid/DAY,
-              time_step[i].gamma_dep/time_step[i].width/LSUN,
-              time_step[i].positron_dep/time_step[i].width/LSUN,
-              time_step[i].dep/time_step[i].width/LSUN);
+      fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid / DAY,
+              time_step[i].gamma_dep / time_step[i].width / LSUN,
+              time_step[i].positron_dep / time_step[i].width / LSUN,
+              time_step[i].dep / time_step[i].width / LSUN);
     }
     fclose(dep_file);
   }
 
-
-  printout("simulation finished at %d\n",time(NULL));
+  printout("simulation finished at %d\n", time(NULL));
   //fclose(tb_file);
   fclose(estimators_file);
   fclose(nlte_file);
@@ -1529,8 +1530,8 @@ int printout(const char *restrict format, ...)
    int ret_status = 0;
 
    va_list args;
-   va_start(args,format);
-   ret_status = vfprintf(output_file,format,args);
+   va_start(args, format);
+   ret_status = vfprintf(output_file, format, args);
    va_end(args);
 
    return ret_status;
