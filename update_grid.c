@@ -878,7 +878,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
             }
 
             if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
-              nt_solve_spencerfano(n,nts);
+              nt_solve_spencerfano(n,nts);  // should this be moved inside the NLTE population solver? would be slower but more accurate
 
             const double nne = get_nne(n);
             const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
