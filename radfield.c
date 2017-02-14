@@ -902,7 +902,7 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 void radfield_reduce_estimators(int my_rank)
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  printout("radfield_reduce_estimators starting\n");
+  printout("Reducing radiation field estimators\n");
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
 
@@ -914,19 +914,11 @@ void radfield_reduce_estimators(int my_rank)
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
         // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
-        double J_raw_reduced = 0.;
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].J_raw, &J_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        double nuJ_raw_reduced = 0.;
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &nuJ_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        int contribcount_reduced = 0.;
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].contribcount, &contribcount_reduced, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-        radfieldbins[modelgridindex][binindex].J_raw = J_raw_reduced;
-        radfieldbins[modelgridindex][binindex].nuJ_raw = nuJ_raw_reduced;
-        radfieldbins[modelgridindex][binindex].contribcount = contribcount_reduced;
         // printout("MPI: After MPI_Allreduce: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
       }
     }
