@@ -489,6 +489,7 @@ static double N_e(int modelgridindex, double energy)
 // possibly not valid for energy > E_0
 {
   const double energy_ev = energy / EV;
+  const double tot_nion = get_tot_nion(modelgridindex);
   double N_e = 0.;
 
   for (int element = 0; element < nelements; element++)
@@ -502,7 +503,7 @@ static double N_e(int modelgridindex, double energy)
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
 
-      if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
+      if (nnion < minionfraction * tot_nion) // skip negligible ions
         continue;
 
       // excitation terms
