@@ -1003,7 +1003,10 @@ static void analyse_sf_solution(int modelgridindex)
     const int Z = get_element(element);
     for (int ion = 0; ion < get_nions(element); ion++)
     {
-      nt_solution[modelgridindex].eff_ionpot[element][ion] = calculate_eff_ionpot(modelgridindex, element, ion);
+      float eff_ionpot = calculate_eff_ionpot(modelgridindex, element, ion);
+      if (!isfinite(eff_ionpot))
+        eff_ionpot = 0.;
+      nt_solution[modelgridindex].eff_ionpot[element][ion] = eff_ionpot;
 
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
@@ -1241,8 +1244,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
         }
       }
     }
+    printout("\n");
   }
-  printout("\n");
 
   gsl_vector_free(vec_xs_excitation_nnion_deltae);
 
