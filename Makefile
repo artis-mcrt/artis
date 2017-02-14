@@ -3,15 +3,18 @@ GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
 ifneq (,$(findstring raijin, $(HOST))) # NCI Raijin cluster
-  CC = mpicc
-	INCLUDE =
-  LIB =
-  CFLAGS = -DTIMED_RESTARTS -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
+#needs
+#module load intel-cc/
+#module load openmpi
+#module load gsl
 
-	  LDFLAGS = $(LIB) -lgsl -lgslcblas
-	  sn3d: CFLAGS += -DMPI_ON
-	  exspec: CFLAGS += -DDO_EXSPEC
-	  exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
+  CC = mpicc
+  CFLAGS = -DTIMED_RESTARTS -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
+	LDFLAGS= -lgsl -lgslcblas -lm
+
+  sn3d: CFLAGS += -DMPI_ON
+  exspec: CFLAGS += -DDO_EXSPEC
+  exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
 
 else  # macOS laptop
 
@@ -39,33 +42,33 @@ else  # macOS laptop
 endif
 
 ### Settings for the miner
-ifeq ($(OSTYPE),linux)
-  CC = cc
-  INCLUDE = /home/ssim/gsl/include
-  LIB = /home/ssim/gsl/lib
-  CFLAGS = -O3 -g -I$(INCLUDE)
-  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-endif
+# ifeq ($(OSTYPE),linux)
+#   CC = cc
+#   INCLUDE = /home/ssim/gsl/include
+#   LIB = /home/ssim/gsl/lib
+#   CFLAGS = -O3 -g -I$(INCLUDE)
+#   LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+#   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+#   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+# endif
 
 
 ### Settings for Coala
-ifeq ($(OSTYPE),linux)
-  CC = /pkg/linux/SS12/sunstudio12/bin/cc
-#  CC = gcc
-  INCLUDE = /home/ssim/gsl/include
-  INCLUDE2 = /usr/local/openmpi/include
-  LIB2 = /usr/local/openmpi/lib
-  LIB = /home/ssim/gsl/lib
-#  CFLAGS = -O3 -I$(INCLUDE) -I$(INCLUDE2) -fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
-  CFLAGS = -O3 -I$(INCLUDE) -I$(INCLUDE2)  -pthread -DMPI_ON
-#-fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
-  LDFLAGS= -L$(LIB) -L$(LIB2) -R$(LIB2) -lgsl -lgslcblas -lm -pthread -L/usr/local/openmpi/lib -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
-#  LDFLAGS= -L$(LIB) -L$(LIB2) -L$(LIB3) -lgsl -lgslcblas -lm -pthread
-  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-endif
+# ifeq ($(OSTYPE),linux)
+#   CC = /pkg/linux/SS12/sunstudio12/bin/cc
+# #  CC = gcc
+#   INCLUDE = /home/ssim/gsl/include
+#   INCLUDE2 = /usr/local/openmpi/include
+#   LIB2 = /usr/local/openmpi/lib
+#   LIB = /home/ssim/gsl/lib
+# #  CFLAGS = -O3 -I$(INCLUDE) -I$(INCLUDE2) -fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
+#   CFLAGS = -O3 -I$(INCLUDE) -I$(INCLUDE2)  -pthread -DMPI_ON
+# #-fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
+#   LDFLAGS= -L$(LIB) -L$(LIB2) -R$(LIB2) -lgsl -lgslcblas -lm -pthread -L/usr/local/openmpi/lib -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
+# #  LDFLAGS= -L$(LIB) -L$(LIB2) -L$(LIB3) -lgsl -lgslcblas -lm -pthread
+#   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+#   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+# endif
 
 
 ### Settings for mime
@@ -76,38 +79,6 @@ ifeq ($(HOST),mime)
 #-pthread -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-endif
-
-
-
-### Settings for vayu
-ifeq ($(USER),sas120)
-
-#needs
-#module load intel-cc/11.1.046
-#module load openmpi/1.4.3
-#module load gsl/1.12
-
-  CC = mpicc
-  CFLAGS = -O3 -DMPI_ON -DTIMED_RESTARTS
-  LDFLAGS= -lgsl -lgslcblas -lm
-  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-endif
-
-### Settings for MACBOOK
-ifeq ($(USER),lukesignorethis)
-
-  CC = cc
-
-  CFLAGS = -O0 -I/usr/local/opt/gsl/include/ -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error -ftrap-function=abort -g
-#-DMPI_ON
-  LDFLAGS= -lgsl -lgslcblas -lm -L/usr/local/opt/gsl/lib/
-
-  exspec: override CFLAGS =  -O3  -DDO_EXSPEC
-  exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
-  exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
-
 endif
 
 
