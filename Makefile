@@ -2,6 +2,19 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
+ifneq (,$(findstring raijin, $(HOST))) # NCI Raijin cluster
+  CC = mpicc
+	INCLUDE =
+  LIB =
+  CFLAGS = -DTIMED_RESTARTS -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
+
+	  LDFLAGS = $(LIB) -lgsl -lgslcblas
+	  sn3d: CFLAGS += -DMPI_ON
+	  exspec: CFLAGS += -DDO_EXSPEC
+	  exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
+
+else  # macOS laptop
+
   CC = clang
 #  CC = clang-3.8
 #  CC = clang-omp
@@ -22,6 +35,8 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 #  sn3d: CFLAGS += -fopenmp
   exspec: CFLAGS += -DDO_EXSPEC
   exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
+
+endif
 
 ### Settings for the miner
 ifeq ($(OSTYPE),linux)
