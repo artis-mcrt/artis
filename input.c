@@ -467,22 +467,24 @@ static void read_unprocessed_atomicdata(void)
             double A;
             double coll_str;
             int intforbidden;
-            fscanf(transitiondata,"%d %d %lg %lg %d\n",&lower_in,&upper_in,&A,&coll_str,&intforbidden);
+            fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden);
             const int lower = lower_in - 1; // TODO: remove the minus one after we change the level indicies to start at zero in transitiondata.txt
             const int upper = upper_in - 1;
 
-            if (Z == 26 && ionstage == 2) // TESTING FOR FE II
-            {
-              // const double factor = 2.0;
-              // if (coll_str >= 0.) // don't mess up the negative ones!
-              // {
-              //   printout("multiplying coll_str for Fe II transition level %d to %d by %g\n", lower, upper, factor);
-              //   coll_str *= factor; // TESTING: REMOVE!!!
-              // }
-              // printout("multiplying A value for Fe II transition level %d to %d by %g\n", lower, upper, factor);
-              // coll_str *= factor; // TESTING: REMOVE!!!
-            }
+            // if (Z == 26 && ionstage == 2) // TESTING FOR FE II
+            // {
+            //   const double factor = 2.0;
+            //   if (coll_str >= 0.) // don't mess up the negative ones!
+            //   {
+            //     printout("multiplying coll_str for Fe II transition level %d to %d by %g\n", lower, upper, factor);
+            //     coll_str *= factor; // TESTING: REMOVE!!!
+            //   }
+            //   printout("multiplying A value for Fe II transition level %d to %d by %g\n", lower, upper, factor);
+            //   coll_str *= factor; // TESTING: REMOVE!!!
+            // }
 
+            // this entire block can be removed if we don't want to add in extra collisonal
+            // transitions between the first n levels
             if (prev_lower < nlevels_requiretransitions && prev_upper < nlevelsmax - 1)
             {
               if (lower == prev_lower && upper > prev_upper + 1) // same lower level, but skipped some upper levels
@@ -494,6 +496,11 @@ static void read_unprocessed_atomicdata(void)
                     continue;
                   tottransitions += 1;
                   transitiontable = realloc(transitiontable, tottransitions * sizeof(transitiontable_entry));
+                  if (transitiontable == NULL)
+                  {
+                    printout("Could not reallocate transitiontable\n");
+                    abort();
+                  }
                   transitiontable[i].lower = prev_lower;
                   transitiontable[i].upper = tmplevel;
                   transitiontable[i].A = 0.;
@@ -507,8 +514,13 @@ static void read_unprocessed_atomicdata(void)
               {
                 for (int tmplevel = prev_upper + 1; tmplevel < nlevelsmax; tmplevel++)
                 {
-                  tottransitions++;
+                  tottransitions += 1;
                   transitiontable = realloc(transitiontable, tottransitions * sizeof(transitiontable_entry));
+                  if (transitiontable == NULL)
+                  {
+                    printout("Could not reallocate transitiontable\n");
+                    abort();
+                  }
                   transitiontable[i].lower = prev_lower;
                   transitiontable[i].upper = tmplevel;
                   transitiontable[i].A = 0.;
@@ -519,6 +531,7 @@ static void read_unprocessed_atomicdata(void)
                 }
               }
             }
+
             transitiontable[i].lower = lower;
             transitiontable[i].upper = upper;
             transitiontable[i].A = A;
@@ -596,7 +609,7 @@ static void read_unprocessed_atomicdata(void)
             ///Moved to the section with ionising levels below
             //elements[element].ions[ion].levels[level].cont_index = cont_index;
             //cont_index--;
-            /// Initialise the metastable flag to true. Set it to false (0) if downward transition exists.
+            /// Initialise the metastable flag to true. Set it to false if a downward transition exists.
             elements[element].ions[ion].levels[level].metastable = true;
             //elements[element].ions[ion].levels[level].main_qn = mainqn;
 
@@ -682,8 +695,8 @@ static void read_unprocessed_atomicdata(void)
               lineindex++;
               if (lineindex % MLINES == 0)
               {
-                printout("[info] read_atomicdata: increase linelistsize from %d to %d\n",lineindex,lineindex+MLINES);
-                if ((linelist = realloc(linelist, (lineindex+MLINES)*sizeof(linelist_entry))) == NULL)
+                printout("[info] read_atomicdata: increase linelistsize from %d to %d\n", lineindex, lineindex + MLINES);
+                if ((linelist = realloc(linelist, (lineindex + MLINES) * sizeof(linelist_entry))) == NULL)
                 {
                   printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
                   abort();
@@ -695,43 +708,41 @@ static void read_unprocessed_atomicdata(void)
 
               elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
               if ((elements[element].ions[ion].levels[level].downtrans
-                  = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level]+1)*sizeof(transitionlist_entry))) == NULL)
+                  = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level] + 1) * sizeof(transitionlist_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
                 abort();
               }
               elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
-              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon = epsilon(element,ion,targetlevel);
-              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].stat_weight = stat_weight(element,ion,targetlevel);
+              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon = epsilon(element, ion, targetlevel);
+              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].stat_weight = stat_weight(element, ion, targetlevel);
               //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
               //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
               ndownarr[level]++;
 
               elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
-              elements[element].ions[ion].levels[targetlevel].uptrans = realloc(
-                  elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel]+1)*sizeof(transitionlist_entry));
-
-              if (elements[element].ions[ion].levels[targetlevel].uptrans == NULL)
+              if ((elements[element].ions[ion].levels[targetlevel].uptrans
+                  = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel] + 1) * sizeof(transitionlist_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
                 abort();
               }
               elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
-              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon = epsilon(element,ion,level);
-              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element,ion,level);
+              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon = epsilon(element, ion, level);
+              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element, ion, level);
               nuparr[targetlevel]++;
             }
             else
             {
               // This is a new branch to deal with lines that have different types of transition. It should trip after a transition is already known.
-              const int linelistindex = transitions[level].to[level-targetlevel-1];
+              const int linelistindex = transitions[level].to[level - targetlevel - 1];
               const double A_ul = transitiontable[ii].A;
               const double coll_str = transitiontable[ii].coll_str;
               //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
-              const double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
-              const double g = stat_weight(element,ion,level)/stat_weight(element,ion,targetlevel);
-              const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI,2)) * A_ul;
+              const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
+              const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
+              const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
               //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
               //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
 
@@ -739,7 +750,7 @@ static void read_unprocessed_atomicdata(void)
               {
                 printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
                 printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
-                printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n", transitions[level].to[level-targetlevel-1]);
+                printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n", transitions[level].to[level - targetlevel - 1]);
                 printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
                 printout("[input.c]   linelist[linelistindex].elementindex %d, linelist[linelistindex].ionindex %d, linelist[linelistindex].upperlevelindex %d, linelist[linelistindex].lowerlevelindex %d\n", linelist[linelistindex].elementindex, linelist[linelistindex].ionindex, linelist[linelistindex].upperlevelindex,linelist[linelistindex].lowerlevelindex);
                 abort();
@@ -812,9 +823,9 @@ static void read_unprocessed_atomicdata(void)
 
 
   /// Set up the list of allowed upward transitions for each level
-  printout("total uptrans %d\n",totaluptrans);
-  printout("total downtrans %d\n",totaldowntrans);
-  printout("coolingcheck %d\n",coolingcheck);
+  printout("total uptrans %d\n", totaluptrans);
+  printout("total downtrans %d\n", totaldowntrans);
+  printout("coolingcheck %d\n", coolingcheck);
 
 
   ///debug output
@@ -831,7 +842,7 @@ static void read_unprocessed_atomicdata(void)
   */
 
   /// then sort the linelist by decreasing frequency
-  qsort(linelist,nlines,sizeof(linelist_entry),compare_linelistentry);
+  qsort(linelist, nlines, sizeof(linelist_entry), compare_linelistentry);
 
   /// Save sorted linelist into a file
   // if (rank_global == 0)
