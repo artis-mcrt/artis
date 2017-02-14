@@ -8,7 +8,9 @@
 #include "grid_init.h"
 #include <string.h>
 #include <gsl/gsl_integration.h>
-
+#define  _XOPEN_SOURCE
+#define D_POSIX_SOURCE
+#include <stdio.h>
 
 // typedef struct gslintegration_ffheatingparas
 // {
@@ -43,6 +45,7 @@ static bool read_ratecoeff_dat(void)
 /// returns true if successful or false otherwise
 {
   extern FILE *popen();
+  int pclose(FILE *stream);
   FILE *popenadatahash = popen("openssl md5 -binary adata.txt | xxd -p", "r");
   fgets(adatafile_hash, 33, popenadatahash);
   printout("MD5(adata.txt) = %s\n", adatafile_hash);
