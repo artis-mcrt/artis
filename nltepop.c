@@ -614,15 +614,15 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       ion_populations[ion] = solution_ion_pop;
       if (ion > 0)
       {
-        double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
+        const double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
 
-        double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
-        double T_e = get_Te(modelgridindex);
-        double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion-1] / modelgrid[modelgridindex].composition[element].partfunct[ion];
-        double gs_g_ratio = stat_weight(element,ion-1,0) / stat_weight(element,ion,0);
-        double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
-        double solution_ion_pop_ratio = ion_populations[ion-1] / ion_populations[ion];
-        double sbphi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
+        const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
+        const double T_e = get_Te(modelgridindex);
+        const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion-1] / modelgrid[modelgridindex].composition[element].partfunct[ion];
+        const double gs_g_ratio = stat_weight(element,ion-1,0) / stat_weight(element,ion,0);
+        const double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
+        const double solution_ion_pop_ratio = ion_populations[ion-1] / ion_populations[ion];
+        const double sbphi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
 
         printout("  The ratio of groundlevel pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
                  get_ionstage(element,ion-1),ion_stage,gspopratio,sbphi_gs,gspopratio/sbphi_gs);
