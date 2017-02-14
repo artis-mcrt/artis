@@ -934,15 +934,15 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
     if (!isfinite(Y_nt))
     {
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-      printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ion_stage %d. Using WF approx instead = %g\n",
-               Y_nt, get_element(element), get_ionstage(element, ion), Y_nt_wfapprox);
+      printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ion_stage %d for cell %d. Using WF approx instead = %g\n",
+               Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       return Y_nt_wfapprox;
     }
     else if (Y_nt < 0)
     {
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-      printout("Warning: Spencer-Fano solver gives negative ionization rate (%g) for element %d ion_stage %d. Using WF approx instead = %g\n",
-               Y_nt, get_element(element), get_ionstage(element, ion), Y_nt_wfapprox);
+      printout("Warning: Spencer-Fano solver gives negative ionization rate (%g) for element %d ion_stage %d cell %d. Using WF approx instead = %g\n",
+               Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       return Y_nt_wfapprox;
     }
     else
@@ -1334,7 +1334,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   nt_solution[modelgridindex].timestep = timestep;
   nt_solution[modelgridindex].frac_heating = -1.;
   nt_solution[modelgridindex].E_0 = E_0;
-  
+
   analyse_sf_solution(modelgridindex);
 
   if (!STORE_NT_SPECTRUM)
