@@ -143,18 +143,26 @@ void nonthermal_init(int my_rank)
             "timestep","modelgridindex","index","energy_ev","source","y");
     fflush(nonthermalfile);
 
-    for (int mgi = 0; mgi < MMODELGRID; mgi++)
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID + 1; modelgridindex++)
     {
-      nt_solution[mgi].frac_heating = 1.0;
-      nt_solution[mgi].timestep = -1;
+      nt_solution[modelgridindex].frac_heating = 1.0;
+      nt_solution[modelgridindex].timestep = -1;
+      nt_solution[modelgridindex].E_0 = 0.;
 
-      if (STORE_NT_SPECTRUM && modelgrid[mgi].associated_cells > 0)
+      if (STORE_NT_SPECTRUM && modelgrid[modelgridindex].associated_cells > 0)
       {
-        nt_solution[mgi].yfunc = calloc(SFPTS, sizeof(double));
+        nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
       }
       else
       {
-        nt_solution[mgi].yfunc = NULL;
+        nt_solution[modelgridindex].yfunc = NULL;
+      }
+      for (int element = 0; element < nelements; element++)
+      {
+        for (int ion = 0; ion < get_nions(element); ion++)
+        {
+          nt_solution[modelgridindex].eff_ionpot[element][ion] = 0.;
+        }
       }
     }
 
@@ -195,7 +203,7 @@ void nonthermal_init(int my_rank)
     printout("Finished initializing non-thermal solver\n");
   }
   else
-    printout("Tried to initialize the non-thermal solver again!\n");
+    printout("Tried to initialize the non-thermal solver more than once!\n");
 }
 
 
@@ -280,10 +288,10 @@ void nonthermal_close_file(void)
   gsl_vector_free(sourcevec);
   if (STORE_NT_SPECTRUM)
   {
-    for (int mgi = 0; mgi < MMODELGRID; mgi++)
+    for (int mgi = 0; mgi < MMODELGRID + 1; mgi++)
     {
-      // if (modelgrid[mgi].associated_cells > 0)
-      free(nt_solution[mgi].yfunc);
+      if (modelgrid[mgi].associated_cells > 0)
+        free(nt_solution[mgi].yfunc);
     }
   }
   free(colliondata);
@@ -894,6 +902,12 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
 // Kozma & Fransson 1992 equation 13
 {
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+  if (modelgrid[modelgridindex].associated_cells <= 0)
+  {
+    printout("ERROR: nt_ionization_ratecoeff_sf called on empty cell %d\n", modelgridindex);
+    abort();
+  }
+
   if (deposition_rate_density > 0.)
     return deposition_rate_density / get_tot_nion(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
   else
@@ -906,6 +920,11 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
   if (!NT_ON)
   {
     printout("ERROR: NT_ON is false, but nt_ionization_ratecoeff has been called.\n");
+    abort();
+  }
+  if (modelgrid[modelgridindex].associated_cells <= 0)
+  {
+    printout("ERROR: nt_ionization_ratecoeff called on empty cell %d\n", modelgridindex);
     abort();
   }
 
@@ -1065,8 +1084,6 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
 
     nt_solution[modelgridindex].timestep = timestep;
-    nt_solution[modelgridindex].frac_heating = 1.0;
-    nt_solution[modelgridindex].E_0 = 0.;
 
     return;
   }
@@ -1075,12 +1092,16 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
     if (deposition_rate_density_ev < 1e-2)
     {
-      printout("Zero non-thermal deposition in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
+      printout("Near-zero non-thermal deposition in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
 
-      gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
-      gsl_vector_set_zero(&yvecview.vector);
+      // if (STORE_NT_SPECTRUM)
+      // {
+      //   nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
+      //   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+      //   gsl_vector_set_zero(&yvecview.vector);
+      // }
 
-      nonthermal_write_to_file(modelgridindex, timestep);
+      // nonthermal_write_to_file(modelgridindex, timestep);
 
       nt_solution[modelgridindex].timestep = timestep;
       nt_solution[modelgridindex].frac_heating = 1.0;
@@ -1249,8 +1270,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   // gsl_permutation *p = gsl_permutation_alloc(SFPTS);
   // gsl_linalg_LU_decomp(sfmatrix_LU_decomp, p, &s);
 
-  // instead of LU decompositin above, we know that the
-  // matrix should already be in upper triangular form so is equal to its own LU decompositon!
+  // The LU decomposition above is redundant if we already
+  // made sure to put the sfmatrix in upper triangular form
   gsl_matrix *sfmatrix_LU_decomp = sfmatrix;
   gsl_permutation *p = gsl_permutation_calloc(SFPTS); // identity permutation
 
@@ -1270,7 +1291,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
   double error_best = -1.;
   gsl_vector *yvec_best = gsl_vector_alloc(SFPTS); // solution vector with lowest error
-  gsl_vector *gsl_work_vector = gsl_vector_alloc(SFPTS);
+  gsl_vector *gsl_work_vector = gsl_vector_calloc(SFPTS);
   gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
   int iteration;
   for (iteration = 0; iteration < 10; iteration++)
@@ -1313,6 +1334,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   nt_solution[modelgridindex].timestep = timestep;
   nt_solution[modelgridindex].frac_heating = -1.;
   nt_solution[modelgridindex].E_0 = E_0;
+  
   analyse_sf_solution(modelgridindex);
 
   if (!STORE_NT_SPECTRUM)
