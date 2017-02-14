@@ -241,6 +241,9 @@ static double get_y_sample(int modelgridindex, int index)
 
 static void nonthermal_write_to_file(int modelgridindex, int timestep)
 {
+  if (timestep % 10 != 0)
+    return;
+
 # ifdef _OPENMP
 # pragma omp critical (nonthermal_out_file)
   {
