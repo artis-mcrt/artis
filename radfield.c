@@ -49,8 +49,7 @@ struct radfieldbin
   enum_bin_fit_type fit_type;
 };
 
-static struct radfieldbin *radfieldbins[MMODELGRID+1]; // heap allocated alterative
-// static struct radfieldbin radfieldbins[MMODELGRID+1][RADFIELDBINCOUNT]; // THIS IS ALLOCATED EVEN IF MULTIBIN_RADFIELD_MODEL_ON IS FALSE!
+static struct radfieldbin *radfieldbins[MMODELGRID+1];
 
 typedef enum
 {
@@ -96,12 +95,11 @@ void radfield_init(int my_rank)
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
+    radfield_set_J_normfactor(modelgridindex, -1.0);
     // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, modelgrid[modelgridindex].associated_cells);
     if (modelgrid[modelgridindex].associated_cells > 0)
     {
       radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
-
-      radfield_set_J_normfactor(modelgridindex, -1.0);
 
       double prev_nu_upper = nu_lower_first_initial;
       const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
@@ -156,7 +154,12 @@ static double radfield_get_bin_J(int modelgridindex, int binindex, bool averaged
 {
   if (J_normfactor[modelgridindex] <= 0.0)
   {
-    printout("radfield: Fatal error: radfield_get_bin_J called before J_normfactor set for modelgridindex %d",modelgridindex);
+    printout("radfield: Fatal error: radfield_get_bin_J called before J_normfactor set for modelgridindex %d, = %g",modelgridindex,J_normfactor[modelgridindex]);
+    abort();
+  }
+  else if (modelgridindex >= MMODELGRID)
+  {
+    printout("radfield: Fatal error: radfield_get_bin_J called before on modelgridindex %d >= MMODELGRID",modelgridindex);
     abort();
   }
   const double J_current = radfieldbins[modelgridindex][binindex].J_raw * J_normfactor[modelgridindex];
@@ -175,6 +178,11 @@ static void radfield_set_bin_J(int modelgridindex, int binindex, double value)
     printout("radfield: Fatal error: radfield_set_bin_J called before J_normfactor set for modelgridindex %d",modelgridindex);
     abort();
   }
+  else if (modelgridindex >= MMODELGRID)
+  {
+    printout("radfield: Fatal error: radfield_set_bin_J called before on modelgridindex %d >= MMODELGRID",modelgridindex);
+    abort();
+  }
   radfieldbins[modelgridindex][binindex].J_raw = value / J_normfactor[modelgridindex];
 }
 
@@ -184,6 +192,11 @@ static double radfield_get_bin_nuJ(int modelgridindex, int binindex, bool averag
   if (J_normfactor[modelgridindex] <= 0.0)
   {
     printout("radfield: Fatal error: radfield_get_bin_nuJ called before J_normfactor set for modelgridindex %d",modelgridindex);
+    abort();
+  }
+  else if (modelgridindex >= MMODELGRID)
+  {
+    printout("radfield: Fatal error: radfield_get_bin_nuJ called before on modelgridindex %d >= MMODELGRID",modelgridindex);
     abort();
   }
   const double nuJ_current = radfieldbins[modelgridindex][binindex].nuJ_raw * J_normfactor[modelgridindex];
@@ -198,6 +211,7 @@ static inline
 double radfield_get_bin_nu_bar(int modelgridindex, int binindex)
 // importantly, this is average beween the current and previous timestep
 {
+  printout("radfield: radfield_get_bin_nu_bar called on modelgridindex %d\n",modelgridindex);
   const double nuJ_sum = radfield_get_bin_nuJ(modelgridindex, binindex, true);
   const double J_sum = radfield_get_bin_J(modelgridindex, binindex, true);
   return nuJ_sum / J_sum;
@@ -293,7 +307,7 @@ void radfield_write_to_file(int modelgridindex, int timestep)
 # endif
     if (!radfield_initialized)
     {
-      printout("Call to write_to_radfield_file before init_radfield");
+      printout("Call to radfield_write_to_file before radfield_init\n");
       abort();
     }
 
@@ -349,11 +363,11 @@ void radfield_close_file(void)
   {
     fclose(radfieldfile);
 
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
-  {
-    if (modelgrid[modelgridindex].associated_cells > 0)
-      free(radfieldbins[modelgridindex]);
-  }
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    {
+      if (modelgrid[modelgridindex].associated_cells > 0)
+        free(radfieldbins[modelgridindex]);
+    }
 
     //free(radfieldbins);
   }
@@ -366,7 +380,7 @@ void radfield_zero_estimators(int modelgridindex)
 {
   nuJ[modelgridindex] = 0.;
 
-  if (MULTIBIN_RADFIELD_MODEL_ON & radfield_initialized)
+  if (MULTIBIN_RADFIELD_MODEL_ON & radfield_initialized && modelgrid[modelgridindex].associated_cells > 0)
   {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
@@ -838,7 +852,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
 
 void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W)
 {
-  double nubar = nuJ/J;
+  double nubar = nuJ / J;
   if (!isfinite(nubar) || nubar == 0.)
   {
     /// Return old T_R
