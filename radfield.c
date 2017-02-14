@@ -913,14 +913,20 @@ void radfield_reduce_estimators(int my_rank)
     {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        MPI_Barrier(MPI_COMM_WORLD);
-
         // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        double J_raw_reduced = 0.;
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].J_raw, &J_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        double nuJ_raw_reduced = 0.;
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &nuJ_raw_reduced, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        int contribcount_reduced = 0.;
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].contribcount, &contribcount_reduced, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].J_raw, &radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&radfieldbins[modelgridindex][binindex].contribcount, &radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
+        radfieldbins[modelgridindex][binindex].J_raw = J_raw_reduced;
+        radfieldbins[modelgridindex][binindex].nuJ_raw = nuJ_raw_reduced;
+        radfieldbins[modelgridindex][binindex].contribcount = contribcount_reduced;
         // printout("MPI: After MPI_Allreduce: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
       }
     }
