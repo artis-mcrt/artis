@@ -74,8 +74,10 @@ static FILE *restrict radfieldfile = NULL;
 
 void radfield_init(int my_rank)
 {
-  if (!MULTIBIN_RADFIELD_MODEL_ON || radfield_initialized == true)
+  if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
+  if (radfield_initialized)
+    printout("WARNING: Tried to initialize radfield twice!\n");
 
   printout("Initialising radiation field with %d bins from (%6.2f eV, %f A) to (%6.2f eV, %f A)\n",
            RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
@@ -379,7 +381,7 @@ void radfield_zero_estimators(int modelgridindex)
 {
   nuJ[modelgridindex] = 0.;
 
-  if (MULTIBIN_RADFIELD_MODEL_ON & radfield_initialized && modelgrid[modelgridindex].associated_cells > 0)
+  if (MULTIBIN_RADFIELD_MODEL_ON && radfield_initialized && modelgrid[modelgridindex].associated_cells > 0)
   {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
@@ -980,9 +982,12 @@ void radfield_write_restart_data(FILE *gridsave_file)
 {
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
-  fprintf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
+
+  printout("Writing radiation field restart data\n");
+
+  fprintf(gridsave_file,"%d %lg %lg %lg %lg\n",
           RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
-          T_R_min, T_R_max, radfield_initialized);
+          T_R_min, T_R_max);
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     if (modelgrid[modelgridindex].associated_cells > 0)
@@ -1006,12 +1011,16 @@ void radfield_read_restart_data(FILE *gridsave_file)
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
 
-  int bincount_in, radfield_initialized_in;
+  printout("Reading radiation field restart data\n");
+
+  if (!radfield_initialized)
+    printout("ERROR: Radiation field has not been initialised yet. Can't read saved state.\n");
+
+  int bincount_in;
   double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
-  fscanf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
+  fscanf(gridsave_file,"%d %lg %lg %lg %lg\n",
           &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
-          &T_R_min_in, &T_R_max_in, &radfield_initialized_in);
-  radfield_initialized = radfield_initialized_in;
+          &T_R_min_in, &T_R_max_in);
 
   double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
   if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;

@@ -1348,6 +1348,91 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 }
 
 
+void nt_write_restart_data(FILE *gridsave_file)
+{
+  if (!NT_SOLVE_SPENCERFANO)
+    return;
+
+  printout("Writing restart data for non-thermal solver\n");
+
+  fprintf(gridsave_file, "%d %lg %lg\n", SFPTS, EMIN, EMAX);
+
+  if (STORE_NT_SPECTRUM)
+  {
+    printout("nt_write_restart_data not implemented for STORE_NT_SPECTRUM ON");
+    abort();
+  }
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    if (modelgrid[modelgridindex].associated_cells > 0)
+    {
+      fprintf(gridsave_file, "%d %lg %g ",
+              nt_solution[modelgridindex].timestep,
+              nt_solution[modelgridindex].E_0,
+              nt_solution[modelgridindex].frac_heating);
+
+      for (int element = 0; element < nelements; element++)
+      {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++)
+        {
+          fprintf(gridsave_file, "%g ", nt_solution[modelgridindex].eff_ionpot[element][ion]);
+        }
+      }
+    }
+  }
+}
+
+
+void nt_read_restart_data(FILE *gridsave_file)
+{
+  if (!NT_SOLVE_SPENCERFANO)
+    return;
+
+  printout("Reading restart data for non-thermal solver\n");
+
+  int sfpts_in;
+  double emin_in;
+  double emax_in;
+  fscanf(gridsave_file, "%d %lg %lg\n", &sfpts_in, &emin_in, &emax_in);
+
+  if (sfpts_in != SFPTS || emin_in != EMIN || emax_in != EMAX)
+  {
+    printout("ERROR: gridsave file specifies %d Spencer-Fano samples, emin %lg emax %lg\n",
+             sfpts_in, emin_in, emax_in);
+    printout("ERROR: This simulation has %d Spencer-Fano samples, emin %lg emax %lg\n",
+             SFPTS, EMIN, EMAX);
+    abort();
+  }
+
+  if (STORE_NT_SPECTRUM)
+  {
+    printout("nt_write_restart_data not implemented for STORE_NT_SPECTRUM ON");
+    abort();
+  }
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    if (modelgrid[modelgridindex].associated_cells > 0)
+    {
+
+      fscanf(gridsave_file, "%d %lg %g ",
+             &nt_solution[modelgridindex].timestep,
+             &nt_solution[modelgridindex].E_0,
+             &nt_solution[modelgridindex].frac_heating);
+
+      for (int element = 0; element < nelements; element++)
+      {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++)
+        {
+          fscanf(gridsave_file, "%g ", &nt_solution[modelgridindex].eff_ionpot[element][ion]);
+        }
+      }
+    }
+  }
+}
+
+
 #ifdef MPI_ON
 void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 {

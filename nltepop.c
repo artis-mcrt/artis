@@ -612,28 +612,28 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       precalculate_partfuncts(modelgridindex);
 
       ion_populations[ion] = solution_ion_pop;
-      if (ion > 0)
-      {
-        const double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
-
-        const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
-        const double T_e = get_Te(modelgridindex);
-        const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion-1] / modelgrid[modelgridindex].composition[element].partfunct[ion];
-        const double gs_g_ratio = stat_weight(element,ion-1,0) / stat_weight(element,ion,0);
-        const double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
-        const double solution_ion_pop_ratio = ion_populations[ion-1] / ion_populations[ion];
-        const double sbphi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
-
-        printout("  The ratio of groundlevel pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
-                 get_ionstage(element,ion-1),ion_stage,gspopratio,sbphi_gs,gspopratio/sbphi_gs);
-        printout("  The ratio of total pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
-                 get_ionstage(element,ion-1),ion_stage,solution_ion_pop_ratio,sbphi,solution_ion_pop_ratio/sbphi);
-        const double nne = get_nne(modelgridindex);
-        // calculate_partfunct(element, ion, modelgridindex) * modelgrid[modelgridindex].composition[element].groundlevelpop[ion] / stat_weight(element,ion,0))
-        printout("  The corresponding phi-factor is: %g\n", (solution_ion_pop_ratio / nne));
-        printout("  The ionization solver gives phi(ion_stage=%d / %d) = %g\n",
-                 get_ionstage(element, ion-1), get_ionstage(element, ion), phi(element, ion-1, modelgridindex));
-      }
+      // if (ion > 0)
+      // {
+      //   const double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
+      //
+      //   const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
+      //   const double T_e = get_Te(modelgridindex);
+      //   const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion-1] / modelgrid[modelgridindex].composition[element].partfunct[ion];
+      //   const double gs_g_ratio = stat_weight(element,ion-1,0) / stat_weight(element,ion,0);
+      //   const double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
+      //   const double solution_ion_pop_ratio = ion_populations[ion-1] / ion_populations[ion];
+      //   const double sbphi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
+      //
+      //   printout("  The ratio of groundlevel pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
+      //            get_ionstage(element,ion-1),ion_stage,gspopratio,sbphi_gs,gspopratio/sbphi_gs);
+      //   printout("  The ratio of total pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
+      //            get_ionstage(element,ion-1),ion_stage,solution_ion_pop_ratio,sbphi,solution_ion_pop_ratio/sbphi);
+      //   const double nne = get_nne(modelgridindex);
+      //   // calculate_partfunct(element, ion, modelgridindex) * modelgrid[modelgridindex].composition[element].groundlevelpop[ion] / stat_weight(element,ion,0))
+      //   printout("  The corresponding phi-factor is: %g\n", (solution_ion_pop_ratio / nne));
+      //   printout("  The ionization solver gives phi(ion_stage=%d / %d) = %g\n",
+      //            get_ionstage(element, ion-1), get_ionstage(element, ion), phi(element, ion-1, modelgridindex));
+      // }
 
 
       //double nne = get_nne(modelgridindex);

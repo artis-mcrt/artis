@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
+#include "nonthermal.h"
 #include "radfield.h"
 #include "rpkt.h"
 #include "vectors.h"
@@ -1510,6 +1511,7 @@ static void read_grid_restart_data(void)
   }
 
   radfield_read_restart_data(gridsave_file);
+  nt_read_restart_data(gridsave_file);
   fclose(gridsave_file);
 }
 
@@ -1667,7 +1669,7 @@ static void uniform_grid_setup(void)
 }
 
 
-void grid_init(void)
+void grid_init(int my_rank)
 /// Subroutine that initialises the grid cells. Designed so that grid cells
 /// don't need to be uniform but for the moment they are.
 {
@@ -1731,6 +1733,10 @@ void grid_init(void)
       abort();
     }
   }
+
+  radfield_init(my_rank);
+  if (NT_ON && NT_SOLVE_SPENCERFANO)
+    nonthermal_init(my_rank);
 
   /// and assign a temperature to the cells
   assign_temperature();

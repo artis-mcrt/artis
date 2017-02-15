@@ -760,7 +760,8 @@ int main(int argc, char** argv)
     /// and sizes of the grid cells.
     time_init();
     printout("time time init %d\n",time(NULL));
-    grid_init();
+
+    grid_init(my_rank);
 
     /// Next we want to initialise the packets.
     /// To overcome memory limitations for large numbers of packets, which need to be
@@ -769,7 +770,7 @@ int main(int argc, char** argv)
     {
       /// Create a bunch of npkts packets
       /// and write them to a binary file for later readin.
-      packet_init(middle_iteration,my_rank);
+      packet_init(middle_iteration, my_rank);
     }
 
     /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
@@ -862,9 +863,6 @@ int main(int argc, char** argv)
     do_this_full_loop = 1;
     int nts = itstep;
 
-    radfield_init(my_rank);
-    if (NT_ON && NT_SOLVE_SPENCERFANO)
-      nonthermal_init(my_rank);
     // Initialise virtual packets file and vspecpol
     #ifdef ESTIMATORS_ON
       sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);

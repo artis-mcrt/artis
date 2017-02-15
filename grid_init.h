@@ -3,7 +3,7 @@
 
 #include "sn3d.h"
 
-void grid_init(void);
+void grid_init(int my_rank);
 void allocate_compositiondata(int cellnumber);
 void allocate_cooling(int modelgridindex);
 

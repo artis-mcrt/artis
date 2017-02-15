@@ -1531,6 +1531,7 @@ void write_grid_restart_data(void)
     }
   }
   radfield_write_restart_data(gridsave_file);
+  nt_write_restart_data(gridsave_file);
   fclose(gridsave_file);
 }
 
