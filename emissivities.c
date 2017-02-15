@@ -200,7 +200,7 @@ void normalise_estimators(int nts)
 {
   double dfreq[EMISS_MAX];
 
-  double time_factor = 1. / pow(time_step[nts].mid / tmin, 3.0) / time_step[nts].width;
+  const double time_factor = 1. / pow(time_step[nts].mid / tmin, 3.0) / time_step[nts].width;
 
   for (int m = 0; m < emiss_max; m++)
   {
@@ -216,8 +216,8 @@ void normalise_estimators(int nts)
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
-    int assoc_cells = modelgrid[n].associated_cells;
-    double volume = 1. / vol_init();  // That's not going to work if the cell number matters! i.e. vol_init(&cell[n])
+    const int assoc_cells = modelgrid[n].associated_cells;
+    const double volume = 1. / vol_init();  // That's not going to work if the cell number matters! i.e. vol_init(&cell[n])
     for (int m = 0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = compton_emiss[n][m] * time_factor * volume / nprocs / assoc_cells;
