@@ -211,7 +211,6 @@ static inline
 double radfield_get_bin_nu_bar(int modelgridindex, int binindex)
 // importantly, this is average beween the current and previous timestep
 {
-  printout("radfield: radfield_get_bin_nu_bar called on modelgridindex %d\n",modelgridindex);
   const double nuJ_sum = radfield_get_bin_nuJ(modelgridindex, binindex, true);
   const double J_sum = radfield_get_bin_J(modelgridindex, binindex, true);
   return nuJ_sum / J_sum;
@@ -951,13 +950,14 @@ void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 
   for (int modelgridindex = sender_nstart; modelgridindex < sender_nstart + sender_ndo; modelgridindex++)
   {
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
     if (modelgrid[modelgridindex].associated_cells > 0)
     {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
         MPI_Barrier(MPI_COMM_WORLD);
         // printout("radfield_MPI_Bcast bin %d T_R before: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
-        MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].nu_upper, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);

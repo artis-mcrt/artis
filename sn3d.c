@@ -774,7 +774,7 @@ int main(int argc, char** argv)
 
     /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
     /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
-    /// processes. This is done by assigning each MPI process nblock processes. The residual n_leftover
+    /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
     /// cells are sent to processes 0 ... process n_leftover -1.
     #ifdef MPI_ON
       //nblock = ngrid / p;
@@ -811,10 +811,10 @@ int main(int argc, char** argv)
       else
       {
         ndo = nblock;
-        nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover)*(nblock);
+        nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
       }
 
-      printout("process %d doing %d cells from %d to %d\n",my_rank,ndo,nstart,nstart+ndo-1);
+      printout("process %d doing %d cells from %d to %d\n", my_rank, ndo, nstart, nstart + ndo - 1);
 
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
