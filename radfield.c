@@ -978,25 +978,24 @@ void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 
 void radfield_write_restart_data(FILE *gridsave_file)
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON)
+  if (!MULTIBIN_RADFIELD_MODEL_ON)
+    return;
+  fprintf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
+          RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
+          T_R_min, T_R_max, radfield_initialized);
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    fprintf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
-            RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
-            T_R_min, T_R_max, radfield_initialized);
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    if (modelgrid[modelgridindex].associated_cells > 0)
     {
-      if (modelgrid[modelgridindex].associated_cells > 0)
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-        {
-          fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
-                  J_normfactor[modelgridindex], radfieldbins[modelgridindex][binindex].nu_upper,
-                  radfieldbins[modelgridindex][binindex].J_raw,
-                  radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
-                  radfieldbins[modelgridindex][binindex].prev_nuJ_normed, radfieldbins[modelgridindex][binindex].prev_contribcount,
-                  radfieldbins[modelgridindex][binindex].W, radfieldbins[modelgridindex][binindex].T_R,
-                  radfieldbins[modelgridindex][binindex].contribcount, radfieldbins[modelgridindex][binindex].fit_type);
-        }
+        fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+                J_normfactor[modelgridindex], radfieldbins[modelgridindex][binindex].nu_upper,
+                radfieldbins[modelgridindex][binindex].J_raw,
+                radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
+                radfieldbins[modelgridindex][binindex].prev_nuJ_normed, radfieldbins[modelgridindex][binindex].prev_contribcount,
+                radfieldbins[modelgridindex][binindex].W, radfieldbins[modelgridindex][binindex].T_R,
+                radfieldbins[modelgridindex][binindex].contribcount, radfieldbins[modelgridindex][binindex].fit_type);
       }
     }
   }
@@ -1004,45 +1003,45 @@ void radfield_write_restart_data(FILE *gridsave_file)
 
 void radfield_read_restart_data(FILE *gridsave_file)
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON)
+  if (!MULTIBIN_RADFIELD_MODEL_ON)
+    return;
+
+  int bincount_in, radfield_initialized_in;
+  double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
+  fscanf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
+          &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
+          &T_R_min_in, &T_R_max_in, &radfield_initialized_in);
+  radfield_initialized = radfield_initialized_in;
+
+  double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
+  if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+  double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
+  if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
+
+  if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
+      nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999)
   {
-    int bincount_in, radfield_initialized_in;
-    double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
-    fscanf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
-            &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
-            &T_R_min_in, &T_R_max_in, &radfield_initialized_in);
-    radfield_initialized = radfield_initialized_in;
-
-    double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
-    if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
-    double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
-    if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
-
-    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
-        nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999)
+    printout("ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
+             bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
+    printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
+            RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
+    abort();
+  }
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    if (modelgrid[modelgridindex].associated_cells > 0)
     {
-      printout("ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
-               bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
-      printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
-              RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
-      abort();
-    }
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
-    {
-      if (modelgrid[modelgridindex].associated_cells > 0)
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-        {
-          int fit_type_in;
-          fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
-                  &J_normfactor[modelgridindex], &radfieldbins[modelgridindex][binindex].nu_upper,
-                  &radfieldbins[modelgridindex][binindex].J_raw,
-                  &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,
-                  &radfieldbins[modelgridindex][binindex].prev_nuJ_normed, &radfieldbins[modelgridindex][binindex].prev_contribcount,
-                  &radfieldbins[modelgridindex][binindex].W, &radfieldbins[modelgridindex][binindex].T_R,
-                  &radfieldbins[modelgridindex][binindex].contribcount, &fit_type_in);
-          radfieldbins[modelgridindex][binindex].fit_type = fit_type_in;
-        }
+        int fit_type_in;
+        fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+                &J_normfactor[modelgridindex], &radfieldbins[modelgridindex][binindex].nu_upper,
+                &radfieldbins[modelgridindex][binindex].J_raw,
+                &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,
+                &radfieldbins[modelgridindex][binindex].prev_nuJ_normed, &radfieldbins[modelgridindex][binindex].prev_contribcount,
+                &radfieldbins[modelgridindex][binindex].W, &radfieldbins[modelgridindex][binindex].T_R,
+                &radfieldbins[modelgridindex][binindex].contribcount, &fit_type_in);
+        radfieldbins[modelgridindex][binindex].fit_type = fit_type_in;
       }
     }
   }
