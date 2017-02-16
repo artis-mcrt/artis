@@ -692,8 +692,8 @@ static double find_T_R(int modelgridindex, int binindex)
       T_R = gsl_root_fsolver_root(T_R_solver);
       //cell[cellnumber].T_e = T_e;
 
-      double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
-      double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
+      const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
+      const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
       status = gsl_root_test_interval(T_R_lower,T_R_upper,epsabs,epsrel);
 
       //printout("find_T_R: bin %4d iter %d, T_R is between %7.1f and %7.1f, guess %7.1f, delta_nu_bar %g, status %d\n",
@@ -1011,7 +1011,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
 
-  printout("Reading radiation field restart data\n");
+  printout("Reading restart data for radiation field\n");
 
   if (!radfield_initialized)
     printout("ERROR: Radiation field has not been initialised yet. Can't read saved state.\n");
