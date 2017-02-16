@@ -1465,8 +1465,9 @@ void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
   {
     if (modelgrid[modelgridindex].associated_cells > 0)
     {
-      printout("nonthermal_MPI_Bcast before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-               logged_element_z, logged_ion_stage, nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
+      printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
+               modelgridindex, logged_element_z, logged_ion_stage,
+               nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
                get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
       MPI_Barrier(MPI_COMM_WORLD);
       if (STORE_NT_SPECTRUM)
@@ -1482,13 +1483,14 @@ void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
         const int nions = get_nions(element);
         MPI_Bcast(&nt_solution[modelgridindex].eff_ionpot[element], nions, MPI_FLOAT, root, MPI_COMM_WORLD);
       }
-      printout("nonthermal_MPI_Bcast  after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-               logged_element_z, logged_ion_stage, nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
+      printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
+               modelgridindex, logged_element_z, logged_ion_stage,
+               nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
                get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
     }
     else
     {
-      printout("No associated cells. Skipping.\n");
+      printout("Skipping empty grid cell %d.\n", modelgridindex);
     }
   }
 
