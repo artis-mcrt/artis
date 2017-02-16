@@ -2,11 +2,12 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-ifneq (,$(findstring raijin, $(HOST))) # NCI Raijin cluster
-#needs
-#module load intel-cc/
-#module load openmpi
-#module load gsl
+ifneq (,$(findstring raijin, $(HOST)))
+	# NCI Raijin cluster
+	# needs:
+	# module load intel-cc/
+	# module load openmpi
+	# module load gsl
 
   CC = mpicc
   CFLAGS = -DTIMED_RESTARTS -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
@@ -16,26 +17,27 @@ ifneq (,$(findstring raijin, $(HOST))) # NCI Raijin cluster
   exspec: CFLAGS += -DDO_EXSPEC
   exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
 
-else  # macOS laptop
+else
+	# macOS laptop
 
   CC = clang
-#  CC = clang-3.8
-#  CC = clang-omp
-#  CC = gcc-6
-#  CC = mpicc
-#  CC = icc
+ # CC = clang-3.8
+ # CC = clang-omp
+ # CC = gcc-6
+ # CC = mpicc
+ # CC = icc
   INCLUDE = -I/usr/local/Cellar/gsl/2.3/include -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/opt/gperftools/include
   LIB = -L/usr/local/Cellar/gsl/2.3/lib -L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
   CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
 
-#in GCC6, -Wmisleading-indentation will be useful
-#also -fopenmp after -I$(INCLUDE)
-#maybe  -fopt-info-vec-missed
+# in GCC6, -Wmisleading-indentation will be useful
+# also -fopenmp after -I$(INCLUDE)
+# maybe  -fopt-info-vec-missed
 #  -fwhole-program
-#add -lprofiler for gperftools
+# add -lprofiler for gperftools
 
   LDFLAGS = $(LIB) -lgsl -lgslcblas
-#  sn3d: CFLAGS += -fopenmp
+ # sn3d: CFLAGS += -fopenmp
   exspec: CFLAGS += -DDO_EXSPEC
   exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
 
@@ -223,7 +225,7 @@ sn3dmpi: clean version
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
-exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c
+exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c
 
 exspec: version
 	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exspec
