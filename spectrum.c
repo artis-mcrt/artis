@@ -18,8 +18,8 @@
 #ifdef TRACE_EMISSION_REGION_ON
   #define traceemiss_nulower (CLIGHT / (4500e-8))  // in Angstroms
   #define traceemiss_nuupper (CLIGHT / (4200e-8))  // in Angstroms
-  #define traceemiss_timestepmin 70
-  #define traceemiss_timestepmax 90
+  #define traceemiss_timestepmin 15
+  #define traceemiss_timestepmax 25
 
   typedef struct emissioncontrib
   {
