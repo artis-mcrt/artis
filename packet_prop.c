@@ -13,7 +13,7 @@ void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, 
   double t_current = t1;
 
   /* 0 the scatter counter for the packet. */
-  // pkt_ptr->scat_count = 0;
+  pkt_ptr->scat_count = 0;
 
   while (t_current >= 0)
   {

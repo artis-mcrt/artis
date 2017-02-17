@@ -193,7 +193,7 @@ typedef struct packet
   double tdecay;  /// Time at which pellet decays.
   int escape_time; /// Time at which is passes out of the grid.
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
-  // int scat_count;  /// WHAT'S THAT???
+  int scat_count;  /// WHAT'S THAT???
   int number;     /// A unique number to identify which packet caused potential troubles.
 } PKT;
 
