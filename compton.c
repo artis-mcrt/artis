@@ -11,9 +11,9 @@ static double sigma_compton_partial(double x, double f)
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.
 {
-  const double term1 = ( (x*x) - (2*x) - 2 ) * log(f) / x / x;
-  const double term2 = ( ((f*f) -1) / (f * f)) / 2;
-  const double term3 = ( (f - 1) / x) * ( (1/x) + (2/f) + (1/(x*f)));
+  const double term1 = ( (x * x) - (2 * x) - 2 ) * log(f) / x / x;
+  const double term2 = ( ((f * f) -1) / (f * f)) / 2;
+  const double term3 = ( (f - 1) / x) * ( (1 / x) + (2 / f) + (1 / (x * f)));
 
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
@@ -21,13 +21,13 @@ static double sigma_compton_partial(double x, double f)
 
 double sig_comp(const PKT *pkt_ptr, double t_current)
 {
-  double sigma_cmf;
   // Start by working out the compton x-section in the co-moving frame.
 
   double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
   // Use this to decide whether the Thompson limit is acceptable.
 
+  double sigma_cmf;
   if (xx < THOMSON_LIMIT)
   {
     sigma_cmf = SIGMA_T;
@@ -56,8 +56,6 @@ static double choose_f(double xx, double zrand)
 // To choose the value of f to integrate to - idea is we want
 //   sigma_compton_partial(xx,f) = zrand. */
 {
-  double ftry, try;
-
   double f_max = 1 + (2 * xx);
   double f_min = 1;
 
@@ -68,10 +66,11 @@ static double choose_f(double xx, double zrand)
 
   //printout("new\n");
 
+  double ftry;
   while ((err > 1.e-4) && (count < 1000))
   {
-    ftry = (f_max + f_min)/2;
-    try = sigma_compton_partial(xx, ftry);
+    ftry = (f_max + f_min) / 2;
+    const double try = sigma_compton_partial(xx, ftry);
     //printout("ftry %g %g %g %g %g\n",ftry, f_min, f_max, try, norm);
     if (try > norm)
     {
@@ -85,11 +84,10 @@ static double choose_f(double xx, double zrand)
     }
     //      printout("error %g\n",err);
     count++;
-  }
-
-  if (count == 1000)
-  {
-    printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, try, norm);
+    if (count == 1000)
+    {
+      printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, try, norm);
+    }
   }
 
   return ftry;
@@ -107,9 +105,9 @@ static double thomson_angle(void)
   double t_coeff = sqrt( (B_coeff * B_coeff) + 4);
   t_coeff = t_coeff - B_coeff;
   t_coeff = t_coeff / 2;
-  t_coeff = pow(t_coeff, (1./3));
+  t_coeff = pow(t_coeff, (1 / 3));
 
-  const double mu = (1./t_coeff) - t_coeff;
+  const double mu = (1 / t_coeff) - t_coeff;
 
   if (fabs(mu) > 1)
   {
@@ -130,7 +128,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
 
   //  printout("Compton scattering.\n");
 
-  double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
+  const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
   /* It is known that a Compton scattering event is going to take place.
      We need to do two things - (1) decide whether to convert energy
@@ -158,7 +156,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
 
     /* Check that f lies between 1.0 and (2xx  + 1) */
 
-    if ((f < 1) || (f > (2*xx + 1)))
+    if ((f < 1) || (f > (2 * xx + 1)))
     {
       printout("Compton f out of bounds. Abort.\n");
       abort();
@@ -172,21 +170,21 @@ void com_sca(PKT *pkt_ptr, double t_current)
   zrand = gsl_rng_uniform(rng);
   if (zrand < prob_gamma)
   {
-    /* It stays as a gamma ray. Change frequency and direction in
-       co-moving frame then transfer back to rest frame.*/
+    // It stays as a gamma ray. Change frequency and direction in
+    // co-moving frame then transfer back to rest frame.
 
-    pkt_ptr->nu_cmf = pkt_ptr->nu_cmf / f; //reduce frequency
+    pkt_ptr->nu_cmf = pkt_ptr->nu_cmf / f; // reduce frequency
 
-
-    /* The packet has stored the direction in the rest frame.
-       Use aberation of angles to get this into the co-moving frame.*/
+    // The packet has stored the direction in the rest frame.
+    // Use aberation of angles to get this into the co-moving frame.
 
     double vel_vec[3];
-    double cmf_dir[3];
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
+
+    double cmf_dir[3];
     angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
 
-    /* Now change the direction through the scattering angle.*/
+    // Now change the direction through the scattering angle.
 
     double cos_theta;
     if (xx <  THOMSON_LIMIT)
@@ -195,53 +193,54 @@ void com_sca(PKT *pkt_ptr, double t_current)
     }
     else
     {
-      cos_theta = 1. - ((f - 1)/xx);
+      cos_theta = 1. - ((f - 1) / xx);
     }
 
     double new_dir[3];
-    scatter_dir(cmf_dir,cos_theta,new_dir);
+    scatter_dir(cmf_dir, cos_theta, new_dir);
 
-    double test = dot(new_dir,new_dir);
+    double test = dot(new_dir, new_dir);
     if (fabs(1. - test) > 1.e-8)
     {
       printout("Not a unit vector - Compton. Abort. %g %g %g\n", f, xx, test);
-      printout("new_dir %g %g %g\n",new_dir[0],new_dir[1],new_dir[2]);
-      printout("cmf_dir %g %g %g\n",cmf_dir[0],cmf_dir[1],cmf_dir[2]);
-      printout("cos_theta %g",cos_theta);
+      printout("new_dir %g %g %g\n", new_dir[0], new_dir[1], new_dir[2]);
+      printout("cmf_dir %g %g %g\n", cmf_dir[0], cmf_dir[1], cmf_dir[2]);
+      printout("cos_theta %g", cos_theta);
       abort();
     }
 
-    test = dot(new_dir,cmf_dir);
-
+    test = dot(new_dir, cmf_dir);
     if (fabs(test - cos_theta) > 1.e-8)
     {
       printout("Problem with angle - Compton. Abort.\n");
       abort();
     }
 
-    /* Now convert back again.*/
+    // Now convert back again.
 
-    get_velocity(pkt_ptr->pos, vel_vec, (-1.*t_current));
+    get_velocity(pkt_ptr->pos, vel_vec, (-1 * t_current));
     angle_ab(new_dir, vel_vec, final_dir);
 
     pkt_ptr->dir[0] = final_dir[0];
     pkt_ptr->dir[1] = final_dir[1];
     pkt_ptr->dir[2] = final_dir[2];
 
-    /*It now has a rest frame direction and a co-moving frequency.
-	   Just need to set the rest frame energy.*/
+    // It now has a rest frame direction and a co-moving frequency.
+    //  Just need to set the rest frame energy.
 
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
-    pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
-    pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
+    const double dopplerfactor = 1 / doppler(pkt_ptr->dir, vel_vec);
 
-    pkt_ptr->last_cross = NONE; //allow it to re-cross a boundary
+    pkt_ptr->nu_rf = pkt_ptr->nu_cmf * dopplerfactor;
+    pkt_ptr->e_rf = pkt_ptr->e_cmf * dopplerfactor;
+
+    pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
 
   }
   else
   {
-    /* It's converted to an e-minus packet.*/
+    // It's converted to an e-minus packet.
     pkt_ptr->type = TYPE_EMINUS;
     pkt_ptr->absorptiontype = -3;
   }
