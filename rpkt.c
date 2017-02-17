@@ -807,7 +807,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
         }
         #ifdef DEBUG_ON
           /** New cell so reset the scat_counter */
-          // pkt_ptr->scat_count = 0;
+          pkt_ptr->scat_count = 0;
           //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
           pkt_ptr->last_event = pkt_ptr->last_event + 100;
         #endif

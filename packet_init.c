@@ -437,7 +437,7 @@ void write_packets(FILE *restrict packets_file)
    fprintf(packets_file,"%g ",pkt[i].nu_rf);
    fprintf(packets_file,"%d ",pkt[i].escape_type);
    fprintf(packets_file,"%d ",pkt[i].escape_time);
-  //  fprintf(packets_file,"%d ",pkt[i].scat_count);
+   fprintf(packets_file,"%d ",pkt[i].scat_count);
    fprintf(packets_file,"%d ",pkt[i].next_trans);
    fprintf(packets_file,"%d ",pkt[i].interactions);
    fprintf(packets_file,"%d ",pkt[i].last_event);
@@ -472,7 +472,7 @@ void read_packets(FILE *restrict packets_file)
    fscanf(packets_file,"%lg ",&pkt[i].nu_rf);
    fscanf(packets_file,"%d ",&pkt[i].escape_type);
    fscanf(packets_file,"%d ",&pkt[i].escape_time);
-  //  fscanf(packets_file,"%d ",&pkt[i].scat_count);
+   fscanf(packets_file,"%d ",&pkt[i].scat_count);
    fscanf(packets_file,"%d ",&pkt[i].next_trans);
    fscanf(packets_file,"%d ",&pkt[i].interactions);
    fscanf(packets_file,"%d ",&pkt[i].last_event);
