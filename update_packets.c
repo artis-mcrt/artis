@@ -198,10 +198,12 @@ void update_packets(int nts)
         abort();
       }
 
-      if (debuglevel == 10 || debuglevel == 2) printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",n,pkt_ptr->interactions,nts);
+      if (debuglevel == 10 || debuglevel == 2)
+        printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",
+                 n, pkt_ptr->interactions, nts);
 
-      if (n == npkts-1) printout("last packet updated at %d\n",time(NULL));
-
+      if (n == npkts-1)
+        printout("last packet updated at %d\n",time(NULL));
     }
   }
 
