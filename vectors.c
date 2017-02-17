@@ -26,7 +26,7 @@ void angle_ab(const double *restrict const dir1, const double *restrict vel, dou
 }
 
 
-double doppler (const double *restrict dir1, const double *restrict vel)
+double doppler(const double *restrict dir1, const double *restrict vel)
 // Routine for Doppler shift in SR. Takes one direction and velocity
 //  as input and gives back double.
 {
