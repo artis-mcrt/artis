@@ -137,10 +137,10 @@ int main(int argc, char** argv)
     for (i = 0; i < nprocs; i++)
     {
       /// Read in the next bunch of packets to work on
-      sprintf(filename,"packets%d_%d.tmp",i,0);
+      sprintf(filename,"packets%d_%d.tmp",0,i);
       printout("%s\n",filename);
       if ((packets_file = fopen(filename, "rb")) == NULL)
-      //sprintf(filename,"packets%.2d_%.4d.out",i,0);
+      //sprintf(filename,"packets%.2d_%.4d.out",0,i);
      //if ((packets_file = fopen(filename, "r")) == NULL)
       {
         printf("Cannot open packets file %s\n",filename);
@@ -153,7 +153,7 @@ int main(int argc, char** argv)
 
 
       /// Read in the next bunch of packets to work on
-      sprintf(filename,"packets%.2d_%.4d.out",i,0);
+      sprintf(filename,"packets%.2d_%.4d.out",0,i);
       printout("%s\n",filename);
       if ((packets_file = fopen(filename, "w")) == NULL)
       {
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
       {
         /// Read in the next bunch of packets to work on
         //sprintf(filename,"packets%d_%d.tmp",0,i);
-        sprintf(filename,"packets%.2d_%.4d.out",i,0);
+        sprintf(filename,"packets%.2d_%.4d.out",0,i);
         printout("%s, %d %d\n",filename,i,nprocs);
         //if ((packets_file = fopen(filename, "rb")) == NULL)
         if ((packets_file = fopen(filename, "r")) == NULL)

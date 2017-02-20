@@ -1,13 +1,203 @@
 SHELL = /bin/sh
 
 
-### Settings for SS MACBOOK
-ifeq ($(USER),mattia)
+### Settings for the miner
+ifeq ($(OSTYPE),linux)
+  CC = cc
+  INCLUDE = /home/ssim/gsl/include
+  LIB = /home/ssim/gsl/lib
+  CFLAGS = -O3 -g -I$(INCLUDE)
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+endif
 
-#needs
+
+### Settings for Coala
+ifeq ($(OSTYPE),linux)
+  CC = /pkg/linux/SS12/sunstudio12/bin/cc
+#  CC = gcc
+  INCLUDE = /home/ssim/gsl/include
+  INCLUDE2 = /usr/local/openmpi/include
+  LIB2 = /usr/local/openmpi/lib
+  LIB = /home/ssim/gsl/lib
+#  CFLAGS = -O3 -I$(INCLUDE) -I$(INCLUDE2) -fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
+  CFLAGS = -O3 -I$(INCLUDE) -I$(INCLUDE2)  -pthread -DMPI_ON
+#-fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
+  LDFLAGS= -L$(LIB) -L$(LIB2) -R$(LIB2) -lgsl -lgslcblas -lm -pthread -L/usr/local/openmpi/lib -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
+#  LDFLAGS= -L$(LIB) -L$(LIB2) -L$(LIB3) -lgsl -lgslcblas -lm -pthread
+endif
+
+
+### Settings for mime
+ifeq ($(HOST),mime)
+  CC = mpicc
+  CFLAGS = -O3 -m64 -DMPI_ON -DTIMED_RESTARTS
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -m64  
+#-pthread -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
+endif
+
+
+
+### Settings for vayu
+ifeq ($(USER),mbu552)
+
+#needs 
 #module load intel-cc/11.1.046
 #module load openmpi/1.4.3
-#module load gsl/1.12                                       
+#module load gsl/1.15
+
+  CC = mpicc
+  CFLAGS = -O3 -DMPI_ON -DTIMED_RESTARTS
+  LDFLAGS= -lgsl -lgslcblas -lm 
+endif
+
+
+
+### Settings for MPA machines
+ifeq ($(DOMAIN),MPA-Garching.MPG.DE) 
+  #CC = gcc
+  CC    = /afs/rzg/@sys/bin/icc
+  INCLUDE=/afs/mpa/project/artis/code/lib/gsl32/include/
+  LIB=/afs/mpa/project/artis/code/lib/gsl32
+  ifeq ($(MACHTYPE),x86_64)
+    INCLUDE=/afs/mpa/project/artis/code/lib/gsl64/include/
+    LIB=/afs/mpa/project/artis/code/lib/gsl64
+  endif
+  #CFLAGS =  -Wall -g -I$(INCLUDE)
+  #CFLAGS =  -O3 -g -I$(INCLUDE)
+  CFLAGS = -O3 -g -pg -I$(INCLUDE)
+  #CFLAGS = -openmp  -g -I$(INCLUDE)
+  #CFLAGS = -openmp -O3 -g -I$(INCLUDE)
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exspec_dd: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
+
+  ### desktop MPI
+  #CC    =  /opt/mpich2-1.0.3/bin/mpicc #/usr/common/pdsoft/appl/mpich-1.2.6/bin/mpicc #/usr/common/pdsoft/bin/mpicc
+  #INCLUDE=/afs/mpa/common/pdsoft/include/
+  #LIB=/afs/mpa/common/pdsoft/lib/
+  #CFLAGS = -O3 -g -I$(INCLUDE)  -DMPI_ON
+  #LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+  #exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DMPI_ON -DDO_EXSPEC
+endif
+
+
+
+### Settings for IBM Regatta
+ifeq ($(OSTYPE),aix)
+  #
+  #ifeq ($(HOSTTYPE),rs6000)
+  CC = mpcc_r 
+  #INCLUDE=/u/mkromer/lib/regatta64/include
+  #LIB=/u/mkromer/lib/regatta64/lib
+#  INCLUDE=/u/mkromer/lib/power6_xlc_32_o3/include
+#  LIB=/u/mkromer/lib/power6_xlc_32_o3/lib
+  #INCLUDE=/u/mkromer/lib/power6_xlcr_64_o3/include
+  #LIB=/u/mkromer/lib/power6_xlcr_64_o3/lib
+  INCLUDE=/u/mkromer/lib/test_64_r/include
+  LIB=/u/mkromer/lib/test_64_r/lib
+  #CFLAGS = -O4 -I$(INCLUDE) -qsmp -q64   -qcpluscmt -DMPI_ON
+  CFLAGS = -O3 -g -I$(INCLUDE) -q64 -qstrict -qcpluscmt -DMPI_ON #-DPOWER6
+  CFLAGS = -O3 -g -I$(INCLUDE) -q64 -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON #-DPOWER6
+#  CFLAGS = -O3 -g -I$(INCLUDE) -qstrict -qcpluscmt -bmaxdata:0x80000000 -DMPI_ON #-DPOWER6
+  #CFLAGS = -O3 -g -I$(INCLUDE) -qsmp -q64 -qstrict -qcpluscmt 
+  #CFLAGS = -O3 -g -I$(INCLUDE) -q64 -qstrict -qcpluscmt -bmaxdata:0x160000000 -bmaxstack:0x160000000
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -qthreaded
+  exspec: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt  -DDO_EXSPEC
+  exspec_dd: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt  -DDO_EXSPEC
+  exgamma: override CFLAGS = -O3 -g -q64 -I$(INCLUDE) -qstrict -qcpluscmt  -DDO_EXSPEC
+endif
+
+
+
+### Settings for the OPA cluster
+ifeq ($(DOMAIN),opt.rzg.mpg.de)
+  CC    = mpiicc
+  #this requires a 
+  #  module load intel
+  #  module load impi
+  #  module load gsl
+  #check available module with module avail
+  #Read gsl now from system wide installation
+  #INCLUDE=/afs/ipp-garching.mpg.de/home/m/mkromer/lib/opa/include/
+  #LIB=/afs/ipp-garching.mpg.de/home/m/mkromer/lib/opa/lib
+  #INCLUDE=/afs/ipp-garching.mpg.de/home/s/ssim/gsl-opa/include/
+  #LIB=/afs/ipp-garching.mpg.de/home/s/ssim/gsl-opa/lib
+  #CFLAGS = -O2 -openmp -I$(INCLUDE)
+  #CFLAGS = -m64 -O2 -mcmodel medium -shared-intel -I$(INCLUDE) -DMPI_ON
+  CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DMPI_ON
+  #"-mcmodel medium -shared-intel" are needed to hold > 2GB static data
+  #in memory http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
+  #LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
+  LDFLAGS= $(GSL_LDFLAGS) -lgsl -lgslcblas -lm
+  exspec: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
+  exspec_dd: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
+  exgamma: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
+endif
+
+
+
+### Settings for the RZG BlueGene
+ifeq ($(HOSTNAME),genius1.rzg.mpg.de)
+  CC     = mpixlc_r
+  INCLUDE= /u/mkromer/lib/BG/include
+  LIB    = /u/mkromer/lib/BG/lib
+  #CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=450 -qtune=450 -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON
+  CFLAGS = -O5 -I$(GSL_INCLUDE) -qarch=450d -qtune=450 -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
+  ##try qsmp=omp the higher optimisation levels up to O5 and no -qstrict, arch
+  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -qthreaded
+endif
+
+
+
+### Settings for the Juelich BlueGene/P
+ifeq ($(findstring jugene,$(HOSTNAME)), jugene)
+  #this requires a
+  #  module load gsl
+  #check available module with module avail
+  CC     = mpixlc_r
+  #CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=450 -qtune=450 -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON
+  CFLAGS = -O5 -I$(GSL_INCLUDE) -qarch=450d -qtune=450 -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
+  LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm -qthreaded
+endif
+
+
+### Settings for the Juelich BlueGene/Q                                                                           
+ifeq ($(findstring juqueen,$(HOSTNAME)), juqueen)
+ #this requires a                                                                                                 
+ #  module load gsl                                                                                               
+ #check available module with module avail                                                                        
+ #CC     = mpixlc_r
+ CC     = mpixlc  
+#CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON          
+ CFLAGS = -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qinline -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
+# CFLAGS = -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qinline -qcpluscmt -DMPI_ON 
+#CFLAGS =  -O4 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qnoipa -qinline -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON    
+ LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm -qthreaded
+
+  exspec: override CFLAGS =  -O3  -DDO_EXSPEC -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qinline -qcpluscmt
+  exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
+  exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
+
+endif
+
+
+### Settings for JUROPA
+ifeq ($(WORK),/lustre/jwork/hmu14/hmu146)
+  #this requires a
+  #  module load gsl
+  #check available module with module avail
+  CC     = mpicc
+  CFLAGS = -O3 -I$(GSL_ROOT)/include -openmp -DMPI_ON
+  LDFLAGS= -L$(GSL_ROOT)/lib -lgsl -lgslcblas -lm
+  exspec: override CFLAGS = -O3 -I$(GSL_ROOT)/include -DDO_EXSPEC
+  exspec_dd: override CFLAGS = -O3 -I$(GSL_ROOT)/include -DDO_EXSPEC
+  exgamma: override CFLAGS = -O3 -I$(GSL_ROOT)/include -DDO_EXSPEC
+endif
+
+
+### Settings for MB MACBOOK
+ifeq ($(USER),mattia)
 
   CC = mpicc
   CFLAGS = -O3 -DMPI_ON
@@ -18,7 +208,6 @@ ifeq ($(USER),mattia)
   exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
 
 endif
-
 
 
 ### Settings for STARBASE                                                                                          
@@ -42,7 +231,6 @@ ifeq ($(USER),mb)
 
 endif
 
-
 ### Settings for cosma                                                                                            
 ifeq ($(USER),dc-bull1)
 
@@ -55,40 +243,6 @@ ifeq ($(USER),dc-bull1)
   LDFLAGS= -lgsl -lgslcblas -lm
 
   exspec: override CFLAGS =  -O3  -DDO_EXSPEC
-  exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
-  exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
-
-endif
-
-
-### Settings for vayu
-ifeq ($(USER),mbu552)
-
-#needs 
-#module load intel-cc/11.1.046
-#module load openmpi/1.4.3
-#module load gsl/1.15
-
-  CC = mpicc
-  CFLAGS = -O3 -DMPI_ON -DTIMED_RESTARTS
-  LDFLAGS= -lgsl -lgslcblas -lm 
-endif
-
-
-### Settings for the Juelich BlueGene/Q                                                                           
-ifeq ($(findstring juqueen,$(HOSTNAME)), juqueen)
- #this requires a                                                                                                 
- #  module load gsl                                                                                               
- #check available module with module avail                                                                        
- #CC     = mpixlc_r
- CC     = mpixlc  
-#CFLAGS = -g -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qsmp=omp -qthreaded -qstrict -qcpluscmt -DMPI_ON          
- CFLAGS = -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qinline -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON
-# CFLAGS = -O3 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qinline -qcpluscmt -DMPI_ON 
-#CFLAGS =  -O4 -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qnoipa -qinline -qsmp=omp -qthreaded -qcpluscmt -DMPI_ON    
- LDFLAGS= -L$(GSL_LIB) -lgsl -lgslcblas -lm -qthreaded
-
-  exspec: override CFLAGS =  -O3  -DDO_EXSPEC -I$(GSL_INCLUDE) -qarch=qp -qtune=qp -qinline -qcpluscmt
   exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
   exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
 
@@ -148,10 +302,3 @@ clean:
 
 veryclean:
 	rm -f *o *exe *~ 
-
-
-
-
-
-
-

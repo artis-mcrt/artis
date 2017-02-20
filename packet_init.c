@@ -13,7 +13,7 @@ int packet_init(int middle_iteration, int my_rank)
   {
     pktnumberoffset = middle_iteration*npkts;
     setup_packets(pktnumberoffset);
-    sprintf(filename,"packets%d_%d_odd.tmp",my_rank,middle_iteration);
+    sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank);
     if ((packets_file = fopen(filename, "wb")) == NULL)
     {
       printf("[fatal]: packet_init: Cannot open packets file\n");
@@ -28,7 +28,7 @@ int packet_init(int middle_iteration, int my_rank)
     int n;
     if (i > 0)
     {
-    sprintf(filename,"packets%d_%d.tmp",my_rank,i-1);
+    sprintf(filename,"packets%d_%d.tmp",i-1,my_rank);
     if ((packets_file = fopen(filename, "rb")) == NULL)
     {
     printf("Cannot open packets file\n");
