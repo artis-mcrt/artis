@@ -44,7 +44,7 @@ void calculate_kpkt_rates(int modelgridindex)
   for (int element = 0; element < nelements; element++)
   {
     //printout("[debug] do_kpkt: element %d\n",element);
-    mastate[tid].element = element;
+    // mastate[tid].element = element;
     const int nions = get_nions(element);
     //if (get_abundance(modelgridindex,element) > 0.)
     //{
@@ -52,7 +52,7 @@ void calculate_kpkt_rates(int modelgridindex)
       {
         C_ion = 0.;
         //printout("[debug] do_kpkt: ion %d\n",ion);
-        mastate[tid].ion = ion;
+        // mastate[tid].ion = ion;
         const int nlevels_currention = get_nlevels(element,ion);
         //ionisinglevels = get_ionisinglevels(element,ion);
         const int ionisinglevels = get_bfcontinua(element,ion);
@@ -83,10 +83,10 @@ void calculate_kpkt_rates(int modelgridindex)
         {
           //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
           const double epsilon_current = epsilon(element,ion,level);
-          mastate[tid].level = level;
+          // mastate[tid].level = level;
           ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-          mastate[tid].nnlevel = nnlevel;
+          // mastate[tid].nnlevel = nnlevel;
           //mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,level);
 
           /// excitation to same ionization stage
@@ -99,7 +99,7 @@ void calculate_kpkt_rates(int modelgridindex)
             //printout("    excitation to level %d possible\n",upper);
             //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
             const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon - epsilon_current;
-            C = nnlevel * col_excitation_ratecoeff(modelgridindex, lineindex, epsilon_trans) * epsilon_trans;
+            C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
             //C = 0.;
             //C_exc += C;
             C_ion += C;
@@ -159,7 +159,7 @@ void calculate_kpkt_rates(int modelgridindex)
             C = 0.0;
             for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
-                C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
+              C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
             }
             //printout("element %d, ion %d, level %d, T_e %g, alpha_E - alpha %g, bfcoolingcoeff %g\n",element,ion,level,T_e,C/E_threshold,C);
             //double interpolate_stimulated_recomb(int element, int ion, int level, double T);
@@ -263,8 +263,8 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
 
   //printout("[debug] do_kpkt: element %d\n",element);
   const int nions = get_nions(element);
-  mastate[tid].element = element;
-  mastate[tid].ion = ion;
+  // mastate[tid].element = element;
+  // mastate[tid].ion = ion;
   const int nlevels_currention = get_nlevels(element,ion);
   //ionisinglevels = get_ionisinglevels(element,ion);
   const int ionisinglevels = get_bfcontinua(element,ion);
@@ -296,11 +296,11 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   {
     //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
     const double epsilon_current = epsilon(element,ion,level);
-    mastate[tid].level = level;
+    // mastate[tid].level = level;
     ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
     const double nnlevel = get_levelpop(modelgridindex,element,ion,level);
-    mastate[tid].nnlevel = nnlevel;
+    // mastate[tid].nnlevel = nnlevel;
 
     /// excitation to same ionization stage
     /// -----------------------------------
@@ -312,7 +312,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       //printout("    excitation to level %d possible\n",upper);
       //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
       const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon - epsilon_current;
-      const double C = nnlevel * col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans) * epsilon_trans;
+      const double C = nnlevel * col_excitation_ratecoeff(T_e,nne,lineindex,epsilon_trans) * epsilon_trans;
       //C = 0.;
       //C_exc += C;
       //C_ion += C;
