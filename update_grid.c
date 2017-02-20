@@ -582,7 +582,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
               }
               precalculate_partfuncts(n);
               //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
-              calculate_populations(n);
+              calculate_populations(n); // TODO: need to avoid this if NLTE_POPS_ALL_IONS_SIMULTANEOUS is on!
             }
             /// For all other timesteps temperature corrections have to be applied
             else
@@ -900,8 +900,8 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
               printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
               modelgrid[n].thick = 1;
             }
-            // else if (grey_optical_depth > cell_is_optically_thick_vpkt)
-            //   modelgrid[n].thick = 2;
+            else if (grey_optical_depth > cell_is_optically_thick_vpkt)
+              modelgrid[n].thick = 2;
             else
               modelgrid[n].thick = 0;
 
