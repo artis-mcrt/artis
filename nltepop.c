@@ -236,8 +236,6 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     //set_W(modelgridindex,1.0); //TODO: remove after testing complete
     //printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
 
-    const double T_e = get_Te(modelgridindex);
-    const double nne = get_nne(modelgridindex);
     int nlte_dimension = 0;
     double *const superlevel_partfunc = calloc(nions,sizeof(double)); //space is allocated for every ion, whether or not it has a superlevel
     for (int ion = 0; ion < nions; ion++)
@@ -343,7 +341,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
           const double epsilon_trans = epsilon_target - epsilon_current;
 
           const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-          const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+          const double C = col_excitation_ratecoeff(modelgridindex, lineindex, epsilon_trans);
 
           // if ((element == 0) && (ion == 1) && ((level <= 5) || (level == 35)) && (upper >= 74) && (upper <= 77))
           // {
@@ -720,8 +718,6 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
   double test_ratio_upper;
 
   int super_level;
-  const double T_e = get_Te(modelgridindex);
-  const double nne = get_nne(modelgridindex);
 
   if (get_nlevels(element,ion) > 1)
   {
@@ -865,7 +861,7 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].nnlevel = 1.0;
 
           R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-          C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+          C = col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans);
 
           if ((level == 0) || (is_nlte(element, ion, level) == 1))
           {

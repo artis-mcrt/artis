@@ -286,22 +286,21 @@ static double calculate_elem_Gamma(int modelgridindex, int element, int ion)
   if (ion < nions - 1)
   {
     const int ionisinglevels = get_bfcontinua(element,ion);
-    // mastate[tid].element = element;
-    // mastate[tid].ion = ion;
-    // mastate[tid].nnlevel = 1.0;
+    mastate[tid].element = element;
+    mastate[tid].ion = ion;
+    mastate[tid].nnlevel = 1.0;
     double Col_ion = 0.;
     for (int level = 0; level < ionisinglevels; level++)
     {
       double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-      const int nphixstargets = get_nphixstargets(element,ion,level);
-      for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+      for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
-        const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+        int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
         Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-        // mastate[tid].level = level;
+        mastate[tid].level = level;
 
-        const double epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
+        double epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
         //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
         Col_ion += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
       }

@@ -139,7 +139,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
      scattering angle. Probability of scattering into particular angle
      (i.e. final energy) is related to the partial cross-section.*/
 
-  /* Choose a random number to get the energy. Want to find the
+  /* Choose a random number to get the eneregy. Want to find the
    factor by which the energy changes "f" such that
    sigma_partial/sigma_tot = zrand */
 
