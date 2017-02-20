@@ -75,7 +75,7 @@ double tmin_vspec, tmax_vspec;
 double Nrange;
 double lmin_vspec[MRANGE], lmax_vspec[MRANGE];
 double numin_vspec[MRANGE], numax_vspec[MRANGE];
-double cell_is_optically_thick_vpkt;
+double cell_is_optically_thick_vpkt = 0.;
 double tau_max_vpkt;
 
 struct vspecpol
