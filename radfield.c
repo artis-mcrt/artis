@@ -985,6 +985,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
 
   printout("Writing radiation field restart data\n");
 
+  fprintf(gridsave_file, "%d\n", 30490824); // special number marking the beginning of radfield data
   fprintf(gridsave_file,"%d %lg %lg %lg %lg\n",
           RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
           T_R_min, T_R_max);
@@ -992,10 +993,11 @@ void radfield_write_restart_data(FILE *gridsave_file)
   {
     if (modelgrid[modelgridindex].associated_cells > 0)
     {
+      fprintf(gridsave_file,"%d %lg\n", modelgridindex, J_normfactor[modelgridindex]);
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        fprintf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
-                J_normfactor[modelgridindex], radfieldbins[modelgridindex][binindex].nu_upper,
+        fprintf(gridsave_file,"%lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+                radfieldbins[modelgridindex][binindex].nu_upper,
                 radfieldbins[modelgridindex][binindex].J_raw,
                 radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
                 radfieldbins[modelgridindex][binindex].prev_nuJ_normed, radfieldbins[modelgridindex][binindex].prev_contribcount,
@@ -1014,13 +1016,24 @@ void radfield_read_restart_data(FILE *gridsave_file)
   printout("Reading restart data for radiation field\n");
 
   if (!radfield_initialized)
+  {
     printout("ERROR: Radiation field has not been initialised yet. Can't read saved state.\n");
+    abort();
+  }
+
+  int code_check;
+  fscanf(gridsave_file, "%d\n", &code_check);
+  if (code_check != 30490824)
+  {
+    printout("ERROR: Beginning of radfield restart data not found!");
+    abort();
+  }
 
   int bincount_in;
   double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
   fscanf(gridsave_file,"%d %lg %lg %lg %lg\n",
-          &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
-          &T_R_min_in, &T_R_max_in);
+         &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
+         &T_R_min_in, &T_R_max_in);
 
   double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
   if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
@@ -1040,11 +1053,18 @@ void radfield_read_restart_data(FILE *gridsave_file)
   {
     if (modelgrid[modelgridindex].associated_cells > 0)
     {
+      int mgi_in;
+      fscanf(gridsave_file,"%d %lg\n", &mgi_in, &J_normfactor[modelgridindex]);
+      if (mgi_in != modelgridindex)
+      {
+        printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
+        abort();
+      }
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
         int fit_type_in;
-        fscanf(gridsave_file,"%lg %lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
-                &J_normfactor[modelgridindex], &radfieldbins[modelgridindex][binindex].nu_upper,
+        fscanf(gridsave_file,"%lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+                &radfieldbins[modelgridindex][binindex].nu_upper,
                 &radfieldbins[modelgridindex][binindex].J_raw,
                 &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,
                 &radfieldbins[modelgridindex][binindex].prev_nuJ_normed, &radfieldbins[modelgridindex][binindex].prev_contribcount,
