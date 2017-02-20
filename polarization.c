@@ -6,74 +6,176 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
 {
   double vec_len(), doppler(), dot();
   int get_velocity(), angle_ab();
-  
-  double zrand,zrand2;
-  double mu,phi,sintheta;
-  double dummy_dir[3], vel_vec[3];
-  double old_dir_cmf[3],new_dir_cmf[3],dir_perp[3];
-  double old_dir_rf[3];
-  int cross_prod();
+  double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
+    
+  double zrand,zrand2,zrand3;
+  double dummy_dir[3], vel_vec[3], vel_rev[3];
+  double old_dir_cmf[3],new_dir_cmf[3];
   void vec_norm (double x[3], double z[3]);
-  double sin_gamma,cos_gamma;
-  double Inew, Unew, Qnew, Uold, Qold;
-  double sin_2gamma, cos_2gamma, mu2;
-
+  double Qi, Ui, Inew, Unew, Qnew, Uold, Qold, I, Qf, Uf, Q, U;
+  double mu,p,x,M,tsc,phisc;
+  double i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
+  double ref1[3],ref2[3];
+    
+  void meridian(double *n, double *ref1, double *ref2);
+  void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
+  void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
+  
+    
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
   pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
+
+    
+  get_velocity(pkt_ptr->pos, vel_vec, t_current);
+    
+    
+  // Transform Stokes Parameters from the RF to the CMF
   
-  /// First get the incoming direction in the cmf and store it
+  Qi = pkt_ptr->stokes[1];
+  Ui = pkt_ptr->stokes[2];
+    
+  frame_transform(pkt_ptr->dir,&Qi,&Ui,vel_vec,old_dir_cmf);
+    
+   
+  // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos & Whitlock 2008)
+    
+  /* Assume dipole function (rejecton method, see Code & Whitney 1995) */
+  #ifdef DIPOLE
+    
+    do {
+        
+        zrand = gsl_rng_uniform(rng);
+        zrand2 = gsl_rng_uniform(rng);
+        zrand3 = gsl_rng_uniform(rng);
+        
+        phisc = 2 * PI * zrand ;
+        M = 2 * zrand2 - 1;
+        mu = pow(M,2.) ;
+        
+        // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
+        // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
+        // is measured in the counter-clockwise direction. Therefore we use the clockwise rotation matrix but
+        // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
+        // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
+        // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
+        p = (mu+1) + (mu-1) * ( cos(2*phisc) * Qi + sin(2*phisc) * Ui  );
+        
+        // generate a number between 0 and the maximum of the previous function (2)
+        x = 2 * zrand3 ;
+    }
+    
+    while (x>p);
+    
+  /* Assume isotropic scattering */
+  #else
+    
+    zrand = gsl_rng_uniform(rng);
+    zrand2 = gsl_rng_uniform(rng);
+    
+    M = 2. * zrand - 1 ;
+    mu = pow(M,2.) ;
+    phisc = 2 * PI * zrand2 ;
+    
+  #endif
+    
+  tsc = acos(M);
+    
+  if( fabs(old_dir_cmf[2]) < 0.99999 ) {
+      
+      new_dir_cmf[0] = sin(tsc)/sqrt(1.-pow(old_dir_cmf[2],2.)) * ( old_dir_cmf[1] * sin(phisc) - old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc) ) + old_dir_cmf[0] * cos(tsc) ;
+      new_dir_cmf[1] = sin(tsc)/sqrt(1-pow(old_dir_cmf[2],2.)) * ( - old_dir_cmf[0] * sin(phisc) - old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc) ) + old_dir_cmf[1] * cos(tsc) ;
+      new_dir_cmf[2] = sin(tsc) * cos(phisc) * sqrt(1-pow(old_dir_cmf[2],2.))  +  old_dir_cmf[2] * cos(tsc) ;
+    
+  }
+    
+  else {
+      
+      new_dir_cmf[0] = sin(tsc) * cos(phisc) ;
+      new_dir_cmf[1] = sin(tsc) * sin(phisc) ;
+      if(old_dir_cmf[2]>0 ) new_dir_cmf[2] = cos(tsc) ;
+      else new_dir_cmf[2] = - cos(tsc) ;
+      
+  }
+
+
+  // Need to rotate Stokes Parameters in the scattering plane
+    
+  meridian(old_dir_cmf,ref1,ref2);
+    
+  /* This is the i1 angle of Bulla+2015, obtained by computing the angle between the
+     reference axes ref1 and ref2 in the meridian frame and the corresponding axes
+     ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
+     scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540) */
+  i1 = rot_angle(old_dir_cmf,new_dir_cmf,ref1,ref2);
+  cos2i1 = cos(2 * i1) ;
+  sin2i1 = sin(2 * i1) ;
+    
+  Qold = Qi * cos2i1 - Ui * sin2i1;
+  Uold = Qi * sin2i1 + Ui * cos2i1;
+    
+
+  // Scattering
+    
+  mu = dot(old_dir_cmf,new_dir_cmf);
+    
+  Inew = 0.75 * ( (mu * mu + 1.0) + Qold * (mu * mu - 1.0) ) ;
+  Qnew = 0.75 * ( (mu * mu - 1.0) + Qold * (mu * mu + 1.0) ) ;
+  Unew = 1.5 * mu * Uold ;
+    
+  Qnew = Qnew/Inew ;
+  Unew = Unew/Inew ;
+  I = Inew/Inew ;
+    
+    
+  // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
+    
+  meridian(new_dir_cmf,ref1,ref2);
   
-  /// We have incoming dir in rf - we want to convert it to the cmf 
-  /// - use aberation of angles. 
-
-
-  ///get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  ///angle_ab(pkt_ptr->dir, vel_vec, old_dir_cmf);
+  /* This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
+     reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+     meridian frame. NB: we need to add PI to transform THETA to i2 */
+  i2 = PI + rot_angle(new_dir_cmf,old_dir_cmf,ref1,ref2);
+  cos2i2 = cos(2 * i2) ;
+  sin2i2 = sin(2 * i2) ;
   
-  ///trying for now to work in rf only
-  old_dir_rf[0]=pkt_ptr->dir[0];
-  old_dir_rf[1]=pkt_ptr->dir[1];
-  old_dir_rf[2]=pkt_ptr->dir[2];
+  Q = Qnew * cos2i2 + Unew * sin2i2;
+  U = - Qnew * sin2i2 + Unew * cos2i2;
+    
+    
+  // Transform Stokes Parameters from the CMF to the RF
+    
+  vel_rev[0] = - vel_vec[0] ;
+  vel_rev[1] = - vel_vec[1] ;
+  vel_rev[2] = - vel_vec[2] ;
+    
+  frame_transform(new_dir_cmf,&Q,&U,vel_rev,dummy_dir);
+    
+
+  pkt_ptr->stokes[0]=I;
+  pkt_ptr->stokes[1]=Q;
+  pkt_ptr->stokes[2]=U;
   
+    
 
-  /// Need to assign a new direction. Assume isotropic emission in the cmf
-  zrand = gsl_rng_uniform(rng);
-  zrand2 = gsl_rng_uniform(rng);
-
-  mu = -1 + (2.*zrand);
-  phi = zrand2 * 2 * PI;
-  sintheta = sqrt(1. - (mu * mu));
-
-  new_dir_cmf[0] = sintheta * cos(phi);
-  new_dir_cmf[1] = sintheta * sin(phi);
-  new_dir_cmf[2] = mu;
-
-  //printout("[debug] pkt_ptr->dir in CMF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-  
- /// This direction is in the cmf - we want to convert it to the rest 
-  /// frame - use aberation of angles. We want to convert from cmf to
-  /// rest so need -ve velocity.
-  get_velocity(pkt_ptr->pos, vel_vec, (-1*(t_current)));
-  ///negative time since we want the backwards transformation here
-
-  angle_ab(new_dir_cmf, vel_vec, dummy_dir);
+  // ---------------------- Update rest frame direction, frequency and energy --------------------
+    
   pkt_ptr->dir[0] = dummy_dir[0];
   pkt_ptr->dir[1] = dummy_dir[1];
   pkt_ptr->dir[2] = dummy_dir[2];
-  //printout("[debug] pkt_ptr->dir in RF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-
-  /// Check unit vector.
+ 
+  // Check unit vector.
   #ifdef DEBUG_ON
-    if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
+    if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-6)
     {
       printout("[fatal] do_ma: Not a unit vector. Abort.\n");
       abort();
     }
   #endif
       
-  /// Finally we want to put in the rest frame energy and frequency. And record
-  /// that it's now a r-pkt.
+  // Finally we want to put in the rest frame energy and frequency.
+  // And record that it's now a r-pkt.
+  
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
 
@@ -84,58 +186,10 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
       abort();
     }
   #endif
+    
   pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf; 
 
 
-  ///for polarization want to get a direction which is perpendiculat to scattering plane
-  //printout("rf pkt direction before scattering %g, %g, %g\n",old_dir_rf[0],old_dir_rf[1],old_dir_rf[2]);
-  //printout("rf pkt direction after scattering %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-  
-  cross_prod(old_dir_rf,pkt_ptr->dir,dir_perp);
-  //printout("old pol reference dir %g, %g, %g\n",pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
-  //printout("new pol reference dir %g, %g, %g\n",dir_perp[0],dir_perp[1],dir_perp[2]);
-  vec_norm(dir_perp,dir_perp);
-  //printout("new pol reference dir after normalisation %g, %g, %g\n",dir_perp[0],dir_perp[1],dir_perp[2]);
-
-  ///now we want to know the angle that rotated the coordinate system for polarization from the stored reference direction pol_dir to the new one defined by dir_perp. This comes from their dor and cross products. The angle is "gamma", following Hillier 91
-  cos_gamma = dot(pkt_ptr->pol_dir,dir_perp);
-  cross_prod(dir_perp,pkt_ptr->pol_dir,dummy_dir);
-  sin_gamma=dot(dummy_dir,old_dir_rf);
-  //printout("cos_gamma %g, sin_gamma %g\n",cos_gamma,sin_gamma);
-  
-  if ((fabs(((cos_gamma*cos_gamma) + (sin_gamma*sin_gamma))-1.0)) > 1.e-6)
-    {
-      printout("Polarization rotation angle misbehaving. %g %g %g\n", cos_gamma, sin_gamma, ((cos_gamma*cos_gamma) + (sin_gamma*sin_gamma)));
-    }
-
-  ///transform Q and U by rotation
-  sin_2gamma = 2* sin_gamma*cos_gamma;
-  cos_2gamma = 2*(cos_gamma*cos_gamma) - 1.0;
-  
-  //printout("stokes qu old, %g %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1]);
-  Qold= (pkt_ptr->stokes_qu[0] * cos_2gamma) + (pkt_ptr->stokes_qu[1] * sin_2gamma);
-  Uold= (pkt_ptr->stokes_qu[1] * cos_2gamma) - (pkt_ptr->stokes_qu[0] * sin_2gamma);
-  //printout("stokes qu old rotated, %g %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1]);
-
-
-  ///now apply the scattering matrix
-  ///conceptually, I is 1.0; we want to get Inew, Qnew and Unew then divide Qnew and Unew by Inew
-
-  mu=dot(old_dir_rf,pkt_ptr->dir);
-  mu2=mu*mu;
-  Inew = 0.75 * ((1. + mu2) + ((mu2 - 1.0)*Qold));
-  Qnew = 0.75 * ((mu2 - 1.0) + ((mu2 + 1.0)*Qold));
-  Unew = 1.5 * mu * Uold;
-  
-  
-  pkt_ptr->stokes_qu[0]=Qnew/Inew;
-  pkt_ptr->stokes_qu[1]=Unew/Inew;
-  //printout("mu, mu2 %g %g\n",mu,mu2);
-  //printout("stokes qu new, %g %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1]);
-
-  pkt_ptr->pol_dir[0]=dir_perp[0];
-  pkt_ptr->pol_dir[1]=dir_perp[1];
-  pkt_ptr->pol_dir[2]=dir_perp[2];
   
 
  }

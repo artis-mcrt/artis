@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "vpkt.h"
 #include <gsl/gsl_integration.h>
 
   
@@ -483,7 +484,7 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
     /// Grey opacity treatment, set a dummy value for nu_cmf
     pkt_ptr->nu_cmf = 1;
   }
-  if (!finite(pkt_ptr->nu_cmf))
+  if (!isfinite(pkt_ptr->nu_cmf))
   {
     printout("[fatal] do_kpkt_bb: selected frequency not finite ... abort\n");
     abort();
@@ -491,8 +492,12 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
   /// and then emitt the packet randomly in the comoving frame
   emitt_rpkt(pkt_ptr,t_current);
   if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-  if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick != 1)
-    calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+    if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick != 1){
+        //printout("Abou to reset kpkt_bb\n");
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        //printout("Abou to reset kpkt_bb\n");
+    
+    }
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb += 1;
   k_stat_to_r_bb += 1;
@@ -600,6 +605,8 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   int get_element(int element);
   int get_coolinglistoffset(int element, int ion);
   int get_ncoolingterms(int element, int ion);
+  int call_estimators(PKT *pkt_ptr, double t_current, int realtype);
+  void update_cell(int cellnumber);
 
   double coolingsum;
   int element,ion,level,upper;
@@ -623,7 +630,9 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   int ilow,low,high;
   double rndcool;
   double oldcoolingsum;
-
+    
+  int vflag = 0, mgi;
+    
   int modelgridindex = cell[pkt_ptr->where].modelgridindex;
   
   /// Instead of doing the following, it is now made sure that kpkts in optically
@@ -793,7 +802,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->nu_cmf = -KB*T_e/H * log(zrand);
       //pkt_ptr->nu_cmf = 3.7474058e+14;
       
-      if (!finite(pkt_ptr->nu_cmf))
+      if (!isfinite(pkt_ptr->nu_cmf))
       {
         printout("[fatal] ff cooling: selected frequency not finite ... abort\n");
         abort();
@@ -801,7 +810,8 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr,t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-      calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      
+        
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_ff += 1;
       k_stat_to_r_ff += 1;
@@ -816,6 +826,28 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       #ifndef FORCE_LTE
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+       
+        
+        
+      /* call the estimator routine - generate a virtual packet */
+      #ifdef VPKT_ON
+        realtype = 2 ;
+       
+        vflag = call_estimators(pkt_ptr, t_current, realtype);
+ 
+        //printout("Abou to reset rpkt cell kpkt\n");
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        //printout("Compl to reset rpkt cell kpkt\n");
+
+    
+      #else
+        
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        
+      #endif
+        
+        
+        
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
     {
@@ -913,15 +945,17 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       // /// Sample the packets comoving frame frequency according to paperII 4.2.2
       if (debuglevel == 2) printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
       //pkt_ptr->nu_cmf = 3.7474058e+14;
-      if (!finite(pkt_ptr->nu_cmf))
+      if (!isfinite(pkt_ptr->nu_cmf))
       {
         printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
         abort();
       }
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr,t_current);
+        
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by fb\n");
-      calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        
+        
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_fb += 1;
       k_stat_to_r_fb += 1;
@@ -933,6 +967,25 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
+        
+        
+      /* call the estimator routine - generate a virtual packet */
+      #ifdef VPKT_ON
+        realtype = 2 ;
+
+        vflag = call_estimators(pkt_ptr, t_current, realtype);
+
+        //printout("Abou to reset rpkt cell kpkt\n");
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        //printout("Compl to reset rpkt cell kpkt\n");
+
+      #else
+        
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      
+      #endif
+      
+        
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
     {

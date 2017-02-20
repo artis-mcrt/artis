@@ -15,6 +15,13 @@
 //#define FORCE_LTE
 #define RECORD_LINESTAT
 
+// Polarisation for real packets
+#define DIPOLE
+#define POL_ON
+
+// Polarisation for virtual packets
+#define VPKT_ON
+
 
 //#define HUGEE 2000018
 //#define HUGEE 50000
@@ -58,7 +65,7 @@
 #define OSCSTRENGTHCONVERSION 1.3473837e+21
 
 #define isothermal_homogeneous_grid 0
-//#define MPTS_MODEL 10000  
+//#define MPTS_MODEL 10000
 
 
 #define MXGRID 100     /* Max number of grid cells in x-direction.*/
@@ -109,11 +116,11 @@ double E48V;
 
 #define COOLING_UNDEFINED       -99
 #define COOLINGTYPE_FF          880
-#define COOLINGTYPE_FB          881 
+#define COOLINGTYPE_FB          881
 #define COOLINGTYPE_COLLEXC     882
 #define COOLINGTYPE_COLLION     883
 #define HEATINGTYPE_FF          884
-#define HEATINGTYPE_BF          885 
+#define HEATINGTYPE_BF          885
 #define HEATINGTYPE_COLLDEEXC   886
 #define HEATINGTYPE_COLLRECOMB  887
 #define COOLINGCUT              0.99 //1.01
@@ -152,7 +159,7 @@ int grid_type, model_type;
 int nprocs;      /// Global variable which holds the number of MPI processes
 int rank_global; /// Global variable which holds the rank of the active MPI process
 //int nprocs_exspec;
-int npkts;   
+int npkts;
 int nesc; //number of packets that escape during current timestep  ///ATMOIC
 
 double xmax, ymax, zmax;
@@ -340,7 +347,7 @@ double time_syn[MSYN_TIME];
 
 double DeltaA; /* area used for syn */ ///possible to do this as local variable?
 
-#define EMISS_MAX 2 /* Maxmimum number of frequency points in 
+#define EMISS_MAX 2 /* Maxmimum number of frequency points in
 			     grid used to store emissivity estimators. */
 int emiss_offset; /*the index in the line list of the 1st line for which
 		    an emissivity estimator is recorded*/
@@ -369,7 +376,7 @@ float modelgrid_composition[MMODELGRID];
 float modelgrid_abundance[MMODELGRID*MELEMENTS];         /// Abundance of the element (by mass!).
 float modelgrid_groundlevelpop[MMODELGRID*MELEMENTS*MIONS];   /// Pointer to an array of floats which contains the groundlevel populations
                           /// of all included ionisation stages for the element.
-float modelgrid_partfunct[MMODELGRID*MELEMENTS*MIONS];        /// Pointer to an array of floats which contains the partition functions 
+float modelgrid_partfunct[MMODELGRID*MELEMENTS*MIONS];        /// Pointer to an array of floats which contains the partition functions
 */
 
 /// THESE ARE THE GRID BASED ESTIMATORS
@@ -394,7 +401,7 @@ double energy_deposition[MMODELGRID+1];
   double corrphotoionrenorm[(MMODELGRID+1)*MELEMENTS*MIONS];
   double redhelper[(MMODELGRID+1)*MELEMENTS*MIONS];
 
-  
+
   #ifdef DO_TITER
     double nuJ_reduced_save[MMODELGRID];
     double ffheatingestimator_save[MMODELGRID];
@@ -402,7 +409,7 @@ double energy_deposition[MMODELGRID+1];
     double gammaestimator_save[MMODELGRID*MELEMENTS*MIONS];
     double bfheatingestimator_save[MMODELGRID*MELEMENTS*MIONS];
   #endif
-  
+
   //double mabfcount[MGRID],mabfcount_thermal[MGRID], kbfcount[MGRID],kbfcount_ion[MGRID],kffcount[MGRID], kffabs[MGRID],kbfabs[MGRID],kgammadep[MGRID];
   //double matotem[MGRID],maabs[MGRID];
 #endif
@@ -414,10 +421,10 @@ double energy_deposition[MMODELGRID+1];
 
 int do_comp_est; /* 1 = compute compton emissivity estimators. 0 = don't */
 int do_r_lc;     /* If not set to 1 then the opacity for r-packets is 0. */
-int do_rlc_est;  /* 1= compute estimators for the r-pkt light curve. 
-                    2 = compute estimators with opacity weights 
+int do_rlc_est;  /* 1= compute estimators for the r-pkt light curve.
+                    2 = compute estimators with opacity weights
                     3 = compute estimators, but use only for gamma-heating rate */
- 
+
 
 int n_out_it; /* # of sets of 1,000,000 photons to run. */
 
@@ -562,7 +569,7 @@ double T_step;
 double T_step_log;
 
 int homogeneous_abundances;
- 
+
 #define NPHIXSPOINTS 100
 
 ///Constants for van-Regmorter approximation. Defined in input.c
@@ -595,13 +602,12 @@ FILE *estimators_file;
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
 extern short neutral_flag;
 
-short elements_uppermost_ion[MTHREADS][MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element 
-                                                   /// in a given cell. Be aware that this must not be used outside of the update_grid 
-                                                   /// routine and their doughters. 
+short elements_uppermost_ion[MTHREADS][MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element
+                                                   /// in a given cell. Be aware that this must not be used outside of the update_grid
+                                                   /// routine and their daughters.
 
 extern short use_cellhist;
 
 #ifdef _OPENMP
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
-
