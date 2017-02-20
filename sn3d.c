@@ -580,28 +580,32 @@ int main(int argc, char** argv)
     nthreads = omp_get_num_threads();
     if (nthreads > MTHREADS)
     {
-      printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n",MTHREADS,nthreads);
+      printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n", MTHREADS, nthreads);
       abort();
     }
 #   ifdef _OPENMP
-    printout("OpenMP parallelisation active with %d threads\n",nthreads);
+    printout("OpenMP parallelisation active with %d threads\n", nthreads);
 #   endif
   }
 
   #ifndef GIT_BRANCH
     #define GIT_BRANCH "UNKNOWN"
   #endif
-  #ifndef GIT_HASH
-    #define GIT_HASH "UNKNOWN"
-  #endif
-  printout("ARTIS git branch %s\n",GIT_BRANCH);
+  printout("ARTIS git branch %s\n", GIT_BRANCH);
 
-  #ifdef GIT_VERSION
-    printout("Current version: %s\n",GIT_VERSION);
+  #ifndef GIT_VERSION
+    #define GIT_VERSION "UNKNOWN"
   #endif
+  printout("Current version: %s\n", GIT_VERSION);
 
   //printout("Hash of most recent commit: %s\n",GIT_HASH);
-  printout("Compiled at %s on %s\n",__TIME__,__DATE__);
+  printout("Compiled at %s on %s\n", __TIME__, __DATE__);
+
+  #ifdef MPI_ON
+    printout("MPI enabled\n");
+  #else
+    printout("MPI disabled\n");
+  #endif
 
   if ((mastate = calloc(nthreads,sizeof(mastate_t))) == NULL)
   {
