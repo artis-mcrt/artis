@@ -1355,6 +1355,7 @@ void nt_write_restart_data(FILE *gridsave_file)
 
   printout("Writing restart data for non-thermal solver\n");
 
+  fprintf(gridsave_file, "%d\n", 24724518); // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %lg %lg\n", SFPTS, EMIN, EMAX);
 
   if (STORE_NT_SPECTRUM)
@@ -1366,7 +1367,8 @@ void nt_write_restart_data(FILE *gridsave_file)
   {
     if (modelgrid[modelgridindex].associated_cells > 0)
     {
-      fprintf(gridsave_file, "%d %lg %g ",
+      fprintf(gridsave_file, "%d %d %lg %g ",
+              modelgridindex,
               nt_solution[modelgridindex].timestep,
               nt_solution[modelgridindex].E_0,
               nt_solution[modelgridindex].frac_heating);
@@ -1391,6 +1393,14 @@ void nt_read_restart_data(FILE *gridsave_file)
 
   printout("Reading restart data for non-thermal solver\n");
 
+  int code_check;
+  fscanf(gridsave_file, "%d\n", &code_check);
+  if (code_check != 24724518)
+  {
+    printout("ERROR: Beginning of non-thermal restart data not found!");
+    abort();
+  }
+
   int sfpts_in;
   double emin_in;
   double emax_in;
@@ -1414,11 +1424,17 @@ void nt_read_restart_data(FILE *gridsave_file)
   {
     if (modelgrid[modelgridindex].associated_cells > 0)
     {
-
-      fscanf(gridsave_file, "%d %lg %g ",
+      int mgi_in;
+      fscanf(gridsave_file, "%d %d %lg %g ",
+             &mgi_in,
              &nt_solution[modelgridindex].timestep,
              &nt_solution[modelgridindex].E_0,
              &nt_solution[modelgridindex].frac_heating);
+      if (mgi_in != modelgridindex)
+      {
+        printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
+        abort();
+      }
 
       for (int element = 0; element < nelements; element++)
       {
