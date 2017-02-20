@@ -1056,7 +1056,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             mastate[tid].element = element;
             mastate[tid].ion = ion;
             mastate[tid].level = level;
-            const double sigma_bf = photoionization_crosssection(nu_edge,nu);
+            const double sigma_bf = xs_photoionization(element, ion, level, nu_edge, nu);
             double kappa_bf_contr = 0.0; //corrfactor
             const int nphixstargets = get_nphixstargets(element,ion,level);
             if (nphixstargets > 0)
@@ -1349,7 +1349,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
                         mastate[tid].element = element;
                         mastate[tid].ion = ion;
                         mastate[tid].level = level;
-                        double sigma_bf = photoionization_crosssection(nu_edge,nu);
+                        const double sigma_bf = xs_photoionization(element, ion, level, nu_edge, nu);
 
                         bef = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact;
 
