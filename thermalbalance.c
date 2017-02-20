@@ -528,7 +528,7 @@ void calculate_cooling_rates(int modelgridindex)
           const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
           //printout("    excitation to level %d possible\n",upper);
           const double epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-          C = nnlevel * col_excitation_ratecoeff(modelgridindex,lineindex,epsilon_trans) * epsilon_trans;
+          C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
           C_exc += C;
         }
 
