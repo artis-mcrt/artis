@@ -1087,7 +1087,7 @@ double get_bfcooling(int element, int ion, int level, int modelgridindex)
   }
   
   #ifdef DEBUG_ON
-    if (!finite(bfcooling))
+    if (!isfinite(bfcooling))
     {
       printout("[fatal] get_bfcooling: bfcooling infinite (%g) for element %d, ion %d, level %d in modelgridcell %d\n",bfcooling,element,ion,level,modelgridindex);
       printout("[fatal] get_bfcooling: bfcoolingcoeff %g, nnion %g, nne %g, T_e %g\n",interpolate_bfcoolingcoeff(element,ion,level,T_e),nnion,nne,T_e);

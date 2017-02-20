@@ -2,6 +2,7 @@
 //#include <math.h>
 //#include <stdlib.h>
 #include "sn3d.h"
+#include "vpkt.h"
 #ifdef DO_EXSPEC
   #include "exspec.h"
 #endif
@@ -96,7 +97,6 @@ int input(rank)
   #ifdef DO_EXSPEC
     /// Spectra settings
     nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
-    vnnubins = VMNUBINS; //10000; /// frequency bins for virtual packet spectrum (estimators)
     /// lower and upper frequency boundaries for make_spectrum_res: gamma spectra?
     nu_min = 0.05 * MEV / H;
     nu_max = 4 * MEV / H;
@@ -119,7 +119,7 @@ int input(rank)
   ntlcbins = ntstep; ///time bins for light curve #(timesteps)
 
   /// Read in parameters from vpkt.txt
-  #ifdef ESTIMATORS_ON
+  #ifdef VPKT_ON
     read_parameterfile_vpkt();
   #endif
 
@@ -2527,7 +2527,6 @@ void update_parameterfile(int nts)
 
 ///****************************************************************************
 /// Subroutine to read in input parameters from vpkt.txt.
-#ifdef ESTIMATORS_ON
 
 void read_parameterfile_vpkt()
 {
@@ -2579,72 +2578,106 @@ void read_parameterfile_vpkt()
 
     }
 
-    // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
-    fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
+    // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
+    fscanf(input_file, "%g ", &dum4);
 
-    if (dum4==1) {
+    if (dum4!=1) {
 
-        tmin_vspec = dum5 * DAY;
-        tmax_vspec = dum6 * DAY;
+        Nspectra = 1;
+        exclude[0] = 0;
     }
 
     else {
 
-        tmin_vspec = tmin;
-        tmax_vspec = tmax;
+      fscanf(input_file, "%d ", &dum1);
+      Nspectra = dum1;
 
+      if ( Nspectra > MSPECTRA ) {
+
+          printout("Too many spectra! Nspectra > MSPECTRA \n");
+          exit(0);
+      }
+
+      
+      for (i=0;i<Nspectra;i++) {
+  
+          fscanf(input_file, "%g ", &dum2);
+          exclude[i] = dum2;
+
+          // The first number should be equal to zero!
+          if (exclude[0]!=0) {
+
+            printout("The first spectrum should allow for all opacities (exclude[i]=0) and is not \n");
+            exit(0);             
+          }
+  
+      }
     }
 
-    if (tmin_vspec < tmin ) {
-
-        printout("tmin_vpkt was smaller than tmin -> tmin_vpkt = tmin \n");
-        tmin_vspec = tmin ;
-
+    // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
+    fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
+  
+    if (dum4==1) {
+  
+        tmin_vspec_input = dum5 * DAY;
+        tmax_vspec_input = dum6 * DAY;
+    }
+  
+    else {
+  
+        tmin_vspec_input = tmin_vspec;
+        tmax_vspec_input = tmax_vspec;
+    }
+  
+    if (tmin_vspec_input < tmin_vspec ) {
+  
+        printout("tmin_vspec_input is smaller than tmin_vspec \n");
+        exit(0); 
+    }
+  
+    if (tmax_vspec_input > tmax_vspec ) {
+  
+        printout("tmax_vspec_input is larger than tmax_vspec \n");
+        exit(0) ;
     }
 
-    if (tmax_vspec > tmax ) {
-
-        printout("tmax_vpkt was bigger than tmax -> tmax_vpkt = tmax \n");
-        tmax_vspec = tmax ;
-
-    }
 
     // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
     // followed by a list of ranges (dum6,dum7)
     fscanf(input_file, "%g ", &dum4);
-
+  
     if (dum4==1) {
-
+  
         fscanf(input_file, "%g ", &dum5);
-
+  
         Nrange = dum5;
         if ( Nrange > MRANGE ) {
-
+  
             printout("Too many ranges! Nrange > MRANGE \n");
             exit(0);
         }
-
+  
         for (i=0;i<Nrange;i++) {
-
+  
             fscanf(input_file, "%g %g", &dum6, &dum7);
-
-            lmin_vspec[i] = dum6;
-            lmax_vspec[i] = dum7;
-
-            numin_vspec[i] = CLIGHT / (lmax_vspec[i]*1e-8) ;
-            numax_vspec[i] = CLIGHT / (lmin_vspec[i]*1e-8) ;
-
+  
+            lmin_vspec_input[i] = dum6;
+            lmax_vspec_input[i] = dum7;
+  
+            numin_vspec_input[i] = CLIGHT / (lmax_vspec_input[i]*1e-8) ;
+            numax_vspec_input[i] = CLIGHT / (lmin_vspec_input[i]*1e-8) ;
+  
         }
-
+  
     }
-
+  
     else {
-
+  
         Nrange = 1;
-
-        numin_vspec[0] = 0 ;
-        numax_vspec[0] = 1e16 ;
-
+  
+        numin_vspec_input[0] = numin_vspec ;
+        numax_vspec_input[0] = numax_vspec ;
+  
     }
 
     // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
@@ -2693,6 +2726,5 @@ void read_parameterfile_vpkt()
 
 }
 
-#endif
 
 

@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "vpkt.h"
 
 /** Subroutine to update the matter quantities in the grid cells at the start
    of the new timestep. */
@@ -60,6 +61,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
   int search_cellhistory(int cellnumber);
   void determine_kpkt_cuts(int cellnumber);
 
+  int get_element();
 
   /// only needed if all level populations should be printed to the output-file
   //double pop, excitedlevelpops;
@@ -419,7 +421,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
     
                 #ifdef FORCE_LTE
                   /// LTE version of the code
-                  if (!finite(J[n]))
+                  if (!isfinite(J[n]))
                   {
                     printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
                     abort();
@@ -435,7 +437,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   #endif
                   
                   T_R = pow(PI/STEBO*(J[n]),1./4.);
-                  if (finite(T_R))
+                  if (isfinite(T_R))
                   {
                     /// Make sure that T is in the allowed temperature range.
                     if (T_R > MAXTEMP) T_R = MAXTEMP;
@@ -484,7 +486,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   if (initial_iteration == 1 || modelgrid[n].thick == 1)
                   {
                     /// LTE version of the code
-                    if (!finite(J[n]))
+                    if (!isfinite(J[n]))
                     {
                       printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
                       abort();
@@ -500,7 +502,7 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     #endif
                     
                     T_R = pow(PI/STEBO*(J[n]),1./4.);
-                    if (finite(T_R))
+                    if (isfinite(T_R))
                     {
                       /// Make sure that T is in the allowed temperature range.
                       if (T_R > MAXTEMP) T_R = MAXTEMP;
@@ -556,9 +558,9 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   else
                   {
                     /// Calculate estimators
-                    if (!finite(nuJ[n]) || !finite(J[n]))
+                    if (!isfinite(nuJ[n]) || !isfinite(J[n]))
                     {
-                      printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
+                      printout("[fatal] update_grid: non isfinite estimator before normalisation ... abort\n");
                       abort();
                     }
                     
@@ -1330,7 +1332,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
       {
         factor *= nne_hi * phi(element,i,modelgridindex);
         //printout("element %d, ion %d, factor %g\n",element,i,factor);
-        if (!finite(factor)) 
+        if (!isfinite(factor)) 
         {
           printout("[info] calculate_populations: uppermost_ion limited by phi factors for element %d, ion %d in cell %d\n",element,i,modelgridindex);
           break;
@@ -1382,7 +1384,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
         nntot += nnion;
         nne += nnion * (get_ionstage(element,ion)-1);
         modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
-        if (!finite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
+        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
@@ -1469,7 +1471,7 @@ double calculate_populations(int modelgridindex, int first_nonempty_cell)
         nntot += nnion;
         nne_check += nnion * (get_ionstage(element,ion)-1);
         modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
-        if (!finite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
+        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion])) 
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
@@ -1517,7 +1519,7 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
   double T,nubar;
   
   nubar = nuJ/J;
-  if (!finite(nubar) || nubar == 0.)
+  if (!isfinite(nubar) || nubar == 0.)
   {
     /// Return old T_R
     printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",modelgridindex);
@@ -1563,29 +1565,29 @@ void get_radfield_params(double J, double nuJ, int modelgridindex, double *T_J, 
 
 
 
-/*
-///****************************************************************************
-double nuB_nu_integrand(double nu, void *paras)
-{
-  double T = ((gslintegration_paras *) paras)->T;
-  
-  return nu * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
-}
 
 ///****************************************************************************
-double B_nu_integrand(double nu, void *paras)
-{
-  double T = ((gslintegration_paras *) paras)->T;
-  
-  return TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
-}
-*/
+//double nuB_nu_integrand(double nu, void *paras)
+//{
+//  double T = ((gslintegration_paras *) paras)->T;
+//  
+//  return nu * TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
+//}
+//
+/////****************************************************************************
+//double B_nu_integrand(double nu, void *paras)
+//{
+//  double T = ((gslintegration_paras *) paras)->T;
+//  
+//  return TWOHOVERCLIGHTSQUARED * pow(nu,3) * 1/(exp(H*nu/KB/T)-1);
+//}
+
 
 
 #ifndef FORCE_LTE
 
 /*
-///****************************************************************************
+****************************************************************************
 double get_ffcooling(int element, int ion, int cellnumber)
 {
   double ionstagepop(int cellnumber, int element, int ion);

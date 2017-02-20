@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "vpkt.h"
 
 /* Material for handing r-packet propagation. */
 
@@ -617,7 +618,7 @@ int rpkt_event(PKT *pkt_ptr, int rpkt_eventtype, double t_current) //, double ka
     
         
       /* call the estimator routine - generate a virtual packet */
-      #ifdef ESTIMATORS_ON
+      #ifdef VPKT_ON
         
         realtype = 1 ;
         
@@ -1225,7 +1226,7 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
               //phixslist[tid].groundcont[gphixsindex].bfheating_contr = helper * nu_edge;
             }
             #ifdef DEBUG_ON
-              if (!finite(check))
+              if (!isfinite(check))
               {
                 printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",check);
                 printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
@@ -1329,14 +1330,14 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
   
   
   #ifdef DEBUG_ON
-    if (!finite(kappa_rpkt_cont[tid].total))
+    if (!isfinite(kappa_rpkt_cont[tid].total))
     {
       printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
       printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont[tid].es,kappa_rpkt_cont[tid].ff,kappa_rpkt_cont[tid].bf);
       printout("[fatal] nbfcontinua %d\n",nbfcontinua);
       printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
       printout("[fatal] pkt_ptr->nu_cmf %g, T_e %g, nne %g\n",pkt_ptr->nu_cmf,T_e,nne);
-      if (finite(kappa_rpkt_cont[tid].es))
+      if (isfinite(kappa_rpkt_cont[tid].es))
       {
         kappa_rpkt_cont[tid].ff = 0.;
         kappa_rpkt_cont[tid].bf = 0.;
@@ -1527,7 +1528,7 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
                             //phixslist[tid].groundcont[gphixsindex].bfheating_contr = helper * nu_edge;
                         }
                         #ifdef DEBUG_ON
-                        if (!finite(check))
+                        if (!isfinite(check))
                         {
                             printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",check);
                             printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
@@ -1631,14 +1632,14 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
     
     
     #ifdef DEBUG_ON
-    if (!finite(kappa_rpkt_cont[tid].total))
+    if (!isfinite(kappa_rpkt_cont[tid].total))
     {
         printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
         printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont[tid].es,kappa_rpkt_cont[tid].ff,kappa_rpkt_cont[tid].bf);
         printout("[fatal] nbfcontinua %d\n",nbfcontinua);
         printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
         printout("[fatal] pkt_ptr->nu_cmf %g, T_e %g, nne %g\n",pkt_ptr->nu_cmf,T_e,nne);
-        if (finite(kappa_rpkt_cont[tid].es))
+        if (isfinite(kappa_rpkt_cont[tid].es))
         {
             kappa_rpkt_cont[tid].ff = 0.;
             kappa_rpkt_cont[tid].bf = 0.;
@@ -2004,11 +2005,11 @@ int call_estimators(PKT *pkt_ptr, double t_current, int realtype)
         
         t_arrive = t_current - (dot(pkt_ptr->pos,obs)/CLIGHT_PROP) ;
         
-        if (t_arrive >= tmin_vspec  && t_arrive <= tmax_vspec) {       /* time selection */
+        if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input) {       /* time selection */
             
             for (i=0;i<Nrange;i++){   /* Loop over frequency ranges */
                 
-                if (pkt_ptr->nu_cmf / doppler(obs, vel_vec) > numin_vspec[i] && pkt_ptr->nu_cmf / doppler(obs, vel_vec) < numax_vspec[i] ) {  /* frequency selection */
+                if (pkt_ptr->nu_cmf / doppler(obs, vel_vec) > numin_vspec_input[i] && pkt_ptr->nu_cmf / doppler(obs, vel_vec) < numax_vspec_input[i] ) {  /* frequency selection */
                     
                     rlc_emiss_vpkt(pkt_ptr, t_current, bin, obs, realtype);
                     

@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "vpkt.h"
 #include "exspec.h"
 #include <string.h>
 
@@ -14,7 +15,7 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
   double doppler();
   int angle_ab(double *dir1,double *vel,double *dir2);
   double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
-  int add_to_specpol(PKT *pkt_ptr, int bin, double t_arrive);
+  int add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive);
   int add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, double *obs);
   int move_pkt(PKT *pkt_ptr, double distance, double time);
   double closest_transition(PKT *pkt_ptr);
@@ -26,10 +27,11 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
   void meridian(double *n, double *ref1, double *ref2);
   void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
   void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
+  int check_tau(double *tau, double *tau_max);
 
   double vel_vec[3],old_dir_cmf[3],obs_cmf[3],vel_rev[3];
-  double sdist;
-  double kap_cont;
+  double sdist,s_cont;
+  double kap_cont,kap_cont_nobf,kap_cont_noff,kap_cont_noes;
   int snext;
   int end_packet;
   double t_future,t_arrive;
@@ -37,11 +39,12 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
   double nutrans;
   int element, ion, upper, lower;
   double A_ul,B_ul,B_lu;
-  double n_u,n_l,tau,t_line;
+  double n_u,n_l,t_line;
   int mgi;
-  double Qi,Ui,Qold,Uold,Inew,Qnew,Unew,I,Q,U,pn,prob;
+  double Qi,Ui,Qold,Uold,Inew,Qnew,Unew,Itmp,Qtmp,Utmp,I,Q,U,pn,prob;
   double mu,i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
   double ref1[3],ref2[3];
+  int ind,anumber,get_element(),tau_flag=0;
 
   int bin_range;
 
@@ -52,11 +55,12 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
 
   end_packet = 0 ;
-  tau = 0;
   sdist = 0;
   ldist = 0;
   nutrans = 0;
   t_future = t_current;
+
+  for (ind=0;ind<Nspectra;ind++) tau_vpkt[ind] = 0;
 
   dummy_ptr->dir[0] = obs[0] ;
   dummy_ptr->dir[1] = obs[1] ;
@@ -156,27 +160,34 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
   // --------- compute the optical depth to boundary ----------------
 
-  //printout("next_trans = %d \t nu_cmf = %g \n",dummy_ptr->next_trans,dummy_ptr->nu_cmf);
-
   mgi = cell[dummy_ptr->where].modelgridindex;
 
   while (end_packet == 0) {
 
       ldist = 0 ;
 
-      sdist = boundary_cross(dummy_ptr, t_future, &snext); /* distance to the next cell */
+      /* distance to the next cell */
+      sdist = boundary_cross(dummy_ptr, t_future, &snext); 
+      s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
-      //printout("before \n");
       calculate_kappa_vpkt_cont(dummy_ptr, t_future);
-      //printout("after \n");
+
       kap_cont = kappa_rpkt_cont[tid].total;
+      kap_cont_nobf = kap_cont - kappa_rpkt_cont[tid].bf;
+      kap_cont_noff = kap_cont - kappa_rpkt_cont[tid].ff;
+      kap_cont_noes = kap_cont - kappa_rpkt_cont[tid].es;
 
-      tau += kap_cont * sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
+      for (ind=0;ind<Nspectra;ind++) {
 
-      //printout("--- New cell\ntau = %g ldist = %g \t sdist = %g \n",tau,ldist,sdist);
+          if (exclude[ind] == -2) tau_vpkt[ind] += kap_cont_nobf * s_cont;
+          else if (exclude[ind] == -3) tau_vpkt[ind] += kap_cont_noff * s_cont;
+          else if (exclude[ind] == -4) tau_vpkt[ind] += kap_cont_noes * s_cont;
+          else tau_vpkt[ind] += kap_cont * s_cont;
+      }
 
       /* kill vpkt with high optical depth */
-      if (tau > tau_max_vpkt) return(0) ;
+      tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
+      if (tau_flag == 0 ) return(0) ;
 
       while ( ldist < sdist ) {
 
@@ -189,6 +200,8 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
           upper = mastate[tid].level;
           lower = mastate[tid].activatedfromlevel;
           A_ul = mastate[tid].einstein;
+
+          anumber = get_element(element);
 
           if (nutrans > 0) {
 
@@ -212,13 +225,20 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
               n_u = calculate_exclevelpop(mgi,element,ion,upper);
               n_l = calculate_exclevelpop(mgi,element,ion,lower);
 
-              tau += (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_line;
-
-              //printout("tau = %g ldist = %g \t sdist = %g \n",tau,ldist,sdist);
-
-
+              // Check on the element to exclude
+              // NB: ldist before need to be computed anyway (I want to move the packets to the 
+              // line interaction point even if I don't interact)
+              
+              for (ind=0;ind<Nspectra;ind++) {
+                  
+                  // If exclude[ind]==-1, I do not include line opacity
+                  if ( exclude[ind]!=-1 && (anumber != exclude[ind]) )  tau_vpkt[ind] += (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_line;
+                  
+              }
+              
               /* kill vpkt with high optical depth */
-              if (tau > tau_max_vpkt) return(0) ;
+              tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
+              if (tau_flag == 0 ) return(0) ;
 
 
           }
@@ -261,28 +281,42 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
   // -------------- final stokes vector ---------------
 
-  prob = pn * exp( - tau ) ;
-
-  I = I * prob ;
-  Q = Q * prob ;
-  U = U * prob ;
-
-  dummy_ptr->stokes[0] = I;
-  dummy_ptr->stokes[1] = Q;
-  dummy_ptr->stokes[2] = U;
-
-  if (I!=I || Q!=Q || U!=U) printout("Nan Number!! %g %g %g %g %g %g %g %g \n",I,Q,U,pn,tau,mu,i1,i2);
-
-  /* bin on fly and produce file with spectrum */
-
-  t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/CLIGHT_PROP) ;
-
-  add_to_vspecpol(dummy_ptr,bin,t_arrive);
+  for (ind=0;ind<Nspectra;ind++) {
+      
+      prob = pn * exp( - tau_vpkt[ind] ) ;
+      
+      Itmp = I * prob ;
+      Qtmp = Q * prob ;
+      Utmp = U * prob ;
+      
+      dummy_ptr->stokes[0] = Itmp;
+      dummy_ptr->stokes[1] = Qtmp;
+      dummy_ptr->stokes[2] = Utmp;
+      
+      if (Itmp!=Itmp || Qtmp!=Qtmp || Utmp!=Utmp) printout("Nan Number!! %g %g %g %g %g %g %g %g \n",Itmp,Qtmp,Utmp,pn,tau_vpkt[ind],mu,i1,i2);
+      
+      /* bin on fly and produce file with spectrum */
+      
+      t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/CLIGHT_PROP) ;
+      
+      add_to_vspecpol(dummy_ptr,bin,ind,t_arrive);
+  
+  }
 
 
   // vpkt grid
 
   if (vgrid_flag==1) {
+
+      prob = pn * exp( - tau_vpkt[0] ) ;
+      
+      Itmp = I * prob ;
+      Qtmp = Q * prob ;
+      Utmp = U * prob ;
+      
+      dummy_ptr->stokes[0] = Itmp;
+      dummy_ptr->stokes[1] = Qtmp;
+      dummy_ptr->stokes[2] = Utmp;
 
       for (bin_range=0;bin_range<Nrange_grid;bin_range++) {
 
@@ -307,8 +341,22 @@ rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtyp
 
 
 
-
-
+///****************************************************************************
+/* Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups 
+E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt 
+because of the element Zi. If we remove Zi, tau now could be lower than tau_max_vpkt and could 
+thus contribute to the spectrum. */
+///****************************************************************************
+int check_tau(double *tau, double *tau_max) {
+    
+    int i,count = 0 ;
+    
+    for (i=0;i<Nspectra;i++) if ( tau[i] > *tau_max ) count += 1 ;
+    
+    if (count == Nspectra) return 0;
+    else return 1;
+    
+}
 
 
 ///****************************************************************************
@@ -403,11 +451,11 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
         if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) rot_angle = (acos(-1.) - acos(fabs(Q0 / p))) / 2. ;
         if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) rot_angle = (acos(-1.) + acos(fabs(Q0 / p))) / 2. ;
         if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) rot_angle = (2. * acos(-1.) - acos(fabs(Q0 / p))) / 2. ;
-        if ((cos2rot_angle == 0)) {
+        if (cos2rot_angle == 0) {
             rot_angle = 0.25 * acos(-1);
             if (U0 < 0) rot_angle = 0.75 * acos(-1);
         }
-        if ((sin2rot_angle == 0)) {
+        if (sin2rot_angle == 0) {
             rot_angle = 0.0;
             if (Q0 < 0) rot_angle = 0.5 * acos(-1);
 
@@ -519,32 +567,35 @@ void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf) {
 
 /**********************************************************************/
 /*Routine to add a packet to the outcoming spectrum.*/
-int add_to_vspecpol(PKT *pkt_ptr, int bin, double t_arrive)
+int add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
 {
-    /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
+    /* Need to decide in which (1) time and (2) frequency bin the vpkt is escaping */
 
     double dot();
     double deltai,deltaq,deltau;
     int nt, nnu;
+    int ind_comb;
+
+    ind_comb = Nspectra * bin + ind;
 
     /// Put this into the time grid.
-    if (t_arrive > tmin && t_arrive < tmax)
+    if (t_arrive > tmin_vspec && t_arrive < tmax_vspec)
     {
 
-        nt = (log(t_arrive) - log(tmin)) / dlogt;
-        if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
+        nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
+        if (pkt_ptr->nu_rf > numin_vspec && pkt_ptr->nu_rf < numax_vspec)
         {
             #pragma omp critical
             {
-                nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
+                nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) /  dlognu_vspec;
 
-                deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
-                deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
-                deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / vstokes_i[nt][bin].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
+                deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
+                deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
+                deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
 
-                vstokes_i[nt][bin].flux[nnu] += deltai;
-                vstokes_q[nt][bin].flux[nnu] += deltaq;
-                vstokes_u[nt][bin].flux[nnu] += deltau;
+                vstokes_i[nt][ind_comb].flux[nnu] += deltai;
+                vstokes_q[nt][ind_comb].flux[nnu] += deltaq;
+                vstokes_u[nt][ind_comb].flux[nnu] += deltau;
             }
 
         }
@@ -561,31 +612,31 @@ int add_to_vspecpol(PKT *pkt_ptr, int bin, double t_arrive)
 /**********************************************************************/
 void init_vspecpol(void)
 {
-    int n,m,bin;
+    int n,m,ind_comb;
 
 
-    for (bin=0;bin<MOBS;bin++) {
+    for (ind_comb=0;ind_comb<MTOT;ind_comb++) {
 
         /** start by setting up the time and frequency bins. */
         /** it is all done interms of a logarithmic spacing in both t and nu - get the
          step sizes first. */
 
-        dlogt = (log(tmax) - log(tmin))/VMTBINS;
-        dlognu = (log(nu_max_r) - log(nu_min_r))/VMNUBINS;
+        dlogt_vspec = (log(tmax_vspec) - log(tmin_vspec))/VMTBINS;
+        dlognu_vspec = (log(numax_vspec) - log(numin_vspec))/VMNUBINS;
 
         for (n = 0; n < VMTBINS; n++)
         {
-            vstokes_i[n][bin].lower_time = exp( log(tmin) + (n * (dlogt)));
-            vstokes_i[n][bin].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - vstokes_i[n][bin].lower_time;
+            vstokes_i[n][ind_comb].lower_time = exp( log(tmin_vspec) + (n * (dlogt_vspec)));
+            vstokes_i[n][ind_comb].delta_t = exp( log(tmin_vspec) + ((n+1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
 
             for (m=0; m < VMNUBINS; m++)
             {
-                lower_freq_vspec[m] = exp( log(nu_min_r) + (m * (dlognu)));
-                delta_freq_vspec[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - lower_freq_vspec[m];
+                lower_freq_vspec[m] = exp( log(numin_vspec) + (m * (dlognu_vspec)));
+                delta_freq_vspec[m] = exp( log(numin_vspec) + ((m+1) * (dlognu_vspec))) - lower_freq_vspec[m];
 
-                vstokes_i[n][bin].flux[m] = 0.0;
-                vstokes_q[n][bin].flux[m] = 0.0;
-                vstokes_u[n][bin].flux[m] = 0.0;
+                vstokes_i[n][ind_comb].flux[m] = 0.0;
+                vstokes_q[n][ind_comb].flux[m] = 0.0;
+                vstokes_u[n][ind_comb].flux[m] = 0.0;
 
             }
         }
@@ -602,16 +653,16 @@ void init_vspecpol(void)
 /*******************************************************/
 int write_vspecpol(FILE *specpol_file)
 {
-    int m,p,l,bin;
+    int m,p,l,ind_comb;
 
-    for (bin=0;bin<Nobs;bin++) {
+    for (ind_comb=0;ind_comb<MTOT;ind_comb++) {
 
         fprintf(specpol_file, "%g ", 0.0);
 
         for (l=0;l<3;l++) {
             for (p = 0; p < VMTBINS; p++)
             {
-              fprintf(specpol_file, "%g ", (vstokes_i[p][bin].lower_time + (vstokes_i[p][bin].delta_t/2))/DAY);
+              fprintf(specpol_file, "%g ", (vstokes_i[p][ind_comb].lower_time + (vstokes_i[p][ind_comb].delta_t/2))/DAY);
             }
         }
 
@@ -625,19 +676,19 @@ int write_vspecpol(FILE *specpol_file)
             // Stokes I
             for (p = 0; p < VMTBINS; p++)
             {
-              fprintf(specpol_file, "%g ", vstokes_i[p][bin].flux[m]);
+              fprintf(specpol_file, "%g ", vstokes_i[p][ind_comb].flux[m]);
             }
 
             // Stokes Q
             for (p = 0; p < VMTBINS; p++)
             {
-              fprintf(specpol_file, "%g ", vstokes_q[p][bin].flux[m]);
+              fprintf(specpol_file, "%g ", vstokes_q[p][ind_comb].flux[m]);
             }
 
             // Stokes U
             for (p = 0; p < VMTBINS; p++)
             {
-              fprintf(specpol_file, "%g ", vstokes_u[p][bin].flux[m]);
+              fprintf(specpol_file, "%g ", vstokes_u[p][ind_comb].flux[m]);
             }
 
             fprintf(specpol_file, "\n");
@@ -661,25 +712,25 @@ int write_vspecpol(FILE *specpol_file)
 /*******************************************************/
 int read_vspecpol(FILE *specpol_file)
 {
-    int n,m,j,p,l,bin;
+    int n,m,j,p,l,ind_comb;
     float a,b,c;
 
 
-    for (bin=0;bin<Nobs;bin++) {
+    for (ind_comb=0;ind_comb<MTOT;ind_comb++) {
 
         // Initialise times and frequencies
-        dlogt = (log(tmax) - log(tmin))/VMTBINS;
-        dlognu = (log(nu_max_r) - log(nu_min_r))/VMNUBINS;
+        dlogt_vspec = (log(tmax_vspec) - log(tmin_vspec))/VMTBINS;
+        dlognu_vspec = (log(numax_vspec) - log(numin_vspec))/VMNUBINS;
 
         for (n = 0; n < VMTBINS; n++)
         {
-            vstokes_i[n][bin].lower_time = exp( log(tmin) + (n * (dlogt)));
-            vstokes_i[n][bin].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - vstokes_i[n][bin].lower_time;
+            vstokes_i[n][ind_comb].lower_time = exp( log(tmin_vspec) + (n * (dlogt_vspec)));
+            vstokes_i[n][ind_comb].delta_t = exp( log(tmin_vspec) + ((n+1) * (dlogt_vspec))) - vstokes_i[n][ind_comb].lower_time;
 
             for (m=0; m < VMNUBINS; m++)
             {
-                lower_freq_vspec[m] = exp( log(nu_min_r) + (m * (dlognu)));
-                delta_freq_vspec[m] = exp( log(nu_min_r) + ((m+1) * (dlognu))) - lower_freq_vspec[m];
+                lower_freq_vspec[m] = exp( log(numin_vspec) + (m * (dlognu_vspec)));
+                delta_freq_vspec[m] = exp( log(numin_vspec) + ((m+1) * (dlognu_vspec))) - lower_freq_vspec[m];
 
             }
         }
@@ -699,13 +750,13 @@ int read_vspecpol(FILE *specpol_file)
             fscanf(specpol_file, "%g ", &c);
 
             // Stokes I
-            for (p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_i[p][bin].flux[j]);
+            for (p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_i[p][ind_comb].flux[j]);
 
             // Stokes Q
-            for (p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_q[p][bin].flux[j]);
+            for (p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_q[p][ind_comb].flux[j]);
 
             // Stokes U
-            for (p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_u[p][bin].flux[j]);
+            for (p = 0; p < VMTBINS; p++) fscanf(specpol_file, "%lg ", &vstokes_u[p][ind_comb].flux[j]);
 
             fscanf(specpol_file, "\n");
 

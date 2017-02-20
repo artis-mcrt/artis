@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "vpkt.h"
 #include <gsl/gsl_integration.h>
 
 
@@ -269,7 +270,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("checking uptrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,upper,R,C,epsilon_trans);
-          if (!finite(internal_up_same)) {printout("fatal: internal_up_same has nan contribution\n");}
+          if (!isfinite(internal_up_same)) {printout("fatal: internal_up_same has nan contribution\n");}
         #endif
       }
       }
@@ -391,9 +392,9 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       //}
       
       #ifdef DEBUG_ON
-        if (!finite(pkt_ptr->nu_cmf))
+        if (!isfinite(pkt_ptr->nu_cmf))
         {
-          printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
+          printout("[fatal] rad deexcitation of MA: selected frequency not isfinite ... abort\n");
           abort();
         }
         if (i > ndowntrans)
@@ -438,7 +439,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         
         
       /* call the estimator routine - generate a virtual packet */
-      #ifdef ESTIMATORS_ON
+      #ifdef VPKT_ON
         
         realtype = 3 ;
         
@@ -684,9 +685,9 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
       
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
-        if (!finite(pkt_ptr->nu_cmf))
+        if (!isfinite(pkt_ptr->nu_cmf))
         {
-          printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
+          printout("[fatal] rad recombination of MA: selected frequency not isfinite ... abort\n");
           abort();
         }
         //if (tid == 0) ma_stat_deactivation_fb += 1;
@@ -713,7 +714,7 @@ double do_ma(PKT *pkt_ptr, double t1, double t2, int timestep)
         
         
       /* call the estimator routine - generate a virtual packet */
-      #ifdef ESTIMATORS_ON
+      #ifdef VPKT_ON
         realtype = 3 ;
 
         vflag = call_estimators(pkt_ptr, t_current, realtype);
@@ -1054,7 +1055,7 @@ double rad_deexcitation(PKT *pkt_ptr, int lower, double epsilon_trans, double st
     //printout("[debug] rad_rates_down: nne %g \n",cell[pkt_ptr->where].nne);
     if (debuglevel == 2) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
     if (debuglevel == 777) printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n",A_ul,tau_sobolev,n_u);
-    if (!finite(R)) {printout("fatal a1: abort\n"); abort();}
+    if (!isfinite(R)) {printout("fatal a1: abort\n"); abort();}
   #endif
   
   return R;
@@ -1133,7 +1134,7 @@ double rad_excitation(PKT *pkt_ptr, int upper, double epsilon_trans, double stat
     if (debuglevel == 2) printout("[debug] rad_rates_up: element, ion, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",element,ion,upper,lower,A_ul,n_l);
     if (debuglevel == 2) printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",A_ul,tau_sobolev,n_u,n_l,radfield(nu_trans,modelgridindex));
     if (debuglevel == 777) printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",A_ul,tau_sobolev,n_u,n_l,radfield(nu_trans,modelgridindex));
-    if (!finite(R)) 
+    if (!isfinite(R)) 
     {
       printout("[fatal] rad_excitation: abort\n"); 
       printout("[fatal] rad_excitation: R %g, mastate[tid].nnlevel %g, B_lu %g, B_ul %g, n_u %g, n_l %g, beta %g, radfield %g,tau_sobolev %g, t_current %g\n",R,mastate[tid].nnlevel,B_lu,B_ul,n_u,n_l,beta,radfield(nu_trans,modelgridindex),tau_sobolev,t_current); 
@@ -1171,7 +1172,7 @@ double rad_recombination(int modelgridindex, int lower, double epsilon_trans)
   
   #ifdef DEBUG_ON
     //printout("[debug]    rad_recombiantion: R %g\n",R);
-    if (!finite(R)) {printout("fatal a2: abort\n"); abort();}
+    if (!isfinite(R)) {printout("fatal a2: abort\n"); abort();}
   #endif
   
   return R;
@@ -1203,7 +1204,7 @@ double photoionization(int modelgridindex, int upper, double epsilon_trans)
   
   #ifdef DEBUG_ON
     //printout("[photoionization] R %g\n",R);
-    if (!finite(R)) {printout("fatal a4: abort\n"); abort();}
+    if (!isfinite(R)) {printout("fatal a4: abort\n"); abort();}
   #endif
   
   return R;
@@ -1261,7 +1262,7 @@ double col_excitation(int modelgridindex, int upper, int lineindex, double epsil
     if (debuglevel == 2) printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
     if (debuglevel == 2) printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
     if (debuglevel == 777) printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
-    if (!finite(C)) 
+    if (!isfinite(C)) 
     {
       printout("fatal a5: abort\n"); 
       printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
@@ -1309,7 +1310,7 @@ double col_ionization(int modelgridindex, int upper, double epsilon_trans)
   
     #ifdef DEBUG_ON
       if (debuglevel == 777) printout("[debug] col_ion: n_l %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_l, nne,T_e,g,epsilon_trans,photoionization_crosssection(nu_lower, nu_lower));
-      if (!finite(C)) {printout("fatal a6: abort\n"); abort();}
+      if (!isfinite(C)) {printout("fatal a6: abort\n"); abort();}
     #endif
   }
   else
@@ -1370,7 +1371,7 @@ double col_deexcitation(int modelgridindex, int lower, double epsilon_trans, dou
     if (debuglevel == 2) printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     if (debuglevel == 777) printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
-    if (!finite(C)) {printout("fatal a7: abort\n"); abort();}
+    if (!isfinite(C)) {printout("fatal a7: abort\n"); abort();}
   #endif
     
   return C;
@@ -1428,7 +1429,7 @@ double col_recombination(int modelgridindex, int lower, double epsilon_trans)
       if (debuglevel == 777) printout("get_sahafact %g, fac1 %g, C %g\n",get_sahafact(element,ion-1,lower,T_e,epsilon_trans),fac1,C);
       ///means n_u*nne * detailed_balancing of c_ikappa
       if (debuglevel == 777) printout("[debug] col_recomb: n_u %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_u, nne,T_e,g,epsilon_trans,sigma_bf);
-      if (!finite(C)) {printout("fatal a8: abort\n"); abort();}
+      if (!isfinite(C)) {printout("fatal a8: abort\n"); abort();}
     #endif
   }
   else

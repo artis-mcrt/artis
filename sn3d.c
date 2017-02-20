@@ -13,6 +13,7 @@
 
 #include "threadprivate.h"
 #include "sn3d.h"
+#include "vpkt.h"
 #include "version.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
@@ -428,7 +429,7 @@ int main(int argc, char** argv)
     nts = itstep;
 
     // Initialise virtual packets file and vspecpol
-    #ifdef ESTIMATORS_ON
+    #ifdef VPKT_ON
       sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
       if ((vspecpol_file = fopen(filename, "w")) == NULL)
       {
@@ -492,7 +493,7 @@ int main(int argc, char** argv)
       #endif
 
       #ifdef TIMED_RESTARTS
-        if ((time(NULL) - real_time_start) > 10800)
+        if ((time(NULL) - real_time_start) > 9000)
         {
           do_this_full_loop = 0; //This flag will make it do a write out then quit, hopefully
           printout("Going to terminate since remaining time is too short. %d\n", time(NULL) - real_time_start);
@@ -1155,7 +1156,7 @@ int main(int argc, char** argv)
           printout("time after estimators have been communicated %d\n",time(NULL));
           printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %g)\n",outer_iteration,nts,my_rank,time_step[nts].pellet_decays,nesc,time_step[nts].mid/DAY);
 
-          #ifdef ESTIMATORS_ON
+          #ifdef VPKT_ON
 
             printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",outer_iteration,nts,my_rank,nvpkt,nvpkt_esc1+nvpkt_esc2+nvpkt_esc3);
             printout("%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a macroatom deactivation. \n",nvpkt_esc1,nvpkt_esc2,nvpkt_esc3);
@@ -1198,7 +1199,7 @@ int main(int argc, char** argv)
           fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
           fclose(packets_file);
 
-          #ifdef ESTIMATORS_ON
+          #ifdef VPKT_ON
           {
             if (nts % 2 == 0) sprintf(filename,"vspecpol_%d_%d_even.tmp",my_rank,tid);
             else sprintf(filename,"vspecpol_%d_%d_odd.tmp",my_rank,tid);
@@ -1248,7 +1249,7 @@ int main(int argc, char** argv)
             fclose(packets_file);
 
             // write specpol of the virtual packets
-            #ifdef ESTIMATORS_ON
+            #ifdef VPKT_ON
               write_vspecpol(vspecpol_file);
               fclose(vspecpol_file);
 

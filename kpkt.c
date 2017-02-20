@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "vpkt.h"
 #include <gsl/gsl_integration.h>
 
   
@@ -483,7 +484,7 @@ double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2)
     /// Grey opacity treatment, set a dummy value for nu_cmf
     pkt_ptr->nu_cmf = 1;
   }
-  if (!finite(pkt_ptr->nu_cmf))
+  if (!isfinite(pkt_ptr->nu_cmf))
   {
     printout("[fatal] do_kpkt_bb: selected frequency not finite ... abort\n");
     abort();
@@ -801,7 +802,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->nu_cmf = -KB*T_e/H * log(zrand);
       //pkt_ptr->nu_cmf = 3.7474058e+14;
       
-      if (!finite(pkt_ptr->nu_cmf))
+      if (!isfinite(pkt_ptr->nu_cmf))
       {
         printout("[fatal] ff cooling: selected frequency not finite ... abort\n");
         abort();
@@ -829,7 +830,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
         
         
       /* call the estimator routine - generate a virtual packet */
-      #ifdef ESTIMATORS_ON
+      #ifdef VPKT_ON
         realtype = 2 ;
        
         vflag = call_estimators(pkt_ptr, t_current, realtype);
@@ -944,7 +945,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       // /// Sample the packets comoving frame frequency according to paperII 4.2.2
       if (debuglevel == 2) printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
       //pkt_ptr->nu_cmf = 3.7474058e+14;
-      if (!finite(pkt_ptr->nu_cmf))
+      if (!isfinite(pkt_ptr->nu_cmf))
       {
         printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
         abort();
@@ -969,7 +970,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
         
         
       /* call the estimator routine - generate a virtual packet */
-      #ifdef ESTIMATORS_ON
+      #ifdef VPKT_ON
         realtype = 2 ;
 
         vflag = call_estimators(pkt_ptr, t_current, realtype);

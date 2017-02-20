@@ -65,7 +65,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
       }
       
       #ifdef DEBUG_ON
-        if (!finite(nuJ[modelgridindex])) 
+        if (!isfinite(nuJ[modelgridindex])) 
         {
           printout("[fatal] update_estimators: estimator becomes non finite: helper %g, nu_cmf %g ... abort\n",helper,pkt_ptr->nu_cmf);
           abort();
@@ -80,7 +80,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
     
     
     #ifdef DEBUG_ON
-      if (!finite(J[modelgridindex])) 
+      if (!isfinite(J[modelgridindex])) 
       {
         printout("[fatal] update_estimators: estimator becomes non finite: helper %g, nu_cmf %g ... abort\n",helper,pkt_ptr->nu_cmf);
         abort();
