@@ -5,6 +5,7 @@
 #include "packet_prop.h"
 #include "rpkt.h"
 
+
 void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, const int nts)
 // Master routine for moving packets around. When it called,
 //   it is given the time at start of inverval and at end - when it finishes,
@@ -90,7 +91,7 @@ void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, 
     }
     else if (pkt_type == TYPE_MA)
     {
-      /*It's an active macroatom - apply transition probabilities*/
+      // It's an active macroatom - apply transition probabilities
       //printout("MA-packet handling\n");
 
       t_current = do_ma(pkt_ptr, t_current, t2, nts);

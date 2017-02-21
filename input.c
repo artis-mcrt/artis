@@ -1996,7 +1996,7 @@ static int read_3d_model(void)
 
     if (rho_model > 0)
     {
-      modelgrid[mgi].associated_cells = 1;
+      mg_associated_cells[mgi] = 1;
       cell[n].modelgridindex = mgi;
       helper=rho_model * pow( (t_model/tmin), 3.);
       //printout("mgi %d, helper %g\n",mgi,helper);

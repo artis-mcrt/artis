@@ -216,7 +216,7 @@ void normalise_estimators(int nts)
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
-    const int assoc_cells = modelgrid[n].associated_cells;
+    const int assoc_cells = mg_associated_cells[n];
     const double volume = 1. / vol_init();  // That's not going to work if the cell number matters! i.e. vol_init(&cell[n])
     for (int m = 0; m < emiss_max; m++)
     {

@@ -149,7 +149,7 @@ void nonthermal_init(int my_rank)
       nt_solution[modelgridindex].timestep = -1;
       nt_solution[modelgridindex].E_0 = 0.;
 
-      if (STORE_NT_SPECTRUM && modelgrid[modelgridindex].associated_cells > 0)
+      if (STORE_NT_SPECTRUM && mg_associated_cells[modelgridindex] > 0)
       {
         nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
       }
@@ -290,7 +290,7 @@ void nonthermal_close_file(void)
   {
     for (int mgi = 0; mgi < MMODELGRID + 1; mgi++)
     {
-      if (modelgrid[mgi].associated_cells > 0)
+      if (mg_associated_cells[mgi] > 0)
         free(nt_solution[mgi].yfunc);
     }
   }
@@ -903,7 +903,7 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
 // Kozma & Fransson 1992 equation 13
 {
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-  if (modelgrid[modelgridindex].associated_cells <= 0)
+  if (mg_associated_cells[modelgridindex] <= 0)
   {
     printout("ERROR: nt_ionization_ratecoeff_sf called on empty cell %d\n", modelgridindex);
     abort();
@@ -923,7 +923,7 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
     printout("ERROR: NT_ON is false, but nt_ionization_ratecoeff has been called.\n");
     abort();
   }
-  if (modelgrid[modelgridindex].associated_cells <= 0)
+  if (mg_associated_cells[modelgridindex] <= 0)
   {
     printout("ERROR: nt_ionization_ratecoeff called on empty cell %d\n", modelgridindex);
     abort();
@@ -1083,7 +1083,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
-  if (modelgrid[modelgridindex].associated_cells < 1)
+  if (mg_associated_cells[modelgridindex] < 1)
   {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
 
@@ -1365,7 +1365,7 @@ void nt_write_restart_data(FILE *gridsave_file)
   }
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    if (modelgrid[modelgridindex].associated_cells > 0)
+    if (mg_associated_cells[modelgridindex] > 0)
     {
       fprintf(gridsave_file, "%d %d %lg %g ",
               modelgridindex,
@@ -1422,7 +1422,7 @@ void nt_read_restart_data(FILE *gridsave_file)
   }
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    if (modelgrid[modelgridindex].associated_cells > 0)
+    if (mg_associated_cells[modelgridindex] > 0)
     {
       int mgi_in;
       fscanf(gridsave_file, "%d %d %lg %g ",
@@ -1479,7 +1479,7 @@ void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 
   for (int modelgridindex = sender_nstart; modelgridindex < sender_nstart + sender_ndo; modelgridindex++)
   {
-    if (modelgrid[modelgridindex].associated_cells > 0)
+    if (mg_associated_cells[modelgridindex] > 0)
     {
       printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
                modelgridindex, logged_element_z, logged_ion_stage,
