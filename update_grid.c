@@ -247,6 +247,7 @@ static void write_to_estimators_file(int n, int timestep)
   fflush(estimators_file);
 }
 
+
 static void cellhistory_clear(void)
 {
   /// All entries of the cellhistory stack must be flagged as empty at the
@@ -582,7 +583,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
               }
               precalculate_partfuncts(n);
               //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
-              calculate_populations(n); // TODO: need to avoid this if NLTE_POPS_ALL_IONS_SIMULTANEOUS is on!
+              calculate_populations(n);
             }
             /// For all other timesteps temperature corrections have to be applied
             else
