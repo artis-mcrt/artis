@@ -283,9 +283,9 @@ typedef struct modelgrid_t
                                          /// and all the groundlevel
                                          /// populations and partition
                                          /// functions for their ions
-  double *nlte_pops;                      /// Pointer to an array that
-					 /// contains the nlte-level
-					 /// populations for this cell
+  double *nlte_pops;                     /// Pointer to an array that
+                                         /// contains the nlte-level
+                                         /// populations for this cell
 
   double totalcooling;
   mgicooling_t *cooling;

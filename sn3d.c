@@ -294,6 +294,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
   #endif
 }
 
+
 static void mpi_reduce_estimators(int my_rank)
 {
   /// the following blocks gather all the estimators to the zeroth (Master) thread

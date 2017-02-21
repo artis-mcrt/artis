@@ -15,7 +15,7 @@ void time_init(void)
   }
 
   /// For logarithmic steps, the logarithmic inverval will be
-  const double dlogt = (log(tmax) - log(tmin))/ntstep;
+  const double dlogt = (log(tmax) - log(tmin)) / ntstep;
   //dlogt = 0.17917595;
   //dlogt = 0.03583518938456109026;
   //dlogt = (tmax - tmin)/ntstep;
