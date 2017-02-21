@@ -15,11 +15,11 @@
 //#define FORCE_LTE
 #define RECORD_LINESTAT
 
-// Polarisation for real packets
+// Polarisation for r-packets
 #define DIPOLE
 #define POL_ON
 
-// Polarisation for virtual packets
+// Virtual packets
 #define VPKT_ON
 
 

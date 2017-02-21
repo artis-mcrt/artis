@@ -1,5 +1,7 @@
 #include "sn3d.h"
-#include "vpkt.h"
+#ifdef VPKT_ON
+  #include "vpkt.h"
+#endif
 
 /* Material for handing r-packet propagation. */
 
@@ -1967,70 +1969,72 @@ void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
 }
 
 
+#ifdef VPKT_ON
 
-int call_estimators(PKT *pkt_ptr, double t_current, int realtype)
-{
-    double t_arrive,obs[3];
-    int bin;
-    double dot();
-    double closest_transition(PKT *pkt_ptr);
-    int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
-    int rlc_emiss_vpkt2(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
-    void update_cell(int cellnumber);
-    int vflag ;
-    double nutrans;
-    int mgi;
-    double vel_vec[3];
-    double doppler();
-    int get_velocity();
-    int i;
-    
-    
-    vflag = 0;
-    
-    get_velocity(pkt_ptr->pos, vel_vec, t_current);
-    
-    // Cut on vpkts
-    mgi=cell[pkt_ptr->where].modelgridindex;
-    if (modelgrid[mgi].thick != 0) return 0;
-
-    /* this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer) */
-    if (pkt_ptr->next_trans == 0) nutrans = closest_transition(pkt_ptr);
-    
-    for (bin = 0 ; bin < Nobs ; bin++ ) {                   /* loop over different observers */
+  int call_estimators(PKT *pkt_ptr, double t_current, int realtype)
+  {
+      double t_arrive,obs[3];
+      int bin;
+      double dot();
+      double closest_transition(PKT *pkt_ptr);
+      int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
+      int rlc_emiss_vpkt2(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
+      void update_cell(int cellnumber);
+      int vflag ;
+      double nutrans;
+      int mgi;
+      double vel_vec[3];
+      double doppler();
+      int get_velocity();
+      int i;
       
-        obs[0] = sqrt(1-nz_obs_vpkt[bin]*nz_obs_vpkt[bin]) * cos(phiobs[bin]) ;
-        obs[1] = sqrt(1-nz_obs_vpkt[bin]*nz_obs_vpkt[bin]) * sin(phiobs[bin]) ;
-        obs[2] = nz_obs_vpkt[bin] ;
-        
-        t_arrive = t_current - (dot(pkt_ptr->pos,obs)/CLIGHT_PROP) ;
-        
-        if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input) {       /* time selection */
-            
-            for (i=0;i<Nrange;i++){   /* Loop over frequency ranges */
-                
-                if (pkt_ptr->nu_cmf / doppler(obs, vel_vec) > numin_vspec_input[i] && pkt_ptr->nu_cmf / doppler(obs, vel_vec) < numax_vspec_input[i] ) {  /* frequency selection */
-                    
-                    rlc_emiss_vpkt(pkt_ptr, t_current, bin, obs, realtype);
-                    
-                    vflag = 1;
-                    
-                    // Need to update the starting cell for next observer
-                    // If previous vpkt reached tau_lim, change_cell (and then update_cell) hasn't been called
-                    mgi=cell[pkt_ptr->where].modelgridindex;
-                    update_cell(mgi);
-                    
-                }
-                
-            }
-            
-        }
-    
-    }
-    
-    
-    return vflag;
-    
-}
+      
+      vflag = 0;
+      
+      get_velocity(pkt_ptr->pos, vel_vec, t_current);
+      
+      // Cut on vpkts
+      mgi=cell[pkt_ptr->where].modelgridindex;
+      if (modelgrid[mgi].thick != 0) return 0;
 
+      /* this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer) */
+      if (pkt_ptr->next_trans == 0) nutrans = closest_transition(pkt_ptr);
+      
+      for (bin = 0 ; bin < Nobs ; bin++ ) {                   /* loop over different observers */
+        
+          obs[0] = sqrt(1-nz_obs_vpkt[bin]*nz_obs_vpkt[bin]) * cos(phiobs[bin]) ;
+          obs[1] = sqrt(1-nz_obs_vpkt[bin]*nz_obs_vpkt[bin]) * sin(phiobs[bin]) ;
+          obs[2] = nz_obs_vpkt[bin] ;
+          
+          t_arrive = t_current - (dot(pkt_ptr->pos,obs)/CLIGHT_PROP) ;
+          
+          if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input) {       /* time selection */
+              
+              for (i=0;i<Nrange;i++){   /* Loop over frequency ranges */
+                  
+                  if (pkt_ptr->nu_cmf / doppler(obs, vel_vec) > numin_vspec_input[i] && pkt_ptr->nu_cmf / doppler(obs, vel_vec) < numax_vspec_input[i] ) {  /* frequency selection */
+                      
+                      rlc_emiss_vpkt(pkt_ptr, t_current, bin, obs, realtype);
+                      
+                      vflag = 1;
+                      
+                      // Need to update the starting cell for next observer
+                      // If previous vpkt reached tau_lim, change_cell (and then update_cell) hasn't been called
+                      mgi=cell[pkt_ptr->where].modelgridindex;
+                      update_cell(mgi);
+                      
+                  }
+                  
+              }
+              
+          }
+      
+      }
+      
+      
+      return vflag;
+      
+  }
+
+#endif
 

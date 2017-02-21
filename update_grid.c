@@ -1,5 +1,7 @@
 #include "sn3d.h"
-#include "vpkt.h"
+#ifdef VPKT_ON
+  #include "vpkt.h"
+#endif
 
 /** Subroutine to update the matter quantities in the grid cells at the start
    of the new timestep. */
@@ -395,16 +397,32 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                 modelgrid[n].grey_depth = grey_optical_depth;
                     
   //               grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
-                {
-                  printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
-                  modelgrid[n].thick = 1;
-                }
-                else if (grey_optical_depth > cell_is_optically_thick_vpkt )
-                {
-                    modelgrid[n].thick = 2;
-                }
-                else modelgrid[n].thick = 0;
+
+                #ifdef VPKT_ON
+
+                  if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                  {
+                    printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                    modelgrid[n].thick = 1;
+                  }
+                  else if (grey_optical_depth > cell_is_optically_thick_vpkt )
+                  {
+                      modelgrid[n].thick = 2;
+                  }
+                  else modelgrid[n].thick = 0;
+                
+                #else
+
+                  if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                  {
+                    printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                    modelgrid[n].thick = 1;
+                  }
+                  else modelgrid[n].thick = 0;
+
+                #endif
+
+
               }
               
               /// For all other timesteps temperature corrections have to be applied
@@ -470,17 +488,34 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                   modelgrid[n].grey_depth = grey_optical_depth;
   
   //                 grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                  if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
-                  {
-                    printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
-                    modelgrid[n].thick = 1;
-                  }
-                  else if (grey_optical_depth > cell_is_optically_thick_vpkt )
-                  {
-                      modelgrid[n].thick = 2;
-                  }
-                  else modelgrid[n].thick = 0;
-                
+                  #ifdef VPKT_ON
+
+                    if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                    {
+                      printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                      modelgrid[n].thick = 1;
+                    }
+                    else if (grey_optical_depth > cell_is_optically_thick_vpkt )
+                    {
+                        modelgrid[n].thick = 2;
+                    }
+                    else modelgrid[n].thick = 0;
+                  
+                  #else
+
+                    if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                    {
+                      printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                      modelgrid[n].thick = 1;
+                    }
+                    else modelgrid[n].thick = 0;
+
+                  #endif
+
+
+
+
+
                 #else 
                   /// non-LTE version of the code
                   if (initial_iteration == 1 || modelgrid[n].thick == 1)
@@ -543,16 +578,30 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     modelgrid[n].grey_depth = grey_optical_depth;
   
   //                   grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                    if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
-                    {
-                      printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
-                      modelgrid[n].thick = 1;
-                    }
-                    else if (grey_optical_depth > cell_is_optically_thick_vpkt )
-                    {
-                        modelgrid[n].thick = 2;
-                    }
-                    else modelgrid[n].thick = 0;
+                    #ifdef VPKT_ON
+
+                      if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                      {
+                        printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                        modelgrid[n].thick = 1;
+                      }
+                      else if (grey_optical_depth > cell_is_optically_thick_vpkt )
+                      {
+                          modelgrid[n].thick = 2;
+                      }
+                      else modelgrid[n].thick = 0;
+                    
+                    #else
+
+                      if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                      {
+                        printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                        modelgrid[n].thick = 1;
+                      }
+                      else modelgrid[n].thick = 0;
+
+                    #endif
+
                   }
                   
                   else
@@ -696,16 +745,31 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     modelgrid[n].grey_depth = grey_optical_depth;
                     
   //                   grey_optical_depth = SIGMA_T*nne*wid_init*tratmid;
-                    if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
-                    {
-                      printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
-                      modelgrid[n].thick = 1;
-                    }
-                    else if (grey_optical_depth > cell_is_optically_thick_vpkt )
-                    {
-                        modelgrid[n].thick = 2;
-                    }
-                    else modelgrid[n].thick = 0;
+                    #ifdef VPKT_ON
+
+                      if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                      {
+                        printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                        modelgrid[n].thick = 1;
+                      }
+                      else if (grey_optical_depth > cell_is_optically_thick_vpkt )
+                      {
+                          modelgrid[n].thick = 2;
+                      }
+                      else modelgrid[n].thick = 0;
+                    
+                    #else
+
+                      if (grey_optical_depth > cell_is_optically_thick && m < n_grey_timesteps)
+                      {
+                        printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+                        modelgrid[n].thick = 1;
+                      }
+                      else modelgrid[n].thick = 0;
+
+                    #endif
+
+                          
                   }
                 #endif
                   

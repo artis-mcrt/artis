@@ -13,7 +13,9 @@
 
 #include "threadprivate.h"
 #include "sn3d.h"
-#include "vpkt.h"
+#ifdef VPKT_ON
+  #include "vpkt.h"
+#endif
 #include "version.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
@@ -98,11 +100,12 @@ int main(int argc, char** argv)
   int real_time_start, do_this_full_loop;
 
 
-  nvpkt=0;
-  nvpkt_esc1=0;
-  nvpkt_esc2=0;
-  nvpkt_esc3=0;
-
+  #ifdef VPKT_ON
+    nvpkt=0;
+    nvpkt_esc1=0;
+    nvpkt_esc2=0;
+    nvpkt_esc3=0;
+  #endif
 
 
 //  int HUGEE;

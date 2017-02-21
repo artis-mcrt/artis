@@ -1,5 +1,7 @@
 #include "sn3d.h"
-#include "vpkt.h"
+#ifdef VPKT_ON
+  #include "vpkt.h"
+#endif
 #include <gsl/gsl_integration.h>
 
 
