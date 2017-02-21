@@ -347,14 +347,15 @@ static void density_1d_read(void)
 
 
   /// Determine the number of simulation cells associated with the model cells
-  for (int i = 0; i < npts_model; i++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
     int count = 0;
     for (int ii = 0; ii < ngrid; ii++)
     {
-      if (cell[ii].modelgridindex == i) count++;
+      if (cell[ii].modelgridindex == mgi)
+        count++;
     }
-    modelgrid[i].associated_cells = count;
+    mg_associated_cells[mgi] = count;
   }
 
 
@@ -363,7 +364,7 @@ static void density_1d_read(void)
 //    mgi = cell[n].modelgridindex;
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    if (modelgrid[mgi].associated_cells > 0)
+    if (mg_associated_cells[mgi] > 0)
     {
       const double helper = rho_model[mgi] * pow(t_model / tmin, 3);
       set_rhoinit(mgi,helper);
@@ -769,7 +770,7 @@ static void density_2d_read(void)
     {
       if (cell[ii].modelgridindex == i) count++;
     }
-    modelgrid[i].associated_cells = count;
+    mg_associated_cells[i] = count;
   }
 
 
@@ -778,7 +779,7 @@ static void density_2d_read(void)
 //    mgi = cell[n].modelgridindex;
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    if (modelgrid[mgi].associated_cells > 0)
+    if (mg_associated_cells[mgi] > 0)
     {
       const double helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
       set_rhoinit(mgi,helper);

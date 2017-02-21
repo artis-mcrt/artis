@@ -150,7 +150,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
         //nn = nonemptycells[my_rank+nncl*nprocs];
         MPI_Pack(&mgi, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
         //if (cell[nn].rho > MINDENSITY)
-        if (modelgrid[mgi].associated_cells > 0)
+        if (mg_associated_cells[mgi] > 0)
         {
           MPI_Pack(&modelgrid[mgi].thick, 1, MPI_SHORT, buffer, HUGEE, &position, MPI_COMM_WORLD);
           MPI_Pack(&modelgrid[mgi].rho, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
@@ -187,7 +187,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
       int mgi;
       MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
       //if (cell[ncl].rho > MINDENSITY)
-      if (modelgrid[mgi].associated_cells > 0)
+      if (mg_associated_cells[mgi] > 0)
       {
         MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
         MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
@@ -227,7 +227,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
           //nn = nonemptycells[my_rank+nncl*nprocs];
           MPI_Pack(&mgi, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
           //if (cell[nn].rho > MINDENSITY)
-          if (modelgrid[mgi].associated_cells > 0)
+          if (mg_associated_cells[mgi] > 0)
           {
             MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
           }
@@ -245,7 +245,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
         int mgi;
         MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
         //if (cell[ncl].rho > MINDENSITY)
-        if (modelgrid[mgi].associated_cells > 0)
+        if (mg_associated_cells[mgi] > 0)
         {
           MPI_Unpack(buffer2, HUGEE2, &position, modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
         }
@@ -1389,7 +1389,7 @@ int main(int argc, char** argv)
           for (mgi = nstart; mgi < (nstart+ndo); mgi++)
           {
             MPI_Pack(&mgi, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-            if (modelgrid[mgi].associated_cells > 0)
+            if (mg_associated_cells[mgi] > 0)
             {
               MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
               MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
@@ -1406,7 +1406,7 @@ int main(int argc, char** argv)
         for (int nn = 0; nn < nlp; nn++)
         {
           MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
-          if (modelgrid[mgi].associated_cells > 0)
+          if (mg_associated_cells[mgi] > 0)
           {
             MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
             MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);

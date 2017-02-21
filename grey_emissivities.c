@@ -139,7 +139,7 @@ void normalise_grey(int nts)
   double helper = pow(time_step[nts].mid / tmin, 3);
   for (int n = 0; n < npts_model; n++)
   {
-    int assoc_cells = modelgrid[n].associated_cells;
+    int assoc_cells = mg_associated_cells[n];
     double dV = vol_init() * helper; //vol_init(&cell[n]) in future coordinate systems
 
     rpkt_emiss[n] = rpkt_emiss[n] * ONEOVER4PI / dV / dt / nprocs / assoc_cells;

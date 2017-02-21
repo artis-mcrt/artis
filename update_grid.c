@@ -130,7 +130,7 @@ static void update_abundances(int modelgridindex, double t_current)
 
 static void write_to_estimators_file(int n, int timestep)
 {
-  if (modelgrid[n].associated_cells > 0)
+  if (mg_associated_cells[n] > 0)
   {
     //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
     //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
@@ -522,7 +522,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
       {
         /// Check if this task should work on the current model grid cell.
         /// If yes, do update grid
-        const int assoc_cells = modelgrid[n].associated_cells;
+        const int assoc_cells = mg_associated_cells[n];
         const double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
         if (assoc_cells > 0)
         {
@@ -1480,7 +1480,7 @@ void write_grid_restart_data(void)
 
   for (int n = 0; n < npts_model; n++)
   {
-    if (modelgrid[n].associated_cells > 0)
+    if (mg_associated_cells[n] > 0)
     {
       fprintf(gridsave_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
       #ifndef FORCE_LTE

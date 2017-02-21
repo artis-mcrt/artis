@@ -23,9 +23,9 @@ void time_init(void)
   /// Now setup the individual time steps
   for (int n = 0; n < ntstep; n++)
   {
-    time_step[n].start = tmin * exp(n*dlogt);
-    time_step[n].mid = tmin * exp((n+0.5)*dlogt);
-    time_step[n].width = (tmin * exp((n+1)*dlogt)) - time_step[n].start;
+    time_step[n].start = tmin * exp(n * dlogt);
+    time_step[n].mid = tmin * exp((n + 0.5) * dlogt);
+    time_step[n].width = (tmin * exp((n + 1) * dlogt)) - time_step[n].start;
     //time_step[n].start = tmin * n*dlogt;
     //time_step[n].mid = tmin * (n+0.5)*dlogt;
     //time_step[n].width = (tmin * (n+1)*dlogt) - time_step[n].start;

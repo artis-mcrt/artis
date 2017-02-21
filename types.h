@@ -256,8 +256,6 @@ typedef struct modelgrid_t
   double TR;
   double TJ;
   double W;
-  int associated_cells;
-  short thick;
   float initial_radial_pos;
   float rhoinit;
   float rho;
@@ -291,8 +289,8 @@ typedef struct modelgrid_t
 
   double totalcooling;
   mgicooling_t *cooling;
+  short thick;
 } modelgrid_t;
-
 
 /// Type definition for the sampling grid
 /*
