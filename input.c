@@ -2581,14 +2581,13 @@ void read_parameterfile(int rank)
   ///MK: end
 
   /// Do we start a new simulation or, continue another one?
-  fscanf(input_file, "%d", &dum1);
-  if (dum1 == 1)
-  {
-    simulation_continued_from_saved = true;        /// Continue simulation
-    printout("input: continue simulation\n");
-  }
+  int continue_flag;
+  fscanf(input_file, "%d", &continue_flag);
+  simulation_continued_from_saved = (continue_flag == 1);
+  if (simulation_continued_from_saved)
+    printout("input: resuming simulation from saved point\n");
   else
-    simulation_continued_from_saved = false;          /// Start a new simulation
+    printout("input: starting a new simulation\n");
 
   /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
   /// switches from the nebular approximation to LTE.

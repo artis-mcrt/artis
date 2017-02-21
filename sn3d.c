@@ -39,23 +39,28 @@ static FILE *initialise_linestat_file(void)
     abort();
   }
 
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g ", CLIGHT/linelist[i].nu);
-    fprintf(linestat_file,"\n");
+  for (int i = 0; i < nlines; i++)
+    fprintf(linestat_file, "%g ", CLIGHT/linelist[i].nu);
+  fprintf(linestat_file,"\n");
 
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_element(linelist[i].elementindex));
-    fprintf(linestat_file,"\n");
+  for (int i = 0; i < nlines; i++)
+    fprintf(linestat_file, "%d ", get_element(linelist[i].elementindex));
+  fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", get_ionstage(linelist[i].elementindex,linelist[i].ionindex));
-    fprintf(linestat_file,"\n");
+  for (int i = 0; i < nlines; i++)
+    fprintf(linestat_file, "%d ", get_ionstage(linelist[i].elementindex, linelist[i].ionindex));
+  fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].upperlevelindex+1);
-    fprintf(linestat_file,"\n");
+  for (int i = 0; i < nlines; i++)
+    fprintf(linestat_file, "%d ", linelist[i].upperlevelindex + 1);
+  fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%d ", linelist[i].lowerlevelindex+1);
-    fprintf(linestat_file,"\n");
+  for (int i = 0; i < nlines; i++)
+    fprintf(linestat_file, "%d ", linelist[i].lowerlevelindex + 1);
+  fprintf(linestat_file, "\n");
 
   fflush(linestat_file);
-  //setvbuf(linestat_file, NULL, _IOLBF, 1); //flush after every line makes it slow!
+  //setvbuf(linestat_file, NULL, _IOLBF, 1); // flush after every line makes it slow!
 
   return linestat_file;
 }
@@ -97,7 +102,7 @@ static void pkt_action_counters_printout(void)
   {
     allpktinteractions += pkt[i].interactions;
   }
-  double meaninteractions = allpktinteractions / npkts;
+  const double meaninteractions = allpktinteractions / npkts;
   printout("mean number of interactions per packet = %g\n",meaninteractions);
 
   /// Printout packet statistics
@@ -137,8 +142,9 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
   int position = 0;
   for (int n = 0; n < p; n++)
   {
-    radfield_MPI_Bcast(n, my_rank, nstart, ndo);
-    if (NT_ON && NT_SOLVE_SPENCERFANO && !(initial_iteration || modelgrid[n].thick == 1))
+    if (MULTIBIN_RADFIELD_MODEL_ON)
+      radfield_MPI_Bcast(n, my_rank, nstart, ndo);
+    if (NT_ON && NT_SOLVE_SPENCERFANO)
       nonthermal_MPI_Bcast(n, my_rank, nstart, ndo);
     if (my_rank == n)
     {
