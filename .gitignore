@@ -11,3 +11,4 @@ tags
 browse.VC.db
 *.optrpt
 sn3d.dSYM
+.tags
