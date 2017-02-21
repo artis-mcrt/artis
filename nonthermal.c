@@ -249,9 +249,6 @@ static double get_y_sample(int modelgridindex, int index)
 
 static void nonthermal_write_to_file(int modelgridindex, int timestep)
 {
-  if (timestep % 10 != 0)
-    return;
-
 # ifdef _OPENMP
 # pragma omp critical (nonthermal_out_file)
   {
@@ -1328,7 +1325,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   // gsl_matrix_free(sfmatrix_LU_decomp);
   gsl_vector_free(rhsvec);
 
-  nonthermal_write_to_file(modelgridindex, timestep);
+  if (timestep % 2 == 0)
+    nonthermal_write_to_file(modelgridindex, timestep);
 
   if (!gsl_vector_isnonneg(yvec))
   {

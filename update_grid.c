@@ -138,7 +138,7 @@ static void write_to_estimators_file(int n, int timestep)
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
-    if (NLTE_POPS_ON && timestep % 10 == 0)
+    if (NLTE_POPS_ON && timestep % 2 == 0)
       nltepop_write_to_file(n,timestep);
 
     fprintf(estimators_file, "populations ");
