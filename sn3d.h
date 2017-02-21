@@ -19,7 +19,7 @@ static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;  // solve the populati
 static const bool MULTIBIN_RADFIELD_MODEL_ON = true;  // if using this, should avoid look up tables and switch on
                                                        // direct integration options below
                                                        // (since they assume J_nu is Planck function)
-static const int FIRST_NLTE_RADFIELD_TIMESTEP = 14;
+static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 static const bool NO_LUT_PHOTOION = true; // dynamically calculate photoionization
                                            // rates for the current radiation field
                                            // instead of interpolating values from a
@@ -75,7 +75,7 @@ double tmin_vspec, tmax_vspec;
 double Nrange;
 double lmin_vspec[MRANGE], lmax_vspec[MRANGE];
 double numin_vspec[MRANGE], numax_vspec[MRANGE];
-double cell_is_optically_thick_vpkt = 0.;
+double cell_is_optically_thick_vpkt;
 double tau_max_vpkt;
 
 struct vspecpol
