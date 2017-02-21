@@ -1464,14 +1464,14 @@ static void read_grid_restart_data(void)
     abort();
   }
 
-  for (int n = 0; n < npts_model; n++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
     //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
     //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g %g %d\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy,&dummy,&idummy);
     double T_R,T_e,W,T_J;
-    int mgi,thick;
-    fscanf(gridsave_file,"%d %lg %lg %lg %lg %d",&mgi,&T_R,&T_e,&W,&T_J,&thick);
-    if (n == mgi)
+    int mgi_in,thick;
+    fscanf(gridsave_file,"%d %lg %lg %lg %lg %d",&mgi_in,&T_R,&T_e,&W,&T_J,&thick);
+    if (mgi_in == mgi)
     {
       set_TR(mgi, T_R);
       set_Te(mgi, T_e);
@@ -1486,8 +1486,8 @@ static void read_grid_restart_data(void)
           for (int ion = 0; ion < nions; ion++)
           {
             double Gamma;
-            fscanf(gridsave_file,"%lg ",&Gamma);
-            corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = Gamma;
+            fscanf(gridsave_file, "%lg ", &Gamma);
+            corrphotoionrenorm[mgi * nelements * maxion + element * maxion + ion] = Gamma;
           }
         }
 
@@ -1497,8 +1497,8 @@ static void read_grid_restart_data(void)
           for (int ion = 0; ion < nions; ion++)
           {
             double Gamma;
-            fscanf(gridsave_file,"%lg ",&Gamma);
-            gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma;
+            fscanf(gridsave_file, "%lg ", &Gamma);
+            gammaestimator[mgi * nelements * maxion + element * maxion + ion] = Gamma;
           }
         }
       #endif
@@ -1506,7 +1506,7 @@ static void read_grid_restart_data(void)
     else
     {
       printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
-      printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n",mgi,n);
+      printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n",mgi_in,mgi);
       abort();
     }
   }
@@ -1518,12 +1518,18 @@ static void read_grid_restart_data(void)
 
 
 static void assign_temperature(void)
-/// Routine for assigning temperatures to the grid cells at the start of the
-/// simulation.
+/// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
-  /// For a simulation started from scratch we estimate the initial temperatures
-  if (!simulation_continued_from_saved)
+  if (simulation_continued_from_saved)
   {
+    /// For continuation of an existing simulation we read the temperatures
+    /// at the end of the simulation and write them to the grid.
+    read_grid_restart_data();
+  }
+  else
+  {
+    /// For a simulation started from scratch we estimate the initial temperatures
+
     /// We assume that for early times the material is so optically thick, that
     /// all the radiation is trapped in the cell it originates from. This
     /// means furthermore LTE, so that both temperatures can be evaluated
@@ -1584,12 +1590,6 @@ static void assign_temperature(void)
 
       set_W(n, 1.);
     }
-  }
-  /// For continuation of an existing simulation we read the temperatures
-  /// at the end of the simulation and write them to the grid.
-  else
-  {
-    read_grid_restart_data();
   }
 }
 
