@@ -932,9 +932,6 @@ void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 {
-  if (!MULTIBIN_RADFIELD_MODEL_ON)
-    return;
-
   int sender_nstart;
   int sender_ndo;
   // double nu_lower_first;
