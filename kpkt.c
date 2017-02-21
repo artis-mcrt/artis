@@ -127,8 +127,7 @@ void calculate_kpkt_rates(int modelgridindex)
             for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
               const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-              const double epsilon_upper = epsilon(element,ion+1,upper);
-              const double epsilon_trans = epsilon_upper - epsilon_current;
+              const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
               //printout("cooling list: col_ionization\n");
               C += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
             }
