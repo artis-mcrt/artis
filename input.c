@@ -2471,7 +2471,7 @@ void read_parameterfile(int rank)
       /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
       /// to the thread-ID tid.
       unsigned long int zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
-      printout("rank %d: thread %d has zseed %d\n",rank,tid,zseed);
+      printout("rank %d: thread %d has zseed %d\n", rank, tid, zseed);
       /// start by setting up the randon number generator
       rng = gsl_rng_alloc(gsl_rng_ran3);
       gsl_rng_set(rng, zseed);
@@ -2555,19 +2555,18 @@ void read_parameterfile(int rank)
   fscanf(input_file, "%g", &dum2); // change speed of light?
   CLIGHT_PROP = dum2 * CLIGHT;
 
-  fscanf(input_file, "%g", &dum2); ///use grey opacity for gammas?
-  gamma_grey = dum2;
+  fscanf(input_file, "%lg", &gamma_grey); ///use grey opacity for gammas?
 
-  float dum4;
-  fscanf(input_file, "%g %g %g", &dum2, &dum3, &dum4); // components of syn_dir
+  float syn_dir_in[3];
+  fscanf(input_file, "%g %g %g", &syn_dir_in[0], &syn_dir_in[1], &syn_dir_in[2]); // components of syn_dir
 
-  const double rr = (dum2 * dum2) + (dum3 * dum3) + (dum4 * dum4);
+  const double rr = (syn_dir_in[0] * syn_dir_in[0]) + (syn_dir_in[1] * syn_dir_in[1]) + (syn_dir_in[2] * syn_dir_in[2]);
   /// ensure that this vector is normalised.
   if (rr > 1.e-6)
   {
-    syn_dir[0] = dum2 / sqrt(rr);
-    syn_dir[1] = dum3 / sqrt(rr);
-    syn_dir[2] = dum4 / sqrt(rr);
+    syn_dir[0] = syn_dir_in[0] / sqrt(rr);
+    syn_dir[1] = syn_dir_in[1] / sqrt(rr);
+    syn_dir[2] = syn_dir_in[2] / sqrt(rr);
   }
   else
   {
@@ -2581,8 +2580,7 @@ void read_parameterfile(int rank)
   fscanf(input_file, "%d", &opacity_case); // opacity choice
 
   ///MK: begin
-  fscanf(input_file, "%g", &dum2); ///free parameter for calculation of rho_crit
-  rho_crit_para = dum2;
+  fscanf(input_file, "%lg", &rho_crit_para); ///free parameter for calculation of rho_crit
   printout("input: rho_crit_para %g\n", rho_crit_para);
   ///the calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
 
