@@ -267,15 +267,16 @@ double radfield_get_bin_T_R(int modelgridindex, int binindex)
 int radfield_select_bin(int modelgridindex, double nu)
 {
   // linear search one by one until found
+  if (nu < radfield_get_bin_nu_lower(modelgridindex, 0))
+    return -1; // out of range, nu lower than lowest bin
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
   {
-    if (radfield_get_bin_nu_lower(modelgridindex, binindex) < nu &&
-        radfieldbin_nu_upper[modelgridindex][binindex] >= nu)
+    if (radfieldbin_nu_upper[modelgridindex][binindex] > nu)
     {
       return binindex;
     }
   }
-  return -1;
+  return -1; // out of range, nu higher than higher bin
 
   // binary search for bin with nu_lower <= nu > nu_upper
   // int low = 0;
