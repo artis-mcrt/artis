@@ -1455,8 +1455,8 @@ static void write_bflist_file(int includedionisinglevels)
       }
     }
   }
-  if (rank_global == 0) fclose(bflist_file);
-
+  if (rank_global == 0)
+    fclose(bflist_file);
 }
 
 
@@ -1480,7 +1480,6 @@ static void setup_coolinglist(void)
     }
   }
   printout("[info] read_atomicdata: number of coolingterms %d\n",ncoolingterms);*/
-
 
   ncoolingterms = 0;
   for (int element = 0; element < nelements; element++)
@@ -1566,10 +1565,10 @@ static void setup_phixs_list(void)
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions-1; ion++)
       {
-        double epsilon_upper = epsilon(element,ion+1,0);
-        int level = 0; //TODO: this needs updating for multilevel ionization
-        double E_threshold = epsilon_upper - epsilon(element,ion,level);
-        double nu_edge = E_threshold/H;
+        const int level = 0;
+        const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
+        const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+        const double nu_edge = E_threshold / H;
         phixslist[itid].groundcont[i].element = element;
         phixslist[itid].groundcont[i].ion = ion;
         phixslist[itid].groundcont[i].level = level;
@@ -1594,7 +1593,7 @@ static void setup_phixs_list(void)
     for (int element = 0; element < nelements; element++)
     {
       const int nions = get_nions(element);
-      for (int ion = 0; ion < nions-1; ion++)
+      for (int ion = 0; ion < nions - 1; ion++)
       {
         const int nlevels = get_bfcontinua(element,ion);
         //nlevels = get_ionisinglevels(element,ion);
@@ -1602,9 +1601,9 @@ static void setup_phixs_list(void)
         //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
         for (int level = 0; level < nlevels; level++)
         {
-          int upperlevel = get_phixsupperlevel(element,ion,level,0);
-          double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
-          double nu_edge = E_threshold/H;
+          const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
+          const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+          const double nu_edge = E_threshold / H;
 
           int index_in_groundlevelcontestimator;
 
@@ -1613,7 +1612,8 @@ static void setup_phixs_list(void)
           phixslist[itid].allcont[i].level = level;
           phixslist[itid].allcont[i].nu_edge = nu_edge;
           phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge,&index_in_groundlevelcontestimator,element,ion,level);
-          if (itid == 0) elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
+          if (itid == 0)
+            elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
           i++;
         }
       }
@@ -1761,7 +1761,7 @@ static void read_atomicdata(void)
 }
 
 
-static int read_1d_model(void)
+static void read_1d_model(void)
 /// Subroutine to read in a 1-D model.
 {
   FILE *model_input;
@@ -1841,12 +1841,10 @@ static int read_1d_model(void)
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
   printout("rmax %g\n", rmax);
-
-  return 0;
 }
 
 
-static int read_2d_model(void)
+static void read_2d_model(void)
 /// Subroutine to read in a 2-D model.
 {
   FILE *model_input;
@@ -1929,12 +1927,10 @@ static int read_2d_model(void)
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
   printout("rmax %g\n", rmax);
-
-  return 0;
 }
 
 
-static int read_3d_model(void)
+static void read_3d_model(void)
 /// Subroutine to read in a 3-D model.
 {
   float dum2, dum3, dum4, dum5, dum6;
@@ -2119,8 +2115,6 @@ static int read_3d_model(void)
 //        printout("Unknown opacity case. Abort.\n");
 //        abort();
 //      }
-
-   return 0;
 }
 
 
@@ -2157,7 +2151,7 @@ static void read_binding_energies(void)
 }
 
 
-int input(int rank)
+void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
   homogeneous_abundances = false;
@@ -2434,8 +2428,6 @@ int input(int rank)
       }
     }
   #endif
-
-  return 0;
 }
 
 

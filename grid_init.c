@@ -1218,14 +1218,10 @@ void allocate_compositiondata(int modelgridindex)
     modelgrid[modelgridindex].composition[element].abundance = 0.;
 
     /// and allocate memory to store the ground level populations for each ionisation stage
-    if ((modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) malloc(get_nions(element)*sizeof(float))) == NULL)
+    if ((modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) calloc(get_nions(element), sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
       abort();
-    }
-    for (int ion_index = 0; ion_index < get_nions(element); ion_index++)
-    {
-      modelgrid[modelgridindex].composition[element].groundlevelpop[ion_index]=0.0;
     }
 
     if ((modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element)*sizeof(float))) == NULL)
