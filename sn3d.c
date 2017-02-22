@@ -377,7 +377,7 @@ static void mpi_reduce_estimators(int my_rank)
   }
   if (do_comp_est)
   {
-    MPI_Reduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID*EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
