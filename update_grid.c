@@ -315,7 +315,472 @@ static double calculate_elem_Gamma(int modelgridindex, int element, int ion)
 }
 
 
-void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
+static void update_grid_cell(int n, int nts, int titer, double tratmid, double deltaV, double deltat, double* mps)
+// n is the modelgrid index
+{
+  const int assoc_cells = mg_associated_cells[n];
+  if (assoc_cells > 0)
+  {
+    // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
+    const bool log_this_cell = true;
+    //cellnumber = modelgrid[n].cellnumber;
+    /// Update current mass density of cell
+    //n = nonemptycells[my_rank+ncl*nprocs];
+    if (log_this_cell)
+      printout("[info] update_grid: working on cell %d ...\n", n);
+    //n = nonemptycells[ncl];
+    //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
+    modelgrid[n].rho = modelgrid[n].rhoinit / pow(tratmid, 3);
+    //cell[n].rho = cell[n].rho_init / pow(tratmid,3);
+    //rho = cell[n].rho;
+    /// This is done outside update grid now
+    //modelgrid[n].totalcooling = COOLING_UNDEFINED;
+
+    if (opacity_case == 4)
+    {
+      /// Update abundances of radioactive isotopes
+      //printout("call update abundances for timestep %d in model cell %d\n",m,n);
+      update_abundances(n, time_step[nts].mid);
+
+      /// For timestep 0 we calculate the level populations straight forward wihout
+      /// applying any temperature correction
+      if ((nts - itstep) == 0 && titer == 0)
+      {
+        /// Determine renormalisation factor for corrected photoionisation cross-sections
+        #ifndef FORCE_LTE
+        if (!simulation_continued_from_saved)
+        {
+          for (int element = 0; element < nelements; element++)
+          {
+            const int nions = get_nions(element);
+            for (int ion = 0; ion < nions; ion++)
+            {
+              corrphotoionrenorm[n * nelements * maxion + element * maxion + ion] = 1.;
+            }
+          }
+        }
+        #endif
+
+        /// W == 1 indicates that this modelgrid cell was treated grey in the
+        /// last timestep. Therefore it has no valid Gamma estimators and must
+        /// be treated in LTE at restart.
+        if (modelgrid[n].thick == 0 && get_W(n) == 1)
+        {
+          if (log_this_cell)
+            printout("force modelgrid cell to be grey at restart\n");
+          modelgrid[n].thick = 1;
+        }
+        if (log_this_cell)
+        {
+          printout("initial_iteration %d\n",initial_iteration);
+          printout("modelgrid.thick: %d\n",modelgrid[n].thick);
+        }
+        precalculate_partfuncts(n);
+        //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
+        calculate_populations(n);
+      }
+      else
+      /// For all other timesteps temperature corrections have to be applied
+      {
+        /// we have to calculate the electron density
+        /// and all the level populations
+        /// Normalise estimators and make sure that they are finite.
+        /// Then update T_R and W using the estimators.
+        /// (This could in principle also be done for empty cells)
+
+        #ifndef FORCE_LTE
+        const double estimator_normfactor = 1 / (deltaV * deltat) / nprocs / assoc_cells;
+        const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
+
+        if (initial_iteration || modelgrid[n].thick == 1)
+        #endif
+        {
+          /// LTE version of the code
+          if (!isfinite(J[n]))
+          {
+            printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
+            abort();
+          }
+          J[n] *= estimator_normfactor_over4pi;
+
+          #ifdef DO_TITER
+            if (J_reduced_save[n] >= 0)
+            {
+              J[n] = (J[n] + J_reduced_save[n]) / 2;
+            }
+            J_reduced_save[n] = J[n];
+          #endif
+
+          double T_R = pow(PI / STEBO * J[n], 1/4);
+          if (isfinite(T_R))
+          {
+            /// Make sure that T is in the allowed temperature range.
+            if (T_R > MAXTEMP)
+              T_R = MAXTEMP;
+            if (T_R < MINTEMP)
+              T_R = MINTEMP;
+          }
+          else
+          {
+            /// keep old value of T_R
+            printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",n);
+            T_R = modelgrid[n].TR;
+          }
+          set_TR(n, T_R);
+          set_Te(n, T_R);
+          set_TJ(n, T_R);
+          set_W(n, 1);
+
+          #ifndef FORCE_LTE
+          /// These don't depend on T_e, therefore take them out of the T_e iteration
+          for (int element = 0; element < nelements; element++)
+          {
+            const int nions = get_nions(element);
+            for (int ion = 0; ion < nions-1; ion++)
+            {
+              corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 1.;
+            }
+          }
+          #endif
+
+          precalculate_partfuncts(n);
+          calculate_populations(n);
+        }
+        #ifndef FORCE_LTE
+        else // not (initial_iteration || modelgrid[n].thick == 1)
+        {
+          /// Calculate estimators
+          if (!isfinite(nuJ[n]) || !isfinite(J[n]))
+          {
+            printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
+            abort();
+          }
+
+          J[n] *= estimator_normfactor_over4pi;
+          nuJ[n] *= estimator_normfactor_over4pi;
+          radfield_set_J_normfactor(n, estimator_normfactor_over4pi);
+          ffheatingestimator[n] *= estimator_normfactor;
+          colheatingestimator[n] *= estimator_normfactor;
+
+          #ifdef DO_TITER
+            if (J_reduced_save[n] >= 0)
+            {
+              J[n] = (J[n] + J_reduced_save[n]) / 2;
+            }
+            J_reduced_save[n] = J[n];
+            if (nuJ_reduced_save[n] >= 0)
+            {
+              nuJ[n] = (nuJ[n] + nuJ_reduced_save[n]) / 2;
+            }
+            nuJ_reduced_save[n] = nuJ[n];
+            if (ffheatingestimator_save[n] >= 0)
+            {
+              ffheatingestimator[n] = (ffheatingestimator[n] + ffheatingestimator_save[n]) / 2;
+            }
+            ffheatingestimator_save[n] = ffheatingestimator[n];
+            if (colheatingestimator_save[n] >= 0)
+            {
+              colheatingestimator[n] = (colheatingestimator[n] + colheatingestimator_save[n]) / 2;
+            }
+            colheatingestimator_save[n] = colheatingestimator[n];
+          #endif
+
+          for (int element = 0; element < nelements; element++)
+          {
+            const int nions = get_nions(element);
+            for (int ion = 0; ion < nions - 1; ion++)
+            {
+              //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[n*nelements*maxion+element*maxion+ion]);
+              gammaestimator[n*nelements*maxion+element*maxion+ion] *= estimator_normfactor / H;
+              //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[n*nelements*maxion+element*maxion+ion]);
+              #ifdef DO_TITER
+                if (gammaestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
+                {
+                  gammaestimator[n*nelements*maxion+element*maxion+ion] = (gammaestimator[n*nelements*maxion+element*maxion+ion] + gammaestimator_save[n*nelements*maxion+element*maxion+ion]) / 2;
+                }
+                gammaestimator_save[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion];
+              #endif
+
+              corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion] /
+                                                                          get_corrphotoioncoeff_ana(element,ion,0,0,n);
+
+              if (!isfinite(corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]))
+              {
+                printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,gammaestimator[n*nelements*maxion+element*maxion+ion],get_corrphotoioncoeff_ana(element,ion,0,0,n));
+                abort();
+              }
+
+            /// 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm values
+            /// so that the values are known when required by the call to get_corrphotoioncoeff in the following
+            /// loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest corrphotoionrenorm
+            /// in frequency space which can lead to zero contributions to the total photoionsation rate!
+            }
+          }
+          /// Then reopen the same loops again.
+          for (int element = 0; element < nelements; element++)
+          {
+            const int nions = get_nions(element);
+            for (int ion = 0; ion < nions-1; ion++)
+            {
+              /// Reuse the gammaestimator array as temporary storage of the Gamma values during
+              /// the remaining part of the update_grid phase. Afterwards it is reset to record
+              /// the next timesteps gamma estimators.
+              //nlevels = get_nlevels(element,ion);
+              //nlevels = get_ionisinglevels(element,ion);
+              int ionestimindex = n*nelements*maxion+element*maxion + ion;
+              gammaestimator[ionestimindex] = calculate_elem_Gamma(n, element, ion);
+              //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
+
+              bfheatingestimator[ionestimindex] *= estimator_normfactor;
+              #ifdef DO_TITER
+                if (bfheatingestimator_save[ionestimindex] >= 0)
+                {
+                  bfheatingestimator[ionestimindex] = (bfheatingestimator[ionestimindex]+bfheatingestimator_save[ionestimindex])/2.;
+                }
+                bfheatingestimator_save[ionestimindex] = bfheatingestimator[ionestimindex];
+              #endif
+              /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
+              /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
+
+              bfheatingestimator[ionestimindex] = bfheatingestimator[ionestimindex] / get_bfheatingcoeff_ana(element,ion,0,0,n);
+
+              if (!isfinite(bfheatingestimator[ionestimindex]))
+              {
+                printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[ionestimindex],get_bfheatingcoeff_ana(element,ion,0,0,n));
+                abort();
+              }
+
+              //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[ionestimindex]);
+            }
+          }
+
+          // Get radiation field parameters out of the estimators
+          radfield_fit_parameters(n,nts);
+
+          int nlte_iter = 0;
+          double nlte_test = 2.; //ratio of previous to current iteration's free electron density solution
+          while (nlte_test > 1.03)
+          {
+            if (NLTE_POPS_ON)
+            {
+              //recalculate the Gammas using the current population estimates
+              if (nlte_iter != 0)
+              {
+                for (int element = 0; element < nelements; element++)
+                {
+                  const int nions = get_nions(element);
+                  for (int ion = 0; ion < nions - 1; ion++)
+                  {
+                    gammaestimator[n*nelements*maxion+element*maxion + ion] = calculate_elem_Gamma(n, element, ion);
+                  }
+                }
+              }
+            }
+            else
+            {
+              /// These don't depend on T_e, therefore take them out of the T_e iteration
+              precalculate_partfuncts(n);
+            }
+
+            /// Find T_e as solution for thermal balance
+            double T_e_old = get_Te(n);
+            double T_e;
+            if (titer == 0)
+              T_e = call_T_e_finder(n,time_step[nts - 1].mid,MINTEMP,MAXTEMP);
+            else
+              T_e = call_T_e_finder(n,time_step[nts].mid,MINTEMP,MAXTEMP);
+
+            if (T_e > 2 * T_e_old)
+            {
+              T_e = 2 * T_e_old;
+              printout("use T_e damping in cell %d\n",n);
+              if (T_e > MAXTEMP)
+                T_e = MAXTEMP;
+            }
+            else if (T_e < 0.5 * T_e_old)
+            {
+              T_e = 0.5 * T_e_old;
+              printout("use T_e damping in cell %d\n",n);
+              if (T_e < MINTEMP)
+                T_e = MINTEMP;
+            }
+            //T_e = T_J;
+            set_Te(n,T_e);
+
+            if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
+            {
+              /// Store population values to the grid
+              calculate_populations(n);
+              //calculate_cooling_rates(n);
+              //calculate_heating_rates(n);
+            }
+
+            if (NLTE_POPS_ON)
+            {
+              nlte_test = 0.0;
+              for (int element = 0; element < nelements; element++)
+              {
+                if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
+                  solve_nlte_pops_element(element, n, nts);
+                else
+                {
+                  const int nions = get_nions(element);
+                  for (int ion = 0; ion < nions-1; ion++)
+                  {
+                    double trial = solve_nlte_pops(element, ion, n, nts);
+                    if ((trial < 1.0) && (trial > 0.0))
+                      trial = 1. / trial;
+
+                    if (trial > nlte_test)
+                      nlte_test = trial;
+
+                    //printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
+                  }
+                }
+              }
+
+              if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
+              {
+                printout("Completed iteration of NLTE population solver in cell %d for timestep %d.\n", n, nts);
+                double oldnne = get_nne(n);
+                precalculate_partfuncts(n);
+                calculate_electron_densities(n); // sets nne
+                nlte_test = get_nne(n) / oldnne;
+                if (nlte_test < 1)
+                  nlte_test = 1. / nlte_test;
+                printout("nne/NLTE solver iteration %d: previous nne is %g, new nne is %g, accuracy is %g\n",nlte_iter,oldnne,get_nne(n),nlte_test);
+                //set_nne(n, (get_nne(n) + oldnne) / 2.);
+              }
+              else
+                printout("Completed iteration for NLTE population solver in cell %d for timestep %d. Fractional error returned: %g\n", n, nts, nlte_test - 1.);
+
+              if (nlte_iter > NLTEITER)
+              {
+                printout("NLTE solver failed to converge after %d iterations. Test ratio %g.\n", NLTEITER + 1, nlte_test);
+                nlte_test = 0.0;
+              }
+              nlte_iter++;
+            }
+            else
+            {
+              // no NLTE means no NLTE iterations required, so pass it
+              nlte_test = 1.0;
+            }
+          }
+          if (NLTE_POPS_ON && nlte_iter <= NLTEITER)
+            printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test - 1., nlte_iter);
+        }
+        #endif
+        if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
+          nt_solve_spencerfano(n,nts);  // should this be moved inside the NLTE population solver? would be slower but more accurate
+      }
+
+      const double nne = get_nne(n);
+      const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
+
+      const double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
+      const double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init * tratmid;
+      const double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
+      if (log_this_cell)
+      {
+        printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
+        printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+        //printout("rmax %g, tratmid %g\n",rmax,tratmid);
+      }
+      modelgrid[n].grey_depth = grey_optical_depth;
+
+//          grey_optical_depth = compton_optical_depth;
+      if ((grey_optical_depth > cell_is_optically_thick) && (nts < n_grey_timesteps))
+      {
+        printout("cell %d is treated in grey approximation (tau %g)\n", n, grey_optical_depth);
+        modelgrid[n].thick = 1;
+      }
+      // else if (grey_optical_depth > cell_is_optically_thick_vpkt)
+      //   modelgrid[n].thick = 2;
+      else
+        modelgrid[n].thick = 0;
+
+      /// Temperatures are are now written to file outside the parallel block!
+
+      /// Reset the volume estimators to zero for the current timestep
+      /// Moved next lines to zero_estimators routine (SS)
+      /*
+      nuJ[n] = 0.;
+      J[n] = 0.;
+      cell[n].heating_ff = 0.;
+      cell[n].heating_bf = 0.;
+      */
+
+
+      //set_kappagrey(n,SIGMA_T);
+
+      /// Cooling rates depend only on cell properties, precalculate total cooling
+      /// and ion contributions inside update grid and communicate between MPI tasks
+      calculate_kpkt_rates(n);
+    }
+    else if (opacity_case == 3)
+    {
+      /// MK Begin
+      //printout("update_grid: opacity_case 3 ... updating cell[n].kappa_grey"); //MK
+      if (get_rho(n) > rho_crit)
+      {
+        set_kappagrey(n, opcase3_normal * (0.9 * get_ffe(n) + 0.1) * rho_crit/get_rho(n));
+      }
+      else
+      {
+        set_kappagrey(n, opcase3_normal * (0.9 * get_ffe(n) + 0.1));
+      }
+      /// MK End
+    }
+
+    if (do_rlc_est == 2 && get_nne(n) > 0)
+    {
+      double cell_len_scale = 0.1 / get_nne(n) / SIGMA_T;
+      if (cell_len_scale < mps[tid])
+      {
+        mps[tid] = cell_len_scale;
+      }
+      cell_len_scale = 0.1 / get_rho(n) / GREY_OP;
+      if (cell_len_scale <  mps[tid])
+      {
+        mps[tid] = cell_len_scale;
+      }
+    }
+  }
+  else
+  {
+    /// For modelgrid cells that are not represented in the simulation grid,
+    /// Set grid properties to zero
+    set_TR(n, 0.);
+    set_TJ(n, 0.);
+    set_Te(n, 0.);
+    set_W(n, 0.);
+
+    #ifndef FORCE_LTE
+      for (int element = 0; element < nelements; element++)
+      {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++)
+        {
+          const int estimindex = n * nelements * maxion + element * maxion + ion;
+          corrphotoionrenorm[estimindex] = 0.;
+          gammaestimator[estimindex] = 0.;
+        }
+      }
+    #endif
+  }
+
+  //maybe want to add omp ordered here if the modelgrid cells should be output in order
+  #ifdef _OPENMP
+  #pragma omp critical(estimators_file)
+  #endif
+  {
+    write_to_estimators_file(n,nts);
+  }
+}
+
+
+void update_grid(int nts, int my_rank, int nstart, int ndo, int titer)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 /// m timestep
@@ -394,12 +859,12 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
   if (nts == 0)
   {
     t_previous = 0.;
-    deltaV = pow(wid_init * trat,3);  /// volume of grid cell: current or previous cell size???????????????????
+    deltaV = pow(wid_init * trat, 3);  /// volume of grid cell: current or previous cell size???????????????????
   }
   else
   {
     t_previous = time_step[nts - 1].start;
-    deltaV = pow(wid_init * time_step[nts - 1].mid / tmin,3);  /// volume of grid cell: current or previous cell size???????????????????
+    deltaV = pow(wid_init * time_step[nts - 1].mid / tmin, 3);  /// volume of grid cell: current or previous cell size???????????????????
     /*if (nts == 1)
     {
       dt_elapsed = (log(time_step[nts-1].mid) - log(time_step[nts-1].start));
@@ -519,470 +984,11 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
     //for (n = nstart; n < nstart+nblock; n++)
     for (int n = 0; n < npts_model; n++)
     {
-      if (n >= nstart && n < nstart + nblock)
+      /// Check if this task should work on the current model grid cell.
+      /// If yes, update the cell
+      if (n >= nstart && n < nstart + ndo)
       {
-        /// Check if this task should work on the current model grid cell.
-        /// If yes, do update grid
-        const int assoc_cells = mg_associated_cells[n];
-        const double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
-        if (assoc_cells > 0)
-        {
-          // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
-          const bool log_this_cell = true;
-          //cellnumber = modelgrid[n].cellnumber;
-          /// Update current mass density of cell
-          //n = nonemptycells[my_rank+ncl*nprocs];
-          if (log_this_cell)
-            printout("[info] update_grid: working on cell %d ...\n",n);
-          //n = nonemptycells[ncl];
-          //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
-          modelgrid[n].rho = modelgrid[n].rhoinit / pow(tratmid,3);
-          //cell[n].rho = cell[n].rho_init / pow(tratmid,3);
-          //rho = cell[n].rho;
-          /// This is done outside update grid now
-          //modelgrid[n].totalcooling = COOLING_UNDEFINED;
-
-          if (opacity_case == 4)
-          {
-            /// Update abundances of radioactive isotopes
-            //printout("call update abundances for timestep %d in model cell %d\n",m,n);
-            update_abundances(n, time_step[nts].mid);
-
-            /// For timestep 0 we calculate the level populations straight forward wihout
-            /// applying any temperature correction
-            if ((nts - itstep) == 0 && titer == 0)
-            {
-              /// Determine renormalisation factor for corrected photoionsiation cross-sections
-#ifndef FORCE_LTE
-              if (!simulation_continued_from_saved)
-              {
-                for (int element = 0; element < nelements; element++)
-                {
-                  const int nions = get_nions(element);
-                  for (int ion = 0; ion < nions; ion++)
-                  {
-                    corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 1.;
-                  }
-                }
-              }
-#endif
-
-              /// W == 1 indicates that this modelgrid cell was treated grey in the
-              /// last timestep. Therefore it has no valid Gamma estimators and must
-              /// be treated in LTE at restart.
-              if (modelgrid[n].thick == 0 && get_W(n) == 1)
-              {
-                if (log_this_cell)
-                  printout("force modelgrid cell to be grey at restart\n");
-                modelgrid[n].thick = 1;
-              }
-              if (log_this_cell)
-              {
-                printout("initial_iteration %d\n",initial_iteration);
-                printout("modelgrid.thick: %d\n",modelgrid[n].thick);
-              }
-              precalculate_partfuncts(n);
-              //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
-              calculate_populations(n);
-            }
-            /// For all other timesteps temperature corrections have to be applied
-            else
-            {
-              /// we have to calculate the electron density
-              /// and all the level populations
-              /// Normalise estimators and make sure that they are finite.
-              /// Then update T_R and W using the estimators.
-              /// (This could in principle also be done for empty cells)
-
-#ifndef FORCE_LTE
-              const double estimator_normfactor = 1 / (deltaV * deltat) / nprocs / assoc_cells;
-              const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
-
-              if (initial_iteration || modelgrid[n].thick == 1)
-#endif
-              {
-                /// LTE version of the code
-                if (!isfinite(J[n]))
-                {
-                  printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
-                  abort();
-                }
-                J[n] *= estimator_normfactor_over4pi;
-
-                #ifdef DO_TITER
-                  if (J_reduced_save[n] >= 0)
-                  {
-                    J[n] = (J[n] + J_reduced_save[n]) / 2;
-                  }
-                  J_reduced_save[n] = J[n];
-                #endif
-
-                double T_R = pow(PI / STEBO * J[n], 1/4);
-                if (isfinite(T_R))
-                {
-                  /// Make sure that T is in the allowed temperature range.
-                  if (T_R > MAXTEMP)
-                    T_R = MAXTEMP;
-                  if (T_R < MINTEMP)
-                    T_R = MINTEMP;
-                }
-                else
-                {
-                  /// keep old value of T_R
-                  printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",n);
-                  T_R = modelgrid[n].TR;
-                }
-                set_TR(n,T_R);
-                set_Te(n,T_R);
-                set_TJ(n,T_R);
-                set_W(n,1);
-
-                #ifndef FORCE_LTE
-                /// These don't depend on T_e, therefore take them out of the T_e iteration
-                for (int element = 0; element < nelements; element++)
-                {
-                  const int nions = get_nions(element);
-                  for (int ion = 0; ion < nions-1; ion++)
-                  {
-                    corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 1.;
-                  }
-                }
-                #endif
-
-                precalculate_partfuncts(n);
-                calculate_populations(n);
-              }
-              #ifndef FORCE_LTE
-              else // not (initial_iteration || modelgrid[n].thick == 1)
-              {
-                /// Calculate estimators
-                if (!isfinite(nuJ[n]) || !isfinite(J[n]))
-                {
-                  printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
-                  abort();
-                }
-
-                J[n] *= estimator_normfactor_over4pi;
-                nuJ[n] *= estimator_normfactor_over4pi;
-                radfield_set_J_normfactor(n, estimator_normfactor_over4pi);
-                ffheatingestimator[n] *= estimator_normfactor;
-                colheatingestimator[n] *= estimator_normfactor;
-
-                #ifdef DO_TITER
-                  if (J_reduced_save[n] >= 0)
-                  {
-                    J[n] = (J[n] + J_reduced_save[n]) / 2;
-                  }
-                  J_reduced_save[n] = J[n];
-                  if (nuJ_reduced_save[n] >= 0)
-                  {
-                    nuJ[n] = (nuJ[n] + nuJ_reduced_save[n]) / 2;
-                  }
-                  nuJ_reduced_save[n] = nuJ[n];
-                  if (ffheatingestimator_save[n] >= 0)
-                  {
-                    ffheatingestimator[n] = (ffheatingestimator[n] + ffheatingestimator_save[n]) / 2;
-                  }
-                  ffheatingestimator_save[n] = ffheatingestimator[n];
-                  if (colheatingestimator_save[n] >= 0)
-                  {
-                    colheatingestimator[n] = (colheatingestimator[n] + colheatingestimator_save[n]) / 2;
-                  }
-                  colheatingestimator_save[n] = colheatingestimator[n];
-                #endif
-
-                for (int element = 0; element < nelements; element++)
-                {
-                  const int nions = get_nions(element);
-                  for (int ion = 0; ion < nions - 1; ion++)
-                  {
-                    //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[n*nelements*maxion+element*maxion+ion]);
-                    gammaestimator[n*nelements*maxion+element*maxion+ion] *= estimator_normfactor / H;
-                    //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[n*nelements*maxion+element*maxion+ion]);
-                    #ifdef DO_TITER
-                      if (gammaestimator_save[n*nelements*maxion+element*maxion+ion] >= 0)
-                      {
-                        gammaestimator[n*nelements*maxion+element*maxion+ion] = (gammaestimator[n*nelements*maxion+element*maxion+ion] + gammaestimator_save[n*nelements*maxion+element*maxion+ion]) / 2;
-                      }
-                      gammaestimator_save[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion];
-                    #endif
-
-                    corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = gammaestimator[n*nelements*maxion+element*maxion+ion] /
-                                                                                get_corrphotoioncoeff_ana(element,ion,0,0,n);
-
-                    if (!isfinite(corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]))
-                    {
-                      printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,gammaestimator[n*nelements*maxion+element*maxion+ion],get_corrphotoioncoeff_ana(element,ion,0,0,n));
-                      abort();
-                    }
-
-                  /// 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm values
-                  /// so that the values are known when required by the call to get_corrphotoioncoeff in the following
-                  /// loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest corrphotoionrenorm
-                  /// in frequency space which can lead to zero contributions to the total photoionsation rate!
-                  }
-                }
-                /// Then reopen the same loops again.
-                for (int element = 0; element < nelements; element++)
-                {
-                  const int nions = get_nions(element);
-                  for (int ion = 0; ion < nions-1; ion++)
-                  {
-                    /// Reuse the gammaestimator array as temporary storage of the Gamma values during
-                    /// the remaining part of the update_grid phase. Afterwards it is reset to record
-                    /// the next timesteps gamma estimators.
-                    //nlevels = get_nlevels(element,ion);
-                    //nlevels = get_ionisinglevels(element,ion);
-                    int ionestimindex = n*nelements*maxion+element*maxion + ion;
-                    gammaestimator[ionestimindex] = calculate_elem_Gamma(n, element, ion);
-                    //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
-
-                    bfheatingestimator[ionestimindex] *= estimator_normfactor;
-                    #ifdef DO_TITER
-                      if (bfheatingestimator_save[ionestimindex] >= 0)
-                      {
-                        bfheatingestimator[ionestimindex] = (bfheatingestimator[ionestimindex]+bfheatingestimator_save[ionestimindex])/2.;
-                      }
-                      bfheatingestimator_save[ionestimindex] = bfheatingestimator[ionestimindex];
-                    #endif
-                    /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
-                    /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
-
-                    bfheatingestimator[ionestimindex] = bfheatingestimator[ionestimindex] / get_bfheatingcoeff_ana(element,ion,0,0,n);
-
-                    if (!isfinite(bfheatingestimator[ionestimindex]))
-                    {
-                      printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[ionestimindex],get_bfheatingcoeff_ana(element,ion,0,0,n));
-                      abort();
-                    }
-
-                    //printout("cell %d element %d ion %d bfheatingestimator %g\n",n,element,ion,bfheatingestimator[ionestimindex]);
-                  }
-                }
-
-                // Get radiation field parameters out of the estimators
-                radfield_fit_parameters(n,nts);
-
-                int nlte_iter = 0;
-                double nlte_test = 2.; //ratio of previous to current iteration's free electron density solution
-                while (nlte_test > 1.03)
-                {
-                  if (NLTE_POPS_ON)
-                  {
-                    //recalculate the Gammas using the current population estimates
-                    if (nlte_iter != 0)
-                    {
-                      for (int element = 0; element < nelements; element++)
-                      {
-                        const int nions = get_nions(element);
-                        for (int ion = 0; ion < nions - 1; ion++)
-                        {
-                          gammaestimator[n*nelements*maxion+element*maxion + ion] = calculate_elem_Gamma(n, element, ion);
-                        }
-                      }
-                    }
-                  }
-                  else
-                  {
-                    /// These don't depend on T_e, therefore take them out of the T_e iteration
-                    precalculate_partfuncts(n);
-                  }
-
-                  /// Find T_e as solution for thermal balance
-                  double T_e_old = get_Te(n);
-                  double T_e;
-                  if (titer == 0)
-                    T_e = call_T_e_finder(n,time_step[nts - 1].mid,MINTEMP,MAXTEMP);
-                  else
-                    T_e = call_T_e_finder(n,time_step[nts].mid,MINTEMP,MAXTEMP);
-
-                  if (T_e > 2 * T_e_old)
-                  {
-                    T_e = 2 * T_e_old;
-                    printout("use T_e damping in cell %d\n",n);
-                    if (T_e > MAXTEMP)
-                      T_e = MAXTEMP;
-                  }
-                  else if (T_e < 0.5 * T_e_old)
-                  {
-                    T_e = 0.5 * T_e_old;
-                    printout("use T_e damping in cell %d\n",n);
-                    if (T_e < MINTEMP)
-                      T_e = MINTEMP;
-                  }
-                  //T_e = T_J;
-                  set_Te(n,T_e);
-
-                  if (!NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
-                  {
-                    /// Store population values to the grid
-                    calculate_populations(n);
-                    //calculate_cooling_rates(n);
-                    //calculate_heating_rates(n);
-                  }
-
-                  if (NLTE_POPS_ON)
-                  {
-                    nlte_test = 0.0;
-                    for (int element = 0; element < nelements; element++)
-                    {
-                      if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
-                        solve_nlte_pops_element(element, n, nts);
-                      else
-                      {
-                        const int nions = get_nions(element);
-                        for (int ion = 0; ion < nions-1; ion++)
-                        {
-                          double trial = solve_nlte_pops(element, ion, n, nts);
-                          if ((trial < 1.0) && (trial > 0.0))
-                            trial = 1. / trial;
-
-                          if (trial > nlte_test)
-                            nlte_test = trial;
-
-                          //printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
-                        }
-                      }
-                    }
-                    if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
-                      printout("Completed iteration of NLTE population solver in cell %d for timestep %d.\n", n, nts);
-                    else
-                      printout("Completed iteration for NLTE population solver in cell %d for timestep %d. Fractional error returned: %g\n", n, nts, nlte_test - 1.);
-
-                    if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
-                    {
-                      double oldnne = get_nne(n);
-                      precalculate_partfuncts(n);
-                      calculate_electron_densities(n); // sets nne
-                      nlte_test = get_nne(n) / oldnne;
-                      if (nlte_test < 1)
-                        nlte_test = 1. / nlte_test;
-                      printout("nne/NLTE solver iteration %d: previous nne is %g, new nne is %g, accuracy is %g\n",nlte_iter,oldnne,get_nne(n),nlte_test);
-                      //set_nne(n, (get_nne(n) + oldnne) / 2.);
-                    }
-                    if (nlte_iter > NLTEITER)
-                    {
-                      printout("NLTE solver failed to converge after %d iterations. Test ratio %g.\n", NLTEITER + 1, nlte_test);
-                      nlte_test = 0.0;
-                    }
-                    nlte_iter++;
-                  }
-                  else
-                  {
-                    // no NLTE means no NLTE iterations required, so pass it
-                    nlte_test = 1.0;
-                  }
-                }
-                if (NLTE_POPS_ON && nlte_iter <= NLTEITER)
-                  printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test - 1., nlte_iter);
-              }
-              #endif
-              if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
-                nt_solve_spencerfano(n,nts);  // should this be moved inside the NLTE population solver? would be slower but more accurate
-            }
-
-            const double nne = get_nne(n);
-            const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
-
-            const double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init * tratmid;
-            const double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
-            if (log_this_cell)
-            {
-              printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
-              printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
-              //printout("rmax %g, tratmid %g\n",rmax,tratmid);
-            }
-            modelgrid[n].grey_depth = grey_optical_depth;
-
-//          grey_optical_depth = compton_optical_depth;
-            if ((grey_optical_depth > cell_is_optically_thick) && (nts < n_grey_timesteps))
-            {
-              printout("cell %d is treated in grey approximation (tau %g)\n", n, grey_optical_depth);
-              modelgrid[n].thick = 1;
-            }
-            // else if (grey_optical_depth > cell_is_optically_thick_vpkt)
-            //   modelgrid[n].thick = 2;
-            else
-              modelgrid[n].thick = 0;
-
-            /// Temperatures are are now written to file outside the parallel block!
-
-            /// Reset the volume estimators to zero for the current timestep
-            /// Moved next lines to zero_estimators routine (SS)
-            /*
-            nuJ[n] = 0.;
-            J[n] = 0.;
-            cell[n].heating_ff = 0.;
-            cell[n].heating_bf = 0.;
-            */
-
-
-            //set_kappagrey(n,SIGMA_T);
-
-            /// Cooling rates depend only on cell properties, precalculate total cooling
-            /// and ion contributions inside update grid and communicate between MPI tasks
-            calculate_kpkt_rates(n);
-          }
-
-          /// MK Begin
-          if (opacity_case == 3)
-          {
-            //printout("update_grid: opacity_case 3 ... updating cell[n].kappa_grey"); //MK
-            if (get_rho(n) > rho_crit)
-            {
-              set_kappagrey(n, opcase3_normal * (0.9 * get_ffe(n) + 0.1) * rho_crit/get_rho(n));
-            }
-            else
-            {
-              set_kappagrey(n, opcase3_normal * (0.9 * get_ffe(n) + 0.1));
-            }
-          }
-          /// MK End
-
-          if (do_rlc_est == 2 && get_nne(n) > 0)
-          {
-            double cell_len_scale = 0.1 / get_nne(n) / SIGMA_T;
-            if (cell_len_scale < mps[tid])
-            {
-              mps[tid] = cell_len_scale;
-            }
-            cell_len_scale = 0.1 / get_rho(n) / GREY_OP;
-            if (cell_len_scale <  mps[tid])
-            {
-              mps[tid] = cell_len_scale;
-            }
-          }
-        }
-        else
-        {
-          ///Treat modelgrid cells which are not represented in the simulation grid
-          ///Set grid properties to zero
-          set_TR(n,0.);
-          set_TJ(n,0.);
-          set_Te(n,0.);
-          set_W(n,0.);
-
-          #ifndef FORCE_LTE
-            for (int element = 0; element < nelements; element++)
-            {
-              const int nions = get_nions(element);
-              for (int ion = 0; ion < nions; ion++)
-              {
-                const int estimindex = n*nelements*maxion+element*maxion + ion;
-                corrphotoionrenorm[estimindex] = 0.;
-                gammaestimator[estimindex] = 0.;
-              }
-            }
-          #endif
-        }
-
-        //maybe want to add omp ordered here if the modelgrid cells should be output in order
-        #ifdef _OPENMP
-        #pragma omp critical(estimators_file)
-        #endif
-        {
-          write_to_estimators_file(n,nts);
-        }
+        update_grid_cell(n, nts, titer, tratmid, deltaV, deltat, mps);
       }
       else
       {
@@ -994,7 +1000,7 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++)
           {
-            gammaestimator[n*nelements*maxion+element*maxion + ion] = 0.;
+            gammaestimator[n * nelements * maxion + element * maxion + ion] = 0.;
           }
         }
       }
@@ -1028,7 +1034,6 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
   printout("Grey normalisation check: %g\n", check1/check2);
   */
 
-
   /// Assign the minimum of thread private mps to the global variable max_path_step
   max_path_step = mps[0];
   for (int i = 1; i < nthreads; i++)
@@ -1038,7 +1043,6 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
       max_path_step = mps[i];
     }
   }
-
 
   if (do_rlc_est == 2)
   {
@@ -1082,7 +1086,6 @@ double calculate_populations(int modelgridindex)
   const double T_e = get_Te(modelgridindex);
   const double W = get_W(modelgridindex);
 
-  double nne_lo = 0.;  //MINPOP;
   double nne_hi = get_rho(modelgridindex) / MH;
 
   /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
@@ -1195,6 +1198,7 @@ double calculate_populations(int modelgridindex)
     //printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
     //printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
     //printout("n, x_lo, x_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n",modelgridindex,x_lo,x_hi,T_R,T_e,W,cell[modelgridindex].rho);
+    double nne_lo = 0.;  //MINPOP;
     if (nne_solution_f(nne_lo,f.params)*nne_solution_f(nne_hi,f.params) > 0)
     {
       printout("n, nne_lo, nne_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n",modelgridindex,nne_lo,nne_hi,T_R,T_e,W,get_rho(modelgridindex));
@@ -1222,7 +1226,7 @@ double calculate_populations(int modelgridindex)
     do
     {
       iter++;
-      status = gsl_root_fsolver_iterate(solver);
+      gsl_root_fsolver_iterate(solver);
       nne = gsl_root_fsolver_root(solver);
       nne_lo = gsl_root_fsolver_x_lower(solver);
       nne_hi = gsl_root_fsolver_x_upper(solver);
@@ -1233,7 +1237,8 @@ double calculate_populations(int modelgridindex)
 
     gsl_root_fsolver_free(solver);
 
-    if (nne < MINPOP) nne = MINPOP;
+    if (nne < MINPOP)
+      nne = MINPOP;
 
     set_nne(modelgridindex,nne);
     //cell[modelgridindex].nne = nne;
