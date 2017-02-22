@@ -316,8 +316,8 @@ double alpha_sp_E_integrand_gsl(double nu, void *restrict paras)
 
   /// Dependence on dilution factor W is linear. This allows to set it here to
   /// 1. and scale to its actual value later on.
-  double x = sigma_bf / H / nu * radfield_dbbnu,T,1.);
-  //x = sigma_bf/H/nu * radfield_dbbnu,T,1.);
+  double x = sigma_bf / H / nu * radfield_dbb(nu,T,1.);
+  //x = sigma_bf/H/nu * radfield_dbb(nu,T,1.);
   //if (HOVERKB*nu/T < 1e-2) x = sigma_bf * pow(nu,2)/(HOVERKB*nu/T);
   //else if (HOVERKB*nu/T >= 1e2) x = sigma_bf * pow(nu,2)*exp(-HOVERKB*nu/T);
   //else x = sigma_bf * pow(nu,2)/(exp(HOVERKB*nu/T)-1);
@@ -341,7 +341,7 @@ static double gammacorr_integrand_gsl(double nu, void *restrict paras)
   /// Dependence on dilution factor W is linear. This allows to set it here to
   /// 1. and scale to its actual value later on.
   /// Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
-  return sigma_bf * ONEOVERH / nu * radfield_dbbnu,T,1) * (1 - exp(-HOVERKB*nu/T));
+  return sigma_bf * ONEOVERH / nu * radfield_dbb(nu,T,1) * (1 - exp(-HOVERKB*nu/T));
 }
 
 static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
@@ -358,7 +358,7 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
 
   /// Precalculation for T_e=T_R and W=1
   double T  = ((gslintegration_paras *) paras)->T;
-  double x = sigma_bf * (1-nu_edge/nu) * radfield_dbbnu,T,1) * (1-exp(-HOVERKB*nu/T));
+  double x = sigma_bf * (1-nu_edge/nu) * radfield_dbb(nu,T,1) * (1-exp(-HOVERKB*nu/T));
 
   /// Precalculation for a (T_R,T_e)-grid, but still W is assumed to be 1.
   /// The radfield part can be corrected later because of its linear dependence.
@@ -371,7 +371,7 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
   double E_threshold = nu_edge*H;
   double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
-  x = sigma_bf*(1-nu_edge/nu)*radfield_dbbnu,T_R,1) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-H*nu/KB/T_e));*/
+  x = sigma_bf*(1-nu_edge/nu)*radfield_dbb(nu,T_R,1) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-H*nu/KB/T_e));*/
 
   return x;
 }
@@ -403,7 +403,7 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
   double sfac = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
 
-  x = sigma_bf*(1-nu_edge/nu)*radfield_dbbnu,T_R,W) * (1-nnionlevel*nne/nnlevel*sf*exp(-H*nu/KB/T_e));
+  x = sigma_bf*(1-nu_edge/nu)*radfield_dbb(nu,T_R,W) * (1-nnionlevel*nne/nnlevel*sf*exp(-H*nu/KB/T_e));
   return x;
 }*/
 
@@ -452,9 +452,9 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
   }
   kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * g_ff * nne * (1-exp(-HOVERKB*nu/T_e));
 //  if (nu <= nu_rfcut)
-    x = kappa_ff * radfield_dbbnu,T_R,W);
+    x = kappa_ff * radfield_dbb(nu,T_R,W);
 //  else
-//    x = kappa_ff * radfield_dbbnu,T_D,W_D);
+//    x = kappa_ff * radfield_dbb(nu,T_D,W_D);
 
   return x;
 }*/
@@ -509,7 +509,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   double sigma_bf = photoionization_crosssection(nu_edge,nu);
 
-  return sigma_bf * (1-nu_edge/nu) * radfield_dbbnu, T, 1) * exp(-HOVERKB*nu/T);
+  return sigma_bf * (1-nu_edge/nu) * radfield_dbb(nu, T, 1) * exp(-HOVERKB*nu/T);
 }*/
 
 
@@ -530,7 +530,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   double sigma_bf = photoionization_crosssection(nu_edge,nu);
-  double x = sigma_bf / H / nu * radfield_dbbnu,T,1) * exp(-HOVERKB*nu/T);
+  double x = sigma_bf / H / nu * radfield_dbb(nu,T,1) * exp(-HOVERKB*nu/T);
   ///in formula this looks like
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
