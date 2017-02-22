@@ -572,9 +572,9 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
               /// be treated in LTE at restart.
               if (modelgrid[n].thick == 0 && get_W(n) == 1)
               {
-                modelgrid[n].thick = 1;
                 if (log_this_cell)
                   printout("force modelgrid cell to be grey at restart\n");
+                modelgrid[n].thick = 1;
               }
               if (log_this_cell)
               {
@@ -877,10 +877,9 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
                   printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test - 1., nlte_iter);
               }
               #endif
+              if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
+                nt_solve_spencerfano(n,nts);  // should this be moved inside the NLTE population solver? would be slower but more accurate
             }
-
-            if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
-              nt_solve_spencerfano(n,nts);  // should this be moved inside the NLTE population solver? would be slower but more accurate
 
             const double nne = get_nne(n);
             const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
@@ -896,13 +895,13 @@ void update_grid(int nts, int my_rank, int nstart, int nblock, int titer)
             modelgrid[n].grey_depth = grey_optical_depth;
 
 //          grey_optical_depth = compton_optical_depth;
-            if (grey_optical_depth > cell_is_optically_thick && nts < n_grey_timesteps)
+            if ((grey_optical_depth > cell_is_optically_thick) && (nts < n_grey_timesteps))
             {
-              printout("cell %d is treated in grey approximation (tau %g)\n",n,grey_optical_depth);
+              printout("cell %d is treated in grey approximation (tau %g)\n", n, grey_optical_depth);
               modelgrid[n].thick = 1;
             }
-            else if (grey_optical_depth > cell_is_optically_thick_vpkt)
-              modelgrid[n].thick = 2;
+            // else if (grey_optical_depth > cell_is_optically_thick_vpkt)
+            //   modelgrid[n].thick = 2;
             else
               modelgrid[n].thick = 0;
 
