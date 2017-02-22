@@ -1294,6 +1294,7 @@ int main(int argc, char** argv)
 
     #ifdef MPI_ON
       free(buffer);
+      free(buffer2);
     #endif
   }
 
