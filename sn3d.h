@@ -37,7 +37,7 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 //#define POL_ON
 
 // Polarisation for virtual packets
-//#define ESTIMATORS_ON
+//#define VPKT_ON
 
 
 #if !defined DO_EXSPEC && !defined MPI_ON
@@ -365,7 +365,7 @@ double J[MMODELGRID+1];
 
 
 #ifdef FORCE_LTE
-  double redhelper[MMODELGRID+1];
+  // double redhelper[MMODELGRID+1];
   //don't use the variables below in LTE mode, just declare them here so the code compiles
   double *ffheatingestimator;
   double *bfheatingestimator;
@@ -379,7 +379,7 @@ double J[MMODELGRID+1];
   double gammaestimator[(MMODELGRID+1)*MELEMENTS*MIONS];
   double bfheatingestimator[(MMODELGRID+1)*MELEMENTS*MIONS];
   double corrphotoionrenorm[(MMODELGRID+1)*MELEMENTS*MIONS];
-  double redhelper[(MMODELGRID+1)*MELEMENTS*MIONS];
+  // double redhelper[(MMODELGRID+1)*MELEMENTS*MIONS];
 
   #ifdef DO_TITER
     double nuJ_reduced_save[MMODELGRID];

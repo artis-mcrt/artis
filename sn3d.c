@@ -262,34 +262,17 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
   #ifndef FORCE_LTE
     if (simulation_continued_from_saved && nts-itstep == 0 && titer == 0)
     {
-      ;
     }
     else
     {
       /// Reduce the corrphotoionrenorm array.
       printout("nts %d, titer %d: bcast corr photoionrenorm\n",nts,titer);
-      MPI_Reduce(&corrphotoionrenorm, &redhelper, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0)
-      {
-        for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
-        {
-          corrphotoionrenorm[i] = redhelper[i];
-        }
-      }
-      MPI_Bcast(&corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
       /// Reduce the gammaestimator array. Only needed to write restart data.
       printout("nts %d, titer %d: bcast gammaestimator\n",nts,titer);
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0)
-      {
-        for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
-        {
-          gammaestimator[i] = redhelper[i];
-        }
-      }
-      MPI_Bcast(&gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
   #endif
 }
@@ -298,87 +281,24 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
 static void mpi_reduce_estimators(int my_rank)
 {
   /// the following blocks gather all the estimators to the zeroth (Master) thread
-  MPI_Reduce(&J, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  if (my_rank == 0)
-  {
-    for (int i = 0; i < MMODELGRID; i++)
-    {
-      J[i] = redhelper[i];
-    }
-  }
+  MPI_Reduce(MPI_IN_PLACE, &J, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
   #ifndef FORCE_LTE
-    MPI_Reduce(&nuJ, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        nuJ[i] = redhelper[i];
-      }
-    }
+    MPI_Reduce(MPI_IN_PLACE, &nuJ, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     radfield_reduce_estimators(my_rank);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(&ffheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        ffheatingestimator[i] = redhelper[i];
-      }
-    }
+    MPI_Reduce(MPI_IN_PLACE, &ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(&colheatingestimator, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        colheatingestimator[i] = redhelper[i];
-      }
-    }
+    MPI_Reduce(MPI_IN_PLACE, &colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(&gammaestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-      {
-        gammaestimator[i] = redhelper[i];
-      }
-    }
+    MPI_Reduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(&bfheatingestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-      {
-        bfheatingestimator[i] = redhelper[i];
-      }
-    }
-/*          MPI_Reduce(&ionfluxestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-      {
-        ionfluxestimator[i] = redhelper[i];
-      }
-    }*/
-/*        MPI_Reduce(&twiddle, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-      {
-        twiddle[i] = redhelper[i];
-      }
-    }*/
-/*          MPI_Reduce(&stimrecombestimator, &redhelper, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID*nelements*maxion; i++)
-      {
-        stimrecombestimator[i] = redhelper[i];
-      }
-    }*/
+    MPI_Reduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // MPI_Reduce(MPI_IN_PLACE, &ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // MPI_Reduce(MPI_IN_PLACE, &twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // MPI_Reduce(MPI_IN_PLACE, &stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-/*          MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+/*    MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     if (my_rank == 0)
     {
       for (int i = 0; i < MMODELGRID; i++)
@@ -445,52 +365,19 @@ static void mpi_reduce_estimators(int my_rank)
   #endif
 
   #ifdef RECORD_LINESTAT
-    MPI_Reduce(ecounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < nlines; i++)
-      {
-        ecounter[i] = linestat_reduced[i];
-      }
-    }
-    MPI_Reduce(acounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < nlines; i++)
-      {
-        acounter[i] = linestat_reduced[i];
-      }
-    }
+    MPI_Reduce(MPI_IN_PLACE, ecounter, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(MPI_IN_PLACE, acounter, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   #endif
 
   //double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
   //double deltat = time_step[nts].width;
   if (do_rlc_est != 0)
   {
-    MPI_Reduce(&rpkt_emiss, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        rpkt_emiss[i] = redhelper[i];
-      }
-    }
+    MPI_Reduce(MPI_IN_PLACE, &rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   }
   if (do_comp_est)
   {
-    MPI_Reduce(&compton_emiss, &redhelper, MMODELGRID*EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      int i = 0;
-      for (int n = 0; n < MMODELGRID; n++)
-      {
-        for (int nn = 0; nn < EMISS_MAX; nn++)
-        {
-          compton_emiss[n][nn] = redhelper[i];
-          i++;
-        }
-      }
-    }
+    MPI_Reduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID*EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -505,20 +392,18 @@ static void mpi_broadcast_estimators(int my_rank)
     MPI_Bcast(&colheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    //MPI_Bcast(&photoionestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    //MPI_Bcast(&stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    /*
-    MPI_Bcast(&ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    //MPI_Bcast(&twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&mabfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&mabfcount_thermal, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&kbfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&kbfcount_ion, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&kffcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&kffabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&kbfabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&kgammadep, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    */
+    // MPI_Bcast(&photoionestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&mabfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&mabfcount_thermal, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&kbfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&kbfcount_ion, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&kffcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&kffabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&kbfabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // MPI_Bcast(&kgammadep, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   #endif
   if (do_rlc_est != 0)
   {
@@ -532,6 +417,27 @@ static void mpi_broadcast_estimators(int my_rank)
 }
 #endif
 
+
+static void write_temp_packetsfile(int timestep, int my_rank)
+{
+  char filename[100];
+  if (timestep % 2 == 0)
+    sprintf(filename,"packets%d_%d_even.tmp", 0, my_rank);
+  else
+    sprintf(filename,"packets%d_%d_odd.tmp", 0, my_rank);
+
+  FILE *packets_file = fopen(filename, "wb");
+  if (packets_file == NULL)
+  {
+    printout("Cannot write to temporary packets file %s\n",filename);
+    abort();
+  }
+
+  fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
+  fclose(packets_file);
+}
+
+
 int main(int argc, char** argv)
 // Main - top level routine.
 {
@@ -543,7 +449,7 @@ int main(int argc, char** argv)
   int nstart, ndo;
   char filename[100];
 
-  int do_this_full_loop;
+  bool do_this_full_loop;
 
   nvpkt = 0;
   nvpkt_esc1 = 0;
@@ -634,45 +540,6 @@ int main(int argc, char** argv)
     printout("[fatal] input: error initializing heatingrates communication variables ... abort\n");
     abort();
   }
-
-
-  /*
-  float *test,*test1;
-  printout("Hello!\n");
-  printout("sizeof float %d\n",sizeof(float));
-  printout("sizeof double %d\n",sizeof(double));
-  //printout("allocate 100 floats\n");
-  //if ((test = calloc(100, sizeof(float))) == NULL)
-  //{
-  //  printout("[fatal] input: not enough memory to initialise 100 floats ... abort\n");
-  //  abort();
-  //}
-
-  //printout("allocate 2500MB of floats\n");
-  //if ((test1 = malloc(655360000*sizeof(float))) == NULL)
-  //{
-  //  printout("[fatal] input: not enough memory to initialise 2500MB of floats ... abort\n");
-  //}
-
-  test1 = NULL;
-  printout("allocate 400MB of floats step by step\n");
-  for (int i=0; i < 4*26214400; i++)
-  {
-    if ((test = my_malloc(sizeof(float))) == NULL)
-    {
-      printout("[fatal] stopped initialisation at %d\n",i);
-    }
-    if (i % 1000 == 0)
-    {
-      fprintf(output_file,"i %d, diff %d, newptr %p, oldptr %p\n",i,test-test1,test,test1);
-    }
-    test1 = test;
-  }
-
-  printout("test finished\n");
-  MPI_Finalize();
-  abort();
-  */
 
 
   /// Using this and the global variable output_file opens and closes the output_file
@@ -848,8 +715,6 @@ int main(int argc, char** argv)
         printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
         abort();
       }
-
-
     #else
       nstart = 0;
       //ndo = ngrid;
@@ -870,12 +735,12 @@ int main(int argc, char** argv)
     //{
 
     /// Now use while loop to allow for timed restarts
-    int last_loop = ftstep;
-    do_this_full_loop = 1;
+    const int last_loop = ftstep;
+    do_this_full_loop = true;
     int nts = itstep;
 
     // Initialise virtual packets file and vspecpol
-    #ifdef ESTIMATORS_ON
+    #ifdef VPKT_ON
       sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
       if ((vspecpol_file = fopen(filename, "w")) == NULL)
       {
@@ -947,7 +812,7 @@ int main(int argc, char** argv)
       #ifdef TIMED_RESTARTS
         if ((time(NULL) - real_time_start) > 3 * 3600)
         {
-          do_this_full_loop = 0; //This flag will make it do a write out then quit, hopefully
+          do_this_full_loop = false; // This flag will make it do a write out then quit, hopefully
           printout("Going to terminate since remaining time is too short. %d\n", time(NULL) - real_time_start);
         }
         else
@@ -955,14 +820,14 @@ int main(int argc, char** argv)
           printout("Going to continue. Total time spent so far: %d.\n", time(NULL) - real_time_start);
         }
         #ifdef MPI_ON
-          MPI_Bcast(&do_this_full_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+          MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
         #endif
       #endif
 
-      // The first time step must solve the ionisation balance in LTE
-      initial_iteration = (nts == 0);
-
-      #ifndef DO_TITER
+      #ifdef DO_TITER
+        // The first time step must solve the ionisation balance in LTE
+        initial_iteration = (nts == 0);
+      #else
         /// Do 3 iterations on timestep 0-9
         /*if (nts == 0)
         {
@@ -1018,14 +883,7 @@ int main(int argc, char** argv)
           }
         #endif
 
-        if (do_r_lc)
-        {
-          do_comp_est = false;
-        }
-        else
-        {
-          do_comp_est = estim_switch(nts);
-        }
+        do_comp_est = do_r_lc ? false : estim_switch(nts);
 
         nesc = 0;
 
@@ -1101,7 +959,7 @@ int main(int argc, char** argv)
         // and also the photoion and stimrecomb estimators
         zero_estimators();
 
-        if ((nts < ftstep) && (do_this_full_loop == 1))
+        if ((nts < ftstep) && do_this_full_loop)
         {
           /// Now process the packets.
           printout("time before update packets %d\n",time(NULL));
@@ -1210,7 +1068,7 @@ int main(int argc, char** argv)
           printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %g)\n",
                    outer_iteration, nts, my_rank, time_step[nts].pellet_decays, nesc, time_step[nts].mid / DAY);
 
-          #ifdef ESTIMATORS_ON
+          #ifdef VPKT_ON
             printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",
                      outer_iteration, nts, my_rank, nvpkt, nvpkt_esc1 + nvpkt_esc2 + nvpkt_esc3);
             printout("%d virtual packets came from an electron scattering event, %d from a kpkt deactivation and %d from a macroatom deactivation. \n",
@@ -1236,30 +1094,14 @@ int main(int argc, char** argv)
                 fprintf(linestat_file, "%d ", acounter[i]);
               fprintf(linestat_file, "\n");
               fflush(linestat_file);
-
-              ///Old style
-              //for (int i = 0; i < nlines; i++) fprintf(linestat_file,"%g %d %d %d %d %d %d\n", CLIGHT/linelist[i].nu, get_element(linelist[i].elementindex), get_ionstage(linelist[i].elementindex,linelist[i].ionindex), linelist[i].upperlevelindex+1, linelist[i].lowerlevelindex+1,ecounter_reduced[i],acounter_reduced[i]);
             }
           #endif
 
           printout("time before write temporary packets file %d\n",time(NULL));
 
-          if (nts % 2 == 0)
-            sprintf(filename,"packets%d_%d_even.tmp", 0, my_rank);
-          else
-            sprintf(filename,"packets%d_%d_odd.tmp", 0, my_rank);
+          write_temp_packetsfile(nts, my_rank);
 
-          packets_file = fopen(filename, "wb");
-          if (packets_file == NULL)
-          {
-            printout("Cannot write to temporary packets file %s\n",filename);
-            abort();
-          }
-
-          fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
-          fclose(packets_file);
-
-          #ifdef ESTIMATORS_ON
+          #ifdef VPKT_ON
           if (nts % 2 == 0)
             sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
           else
@@ -1312,7 +1154,7 @@ int main(int argc, char** argv)
             fclose(packets_file);
 
             // write specpol of the virtual packets
-            #ifdef ESTIMATORS_ON
+            #ifdef VPKT_ON
               write_vspecpol(vspecpol_file);
               fclose(vspecpol_file);
 
@@ -1342,7 +1184,7 @@ int main(int argc, char** argv)
       }
 
       nts++;
-      if (do_this_full_loop == 0)
+      if (!do_this_full_loop)
       {
         nts += last_loop + 1; // this will break the loop and terminate the code
       }
@@ -1466,7 +1308,7 @@ int main(int argc, char** argv)
   //grid_init();
   //syn_gamma();
 
-  if ((ntstep != ftstep) || (do_this_full_loop == 0))
+  if ((ntstep != ftstep) || (!do_this_full_loop))
   {
     printout("RESTART_NEEDED to continue model\n");
   }

@@ -26,7 +26,7 @@ static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
 
   /// Set new T_e guess for the current cell and update populations
   //cell[cellnumber].T_e = T_e;
-  set_Te(modelgridindex,T_e);
+  set_Te(modelgridindex, T_e);
   double nntot;
   if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
     nntot = calculate_electron_densities(modelgridindex);
@@ -61,8 +61,8 @@ static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
 
   /// Adiabatic cooling term
   const double p = nntot * KB * T_e;
-  const double dV = 3 * pow(wid_init / tmin,3) * pow(t_current,2);
-  const double V = pow(wid_init * t_current / tmin,3);
+  const double dV = 3 * pow(wid_init / tmin, 3) * pow(t_current, 2);
+  const double V = pow(wid_init * t_current / tmin, 3);
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   coolingrates[tid].adiabatic = p * dV / V;
 
@@ -70,18 +70,11 @@ static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
   const double total_coolingrate = coolingrates[tid].ff + coolingrates[tid].fb + coolingrates[tid].collisional + coolingrates[tid].adiabatic;
 
   return total_heating_rate - total_coolingrate; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
-
-  //return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collisional + heatingrates[tid].gamma - coolingrates[tid].adiabatic; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
-
-  //return heatingrates[tid].gamma - coolingrates[tid].fb; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
-  //return heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collbf - coolingrates[tid].ff - coolingrates[tid].fb - coolingrates[tid].collbf + heatingrates[tid].gamma - coolingrates[tid].adiabatic - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
 }
 
 
 double call_T_e_finder(int modelgridindex, double t_current, double T_min, double T_max)
 {
-  double T_e;
-
   printout("finding T_e...");
 
   //double deltat = (T_max - T_min) / 100;
@@ -116,11 +109,13 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
   printout("[heating - cooling] at T_min: %g, at T_max: %g\n",thermalmin,thermalmax);
   if (!isfinite(thermalmin) || !isfinite(thermalmax))
   {
-    printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+    printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",
+             modelgridindex, get_TR(modelgridindex), get_W(modelgridindex));
     thermalmax = thermalmin = -1;
   }
 
   //double thermalmax = find_T_e(T_max,find_T_e_f.params);
+  double T_e;
   if (thermalmin * thermalmax < 0)
   {
     /// If it has, then solve for the root T_e
@@ -152,26 +147,27 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
     gsl_root_fsolver *restrict T_e_solver = gsl_root_fsolver_alloc(solvertype);
 
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-    int iter2 = 0;
+    ;
     const double fractional_accuracy = 1e-2;
     const int maxit = 100;
     int status;
-    do
+    for (int iternum = 0; iternum < maxit; iternum++)
     {
-      iter2++;
-      status = gsl_root_fsolver_iterate(T_e_solver);
+      iternum++;
+      gsl_root_fsolver_iterate(T_e_solver);
       T_e = gsl_root_fsolver_root(T_e_solver);
       //cell[cellnumber].T_e = T_e;
-      set_Te(modelgridindex,T_e);
+      set_Te(modelgridindex, T_e);
       const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
       const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
-      status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
-      printout("[debug] find T_e:   iter %d, interval [%g, %g], guess %g, status %d\n",iter2,T_e_min,T_e_max,T_e,status);
+      status = gsl_root_test_interval(T_e_min, T_e_max, 0, fractional_accuracy);
+      printout("[debug] find T_e:   iter %d, interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
+      if (status != GSL_CONTINUE)
+        break;
     }
-    while (status == GSL_CONTINUE && iter2 < maxit);
 
     if (status == GSL_CONTINUE)
-      printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
+      printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n", maxit);
 
     gsl_root_fsolver_free(T_e_solver);
   }
