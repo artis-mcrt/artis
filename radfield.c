@@ -11,7 +11,7 @@
 #define RADFIELDBINCOUNT 96
 // static const int RADFIELDBINCOUNT = 96;
 
-extern inline double radfield_dbbdouble nu, double T, double W);
+extern inline double radfield_dbb(double nu, double T, double W);
 
 static const double nu_lower_first_initial = (CLIGHT / (15000e-8)); // in Angstroms
 static const double nu_upper_last_initial = (CLIGHT /   (500e-8));  // in Angstroms
@@ -472,7 +472,7 @@ double radfield(double nu, int modelgridindex)
         {
           if (bin->T_R >= 0.)
           {
-            const double J_nu = radfield_dbbnu, bin->T_R, bin->W);
+            const double J_nu = radfield_dbb(nu, bin->T_R, bin->W);
             /*if (fabs(J_nu / J_nu_fullspec - 1.0) > 0.5)
             {
               printout("WARNING: radfield: significant discrepancy. J_nu_fullspec %g, J_nu %g, nu %g bin->W %g bin->T_R %g\n",
@@ -512,7 +512,7 @@ double radfield(double nu, int modelgridindex)
 
   const double T_R_fullspec = get_TR(modelgridindex);
   const double W_fullspec   = get_W(modelgridindex);
-  const double J_nu_fullspec = radfield_dbbnu, T_R_fullspec, W_fullspec);
+  const double J_nu_fullspec = radfield_dbb(nu, T_R_fullspec, W_fullspec);
   return J_nu_fullspec;
 }
 
