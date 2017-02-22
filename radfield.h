@@ -7,7 +7,7 @@ void radfield_zero_estimators(int modelgridindex);
 void radfield_init(int my_rank);
 void radfield_write_to_file(int modelgridindex, int timestep);
 void radfield_close_file(void);
-void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf);
+void radfield_update_binned_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf);
 double radfield(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex, int timestep);
 void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
@@ -19,7 +19,7 @@ void radfield_read_restart_data(FILE *gridsave_file);
 int radfield_select_bin(int modelgridindex, double nu);
 
 
-inline double radfield2(double nu, double T, double W)
+inline double radfield_dbb(double nu, double T, double W)
 // returns J_nu for a diluted black body
 {
   return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) / (exp(HOVERKB * nu / T) - 1);
