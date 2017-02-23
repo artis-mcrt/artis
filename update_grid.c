@@ -186,33 +186,6 @@ static void write_to_estimators_file(int n, int timestep)
     fprintf(estimators_file,"%d %g %g %g %g %g ",n,0.,0.,0.,0.,0.);
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g ",n,0.,0.,0.,0.,0.,0.,0.);
 
-    if (NLTE_POPS_ON)
-    {
-      fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.);
-      for (int nlte = 0; nlte < total_nlte_levels; nlte++)
-      {
-        fprintf(nlte_file,"%g ", 0.);
-      }
-      fprintf(nlte_file,"\n");
-      //fprintf(nlte_file,"%d %g %g %g %g ",n,0.,0.,0.,0.,0.);
-      for(int dummy_element = 0; dummy_element < nelements; dummy_element++)
-      {
-        int nions = get_nions(dummy_element);
-        for (int dummy_ion = 0; dummy_ion < nions; dummy_ion++)
-        {
-          int nlte = get_nlevels_nlte(dummy_element, dummy_ion);
-          if (nlte > 0)
-          {
-            for (int dummy_level = 1; dummy_level < (nlte+1); dummy_level++)
-            {
-              //fprintf(nlte_file,"%g ", 0.0);
-            }
-          }
-        }
-      }
-      //fprintf(nlte_file,"\n");
-    }
-
     for (int element = 0; element < nelements; element++)
     {
       const int nions = get_nions(element);
