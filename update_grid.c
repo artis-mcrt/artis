@@ -458,7 +458,8 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         }
         precalculate_partfuncts(n);
         //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
-        calculate_populations(n);
+        if (!simulation_continued_from_saved || !NLTE_POPS_ON) // if these are not read from the gridsave file, calculate them now
+          calculate_populations(n);
       }
       else
       /// For all other timesteps temperature corrections have to be applied
@@ -1506,8 +1507,11 @@ void write_grid_restart_data(void)
       fprintf(gridsave_file,"\n");
     }
   }
+
+  // the order of these calls is very important!
   radfield_write_restart_data(gridsave_file);
   nt_write_restart_data(gridsave_file);
+  nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
 }
 

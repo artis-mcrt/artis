@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
+#include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "rpkt.h"
@@ -1507,8 +1508,10 @@ static void read_grid_restart_data(void)
     }
   }
 
+  // the order of these calls is very important!
   radfield_read_restart_data(gridsave_file);
   nt_read_restart_data(gridsave_file);
+  nltepop_read_restart_data(gridsave_file);
   fclose(gridsave_file);
 }
 

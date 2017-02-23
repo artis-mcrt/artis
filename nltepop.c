@@ -1274,3 +1274,101 @@ void nltepop_write_to_file(int n, int timestep)
   //fprintf(nlte_file,"\n");
   fflush(nlte_file);
 }
+
+
+void nltepop_write_restart_data(FILE *restart_file)
+{
+  if (!NLTE_POPS_ON)
+    return;
+
+  printout("Writing restart data for NLTE populations (total_nlte_levels %d)\n", total_nlte_levels);
+
+  fprintf(restart_file, "%d\n", 75618527); // special number marking the beginning of nlte data
+  fprintf(restart_file, "%d\n", total_nlte_levels);
+
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    if (mg_associated_cells[modelgridindex] > 0)
+    {
+      fprintf(restart_file, "%d\n", modelgridindex);
+      for (int element = 0; element < nelements; element++)
+      {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++)
+        {
+          fprintf(restart_file, "%d %g %g %lg\n",
+                  ion,
+                  modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+                  modelgrid[modelgridindex].composition[element].partfunct[ion],
+                  modelgrid[modelgridindex].cooling[element].contrib[ion]);
+        }
+      }
+      for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
+      {
+        fprintf(restart_file, "%lg ", modelgrid[modelgridindex].nlte_pops[nlteindex]);
+      }
+    }
+  }
+}
+
+
+void nltepop_read_restart_data(FILE *restart_file)
+{
+  if (!NLTE_POPS_ON)
+    return;
+
+  printout("Reading restart data for NLTE populations\n");
+
+  int code_check;
+  fscanf(restart_file, "%d\n", &code_check);
+  if (code_check != 75618527)
+  {
+    printout("ERROR: Beginning of NLTE restart data not found!");
+    abort();
+  }
+
+  int total_nlte_levels_in;
+  fscanf(restart_file, "%d\n", &total_nlte_levels_in);
+  if (total_nlte_levels_in != total_nlte_levels)
+  {
+    printout("ERROR: Expected NLTE levels but found %d in restart file", total_nlte_levels, total_nlte_levels_in);
+    abort();
+  }
+
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    if (mg_associated_cells[modelgridindex] > 0)
+    {
+      int mgi_in;
+      fscanf(restart_file, "%d\n", &mgi_in);
+      if (mgi_in != modelgridindex)
+      {
+        printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
+        abort();
+      }
+
+      for (int element = 0; element < nelements; element++)
+      {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++)
+        {
+          int ion_in;
+          fscanf(restart_file, "%d %g %g %lg\n",
+                 &ion_in,
+                 &modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+                 &modelgrid[modelgridindex].composition[element].partfunct[ion],
+                 &modelgrid[modelgridindex].cooling[element].contrib[ion]);
+          if (ion_in != ion)
+          {
+            printout("ERROR: expected data for ion %d but found ion %d\n", ion, ion_in);
+            abort();
+          }
+        }
+      }
+      for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
+      {
+        fscanf(restart_file, "%lg ", &modelgrid[modelgridindex].nlte_pops[nlteindex]);
+      }
+    }
+  }
+}
