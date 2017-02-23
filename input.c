@@ -569,19 +569,7 @@ static void read_unprocessed_atomicdata(void)
         /// now we need to readout the data for all those levels, write them to memory
         /// and set up the list of possible transitions for each level
         int nuparr[nlevelsmax];
-        // int *nuparr = calloc(nlevelsmax, sizeof(int));
-        // if (nuparr == NULL)
-        // {
-        //   printout("[fatal] input: not enough memory to allocate nuparr ... abort\n");
-        //   abort();
-        // }
         int ndownarr[nlevelsmax];
-        // int *ndownarr = calloc(nlevelsmax, sizeof(int));
-        // if (ndownarr == NULL)
-        // {
-        //   printout("[fatal] input: not enough memory to allocate ndownarr... abort\n");
-        //   abort();
-        // }
         if ((transitions = calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
         {
           printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
@@ -659,11 +647,10 @@ static void read_unprocessed_atomicdata(void)
 
         for (int ii = 0; ii < tottransitions; ii++)
         {
-          int level = transitiontable[ii].upper;
-          int targetlevel = transitiontable[ii].lower;
-
+          const int level = transitiontable[ii].upper;
           if (level < nlevelsmax)
           {
+            const int targetlevel = transitiontable[ii].lower;
 
             //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
             //{
@@ -768,9 +755,6 @@ static void read_unprocessed_atomicdata(void)
         }
         //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
         //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-
-        // free(nuparr);
-        // free(ndownarr);
 
         for (int level = 0; level < nlevelsmax; level++)
         {
