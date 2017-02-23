@@ -981,7 +981,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
 
-  printout("Writing radiation field restart data\n");
+  printout("Writing restart data for binned radiation field\n");
 
   fprintf(gridsave_file, "%d\n", 30490824); // special number marking the beginning of radfield data
   fprintf(gridsave_file,"%d %lg %lg %lg %lg\n",
