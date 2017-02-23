@@ -566,7 +566,6 @@ FILE *restrict tau_file;
 FILE *restrict tb_file;
 FILE *restrict heating_file;
 FILE *restrict estimators_file;
-FILE *restrict nlte_file;
 
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
 extern bool neutral_flag;

@@ -1356,7 +1356,7 @@ int main(int argc, char** argv)
   printout("simulation finished at %d\n", time(NULL));
   //fclose(tb_file);
   fclose(estimators_file);
-  fclose(nlte_file);
+  nltepop_close_file(my_rank);
   radfield_close_file();
   if (NT_ON && NT_SOLVE_SPENCERFANO)
     nonthermal_close_file();

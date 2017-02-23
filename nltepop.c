@@ -12,6 +12,7 @@
 #include "ratecoeff.h"
 #include "update_grid.h"
 
+static FILE *nlte_file;
 
 static int get_nlte_vector_index(int element_in, int ion_in, int level_in)
 {
@@ -1181,6 +1182,12 @@ void nltepop_open_file(int my_rank)
     printout("Cannot open %s.\n",filename);
     abort();
   }
+}
+
+
+void nltepop_close_file(int my_rank)
+{
+  fclose(nlte_file);
 }
 
 
