@@ -152,7 +152,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
         /// bb-emission
         const int element = linelist[et].elementindex;
         const int ion = linelist[et].ionindex;
-        nproc = element*maxion+ion;
+        nproc = element * maxion + ion;
         #ifdef TRACE_EMISSION_REGION_ON
         if (nt >= traceemiss_timestepmin && nt <= traceemiss_timestepmax)
         {
@@ -177,7 +177,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
         et = -1 * et - 1;
         const int element = bflist[et].elementindex;
         const int ion = bflist[et].ionindex;
-        nproc = nelements*maxion + element*maxion+ion;
+        nproc = nelements * maxion + element * maxion + ion;
       }
       spectra[nt].stat[nnu].emission[nproc] += deltaE;
 

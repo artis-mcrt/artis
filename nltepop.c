@@ -16,6 +16,8 @@
 static FILE *nlte_file;
 
 static int get_nlte_vector_index(int element_in, int ion_in, int level_in)
+// this is the index for the NLTE solver that is handling all ions of a single element
+// This is NOT an index into modelgrid[modelgridindex].nlte_pops that contains all elements
 {
   int index = 0;
   for (int ion = 0; ion < ion_in; ion++)
@@ -70,7 +72,8 @@ static void eliminate_nlte_matrix_rowcol(int index, int gs_index, gsl_matrix *co
 }
 
 
-static void filter_nlte_matrix(int element, gsl_matrix *const rate_matrix, gsl_vector *const balance_vector, gsl_vector *const pop_norm_factors)
+static void filter_nlte_matrix(int element, gsl_matrix *const rate_matrix, gsl_vector *const balance_vector,
+                               gsl_vector *const pop_norm_factor_vec)
 // find rows and columns that barely interaction with other levels, and effectively
 // removing them by zeroing their interactions and setting their departure
 // coeff to 1.0
@@ -235,9 +238,10 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
 
 
 void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
-//solves for nlte correction factors to level populations for levels in all ions of an element
+// solves the statistical balance equations to find NLTE level populations for all ions of an element
+// (ionisation balance follows from this too)
 {
-  // can save memory by using a combined rate matrix, at the expense of diagnostic information
+  // can save memory by using a combined rate matrix, at the cost of diagnostic information
   const bool individual_process_matricies = false;
 
   const double t_mid = time_step[timestep].mid;
@@ -254,7 +258,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     const double T_e = get_Te(modelgridindex);
     const double nne = get_nne(modelgridindex);
     int nlte_dimension = 0;
-    double superlevel_partfunc[nions]; //space is allocated for every ion, whether or not it has a superlevel
+    double superlevel_partfunc[nions]; // space is allocated for every ion, even if it does not have a superlevel
     for (int ion = 0; ion < nions; ion++)
     {
       superlevel_partfunc[ion] = 0;
@@ -283,7 +287,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       }
     }
 
-    printout("NLTE: the vector dimension is %d. Allocating...", nlte_dimension);
+    // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
     gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     gsl_matrix *rate_matrix_rad_bb;
@@ -301,6 +305,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     }
     else
     {
+      // alias the single matrix accounting for all processes
       rate_matrix_rad_bb = rate_matrix;
       rate_matrix_coll_bb = rate_matrix;
       rate_matrix_rad_bf = rate_matrix;
@@ -315,8 +320,6 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       printout("Cannot allocate NLTE rate matrix/balance vector memory.\n");
       abort();
     }
-
-    printout("done\n", nlte_dimension);
 
     for (int ion = 0; ion < nions; ion++)
     {
@@ -471,7 +474,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     gsl_vector_view first_row_view = gsl_matrix_row(rate_matrix, 0);
     gsl_vector_set_all(&first_row_view.vector, 1.0);
     // set first balance vector entry to the element population (all other entries will be zero)
-    double element_population = get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex);
+    const double element_population = get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex);
     gsl_vector_set(balance_vector, 0, element_population);
 
     // calculate the normalisation factors and apply them to the matrix
@@ -524,7 +527,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 
     // eliminate barely-interacting levels from the NLTE matrix by removing
     // their interactions and setting their normalised populations (probably departure coeff) to 1.0
-    filter_nlte_matrix(element,rate_matrix,balance_vector,pop_norm_factor_vec);
+    // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
 
     // make a copy of the rate matrix for the LU decomp
     gsl_matrix *rate_matrix_LU_decomp = gsl_matrix_alloc(nlte_dimension, nlte_dimension);
@@ -572,7 +575,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     if (error_best >= 0.)
     {
       printout("NLTE solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",iteration,error_best);
-      gsl_vector_memcpy(x,x_best);
+      gsl_vector_memcpy(x, x_best);
     }
     gsl_vector_free(gsl_work_vector);
     gsl_vector_free(x_best);
@@ -624,7 +627,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       double solution_ion_pop = 0.0;
       for (int level = 1; level <= nlevels_nlte; level++)
       {
-        const int index = get_nlte_vector_index(element,ion,level);
+        const int index = get_nlte_vector_index(element, ion, level);
         modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = gsl_vector_get(popvec, index) / modelgrid[modelgridindex].rho;
         solution_ion_pop += gsl_vector_get(popvec, index);
       }
@@ -726,13 +729,13 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     {
       const int nlte_start = elements[element].ions[ion].first_nlte;
       const int nlevels_nlte = get_nlevels_nlte(element,ion);
-      for (int level = 1; level < nlevels_nlte+1; level++)
+      for (int level = 1; level < nlevels_nlte + 1; level++)
       {
-        modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = -1.0; // flag to indicate no useful data
+        modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0; // flag to indicate no useful data
       }
       if (nlevels_nlte != (get_nlevels(element,ion) - 1)) // a superlevel exists
       {
-        modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = -1.0;
+        modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = -1.0;
       }
     }
   }
