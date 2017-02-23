@@ -3,7 +3,7 @@
 
 #include "sn3d.h"
 
-void update_grid(int m, int my_rank, int nstart, int nblock, int titer);
+void update_grid(const int nts, const int my_rank, const int nstart, const int ndo, const int titer);
 void precalculate_partfuncts(int modelgridindex);
 double calculate_populations(int modelgridindex);
 double calculate_electron_densities(int modelgridindex);
