@@ -460,6 +460,11 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
         if (!simulation_continued_from_saved || !NLTE_POPS_ON) // if these are not read from the gridsave file, calculate them now
           calculate_populations(n);
+        else
+        {
+          calculate_electron_densities(n);
+          // printout("nne: %g\n", get_nne(n));
+        }
       }
       else
       /// For all other timesteps temperature corrections have to be applied
@@ -1458,7 +1463,7 @@ void write_grid_restart_data(void)
   {
     if (mg_associated_cells[n] > 0)
     {
-      fprintf(gridsave_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
+      fprintf(gridsave_file,"%d %g %g %g %g %d %lg", n, get_TR(n), get_Te(n), get_W(n), get_TJ(n), modelgrid[n].thick, rpkt_emiss[n]);
       #ifndef FORCE_LTE
         for (int element = 0; element < nelements; element++)
         {
@@ -1477,13 +1482,11 @@ void write_grid_restart_data(void)
           }
         }
       #endif
-
-      fprintf(gridsave_file,"\n");
     }
     else
     {
       ///Write zeros for cells which are non-represented in the simulation grid
-      fprintf(gridsave_file,"%d %g %g %g %g %d ",n,0.,0.,0.,0.,0);
+      fprintf(gridsave_file,"%d %g %g %g %g %d %lg",n,0.,0.,0.,0.,0,0.);
 
       #ifndef FORCE_LTE
         for (int element = 0; element < nelements; element++)
@@ -1504,8 +1507,8 @@ void write_grid_restart_data(void)
         }
       #endif
 
-      fprintf(gridsave_file,"\n");
     }
+    fprintf(gridsave_file,"\n");
   }
 
   // the order of these calls is very important!
