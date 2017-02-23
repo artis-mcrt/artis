@@ -1133,18 +1133,17 @@ double calculate_populations(int modelgridindex)
     /// we get this info only once when T_e is converged and not for each
     /// iteration step.
     neutral_flag = true;
-    //printout("[warning] calculate_poulations: only neutral ions in cell %d modelgridindex\n",modelgridindex);
+    //printout("[warning] calculate_populations: only neutral ions in cell %d modelgridindex\n",modelgridindex);
     //abort();
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
-
     for (int element = 0; element < nelements; element++)
     {
       const double abundance = get_abundance(modelgridindex,element);
-      const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
 
+      const int nions = get_nions(element);
       /// Assign the species population to the neutral ion and set higher ions to MINPOP
       for (int ion = 0; ion < nions; ion++)
       {
@@ -1157,7 +1156,9 @@ double calculate_populations(int modelgridindex)
           nnion = 0.;
         nntot += nnion;
         nne += nnion * (get_ionstage(element,ion)-1);
-        modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
+        modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
+          nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
         if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
@@ -1260,8 +1261,8 @@ double calculate_populations(int modelgridindex)
         //if (modelgrid[modelgridindex].composition[element].groundlevelpop[ion] < 0)
         //if (initial_iteration || modelgrid[modelgridindex].thick == 1)
         {
-          modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = nnion *
-                stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
+          modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (nnion *
+                stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
           //printout("calculate_populations: setting groundlevelpop of ion %d\n",ion);
         }
         //else
@@ -1289,8 +1290,9 @@ double calculate_populations(int modelgridindex)
 
 
 double calculate_electron_densities(int modelgridindex)
-// Determines and sets the free and total electron number densities
-// for a given cell and stores them
+// Determines the free and total electron number densities
+// for a given cell and stores them, assuming fixed ion populations (ground_level_pop and partfunc)
+// are fixed (determined by NLTE all-ion solver)
 {
   double nne_tot = 0.; // total electron density
   double nne = 0.;     // free electron density
