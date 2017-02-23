@@ -574,7 +574,7 @@ int main(int argc, char** argv)
   //}
   //setvbuf(tb_file, NULL, _IOLBF, 1);
 
-  sprintf(filename,"estimators_%.4d.out",my_rank);
+  sprintf(filename, "estimators_%.4d.out", my_rank);
   if ((estimators_file = fopen(filename, "w")) == NULL)
   {
     printout("Cannot open %s.\n",filename);
@@ -585,7 +585,6 @@ int main(int argc, char** argv)
   if (NLTE_POPS_ON)
     nltepop_open_file(my_rank);
 
-  printout("Beginning.\n");
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
@@ -603,8 +602,9 @@ int main(int argc, char** argv)
   #endif
 
   printout("time after input %d\n",time(NULL));
-  printout("simulation propagates %d packets through a %d x %d x %d grid\n",npkts,nxgrid,nygrid,nzgrid);
-  printout("timesteps %d\n",ntstep);
+  printout("simulation propagates %d packets through a %d x %d x %d grid\n",
+           npkts, nxgrid, nygrid, nzgrid);
+  printout("timesteps %d\n", ntstep);
 
   /// Precalculate the rate coefficients for spontaneous and stimulated recombination
   /// and for photoionisation. With the nebular approximation they only depend on T_e
