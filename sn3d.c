@@ -285,7 +285,8 @@ static void mpi_reduce_estimators(int my_rank)
   MPI_Barrier(MPI_COMM_WORLD);
   #ifndef FORCE_LTE
     MPI_Reduce(MPI_IN_PLACE, &nuJ, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    radfield_reduce_estimators(my_rank);
+    if (MULTIBIN_RADFIELD_MODEL_ON)
+      radfield_reduce_binned_estimators();
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Reduce(MPI_IN_PLACE, &ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -382,7 +383,7 @@ static void mpi_reduce_estimators(int my_rank)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-static void mpi_broadcast_estimators(int my_rank)
+static void mpi_broadcast_estimators(void)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Bcast(&J, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -1060,7 +1061,7 @@ int main(int argc, char** argv)
 
           #ifdef MPI_ON
             // The master thread has normalised the rpkt and compton estimators and printed out a bunch of stuff. Now redistribute the estimators ready for the next run.
-            mpi_broadcast_estimators(my_rank);
+            mpi_broadcast_estimators();
           #endif
 
           /// Now printout some statistics on the current timestep
@@ -1356,7 +1357,7 @@ int main(int argc, char** argv)
   printout("simulation finished at %d\n", time(NULL));
   //fclose(tb_file);
   fclose(estimators_file);
-  nltepop_close_file(my_rank);
+  nltepop_close_file();
   radfield_close_file();
   if (NT_ON && NT_SOLVE_SPENCERFANO)
     nonthermal_close_file();

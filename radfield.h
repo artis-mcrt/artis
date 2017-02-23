@@ -12,7 +12,7 @@ double radfield(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex, int timestep);
 void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W);
 void radfield_set_J_normfactor(int modelgridindex, double normfactor);
-void radfield_reduce_estimators(int my_rank);
+void radfield_reduce_binned_estimators(void);
 void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo);
 void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);

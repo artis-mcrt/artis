@@ -901,12 +901,12 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 
 
 #ifdef MPI_ON
-void radfield_reduce_estimators(int my_rank)
+void radfield_reduce_binned_estimators(void)
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  printout("Reducing radiation field estimators\n");
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
+  printout("Reducing binned radiation field estimators\n");
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
