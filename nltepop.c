@@ -1226,7 +1226,7 @@ void nltepop_open_file(int my_rank)
 }
 
 
-void nltepop_close_file(int my_rank)
+void nltepop_close_file()
 {
   fclose(nlte_file);
 }
