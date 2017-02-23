@@ -315,7 +315,120 @@ static double calculate_elem_Gamma(int modelgridindex, int element, int ion)
 }
 
 
-static void update_grid_cell(int n, int nts, int titer, double tratmid, double deltaV, double deltat, double* mps)
+static void update_grid_cell_Te_nltepops(const int n, const int nts, const int titer)
+{
+  int nlte_iter = 0;
+  double nlte_test = 2.; //ratio of previous to current iteration's free electron density solution
+  while (nlte_test > 1.03)
+  {
+    if (!NLTE_POPS_ON)
+    {
+      /// These don't depend on T_e, therefore take them out of the T_e iteration
+      precalculate_partfuncts(n);
+    }
+    else if (nlte_iter != 0)
+    {
+      //recalculate the Gammas using the current population estimates
+      for (int element = 0; element < nelements; element++)
+      {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions - 1; ion++)
+        {
+          gammaestimator[n*nelements*maxion+element*maxion + ion] = calculate_elem_Gamma(n, element, ion);
+        }
+      }
+    }
+
+    /// Find T_e as solution for thermal balance
+    double T_e_old = get_Te(n);
+    double T_e;
+    if (titer == 0)
+      T_e = call_T_e_finder(n,time_step[nts - 1].mid,MINTEMP,MAXTEMP);
+    else
+      T_e = call_T_e_finder(n,time_step[nts].mid,MINTEMP,MAXTEMP);
+
+    if (T_e > 2 * T_e_old)
+    {
+      T_e = 2 * T_e_old;
+      printout("use T_e damping in cell %d\n",n);
+      if (T_e > MAXTEMP)
+        T_e = MAXTEMP;
+    }
+    else if (T_e < 0.5 * T_e_old)
+    {
+      T_e = 0.5 * T_e_old;
+      printout("use T_e damping in cell %d\n",n);
+      if (T_e < MINTEMP)
+        T_e = MINTEMP;
+    }
+    //T_e = T_J;
+    set_Te(n,T_e);
+
+    if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
+    {
+      /// Store population values to the grid
+      calculate_populations(n);
+      //calculate_cooling_rates(n);
+      //calculate_heating_rates(n);
+    }
+
+    if (NLTE_POPS_ON)
+    {
+      nlte_test = 0.0;
+      for (int element = 0; element < nelements; element++)
+      {
+        if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
+          solve_nlte_pops_element(element, n, nts);
+        else
+        {
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions-1; ion++)
+          {
+            double trial = solve_nlte_pops(element, ion, n, nts);
+
+            if ((trial < 1.0) && (trial > 0.0))
+              trial = 1. / trial;
+
+            if (trial > nlte_test)
+              nlte_test = trial;
+          }
+        }
+      }
+
+      if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
+      {
+        printout("Completed iteration of NLTE population solver in cell %d for timestep %d.\n", n, nts);
+        double oldnne = get_nne(n);
+        precalculate_partfuncts(n);
+        calculate_electron_densities(n); // sets nne
+        nlte_test = get_nne(n) / oldnne;
+        if (nlte_test < 1)
+          nlte_test = 1. / nlte_test;
+        printout("nne/NLTE solver iteration %d: previous nne is %g, new nne is %g, accuracy is %g\n",nlte_iter,oldnne,get_nne(n),nlte_test);
+        //set_nne(n, (get_nne(n) + oldnne) / 2.);
+      }
+      else
+        printout("Completed iteration for NLTE population solver in cell %d for timestep %d. Fractional error returned: %g\n", n, nts, nlte_test - 1.);
+
+      if (nlte_iter > NLTEITER)
+      {
+        printout("NLTE solver failed to converge after %d iterations. Test ratio %g.\n", NLTEITER + 1, nlte_test);
+        nlte_test = 0.0;
+      }
+      nlte_iter++;
+    }
+    else
+    {
+      // no NLTE means no NLTE iterations required, so pass it
+      nlte_test = 1.0;
+    }
+  }
+  if (NLTE_POPS_ON && nlte_iter <= NLTEITER)
+    printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test - 1., nlte_iter);
+}
+
+static void update_grid_cell(const int n, const int nts, const int titer, const double tratmid,
+                             const double deltaV, const double deltat, double *mps)
 // n is the modelgrid index
 {
   const int assoc_cells = mg_associated_cells[n];
@@ -527,7 +640,7 @@ static void update_grid_cell(int n, int nts, int titer, double tratmid, double d
               /// the next timesteps gamma estimators.
               //nlevels = get_nlevels(element,ion);
               //nlevels = get_ionisinglevels(element,ion);
-              int ionestimindex = n*nelements*maxion+element*maxion + ion;
+              const int ionestimindex = n*nelements*maxion+element*maxion + ion;
               gammaestimator[ionestimindex] = calculate_elem_Gamma(n, element, ion);
               //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
 
@@ -555,120 +668,9 @@ static void update_grid_cell(int n, int nts, int titer, double tratmid, double d
           }
 
           // Get radiation field parameters out of the estimators
-          radfield_fit_parameters(n,nts);
+          radfield_fit_parameters(n, nts);
 
-          int nlte_iter = 0;
-          double nlte_test = 2.; //ratio of previous to current iteration's free electron density solution
-          while (nlte_test > 1.03)
-          {
-            if (NLTE_POPS_ON)
-            {
-              //recalculate the Gammas using the current population estimates
-              if (nlte_iter != 0)
-              {
-                for (int element = 0; element < nelements; element++)
-                {
-                  const int nions = get_nions(element);
-                  for (int ion = 0; ion < nions - 1; ion++)
-                  {
-                    gammaestimator[n*nelements*maxion+element*maxion + ion] = calculate_elem_Gamma(n, element, ion);
-                  }
-                }
-              }
-            }
-            else
-            {
-              /// These don't depend on T_e, therefore take them out of the T_e iteration
-              precalculate_partfuncts(n);
-            }
-
-            /// Find T_e as solution for thermal balance
-            double T_e_old = get_Te(n);
-            double T_e;
-            if (titer == 0)
-              T_e = call_T_e_finder(n,time_step[nts - 1].mid,MINTEMP,MAXTEMP);
-            else
-              T_e = call_T_e_finder(n,time_step[nts].mid,MINTEMP,MAXTEMP);
-
-            if (T_e > 2 * T_e_old)
-            {
-              T_e = 2 * T_e_old;
-              printout("use T_e damping in cell %d\n",n);
-              if (T_e > MAXTEMP)
-                T_e = MAXTEMP;
-            }
-            else if (T_e < 0.5 * T_e_old)
-            {
-              T_e = 0.5 * T_e_old;
-              printout("use T_e damping in cell %d\n",n);
-              if (T_e < MINTEMP)
-                T_e = MINTEMP;
-            }
-            //T_e = T_J;
-            set_Te(n,T_e);
-
-            if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
-            {
-              /// Store population values to the grid
-              calculate_populations(n);
-              //calculate_cooling_rates(n);
-              //calculate_heating_rates(n);
-            }
-
-            if (NLTE_POPS_ON)
-            {
-              nlte_test = 0.0;
-              for (int element = 0; element < nelements; element++)
-              {
-                if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
-                  solve_nlte_pops_element(element, n, nts);
-                else
-                {
-                  const int nions = get_nions(element);
-                  for (int ion = 0; ion < nions-1; ion++)
-                  {
-                    double trial = solve_nlte_pops(element, ion, n, nts);
-                    if ((trial < 1.0) && (trial > 0.0))
-                      trial = 1. / trial;
-
-                    if (trial > nlte_test)
-                      nlte_test = trial;
-
-                    //printout("I think that it's %g (really %g\n", modelgrid[0].nlte_pops[820] , modelgrid[0].nlte_pops[820]*modelgrid[0].rho);
-                  }
-                }
-              }
-
-              if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
-              {
-                printout("Completed iteration of NLTE population solver in cell %d for timestep %d.\n", n, nts);
-                double oldnne = get_nne(n);
-                precalculate_partfuncts(n);
-                calculate_electron_densities(n); // sets nne
-                nlte_test = get_nne(n) / oldnne;
-                if (nlte_test < 1)
-                  nlte_test = 1. / nlte_test;
-                printout("nne/NLTE solver iteration %d: previous nne is %g, new nne is %g, accuracy is %g\n",nlte_iter,oldnne,get_nne(n),nlte_test);
-                //set_nne(n, (get_nne(n) + oldnne) / 2.);
-              }
-              else
-                printout("Completed iteration for NLTE population solver in cell %d for timestep %d. Fractional error returned: %g\n", n, nts, nlte_test - 1.);
-
-              if (nlte_iter > NLTEITER)
-              {
-                printout("NLTE solver failed to converge after %d iterations. Test ratio %g.\n", NLTEITER + 1, nlte_test);
-                nlte_test = 0.0;
-              }
-              nlte_iter++;
-            }
-            else
-            {
-              // no NLTE means no NLTE iterations required, so pass it
-              nlte_test = 1.0;
-            }
-          }
-          if (NLTE_POPS_ON && nlte_iter <= NLTEITER)
-            printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test - 1., nlte_iter);
+          update_grid_cell_Te_nltepops(n, nts, titer);
         }
         #endif
         if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
@@ -735,15 +737,15 @@ static void update_grid_cell(int n, int nts, int titer, double tratmid, double d
 
     if (do_rlc_est == 2 && get_nne(n) > 0)
     {
-      double cell_len_scale = 0.1 / get_nne(n) / SIGMA_T;
-      if (cell_len_scale < mps[tid])
+      const double cell_len_scale_a = 0.1 / get_nne(n) / SIGMA_T;
+      if (cell_len_scale_a < mps[tid])
       {
-        mps[tid] = cell_len_scale;
+        mps[tid] = cell_len_scale_a;
       }
-      cell_len_scale = 0.1 / get_rho(n) / GREY_OP;
-      if (cell_len_scale <  mps[tid])
+      const double cell_len_scale_b = 0.1 / get_rho(n) / GREY_OP;
+      if (cell_len_scale_b <  mps[tid])
       {
-        mps[tid] = cell_len_scale;
+        mps[tid] = cell_len_scale_b;
       }
     }
   }
@@ -780,7 +782,7 @@ static void update_grid_cell(int n, int nts, int titer, double tratmid, double d
 }
 
 
-void update_grid(int nts, int my_rank, int nstart, int ndo, int titer)
+void update_grid(const int nts, const int my_rank, const int nstart, const int ndo, const int titer)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 /// m timestep
