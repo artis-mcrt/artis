@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_vector_double.h>
 #include <gsl/gsl_matrix_double.h>
@@ -154,7 +155,17 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
 
 {
   if (element > nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > get_nlevels_nlte(element, selected_ion) - 1)
-    return;
+  {
+    printout("print_level_rates: invalid element/ion/level arguments\n");
+    abort();
+  }
+
+  if (rate_matrix_rad_bb == rate_matrix_coll_bb)
+  {
+    printout("print_level_rates: rate_matrix_rad_bb == rate_matrix_coll_bb. check individual_process_matricies is off\n");
+    abort();
+  }
+
   const gsl_vector popvector = *popvec;
   const int nlte_dimension = popvector.size;
   const int selected_ionstage = get_ionstage(element, selected_ion);
@@ -226,6 +237,9 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
 void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels in all ions of an element
 {
+  // can save memory by using a combined rate matrix, at the expense of diagnostic information
+  const bool individual_process_matricies = false;
+
   const double t_mid = time_step[timestep].mid;
   const int nions = get_nions(element);
   const int atomic_number = get_element(element);
@@ -252,8 +266,8 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       if (nlevels_nlte == (get_nlevels(element, ion) - 1))
       {
         nlte_dimension += nlevels_nlte + 1;
-        printout("NLTE: setting up ion %d, which contributes %d to the vector dimension (no super level)\n",
-                 ion, nlevels_nlte + 1);
+        // printout("NLTE: setting up ion %d, which contributes %d to the vector dimension (no super level)\n",
+        //          ion, nlevels_nlte + 1);
       }
       else
       {
@@ -263,18 +277,36 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
             superlevel_partfunc[ion] += superlevel_boltzmann(modelgridindex,element,ion,level);
         }
         nlte_dimension += nlevels_nlte + 2;
-        printout("NLTE: setting up ion %d, which contributes %d to the vector dimension (including superlevel with partfunc %g)\n",
-                 ion, nlevels_nlte + 2, superlevel_partfunc[ion]);
+        // printout("NLTE: setting up ion %d, which contributes %d to the vector dimension (including superlevel with partfunc %g)\n",
+        //          ion, nlevels_nlte + 2, superlevel_partfunc[ion]);
       }
     }
 
-    printout("NLTE: the vector dimension is %d.\n", nlte_dimension);
+    printout("NLTE: the vector dimension is %d. Allocating...", nlte_dimension);
 
-    gsl_matrix *const rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    gsl_matrix *const rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    gsl_matrix *const rate_matrix_rad_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    gsl_matrix *const rate_matrix_coll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    gsl_matrix *const rate_matrix_ntcoll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    gsl_matrix *rate_matrix_rad_bb;
+    gsl_matrix *rate_matrix_coll_bb;
+    gsl_matrix *rate_matrix_rad_bf;
+    gsl_matrix *rate_matrix_coll_bf;
+    gsl_matrix *rate_matrix_ntcoll_bf;
+    if (individual_process_matricies)
+    {
+      rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+      rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+      rate_matrix_rad_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+      rate_matrix_coll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+      rate_matrix_ntcoll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    }
+    else
+    {
+      rate_matrix_rad_bb = rate_matrix;
+      rate_matrix_coll_bb = rate_matrix;
+      rate_matrix_rad_bf = rate_matrix;
+      rate_matrix_coll_bf = rate_matrix;
+      rate_matrix_ntcoll_bf = rate_matrix;
+    }
+
     gsl_vector *const balance_vector = gsl_vector_calloc(nlte_dimension);
 
     if (!balance_vector)
@@ -282,6 +314,8 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       printout("Cannot allocate NLTE rate matrix/balance vector memory.\n");
       abort();
     }
+
+    printout("done\n", nlte_dimension);
 
     for (int ion = 0; ion < nions; ion++)
     {
@@ -421,13 +455,15 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       } // level loop
     } // ion loop
 
-    // sum the matricies for each transition process to get a total rate matrix
-    gsl_matrix *const rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    gsl_matrix_add(rate_matrix, rate_matrix_rad_bb);
-    gsl_matrix_add(rate_matrix, rate_matrix_coll_bb);
-    gsl_matrix_add(rate_matrix, rate_matrix_rad_bf);
-    gsl_matrix_add(rate_matrix, rate_matrix_coll_bf);
-    gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bf);
+    if (individual_process_matricies)
+    {
+      // sum the matricies for each transition process to get a total rate matrix
+      gsl_matrix_add(rate_matrix, rate_matrix_rad_bb);
+      gsl_matrix_add(rate_matrix, rate_matrix_coll_bb);
+      gsl_matrix_add(rate_matrix, rate_matrix_rad_bf);
+      gsl_matrix_add(rate_matrix, rate_matrix_coll_bf);
+      gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bf);
+    }
 
     // replace the first row of the matrix and balance vector with the normalisation
     // constraint on the total element population
@@ -647,7 +683,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     printout("The element population is: %g (from abundance) and %g (from matrix solution)\n",
              get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex), gsl_blas_dasum(popvec));
 
-    if (atomic_number == 26 && timestep % 20 == 0)
+    if (individual_process_matricies && atomic_number == 26 && timestep % 20 == 0)
     {
       // print_level_rates(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
@@ -658,11 +694,14 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       // print_level_rates(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
-    gsl_matrix_free(rate_matrix_rad_bb);
-    gsl_matrix_free(rate_matrix_coll_bb);
-    gsl_matrix_free(rate_matrix_rad_bf);
-    gsl_matrix_free(rate_matrix_coll_bf);
-    gsl_matrix_free(rate_matrix_ntcoll_bf);
+    if (individual_process_matricies)
+    {
+      gsl_matrix_free(rate_matrix_rad_bb);
+      gsl_matrix_free(rate_matrix_coll_bb);
+      gsl_matrix_free(rate_matrix_rad_bf);
+      gsl_matrix_free(rate_matrix_coll_bf);
+      gsl_matrix_free(rate_matrix_ntcoll_bf);
+    }
 
     free(ion_populations);
 
