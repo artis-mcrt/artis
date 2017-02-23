@@ -293,7 +293,7 @@ static double calculate_elem_Gamma(int modelgridindex, int element, int ion)
     double Col_ion = 0.;
     for (int level = 0; level < ionisinglevels; level++)
     {
-      double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+      const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
       const int nphixstargets = get_nphixstargets(element,ion,level);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
       {
@@ -317,9 +317,7 @@ static double calculate_elem_Gamma(int modelgridindex, int element, int ion)
 
 static void update_grid_cell_Te_nltepops(const int n, const int nts, const int titer)
 {
-  int nlte_iter = 0;
-  double nlte_test = 2.; //ratio of previous to current iteration's free electron density solution
-  while (nlte_test > 1.03)
+  for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
   {
     if (!NLTE_POPS_ON)
     {
@@ -362,7 +360,7 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
         T_e = MINTEMP;
     }
     //T_e = T_J;
-    set_Te(n,T_e);
+    set_Te(n, T_e);
 
     if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
     {
@@ -374,7 +372,7 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
 
     if (NLTE_POPS_ON)
     {
-      nlte_test = 0.0;
+      double nlte_test; // ratio of previous to current iteration's free electron density solution
       for (int element = 0; element < nelements; element++)
       {
         if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
@@ -404,27 +402,24 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
         nlte_test = get_nne(n) / oldnne;
         if (nlte_test < 1)
           nlte_test = 1. / nlte_test;
-        printout("nne/NLTE solver iteration %d: previous nne is %g, new nne is %g, accuracy is %g\n",nlte_iter,oldnne,get_nne(n),nlte_test);
+        printout("nne/NLTE solver iteration %d: previous nne is %g, new nne is %g, ratio is %g\n",
+                 nlte_iter, oldnne, get_nne(n), nlte_test);
         //set_nne(n, (get_nne(n) + oldnne) / 2.);
       }
       else
         printout("Completed iteration for NLTE population solver in cell %d for timestep %d. Fractional error returned: %g\n", n, nts, nlte_test - 1.);
 
-      if (nlte_iter > NLTEITER)
+      if (nlte_test <= 1.03)
       {
-        printout("NLTE solver failed to converge after %d iterations. Test ratio %g.\n", NLTEITER + 1, nlte_test);
-        nlte_test = 0.0;
+        printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test - 1., nlte_iter + 1);
+        break;
       }
-      nlte_iter++;
+      else if (nlte_iter == NLTEITER)
+        printout("NLTE solver failed to converge after %d iterations. Test ratio %g.\n", nlte_iter + 1, nlte_test);
     }
     else
-    {
-      // no NLTE means no NLTE iterations required, so pass it
-      nlte_test = 1.0;
-    }
+      break; // no iteration needed without NLTE_POPS_ON
   }
-  if (NLTE_POPS_ON && nlte_iter <= NLTEITER)
-    printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test - 1., nlte_iter);
 }
 
 static void update_grid_cell(const int n, const int nts, const int titer, const double tratmid,
