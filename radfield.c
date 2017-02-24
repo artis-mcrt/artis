@@ -408,26 +408,27 @@ void radfield_zero_estimators(int modelgridindex)
 inline
 void radfield_update_binned_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf)
 {
-  int binindex = 0;
-  /*if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
-  {
-    #ifdef DEBUG_ON
-    printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
-    #endif
-    nu_lower_first = nu_cmf;
-  }
-  else if (nu_cmf > radfieldbin_nu_upper[modelgridindex][RADFIELDBINCOUNT - 1])
-  {
-    binindex = RADFIELDBINCOUNT - 1;
-    #ifdef DEBUG_ON
-    printout("radfield: Extending nu_upper_last from %g up to %g\n",radfield_get_bin_nu_upper(modelgridindex,binindex),nu_cmf);
-    #endif
-    radfield_get_bin_nu_upper(modelgridindex, binindex) = nu_cmf;
-  }
-  else*/
-  {
-    binindex = radfield_select_bin(modelgridindex,nu_cmf);
-  }
+  // int binindex = 0;
+  // if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
+  // {
+  //   #ifdef DEBUG_ON
+  //   printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
+  //   #endif
+  //   nu_lower_first = nu_cmf;
+  // }
+  // else if (nu_cmf > radfieldbin_nu_upper[modelgridindex][RADFIELDBINCOUNT - 1])
+  // {
+  //   binindex = RADFIELDBINCOUNT - 1;
+  //   #ifdef DEBUG_ON
+  //   printout("radfield: Extending nu_upper_last from %g up to %g\n",radfield_get_bin_nu_upper(modelgridindex,binindex),nu_cmf);
+  //   #endif
+  //   radfield_get_bin_nu_upper(modelgridindex, binindex) = nu_cmf;
+  // }
+  // else
+  // {
+  //   binindex = radfield_select_bin(modelgridindex,nu_cmf);
+  // }
+  const int binindex = radfield_select_bin(modelgridindex,nu_cmf);
 
   if (binindex >= 0)
   {
