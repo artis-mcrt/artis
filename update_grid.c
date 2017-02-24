@@ -345,6 +345,9 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
 
     if (NLTE_POPS_ON)
     {
+      if (NT_ON && NT_SOLVE_SPENCERFANO)
+        nt_solve_spencerfano(n,nts);  // depends on the ionisation balance, and weakly on nne
+
       double nlte_test; // ratio of previous to current iteration's free electron density solution
       for (int element = 0; element < nelements; element++)
       {
@@ -647,8 +650,6 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
           update_grid_cell_Te_nltepops(n, nts, titer);
         }
         #endif
-        if (NT_ON && NT_SOLVE_SPENCERFANO && !initial_iteration)
-          nt_solve_spencerfano(n,nts);  // should this be moved inside the NLTE population solver? would be slower but more accurate
       }
 
       const float nne = get_nne(n);
