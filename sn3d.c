@@ -27,6 +27,7 @@
 #include "update_grid.h"
 #include "update_packets.h"
 #include "version.h"
+#include "vpkt.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
 
@@ -742,23 +743,6 @@ int main(int argc, char** argv)
 
     // Initialise virtual packets file and vspecpol
     #ifdef VPKT_ON
-      sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
-      if ((vspecpol_file = fopen(filename, "w")) == NULL)
-      {
-        printout("Cannot open %s.\n",filename);
-        abort();
-      }
-
-      if (vgrid_flag == 1)
-      {
-        sprintf(filename,"vpkt_grid_%d-%d.out",my_rank,tid);
-        if ((vpkt_grid_file = fopen(filename, "w")) == NULL)
-        {
-          printout("Cannot open %s.\n",filename);
-          abort();
-        }
-      }
-
       // New simulation
       if (!simulation_continued_from_saved)
       {
@@ -1156,11 +1140,26 @@ int main(int argc, char** argv)
 
             // write specpol of the virtual packets
             #ifdef VPKT_ON
+              sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
+              FILE *vspecpol_file;
+              if ((vspecpol_file = fopen(filename, "w")) == NULL)
+              {
+                printout("Cannot open %s.\n",filename);
+                abort();
+              }
+
               write_vspecpol(vspecpol_file);
               fclose(vspecpol_file);
 
               if (vgrid_flag == 1)
               {
+                sprintf(filename,"vpkt_grid_%d-%d.out",my_rank,tid);
+                FILE *vpkt_grid_file;
+                if ((vpkt_grid_file = fopen(filename, "w")) == NULL)
+                {
+                  printout("Cannot open %s.\n",filename);
+                  abort();
+                }
                 write_vpkt_grid(vpkt_grid_file);
                 fclose(vpkt_grid_file);
               }
