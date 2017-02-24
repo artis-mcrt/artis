@@ -135,12 +135,12 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 void normalise_grey(int nts)
 {
   //for (n=0; n < ngrid; n++)
-  double dt = time_step[nts].width;
-  double helper = pow(time_step[nts].mid / tmin, 3);
+  const double dt = time_step[nts].width;
+  const double helper = pow(time_step[nts].mid / tmin, 3);
   for (int n = 0; n < npts_model; n++)
   {
-    int assoc_cells = mg_associated_cells[n];
-    double dV = vol_init() * helper; //vol_init(&cell[n]) in future coordinate systems
+    const int assoc_cells = mg_associated_cells[n];
+    const double dV = vol_init() * helper; //vol_init(&cell[n]) in future coordinate systems
 
     rpkt_emiss[n] = rpkt_emiss[n] * ONEOVER4PI / dV / dt / nprocs / assoc_cells;
   }
