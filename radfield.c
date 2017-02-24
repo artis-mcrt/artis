@@ -664,8 +664,8 @@ static float find_T_R(int modelgridindex, int binindex)
   double delta_nu_bar_min = delta_nu_bar(T_R_min,&paras);
   double delta_nu_bar_max = delta_nu_bar(T_R_max,&paras);
 
-  printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
-           binindex, delta_nu_bar_min,delta_nu_bar_max);
+  // printout("find_T_R: bin %4d delta_nu_bar(T_R_min) %g, delta_nu_bar(T_R_max) %g\n",
+  //          binindex, delta_nu_bar_min,delta_nu_bar_max);
 
   if (!isfinite(delta_nu_bar_min) || !isfinite(delta_nu_bar_max))
     delta_nu_bar_max = delta_nu_bar_min = -1;
@@ -799,8 +799,8 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       J_bin_sum += radfield_get_bin_J(modelgridindex, binindex, true);
 
-    printout("radfield bins sum to J of %g out of total J %g (%.1f%%).\n",
-             J_bin_sum, J[modelgridindex], 100. * J_bin_sum / J[modelgridindex]);
+    printout("radfield bins sum to J of %g (%.1f%% of total J).\n",
+             J_bin_sum, 100. * J_bin_sum / J[modelgridindex]);
     printout("radfield: Finding parameters for %d bins...\n", RADFIELDBINCOUNT);
 
     double J_bin_max = 0.;

@@ -147,7 +147,6 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
     gsl_root_fsolver *restrict T_e_solver = gsl_root_fsolver_alloc(solvertype);
 
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-    ;
     const double fractional_accuracy = 1e-2;
     const int maxit = 100;
     int status;
