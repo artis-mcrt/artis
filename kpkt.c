@@ -21,8 +21,8 @@ void calculate_kpkt_rates(int modelgridindex)
   double C_ion;
   //double E_threshold;//,nu_threshold;
   //double alpha_sp,modified_alpha_sp;
-  const double nne = get_nne(modelgridindex);
-  const double T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
   //double T_R = get_TR(modelgridindex);
   //double W = get_W(modelgridindex);
   //if (!SILENT) printout("[info] kpkt_cuts: sampling cell %d, T_e %g, T_R %g, W %g, nne %g\n",modelgridindex,T_e,T_R,W,nne);
@@ -246,8 +246,8 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   //double alpha_sp,modified_alpha_sp;
   //double totalcooling;//partialcoolingsum;
 
-  const double nne = get_nne(modelgridindex);
-  const double T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
   //double T_R = get_TR(modelgridindex);
   //double W = get_W(modelgridindex);
 
@@ -454,7 +454,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
 {
   //double nne = cell[pkt_ptr->where].nne ;
   int cellindex = pkt_ptr->where;
-  const double T_e = get_Te(cell[cellindex].modelgridindex);
+  const float T_e = get_Te(cell[cellindex].modelgridindex);
   double t_current = t1;
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
@@ -551,7 +551,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
 
   //double nne = get_nne(modelgridindex);
-  const double T_e = get_Te(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
   double deltat = 0.;
   if (nts < n_kpktdiffusion_timesteps) deltat = kpktdiffusion_timescale * time_step[nts].width;
   //double deltat = 1./(nne*1.02e-12*pow(T_e/1e4,0.843));
@@ -936,8 +936,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   double nu_max_phixs;
   wsp = gsl_integration_workspace_alloc(1024);
 
-  double T_e = cell[cellnumber].T_e;
-  double nne = cell[cellnumber].nne;
+  float T_e = cell[cellnumber].T_e;
+  float nne = cell[cellnumber].nne;
   double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
   //upper = cellhistory[tid].coolinglist[i].upperlevel;
   double nu_threshold = (epsilon(element,ion+1,0) - epsilon(element,ion,level)) / H;

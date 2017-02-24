@@ -469,8 +469,8 @@ void calculate_cooling_rates(int modelgridindex)
 /// Calculate the cooling rates for a given cell. Results are returned
 /// via the elements of the global coolingrates data structure.
 {
-  const double nne = get_nne(modelgridindex);
-  const double T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
 
 /*  PKT dummypkt;
   dummypkt.where = cellnumber;

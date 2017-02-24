@@ -59,8 +59,8 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
 
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
-  const double T_e = get_Te(modelgridindex);
-  const double nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
 
   /// calculate occupation number for active MA level ////////////////////////////////////
   /// general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
@@ -290,10 +290,9 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
           printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g, saved_internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current,cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher);
         }
 
-        double T_e = get_Te(modelgridindex);
-        double T_R = get_TR(modelgridindex);
-        double W = get_W(modelgridindex);
-        printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,T_e,W,get_TJ(modelgridindex));
+        float T_R = get_TR(modelgridindex);
+        float W = get_W(modelgridindex);
+        printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,get_Te(modelgridindex),W,get_TJ(modelgridindex));
         double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
         int index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
         double renorm  = corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
@@ -936,7 +935,7 @@ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int 
 }
 
 
-double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex, double t_current)//, double T_R, double W)
+double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex, double t_current)
 ///radiative excitation rate: paperII 3.5.2
 {
   #ifdef DEBUG_ON
@@ -1023,7 +1022,7 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
 double rad_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower)
 ///radiative recombination rate: paperII 3.5.2
 {
-  const double nne = get_nne(modelgridindex);
+  const float nne = get_nne(modelgridindex);
   double R = 0.0;
   const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
@@ -1056,8 +1055,8 @@ double rad_recombination_ratecoeff(int modelgridindex, int element, int upperion
 double col_deexcitation_ratecoeff(int modelgridindex, double epsilon_trans, int lineindex)
 {
   double C;
-  const double T_e = get_Te(modelgridindex);
-  const double nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
   const double coll_str_thisline = get_coll_str(lineindex);
   const double statweight = statw_upper(lineindex);
   if (coll_str_thisline < 0)
@@ -1125,7 +1124,7 @@ double col_deexcitation_ratecoeff(int modelgridindex, double epsilon_trans, int 
 }
 
 
-double col_excitation_ratecoeff(double T_e, double nne, int lineindex, double epsilon_trans)
+double col_excitation_ratecoeff(float T_e, float nne, int lineindex, double epsilon_trans)
 {
   double C;
   const double coll_strength = get_coll_str(lineindex);
@@ -1198,9 +1197,9 @@ double col_excitation_ratecoeff(double T_e, double nne, int lineindex, double ep
 
 double col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower, double epsilon_trans)
 {
-  const double T_e = get_Te(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
   const double fac1 = epsilon_trans / KB / T_e;
-  const double nne = get_nne(modelgridindex);
+  const float nne = get_nne(modelgridindex);
   const int ionstage = get_ionstage(element,upperion);
   const float sigma_bf_all_targets = elements[element].ions[upperion-1].levels[lower].photoion_xs[0];
 
@@ -1257,8 +1256,8 @@ double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lo
   }
   #endif
 
-  const double T_e = get_Te(modelgridindex);
-  const double nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge

@@ -11,10 +11,10 @@
 #define RADFIELDBINCOUNT 96
 // static const int RADFIELDBINCOUNT = 96;
 
-extern inline double radfield_dbb(double nu, double T, double W);
+extern inline double radfield_dbb(double nu, float T, float W);
 
-static const double nu_lower_first_initial = (CLIGHT / (15000e-8)); // in Angstroms
-static const double nu_upper_last_initial = (CLIGHT /   (500e-8));  // in Angstroms
+static const double nu_lower_first_initial = (CLIGHT / (20000e-8)); // in Angstroms
+static const double nu_upper_last_initial = (CLIGHT /  (2000e-8));  // in Angstroms
 
 static const double boost_region_nu_lower = (CLIGHT / (2500e-8)); // in Angstroms
 static const double boost_region_nu_upper = (CLIGHT / (2100e-8));  // in Angstroms
@@ -40,15 +40,15 @@ struct radfieldbin
   double nuJ_raw;
   double prev_J_normed;
   double prev_nuJ_normed;
-  double W;          // scaling factor
-  double T_R;        // radiation temperature
-  int prev_contribcount;
+  float W;                // dilution (scaling) factor
+  float T_R;              // radiation temperature
   int contribcount;
+  int prev_contribcount;
   enum_bin_fit_type fit_type;
 };
 
-static struct radfieldbin *radfieldbins[MMODELGRID+1];
-static double *radfieldbin_nu_upper[MMODELGRID+1];
+static struct radfieldbin *radfieldbins[MMODELGRID + 1];
+static double *radfieldbin_nu_upper[MMODELGRID + 1]; // array of upper frequency boundaries of bins
 
 typedef enum
 {
@@ -249,14 +249,14 @@ int radfield_get_bin_contribcount(int modelgridindex, int binindex, bool average
 
 
 static inline
-double radfield_get_bin_W(int modelgridindex, int binindex)
+float radfield_get_bin_W(int modelgridindex, int binindex)
 {
   return radfieldbins[modelgridindex][binindex].W;
 }
 
 
 static inline
-double radfield_get_bin_T_R(int modelgridindex, int binindex)
+float radfield_get_bin_T_R(int modelgridindex, int binindex)
 {
   return radfieldbins[modelgridindex][binindex].T_R;
 }
@@ -323,8 +323,8 @@ void radfield_write_to_file(int modelgridindex, int timestep)
       double nu_upper = 0.0;
       double nuJ_out = 0.0;
       double J_out = 0.0;
-      double T_R = 0.0;
-      double W = 0.0;
+      float T_R = 0.0;
+      float W = 0.0;
       double J_nu_bar = 0.0;
       int contribcount = 0;
 
@@ -509,8 +509,8 @@ double radfield(double nu, int modelgridindex)
              W_fullspec, T_R_fullspec, nu, modelgridindex);
   }*/
 
-  const double T_R_fullspec = get_TR(modelgridindex);
-  const double W_fullspec   = get_W(modelgridindex);
+  const float T_R_fullspec = get_TR(modelgridindex);
+  const float W_fullspec   = get_W(modelgridindex);
   const double J_nu_fullspec = radfield_dbb(nu, T_R_fullspec, W_fullspec);
   return J_nu_fullspec;
 }
@@ -652,7 +652,7 @@ static double delta_nu_bar(double T_R, void *restrict paras)
 }
 
 
-static double find_T_R(int modelgridindex, int binindex)
+static float find_T_R(int modelgridindex, int binindex)
 {
   double T_R = 0.0;
 
@@ -690,7 +690,7 @@ static double find_T_R(int modelgridindex, int binindex)
     do
     {
       iteration_num++;
-      status = gsl_root_fsolver_iterate(T_R_solver);
+      gsl_root_fsolver_iterate(T_R_solver);
       T_R = gsl_root_fsolver_root(T_R_solver);
 
       const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
@@ -726,11 +726,55 @@ static double find_T_R(int modelgridindex, int binindex)
 }
 
 
+static void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, float *T_J, float *T_R, float *W)
+{
+  const double nubar = nuJ / J;
+  if (!isfinite(nubar) || nubar == 0.)
+  {
+    /// Return old T_R
+    printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",modelgridindex);
+    *T_J = modelgrid[modelgridindex].TJ;
+    *T_R = modelgrid[modelgridindex].TR;
+    *W = modelgrid[modelgridindex].W;
+  }
+  else
+  {
+    *T_J = pow(PI / STEBO * J, 1 / 4.);
+    if (*T_J > MAXTEMP)
+    {
+      printout("[warning] update_grid: temperature estimator T_J=%g exceeds T_max=%g in cell %d. Set T_J = T_max!\n",*T_J,MAXTEMP,modelgridindex);
+      *T_J = MAXTEMP;
+    }
+    if (*T_J < MINTEMP)
+    {
+      printout("[warning] update_grid: temperature estimator T_J=%g below T_min %g in cell %d. Set T_J = T_min!\n",*T_J,MINTEMP,modelgridindex);
+      *T_J = MINTEMP;
+    }
+
+    *T_R = H * nubar / KB / 3.832229494;
+    if (*T_R > MAXTEMP)
+    {
+      printout("[warning] update_grid: temperature estimator T_R=%g exceeds T_max=%g in cell %d. Set T_R = T_max!\n",*T_R,MAXTEMP,modelgridindex);
+      *T_R = MAXTEMP;
+    }
+    if (*T_R < MINTEMP)
+    {
+      printout("[warning] update_grid: temperature estimator T_R=%g below T_min %g in cell %d. Set T_R = T_min!\n",*T_R,MINTEMP,modelgridindex);
+      *T_R = MINTEMP;
+    }
+
+    *W = PI * J / STEBO / pow(*T_R, 4);
+  }
+}
+
+
 void radfield_fit_parameters(int modelgridindex, int timestep)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
 {
-  double T_J, T_R, W;
+  float T_J;
+  float T_R;
+  float W;
   get_radfield_params_fullspec(J[modelgridindex], nuJ[modelgridindex], modelgridindex, &T_J, &T_R, &W);
   set_TJ(modelgridindex, T_J);
   set_TR(modelgridindex, T_R);
@@ -744,7 +788,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       abort();
     }
 
-    const double T_R_fullspec = get_TR(modelgridindex);
+    const float T_R_fullspec = get_TR(modelgridindex);
     const double J_fullspec = J[modelgridindex];
     //double planck_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
 
@@ -777,8 +821,8 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         radfield_set_bin_J(modelgridindex, binindex, J_bin_max * boost_region_factor);
       }
       const double J_bin = radfield_get_bin_J(modelgridindex, binindex, true);
-      double T_R_bin = -1.0;
-      double W_bin = -1.0;
+      float T_R_bin = -1.0;
+      float W_bin = -1.0;
       int contribcount = radfield_get_bin_contribcount(modelgridindex, binindex, true);
 
       if (contribcount > 10)
@@ -845,50 +889,8 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       printout("bin %4d: J %g, T_R %7.1f, W %12.5e\n",
              binindex, J_bin, T_R_bin, W_bin);
     }*/
-    if (timestep % 5 == 0)
+    if (timestep % 2 == 0)
       radfield_write_to_file(modelgridindex, timestep);
-  }
-}
-
-
-void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, double *T_J, double *T_R, double *W)
-{
-  double nubar = nuJ / J;
-  if (!isfinite(nubar) || nubar == 0.)
-  {
-    /// Return old T_R
-    printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",modelgridindex);
-    *T_J = modelgrid[modelgridindex].TJ;
-    *T_R = modelgrid[modelgridindex].TR;
-    *W = modelgrid[modelgridindex].W;
-  }
-  else
-  {
-    *T_J = pow(PI / STEBO * J, 1/4.);
-    if (*T_J > MAXTEMP)
-    {
-      printout("[warning] update_grid: temperature estimator T_J=%g exceeds T_max=%g in cell %d. Set T_J = T_max!\n",*T_J,MAXTEMP,modelgridindex);
-      *T_J = MAXTEMP;
-    }
-    if (*T_J < MINTEMP)
-    {
-      printout("[warning] update_grid: temperature estimator T_J=%g below T_min %g in cell %d. Set T_J = T_min!\n",*T_J,MINTEMP,modelgridindex);
-      *T_J = MINTEMP;
-    }
-
-    *T_R = H * nubar / KB / 3.832229494;
-    if (*T_R > MAXTEMP)
-    {
-      printout("[warning] update_grid: temperature estimator T_R=%g exceeds T_max=%g in cell %d. Set T_R = T_max!\n",*T_R,MAXTEMP,modelgridindex);
-      *T_R = MAXTEMP;
-    }
-    if (*T_R < MINTEMP)
-    {
-      printout("[warning] update_grid: temperature estimator T_R=%g below T_min %g in cell %d. Set T_R = T_min!\n",*T_R,MINTEMP,modelgridindex);
-      *T_R = MINTEMP;
-    }
-
-    *W = PI * J / STEBO / pow(*T_R,4);
   }
 }
 
@@ -962,8 +964,8 @@ void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].prev_J_normed, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].prev_nuJ_normed, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].W, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbins[modelgridindex][binindex].T_R, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].prev_contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
         // printout("radfield_MPI_Bcast MPI_Bcast radfield bin %d for cell %d from process %d to %d\n", binindex, modelgridindex, root, my_rank);
@@ -993,7 +995,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
       fprintf(gridsave_file,"%d %lg\n", modelgridindex, J_normfactor[modelgridindex]);
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        fprintf(gridsave_file,"%lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+        fprintf(gridsave_file,"%lg %lg %lg %lg %lg %d %g %g %d %d\n",
                 radfieldbin_nu_upper[modelgridindex][binindex],
                 radfieldbins[modelgridindex][binindex].J_raw,
                 radfieldbins[modelgridindex][binindex].nuJ_raw, radfieldbins[modelgridindex][binindex].prev_J_normed,
@@ -1060,7 +1062,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
         int fit_type_in;
-        fscanf(gridsave_file,"%lg %lg %lg %lg %lg %d %lg %lg %d %d\n",
+        fscanf(gridsave_file,"%lg %lg %lg %lg %lg %d %g %g %d %d\n",
                 &radfieldbin_nu_upper[modelgridindex][binindex],
                 &radfieldbins[modelgridindex][binindex].J_raw,
                 &radfieldbins[modelgridindex][binindex].nuJ_raw, &radfieldbins[modelgridindex][binindex].prev_J_normed,

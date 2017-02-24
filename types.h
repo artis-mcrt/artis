@@ -252,16 +252,16 @@ typedef struct mgicooling_t
 
 typedef struct modelgrid_t
 {
-  double Te;
-  double TR;
-  double TJ;
-  double W;
+  float Te;
+  float TR;
+  float TJ;
+  float W;
+  float nne;
   float initial_radial_pos;
   float rhoinit;
   float rho;
   //modelgrid nn_tot
-  float nne;
-  float nnetot;
+  float nnetot;           // total electron density (free + bound). this is not actually used anywhere. keep?
   float fni;
   float fco;
   float f52fe;
