@@ -273,27 +273,29 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
 }
 
 
-static void mpi_reduce_estimators(void)
+static void mpi_reduce_estimators(int my_rank)
 {
-  /// the following blocks gather all the estimators to the zeroth (Master) thread
-  MPI_Reduce(MPI_IN_PLACE, &J, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &J, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
   MPI_Barrier(MPI_COMM_WORLD);
   #ifndef FORCE_LTE
-    MPI_Reduce(MPI_IN_PLACE, &nuJ, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &nuJ, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
     if (MULTIBIN_RADFIELD_MODEL_ON)
       radfield_reduce_binned_estimators();
+
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(MPI_IN_PLACE, &ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(MPI_IN_PLACE, &colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
     // MPI_Reduce(MPI_IN_PLACE, &ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     // MPI_Reduce(MPI_IN_PLACE, &twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     // MPI_Reduce(MPI_IN_PLACE, &stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
 /*    MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     if (my_rank == 0)
     {
@@ -361,19 +363,33 @@ static void mpi_reduce_estimators(void)
   #endif
 
   #ifdef RECORD_LINESTAT
-    MPI_Reduce(MPI_IN_PLACE, ecounter, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Reduce(MPI_IN_PLACE, acounter, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+    {
+      MPI_Reduce(MPI_IN_PLACE, ecounter, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+      MPI_Reduce(MPI_IN_PLACE, acounter, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
+    else
+    {
+      MPI_Reduce(ecounter, MPI_IN_PLACE, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+      MPI_Reduce(acounter, MPI_IN_PLACE, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
   #endif
 
   //double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
   //double deltat = time_step[nts].width;
   if (do_rlc_est != 0)
   {
-    MPI_Reduce(MPI_IN_PLACE, &rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+      MPI_Reduce(MPI_IN_PLACE, &rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    else
+      MPI_Reduce(&rpkt_emiss, MPI_IN_PLACE, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   }
   if (do_comp_est)
   {
-    MPI_Reduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (my_rank == 0)
+      MPI_Reduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    else
+      MPI_Reduce(&compton_emiss, MPI_IN_PLACE, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -381,13 +397,8 @@ static void mpi_reduce_estimators(void)
 static void mpi_broadcast_estimators(void)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Bcast(&J, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   #ifndef FORCE_LTE
-    MPI_Bcast(&nuJ, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&ffheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&colheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
     // MPI_Bcast(&photoionestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     // MPI_Bcast(&stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     // MPI_Bcast(&ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -1014,7 +1025,7 @@ int main(int argc, char** argv)
             // estimators together now, sum them, normalise on the Master thread and then pass back to the
             // others
 
-            mpi_reduce_estimators();
+            mpi_reduce_estimators(my_rank);
           #endif
 
           // The master thread now knows the estimators (averaged over the processors). It will now normalise them.
