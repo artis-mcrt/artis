@@ -129,7 +129,7 @@ double phi(int element, int ion, int modelgridindex)
 
   const double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
   //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
-  const double T_e = get_Te(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
   //double T_R = get_TR(modelgridindex);
 
   //double W = cell[cellnumber].W;
@@ -154,7 +154,7 @@ double phi(int element, int ion, int modelgridindex)
     else
 // elseif (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
 //     {
-//       const double nne = get_nne(modelgridindex);
+//       const float nne = get_nne(modelgridindex);
 //       phi = ionstagepop(modelgridindex,element,ion) / ionstagepop(modelgridindex,element,ion+1) / nne;
 //     }
 // else
@@ -320,7 +320,7 @@ double phi(int element, int ion, int modelgridindex)
   double phi;
 
   double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
-  double T_e = cell[cellnumber].T_e;
+  float T_e = cell[cellnumber].T_e;
 
   partfunct_ratio = cell[cellnumber].composition[element].partfunct[ion]/cell[cellnumber].composition[element].partfunct[ion+1];
   phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);

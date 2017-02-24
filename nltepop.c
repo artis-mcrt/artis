@@ -255,8 +255,8 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     //set_W(modelgridindex,1.0); //TODO: remove after testing complete
     //printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
 
-    const double T_e = get_Te(modelgridindex);
-    const double nne = get_nne(modelgridindex);
+    const float T_e = get_Te(modelgridindex);
+    const float nne = get_nne(modelgridindex);
     int nlte_dimension = 0;
     double superlevel_partfunc[nions]; // space is allocated for every ion, even if it does not have a superlevel
     for (int ion = 0; ion < nions; ion++)
@@ -665,7 +665,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       //   const double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
       //
       //   const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
-      //   const double T_e = get_Te(modelgridindex);
+      //   const float T_e = get_Te(modelgridindex);
       //   const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion-1] / modelgrid[modelgridindex].composition[element].partfunct[ion];
       //   const double gs_g_ratio = stat_weight(element,ion-1,0) / stat_weight(element,ion,0);
       //   const double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
@@ -676,7 +676,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       //            get_ionstage(element,ion-1),ion_stage,gspopratio,sbphi_gs,gspopratio/sbphi_gs);
       //   printout("  The ratio of total pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
       //            get_ionstage(element,ion-1),ion_stage,solution_ion_pop_ratio,sbphi,solution_ion_pop_ratio/sbphi);
-      //   const double nne = get_nne(modelgridindex);
+      //   const float nne = get_nne(modelgridindex);
       //   // calculate_partfunct(element, ion, modelgridindex) * modelgrid[modelgridindex].composition[element].groundlevelpop[ion] / stat_weight(element,ion,0))
       //   printout("  The corresponding phi-factor is: %g\n", (solution_ion_pop_ratio / nne));
       //   printout("  The ionization solver gives phi(ion_stage=%d / %d) = %g\n",
@@ -766,8 +766,8 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
   double test_ratio_upper;
 
   int super_level;
-  const double T_e = get_Te(modelgridindex);
-  const double nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
 
   if (get_nlevels(element,ion) > 1)
   {

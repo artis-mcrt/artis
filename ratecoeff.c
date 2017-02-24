@@ -386,10 +386,10 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
   int cellnumber = ((gslintegration_bfheatingparas *) paras)->cellnumber;
   double nu_edge = ((gslintegration_bfheatingparas *) paras)->nu_edge;
 
-  double T_e = cell[cellnumber].T_e;
+  float T_e = cell[cellnumber].T_e;
   double T_R = cell[cellnumber].T_R;
   double W = cell[cellnumber].W;
-  double nne = cell[cellnumber].nne;
+  float nne = cell[cellnumber].nne;
 
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
@@ -420,7 +420,7 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
   int element,ion;
   int nions,Z;
 
-  double T_e = ((gslintegration_ffheatingparas *) paras)->T_e;
+  float T_e = ((gslintegration_ffheatingparas *) paras)->T_e;
   int cellnumber = ((gslintegration_ffheatingparas *) paras)->cellnumber;
 
   nne = cell[cellnumber].nne;
@@ -589,7 +589,7 @@ static void precalculate_rate_coefficient_integrals(void)
           {
             double error;
             int status = 0;
-            const double T_e = MINTEMP * exp(iter * T_step_log);
+            const float T_e = MINTEMP * exp(iter * T_step_log);
             //T_e = MINTEMP + iter*T_step;
             const double sfac = calculate_sahafact(element,ion,level,upperlevel,T_e,E_threshold);
             //printout("%d %g\n",iter,T_e);
@@ -681,7 +681,7 @@ static void calculate_ion_alpha_sp(void)
 {
   for (int iter = 0; iter < TABLESIZE; iter++)
   {
-    const double T_e = MINTEMP * exp(iter*T_step_log);
+    const float T_e = MINTEMP * exp(iter*T_step_log);
     //T_e = MINTEMP + iter*T_step;
     for (int element = 0; element < nelements; element++)
     {
@@ -1028,7 +1028,7 @@ static double integrand_bfheating_custom_radfield(double nu, void *restrict void
   const int i = (nu/nu_edge - 1.0) / NPHIXSNUINCREMENT;
   const float sigma_bf = params->photoion_xs[i];
 
-  // const double T_e = get_Te(modelgridindex);
+  // const float T_e = get_Te(modelgridindex);
   // return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
 
   const double T_R = get_TR(modelgridindex);
@@ -1090,7 +1090,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
-  // const double T_e = get_Te(modelgridindex);
+  // const float T_e = get_Te(modelgridindex);
   // const double T_R = get_TR(modelgridindex);
   // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
@@ -1134,7 +1134,7 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
 
     if (alpha_sp < 0.)
     {
-      const double T_e = get_Te(modelgridindex);
+      const float T_e = get_Te(modelgridindex);
       alpha_sp = interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e);
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = alpha_sp;
     }
@@ -1142,7 +1142,7 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
   }
   else
   {
-    double T_e = get_Te(modelgridindex);
+    float T_e = get_Te(modelgridindex);
     return interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e);
   }
 }
@@ -1248,9 +1248,9 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
   {
     /// Interpolate bfcooling out of precalculated values
     //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-    double T_e = get_Te(modelgridindex);
+    float T_e = get_Te(modelgridindex);
     double nnion = ionstagepop(modelgridindex,element,ion+1);
-    double nne = get_nne(modelgridindex);
+    float nne = get_nne(modelgridindex);
     //double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
     //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel * nne;
     bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnion * nne;
@@ -1281,8 +1281,8 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 {
   double alpha_sp;
 
-  double T_e = cell[cellnumber].T_e;
-  double nne = cell[cellnumber].nne;
+  float T_e = cell[cellnumber].T_e;
+  float nne = cell[cellnumber].nne;
   double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
 
   alpha_sp = interpolate_spontrecombcoeff(element,ion,level,T_e) * nnionlevel*nne;

@@ -980,8 +980,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
 
   if (do_r_lc)
   {
-    const double nne = get_nne(modelgridindex);
-    const double T_e = get_Te(modelgridindex);
+    const float nne = get_nne(modelgridindex);
+    const float T_e = get_Te(modelgridindex);
     const double nu = pkt_ptr->nu_cmf;
     const double g_ff = 1;
     if (opacity_case == 4)
@@ -1266,8 +1266,8 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
     {
         if (opacity_case == 4)
         {
-            double nne = get_nne(modelgridindex);
-            double T_e = get_Te(modelgridindex);
+            float nne = get_nne(modelgridindex);
+            float T_e = get_Te(modelgridindex);
             //double T_R = get_TR(modelgridindex);
             double nu = pkt_ptr->nu_cmf;
             g_ff = 1;
@@ -1432,8 +1432,8 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current)
         }
         else
         {
-            double nne = get_nne(modelgridindex);
-            double T_e = get_Te(modelgridindex);
+            float nne = get_nne(modelgridindex);
+            float T_e = get_Te(modelgridindex);
             //double T_R = get_TR(modelgridindex);
             g_ff = 1;
             double nu = pkt_ptr->nu_cmf;

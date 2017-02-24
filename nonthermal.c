@@ -565,7 +565,7 @@ static float calculate_frac_heating(int modelgridindex)
 // Kozma & Fransson equation 3
 {
   double frac_heating_Einit = 0.;
-  const double nne = get_nne(modelgridindex);
+  const float nne = get_nne(modelgridindex);
   const double E_0 = nt_solution[modelgridindex].E_0;
 
   const int startindex = get_energyindex_ev(E_0);
@@ -988,7 +988,7 @@ double calculate_nt_excitation_rate(int modelgridindex, int element, int ion, in
 
 static void analyse_sf_solution(int modelgridindex)
 {
-  const double nne = get_nne(modelgridindex);
+  const float nne = get_nne(modelgridindex);
   const double nntot = get_tot_nion(modelgridindex);
 
   // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
@@ -1112,7 +1112,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     }
   }
 
-  const double nne = get_nne(modelgridindex); // electrons per cm^3
+  const float nne = get_nne(modelgridindex); // electrons per cm^3
 
   printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV at timestep %d in cell %d (nne=%g e-/cm^3)\n",
            SFPTS, EMIN, EMAX, timestep, modelgridindex, nne);

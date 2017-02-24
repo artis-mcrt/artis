@@ -651,7 +651,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
           nt_solve_spencerfano(n,nts);  // should this be moved inside the NLTE population solver? would be slower but more accurate
       }
 
-      const double nne = get_nne(n);
+      const float nne = get_nne(n);
       const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
 
       const double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
@@ -1059,7 +1059,7 @@ double calculate_populations(int modelgridindex)
 
   /// Get temperatures
   const double T_R = get_TR(modelgridindex);
-  const double T_e = get_Te(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
   const double W = get_W(modelgridindex);
 
   double nne_hi = get_rho(modelgridindex) / MH;
@@ -1121,7 +1121,7 @@ double calculate_populations(int modelgridindex)
     }
   }
 
-  double nne = 0.;
+  float nne = 0.;
   double nne_tot = 0.;   /// total number of electrons in grid cell which are possible
                          /// targets for compton scattering of gamma rays
   double nntot = 0.;
@@ -1295,7 +1295,7 @@ double calculate_electron_densities(int modelgridindex)
 // are fixed (determined by NLTE all-ion solver)
 {
   double nne_tot = 0.; // total electron density
-  double nne = 0.;     // free electron density
+  float nne = 0.;     // free electron density
 
   for (int element = 0; element < nelements; element++)
   {

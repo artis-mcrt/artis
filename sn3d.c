@@ -159,19 +159,16 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
         //if (cell[nn].rho > MINDENSITY)
         if (mg_associated_cells[mgi] > 0)
         {
-          MPI_Pack(&modelgrid[mgi].thick, 1, MPI_SHORT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].Te, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].TR, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].W, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
           MPI_Pack(&modelgrid[mgi].rho, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
           MPI_Pack(&modelgrid[mgi].nne, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
           MPI_Pack(&modelgrid[mgi].nnetot, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
           MPI_Pack(&modelgrid[mgi].kappagrey, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].TR, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          //MPI_Pack(&cell[nn].T_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].W, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          //MPI_Pack(&cell[nn].W_D, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          //MPI_Pack(&cell[nn].samplecell, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
           MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].thick, 1, MPI_SHORT, buffer, HUGEE, &position, MPI_COMM_WORLD);
 
           for (int element = 0; element < nelements; element++)
           {
@@ -196,19 +193,16 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
       //if (cell[ncl].rho > MINDENSITY)
       if (mg_associated_cells[mgi] > 0)
       {
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
         MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
         MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
         MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
         MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].T_D, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].W_D, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        //MPI_Unpack(buffer, HUGEE, &position, &cell[ncl].samplecell, 1, MPI_INT, MPI_COMM_WORLD);
         MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
 
         for (int element = 0; element < nelements; element++)
         {
@@ -1400,7 +1394,7 @@ int printout(const char *restrict format, ...)
   FILE *tau_file;
 
   double t_current = time_step[timestep].mid;
-  double T_e = cell[cellnumber].T_e;
+  float T_e = cell[cellnumber].T_e;
   double T_R = cell[cellnumber].T_R;
   double W = cell[cellnumber].W;
 
