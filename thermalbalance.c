@@ -153,7 +153,6 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
     int status;
     for (int iternum = 0; iternum < maxit; iternum++)
     {
-      iternum++;
       gsl_root_fsolver_iterate(T_e_solver);
       T_e = gsl_root_fsolver_root(T_e_solver);
       //cell[cellnumber].T_e = T_e;
