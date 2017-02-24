@@ -610,17 +610,17 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 
     gsl_vector_free(residual_vector);
 
-    double ion_populations[nions];
+    // double ion_populations[nions];
     for (int ion = 0; ion < nions; ion++)
     {
-      const int ion_stage = get_ionstage(element, ion);
       const int nlevels_nlte = get_nlevels_nlte(element, ion);
       const int index_gs = get_nlte_vector_index(element, ion, 0);
-      printout("[ion_stage %d]\n", get_ionstage(element, ion));
-
-      printout("  For ion_stage %d, the ground state populations are %g (function) and %g (matrix result with normed pop %g, ltepopnormfactor %g)\n",get_ionstage(element,ion),
-               get_groundlevelpop(modelgridindex, element, ion), gsl_vector_get(popvec, index_gs),
-               gsl_vector_get(x, index_gs), gsl_vector_get(pop_norm_factor_vec, index_gs));
+      // const int ion_stage = get_ionstage(element, ion);
+      // printout("[ion_stage %d]\n", ion_stage);
+      //
+      // printout("  For ion_stage %d, the ground state populations are %g (function) and %g (matrix result with normed pop %g, ltepopnormfactor %g)\n",get_ionstage(element,ion),
+      //          get_groundlevelpop(modelgridindex, element, ion), gsl_vector_get(popvec, index_gs),
+      //          gsl_vector_get(x, index_gs), gsl_vector_get(pop_norm_factor_vec, index_gs));
 
       // store the NLTE level populations
       const int nlte_start = elements[element].ions[ion].first_nlte;
@@ -642,15 +642,16 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 
         solution_ion_pop += gsl_vector_get(popvec, index_sl);
       }
-      printout("  I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n",
-               modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
-               modelgrid[modelgridindex].composition[element].partfunct[ion],
-               modelgrid[modelgridindex].composition[element].partfunct[ion] * modelgrid[modelgridindex].composition[element].groundlevelpop[ion]
-               / stat_weight(element, ion, 0));
+      // printout("  I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n",
+      //          modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+      //          modelgrid[modelgridindex].composition[element].partfunct[ion],
+      //          (modelgrid[modelgridindex].composition[element].partfunct[ion] *
+      //            modelgrid[modelgridindex].composition[element].groundlevelpop[ion]
+      //            / stat_weight(element, ion, 0)));
 
-      //ionstagepop here must be called before setting the new ground level population
-      printout("  For ion_stage %d the total population is %g, but was previously %g\n",
-               ion_stage,solution_ion_pop,ionstagepop(modelgridindex, element, ion));
+      // ionstagepop here must be called before setting the new ground level population
+      // printout("  For ion_stage %d the total population is %g, but was previously %g\n",
+      //          ion_stage,solution_ion_pop,ionstagepop(modelgridindex, element, ion));
 
       // store the ground level population
       modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
@@ -658,7 +659,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 
       precalculate_partfuncts(modelgridindex);
 
-      ion_populations[ion] = solution_ion_pop;
+      // ion_populations[ion] = solution_ion_pop;
       // if (ion > 0)
       // {
       //   const double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
