@@ -279,7 +279,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
 }
 
 
-static void mpi_reduce_estimators(int my_rank)
+static void mpi_reduce_estimators(void)
 {
   /// the following blocks gather all the estimators to the zeroth (Master) thread
   MPI_Reduce(MPI_IN_PLACE, &J, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -1020,7 +1020,7 @@ int main(int argc, char** argv)
             // estimators together now, sum them, normalise on the Master thread and then pass back to the
             // others
 
-            mpi_reduce_estimators(my_rank);
+            mpi_reduce_estimators();
           #endif
 
           // The master thread now knows the estimators (averaged over the processors). It will now normalise them.
