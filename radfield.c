@@ -36,9 +36,7 @@ typedef enum
 
 struct radfieldbin
 {
-  double nu_upper;   //lower wavelength boundary of this bin
-  double J_raw;      //value needs to be multipled by J_normfactor
-                     //to get the true value
+  double J_raw;           // value needs to be multipled by J_normfactor to get the true value
   double nuJ_raw;
   double prev_J_normed;
   double prev_nuJ_normed;
