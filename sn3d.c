@@ -296,70 +296,70 @@ static void mpi_reduce_estimators(int my_rank)
     // MPI_Reduce(MPI_IN_PLACE, &ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     // MPI_Reduce(MPI_IN_PLACE, &twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     // MPI_Reduce(MPI_IN_PLACE, &stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-/*    MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        mabfcount[i] = redhelper[i]/p;
-      }
-    }
-    MPI_Reduce(&mabfcount_thermal, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        mabfcount_thermal[i] = redhelper[i]/p;
-      }
-    }
-    MPI_Reduce(&kbfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        kbfcount[i] = redhelper[i]/p;
-      }
-    }
-    MPI_Reduce(&kbfcount_ion, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        kbfcount_ion[i] = redhelper[i]/p;
-      }
-    }
-    MPI_Reduce(&kffcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        kffcount[i] = redhelper[i]/p;
-      }
-    }
-    MPI_Reduce(&kffabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        kffabs[i] = redhelper[i]/p;
-      }
-    }
-    MPI_Reduce(&kbfabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        kbfabs[i] = redhelper[i]/p;
-      }
-    }
-    MPI_Reduce(&kgammadep, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (my_rank == 0)
-    {
-      for (int i = 0; i < MMODELGRID; i++)
-      {
-        kgammadep[i] = redhelper[i]/p;
-      }
-    }*/
+    // MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // if (my_rank == 0)
+    // {
+    //   for (int i = 0; i < MMODELGRID; i++)
+    //   {
+    //     mabfcount[i] = redhelper[i]/p;
+    //   }
+    // }
+    // MPI_Reduce(&mabfcount_thermal, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // if (my_rank == 0)
+    // {
+    //   for (int i = 0; i < MMODELGRID; i++)
+    //   {
+    //     mabfcount_thermal[i] = redhelper[i]/p;
+    //   }
+    // }
+    // MPI_Reduce(&kbfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // if (my_rank == 0)
+    // {
+    //   for (int i = 0; i < MMODELGRID; i++)
+    //   {
+    //     kbfcount[i] = redhelper[i]/p;
+    //   }
+    // }
+    // MPI_Reduce(&kbfcount_ion, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // if (my_rank == 0)
+    // {
+    //   for (int i = 0; i < MMODELGRID; i++)
+    //   {
+    //     kbfcount_ion[i] = redhelper[i]/p;
+    //   }
+    // }
+    // MPI_Reduce(&kffcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // if (my_rank == 0)
+    // {
+    //   for (int i = 0; i < MMODELGRID; i++)
+    //   {
+    //     kffcount[i] = redhelper[i]/p;
+    //   }
+    // }
+    // MPI_Reduce(&kffabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // if (my_rank == 0)
+    // {
+    //   for (int i = 0; i < MMODELGRID; i++)
+    //   {
+    //     kffabs[i] = redhelper[i]/p;
+    //   }
+    // }
+    // MPI_Reduce(&kbfabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // if (my_rank == 0)
+    // {
+    //   for (int i = 0; i < MMODELGRID; i++)
+    //   {
+    //     kbfabs[i] = redhelper[i]/p;
+    //   }
+    // }
+    // MPI_Reduce(&kgammadep, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    // if (my_rank == 0)
+    // {
+    //   for (int i = 0; i < MMODELGRID; i++)
+    //   {
+    //     kgammadep[i] = redhelper[i]/p;
+    //   }
+    // }
   #endif
 
   #ifdef RECORD_LINESTAT
@@ -398,7 +398,6 @@ static void mpi_broadcast_estimators(void)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   #ifndef FORCE_LTE
-
     // MPI_Bcast(&photoionestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     // MPI_Bcast(&stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     // MPI_Bcast(&ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -418,7 +417,7 @@ static void mpi_broadcast_estimators(void)
   }
   if (do_comp_est)
   {
-    MPI_Bcast(&compton_emiss, MMODELGRID*EMISS_MAX, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, 0, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -451,9 +450,12 @@ int main(int argc, char** argv)
   FILE *restrict packets_file;
   //FILE *temperature_file;
   #ifdef MPI_ON
-    int nblock, numtot, n_leftover;
+    int nblock;
+    int numtot;
+    int n_leftover;
   #endif
-  int nstart, ndo;
+  int nstart;
+  int ndo;
   char filename[100];
 
   bool do_this_full_loop;
@@ -466,9 +468,10 @@ int main(int argc, char** argv)
 //  int HUGEE;
 
   #ifdef MPI_ON
-    int my_rank, p;
     MPI_Init(&argc, &argv);
+    int my_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    int p;
     MPI_Comm_size(MPI_COMM_WORLD, &p);
   #else
     int my_rank = 0;
