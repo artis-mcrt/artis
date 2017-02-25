@@ -96,7 +96,7 @@ void radfield_init(int my_rank)
     printout("Cannot open %s.\n",filename);
     abort();
   }
-  fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %11s\n",
+  fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n",
           "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
           "nuJ","J","J_nu_avg","ncontrib","T_R","W");
   fflush(radfieldfile);
@@ -136,7 +136,11 @@ void radfield_init(int my_rank)
             }
 
             if ((nu_edge > prev_nu_upper) && (nu_edge < radfield_get_bin_nu_upper(modelgridindex, binindex)))
+            {
               radfieldbin_nu_upper[modelgridindex][binindex] = nu_edge;
+              printout("Shifting bin %d nu_upper to bf edge at %12.5e Hz (%6.2f eV, %6.1f A) for Z=%d ion_stage %d level %d\n",
+                       binindex, nu_edge, H * nu_edge / EV, 1e8 * CLIGHT / nu_edge, Z, ion_stage, level);
+            }
           }
         }
 
@@ -348,7 +352,7 @@ void radfield_write_to_file(int modelgridindex, int timestep)
         contribcount = totalcontribs;
       }
 
-      fprintf(radfieldfile,"%8d %15d %8d %11.5e %11.5e %9.3e %9.3e %9.3e %9d %9.1f %11.5e\n",
+      fprintf(radfieldfile,"%8d %15d %8d %11.5e %11.5e %9.3e %9.3e %9.3e %9d %9.1f %12.5e\n",
               timestep,modelgridindex,binindex,nu_lower,nu_upper,nuJ_out,J_out,J_nu_bar,contribcount,T_R,W);
     }
     fflush(radfieldfile);
@@ -712,14 +716,14 @@ static float find_T_R(int modelgridindex, int binindex)
     /// Thermal balance equation always negative ===> T_R = T_min
     /// Calculate the rates again at this T_e to print them to file
     T_R = T_R_max;
-    printout("find_T_R: bin %4d no solution in interval, clamping to T_R_max=%g\n",
-             binindex,T_R_max);
+    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_max=%g\n",
+             modelgridindex, binindex, T_R_max);
   }
   else
   {
     T_R = T_R_min;
-    printout("find_T_R: bin %4d no solution in interval, clamping to T_R_min=%g\n",
-             binindex,T_R_min);
+    printout("find_T_R: cell %d bin %4d no solution in interval, clamping to T_R_min=%g\n",
+             modelgridindex, binindex, T_R_min);
   }
 
   return T_R;
