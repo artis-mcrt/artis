@@ -499,9 +499,9 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
         }
         // NOTE: above calculation is not always equal to the sum of LTE populations
         // since calculate_levelpop_lte imposes MINPOP minimum
-        printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*levelpop(SL)/g(SL) %g\n",
-                 column, gsl_vector_get(pop_norm_factor_vec, column), superlevel_partfunc[ion],
-                 superlevel_partfunc[ion] * calculate_levelpop_lte(modelgridindex,element,ion,level) / stat_weight(element,ion,level));
+        // printout("superlevel norm factor index %d is %g, partfunc is %g, partfunc*levelpop(SL)/g(SL) %g\n",
+        //          column, gsl_vector_get(pop_norm_factor_vec, column), superlevel_partfunc[ion],
+        //          superlevel_partfunc[ion] * calculate_levelpop_lte(modelgridindex,element,ion,level) / stat_weight(element,ion,level));
       }
 
       // apply the normalisation factor to this column in the rate_matrix
@@ -574,7 +574,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     }
     if (error_best >= 0.)
     {
-      printout("NLTE solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",iteration,error_best);
+      printout("NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of %g\n",iteration,error_best);
       gsl_vector_memcpy(x, x_best);
     }
     gsl_vector_free(gsl_work_vector);
