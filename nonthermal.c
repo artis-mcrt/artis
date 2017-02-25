@@ -328,10 +328,11 @@ static int get_y(int modelgridindex, double energy_ev)
 
 
 static double xs_excitation(int lineindex, double epsilon_trans, double energy)
-// excitation cross section in cm^2
+// collisional excitation cross section in cm^2
 // energies are in erg
 {
-  if (energy <= epsilon_trans) return 0.;
+  if (energy < epsilon_trans)
+    return 0.;
   const double coll_str = get_coll_str(lineindex);
 
   if (coll_str >= 0)
@@ -361,17 +362,19 @@ static double xs_excitation(int lineindex, double epsilon_trans, double energy)
 
 
 static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, int lineindex, double epsilon_trans)
-// excitation cross section in cm^2
+// vector of collisional excitation cross sections in cm^2
 // energies are in erg
 {
   const double coll_str = get_coll_str(lineindex);
+  const int en_startindex = 0; // energy point corresponding to epsilon_trans
+  // const int en_startindex = get_energyindex_ev(epsilon_trans_ev);
 
   if (coll_str >= 0)
   {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
     const double constantfactor = pow(H_ionpot, 2) / statw_lower(lineindex) * coll_str * PI * A_naught_squared;
-    for (int j = 0; j < SFPTS; j++)
+    for (int j = en_startindex; j < SFPTS; j++)
     {
       const double energy = gsl_vector_get(envec, j) * EV;
       if (energy >= epsilon_trans)
@@ -392,7 +395,7 @@ static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, int lineinde
     const double prefactor = 45.585750051; // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     const double constantfactor = prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij;
-    for (int j = 0; j < SFPTS; j++)
+    for (int j = en_startindex; j < SFPTS; j++)
     {
       const double energy = gsl_vector_get(envec, j) * EV;
       if (energy >= epsilon_trans)
@@ -792,6 +795,7 @@ static double calculate_nt_frac_excitation(int modelgridindex, int element, int 
 {
   const double nnion = ionstagepop(modelgridindex, element, ion);
   gsl_vector *alltrans_cross_section_vec = gsl_vector_calloc(SFPTS);
+  gsl_vector *xs_excitation_epsilontrans_vec = gsl_vector_alloc(SFPTS);
 
   // for (int level = 0; level < get_nlevels(element,ion); level++)
   const int level = 0; // just consider excitation from the ground level
@@ -804,14 +808,10 @@ static double calculate_nt_frac_excitation(int modelgridindex, int element, int 
       const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[t].epsilon;
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
       const double epsilon_trans = epsilon_target - epsilon_current;
-      const double epsilon_trans_ev = epsilon_trans / EV;
 
-      const int startindex = get_energyindex_ev(epsilon_trans_ev);
-      for (int i = startindex; i < SFPTS; i++)
-      {
-        const double endash = gsl_vector_get(envec, i);
-        *gsl_vector_ptr(alltrans_cross_section_vec, i) += xs_excitation(lineindex, epsilon_trans, endash * EV) * epsilon_trans_ev;
-      }
+      get_xs_excitation_vector(xs_excitation_epsilontrans_vec, lineindex, epsilon_trans);
+      gsl_vector_scale(xs_excitation_epsilontrans_vec, epsilon_trans / EV);
+      gsl_vector_add(alltrans_cross_section_vec, xs_excitation_epsilontrans_vec);
     }
   }
 
@@ -1022,7 +1022,8 @@ static void analyse_sf_solution(int modelgridindex)
         {
           const double frac_ionization_ion_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, n);
           frac_ionization_ion += frac_ionization_ion_shell;
-          printout("  frac_ionization_shell: %g (n %d l %d)\n", frac_ionization_ion_shell, colliondata[n].n, colliondata[n].l);
+          matching_nlsubshell_count++;
+          // printout("  frac_ionization_shell: %g (n %d l %d)\n", frac_ionization_ion_shell, colliondata[n].n, colliondata[n].l);
         }
       }
       const double frac_excitation_ion = calculate_nt_frac_excitation(modelgridindex, element, ion);
@@ -1065,12 +1066,12 @@ static void analyse_sf_solution(int modelgridindex)
   const double frac_sum = frac_heating + frac_excitation_total + frac_ionization_total;
   printout("frac_sum:            %g (should be close to 1.0)\n", frac_sum);
 
-  // double ntexcit_in_a = 0.;
-  // for (int level = 0; level < get_nlevels(0, 1); level++)
-  // {
-  //   ntexcit_in_a += calculate_nt_excitation_rate(modelgridindex, 0, 1, level, 75);
-  // }
-  // printout("total nt excitation rate into level 75: %g\n", ntexcit_in_a);
+  double ntexcit_in_a = 0.;
+  for (int level = 0; level < get_nlevels(0, 1); level++)
+  {
+    ntexcit_in_a += calculate_nt_excitation_rate(modelgridindex, 0, 1, level, 75);
+  }
+  printout("total nt excitation rate into level 75: %g\n", ntexcit_in_a);
 
   // compensate for lost energy by scaling the solution
   // E_init_ev *= frac_sum;
