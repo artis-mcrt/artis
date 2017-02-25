@@ -611,25 +611,9 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
   const double E_ground = epsilon(element,ion,0);
   const double nnground = get_groundlevelpop(modelgridindex,element,ion);
 
-  /*if (nnground < MINPOP)
-  {
-    if (get_abundance(modelgridindex,element) > 0)
-      nnground = MINPOP;
-    else
-      nnground = 0.;
-  }*/
-
   nn = nnground * W *
        stat_weight(element,ion,level) / stat_weight(element,ion,0) *
        exp(-(E_level - E_ground)/KB/T_exc);
-
-  /*if (nn < MINPOP)
-  {
-    if (get_abundance(modelgridindex,element) > 0)
-      nn = MINPOP;
-    else
-      nn = 0.;
-  }*/
 
   return nn;
 }
@@ -695,7 +679,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   else if (NLTE_POPS_ON && (nlte_levels = get_nlevels_nlte(element,ion)) > 0)
   {
     // Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
-    const double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+nlte_levels];
+    const double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte + nlte_levels];
     if (nltepop_over_rho < -0.9) //TODO: should change this to less than zero?
     {
       // Case for when no NLTE level information is available yet

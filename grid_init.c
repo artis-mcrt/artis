@@ -1736,7 +1736,7 @@ void grid_init(int my_rank)
 
   radfield_init(my_rank);
   if (NT_ON && NT_SOLVE_SPENCERFANO)
-    nonthermal_init(my_rank);
+    nt_init(my_rank);
 
   /// and assign a temperature to the cells
   assign_temperature();

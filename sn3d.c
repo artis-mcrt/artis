@@ -146,7 +146,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
     if (MULTIBIN_RADFIELD_MODEL_ON)
       radfield_MPI_Bcast(n, my_rank, nstart, ndo);
     if (NT_ON && NT_SOLVE_SPENCERFANO)
-      nonthermal_MPI_Bcast(n, my_rank, nstart, ndo);
+      nt_MPI_Bcast(n, my_rank, nstart, ndo);
     if (my_rank == n)
     {
       position = 0;
@@ -597,7 +597,7 @@ int main(int argc, char** argv)
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
-  const int real_time_start = time(NULL);
+  const time_t real_time_start = time(NULL);
   printout("time before input %d\n",real_time_start);
   input(my_rank);
 
@@ -708,7 +708,7 @@ int main(int argc, char** argv)
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-      int HUGEE = 4 * ((16 + 4 * includedions) * (nblock + 1) + 1); // LJS: what's the minimum space needed?
+      int HUGEE = 4 * ((12 + 4 * includedions) * (nblock + 1) + 1); // LJS: what's the minimum space needed?
       printout("reserve HUGEE %d space for MPI communication buffer\n",HUGEE);
       //char buffer[HUGEE];
       char *buffer  = malloc(HUGEE*sizeof(char));
@@ -1058,7 +1058,7 @@ int main(int argc, char** argv)
 
           /// Now printout some statistics on the current timestep
           printout("time after estimators have been communicated %d\n", time(NULL));
-          printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %g)\n",
+          printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %gd)\n",
                    outer_iteration, nts, my_rank, time_step[nts].pellet_decays, nesc, time_step[nts].mid / DAY);
 
           #ifdef VPKT_ON
@@ -1367,7 +1367,7 @@ int main(int argc, char** argv)
   nltepop_close_file();
   radfield_close_file();
   if (NT_ON && NT_SOLVE_SPENCERFANO)
-    nonthermal_close_file();
+    nt_close_file();
 
   #ifdef _OPENMP
     #pragma omp parallel

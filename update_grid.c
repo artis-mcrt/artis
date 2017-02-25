@@ -134,22 +134,23 @@ static void write_to_estimators_file(int n, int timestep)
   {
     //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
     //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
-    fprintf(estimators_file,"timestep %d modelgridindex %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",timestep,n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].grey_depth,get_nne(n));
+    fprintf(estimators_file,"timestep %d modelgridindex %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",
+            timestep, n, get_TR(n), get_Te(n), get_W(n), get_TJ(n), modelgrid[n].grey_depth, get_nne(n));
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
     if (NLTE_POPS_ON && timestep % 2 == 0)
       nltepop_write_to_file(n,timestep);
 
-    fprintf(estimators_file, "populations ");
     for (int element = 0; element < nelements; element++)
     {
-      fprintf(estimators_file,"Z=%d: ",get_element(element));
+      fprintf(estimators_file, "populations: Z=%2d",get_element(element));
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)
       {
-        fprintf(estimators_file,"%g ",ionstagepop(n,element,ion));
+        fprintf(estimators_file," (%d: %g)", get_ionstage(element, ion), ionstagepop(n, element, ion));
       }
+      fprintf(estimators_file, "\n");
     }
 
     #ifndef FORCE_LTE
@@ -292,6 +293,14 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
 {
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
   {
+    int duration_solve_spencerfano = -1;
+    if (NT_ON && NT_SOLVE_SPENCERFANO)
+    {
+      const time_t sys_time_start = time(NULL);
+      nt_solve_spencerfano(n, nts);  // depends on the ionisation balance, and weakly on nne
+      duration_solve_spencerfano = time(NULL) - sys_time_start;
+    }
+
     if (!NLTE_POPS_ON)
     {
       /// These don't depend on T_e, therefore take them out of the T_e iteration
@@ -310,6 +319,9 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
       }
     }
 
+
+    int duration_solve_T_e = -1;
+    const time_t sys_time_start_Te = time(NULL);
     /// Find T_e as solution for thermal balance
     double T_e_old = get_Te(n);
     double T_e;
@@ -334,6 +346,7 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
     }
     //T_e = T_J;
     set_Te(n, T_e);
+    duration_solve_T_e = time(NULL) - sys_time_start_Te;
 
     if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
     {
@@ -345,9 +358,9 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
 
     if (NLTE_POPS_ON)
     {
-      if (NT_ON && NT_SOLVE_SPENCERFANO)
-        nt_solve_spencerfano(n, nts);  // depends on the ionisation balance, and weakly on nne
+      int duration_solve_nltepops = -1;
 
+      const time_t sys_time_start = time(NULL);
       double nlte_test; // ratio of previous to current iteration's free electron density solution
       for (int element = 0; element < nelements; element++)
       {
@@ -368,15 +381,18 @@ static void update_grid_cell_Te_nltepops(const int n, const int nts, const int t
           }
         }
       }
+      duration_solve_nltepops = time(NULL) - sys_time_start;
 
       if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
       {
-        double oldnne = get_nne(n);
+        const double oldnne = get_nne(n);
         precalculate_partfuncts(n);
         calculate_electron_densities(n); // sets nne
         nlte_test = get_nne(n) / oldnne;
         if (nlte_test < 1)
           nlte_test = 1. / nlte_test;
+        printout("NLTE (Te/pops/NT_ion) solver cell %d timestep %d iteration %d: time spent on Spencer-Fano %ds, T_e %ds, NLTE pops %ds\n",
+                 n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
         printout("NLTE (Te/pops/NT_ion) solver cell %d timestep %d iteration %d: previous nne is %g, new nne is %g, ratio is %g\n",
                  n, nts, nlte_iter, oldnne, get_nne(n), nlte_test);
         //set_nne(n, (get_nne(n) + oldnne) / 2.);
@@ -407,6 +423,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
   const int assoc_cells = mg_associated_cells[n];
   if (assoc_cells > 0)
   {
+    const time_t sys_time_start_update_cell = time(NULL);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
     const bool log_this_cell = true;
     //cellnumber = modelgrid[n].cellnumber;
@@ -725,6 +742,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         mps[tid] = cell_len_scale_b;
       }
     }
+    printout("update_grid_cell for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_update_cell);
   }
   else
   {
