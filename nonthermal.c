@@ -1015,6 +1015,7 @@ static void analyse_sf_solution(int modelgridindex)
       printout("Z=%d ion_stage %d:\n", Z, ionstage);
       printout("  nnion: %g\n", nnion);
       printout("  nnion/nntot: %g\n", nnion / nntot, get_nne(modelgridindex));
+      int matching_nlsubshell_count = 0;
       for (int n = 0; n < colliondatacount; n++)
       {
         if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
@@ -1028,7 +1029,7 @@ static void analyse_sf_solution(int modelgridindex)
       frac_excitation_total += frac_excitation_ion;
       frac_ionization_total += frac_ionization_ion;
 
-      printout("  frac_ionization: %g\n", frac_ionization_ion);
+      printout("  frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_nlsubshell_count);
       printout("  frac_excitation: %g\n", frac_excitation_ion);
       printout("  workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("  eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
@@ -1114,8 +1115,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
   const float nne = get_nne(modelgridindex); // electrons per cm^3
 
-  printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV at timestep %d in cell %d (nne=%g e-/cm^3)\n",
-           SFPTS, EMIN, EMAX, timestep, modelgridindex, nne);
+  printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d (nne=%g e-/cm^3)\n",
+           SFPTS, EMIN, EMAX, modelgridindex, timestep, nne);
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
@@ -1144,7 +1145,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   {
     const int Z = get_element(element);
     const int nions = get_nions(element);
-    printout("Z=%2d ion_stages: ", Z);
+    printout("  Z=%2d ion_stages: ", Z);
     for (int ion = 0; ion < nions; ion++)
     {
       const int ionstage = get_ionstage(element, ion);
@@ -1276,7 +1277,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   gsl_matrix *sfmatrix_LU_decomp = sfmatrix;
   gsl_permutation *p = gsl_permutation_calloc(SFPTS); // identity permutation
 
-  printout("Solving SF matrix equation\n");
+  // printout("Solving SF matrix equation\n");
   // solve matrix equation: sf_matrix * y_vec = constvec for yvec
 
   if (!STORE_NT_SPECTRUM)
@@ -1288,7 +1289,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   gsl_vector *yvec = &yvecview.vector;
   gsl_linalg_LU_solve(sfmatrix_LU_decomp, p, rhsvec, &yvecview.vector);
 
-  printout("Refining solution\n");
+  // printout("Refining solution\n");
 
   double error_best = -1.;
   gsl_vector *yvec_best = gsl_vector_alloc(SFPTS); // solution vector with lowest error
@@ -1313,8 +1314,9 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   }
   if (error_best >= 0.)
   {
-    printout("SF solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",iteration,error_best);
-    gsl_vector_memcpy(yvec,yvec_best);
+    printout("SF solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",
+             iteration, error_best);
+    gsl_vector_memcpy(yvec, yvec_best);
   }
   gsl_vector_free(yvec_best);
   gsl_vector_free(gsl_work_vector);
@@ -1464,7 +1466,8 @@ void nonthermal_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
     sender_nstart = nstart;
     sender_ndo = ndo;
     if (ndo > 0)
-      printout("nonthermal_MPI_Bcast root process %d will broadcast cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+      printout("nonthermal_MPI_Bcast root process %d will broadcast cells %d to %d\n",
+               my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
   }
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Bcast(&sender_nstart, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);

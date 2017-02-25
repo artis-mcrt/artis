@@ -85,7 +85,7 @@ void radfield_init(int my_rank)
   if (radfield_initialized)
     printout("WARNING: Tried to initialize radfield twice!\n");
 
-  printout("Initialising radiation field with %d bins from (%6.2f eV, %f A) to (%6.2f eV, %f A)\n",
+  printout("Initialising radiation field with %d bins from (%6.2f eV, %6.1f A) to (%6.2f eV, %6.1f A)\n",
            RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
            H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
   char filename[100];
@@ -792,8 +792,8 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
     const double J_fullspec = J[modelgridindex];
     //double planck_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
 
-    printout("Full-spectrum fit radfield params for cell %d: J %g, T_R %g, W %g\n",
-             modelgridindex, J_fullspec, T_R_fullspec, get_W(modelgridindex));
+    printout("Full-spectrum fit radfield params for cell %d at timestep %d: J %g, T_R %g, W %g\n",
+             modelgridindex, timestep, J_fullspec, T_R_fullspec, get_W(modelgridindex));
 
     double J_bin_sum = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -1006,6 +1006,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
     }
   }
 }
+
 
 void radfield_read_restart_data(FILE *gridsave_file)
 {
