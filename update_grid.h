@@ -6,6 +6,7 @@
 void update_grid(const int nts, const int my_rank, const int nstart, const int ndo, const int titer);
 void precalculate_partfuncts(int modelgridindex);
 double calculate_populations(int modelgridindex);
+double calculate_elem_Gamma(int modelgridindex, int element, int ion);
 double calculate_electron_densities(int modelgridindex);
 void write_grid_restart_data(void);
 

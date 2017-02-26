@@ -12,16 +12,6 @@
 
 // Material for handing r-packet propagation.
 
-static double min(double a, double b)
-// returns minimum of a and b
-{
-  if (a >= b)
-    return b;
-  else
-    return a;
-}
-
-
 double closest_transition(PKT *restrict pkt_ptr)
 /// for the propagation through non empty cells
 {
@@ -755,7 +745,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
         double vel_vec[3];
         get_velocity(pkt_ptr->pos, vel_vec, t_current);
         kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
-        double tau_current = 0.0;
+        const double tau_current = 0.0;
         edist = (tau_next - tau_current) / kappa;
         find_nextline = 1;
         #ifdef DEBUG_ON
@@ -765,7 +755,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
       else
       {
         /// get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi,pkt_ptr, &rpkt_eventtype, t_current, tau_next, min(tdist,sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = get_event(mgi,pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         const int next_trans = pkt_ptr->next_trans;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);

@@ -5,7 +5,7 @@
 
 void angle_ab(const double *restrict dir1, const double *restrict vel, double *dir2);
 double doppler(const double *restrict dir1, const double *restrict vel);
-void scatter_dir(const double *restrict dir_in, double cos_theta, double *dir_out);
+void scatter_dir(const double *restrict dir_in, const double cos_theta, double *dir_out);
 
 inline double vec_len(const double x[3])
 // Routine for getting the magnitude of a vector.
@@ -33,10 +33,8 @@ inline double dot(const double *const restrict x, const double *const restrict y
 
 
 inline void get_velocity(const double *const restrict x, double *restrict y, const double t)
-// Routine for getting velocity vector of the flow at a position.
+// Routine for getting velocity vector of the flow at a position with homologous expansion.
 {
-  /* For homologous expansion. */
-
   y[0] = x[0] / t;
   y[1] = x[1] / t;
   y[2] = x[2] / t;
@@ -51,9 +49,9 @@ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout
   const double vec2x = vec2[0];
   const double vec2y = vec2[1];
   const double vec2z = vec2[2];
-  vecout[0] = (vec1y*vec2z) - (vec2y*vec1z);
-  vecout[1] = (vec1z*vec2x) - (vec2z*vec1x);
-  vecout[2] = (vec1x*vec2y) - (vec2x*vec1y);
+  vecout[0] = (vec1y * vec2z) - (vec2y * vec1z);
+  vecout[1] = (vec1z * vec2x) - (vec2z  *vec1x);
+  vecout[2] = (vec1x * vec2y) - (vec2x * vec1y);
 }
 
 #endif //VECTORS_H

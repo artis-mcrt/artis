@@ -1477,14 +1477,17 @@ static void read_grid_restart_data(void)
       modelgrid[mgi].thick = thick;
 
       #ifndef FORCE_LTE
-        for (int element = 0; element < nelements; element++)
+        if (!NO_LUT_PHOTOION)
         {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++)
+          for (int element = 0; element < nelements; element++)
           {
-            double Gamma;
-            fscanf(gridsave_file, "%lg ", &Gamma);
-            corrphotoionrenorm[mgi * nelements * maxion + element * maxion + ion] = Gamma;
+            const int nions = get_nions(element);
+            for (int ion = 0; ion < nions; ion++)
+            {
+              double Gamma;
+              fscanf(gridsave_file, "%lg ", &Gamma);
+              corrphotoionrenorm[mgi * nelements * maxion + element * maxion + ion] = Gamma;
+            }
           }
         }
 

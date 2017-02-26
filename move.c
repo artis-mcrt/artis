@@ -51,23 +51,29 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
           /// the estimators
           if (get_abundance(modelgridindex,element) > 0)
           {
-            #ifdef _OPENMP
-              #pragma omp atomic
-            #endif
-            gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper2;
-
-            #ifdef DEBUG_ON
-            if (!isfinite(gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]))
+            if (!NO_LUT_PHOTOION)
             {
-              printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, helper2 %g\n",i,phixslist[tid].groundcont[i].gamma_contr,helper2);
-              abort();
+              #ifdef _OPENMP
+                #pragma omp atomic
+              #endif
+              gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper2;
+
+              #ifdef DEBUG_ON
+              if (!isfinite(gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]))
+              {
+                printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, helper2 %g\n",i,phixslist[tid].groundcont[i].gamma_contr,helper2);
+                abort();
+              }
+              #endif
             }
-            #endif
-            #ifdef _OPENMP
-              #pragma omp atomic
-            #endif
-            bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu);
-            //bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
+            if (!NO_LUT_BFHEATING)
+            {
+              #ifdef _OPENMP
+                #pragma omp atomic
+              #endif
+              bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu);
+              //bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
+            }
           }
         }
         else break;

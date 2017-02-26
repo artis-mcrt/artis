@@ -160,7 +160,9 @@ double phi(int element, int ion, int modelgridindex)
 // else
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
-      const double Gamma = gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]; //try setting to zero
+      const double Gamma = NO_LUT_PHOTOION ? calculate_elem_Gamma(modelgridindex, element, ion)
+                                           : gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion];
+
       if (Gamma == 0. && (!NT_ON || (rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.)))
       {
         printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
@@ -857,7 +859,8 @@ void initialise_photoionestimators(void)
 
           #ifdef DO_TITER
             gammaestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
-            bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+            if (!NO_LUT_BFHEATING)
+              bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
             /*
             photoionestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
             stimrecombestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
