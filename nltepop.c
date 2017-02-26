@@ -237,7 +237,7 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
 }
 
 
-static void nltepop_clear(int modelgridindex, int element)
+static void nltepop_reset_element(int modelgridindex, int element)
 {
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++)
@@ -254,6 +254,96 @@ static void nltepop_clear(int modelgridindex, int element)
     }
   }
 }
+
+
+static void nltepop_solve_matrix(
+  gsl_matrix *rate_matrix, const gsl_vector *balance_vector,
+  gsl_vector *popvec, const gsl_vector *pop_norm_factor_vec,
+  const int nlte_dimension, int element)
+{
+  gsl_vector *x = gsl_vector_alloc(nlte_dimension); // population solution vector (normalised)
+
+  // make a copy of the rate matrix for the LU decomp
+  gsl_matrix *rate_matrix_LU_decomp = gsl_matrix_alloc(nlte_dimension, nlte_dimension);
+  gsl_matrix_memcpy(rate_matrix_LU_decomp, rate_matrix);
+
+  gsl_permutation *p = gsl_permutation_alloc(nlte_dimension);
+
+  int s; // sign of the transformation
+  gsl_linalg_LU_decomp(rate_matrix_LU_decomp, p, &s);
+
+  // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
+  gsl_linalg_LU_solve(rate_matrix_LU_decomp, p, balance_vector, x);
+
+  //gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
+
+  const double TOLERANCE = 1e-40;
+
+  gsl_vector *gsl_work_vector = gsl_vector_alloc(nlte_dimension);
+  double error_best = -1.;
+  gsl_vector *x_best = gsl_vector_alloc(nlte_dimension); //population solution vector with lowest error
+  gsl_vector *residual_vector = gsl_vector_alloc(nlte_dimension);
+  int iteration;
+  for (iteration = 0; iteration < 10; iteration++)
+  {
+    if (iteration > 0)
+      gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_work_vector);
+
+    gsl_vector_memcpy(residual_vector, balance_vector);
+    gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, x, -1.0, residual_vector); // calculate Ax - b = residual
+    const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector))); // value of the largest absolute residual
+
+    if (error < error_best || error_best < 0.)
+    {
+      gsl_vector_memcpy(x_best,x);
+      error_best = error;
+    }
+    //printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
+    if (error < TOLERANCE)
+    {
+      break;
+    }
+  }
+  if (error_best >= 0.)
+  {
+    printout("  NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of %g\n",iteration,error_best);
+    gsl_vector_memcpy(x, x_best);
+  }
+  gsl_matrix_free(rate_matrix_LU_decomp);
+  gsl_permutation_free(p);
+  gsl_vector_free(x_best);
+  gsl_vector_free(gsl_work_vector);
+
+  gsl_vector_memcpy(popvec, x);                          // are equal to the normed pops multiplied
+  gsl_vector_mul(popvec, pop_norm_factor_vec);           // by the normalisation factors
+
+  for (int row = 0; row < nlte_dimension; row++)
+  {
+    double recovered_balance_vector_elem = 0.;
+    gsl_vector_view row_view = gsl_matrix_row(rate_matrix, row);
+    gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
+
+    int ion, level;
+    get_ion_level_of_nlte_vector_index(row, element, &ion, &level);
+
+    // printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e departure ratio %.4f\n",
+    //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
+    //          recovered_balance_vector_elem, gsl_vector_get(x,row),
+    //          gsl_vector_get(popvec, row),
+    //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
+
+    if (gsl_vector_get(popvec, row) < 0.0)
+    {
+      printout("  WARNING: NLTE solver gave negative population to index %d (ion_stage %d level %d), pop = %g. Forcing departure coeff to 1.0\n",
+               row, get_ionstage(element, ion), level, gsl_vector_get(x, row) * gsl_vector_get(pop_norm_factor_vec, row));
+      gsl_vector_set(popvec, row, 1.);
+    }
+  }
+
+  gsl_vector_free(x);
+  gsl_vector_free(residual_vector);
+}
+
 
 void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 // solves the statistical balance equations to find NLTE level populations for all ions of an element
@@ -359,11 +449,8 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
         const double epsilon_current = epsilon(element, ion, level);
         const int nionisinglevels = get_bfcontinua(element, ion);
 
-        double s_renorm;
-        if ((level != 0) && (is_nlte(element, ion, level) == false))
-          s_renorm = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
-        else
-          s_renorm = 1.0;
+        const double s_renorm = ((!is_nlte(element, ion, level)) && (level != 0)) ?
+          superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion] : 1.0;
 
         const int level_index = get_nlte_vector_index(element, ion, level);
 
@@ -431,46 +518,42 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
         // thermal collisional ionization, photoionisation and recombination processes
         if ((ion < nions - 1) && (level < nionisinglevels))  //&& get_ionstage(element,ion) < get_element(element)+1)
         {
-          // ionization
           const int lower_index = level_index;
 
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            const int upper_index = get_nlte_vector_index(element,ion+1,upper);
-            const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-            const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+            const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+            const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
+            const double epsilon_trans = epsilon(element, ion + 1 ,upper) - epsilon_current;
 
-            *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, lower_index) -= R * s_renorm;
-            *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, lower_index) += R * s_renorm;
-            *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, lower_index) -= C * s_renorm;
-            *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index) += C * s_renorm;
+            // ionization
+            const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+            const double C_ionisation = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
-            if ((R < 0) || (C < 0))
-              printout("  WARNING: Negative ionization rate from ion_stage %d level %d phixstargetindex %d\n",get_ionstage(element,ion),level,phixstargetindex);
-          }
+            *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, lower_index) -= R_ionisation * s_renorm;
+            *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, lower_index) += R_ionisation * s_renorm;
+            *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, lower_index) -= C_ionisation * s_renorm;
+            *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index) += C_ionisation * s_renorm;
 
-          // recombination
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
-          {
-            const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            const int upper_index = get_nlte_vector_index(element,ion+1,upper);
-            const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            const double R = rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
-            const double C = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
+            if ((R_ionisation < 0) || (C_ionisation < 0))
+              printout("  WARNING: Negative ionization rate from ion_stage %d level %d phixstargetindex %d\n",
+                       get_ionstage(element, ion), level, phixstargetindex);
 
-            double s_renorm_upper = 1.0;
-            if ((upper != 0) && (is_nlte(element,ion+1,upper) == false))
-              s_renorm_upper = superlevel_boltzmann(modelgridindex,element,ion+1,upper) / superlevel_partfunc[ion+1];
+            // recombination
+            const double R_recomb = rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
+            const double C_recomb = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
 
-            *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R * s_renorm_upper;
-            *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R * s_renorm_upper;
-            *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C * s_renorm_upper;
-            *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C * s_renorm_upper;
+            const double s_renorm_upper = ((!is_nlte(element, ion + 1, upper)) && (upper != 0)) ?
+              superlevel_boltzmann(modelgridindex, element, ion + 1, upper) / superlevel_partfunc[ion + 1] : 1.0;
 
-            if ((R < 0) || (C < 0))
-              printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",get_ionstage(element,ion),level,phixstargetindex);
+            *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm_upper;
+            *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm_upper;
+            *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm_upper;
+            *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm_upper;
+
+            if ((R_recomb < 0) || (C_recomb < 0))
+              printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
+                       get_ionstage(element, ion), level, phixstargetindex);
           }
 
         } // if (level is an ionising level)
@@ -548,86 +631,9 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     // their interactions and setting their normalised populations (probably departure coeff) to 1.0
     // filter_nlte_matrix(element, rate_matrix, balance_vector, pop_norm_factor_vec);
 
-    // make a copy of the rate matrix for the LU decomp
-    gsl_matrix *rate_matrix_LU_decomp = gsl_matrix_alloc(nlte_dimension, nlte_dimension);
-    gsl_matrix_memcpy(rate_matrix_LU_decomp, rate_matrix);
-
-    gsl_permutation *p = gsl_permutation_alloc(nlte_dimension);
-
-    int s; //sign of the transformation
-    gsl_linalg_LU_decomp(rate_matrix_LU_decomp, p, &s);
-
-    gsl_vector *x = gsl_vector_alloc(nlte_dimension); // population solution vector
-
-    // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
-    gsl_linalg_LU_solve(rate_matrix_LU_decomp, p, balance_vector, x);
-
-    //gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
-
-    const double TOLERANCE = 1e-40;
-
-    double error_best = -1.;
-    gsl_vector *x_best = gsl_vector_alloc(nlte_dimension); //population solution vector with lowest error
-    gsl_vector *gsl_work_vector = gsl_vector_alloc(nlte_dimension);
-    gsl_vector *residual_vector = gsl_vector_alloc(nlte_dimension);
-    int iteration;
-    for (iteration = 0; iteration < 10; iteration++)
-    {
-      if (iteration > 0)
-        gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_work_vector);
-
-      gsl_vector_memcpy(residual_vector, balance_vector);
-      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, x, -1.0, residual_vector); // calculate Ax - b = residual
-      const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector))); // value of the largest absolute residual
-
-      if (error < error_best || error_best < 0.)
-      {
-        gsl_vector_memcpy(x_best,x);
-        error_best = error;
-      }
-      //printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
-      if (error < TOLERANCE)
-      {
-        break;
-      }
-    }
-    if (error_best >= 0.)
-    {
-      printout("  NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of %g\n",iteration,error_best);
-      gsl_vector_memcpy(x, x_best);
-    }
-    gsl_vector_free(gsl_work_vector);
-    gsl_vector_free(x_best);
-    gsl_permutation_free(p);
-
     gsl_vector *popvec = gsl_vector_alloc(nlte_dimension); // the true population densities
-    gsl_vector_memcpy(popvec, x);                          // are equal to the normed pops multiplied
-    gsl_vector_mul(popvec, pop_norm_factor_vec);           // by the normalisation factors
 
-    for (int row = 0; row < nlte_dimension; row++)
-    {
-      double recovered_balance_vector_elem = 0.;
-      gsl_vector_view row_view = gsl_matrix_row(rate_matrix, row);
-      gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
-
-      int ion, level;
-      get_ion_level_of_nlte_vector_index(row,element,&ion,&level);
-
-      // printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e departure ratio %.4f\n",
-      //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
-      //          recovered_balance_vector_elem, gsl_vector_get(x,row),
-      //          gsl_vector_get(popvec, row),
-      //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
-
-      if (gsl_vector_get(popvec, row) < 0.0)
-      {
-        printout("  WARNING: NLTE solver gave negative population to index %d (ion_stage %d level %d), pop = %g. Forcing departure coeff to 1.0\n",
-                 row, get_ionstage(element,ion), level, gsl_vector_get(x,row) * gsl_vector_get(pop_norm_factor_vec, row));
-        gsl_vector_set(popvec, row, 1.);
-      }
-    }
-
-    gsl_vector_free(residual_vector);
+    nltepop_solve_matrix(rate_matrix, balance_vector, popvec, pop_norm_factor_vec, nlte_dimension, element);
 
     // double ion_populations[nions];
     for (int ion = 0; ion < nions; ion++)
@@ -738,11 +744,9 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
       gsl_matrix_free(rate_matrix_ntcoll_bf);
     }
 
-    gsl_vector_free(x);
     gsl_vector_free(popvec);
 
     gsl_matrix_free(rate_matrix);
-    gsl_matrix_free(rate_matrix_LU_decomp);
     gsl_vector_free(balance_vector);
     gsl_vector_free(pop_norm_factor_vec);
   }
@@ -752,7 +756,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     printout("Not solving for NLTE populations in cell %d at timestep %d for element %d due to zero abundance\n",
              modelgridindex,timestep,element);
 
-    nltepop_clear(modelgridindex, element);
+    nltepop_reset_element(modelgridindex, element);
   }
 }
 
@@ -1203,7 +1207,7 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
     {
       //STUFF FOR "NOT USING" CASE
 
-      nltepop_clear(modelgridindex, element);
+      nltepop_reset_element(modelgridindex, element);
       test_ratio = 0.0;
     }
     return test_ratio;

@@ -1205,10 +1205,10 @@ void allocate_compositiondata(int modelgridindex)
     abort();
   }
 
-  for (int element = 0; element < total_nlte_levels; element++)
+  for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
   {
-    modelgrid[modelgridindex].nlte_pops[element] = -1.0; ///flag to indicate that there is
-                                                         /// currently no information on the nlte populations
+    modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0; ///flag to indicate that there is
+                                                           /// currently no information on the nlte populations
   }
 
   //printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
