@@ -255,7 +255,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
   }
 
   #ifndef FORCE_LTE
-    if (NO_LUT_PHOTOION && ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0)))
+    if (!NO_LUT_PHOTOION && ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0)))
     {
       /// Reduce the corrphotoionrenorm array.
       printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
