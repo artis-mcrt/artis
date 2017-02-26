@@ -1054,14 +1054,14 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   intparas.modelgridindex = modelgridindex;
   intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
 
-  double gammacorr = 0.0;
   gsl_function F_gammacorr;
   F_gammacorr.function = &integrand_corrphotoioncoeff_current_radfield;
   F_gammacorr.params = &intparas;
   double error = 0.0;
 
   gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler_off();
-  int status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS31, w, &gammacorr, &error);
+  double gammacorr = 0.0;
+  const int status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS31, w, &gammacorr, &error);
   if (status != 0)
   {
     printout("corrphotoioncoeff integrator status %d. Integral value %g.\n",status,gammacorr);

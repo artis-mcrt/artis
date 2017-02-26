@@ -377,7 +377,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
           const double epsilon_trans = epsilon_current - epsilon_target;
 
           const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-          const double C = col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex);
+          const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
           const int upper_index = level_index;
           const int lower_index = get_nlte_vector_index(element,ion,lower);
@@ -440,7 +440,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
             const int upper_index = get_nlte_vector_index(element,ion+1,upper);
             const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
             const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-            const double C = col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
+            const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
             *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, lower_index) -= R * s_renorm;
             *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, lower_index) += R * s_renorm;
@@ -880,7 +880,7 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
           mastate[tid].nnlevel = 1.0;
 
           R = rad_deexcitation_ratecoeff(modelgridindex,element,ion,level,lower,epsilon_trans,lineindex,t_mid);
-          C = col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex);
+          C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
           s_renorm = 1.0;
 
@@ -998,7 +998,7 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
             int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
             R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-            C = col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
+            C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
             upper_use = nlte_size - 1; //ion above
 
