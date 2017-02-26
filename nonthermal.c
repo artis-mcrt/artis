@@ -64,7 +64,7 @@ static gsl_vector *sourcevec;        // samples of the source function (energy d
 static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
 struct nt_solution_struct {
-  double E_0;     // the lowest energy ionization or excitation in eV
+  double E_0;     // the lowest energy ionization or excitation transition in eV
   double *yfunc;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal electron number flux.
                   // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
   float eff_ionpot[MELEMENTS][MIONS]; // need to keep these (even if the spectrum is not kept) to
@@ -126,6 +126,17 @@ static void read_collion_data(void)
 }
 
 
+static void zero_all_effionpot(int modelgridindex)
+{
+  for (int element = 0; element < nelements; element++)
+  {
+    for (int ion = 0; ion < get_nions(element); ion++)
+    {
+      nt_solution[modelgridindex].eff_ionpot[element][ion] = 0.;
+    }
+  }
+}
+
 void nt_init(int my_rank)
 {
   if (nonthermal_initialized == false)
@@ -157,13 +168,7 @@ void nt_init(int my_rank)
       {
         nt_solution[modelgridindex].yfunc = NULL;
       }
-      for (int element = 0; element < nelements; element++)
-      {
-        for (int ion = 0; ion < get_nions(element); ion++)
-        {
-          nt_solution[modelgridindex].eff_ionpot[element][ion] = 0.;
-        }
-      }
+      zero_all_effionpot(modelgridindex);
     }
 
     envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
@@ -1080,15 +1085,172 @@ static void analyse_sf_solution(int modelgridindex)
 }
 
 
+static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, int element, int ion, double nnion, double *E_0)
+{
+  // excitation terms
+  gsl_vector *vec_xs_excitation_nnion_deltae = gsl_vector_alloc(SFPTS);
+  const int maxlevel = 0; // just consider excitation from the ground level
+  // const int maxlevel = get_nlevels(element,ion); // excitation from all levels (SLOW)
+
+  for (int level = 0; level <= maxlevel; level++)
+  {
+    const double epsilon_current = epsilon(element, ion, level);
+    const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    for (int t = 1; t <= nuptrans; t++)
+    {
+      const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[t].epsilon;
+      const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
+      const double epsilon_trans = epsilon_target - epsilon_current;
+      const double epsilon_trans_ev = epsilon_trans / EV;
+
+      if (epsilon_trans / EV < *E_0 || *E_0 < 0.)
+        *E_0 = epsilon_trans / EV;
+
+      get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans);
+      gsl_vector_scale(vec_xs_excitation_nnion_deltae, nnion * DELTA_E);
+
+      for (int i = 0; i < SFPTS; i++)
+      {
+        const double en = gsl_vector_get(envec, i);
+        const int stopindex = get_energyindex_ev(en + epsilon_trans_ev);
+
+        for (int j = i; j <= stopindex; j++)
+        {
+          // const double endash = gsl_vector_get(envec, j);
+          // *gsl_matrix_ptr(sfmatrix, i, j) += nnion * xs_excitation(lineindex, epsilon_trans, endash * EV) * DELTA_E;
+
+          *gsl_matrix_ptr(sfmatrix, i, j) += gsl_vector_get(vec_xs_excitation_nnion_deltae, j);
+        }
+      }
+    }
+  }
+  gsl_vector_free(vec_xs_excitation_nnion_deltae);
+}
+
+
+static void sfmatrix_add_ionisation(gsl_matrix *sfmatrix, const int Z, const int ionstage, const double nnion, double *E_0)
+{
+  // ionization terms
+  for (int n = 0; n < colliondatacount; n++)
+  {
+    if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
+    {
+      const double ionpot_ev = colliondata[n].ionpot_ev;
+
+      if (ionpot_ev < *E_0 || *E_0 < 0.)
+        *E_0 = ionpot_ev; // new minimum energy for excitation/ionization
+
+      const double J = 0.6 * ionpot_ev;  // valid for elements other than He, Ne, Ar (Kozma & Fransson 1992)
+      // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
+      //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
+
+      for (int i = 0; i < SFPTS; i++)
+      {
+        const double en = gsl_vector_get(envec, i);
+
+        const int secondintegralstartindex = get_energyindex_ev(2 * en + ionpot_ev);
+
+        for (int j = i; j < SFPTS; j++)
+        {
+            const double endash = gsl_vector_get(envec, j);
+
+            const double prefactor = nnion * xs_impactionization(endash, n) / atan((endash - ionpot_ev) / 2 / J);
+
+            const double epsilon_upper = (endash + ionpot_ev) / 2;
+            double epsilon_lower = endash - en;
+            // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
+            *gsl_matrix_ptr(sfmatrix, i, j) += prefactor * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * DELTA_E;
+
+            if (j >= secondintegralstartindex)
+            {
+              epsilon_lower = en + ionpot_ev;
+              // double deltaendash;
+              // if (j == secondintegralstartindex)
+              //   deltaendash = endash + DELTA_E - (2 * en + ionpot_ev);
+              // else
+              //   deltaendash = DELTA_E;
+              *gsl_matrix_ptr(sfmatrix, i, j) -= prefactor * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * DELTA_E;
+            }
+        }
+      }
+      // break; // consider only the valence shell
+    }
+  }
+}
+
+
+static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec, gsl_vector *yvec)
+{
+  // WARNING: this assumes sfmatrix is in upper triangular form already!
+  const gsl_matrix *sfmatrix_LU = sfmatrix;
+  gsl_permutation *p = gsl_permutation_calloc(SFPTS); // identity permutation
+
+  // if the matrix is not upper triangular, then do a decomposition
+  // printout("Doing LU decomposition of SF matrix\n");
+  // make a copy of the matrix for the LU decomp
+  // gsl_matrix *sfmatrix_LU = gsl_matrix_alloc(SFPTS, SFPTS);
+  // gsl_matrix_memcpy(sfmatrix_LU, sfmatrix);
+  // int s; //sign of the transformation
+  // gsl_permutation *p = gsl_permutation_alloc(SFPTS);
+  // gsl_linalg_LU_decomp(sfmatrix_LU, p, &s);
+
+  // printout("Solving SF matrix equation\n");
+
+  // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
+  gsl_linalg_LU_solve(sfmatrix_LU, p, rhsvec, yvec);
+  // printout("Refining solution\n");
+
+  double error_best = -1.;
+  gsl_vector *yvec_best = gsl_vector_alloc(SFPTS); // solution vector with lowest error
+  gsl_vector *gsl_work_vector = gsl_vector_calloc(SFPTS);
+  gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
+  int iteration;
+  for (iteration = 0; iteration < 10; iteration++)
+  {
+    if (iteration > 0)
+      gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU, p, rhsvec, yvec, gsl_work_vector); // first argument must be original matrix
+
+    // calculate Ax - b = residual
+    gsl_vector_memcpy(residual_vector, rhsvec);
+    gsl_blas_dgemv(CblasNoTrans, 1.0, sfmatrix, yvec, -1.0, residual_vector);
+
+    // value of the largest absolute residual
+    const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector)));
+
+    if (error < error_best || error_best < 0.)
+    {
+      gsl_vector_memcpy(yvec_best, yvec);
+      error_best = error;
+    }
+    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
+  }
+  if (error_best >= 0.)
+  {
+    printout("  SF solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",
+             iteration, error_best);
+    gsl_vector_memcpy(yvec, yvec_best);
+  }
+  gsl_vector_free(yvec_best);
+  gsl_vector_free(gsl_work_vector);
+  gsl_vector_free(residual_vector);
+
+  // gsl_matrix_free(sfmatrix_LU); // if this matrix is different to sfmatrix then free it
+  gsl_permutation_free(p);
+
+  if (!gsl_vector_isnonneg(yvec))
+  {
+    printout("solve_sfmatrix: WARNING: y function goes negative!\n");
+  }
+}
+
 void nt_solve_spencerfano(int modelgridindex, int timestep)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
+  nt_solution[modelgridindex].timestep = timestep;
   if (mg_associated_cells[modelgridindex] < 1)
   {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
-
-    nt_solution[modelgridindex].timestep = timestep;
 
     return;
   }
@@ -1108,15 +1270,15 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
       // nt_write_to_file(modelgridindex, timestep);
 
-      nt_solution[modelgridindex].timestep = timestep;
       nt_solution[modelgridindex].frac_heating = 1.0;
       nt_solution[modelgridindex].E_0 = 0.;
+
+      zero_all_effionpot(modelgridindex);
 
       return;
     }
   }
 
-  // const time_t sys_time_start = time(NULL);
   const float nne = get_nne(modelgridindex); // electrons per cm^3
 
   printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d (nne=%g e-/cm^3)\n",
@@ -1143,8 +1305,6 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
   double E_0 = -1.; // reset E_0 so it can be found it again
 
-  gsl_vector *vec_xs_excitation_nnion_deltae = gsl_vector_alloc(SFPTS);
-
   for (int element = 0; element < nelements; element++)
   {
     const int Z = get_element(element);
@@ -1160,97 +1320,11 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
       printout("%d ", ionstage);
 
-      // excitation terms
-      // for (int level = 0; level < get_nlevels(element,ion); level++)
-      const int level = 0; // just consider excitation from the ground level
-      {
-        const double epsilon_current = epsilon(element,ion,level);
-        const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-        for (int t = 1; t <= nuptrans; t++)
-        {
-          const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[t].epsilon;
-          const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
-          const double epsilon_trans = epsilon_target - epsilon_current;
-          const double epsilon_trans_ev = epsilon_trans / EV;
-
-          if (epsilon_trans / EV < E_0 || E_0 < 0.)
-            E_0 = epsilon_trans / EV;
-
-          get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans);
-          gsl_vector_scale(vec_xs_excitation_nnion_deltae, nnion * DELTA_E);
-
-          for (int i = 0; i < SFPTS; i++)
-          {
-            const double en = gsl_vector_get(envec, i);
-            const int stopindex = get_energyindex_ev(en + epsilon_trans_ev);
-
-            for (int j = i; j <= stopindex; j++)
-            {
-              // const double endash = gsl_vector_get(envec, j);
-              // double delta_endash;
-              // if (j == stopindex)
-              //   delta_endash = (en + epsilon_trans_ev) - endash;
-              // else
-              //   delta_endash = DELTA_E;
-
-              // *gsl_matrix_ptr(sfmatrix, i, j) += nnion * xs_excitation(lineindex, epsilon_trans, endash * EV) * DELTA_E;
-              *gsl_matrix_ptr(sfmatrix, i, j) += gsl_vector_get(vec_xs_excitation_nnion_deltae, j);
-            }
-          }
-        }
-      }
-
-      // ionization terms
-      for (int n = 0; n < colliondatacount; n++)
-      {
-        if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
-        {
-          const double ionpot_ev = colliondata[n].ionpot_ev;
-
-          if (ionpot_ev < E_0 || E_0 < 0.)
-            E_0 = ionpot_ev; // new minimum energy for excitation/ionization
-
-          const double J = 0.6 * ionpot_ev;  // valid for elements other than He, Ne, Ar (Kozma & Fransson 1992)
-          // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
-          //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
-
-          for (int i = 0; i < SFPTS; i++)
-          {
-            const double en = gsl_vector_get(envec, i);
-
-            const int secondintegralstartindex = get_energyindex_ev(2 * en + ionpot_ev);
-
-            for (int j = i; j < SFPTS; j++)
-            {
-                const double endash = gsl_vector_get(envec, j);
-
-                const double prefactor = nnion * xs_impactionization(endash, n) / atan((endash - ionpot_ev) / 2 / J);
-
-                const double epsilon_upper = (endash + ionpot_ev) / 2;
-                double epsilon_lower = endash - en;
-                // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
-                *gsl_matrix_ptr(sfmatrix, i, j) += prefactor * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * DELTA_E;
-
-                if (j >= secondintegralstartindex)
-                {
-                  epsilon_lower = en + ionpot_ev;
-                  // double deltaendash;
-                  // if (j == secondintegralstartindex)
-                  //   deltaendash = endash + DELTA_E - (2 * en + ionpot_ev);
-                  // else
-                  //   deltaendash = DELTA_E;
-                  *gsl_matrix_ptr(sfmatrix, i, j) -= prefactor * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * DELTA_E;
-                }
-            }
-          }
-          // break; // consider only the valence shell
-        }
-      }
+      sfmatrix_add_excitation(sfmatrix, element, ion, nnion, &E_0);
+      sfmatrix_add_ionisation(sfmatrix, Z, ionstage, nnion, &E_0);
     }
     printout("\n");
   }
-
-  gsl_vector_free(vec_xs_excitation_nnion_deltae);
 
   // printout("SF matrix | RHS vector:\n");
   // for (int row = 0; row < 10; row++)
@@ -1268,22 +1342,6 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   // }
   // printout("\n");
 
-  // printout("Doing LU decomposition of SF matrix\n");
-  // make a copy of the matrix for the LU decomp
-  // gsl_matrix *sfmatrix_LU_decomp = gsl_matrix_alloc(SFPTS,SFPTS);
-  // gsl_matrix_memcpy(sfmatrix_LU_decomp, sfmatrix);
-  // int s; //sign of the transformation
-  // gsl_permutation *p = gsl_permutation_alloc(SFPTS);
-  // gsl_linalg_LU_decomp(sfmatrix_LU_decomp, p, &s);
-
-  // The LU decomposition above is redundant if we already
-  // made sure to put the sfmatrix in upper triangular form
-  gsl_matrix *sfmatrix_LU_decomp = sfmatrix;
-  gsl_permutation *p = gsl_permutation_calloc(SFPTS); // identity permutation
-
-  // printout("Solving SF matrix equation\n");
-  // solve matrix equation: sf_matrix * y_vec = constvec for yvec
-
   if (!STORE_NT_SPECTRUM)
   {
     nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
@@ -1291,55 +1349,16 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
   gsl_vector *yvec = &yvecview.vector;
-  gsl_linalg_LU_solve(sfmatrix_LU_decomp, p, rhsvec, &yvecview.vector);
+  sfmatrix_solve(sfmatrix, rhsvec, yvec);
 
-  // printout("Refining solution\n");
-
-  double error_best = -1.;
-  gsl_vector *yvec_best = gsl_vector_alloc(SFPTS); // solution vector with lowest error
-  gsl_vector *gsl_work_vector = gsl_vector_calloc(SFPTS);
-  gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
-  int iteration;
-  for (iteration = 0; iteration < 10; iteration++)
-  {
-    if (iteration > 0)
-      gsl_linalg_LU_refine(sfmatrix, sfmatrix_LU_decomp, p, rhsvec, yvec, gsl_work_vector);
-
-    gsl_vector_memcpy(residual_vector, rhsvec);
-    gsl_blas_dgemv(CblasNoTrans, 1.0, sfmatrix, yvec, -1.0, residual_vector); // calculate Ax - b = residual
-    const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector))); // value of the largest absolute residual
-
-    if (error < error_best || error_best < 0.)
-    {
-      gsl_vector_memcpy(yvec_best, yvec);
-      error_best = error;
-    }
-    // printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
-  }
-  if (error_best >= 0.)
-  {
-    printout("  SF solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",
-             iteration, error_best);
-    gsl_vector_memcpy(yvec, yvec_best);
-  }
-  gsl_vector_free(yvec_best);
-  gsl_vector_free(gsl_work_vector);
-  gsl_vector_free(residual_vector);
-  gsl_permutation_free(p);
+  // gsl_matrix_free(sfmatrix_LU); // if this matrix is different to sfmatrix
 
   gsl_matrix_free(sfmatrix);
-  // gsl_matrix_free(sfmatrix_LU_decomp);
   gsl_vector_free(rhsvec);
 
   if (timestep % 2 == 0)
     nt_write_to_file(modelgridindex, timestep);
 
-  if (!gsl_vector_isnonneg(yvec))
-  {
-    printout("WARNING: y function goes negative!\n");
-  }
-
-  nt_solution[modelgridindex].timestep = timestep;
   nt_solution[modelgridindex].frac_heating = -1.;
   nt_solution[modelgridindex].E_0 = E_0;
 
@@ -1349,7 +1368,6 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   {
     free(nt_solution[modelgridindex].yfunc);
   }
-  // printout("Spencer-Fano solver took %d seconds\n", time(NULL) - sys_time_start);
 }
 
 

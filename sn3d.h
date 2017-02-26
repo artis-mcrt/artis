@@ -41,7 +41,7 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 
 
 #if !defined DO_EXSPEC && !defined MPI_ON
-  // #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
+  #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
 #endif
 
 #ifdef MPI_ON
@@ -308,16 +308,16 @@ double *gammaestimator;
   double *ffheatingestimator;
   double *nuJ;
 #else
-  double nuJ[MMODELGRID+1];
-  double ffheatingestimator[MMODELGRID+1];
-  double colheatingestimator[MMODELGRID+1];
+  double nuJ[MMODELGRID + 1];
+  double ffheatingestimator[MMODELGRID + 1];
+  double colheatingestimator[MMODELGRID + 1];
 
   #ifdef DO_TITER
     double nuJ_reduced_save[MMODELGRID];
     double ffheatingestimator_save[MMODELGRID];
     double colheatingestimator_save[MMODELGRID];
-    double gammaestimator_save[MMODELGRID*MELEMENTS*MIONS];
-    double bfheatingestimator_save[MMODELGRID*MELEMENTS*MIONS];
+    double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
+    double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
   #endif
 
   //double mabfcount[MGRID],mabfcount_thermal[MGRID], kbfcount[MGRID],kbfcount_ion[MGRID],kffcount[MGRID], kffabs[MGRID],kbfabs[MGRID],kgammadep[MGRID];

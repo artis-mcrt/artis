@@ -47,10 +47,10 @@ extern inline void set_fcrstable(int modelgridindex, float x);
 extern inline void set_fvstable(int modelgridindex, float x);
 extern inline void set_ftistable(int modelgridindex, float x);
 extern inline void set_kappagrey(int modelgridindex, float x);
-extern inline void set_Te(int modelgridindex, double x);
-extern inline void set_TR(int modelgridindex, double x);
-extern inline void set_TJ(int modelgridindex, double x);
-extern inline void set_W(int modelgridindex, double x);
+extern inline void set_Te(int modelgridindex, float x);
+extern inline void set_TR(int modelgridindex, float x);
+extern inline void set_TJ(int modelgridindex, float x);
+extern inline void set_W(int modelgridindex, float x);
 
 /// Routine for doing a uniform density grid.
 /*int uniform_density_setup ()

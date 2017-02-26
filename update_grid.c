@@ -272,9 +272,7 @@ double calculate_elem_Gamma(int modelgridindex, int element, int ion)
     const float T_e = get_Te(modelgridindex);
     const float nne = get_nne(modelgridindex);
     const int ionisinglevels = get_bfcontinua(element,ion);
-    // mastate[tid].element = element;
-    // mastate[tid].ion = ion;
-    // mastate[tid].nnlevel = 1.0;
+
     double Col_ion = 0.;
     for (int level = 0; level < ionisinglevels; level++)
     {

@@ -152,7 +152,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
   }
   else
   {
-    f = choose_f(xx,zrand);
+    f = choose_f(xx, zrand);
 
     /* Check that f lies between 1.0 and (2xx  + 1) */
 
@@ -164,7 +164,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
 
     /* Prob of keeping gamma ray is...*/
 
-    prob_gamma = 1./ f;
+    prob_gamma = 1. / f;
   }
 
   zrand = gsl_rng_uniform(rng);
@@ -236,7 +236,6 @@ void com_sca(PKT *pkt_ptr, double t_current)
     pkt_ptr->e_rf = pkt_ptr->e_cmf * dopplerfactor;
 
     pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
-
   }
   else
   {
