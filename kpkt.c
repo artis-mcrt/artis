@@ -129,7 +129,7 @@ void calculate_kpkt_rates(int modelgridindex)
               const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
               const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
               //printout("cooling list: col_ionization\n");
-              C += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
+              C += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
             }
             C_ion += C;
             //C = 0.;
@@ -348,7 +348,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
         const double epsilon_upper = epsilon(element, ion + 1, upper);
         const double epsilon_trans = epsilon_upper - epsilon_current;
         //printout("cooling list: col_ionization\n");
-        C += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans)  * epsilon_trans;
+        C += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans)  * epsilon_trans;
       }
       //C_ion += C;
       //C = 0.;

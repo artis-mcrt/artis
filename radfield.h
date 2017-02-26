@@ -21,7 +21,7 @@ int radfield_select_bin(int modelgridindex, double nu);
 inline double radfield_dbb(double nu, float T, float W)
 // returns J_nu for a diluted black body
 {
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) / (exp(HOVERKB * nu / T) - 1);
+  return W * TWOHOVERCLIGHTSQUARED * pow(nu,3) / expm1(HOVERKB * nu / T);
 }
 
 

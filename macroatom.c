@@ -168,7 +168,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         epsilon_trans = epsilon_current - epsilon_target;
         R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-        C = col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex);
+        C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
         const double individ_rad_deexc = R * epsilon_trans;
         const double individ_col_deexc = C * epsilon_trans;
@@ -242,7 +242,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
           upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
           R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-          C = col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
+          C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
           internal_up_higher += (R + C) * epsilon_current;
         }
       }
@@ -286,7 +286,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
           upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
           R += get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-          C += col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
+          C += col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
           printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g, saved_internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current,cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher);
         }
 
@@ -759,7 +759,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
         epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
         R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-        C = col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
+        C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
         rate += (R + C) * epsilon_current;
         if (zrand*internal_up_higher < rate) break;
       }
@@ -809,7 +809,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           epsilon_trans = epsilon_current - epsilon_target;
           R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-          C = col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex);
+          C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
           printout("[debug]    deexcitation to level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",lower,epsilon_target,epsilon_trans,R,C);
         }
 
@@ -837,7 +837,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
             upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
             R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-            C = col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
+            C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
             printout("[debug]    ionisation to ion %d, level %d, epsilon_trans %g, R %g, C %g\n",ion+1,upper,epsilon_trans,R,C);
             break;
           }
@@ -1052,11 +1052,9 @@ double rad_recombination_ratecoeff(int modelgridindex, int element, int upperion
 ///***************************************************************************/
 
 
-double col_deexcitation_ratecoeff(int modelgridindex, double epsilon_trans, int lineindex)
+double col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int lineindex)
 {
   double C;
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
   const double coll_str_thisline = get_coll_str(lineindex);
   const double statweight = statw_upper(lineindex);
   if (coll_str_thisline < 0)
@@ -1245,7 +1243,7 @@ double col_recombination_ratecoeff(int modelgridindex, int element, int upperion
 }
 
 
-double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lower, int phixstargetindex, double epsilon_trans)
+double col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex, double epsilon_trans)
 /// collisional ionization rate: paperII 3.5.1
 {
   #ifdef DEBUG_ON
@@ -1255,9 +1253,6 @@ double col_ionization_ratecoeff(int modelgridindex, int element, int ion, int lo
     abort();
   }
   #endif
-
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
   ///select gaunt factor according to ionic charge

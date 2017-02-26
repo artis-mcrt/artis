@@ -268,6 +268,9 @@ void calculate_heating_rates(int modelgridindex)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
+  const float nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
+
   //gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1024);
   //double intaccuracy = 1e-2;
   //double error;
@@ -286,10 +289,6 @@ void calculate_heating_rates(int modelgridindex)
   PKT *pkt_ptr;
   pkt_ptr = &dummypkt;*/
 
-  //double T_e = get_Te(modelgridindex);
-  //double T_R = get_TR(modelgridindex);
-  //double W = get_W(modelgridindex);
-
   double C_deexc = 0.;
   //double C_recomb = 0.;
   double bfheating = 0.;
@@ -303,32 +302,30 @@ void calculate_heating_rates(int modelgridindex)
     for (int ion = 0; ion < nions; ion++)
     {
       #ifdef DIRECT_COL_HEAT
-      {
-        mastate[tid].ion = ion;
-        const int nlevels_currention = get_nlevels(element,ion);
+      mastate[tid].ion = ion;
+      const int nlevels = get_nlevels(element,ion);
+      const int nbflevels = get_bfcontinua(element,ion);
 //      if (ion > 0) nlevels_lowerion = get_nlevels(element,ion-1);
 
-       for (int level = 0; level < nlevels_currention; level++)
-       {
-         const double epsilon_current = epsilon(element,ion,level);
-         const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-        //  mastate[tid].statweight = stat_weight(element,ion,level);
+     for (int level = 0; level < nlevels; level++)
+     {
+       const double epsilon_current = epsilon(element,ion,level);
+       const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+      //  mastate[tid].statweight = stat_weight(element,ion,level);
 //
 //
 //         /// Collisional heating: deexcitation to same ionization stage
 //         /// ----------------------------------------------------------
-         const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-         for (int ii = 1; ii <= ndowntrans; ii++)
-         {
-           const double epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
-           //double statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
-           const int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
-           const double epsilon_trans = epsilon_current - epsilon_target;
-           const double C = nnlevel * col_deexcitation_ratecoeff(modelgridindex, epsilon_trans, lineindex) * epsilon_trans;
-           C_deexc += C;
-         }
+       const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+       for (int ii = 1; ii <= ndowntrans; ii++)
+       {
+         const double epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
+         //double statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
+         const int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
+         const double epsilon_trans = epsilon_current - epsilon_target;
+         const double C = nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * epsilon_trans;
+         C_deexc += C;
        }
-      }
       #endif
 //
 //         /// Collisional heating: recombination to lower ionization stage
@@ -387,26 +384,21 @@ void calculate_heating_rates(int modelgridindex)
 //         */
 //       }
 
-      /// Bound-free heating (from estimators)
-      /// ------------------------------------
-      //if (ion < nions-1) bfheating += bfheatingestimator[cellnumber*nelements*maxion+element*maxion+ion];
+        /// Bound-free heating (from estimators)
+        /// ------------------------------------
+        //if (ion < nions-1) bfheating += bfheatingestimator[cellnumber*nelements*maxion+element*maxion+ion];
 
-      /// Bound-free heating (renormalised analytical calculation)
-      /// --------------------------------------------------------
-      /// We allow bound free-transitions only if there is a higher ionisation stage
-      /// left in the model atom to match the bound-free absorption in the rpkt routine.
-      /// There this condition is needed as we can only ionise to existing ionisation
-      /// stage even if there would be further ionisation stages in nature which
-      /// are not included in the model atom.
-      if (ion < nions-1)
-      {
+        /// Bound-free heating (renormalised analytical calculation)
+        /// --------------------------------------------------------
+        /// We allow bound free-transitions only if there is a higher ionisation stage
+        /// left in the model atom to match the bound-free absorption in the rpkt routine.
+        /// There this condition is needed as we can only ionise to existing ionisation
+        /// stage even if there would be further ionisation stages in nature which
+        /// are not included in the model atom.
         //nlevels_currention = get_nlevels(element,ion);
         //nlevels_currention = get_ionisinglevels(element,ion);
-        const int nlevels_currention = get_bfcontinua(element,ion);
-        for (int level = 0; level < nlevels_currention; level++)
+        if ((level < nbflevels) && (ion < nions - 1))
         {
-          //double epsilon_current = epsilon(element,ion,level);
-          const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
           const int nphixstargets = get_nphixstargets(element,ion,level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
           {
@@ -537,7 +529,7 @@ void calculate_cooling_rates(int modelgridindex)
             const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
             //printout("cooling list: col_ionization\n");
-            C += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
+            C += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
           }
           C_ion += C;
 

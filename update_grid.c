@@ -265,10 +265,12 @@ static void cellhistory_clear(void)
 
 double calculate_elem_Gamma(int modelgridindex, int element, int ion)
 {
-  double Gamma = 0.;
   const int nions = get_nions(element);
+  double Gamma = 0.;
   if (ion < nions - 1)
   {
+    const float T_e = get_Te(modelgridindex);
+    const float nne = get_nne(modelgridindex);
     const int ionisinglevels = get_bfcontinua(element,ion);
     // mastate[tid].element = element;
     // mastate[tid].ion = ion;
@@ -287,7 +289,7 @@ double calculate_elem_Gamma(int modelgridindex, int element, int ion)
 
         const double epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
         //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
-        Col_ion += nnlevel * col_ionization_ratecoeff(modelgridindex, element, ion, level, phixstargetindex, epsilon_trans);
+        Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
       }
     }
     //printout("element %d ion %d: col/gamma %g Te %g ne %g\n", element, ion, Col_ion/Gamma, get_Te(n), get_nne(n));
