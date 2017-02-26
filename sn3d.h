@@ -300,22 +300,17 @@ double J[MMODELGRID+1];
 #endif
 
 
+double *bfheatingestimator;
+double *corrphotoionrenorm;
+double *gammaestimator;
 #ifdef FORCE_LTE
-  // double redhelper[MMODELGRID+1];
   //don't use the variables below in LTE mode, just declare them here so the code compiles
   double *ffheatingestimator;
-  double *bfheatingestimator;
-  double *corrphotoionrenorm;
-  double *gammaestimator;
   double *nuJ;
 #else
   double nuJ[MMODELGRID+1];
   double ffheatingestimator[MMODELGRID+1];
   double colheatingestimator[MMODELGRID+1];
-  double gammaestimator[(MMODELGRID+1)*MELEMENTS*MIONS];
-  double bfheatingestimator[(MMODELGRID+1)*MELEMENTS*MIONS];
-  double corrphotoionrenorm[(MMODELGRID+1)*MELEMENTS*MIONS];
-  // double redhelper[(MMODELGRID+1)*MELEMENTS*MIONS];
 
   #ifdef DO_TITER
     double nuJ_reduced_save[MMODELGRID];

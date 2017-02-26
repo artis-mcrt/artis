@@ -2607,12 +2607,25 @@ void read_parameterfile(int rank)
   if (NO_LUT_PHOTOION)
     printout("Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no LUT).\n");
   else
-    printout("Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat).\n");
+  {
+    gammaestimator = malloc((MMODELGRID + 1) * MELEMENTS * MIONS * sizeof(double));
+    corrphotoionrenorm = malloc((MMODELGRID + 1) * MELEMENTS * MIONS * sizeof(double));
+    if ((gammaestimator != NULL) && (corrphotoionrenorm != NULL))
+      printout("Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm estimator.\n");
+    else
+    {
+      printout("ERROR: Failed to allocate gammaestimator and corrphotoionrenorm\n");
+      abort();
+    }
+  }
 
   if (NO_LUT_BFHEATING)
     printout("bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no LUT).\n");
   else
-    printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat).\n");
+  {
+    bfheatingestimator = malloc((MMODELGRID+1)*MELEMENTS*MIONS * sizeof(double));
+    printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.\n");
+  }
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
     printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);

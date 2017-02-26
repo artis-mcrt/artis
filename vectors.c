@@ -48,7 +48,7 @@ double doppler(const double *restrict dir1, const double *restrict vel)
 }
 
 
-void scatter_dir(const double *restrict dir_in, double cos_theta, double *dir_out)
+void scatter_dir(const double *restrict dir_in, const double cos_theta, double *dir_out)
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction

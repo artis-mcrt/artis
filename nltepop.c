@@ -237,6 +237,24 @@ static void print_level_rates(int modelgridindex, int element, int selected_ion,
 }
 
 
+static void nltepop_clear(int modelgridindex, int element)
+{
+  const int nions = get_nions(element);
+  for (int ion = 0; ion < nions; ion++)
+  {
+    const int nlte_start = elements[element].ions[ion].first_nlte;
+    const int nlevels_nlte = get_nlevels_nlte(element,ion);
+    for (int level = 1; level < nlevels_nlte + 1; level++)
+    {
+      modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0; // flag to indicate no useful data
+    }
+    if (nlevels_nlte != (get_nlevels(element,ion) - 1)) // a superlevel exists
+    {
+      modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = -1.0;
+    }
+  }
+}
+
 void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
 // solves the statistical balance equations to find NLTE level populations for all ions of an element
 // (ionisation balance follows from this too)
@@ -411,7 +429,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
         }
 
         // thermal collisional ionization, photoionisation and recombination processes
-        if (ion < nions-1 && level < nionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
+        if ((ion < nions - 1) && (level < nionisinglevels))  //&& get_ionstage(element,ion) < get_element(element)+1)
         {
           // ionization
           const int lower_index = level_index;
@@ -734,19 +752,7 @@ void solve_nlte_pops_element(int element, int modelgridindex, int timestep)
     printout("Not solving for NLTE populations in cell %d at timestep %d for element %d due to zero abundance\n",
              modelgridindex,timestep,element);
 
-    for (int ion = 0; ion < nions; ion++)
-    {
-      const int nlte_start = elements[element].ions[ion].first_nlte;
-      const int nlevels_nlte = get_nlevels_nlte(element,ion);
-      for (int level = 1; level < nlevels_nlte + 1; level++)
-      {
-        modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0; // flag to indicate no useful data
-      }
-      if (nlevels_nlte != (get_nlevels(element,ion) - 1)) // a superlevel exists
-      {
-        modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = -1.0;
-      }
-    }
+    nltepop_clear(modelgridindex, element);
   }
 }
 
@@ -1196,18 +1202,11 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
     else
     {
       //STUFF FOR "NOT USING" CASE
-      for (int level = 1; level < nlevels_nlte+1; level++)
-      {
-        modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = -1.0;///flag to indicate no useful data
-      }
-      if (super_level == 1)
-      {
-        modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = -1.0;
-      }
-      test_ratio = 0.0;
 
+      nltepop_clear(modelgridindex, element);
+      test_ratio = 0.0;
     }
-    return(test_ratio);
+    return test_ratio;
   }
   else
   {
@@ -1218,9 +1217,9 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
 
 double superlevel_boltzmann(int modelgridindex, int element, int ion, int level)
 {
-  double T_exc = get_TJ(modelgridindex);
-  double E_level = epsilon(element,ion,level);
-  double E_superlevel = epsilon(element,ion,get_nlevels_nlte(element,ion)+1);
+  const double T_exc = get_TJ(modelgridindex);
+  const double E_level = epsilon(element,ion,level);
+  const double E_superlevel = epsilon(element,ion,get_nlevels_nlte(element,ion)+1);
 
   return stat_weight(element,ion,level) * exp(-(E_level-E_superlevel)/KB/T_exc);
 }
@@ -1240,7 +1239,7 @@ void nltepop_open_file(int my_rank)
 }
 
 
-void nltepop_close_file()
+void nltepop_close_file(void)
 {
   fclose(nlte_file);
 }
@@ -1272,9 +1271,6 @@ void nltepop_write_to_file(int modelgridindex, int timestep)
       {
         double nnlevellte = calculate_levelpop_lte(modelgridindex, element, ion, level);
 
-        const double nnlevelnlte = (level == 0) ? nnlevellte : (
-          modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
-
         fprintf(nlte_file, "%8d %14d %2d %9d ", timestep, modelgridindex, atomic_number, ion_stage);
         if (level < nlevels_nlte + 1)
           fprintf(nlte_file, "%5d ", level);
@@ -1285,6 +1281,9 @@ void nltepop_write_to_file(int modelgridindex, int timestep)
           for (int level_sl = level + 1; level_sl < get_nlevels(element, ion); level_sl++)
             nnlevellte += calculate_levelpop_lte(modelgridindex, element, ion, level_sl);
         }
+
+        const double nnlevelnlte = (level == 0) ? nnlevellte : (
+          modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
 
         fprintf(nlte_file,"%11.5e %11.5e\n",
                 nnlevellte, nnlevelnlte);

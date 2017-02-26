@@ -255,18 +255,14 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
   }
 
   #ifndef FORCE_LTE
-    if (simulation_continued_from_saved && nts-itstep == 0 && titer == 0)
-    {
-    }
-    else
+    if (NO_LUT_PHOTOION && ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0)))
     {
       /// Reduce the corrphotoionrenorm array.
-      printout("nts %d, titer %d: bcast corr photoionrenorm\n",nts,titer);
+      printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
       MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
       /// Reduce the gammaestimator array. Only needed to write restart data.
-      printout("nts %d, titer %d: bcast gammaestimator\n",nts,titer);
-      MPI_Barrier(MPI_COMM_WORLD);
+      printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
       MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
   #endif
@@ -289,9 +285,11 @@ static void mpi_reduce_estimators(int my_rank)
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, &colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (!NO_LUT_PHOTOION)
+      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (!NO_LUT_BFHEATING)
+      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // MPI_Reduce(MPI_IN_PLACE, &ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     // MPI_Reduce(MPI_IN_PLACE, &twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -886,21 +884,24 @@ int main(int argc, char** argv)
                  nts, time(NULL), time(NULL) - real_time_start);
 
         #ifndef FORCE_LTE
-          /// Initialise corrphotoionrenorm[i] to zero before update_grid is called
-          /// This allows reduction after update_grid has finished
-          if (simulation_continued_from_saved && nts - itstep == 0 && titer == 0)
+          if (!NO_LUT_PHOTOION)
           {
-            /// In this case they have been read from file and must neither be touched
-            /// nor broadcasted after update_grid
-          }
-          else
-          {
-            printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-            for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
+            /// Initialise corrphotoionrenorm[i] to zero before update_grid is called
+            /// This allows reduction after update_grid has finished
+            if (simulation_continued_from_saved && nts - itstep == 0 && titer == 0)
             {
-              corrphotoionrenorm[i] = 0.;
+              /// In this case they have been read from file and must neither be touched
+              /// nor broadcasted after update_grid
             }
-            printout("after nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
+            else
+            {
+              printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
+              for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
+              {
+                corrphotoionrenorm[i] = 0.;
+              }
+              printout("after nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
+            }
           }
         #endif
 
@@ -1304,6 +1305,10 @@ int main(int argc, char** argv)
       free(buffer);
       free(buffer2);
     #endif
+    if (!NO_LUT_BFHEATING)
+      free(bfheatingestimator);
+    if (!NO_LUT_PHOTOION)
+      free(corrphotoionrenorm);
   }
 
   if (my_rank == 0)
