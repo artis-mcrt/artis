@@ -43,7 +43,7 @@ void get_gam_ll(void)
   /* Start by setting up the grid of fake lines and their energies. */
   fakeg_spec.nlines = nfake_gam;
 
-  double deltanu = ( (nusyn_max) - (nusyn_min) ) / (fakeg_spec.nlines-3);
+  const double deltanu = ( (nusyn_max) - (nusyn_min) ) / (fakeg_spec.nlines-3);
 
   for (int i = 0; i < fakeg_spec.nlines; i++)
   {
@@ -53,7 +53,7 @@ void get_gam_ll(void)
 
   /* Now do the sorting. */
 
-  int total_lines = cobalt_spec.nlines + nickel_spec.nlines + fakeg_spec.nlines + cr48_spec.nlines + v48_spec.nlines;
+  const int total_lines = cobalt_spec.nlines + nickel_spec.nlines + fakeg_spec.nlines + cr48_spec.nlines + v48_spec.nlines;
   gam_line_list.total = total_lines;
 
   double energy_last = 0.0;
@@ -121,8 +121,8 @@ void get_gam_ll(void)
     energy_last = energy_try;
   }
 
-  FILE *line_list;
-  if ((line_list = fopen("line_list.txt", "w+")) == NULL)
+  FILE *line_list = fopen("line_list.txt", "w+");
+  if (line_list == NULL)
   {
     printout("Cannot open line_list.txt.\n");
     abort();
@@ -133,7 +133,7 @@ void get_gam_ll(void)
     double a;
     double b;
     identify_gam_line(gam_line_list.type[i], gam_line_list.index[i], &a, &b);
-    fprintf(line_list, "%d %d %d %g %g \n", i, gam_line_list.type[i], gam_line_list.index[i], a/MEV, b);
+    fprintf(line_list, "%d %d %d %g %g \n", i, gam_line_list.type[i], gam_line_list.index[i], a / MEV, b);
   }
   fclose(line_list);
 }

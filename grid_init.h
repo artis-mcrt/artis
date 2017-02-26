@@ -259,22 +259,22 @@ inline void set_kappagrey(int modelgridindex, float kappagrey)
   modelgrid[modelgridindex].kappagrey = kappagrey;
 }
 
-inline void set_Te(int modelgridindex, double Te)
+inline void set_Te(int modelgridindex, float Te)
 {
   modelgrid[modelgridindex].Te = Te;
 }
 
-inline void set_TR(int modelgridindex, double TR)
+inline void set_TR(int modelgridindex, float TR)
 {
   modelgrid[modelgridindex].TR = TR;
 }
 
-inline void set_TJ(int modelgridindex, double TJ)
+inline void set_TJ(int modelgridindex, float TJ)
 {
   modelgrid[modelgridindex].TJ = TJ;
 }
 
-inline void set_W(int modelgridindex, double W)
+inline void set_W(int modelgridindex, float W)
 {
   modelgrid[modelgridindex].W = W;
 }
