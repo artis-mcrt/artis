@@ -387,8 +387,6 @@ typedef struct levellist_entry
   int cont_index;                            /// Index of the continuum associated to this level. Negative number.
   int closestgroundlevelcont;
 
-  bool is_nlte;                              /// 1 if the level is to
-                                             /// be treated in nlte
   bool metastable;                            ///
 
 //  double photoion_xs_nu_edge;              /// nu of the first grid point in the photoion_xs lookup-table.
@@ -421,8 +419,8 @@ typedef struct levellist_entry
 
 typedef struct ionlist_entry
 {
-  levellist_entry *restrict levels;                   /// Carries information for each level: 0,1,...,nlevels-1
-  int ionstage;                            /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
+  levellist_entry *restrict levels;          /// Carries information for each level: 0,1,...,nlevels-1
+  int ionstage;                              /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels;                               /// Number of levels for this ionisation stage
   int nlevels_nlte;                          /// number of nlte levels for this ion
   int first_nlte;                            /// reference index for counting of nlte levels
@@ -437,12 +435,12 @@ typedef struct ionlist_entry
 
 typedef struct elementlist_entry
 {
-  ionlist_entry *restrict ions;                       /// Carries information for each ion: 0,1,...,nions-1
-  int nions;                               /// Number of ions for the current element
-  int anumber;                             /// Atomic number
+  ionlist_entry *restrict ions;              /// Carries information for each ion: 0,1,...,nions-1
+  int nions;                                 /// Number of ions for the current element
+  int anumber;                               /// Atomic number
 //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given cell
-//                                             /// Be aware that this must not be used outside of the update_grid routine
-//                                             /// and their daughters. Neither it will work with OpenMP threads.
+                                             /// Be aware that this must not be used outside of the update_grid routine
+                                             /// and their daughters. Neither it will work with OpenMP threads.
   float abundance;                           ///
   float mass;                                /// Atomic mass number in multiple of MH
 } elementlist_entry;
@@ -494,10 +492,10 @@ typedef struct rpkt_cont_opacity_struct
 
 /// Cell history
 ///============================================================================
-typedef struct coolinglist_contributions
-{
-  double contribution;
-} coolinglist_contributions;
+// typedef struct coolinglist_contributions
+// {
+//   double contribution;
+// } coolinglist_contributions;
 
 typedef struct
 {

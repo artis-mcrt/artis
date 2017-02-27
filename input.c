@@ -1329,8 +1329,8 @@ static void read_atomicdata(void)
   total_nlte_levels = 0;
   n_super_levels = 0;
 
- if (NLTE_POPS_ON)
- {
+  if (NLTE_POPS_ON)
+  {
     for (int element = 0; element < nelements; element++)
     {
       const int nions = get_nions(element);
@@ -1354,7 +1354,9 @@ static void read_atomicdata(void)
 
         if (count < (nlevels - 1))
         {
-          /* If there are more levels that the ground state + the number of NLTE levels then we need an extra slot to store data for the "superlevel", which is a representation of all the other levels that are not treated in detail. */
+          // If there are more levels that the ground state + the number of NLTE levels then we need an extra
+          // slot to store data for the "superlevel", which is a representation of all the other levels that
+          // are not treated in detail.
           total_nlte_levels++;
           n_super_levels++;
         }
