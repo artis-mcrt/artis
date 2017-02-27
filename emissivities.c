@@ -176,10 +176,12 @@ void zero_estimators(void)
       {
         for (int ion = 0; ion < maxion; ion++)
         {
-          if (!NO_LUT_PHOTOION)
+          #if (!NO_LUT_PHOTOION)
             gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-          if (!NO_LUT_BFHEATING)
+          #endif
+          #if (!NO_LUT_BFHEATING)
             bfheatingestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+          #endif
 
           // photoionestimator[n*nelements*maxion+element*maxion+ion] = 0.;
           // stimrecombestimator[n*nelements*maxion+element*maxion+ion] = 0.;

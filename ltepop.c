@@ -160,8 +160,11 @@ double phi(int element, int ion, int modelgridindex)
 // else
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
-      const double Gamma = NO_LUT_PHOTOION ? calculate_elem_Gamma(modelgridindex, element, ion)
-                                           : gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion];
+      #if NO_LUT_PHOTOION
+        const double Gamma = calculate_gamma_ion(modelgridindex, element, ion);
+      #else
+        const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
+      #endif
 
       if (Gamma == 0. && (!NT_ON || (rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.)))
       {

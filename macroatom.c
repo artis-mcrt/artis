@@ -278,10 +278,12 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         float T_R = get_TR(modelgridindex);
         float W = get_W(modelgridindex);
         printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,get_Te(modelgridindex),W,get_TJ(modelgridindex));
-        double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
-        int index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-        double renorm  = corrphotoionrenorm[modelgridindex*nelements*maxion+index_in_groundlevelcontestimor];
-        printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
+        #if (!NO_LUT_PHOTOION)
+          double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
+          int index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+          double renorm  = corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimor];
+          printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
+        #endif
 
         //abort();
       }

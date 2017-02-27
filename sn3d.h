@@ -1,9 +1,7 @@
 #ifndef SN3D_H
 #define SN3D_H
 
-#include <unistd.h>
 #include <stdbool.h>
-#include "types.h"
 
 #define DEBUG_ON
 //#define DO_TITER
@@ -20,12 +18,12 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;  // if using this, should a
                                                        // direct integration options below
                                                        // (since they assume J_nu is Planck function)
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
-static const bool NO_LUT_PHOTOION = true; // dynamically calculate photoionization
-                                           // rates for the current radiation field
-                                           // instead of interpolating values from a
-                                           // lookup table for a blackbody radiation field
+#define NO_LUT_PHOTOION true            // dynamically calculate photoionization
+                                        // rates for the current radiation field
+                                        // instead of interpolating values from a
+                                        // lookup table for a blackbody radiation field
 
-static const bool NO_LUT_BFHEATING = true;
+#define NO_LUT_BFHEATING true
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
@@ -38,6 +36,10 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 
 // Polarisation for virtual packets
 // #define VPKT_ON
+
+#include "types.h"
+#include <unistd.h>
+#include <stdbool.h>
 
 
 #if !defined DO_EXSPEC && !defined MPI_ON
@@ -300,11 +302,15 @@ double J[MMODELGRID+1];
 #endif
 
 
-double *bfheatingestimator;
-double *corrphotoionrenorm;
-double *gammaestimator;
+#if (!NO_LUT_PHOTOION)
+  double corrphotoionrenorm[MMODELGRID * MELEMENTS * MIONS];
+  double gammaestimator[MMODELGRID * MELEMENTS * MIONS];
+#endif
+#if (!NO_LUT_BFHEATING)
+  double bfheatingestimator[MMODELGRID * MELEMENTS * MIONS];
+#endif
 #ifdef FORCE_LTE
-  //don't use the variables below in LTE mode, just declare them here so the code compiles
+  // don't use the variables below in LTE mode, just declare them here so the code compiles
   double *ffheatingestimator;
   double *nuJ;
 #else

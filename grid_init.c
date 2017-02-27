@@ -1477,8 +1477,7 @@ static void read_grid_restart_data(void)
       modelgrid[mgi].thick = thick;
 
       #ifndef FORCE_LTE
-        if (!NO_LUT_PHOTOION)
-        {
+        #if (!NO_LUT_PHOTOION)
           for (int element = 0; element < nelements; element++)
           {
             const int nions = get_nions(element);
@@ -1489,18 +1488,18 @@ static void read_grid_restart_data(void)
               corrphotoionrenorm[mgi * nelements * maxion + element * maxion + ion] = Gamma;
             }
           }
-        }
 
-        for (int element = 0; element < nelements; element++)
-        {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++)
+          for (int element = 0; element < nelements; element++)
           {
-            double Gamma;
-            fscanf(gridsave_file, "%lg ", &Gamma);
-            gammaestimator[mgi * nelements * maxion + element * maxion + ion] = Gamma;
+            const int nions = get_nions(element);
+            for (int ion = 0; ion < nions; ion++)
+            {
+              double Gamma;
+              fscanf(gridsave_file, "%lg ", &Gamma);
+              gammaestimator[mgi * nelements * maxion + element * maxion + ion] = Gamma;
+            }
           }
-        }
+        #endif
       #endif
     }
     else
