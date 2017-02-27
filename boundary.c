@@ -33,10 +33,10 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   const double vz = pkt_ptr->dir[2] * CLIGHT_PROP;
   //printout("boundary.c: vx %g, vy %g, vz %g\n",vx,vy,vz);
 
-  const int celindex = pkt_ptr->where;
-  const double cellxmin = cell[celindex].pos_init[0];
-  const double cellymin = cell[celindex].pos_init[1];
-  const double cellzmin = cell[celindex].pos_init[2];
+  const int cellindex = pkt_ptr->where;
+  const double cellxmin = cell[cellindex].pos_init[0];
+  const double cellymin = cell[cellindex].pos_init[1];
+  const double cellzmin = cell[cellindex].pos_init[2];
   //printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",cellxmin,cellymin,cellzmin);
 
   const double cellxmax = cellxmin + wid_init;
@@ -195,7 +195,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 1;
     time = tx_plus;
-    if (cell[celindex].xyz[0] == (nxgrid - 1))
+    if (cell[cellindex].xyz[0] == (nxgrid - 1))
     {
       *snext = -99;
     }
@@ -216,7 +216,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 2;
     time = tx_minus;
-    if (cell[celindex].xyz[0] == 0)
+    if (cell[cellindex].xyz[0] == 0)
     {
       *snext = -99;
     }
@@ -237,7 +237,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 3;
     time = ty_plus;
-    if (cell[celindex].xyz[1] == (nygrid - 1))
+    if (cell[cellindex].xyz[1] == (nygrid - 1))
     {
       *snext = -99;
     }
@@ -258,13 +258,13 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 4;
     time = ty_minus;
-    if (cell[celindex].xyz[1] == 0)
+    if (cell[cellindex].xyz[1] == 0)
     {
       *snext = -99;
     }
     else
     {
-      *snext = celindex - nxgrid;
+      *snext = cellindex - nxgrid;
       pkt_ptr->last_cross = NEG_Y;
     }
   }
@@ -279,7 +279,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 5;
     time = tz_plus;
-    if (cell[celindex].xyz[2] == (nzgrid - 1))
+    if (cell[cellindex].xyz[2] == (nzgrid - 1))
     {
       *snext = -99;
     }
@@ -300,13 +300,13 @@ double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
   {
     choice = 6;
     time = tz_minus;
-    if (cell[celindex].xyz[2] == 0)
+    if (cell[cellindex].xyz[2] == 0)
     {
       *snext = -99;
     }
     else
     {
-      *snext = celindex - (nxgrid*nygrid);
+      *snext = cellindex - (nxgrid*nygrid);
       pkt_ptr->last_cross = NEG_Z;
     }
   }

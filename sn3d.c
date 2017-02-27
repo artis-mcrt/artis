@@ -10,8 +10,8 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-#include "threadprivate.h"
 #include "sn3d.h"
+#include "threadprivate.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
@@ -255,16 +255,18 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
   }
 
   #ifndef FORCE_LTE
-    if (!NO_LUT_PHOTOION && ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0)))
-    {
-      /// Reduce the corrphotoionrenorm array.
-      printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
-      MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    #if (!NO_LUT_PHOTOION)
+      if ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0))
+      {
+        /// Reduce the corrphotoionrenorm array.
+        printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
+        MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-      /// Reduce the gammaestimator array. Only needed to write restart data.
-      printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
-      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    }
+        /// Reduce the gammaestimator array. Only needed to write restart data.
+        printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
+        MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      }
+    #endif
   #endif
 }
 
@@ -280,16 +282,17 @@ static void mpi_reduce_estimators(int my_rank)
     if (MULTIBIN_RADFIELD_MODEL_ON)
       radfield_reduce_binned_estimators();
 
-    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, &ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, &colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    if (!NO_LUT_PHOTOION)
+    #if (!NO_LUT_PHOTOION)
+      MPI_Barrier(MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (!NO_LUT_BFHEATING)
-      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    #endif
+    #if (!NO_LUT_BFHEATING)
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    #endif
 
     // MPI_Reduce(MPI_IN_PLACE, &ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     // MPI_Reduce(MPI_IN_PLACE, &twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -703,13 +706,13 @@ int main(int argc, char** argv)
         nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
       }
 
-      printout("process %d doing %d cells from %d to %d\n", my_rank, ndo, nstart, nstart + ndo - 1);
+      printout("process rank %d (of %d) doing %d cell numbers %d to %d\n", my_rank, nprocs, ndo, nstart, nstart + ndo - 1);
 
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-      int HUGEE = 4 * ((12 + 4 * includedions) * (nblock + 1) + 1); // LJS: what's the minimum space needed?
-      printout("reserve HUGEE %d space for MPI communication buffer\n",HUGEE);
+      int HUGEE = 4 * ((12 + 4 * includedions) * (nblock + 1) + 1);
+      printout("reserve HUGEE %d space for MPI communication buffer\n", HUGEE);
       //char buffer[HUGEE];
       char *buffer  = malloc(HUGEE*sizeof(char));
       if (buffer == NULL)
@@ -886,16 +889,12 @@ int main(int argc, char** argv)
                  nts, time(NULL), time(NULL) - real_time_start);
 
         #ifndef FORCE_LTE
-          if (!NO_LUT_PHOTOION)
-          {
+          #if (!NO_LUT_PHOTOION)
             /// Initialise corrphotoionrenorm[i] to zero before update_grid is called
             /// This allows reduction after update_grid has finished
-            if (simulation_continued_from_saved && nts - itstep == 0 && titer == 0)
-            {
-              /// In this case they have been read from file and must neither be touched
-              /// nor broadcasted after update_grid
-            }
-            else
+            /// unless they have been read from file and must neither be touched
+            /// nor broadcasted after update_grid
+            if ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0))
             {
               printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
               for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
@@ -904,7 +903,7 @@ int main(int argc, char** argv)
               }
               printout("after nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
             }
-          }
+          #endif
         #endif
 
         update_grid(nts, my_rank, nstart, ndo, titer);
@@ -1307,10 +1306,6 @@ int main(int argc, char** argv)
       free(buffer);
       free(buffer2);
     #endif
-    if (!NO_LUT_BFHEATING)
-      free(bfheatingestimator);
-    if (!NO_LUT_PHOTOION)
-      free(corrphotoionrenorm);
   }
 
   if (my_rank == 0)

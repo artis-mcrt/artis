@@ -135,16 +135,20 @@ static void read_phixs_data(void)
                 printout("[fatal] input: not enough memory to initialize spontrecombcoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
                 abort();
               }
+              #if (!NO_LUT_PHOTOION)
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff = calloc(TABLESIZE, sizeof(double))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
                 abort();
               }
+              #endif
+              #if (!NO_LUT_BFHEATING)
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff = calloc(TABLESIZE, sizeof(double))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
                 abort();
               }
+              #endif
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff = calloc(TABLESIZE, sizeof(double))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
@@ -1234,8 +1238,10 @@ static void setup_phixs_list(void)
           phixslist[itid].allcont[i].level = level;
           phixslist[itid].allcont[i].nu_edge = nu_edge;
           phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge,&index_in_groundlevelcontestimator,element,ion,level);
-          if (itid == 0)
-            elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
+          #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+            if (itid == 0)
+              elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
+          #endif
           i++;
         }
       }
@@ -2231,28 +2237,17 @@ void read_parameterfile(int rank)
   else
     printout("input: No non-thermal ionisation is used in this run.\n");
 
-  if (NO_LUT_PHOTOION)
+  #if (NO_LUT_PHOTOION)
     printout("Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no LUT).\n");
-  else
-  {
-    gammaestimator = malloc((MMODELGRID + 1) * MELEMENTS * MIONS * sizeof(double));
-    corrphotoionrenorm = malloc((MMODELGRID + 1) * MELEMENTS * MIONS * sizeof(double));
-    if ((gammaestimator != NULL) && (corrphotoionrenorm != NULL))
-      printout("Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm estimator.\n");
-    else
-    {
-      printout("ERROR: Failed to allocate gammaestimator and corrphotoionrenorm\n");
-      abort();
-    }
-  }
+  #else
+    printout("Corrphotoioncoeff is calculated from LTE lookup tables (ratecoeff.dat) and corrphotoionrenorm estimator.\n");
+  #endif
 
-  if (NO_LUT_BFHEATING)
+  #if (NO_LUT_BFHEATING)
     printout("bfheating coefficients are calculated from the radiation field at each timestep in each modelgrid cell (no LUT).\n");
-  else
-  {
-    bfheatingestimator = malloc((MMODELGRID+1)*MELEMENTS*MIONS * sizeof(double));
+  #else
     printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.\n");
-  }
+  #endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
     printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);

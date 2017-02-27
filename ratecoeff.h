@@ -17,4 +17,6 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 
+double calculate_gamma_ion(int modelgridindex, int element, int ion);
+
 #endif //RATECOEFF_H

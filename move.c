@@ -5,7 +5,7 @@
 #include "vectors.h"
 
 
-void update_estimators(const PKT *restrict pkt_ptr, double distance)
+void update_estimators(const PKT *restrict pkt_ptr, const double distance)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -21,15 +21,29 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
       #pragma omp atomic
     #endif
     J[modelgridindex] += distance_e_cmf;
+    #ifdef DEBUG_ON
+      if (!isfinite(J[modelgridindex]))
+      {
+        printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,pkt_ptr->nu_cmf);
+        abort();
+      }
+    #endif
 
     #ifndef FORCE_LTE
       const double nu = pkt_ptr->nu_cmf;
-      const double helper2 = distance_e_cmf / nu;
       //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
       nuJ[modelgridindex] += distance_e_cmf * nu;
+      #ifdef DEBUG_ON
+        if (!isfinite(nuJ[modelgridindex]))
+        {
+          printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,pkt_ptr->nu_cmf);
+          abort();
+        }
+      #endif
+
       if (MULTIBIN_RADFIELD_MODEL_ON)
         radfield_update_binned_estimators(modelgridindex, distance_e_cmf, nu);
 
@@ -39,68 +53,54 @@ void update_estimators(const PKT *restrict pkt_ptr, double distance)
         #pragma omp atomic
       #endif
       ffheatingestimator[modelgridindex] += distance_e_cmf * kappa_rpkt_cont[tid].ffheating;
-      for (int i = 0; i < nbfcontinua_ground; i++)
-      {
-        const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
-        if (nu > nu_edge)
-        {
-          const int element = phixslist[tid].groundcont[i].element;
-          const int ion = phixslist[tid].groundcont[i].ion;
-          /// Cells with zero abundance for a specific element have zero contribution
-          /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
-          /// the estimators
-          if (get_abundance(modelgridindex,element) > 0)
-          {
-            if (!NO_LUT_PHOTOION)
-            {
-              #ifdef _OPENMP
-                #pragma omp atomic
-              #endif
-              gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper2;
 
-              #ifdef DEBUG_ON
-              if (!isfinite(gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]))
-              {
-                printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, helper2 %g\n",i,phixslist[tid].groundcont[i].gamma_contr,helper2);
-                abort();
-              }
-              #endif
-            }
-            if (!NO_LUT_BFHEATING)
+      #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+        const double helper2 = distance_e_cmf / nu;
+        for (int i = 0; i < nbfcontinua_ground; i++)
+        {
+          const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+          if (nu > nu_edge)
+          {
+            const int element = phixslist[tid].groundcont[i].element;
+            const int ion = phixslist[tid].groundcont[i].ion;
+            /// Cells with zero abundance for a specific element have zero contribution
+            /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
+            /// the estimators
+            if (get_abundance(modelgridindex,element) > 0)
             {
-              #ifdef _OPENMP
-                #pragma omp atomic
+              #if (!NO_LUT_PHOTOION)
+                #ifdef _OPENMP
+                  #pragma omp atomic
+                #endif
+                gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper2;
+
+                #ifdef DEBUG_ON
+                if (!isfinite(gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]))
+                {
+                  printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, helper2 %g\n",i,phixslist[tid].groundcont[i].gamma_contr,helper2);
+                  abort();
+                }
+                #endif
               #endif
-              bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu);
-              //bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
+              #if (!NO_LUT_BFHEATING)
+                #ifdef _OPENMP
+                  #pragma omp atomic
+                #endif
+                bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu);
+                //bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
+              #endif
             }
           }
-        }
-        else break;
-      }
-
-      #ifdef DEBUG_ON
-        if (!isfinite(nuJ[modelgridindex]))
-        {
-          printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,pkt_ptr->nu_cmf);
-          abort();
+          else break;
         }
       #endif
+
     #endif
 
     ///Heating estimators. These are only applicable for pure H. Other elements
     ///need advanced treatment in thermalbalance calculation.
     //cell[pkt_ptr->where].heating_ff += distance_e_cmf * kappa_rpkt_cont[tid].ffheating;
     //cell[pkt_ptr->where].heating_bf += distance_e_cmf * kappa_rpkt_cont[tid].bfheating;
-
-
-    #ifdef DEBUG_ON
-      if (!isfinite(J[modelgridindex]))
-      {
-        printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,pkt_ptr->nu_cmf);
-        abort();
-      }
-    #endif
   }
 
 }
