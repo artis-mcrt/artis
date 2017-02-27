@@ -520,7 +520,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
 
 
 
-int change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
+void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
 /// Routine to take a VIRTUAL packet across a boundary.
 {
   //int element, ion, level;
@@ -542,7 +542,6 @@ int change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current
       pkt_ptr->escape_time = t_current;
       pkt_ptr->type = TYPE_ESCAPE;
       *end_packet = true;
-      return 0;
   }
   else
   {
@@ -550,21 +549,20 @@ int change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current
       //int oldpos = pkt_ptr->where;
       //int old_mgi = cell[pkt_ptr->where].modelgridindex;
       pkt_ptr->where = snext;
+      // mgi = cell[pkt_ptr->where].modelgridindex;
 
       cellcrossings++;
-
-      return 0;
   }
 }
 
 
-/*static int locate(const PKT *restrict pkt_ptr, double t_current)
-/// Routine to return which grid cell the packet is in.
-{
-  // Cheap and nasty version for now - assume a uniform grid.
-  int xx = (pkt_ptr->pos[0] - (cell[0].pos_init[0]*t_current/tmin)) / (wid_init*t_current/tmin);
-  int yy = (pkt_ptr->pos[1] - (cell[0].pos_init[1]*t_current/tmin)) / (wid_init*t_current/tmin);
-  int zz = (pkt_ptr->pos[2] - (cell[0].pos_init[2]*t_current/tmin)) / (wid_init*t_current/tmin);
-
-  return xx + (nxgrid * yy) + (nxgrid * nygrid * zz);
-}*/
+// static int locate(const PKT *restrict pkt_ptr, double t_current)
+// /// Routine to return which grid cell the packet is in.
+// {
+//   // Cheap and nasty version for now - assume a uniform grid.
+//   int xx = (pkt_ptr->pos[0] - (cell[0].pos_init[0]*t_current/tmin)) / (wid_init*t_current/tmin);
+//   int yy = (pkt_ptr->pos[1] - (cell[0].pos_init[1]*t_current/tmin)) / (wid_init*t_current/tmin);
+//   int zz = (pkt_ptr->pos[2] - (cell[0].pos_init[2]*t_current/tmin)) / (wid_init*t_current/tmin);
+//
+//   return xx + (nxgrid * yy) + (nxgrid * nygrid * zz);
+// }
