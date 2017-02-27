@@ -252,18 +252,9 @@ double alpha_sp_integrand_gsl(double nu, void *restrict paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  //int element = mastate[tid].element;
-  //int ion = mastate[tid].ion;
-  //int level = mastate[tid].level;
-
   const double T = ((gslintegration_paras *) paras)->T;
   const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
-  //double nu_edge = (epsilon(element,ion+1,0)-epsilon(element,ion,level))/H;
-  //printout("[debug] alpha_sp_integrand: element, ion, level: %d, %d, %d\n",exchangepkt_ptr->MA_element,exchangepkt_ptr->MA_ion,exchangepkt_ptr->MA_level);
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   const double sigma_bf = photoionization_crosssection(nu_edge,nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu,2) * exp(-HOVERKB*nu/T);
   ///in formula this looks like
@@ -279,18 +270,9 @@ double alpha_sp_E_integrand_gsl(double nu, void *restrict paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  //int element = mastate[tid].element;
-  //int ion = mastate[tid].ion;
-  //int level = mastate[tid].level;
-
   const double T = ((gslintegration_paras *) paras)->T;
   const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
-  //double nu_edge = (epsilon(element,ion+1,0)-epsilon(element,ion,level))/H;
-  //printout("[debug] alpha_sp_integrand: element, ion, level: %d, %d, %d\n",exchangepkt_ptr->MA_element,exchangepkt_ptr->MA_ion,exchangepkt_ptr->MA_level);
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   const double sigma_bf = photoionization_crosssection(nu_edge,nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu,3) / nu_edge * exp(-HOVERKB*nu/T);
   ///in formula this looks like
@@ -333,9 +315,6 @@ static double gammacorr_integrand_gsl(double nu, void *restrict paras)
   const double T = ((gslintegration_paras *) paras)->T;
   const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   const double sigma_bf = photoionization_crosssection(nu_edge,nu);
 
   /// Dependence on dilution factor W is linear. This allows to set it here to
@@ -350,9 +329,6 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
   const double sigma_bf = photoionization_crosssection(nu_edge,nu);
 
@@ -360,6 +336,9 @@ static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
   const double T  = ((gslintegration_paras *) paras)->T;
   const double x = sigma_bf * (1-nu_edge/nu) * radfield_dbb(nu,T,1) * (1-exp(-HOVERKB*nu/T));
 
+  /// Information about the current level is passed via the global variable
+  /// mastate[tid] and its child values element, ion, level
+  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   /// Precalculation for a (T_R,T_e)-grid, but still W is assumed to be 1.
   /// The radfield part can be corrected later because of its linear dependence.
   /// But not the W in the stimulated correction term!
