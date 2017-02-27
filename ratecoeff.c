@@ -991,7 +991,7 @@ double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstarge
 }
 
 
-static double integrand_corrphotoioncoeff_current_radfield(double nu, void *restrict voidparas)
+static double integrand_corrphotoioncoeff_custom_radfield(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
@@ -1041,7 +1041,7 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   const double epsrel = 1e-4;
   const double epsabs = 0.;
 
-  gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(32768);
+  gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(16384);
 
   const int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
 
@@ -1055,13 +1055,15 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
 
   gsl_function F_gammacorr;
-  F_gammacorr.function = &integrand_corrphotoioncoeff_current_radfield;
+  F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
   F_gammacorr.params = &intparas;
   double error = 0.0;
 
   gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler_off();
   double gammacorr = 0.0;
-  const int status = gsl_integration_qag(&F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS31, w, &gammacorr, &error);
+  const int status = gsl_integration_qag(
+    &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 16384, GSL_INTEG_GAUSS31, w, &gammacorr, &error);
+
   if (status != 0)
   {
     printout("corrphotoioncoeff integrator status %d. Integral value %g.\n",status,gammacorr);
@@ -1079,16 +1081,16 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   double error = 0.0;
-  const double epsrel = 1e-4;
+  const double epsrel = 1e-3;
   const double epsabs = 0.;
 
-  gsl_integration_workspace *workspace_bfheating = gsl_integration_workspace_alloc(32768);
+  gsl_integration_workspace *workspace_bfheating = gsl_integration_workspace_alloc(8192);
 
-  const int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+  const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-  const double E_threshold = epsilon(element,ion+1,upperionlevel) - epsilon(element,ion,level);
+  const double E_threshold = epsilon(element, ion + 1, upperionlevel) - epsilon(element, ion, level);
   const double nu_threshold = ONEOVERH * E_threshold;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; // nu of the uppermost point in the phixs table
 
   // const float T_e = get_Te(modelgridindex);
   // const double T_R = get_TR(modelgridindex);
@@ -1107,14 +1109,17 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   F_bfheating.params = &intparas;
 
   gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler_off();
-  const int status = gsl_integration_qag(&F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel, 32768, GSL_INTEG_GAUSS31, workspace_bfheating, &bfheating, &error);
+  const int status = gsl_integration_qag(
+    &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
+    8192, GSL_INTEG_GAUSS15, workspace_bfheating, &bfheating, &error);
+
   if (status != 0)
   {
-    printout("bf_heating integrator status %d. Integral value %g.\n",status,bfheating);
+    printout("bf_heating integrator status %d. Integral value %g.\n", status, bfheating);
   }
   gsl_set_error_handler(gsl_error_handler_old);
 
-  bfheating *= FOURPI * get_phixsprobability(element,ion,level,phixstargetindex);
+  bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
   gsl_integration_workspace_free(workspace_bfheating);
 
@@ -1228,6 +1233,8 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
         abort();
       }
     }
+    // depends on the radiation temperature, not the electron temperature,
+    // so we can keep the old value during T_e finder, even if use_cellhist is false
     cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = bfheatingcoeff;
   }
   return bfheatingcoeff;

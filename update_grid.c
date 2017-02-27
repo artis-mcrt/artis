@@ -276,7 +276,7 @@ double calculate_elem_Gamma(int modelgridindex, int element, int ion)
     double Col_ion = 0.;
     for (int level = 0; level < ionisinglevels; level++)
     {
-      const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+      const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
       const int nphixstargets = get_nphixstargets(element,ion,level);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
       {
@@ -285,7 +285,7 @@ double calculate_elem_Gamma(int modelgridindex, int element, int ion)
         Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
         // mastate[tid].level = level;
 
-        const double epsilon_trans = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
+        const double epsilon_trans = epsilon(element,ion + 1,upperlevel) - epsilon(element,ion,level);
         //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
         Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
       }
@@ -621,12 +621,12 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
                   gammaestimator_save[ionestimindex] = gammaestimator[ionestimindex];
                 #endif
 
-                corrphotoionrenorm[ionestimindex] = gammaestimator[ionestimindex] /
-                                                                            get_corrphotoioncoeff_ana(element,ion,0,0,n);
+                corrphotoionrenorm[ionestimindex] = gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element,ion,0,0,n);
 
                 if (!isfinite(corrphotoionrenorm[ionestimindex]))
                 {
-                  printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,gammaestimator[ionestimindex],get_corrphotoioncoeff_ana(element,ion,0,0,n));
+                  printout("[fatal] about to set corrphotoionrenorm = NaN = gammaestimator / get_corrphotoioncoeff_ana(%d,%d,%d,%d,%d)=%g/%g",
+                           element,ion,0,0,n,gammaestimator[ionestimindex],get_corrphotoioncoeff_ana(element,ion,0,0,n));
                   abort();
                 }
               }
