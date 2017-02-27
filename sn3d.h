@@ -12,9 +12,9 @@ static const bool NT_SOLVE_SPENCERFANO = true;       /// Use the Spencer-Fano so
 static const bool NLTE_POPS_ON = true;
 static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;  // solve the population matrix equation
                                                            // simultaneously for levels in all ions
-#define NLTEITER 30
+#define NLTEITER 30                                        // maximum number of NLTE/Te/Spencer-Fano iterations
 
-static const bool MULTIBIN_RADFIELD_MODEL_ON = true;  // if using this, should avoid look up tables and switch on
+static const bool MULTIBIN_RADFIELD_MODEL_ON = true;   // if using this, should avoid look up tables and switch on
                                                        // direct integration options below
                                                        // (since they assume J_nu is Planck function)
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
@@ -29,6 +29,9 @@ static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
 static const bool SKIPRATECOEFFVALIDATION = false;
+
+// #define TIMED_RESTARTS
+#define WALLTIMELIMITSECONDS (10 * 3600)   // for use with TIMED_RESTARTS
 
 // Polarisation for real packets
 //#define DIPOLE
