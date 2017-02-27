@@ -349,7 +349,7 @@ typedef struct syn_ray
 
 typedef struct transitionlist_entry
 {
-  double epsilon;
+  double epsilon_trans;
   int targetlevel;
   int lineindex;
   int stat_weight;

@@ -163,10 +163,10 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
       for (int i = 1; i <= ndowntrans; i++)
       {
         lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-        const double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+        const double epsilon_target = epsilon(element, ion, lower);
+        epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
         //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-        epsilon_trans = epsilon_current - epsilon_target;
         R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
         C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
@@ -214,10 +214,9 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
       for (int i = 1; i <= nuptrans; i++)
       {
         upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-        const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
+        epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
         //double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-        epsilon_trans = epsilon_target - epsilon_current;
         R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
         C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
 
@@ -327,9 +326,8 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
             if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n",lower);
           #endif
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          const double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+          epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
           linelistindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-          epsilon_trans = epsilon_current - epsilon_target;
           //linelistindex = elements[element].ions[ion].levels[level].transitions[level-lower-1].linelistindex;
           #ifdef RECORD_LINESTAT
             if (tid == 0) ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
@@ -804,13 +802,12 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         for (int i = 1; i <= ndowntrans; i++)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          const double epsilon_target = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+          epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
           //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-          epsilon_trans = epsilon_current - epsilon_target;
           R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
           C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
-          printout("[debug]    deexcitation to level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",lower,epsilon_target,epsilon_trans,R,C);
+          printout("[debug]    deexcitation to level %d, epsilon_trans %g, epsilon_trans %g, R %g, C %g\n",lower,epsilon_trans,epsilon_trans,R,C);
         }
 
         printout("[debug]    check excitation\n");
@@ -818,10 +815,9 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         for (int i = 1; i <= nuptrans; i++)
         {
           upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-          const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
+          epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
           //statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-          epsilon_trans = epsilon_target - epsilon_current;
           R = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_mid);
           C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
           printout("[debug]    excitation to level %d, epsilon_trans %g, R %g, C %g\n",upper,epsilon_trans,R,C);

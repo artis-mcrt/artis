@@ -98,7 +98,7 @@ void calculate_kpkt_rates(int modelgridindex)
             const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
             //printout("    excitation to level %d possible\n",upper);
             //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-            const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon - epsilon_current;
+            const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon_trans;
             C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
             //C = 0.;
             //C_exc += C;
@@ -310,7 +310,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
       //printout("    excitation to level %d possible\n",upper);
       //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon - epsilon_current;
+      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon_trans;
       const double C = nnlevel * col_excitation_ratecoeff(T_e,nne,lineindex,epsilon_trans) * epsilon_trans;
       //C = 0.;
       //C_exc += C;
