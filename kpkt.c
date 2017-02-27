@@ -94,7 +94,7 @@ void calculate_kpkt_rates(int modelgridindex)
           const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
           for (int ii = 1; ii <= nuptrans; ii++)
           {
-            // int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
+            // const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
             const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
             //printout("    excitation to level %d possible\n",upper);
             //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
