@@ -421,7 +421,7 @@ void write_packets(FILE *restrict packets_file)
    fprintf(packets_file,"%d ", pkt[i].nscatterings);
    fprintf(packets_file,"%d ", pkt[i].em_time);
    fprintf(packets_file,"%lg %lg %lg ", pkt[i].absorptiondir[0], pkt[i].absorptiondir[1], pkt[i].absorptiondir[2]);
-   fprintf(packets_file,"%lg %lg ", pkt[i].stokes_qu[0], pkt[i].stokes_qu[1]);
+   fprintf(packets_file,"%lg %lg %lg ", pkt[i].stokes[0], pkt[i].stokes[1], pkt[i].stokes[2]);
    fprintf(packets_file,"%lg %lg %lg ", pkt[i].pol_dir[0], pkt[i].pol_dir[1], pkt[i].pol_dir[2]);
    fprintf(packets_file,"\n");
   }
@@ -462,7 +462,7 @@ void read_packets(FILE *restrict packets_file)
    fscanf(packets_file,"%d ", &pkt[i].nscatterings);
    fscanf(packets_file,"%d ", &pkt[i].em_time);
    fscanf(packets_file,"%lg %lg %lg ", &pkt[i].absorptiondir[0], &pkt[i].absorptiondir[1], &pkt[i].absorptiondir[2]);
-   fscanf(packets_file,"%lg %lg ", &pkt[i].stokes_qu[0], &pkt[i].stokes_qu[1]);
+   fscanf(packets_file,"%lg %lg %lg ", &pkt[i].stokes[0], &pkt[i].stokes[1], &pkt[i].stokes[2]);
    fscanf(packets_file,"%lg %lg %lg ", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2]);
    fscanf(packets_file,"\n");
   }

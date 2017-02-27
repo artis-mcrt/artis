@@ -941,7 +941,8 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
   // Reset polarization information
-  pkt_ptr->stokes_qu[0] = pkt_ptr->stokes_qu[1] = 0.0;
+  pkt_ptr->stokes[0] = 1.0;
+  pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
   dummy_dir[0] = dummy_dir[1] = 0.0;
   dummy_dir[2] = 1.0;
   cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
