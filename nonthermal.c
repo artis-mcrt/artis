@@ -488,6 +488,24 @@ static double ionstagepop_override(const int modelgridindex, const int element, 
 }
 
 
+static double get_J(const int Z, const int ionstage, const double ionpot_ev)
+{
+  // returns an energy in eV
+  // values from Opal et al. 1971 as applied by Kozma & Fransson 1992
+  if (ionstage == 1)
+  {
+    if (Z == 2) // He I
+      return 15.8;
+    else if (Z == 10) // Ne I
+      return 24.2;
+    else if (Z == 18) // Ar I
+      return 10.0;
+  }
+
+  return 0.6 * ionpot_ev;
+}
+
+
 static double N_e(int modelgridindex, double energy)
 // Kozma & Fransson equation 6.
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
@@ -531,7 +549,7 @@ static double N_e(int modelgridindex, double energy)
         if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
         {
           const double ionpot_ev = colliondata[n].ionpot_ev;
-          const double J = 0.6 * ionpot_ev;
+          const double J = get_J(Z, ionstage, ionpot_ev);
           const double lambda = fmin(EMAX - energy_ev, energy_ev + ionpot_ev);
 
           const int integral1startindex = get_energyindex_ev(ionpot_ev);
@@ -1128,11 +1146,11 @@ static void sfmatrix_add_ionisation(gsl_matrix *sfmatrix, const int Z, const int
     if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
     {
       const double ionpot_ev = colliondata[n].ionpot_ev;
+      const double J = get_J(Z, ionstage, ionpot_ev);
 
       if (ionpot_ev < *E_0 || *E_0 < 0.)
         *E_0 = ionpot_ev; // new minimum energy for excitation/ionization
 
-      const double J = 0.6 * ionpot_ev;  // valid for elements other than He, Ne, Ar (Kozma & Fransson 1992)
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
