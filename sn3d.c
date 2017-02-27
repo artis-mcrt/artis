@@ -798,26 +798,37 @@ int main(int argc, char** argv)
       }
     #endif
 
+    #ifdef TIMED_RESTARTS
+      int estimated_time_for_clean_exit = -1;
+    #endif
     while (nts < last_loop)
     {
       nts_global = nts;
       #ifdef MPI_ON
         MPI_Barrier(MPI_COMM_WORLD);
       #endif
+      const time_t time_timestep_start = time(NULL);
 
       #ifdef TIMED_RESTARTS
-        if ((time(NULL) - real_time_start) > 3 * 3600)
+        if (estimated_time_for_clean_exit > -1)
         {
-          do_this_full_loop = false; // This flag will make it do a write out then quit, hopefully
-          printout("Going to terminate since remaining time is too short. %d\n", time(NULL) - real_time_start);
+          const int wallclock_used_seconds = time_timestep_start - real_time_start;
+          const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
+          printout("TIMED_RESTARTS: Used %d of %d seconds of wall time. Estimated time for clean exit is %d seconds\n",
+                   wallclock_used_seconds, WALLTIMELIMITSECONDS, estimated_time_for_clean_exit);
+          if (wallclock_remaining_seconds < 1.5 * estimated_time_for_clean_exit + 30)
+          {
+            do_this_full_loop = false; // This flag will make it do a write out then quit, hopefully
+            printout("TIMED_RESTARTS: Going to terminate since time remaining < 1.5 * estimated_time_for_clean_exit + 30\n");
+          }
+          else
+          {
+            printout("TIMED_RESTARTS: Going to continue since time remaining >= 1.5 * estimated_time_for_clean_exit. + 30\n");
+          }
+          #ifdef MPI_ON
+            MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+          #endif
         }
-        else
-        {
-          printout("Going to continue. Total time spent so far: %d.\n", time(NULL) - real_time_start);
-        }
-        #ifdef MPI_ON
-          MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-        #endif
       #endif
 
       #ifdef DO_TITER
@@ -954,10 +965,15 @@ int main(int argc, char** argv)
         // and also the photoion and stimrecomb estimators
         zero_estimators();
 
+        // MPI_Barrier(MPI_COMM_WORLD);
+        #ifdef TIMED_RESTARTS
+          estimated_time_for_clean_exit = time(NULL) - time_timestep_start;
+        #endif
         if ((nts < ftstep) && do_this_full_loop)
         {
           /// Now process the packets.
-          printout("time before update packets %d\n",time(NULL));
+          const time_t time_update_packets_start = time(NULL);
+          printout("time before update packets %d\n", time_update_packets_start);
           update_packets(nts);
 
           /*
@@ -1020,9 +1036,9 @@ int main(int argc, char** argv)
 
           #ifdef MPI_ON
             MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
+            const time_t time_communicate_estimators_start = time(NULL);
           #endif
-          printout("time after update packets %d\n",time(NULL));
-          //abort();
+          printout("time after update packets %d (took %d seconds)\n", time(NULL), time(NULL) - time_update_packets_start);
 
           #ifdef MPI_ON
             // All the processes have their own versions of the estimators for this time step now.
@@ -1056,11 +1072,10 @@ int main(int argc, char** argv)
           #ifdef MPI_ON
             // The master thread has normalised the rpkt and compton estimators and printed out a bunch of stuff. Now redistribute the estimators ready for the next run.
             mpi_broadcast_estimators();
+            printout("time after estimators have been communicated %d (took %d seconds)\n", time(NULL), time(NULL) - time_communicate_estimators_start);
           #endif
 
-          /// Now printout some statistics on the current timestep
-          printout("time after estimators have been communicated %d\n", time(NULL));
-          printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (time %gd)\n",
+          printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n",
                    outer_iteration, nts, my_rank, time_step[nts].pellet_decays, nesc, time_step[nts].mid / DAY);
 
           #ifdef VPKT_ON
@@ -1092,15 +1107,16 @@ int main(int argc, char** argv)
             }
           #endif
 
-          printout("time before write temporary packets file %d\n",time(NULL));
+          const time_t time_write_packets_file_start = time(NULL);
+          printout("time before write temporary packets file %d\n", time_write_packets_file_start);
 
           write_temp_packetsfile(nts, my_rank);
 
           #ifdef VPKT_ON
           if (nts % 2 == 0)
-            sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+            sprintf(filename,"vspecpol_%d_%d_even.tmp", 0, my_rank);
           else
-            sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+            sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
 
           packets_file = fopen(filename, "wb");
           if (packets_file == NULL)
@@ -1134,7 +1150,7 @@ int main(int argc, char** argv)
           #endif
 
 
-          printout("time after write temporary packets file %d\n",time(NULL));
+          printout("time after write temporary packets file %d (took %d seconds)\n", time(NULL), time(NULL) - time_write_packets_file_start);
 
           if (nts == ftstep - 1)
           {
