@@ -41,7 +41,7 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 
 
 #if !defined DO_EXSPEC && !defined MPI_ON
-  #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
+  // #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
 #endif
 
 #ifdef MPI_ON
