@@ -353,14 +353,6 @@ typedef struct transitionlist_entry
   int lineindex;
 } transitionlist_entry;
 
-/*
-typedef struct
-{
-  float einstein_A;
-  float oscillator_strength;
-  int linelistindex;
-} transitionlist_entry;
-*/
 
 typedef struct phixstarget_entry
 {
@@ -372,6 +364,7 @@ typedef struct phixstarget_entry
   double probability;        // fraction of phixs cross section leading to this final level
   int levelindex;         // index of upper ion level after photoionisation
 } phixstarget_entry;
+
 
 typedef struct levellist_entry
 {
