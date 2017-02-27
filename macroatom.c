@@ -165,7 +165,6 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
         const double epsilon_target = epsilon(element, ion, lower);
         epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
-        //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
         C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
@@ -215,7 +214,6 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
       {
         upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
         epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
-        //double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
         lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
         C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
@@ -803,7 +801,6 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
           epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
-          //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
           C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
@@ -816,7 +813,6 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         {
           upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
           epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
-          //statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
           R = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_mid);
           C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);

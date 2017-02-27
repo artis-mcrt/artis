@@ -871,7 +871,6 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
           epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
-          //double statweight_target = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
 
           mastate[tid].element = element;
@@ -915,7 +914,6 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
         {
           int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
           epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
-          //double statweight_target = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
 
           mastate[tid].element = element;

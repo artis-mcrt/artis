@@ -352,7 +352,6 @@ typedef struct transitionlist_entry
   double epsilon_trans;
   int targetlevel;
   int lineindex;
-  int stat_weight;
 } transitionlist_entry;
 
 /*
