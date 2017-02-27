@@ -834,7 +834,7 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
 
 
 #if (!NO_LUT_PHOTOION)
-  double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
+  static double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
   {
     const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
     if (lowerindex < TABLESIZE-1)
@@ -851,7 +851,21 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
     else
       return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[TABLESIZE-1];
   }
+
+
+  double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+  /// Returns the for stimulated emission corrected photoionisation rate coefficient.
+  {
+    /// The correction factor for stimulated emission in gammacorr is set to its
+    /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+    /// correction may be evaluated at T_R!
+    const double W = get_W(modelgridindex);
+    const double T_R = get_TR(modelgridindex);
+
+    return W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
+  }
 #endif
+
 
 #if (!NO_LUT_BFHEATING)
   static double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, double T) // double T_e, double T_R)
@@ -875,7 +889,22 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
     else
       return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[TABLESIZE-1];
   }
+
+
+  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+  {
+    /// The correction factor for stimulated emission in gammacorr is set to its
+    /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+    /// correction may be evaluated at T_R!
+    const double T_R = get_TR(modelgridindex);
+    const double W = get_W(modelgridindex);
+
+    /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
+    bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);*/
+    return W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
+  }
 #endif
+
 
 // double interpolate_bfheatingcoeff_above(int element, int ion, int level, double T) // double T_e, double T_R)
 // {
@@ -975,34 +1004,6 @@ double interpolate_ions_spontrecombcoeff(int element, int ion, double T)
   }
   else
     return elements[element].ions[ion].Alpha_sp[TABLESIZE-1];
-}
-
-#if (!NO_LUT_BFHEATING)
-double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-{
-  /// The correction factor for stimulated emission in gammacorr is set to its
-  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  /// correction may be evaluated at T_R!
-  const double T_R = get_TR(modelgridindex);
-  const double W = get_W(modelgridindex);
-
-  /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
-  bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);*/
-  return W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
-}
-#endif
-
-
-double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-/// Returns the for stimulated emission corrected photoionisation rate coefficient.
-{
-  /// The correction factor for stimulated emission in gammacorr is set to its
-  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  /// correction may be evaluated at T_R!
-  const double W = get_W(modelgridindex);
-  const double T_R = get_TR(modelgridindex);
-
-  return W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
 }
 
 

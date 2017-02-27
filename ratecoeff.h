@@ -7,7 +7,6 @@ double alpha_sp_integrand_gsl(double nu, void *restrict paras);
 double alpha_sp_E_integrand_gsl(double nu, void *restrict paras);
 
 double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T);
-double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
 double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
 
 double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
