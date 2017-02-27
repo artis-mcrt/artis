@@ -1,345 +1,315 @@
-#ifdef VPKT_ON
-#include "vpkt.h"
 #include "sn3d.h"
-  #include "vpkt.h"
-#include "exspec.h"
+#include "vpkt.h"
+#include "vectors.h"
 #include <string.h>
 
 
 #ifdef VPKT_ON
+void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype)
+{
 
-  /*******************************************************/
-  int
-  rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype)
-  {
+  double vel_vec[3],old_dir_cmf[3],obs_cmf[3],vel_rev[3];
+  double sdist,s_cont;
+  double kap_cont,kap_cont_nobf,kap_cont_noff,kap_cont_noes;
+  int snext;
+  int end_packet;
+  double t_future,t_arrive;
+  double ldist;
+  double nutrans;
+  int element, ion, upper, lower;
+  double A_ul,B_ul,B_lu;
+  double n_u,n_l,t_line;
+  int mgi;
+  double Qi,Ui,Qold,Uold,Inew,Qnew,Unew,Itmp,Qtmp,Utmp,I,Q,U,pn,prob;
+  double mu,i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
+  double ref1[3],ref2[3];
+  int ind,anumber,get_element(),tau_flag=0;
 
-    double dot();
-    int get_velocity();
-    double doppler();
-    int angle_ab(double *dir1,double *vel,double *dir2);
-    double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
-    int add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive);
-    int add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, double *obs);
-    int move_pkt(PKT *pkt_ptr, double distance, double time);
-    double closest_transition(PKT *pkt_ptr);
-    double stat_weight(int element, int ion, int level);
-    double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-    void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current);
-    double boundary_cross();
-    int change_cell_vpkt();
-    void meridian(double *n, double *ref1, double *ref2);
-    void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
-    void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
-    int check_tau(double *tau, double *tau_max);
+  int bin_range;
 
-    double vel_vec[3],old_dir_cmf[3],obs_cmf[3],vel_rev[3];
-    double sdist,s_cont;
-    double kap_cont,kap_cont_nobf,kap_cont_noff,kap_cont_noes;
-    int snext;
-    int end_packet;
-    double t_future,t_arrive;
-    double ldist;
-    double nutrans;
-    int element, ion, upper, lower;
-    double A_ul,B_ul,B_lu;
-    double n_u,n_l,t_line;
-    int mgi;
-    double Qi,Ui,Qold,Uold,Inew,Qnew,Unew,Itmp,Qtmp,Utmp,I,Q,U,pn,prob;
-    double mu,i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
-    double ref1[3],ref2[3];
-    int ind,anumber,get_element(),tau_flag=0;
+  PKT dummy;
+  dummy = *pkt_ptr;
+  PKT *dummy_ptr;
+  dummy_ptr = &dummy;
 
-    int bin_range;
 
-    PKT dummy;
-    dummy = *pkt_ptr;
-    PKT *dummy_ptr;
-    dummy_ptr = &dummy;
+  end_packet = 0 ;
+  sdist = 0;
+  ldist = 0;
+  nutrans = 0;
+  t_future = t_current;
 
+  for (ind=0;ind<Nspectra;ind++) tau_vpkt[ind] = 0;
 
-    end_packet = 0 ;
-    sdist = 0;
-    ldist = 0;
-    nutrans = 0;
-    t_future = t_current;
+  dummy_ptr->dir[0] = obs[0] ;
+  dummy_ptr->dir[1] = obs[1] ;
+  dummy_ptr->dir[2] = obs[2] ;
 
-    for (ind=0;ind<Nspectra;ind++) tau_vpkt[ind] = 0;
+  nvpkt++;          /* increment the number of virtual packet in the given timestep */
 
-    dummy_ptr->dir[0] = obs[0] ;
-    dummy_ptr->dir[1] = obs[1] ;
-    dummy_ptr->dir[2] = obs[2] ;
+  get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
-    nvpkt++;          /* increment the number of virtual packet in the given timestep */
+  /* rf frequency and energy */
+  dummy_ptr->nu_rf = dummy_ptr->nu_cmf / doppler(dummy_ptr->dir, vel_vec);
+  dummy_ptr->e_rf = dummy_ptr->e_cmf * dummy_ptr->nu_rf /dummy_ptr->nu_cmf;
 
-    get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
-    /* rf frequency and energy */
-    dummy_ptr->nu_rf = dummy_ptr->nu_cmf / doppler(dummy_ptr->dir, vel_vec);
-    dummy_ptr->e_rf = dummy_ptr->e_cmf * dummy_ptr->nu_rf /dummy_ptr->nu_cmf;
+  Qi = dummy_ptr->stokes[1];
+  Ui = dummy_ptr->stokes[2];
 
 
-    Qi = dummy_ptr->stokes[1];
-    Ui = dummy_ptr->stokes[2];
+  // ------------ SCATTERING EVENT: dipole function --------------------
 
+  if (realtype==1) {
 
-    // ------------ SCATTERING EVENT: dipole function --------------------
 
-    if (realtype==1) {
+      // Transform Stokes Parameters from the RF to the CMF
 
+      frame_transform(pkt_ptr->dir,&Qi,&Ui,vel_vec,old_dir_cmf);
 
-        // Transform Stokes Parameters from the RF to the CMF
 
-        frame_transform(pkt_ptr->dir,&Qi,&Ui,vel_vec,old_dir_cmf);
+      // Need to rotate Stokes Parameters in the scattering plane
 
+      angle_ab(dummy_ptr->dir, vel_vec, obs_cmf);
 
-        // Need to rotate Stokes Parameters in the scattering plane
+      meridian(old_dir_cmf,ref1,ref2);
 
-        angle_ab(dummy_ptr->dir, vel_vec, obs_cmf);
+      /* This is the i1 angle of Bulla+2015, obtained by computing the angle between the
+         reference axes ref1 and ref2 in the meridian frame and the corresponding axes
+         ref1_sc and ref2_sc in the scattering plane. */
+      i1 = rot_angle(old_dir_cmf,obs_cmf,ref1,ref2);
+      cos2i1 = cos(2 * i1) ;
+      sin2i1 = sin(2 * i1) ;
 
-        meridian(old_dir_cmf,ref1,ref2);
+      Qold = Qi * cos2i1 - Ui * sin2i1;
+      Uold = Qi * sin2i1 + Ui * cos2i1;
 
-        /* This is the i1 angle of Bulla+2015, obtained by computing the angle between the
-           reference axes ref1 and ref2 in the meridian frame and the corresponding axes
-           ref1_sc and ref2_sc in the scattering plane. */
-        i1 = rot_angle(old_dir_cmf,obs_cmf,ref1,ref2);
-        cos2i1 = cos(2 * i1) ;
-        sin2i1 = sin(2 * i1) ;
 
-        Qold = Qi * cos2i1 - Ui * sin2i1;
-        Uold = Qi * sin2i1 + Ui * cos2i1;
+      // Scattering
 
+      mu = dot(old_dir_cmf,obs_cmf);
 
-        // Scattering
+      pn=3./(16.*PI)*( 1+pow(mu,2.) + ( pow(mu,2.) - 1 ) * Qold );
 
-        mu = dot(old_dir_cmf,obs_cmf);
+      Inew = 0.75 * ( (mu * mu + 1.0) + Qold * (mu * mu - 1.0) ) ;
+      Qnew = 0.75 * ( (mu * mu - 1.0) + Qold * (mu * mu + 1.0) ) ;
+      Unew = 1.5 * mu * Uold ;
 
-        pn=3./(16.*PI)*( 1+pow(mu,2.) + ( pow(mu,2.) - 1 ) * Qold );
+      Qnew = Qnew/Inew ;
+      Unew = Unew/Inew ;
+      I = Inew/Inew ;
 
-        Inew = 0.75 * ( (mu * mu + 1.0) + Qold * (mu * mu - 1.0) ) ;
-        Qnew = 0.75 * ( (mu * mu - 1.0) + Qold * (mu * mu + 1.0) ) ;
-        Unew = 1.5 * mu * Uold ;
 
-        Qnew = Qnew/Inew ;
-        Unew = Unew/Inew ;
-        I = Inew/Inew ;
+      // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
+      meridian(obs_cmf,ref1,ref2);
 
-        // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
+      /* This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
+         reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+         meridian frame. NB: we need to add PI to transform THETA to i2 */
+      i2 = PI + rot_angle(obs_cmf,old_dir_cmf,ref1,ref2);
+      cos2i2 = cos(2 * i2) ;
+      sin2i2 = sin(2 * i2) ;
 
-        meridian(obs_cmf,ref1,ref2);
+      Q = Qnew * cos2i2 + Unew * sin2i2;
+      U = - Qnew * sin2i2 + Unew * cos2i2;
 
-        /* This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
-           reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
-           meridian frame. NB: we need to add PI to transform THETA to i2 */
-        i2 = PI + rot_angle(obs_cmf,old_dir_cmf,ref1,ref2);
-        cos2i2 = cos(2 * i2) ;
-        sin2i2 = sin(2 * i2) ;
 
-        Q = Qnew * cos2i2 + Unew * sin2i2;
-        U = - Qnew * sin2i2 + Unew * cos2i2;
+      // Transform Stokes Parameters from the CMF to the RF
 
+      vel_rev[0] = - vel_vec[0] ;
+      vel_rev[1] = - vel_vec[1] ;
+      vel_rev[2] = - vel_vec[2] ;
 
-        // Transform Stokes Parameters from the CMF to the RF
-
-        vel_rev[0] = - vel_vec[0] ;
-        vel_rev[1] = - vel_vec[1] ;
-        vel_rev[2] = - vel_vec[2] ;
-
-        frame_transform(obs_cmf,&Q,&U,vel_rev,obs);
-
-    }
-
-
-    // ------------ MACROATOM and KPKT: isotropic emission --------------------
-
-
-    if  ( realtype == 2 || realtype == 3 ) {
-
-        I=1; Q=0; U=0;
-        pn = 1 / (4*PI) ;
-
-    }
-
-
-    // --------- compute the optical depth to boundary ----------------
-
-    mgi = cell[dummy_ptr->where].modelgridindex;
-
-    while (end_packet == 0) {
-
-        ldist = 0 ;
-
-        /* distance to the next cell */
-        sdist = boundary_cross(dummy_ptr, t_future, &snext);
-        s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
-
-        calculate_kappa_vpkt_cont(dummy_ptr, t_future);
-
-        kap_cont = kappa_rpkt_cont[tid].total;
-        kap_cont_nobf = kap_cont - kappa_rpkt_cont[tid].bf;
-        kap_cont_noff = kap_cont - kappa_rpkt_cont[tid].ff;
-        kap_cont_noes = kap_cont - kappa_rpkt_cont[tid].es;
-
-        for (ind=0;ind<Nspectra;ind++) {
-
-            if (exclude[ind] == -2) tau_vpkt[ind] += kap_cont_nobf * s_cont;
-            else if (exclude[ind] == -3) tau_vpkt[ind] += kap_cont_noff * s_cont;
-            else if (exclude[ind] == -4) tau_vpkt[ind] += kap_cont_noes * s_cont;
-            else tau_vpkt[ind] += kap_cont * s_cont;
-        }
-
-        /* kill vpkt with high optical depth */
-        tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
-        if (tau_flag == 0 ) return(0) ;
-
-        while ( ldist < sdist ) {
-
-            //printout("next_trans = %d \t nutrans = %g \t",dummy_ptr->next_trans,nutrans);
-
-            nutrans = closest_transition(dummy_ptr);
-
-            element = mastate[tid].element;
-            ion = mastate[tid].ion;
-            upper = mastate[tid].level;
-            lower = mastate[tid].activatedfromlevel;
-            A_ul = mastate[tid].einstein;
-
-            anumber = get_element(element);
-
-            if (nutrans > 0) {
-
-                if (dummy_ptr->nu_cmf < nutrans) ldist = 0;
-                else ldist = CLIGHT * t_current * (dummy_ptr->nu_cmf/nutrans - 1);
-
-                if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
-
-                if (ldist > sdist) {      /* exit the while loop if you reach the boundary; go back to the previous transition to start next cell with the excluded line */
-
-                    dummy_ptr->next_trans -= 1 ;
-                    //printout("ldist > sdist : line in the next cell\n");
-                    break ;
-                }
-
-                t_line = t_current + ldist / CLIGHT ;
-
-                B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans,3) * A_ul;
-                B_lu = stat_weight(element,ion,upper)/stat_weight(element,ion,lower) * B_ul;
-
-                n_u = calculate_exclevelpop(mgi,element,ion,upper);
-                n_l = calculate_exclevelpop(mgi,element,ion,lower);
-
-                // Check on the element to exclude
-                // NB: ldist before need to be computed anyway (I want to move the packets to the
-                // line interaction point even if I don't interact)
-
-                for (ind=0;ind<Nspectra;ind++) {
-
-                    // If exclude[ind]==-1, I do not include line opacity
-                    if ( exclude[ind]!=-1 && (anumber != exclude[ind]) )  tau_vpkt[ind] += (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_line;
-
-                }
-
-                /* kill vpkt with high optical depth */
-                tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
-                if (tau_flag == 0 ) return(0) ;
-
-
-            }
-
-        }
-
-
-        // virtual packet is still at the starting position
-        // move it to cell boundary and go to next cell
-        //printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
-
-        t_future += (sdist / CLIGHT_PROP);
-        move_pkt(dummy_ptr, sdist, t_future);
-
-        //printout("About to change vpkt cell\n");
-        change_cell_vpkt(dummy_ptr, snext, &end_packet, t_future);
-        //printout("Completed change vpkt cell\n");
-
-        //printout("dummy->nu_cmf = %g \n",dummy_ptr->nu_cmf);
-        mgi = cell[dummy_ptr->where].modelgridindex;
-        // break if you reach an empty cell
-        if (mgi == MMODELGRID) break;
-
-        /* kill vpkt with pass through a thick cell */
-        if (modelgrid[mgi].thick == 1) return(0);
-
-
-    }
-
-
-    /* increment the number of escaped virtual packet in the given timestep */
-    #ifdef _OPENMP
-    #pragma omp critical
-    #endif
-    {
-      if (realtype==1) nvpkt_esc1++ ;
-      else if (realtype==2) nvpkt_esc2++ ;
-      else if (realtype==3) nvpkt_esc3++ ;
-    }
-
-    // -------------- final stokes vector ---------------
-
-    for (ind=0;ind<Nspectra;ind++) {
-
-        prob = pn * exp( - tau_vpkt[ind] ) ;
-
-        Itmp = I * prob ;
-        Qtmp = Q * prob ;
-        Utmp = U * prob ;
-
-        dummy_ptr->stokes[0] = Itmp;
-        dummy_ptr->stokes[1] = Qtmp;
-        dummy_ptr->stokes[2] = Utmp;
-
-        if (Itmp!=Itmp || Qtmp!=Qtmp || Utmp!=Utmp) printout("Nan Number!! %g %g %g %g %g %g %g %g \n",Itmp,Qtmp,Utmp,pn,tau_vpkt[ind],mu,i1,i2);
-
-        /* bin on fly and produce file with spectrum */
-
-        t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/CLIGHT_PROP) ;
-
-        add_to_vspecpol(dummy_ptr,bin,ind,t_arrive);
-
-    }
-
-
-    // vpkt grid
-
-    if (vgrid_flag==1) {
-
-        prob = pn * exp( - tau_vpkt[0] ) ;
-
-        Itmp = I * prob ;
-        Qtmp = Q * prob ;
-        Utmp = U * prob ;
-
-        dummy_ptr->stokes[0] = Itmp;
-        dummy_ptr->stokes[1] = Qtmp;
-        dummy_ptr->stokes[2] = Utmp;
-
-        for (bin_range=0;bin_range<Nrange_grid;bin_range++) {
-
-            if ( dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range] ) { // Frequency selection
-
-                if ( t_arrive > tmin_grid && t_arrive < tmax_grid ) { // Time selection
-
-                    add_to_vpkt_grid(dummy_ptr, vel_vec, bin_range, bin, obs);
-
-                }
-            }
-        }
-    }
-
-
-
-
-    return(0);
+      frame_transform(obs_cmf,&Q,&U,vel_rev,obs);
 
   }
+
+
+  // ------------ MACROATOM and KPKT: isotropic emission --------------------
+
+
+  if  ( realtype == 2 || realtype == 3 ) {
+
+      I=1; Q=0; U=0;
+      pn = 1 / (4*PI) ;
+
+  }
+
+
+  // --------- compute the optical depth to boundary ----------------
+
+  mgi = cell[dummy_ptr->where].modelgridindex;
+
+  while (end_packet == 0) {
+
+      ldist = 0 ;
+
+      /* distance to the next cell */
+      sdist = boundary_cross(dummy_ptr, t_future, &snext);
+      s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
+
+      calculate_kappa_vpkt_cont(dummy_ptr, t_future);
+
+      kap_cont = kappa_rpkt_cont[tid].total;
+      kap_cont_nobf = kap_cont - kappa_rpkt_cont[tid].bf;
+      kap_cont_noff = kap_cont - kappa_rpkt_cont[tid].ff;
+      kap_cont_noes = kap_cont - kappa_rpkt_cont[tid].es;
+
+      for (ind=0;ind<Nspectra;ind++) {
+
+          if (exclude[ind] == -2) tau_vpkt[ind] += kap_cont_nobf * s_cont;
+          else if (exclude[ind] == -3) tau_vpkt[ind] += kap_cont_noff * s_cont;
+          else if (exclude[ind] == -4) tau_vpkt[ind] += kap_cont_noes * s_cont;
+          else tau_vpkt[ind] += kap_cont * s_cont;
+      }
+
+      /* kill vpkt with high optical depth */
+      tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
+      if (tau_flag == 0 ) return(0) ;
+
+      while ( ldist < sdist ) {
+
+          //printout("next_trans = %d \t nutrans = %g \t",dummy_ptr->next_trans,nutrans);
+
+          nutrans = closest_transition(dummy_ptr);
+
+          element = mastate[tid].element;
+          ion = mastate[tid].ion;
+          upper = mastate[tid].level;
+          lower = mastate[tid].activatedfromlevel;
+          A_ul = mastate[tid].einstein;
+
+          anumber = get_element(element);
+
+          if (nutrans > 0) {
+
+              if (dummy_ptr->nu_cmf < nutrans) ldist = 0;
+              else ldist = CLIGHT * t_current * (dummy_ptr->nu_cmf/nutrans - 1);
+
+              if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
+
+              if (ldist > sdist) {      /* exit the while loop if you reach the boundary; go back to the previous transition to start next cell with the excluded line */
+
+                  dummy_ptr->next_trans -= 1 ;
+                  //printout("ldist > sdist : line in the next cell\n");
+                  break ;
+              }
+
+              t_line = t_current + ldist / CLIGHT ;
+
+              B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans,3) * A_ul;
+              B_lu = stat_weight(element,ion,upper)/stat_weight(element,ion,lower) * B_ul;
+
+              n_u = calculate_exclevelpop(mgi,element,ion,upper);
+              n_l = calculate_exclevelpop(mgi,element,ion,lower);
+
+              // Check on the element to exclude
+              // NB: ldist before need to be computed anyway (I want to move the packets to the
+              // line interaction point even if I don't interact)
+
+              for (ind=0;ind<Nspectra;ind++) {
+
+                  // If exclude[ind]==-1, I do not include line opacity
+                  if ( exclude[ind]!=-1 && (anumber != exclude[ind]) )  tau_vpkt[ind] += (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_line;
+
+              }
+
+              /* kill vpkt with high optical depth */
+              tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
+              if (tau_flag == 0 ) return(0) ;
+
+
+          }
+
+      }
+
+
+      // virtual packet is still at the starting position
+      // move it to cell boundary and go to next cell
+      //printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
+
+      t_future += (sdist / CLIGHT_PROP);
+      move_pkt(dummy_ptr, sdist, t_future);
+
+      //printout("About to change vpkt cell\n");
+      change_cell_vpkt(dummy_ptr, snext, &end_packet, t_future);
+      //printout("Completed change vpkt cell\n");
+
+      //printout("dummy->nu_cmf = %g \n",dummy_ptr->nu_cmf);
+      mgi = cell[dummy_ptr->where].modelgridindex;
+      // break if you reach an empty cell
+      if (mgi == MMODELGRID) break;
+
+      /* kill vpkt with pass through a thick cell */
+      if (modelgrid[mgi].thick == 1) return(0);
+
+
+  }
+
+
+  /* increment the number of escaped virtual packet in the given timestep */
+  #ifdef _OPENMP
+  #pragma omp critical
+  #endif
+  {
+    if (realtype==1) nvpkt_esc1++ ;
+    else if (realtype==2) nvpkt_esc2++ ;
+    else if (realtype==3) nvpkt_esc3++ ;
+  }
+
+  // -------------- final stokes vector ---------------
+
+  for (ind=0;ind<Nspectra;ind++) {
+
+      prob = pn * exp( - tau_vpkt[ind] ) ;
+
+      Itmp = I * prob ;
+      Qtmp = Q * prob ;
+      Utmp = U * prob ;
+
+      dummy_ptr->stokes[0] = Itmp;
+      dummy_ptr->stokes[1] = Qtmp;
+      dummy_ptr->stokes[2] = Utmp;
+
+      if (Itmp!=Itmp || Qtmp!=Qtmp || Utmp!=Utmp) printout("Nan Number!! %g %g %g %g %g %g %g %g \n",Itmp,Qtmp,Utmp,pn,tau_vpkt[ind],mu,i1,i2);
+
+      /* bin on fly and produce file with spectrum */
+
+      t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/CLIGHT_PROP) ;
+
+      add_to_vspecpol(dummy_ptr,bin,ind,t_arrive);
+
+  }
+
+
+  // vpkt grid
+
+  if (vgrid_flag==1) {
+
+      prob = pn * exp( - tau_vpkt[0] ) ;
+
+      Itmp = I * prob ;
+      Qtmp = Q * prob ;
+      Utmp = U * prob ;
+
+      dummy_ptr->stokes[0] = Itmp;
+      dummy_ptr->stokes[1] = Qtmp;
+      dummy_ptr->stokes[2] = Utmp;
+
+      for (bin_range=0;bin_range<Nrange_grid;bin_range++) {
+
+          if ( dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range] ) { // Frequency selection
+
+              if ( t_arrive > tmin_grid && t_arrive < tmax_grid ) { // Time selection
+
+                  add_to_vpkt_grid(dummy_ptr, vel_vec, bin_range, bin, obs);
+
+              }
+          }
+      }
+  }
+}
 
 
   ///****************************************************************************
@@ -757,8 +727,6 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
 /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
 /* -------- the meridian frame such that Q=1 is in the scattering plane and along ref1 ---------------- */
 
-    void vec_norm();
-    double dot();
     double ref1_sc[3],cos_stokes_rot_1, cos_stokes_rot_2, i;
 
     // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
@@ -812,10 +780,6 @@ void meridian(double *n, double *ref1, double *ref2){
 
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf) {
 
-    double dot();
-    void meridian(double *n, double *ref1, double *ref2);
-    int angle_ab (double *dir1,double *vel, double *dir2);
-    void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
     double rot_angle,cos2rot_angle,sin2rot_angle,p,Q0,U0;
     double ref1[3],ref2[3],e_rf[3],e_cmf[3];
     double e_cmf_ref1, e_cmf_ref2, theta_rot;
@@ -892,8 +856,6 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
 
 void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf) {
 
-    double dot();
-    void vec_norm();
     double beta[3],e_par[3], e_perp[3], b_rf[3], b_par[3], b_perp[3], vsqr, gamma_rel, v_cr_b[3], v_cr_e[3], b_cmf[3];
 
     beta[0] = v[0] / CLIGHT ;
@@ -948,6 +910,3 @@ void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf) {
 
 
 }
-
-
-#endif

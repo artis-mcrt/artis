@@ -458,10 +458,12 @@ int main(int argc, char** argv)
 
   bool do_this_full_loop;
 
-  nvpkt = 0;
-  nvpkt_esc1 = 0;
-  nvpkt_esc2 = 0;
-  nvpkt_esc3 = 0;
+  #ifdef VPKT_ON
+    nvpkt = 0;
+    nvpkt_esc1 = 0;
+    nvpkt_esc2 = 0;
+    nvpkt_esc3 = 0;
+  #endif
 
 //  int HUGEE;
 

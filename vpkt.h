@@ -4,11 +4,13 @@
 #include <stdio.h>
 #include "types.h"
 
-int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
 void meridian(double *n, double *ref1, double *ref2);
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
 void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
+
+#ifdef VPKT_ON
+int rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);
 int add_to_vspecpol(PKT *pkt_ptr, int bin, double t_arrive);
 void init_vspecpol(void);
 int write_vspecpol(FILE *specpol_file);
@@ -86,12 +88,14 @@ double dlogt_vspec,dlognu_vspec;
 
 // --------- FLAGS -----------
 
-int realtype ;
+int realtype;
 /* number of virtual packets in a given timestep */
-int nvpkt ;
+int nvpkt;
 /* number of escaped virtual packet in a given timestep (with tau < tau_max) */
-int nvpkt_esc1 ; /* electron scattering event */
-int nvpkt_esc2 ; /* kpkt deactivation */
-int nvpkt_esc3 ; /* macroatom deactivation */
+int nvpkt_esc1; /* electron scattering event */
+int nvpkt_esc2; /* kpkt deactivation */
+int nvpkt_esc3; /* macroatom deactivation */
+
+#endif
 
 #endif //VPKT_H

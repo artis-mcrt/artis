@@ -84,7 +84,8 @@ int pellet_decay(int nts, PKT *pkt_ptr)
   pkt_ptr->last_cross = NONE;
 
   /* initialise polarisation information */
-  pkt_ptr->stokes_qu[0]=pkt_ptr->stokes_qu[1]=0.0;
+  pkt_ptr->stokes[0]=1.0;
+  pkt_ptr->stokes[1]=pkt_ptr->stokes[2]=0.0;
   dummy_dir[0]=dummy_dir[1]=0.0;
   dummy_dir[2]=1.0;
   cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);

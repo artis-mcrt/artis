@@ -187,10 +187,9 @@ typedef struct packet
   double absorptiondir[3]; /// Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a unit vector.
   //short timestep;
   double stokes[3]; //I, Q and U Stokes parameters
-  double stokes_qu[2]; //Q and U Stokes parameters
   double pol_dir[3]; //unit vector which defines the coordinate system against which Q and U are measured; should always be perpendicular to dir
-  enum packet_type escape_type; /// Flag to tell us in which form it escaped from the grid.
   double tdecay;  /// Time at which pellet decays.
+  enum packet_type escape_type; /// Flag to tell us in which form it escaped from the grid.
   int escape_time; /// Time at which is passes out of the grid.
                    /// Pos, dir, where, e_rf, nu_rf should all remain set at the exit point.
   int scat_count;  /// WHAT'S THAT???
