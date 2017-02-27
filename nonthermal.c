@@ -102,10 +102,10 @@ static void read_collion_data(void)
 {
   printout("Reading collisional ionization data...\n");
 
-  FILE *cifile = fopen("ci.dat", "r");
+  FILE *cifile = fopen("collion.txt", "r");
   if (cifile == NULL)
   {
-    printout("Could not open ci.dat\n");
+    printout("Could not open collion.txt\n");
     abort();
   }
 
