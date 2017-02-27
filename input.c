@@ -648,9 +648,11 @@ static void read_unprocessed_atomicdata(void)
         for (int ii = 0; ii < tottransitions; ii++)
         {
           const int level = transitiontable[ii].upper;
+          const double epsilon_upper = epsilon(element, ion, level);
           if (level < nlevelsmax)
           {
             const int targetlevel = transitiontable[ii].lower;
+            const double epsilon_lower = epsilon(element, ion, targetlevel);
 
             //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
             //{
@@ -703,7 +705,7 @@ static void read_unprocessed_atomicdata(void)
                 abort();
               }
               elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
-              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon = epsilon(element, ion, targetlevel);
+              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon_trans = epsilon_upper - epsilon_lower;
               elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].stat_weight = stat_weight(element, ion, targetlevel);
               //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
               //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
@@ -717,7 +719,7 @@ static void read_unprocessed_atomicdata(void)
                 abort();
               }
               elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
-              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon = epsilon(element, ion, level);
+              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon_trans = epsilon_upper - epsilon_lower;
               elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element, ion, level);
               nuparr[targetlevel]++;
             }
@@ -996,10 +998,10 @@ static void read_processed_modelatom(FILE *restrict modelatom)
         for (int i = 1; i <= ndowntrans; i++)
         {
           int targetlevel,lineindex;
-          double levelenergy,statweight;
-          fscanf(modelatom,"%d %lg %lg %d\n",&targetlevel,&levelenergy,&statweight,&lineindex);
+          double epsilon_trans,statweight;
+          fscanf(modelatom,"%d %lg %lg %d\n",&targetlevel,&epsilon_trans,&statweight,&lineindex);
           elements[element].ions[ion].levels[level].downtrans[i].targetlevel = targetlevel;
-          elements[element].ions[ion].levels[level].downtrans[i].epsilon = levelenergy;
+          elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans = epsilon_trans;
           elements[element].ions[ion].levels[level].downtrans[i].stat_weight = statweight;
           elements[element].ions[ion].levels[level].downtrans[i].lineindex = lineindex;
         }
@@ -1017,10 +1019,10 @@ static void read_processed_modelatom(FILE *restrict modelatom)
         for (int i = 1; i <= nuptrans; i++)
         {
           int targetlevel,lineindex;
-          double levelenergy,statweight;
-          fscanf(modelatom,"%d %lg %lg %d\n",&targetlevel,&levelenergy,&statweight,&lineindex);
+          double epsilon_trans,statweight;
+          fscanf(modelatom,"%d %lg %lg %d\n",&targetlevel,&epsilon_trans,&statweight,&lineindex);
           elements[element].ions[ion].levels[level].uptrans[i].targetlevel = targetlevel;
-          elements[element].ions[ion].levels[level].uptrans[i].epsilon = levelenergy;
+          elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans = epsilon_trans;
           elements[element].ions[ion].levels[level].uptrans[i].stat_weight = statweight;
           elements[element].ions[ion].levels[level].uptrans[i].lineindex = lineindex;
         }
@@ -1171,10 +1173,10 @@ static void write_processed_modelatom(void)
         for (int i = 1; i <= ndowntrans; i++)
         {
           int targetlevel = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          double levelenergy = elements[element].ions[ion].levels[level].downtrans[i].epsilon;
+          double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
           double statweight = elements[element].ions[ion].levels[level].downtrans[i].stat_weight;
           int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-          fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
+          fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,epsilon_trans,statweight,lineindex);
         }
 
         int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
@@ -1182,10 +1184,10 @@ static void write_processed_modelatom(void)
         for (int i = 1; i <= nuptrans; i++)
         {
           int targetlevel = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-          double levelenergy = elements[element].ions[ion].levels[level].uptrans[i].epsilon;
+          double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
           double statweight = elements[element].ions[ion].levels[level].uptrans[i].stat_weight;
           int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-          fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,levelenergy,statweight,lineindex);
+          fprintf(modelatom,"%d %.16e %lg %d\n",targetlevel,epsilon_trans,statweight,lineindex);
         }
 
         const int nphixstargets = get_nphixstargets(element,ion,level);

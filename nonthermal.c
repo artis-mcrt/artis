@@ -515,13 +515,11 @@ static double N_e(int modelgridindex, double energy)
       // for (int level = 0; level < get_nlevels(element,ion); level++)
       const int level = 0; // just consider excitation from the ground level
       {
-        const double epsilon_current = epsilon(element,ion,level);
         const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
         for (int t = 1; t <= nuptrans; t++)
         {
-          const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[t].epsilon;
+          const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
           const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
-          const double epsilon_trans = epsilon_target - epsilon_current;
           const double epsilon_trans_ev = epsilon_trans / EV;
           N_e_ion += get_y(modelgridindex, energy_ev + epsilon_trans_ev) * xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
         }
@@ -805,14 +803,12 @@ static double calculate_nt_frac_excitation(int modelgridindex, int element, int 
   // for (int level = 0; level < get_nlevels(element,ion); level++)
   const int level = 0; // just consider excitation from the ground level
   {
-    const double epsilon_current = epsilon(element,ion,level);
     const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
 
     for (int t = 1; t <= nuptrans; t++)
     {
-      const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[t].epsilon;
+      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
-      const double epsilon_trans = epsilon_target - epsilon_current;
 
       get_xs_excitation_vector(xs_excitation_epsilontrans_vec, lineindex, epsilon_trans);
       gsl_vector_scale(xs_excitation_epsilontrans_vec, epsilon_trans / EV);
@@ -964,7 +960,6 @@ double calculate_nt_excitation_rate(int modelgridindex, int element, int ion, in
   gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
   gsl_vector *xs_excitation_vec_sum_alltrans = gsl_vector_calloc(SFPTS);
 
-  const double epsilon_current = epsilon(element,ion,lowerlevel);
   const int nuptrans = elements[element].ions[ion].levels[lowerlevel].uptrans[0].targetlevel;
 
   for (int t = 1; t <= nuptrans; t++)
@@ -972,9 +967,8 @@ double calculate_nt_excitation_rate(int modelgridindex, int element, int ion, in
     const int transupperlevel = elements[element].ions[ion].levels[lowerlevel].uptrans[t].targetlevel;
     if (transupperlevel == upperlevel)
     {
-      const double epsilon_target = elements[element].ions[ion].levels[lowerlevel].uptrans[t].epsilon;
+      const double epsilon_trans = elements[element].ions[ion].levels[lowerlevel].uptrans[t].epsilon_trans;
       const int lineindex = elements[element].ions[ion].levels[lowerlevel].uptrans[t].lineindex;
-      const double epsilon_trans = epsilon_target - epsilon_current;
       // const double epsilon_trans_ev = epsilon_trans / EV;
 
       get_xs_excitation_vector(xs_excitation_vec, lineindex, epsilon_trans);
@@ -1094,13 +1088,11 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, int element, int ion, 
 
   for (int level = 0; level <= maxlevel; level++)
   {
-    const double epsilon_current = epsilon(element, ion, level);
     const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
     for (int t = 1; t <= nuptrans; t++)
     {
-      const double epsilon_target = elements[element].ions[ion].levels[level].uptrans[t].epsilon;
+      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
-      const double epsilon_trans = epsilon_target - epsilon_current;
       const double epsilon_trans_ev = epsilon_trans / EV;
 
       if (epsilon_trans / EV < *E_0 || *E_0 < 0.)
