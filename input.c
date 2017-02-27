@@ -704,7 +704,6 @@ static void read_atomicdata_files(void)
               }
               elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
               elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon_trans = epsilon_upper - epsilon_lower;
-              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].stat_weight = stat_weight(element, ion, targetlevel);
               //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
               //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
               ndownarr[level]++;
@@ -718,7 +717,6 @@ static void read_atomicdata_files(void)
               }
               elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
               elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon_trans = epsilon_upper - epsilon_lower;
-              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].stat_weight = stat_weight(element, ion, level);
               nuparr[targetlevel]++;
             }
             else

@@ -319,7 +319,6 @@ void calculate_heating_rates(int modelgridindex)
        for (int ii = 1; ii <= ndowntrans; ii++)
        {
          const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[ii].epsilon_trans;
-         //double statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
          const int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
          const double C = nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * epsilon_trans;
          C_deexc += C;
@@ -639,7 +638,6 @@ void calculate_cooling_rates(int modelgridindex)
 // //         {
 // //           lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
 // //           epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
-// //           statweight_target = elements[element].ions[ion].levels[level].downtrans[ii].stat_weight;
 // //           lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
 // //           epsilon_trans = epsilon_current - epsilon_target;
 // //           C = col_deexcitation(pkt_ptr,lower,epsilon_trans,statweight_target,lineindex)*epsilon_trans;
