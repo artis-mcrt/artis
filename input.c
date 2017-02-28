@@ -248,8 +248,20 @@ static int compare_linelistentry(const void *restrict p1, const void *restrict p
     else
     {
       printout("Duplicate atomic line?\n");
-      printout("%d %d %d %d %g\n",a1->elementindex,a1->ionindex,a1->lowerlevelindex,a1->upperlevelindex,a1->nu);
-      printout("%d %d %d %d %g\n",a2->elementindex,a2->ionindex,a2->lowerlevelindex,a2->upperlevelindex,a2->nu);
+      printout(
+        "Z=%d ionstage %d lower %d upper %d nu %g\n",
+        get_element(a1->elementindex),
+        get_ionstage(a1->elementindex, a1->ionindex),
+        a1->lowerlevelindex,
+        a1->upperlevelindex,
+        a1->nu);
+      printout(
+        "Z=%d ionstage %d lower %d upper %d nu %g\n",
+        get_element(a2->elementindex),
+        get_ionstage(a2->elementindex, a2->ionindex),
+        a2->lowerlevelindex,
+        a2->upperlevelindex,
+        a2->nu);
       return 0;
     }
   }
