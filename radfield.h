@@ -15,7 +15,6 @@ void radfield_reduce_binned_estimators(void);
 void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo);
 void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);
-int radfield_select_bin(int modelgridindex, double nu);
 
 
 inline double radfield_dbb(double nu, float T, float W)
