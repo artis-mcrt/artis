@@ -139,7 +139,7 @@ void radfield_init(int my_rank)
         const int ion_stage = get_ionstage(phixslist[tid].groundcont[i].element, phixslist[tid].groundcont[i].ion);
         const int level = phixslist[tid].groundcont[i].level;
         //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
-        if (((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
+        if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
         {
           printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e Hz, Z=%d ion_stage %d level %d\n",
                    nu_edge, H * nu_edge / EV, 1e8 * CLIGHT / nu_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
