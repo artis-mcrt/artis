@@ -53,15 +53,15 @@ int main(int argc, char** argv)
   double T_e_max,T_e_min,T_e_step;
   double rho_max,rho_min,rho_step;
   char filename[100];
-  int HUGEE2;
-  char *buffer2;
+  int mpi_nlte_buffer_size;
+  char *mpi_nlte_buffer;
   double nntot;
   int titer;
 
   double deltaV,deltat;
   int assoc_cells;
 
-//  int HUGEE;
+//  int mpi_grid_buffer_size;
 
   #ifdef MPI_ON
     MPI_Init(&argc, &argv);
