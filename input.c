@@ -414,7 +414,6 @@ static void read_atomicdata_files(void)
       {
         printout("[warning] read_atomicdata: requested nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduced nlevelsmax to nlevels\n",nlevelsmax,nlevels,ion,element);
         nlevelsmax = nlevels;
-        //printout("[fatal] read_atomicdata: nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduce nlevelsmax or extend atomic data \n",nlevelsmax,nlevels,ion,element);
       }
 
 
@@ -442,6 +441,7 @@ static void read_atomicdata_files(void)
       }
       printout("transdata header matched: transdata_Z_in %d, transdata_ionstage_in %d, tottransitions %d\n",
                  transdata_Z_in, transdata_ionstage_in, tottransitions);
+      assert(tottransitions >= 0);
 
       int tottransitions_all = tottransitions;
       if (ion == nions - 1) // limit the top ion to one level and no transitions
@@ -488,18 +488,6 @@ static void read_atomicdata_files(void)
             fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden);
             const int lower = lower_in - 1; // TODO: remove the minus one after we change the level indicies to start at zero in transitiondata.txt
             const int upper = upper_in - 1;
-
-            // if (Z == 26 && ionstage == 2) // TESTING FOR FE II
-            // {
-            //   const double factor = 2.0;
-            //   if (coll_str >= 0.) // don't mess up the negative ones!
-            //   {
-            //     printout("multiplying coll_str for Fe II transition level %d to %d by %g\n", lower, upper, factor);
-            //     coll_str *= factor; // TESTING: REMOVE!!!
-            //   }
-            //   printout("multiplying A value for Fe II transition level %d to %d by %g\n", lower, upper, factor);
-            //   coll_str *= factor; // TESTING: REMOVE!!!
-            // }
 
             // this entire block can be removed if we don't want to add in extra collisonal
             // transitions between the first n levels
@@ -600,6 +588,7 @@ static void read_atomicdata_files(void)
           double statweight;
           int ntransitions;
           fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions);
+          assert(levelindex == level + 1);
           //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
           if (level < nlevelsmax)
           {
