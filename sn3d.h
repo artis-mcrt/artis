@@ -4,8 +4,8 @@
 #include <stdbool.h>
 
 #define DEBUG_ON
-//#define DO_TITER
-//#define FORCE_LTE
+// #define DO_TITER
+// #define FORCE_LTE
 static const bool NT_ON = true;                      /// Switch on non-thermal ionisation
 static const bool NT_SOLVE_SPENCERFANO = true;       /// Use the Spencer-Fano solver instead of the work function approximation
 
@@ -299,10 +299,6 @@ int mg_associated_cells[MMODELGRID + 1];    // separate array for faster looping
 /// THESE ARE THE GRID BASED ESTIMATORS
 float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity                     ///ATOMIC
 double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpkt emissivity                        ///ATOMIC
-double J[MMODELGRID+1];
-#ifdef DO_TITER
-  double J_reduced_save[MMODELGRID+1];
-#endif
 
 
 #if (!NO_LUT_PHOTOION)
@@ -315,14 +311,11 @@ double J[MMODELGRID+1];
 #ifdef FORCE_LTE
   // don't use the variables below in LTE mode, just declare them here so the code compiles
   double *ffheatingestimator;
-  double *nuJ;
 #else
-  double nuJ[MMODELGRID + 1];
   double ffheatingestimator[MMODELGRID + 1];
   double colheatingestimator[MMODELGRID + 1];
 
   #ifdef DO_TITER
-    double nuJ_reduced_save[MMODELGRID];
     double ffheatingestimator_save[MMODELGRID];
     double colheatingestimator_save[MMODELGRID];
     double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];

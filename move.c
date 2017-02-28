@@ -17,36 +17,13 @@ void update_estimators(const PKT *restrict pkt_ptr, const double distance)
   if (modelgridindex != MMODELGRID)
   {
     const double distance_e_cmf = distance * pkt_ptr->e_cmf;
-    #ifdef _OPENMP
-      #pragma omp atomic
-    #endif
-    J[modelgridindex] += distance_e_cmf;
-    #ifdef DEBUG_ON
-      if (!isfinite(J[modelgridindex]))
-      {
-        printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,pkt_ptr->nu_cmf);
-        abort();
-      }
-    #endif
+    const double nu = pkt_ptr->nu_cmf;
+    //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
+
+    if (MULTIBIN_RADFIELD_MODEL_ON)
+      radfield_update_estimators(modelgridindex, distance_e_cmf, nu);
 
     #ifndef FORCE_LTE
-      const double nu = pkt_ptr->nu_cmf;
-      //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
-      #ifdef _OPENMP
-        #pragma omp atomic
-      #endif
-      nuJ[modelgridindex] += distance_e_cmf * nu;
-      #ifdef DEBUG_ON
-        if (!isfinite(nuJ[modelgridindex]))
-        {
-          printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,pkt_ptr->nu_cmf);
-          abort();
-        }
-      #endif
-
-      if (MULTIBIN_RADFIELD_MODEL_ON)
-        radfield_update_binned_estimators(modelgridindex, distance_e_cmf, nu);
-
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
       ///quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
       #ifdef _OPENMP

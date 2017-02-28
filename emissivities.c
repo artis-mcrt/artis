@@ -155,9 +155,8 @@ void zero_estimators(void)
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
-    J[n] = 0.; // this is required even if FORCE_LTE is on
+    radfield_zero_estimators(n);
     #ifndef FORCE_LTE
-      radfield_zero_estimators(n);
       ffheatingestimator[n] = 0.;
       colheatingestimator[n] = 0.;
 
