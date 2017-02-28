@@ -1,6 +1,7 @@
 #include <stdio.h>
 //#include <math.h>
 //#include <stdlib.h>
+#include <assert.h>
 #include "sn3d.h"
 #include "atomic.h"
 #include "gamma.h"
@@ -94,7 +95,7 @@ static void read_phixs_data(void)
                 double phixstargetprobability;
                 int in_upperlevel;
                 fscanf(phixsdata,"%d %lg\n",&in_upperlevel,&phixstargetprobability);
-                elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = in_upperlevel-1;//subtract one to get index
+                elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = in_upperlevel - 1;//subtract one to get index
                 elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].probability = phixstargetprobability;
               }
               elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
@@ -343,6 +344,9 @@ static void read_atomicdata_files(void)
     double abundance,mass;
     fscanf(compositiondata,"%d %d %d %d %d %lg %lg",&Z,&nions,&lowermost_ionstage,&uppermost_ionstage,&nlevelsmax_readin,&abundance,&mass);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
+    assert(Z > 0);
+    assert(nions >= 0);
+    assert(nions == uppermost_ionstage - lowermost_ionstage + 1);
 
     /// write this element's data to memory
     elements[element].anumber = Z;
