@@ -138,7 +138,7 @@ static void pkt_action_counters_printout(void)
 }
 
 #ifdef MPI_ON
-static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int ndo, int nts, int titer, char *buffer, int HUGEE, char* buffer2, int HUGEE2)
+static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int ndo, int nts, int titer, char *mpi_grid_buffer, int mpi_grid_buffer_size, char* mpi_nlte_buffer, int mpi_nlte_buffer_size)
 {
   int position = 0;
   for (int n = 0; n < p; n++)
@@ -150,65 +150,65 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
     if (my_rank == n)
     {
       position = 0;
-      MPI_Pack(&ndo, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+      MPI_Pack(&ndo, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
       for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
       //for (int nncl = 0; nncl < ndo; nncl++)
       {
         //nn = nonemptycells[my_rank+nncl*nprocs];
-        MPI_Pack(&mgi, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+        MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
         //if (cell[nn].rho > MINDENSITY)
         if (mg_associated_cells[mgi] > 0)
         {
-          MPI_Pack(&modelgrid[mgi].Te, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].TR, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].W, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].rho, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].nne, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].nnetot, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].kappagrey, 1, MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].thick, 1, MPI_SHORT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].W, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].rho, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].nne, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].nnetot, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].kappagrey, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
           for (int element = 0; element < nelements; element++)
           {
-            MPI_Pack(modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-            MPI_Pack(modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, buffer, HUGEE, &position, MPI_COMM_WORLD);
-            MPI_Pack(modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+            MPI_Pack(modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            MPI_Pack(modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            MPI_Pack(modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           }
         }
       }
-      printout("MPI_BUFFER: used %d of %d bytes of MPI buffer\n", position, HUGEE);
+      printout("MPI_BUFFER: used %d of %d bytes of MPI buffer\n", position, mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Bcast(buffer, HUGEE, MPI_PACKED, n, MPI_COMM_WORLD);
+    MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, n, MPI_COMM_WORLD);
 
     position = 0;
     int nlp;
-    MPI_Unpack(buffer, HUGEE, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
+    MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
     for (int nn = 0; nn < nlp; nn++)
     {
       int mgi;
-      MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+      MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
       //if (cell[ncl].rho > MINDENSITY)
       if (mg_associated_cells[mgi] > 0)
       {
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
 
         for (int element = 0; element < nelements; element++)
         {
-          MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
-          MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
-          MPI_Unpack(buffer, HUGEE, &position, modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
         }
       }
     }
@@ -221,34 +221,34 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
       if (my_rank == n)
       {
         position = 0;
-        MPI_Pack(&ndo, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+        MPI_Pack(&ndo, 1, MPI_INT, mpi_nlte_buffer, mpi_nlte_buffer_size, &position, MPI_COMM_WORLD);
         for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
         //for (int nncl = 0; nncl < ndo; nncl++)
         {
           //nn = nonemptycells[my_rank+nncl*nprocs];
-          MPI_Pack(&mgi, 1, MPI_INT, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+          MPI_Pack(&mgi, 1, MPI_INT, mpi_nlte_buffer, mpi_nlte_buffer_size, &position, MPI_COMM_WORLD);
           //if (cell[nn].rho > MINDENSITY)
           if (mg_associated_cells[mgi] > 0)
           {
-            MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, buffer2, HUGEE2, &position, MPI_COMM_WORLD);
+            MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, mpi_nlte_buffer, mpi_nlte_buffer_size, &position, MPI_COMM_WORLD);
           }
         }
-        printout("MPI_BUFFER: used %d of %d bytes of MPI buffer2\n", position, HUGEE2);
+        printout("MPI_BUFFER: used %d of %d bytes of MPI mpi_nlte_buffer\n", position, mpi_nlte_buffer_size);
       }
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Bcast(buffer2, HUGEE2, MPI_PACKED, n, MPI_COMM_WORLD);
+      MPI_Bcast(mpi_nlte_buffer, mpi_nlte_buffer_size, MPI_PACKED, n, MPI_COMM_WORLD);
 
       position = 0;
       int nlp;
-      MPI_Unpack(buffer2, HUGEE2, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
+      MPI_Unpack(mpi_nlte_buffer, mpi_nlte_buffer_size, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
       for (int nn = 0; nn < nlp; nn++)
       {
         int mgi;
-        MPI_Unpack(buffer2, HUGEE2, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_nlte_buffer, mpi_nlte_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
         //if (cell[ncl].rho > MINDENSITY)
         if (mg_associated_cells[mgi] > 0)
         {
-          MPI_Unpack(buffer2, HUGEE2, &position, modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_nlte_buffer, mpi_nlte_buffer_size, &position, modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
         }
       }
     }
@@ -450,13 +450,6 @@ int main(int argc, char** argv)
 {
   FILE *restrict packets_file;
   //FILE *temperature_file;
-  #ifdef MPI_ON
-    int nblock;
-    int numtot;
-    int n_leftover;
-  #endif
-  int nstart;
-  int ndo;
   char filename[100];
 
   bool do_this_full_loop;
@@ -467,8 +460,6 @@ int main(int argc, char** argv)
     nvpkt_esc2 = 0;
     nvpkt_esc3 = 0;
   #endif
-
-//  int HUGEE;
 
   #ifdef MPI_ON
     MPI_Init(&argc, &argv);
@@ -669,6 +660,13 @@ int main(int argc, char** argv)
     /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
     /// cells are sent to processes 0 ... process n_leftover -1.
     #ifdef MPI_ON
+      int nblock;
+      int numtot;
+      int n_leftover;
+    #endif
+    #ifdef MPI_ON
+      int nstart;
+      int ndo;
       //nblock = ngrid / p;
       //nblock = nnonemptycells / p;
       nblock = npts_model / p;
@@ -711,28 +709,28 @@ int main(int argc, char** argv)
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-      int HUGEE = 4 * ((12 + 4 * includedions) * (nblock + 1) + 1);
-      printout("reserve HUGEE %d space for MPI communication buffer\n", HUGEE);
-      //char buffer[HUGEE];
-      char *buffer  = malloc(HUGEE*sizeof(char));
-      if (buffer == NULL)
+      int mpi_grid_buffer_size = 4 * ((12 + 4 * includedions) * (nblock + 1) + 1);
+      printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
+      //char buffer[mpi_grid_buffer_size];
+      char *mpi_grid_buffer  = malloc(mpi_grid_buffer_size * sizeof(char));
+      if (mpi_grid_buffer == NULL)
       {
-        printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
+        printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
         abort();
       }
-      int HUGEE2 = 4 + 4 * (nblock + 1) + 8 * (nblock + 1) * total_nlte_levels;
-      printout("reserve HUGEE2 %d space for MPI communication buffer2 for NLTE\n", HUGEE2);
-      char *buffer2 = malloc(HUGEE2*sizeof(char));
-      if (buffer2 == NULL)
+      int mpi_nlte_buffer_size = 4 + 4 * (nblock + 1) + 8 * (nblock + 1) * total_nlte_levels;
+      printout("reserve mpi_nlte_buffer_size %d space for MPI communication mpi_nlte_buffer for NLTE\n", mpi_nlte_buffer_size);
+      char *mpi_nlte_buffer = malloc(mpi_nlte_buffer_size * sizeof(char));
+      if (mpi_nlte_buffer == NULL)
       {
-        printout("[fatal] input: not enough memory to initialize MPI exchange buffer ... abort.\n");
+        printout("[fatal] input: not enough memory to initialize MPI NLTE buffer ... abort.\n");
         abort();
       }
     #else
-      nstart = 0;
+      const int nstart = 0;
       //ndo = ngrid;
       //ndo = nnonemptycells;
-      ndo = npts_model;
+      const int ndo = npts_model;
     #endif
 
 
@@ -807,9 +805,9 @@ int main(int argc, char** argv)
       #ifdef MPI_ON
         MPI_Barrier(MPI_COMM_WORLD);
       #endif
-      const time_t time_timestep_start = time(NULL);
 
       #ifdef TIMED_RESTARTS
+        const time_t time_timestep_start = time(NULL);
         if (estimated_time_for_clean_exit > -1)
         {
           const int wallclock_used_seconds = time_timestep_start - real_time_start;
@@ -933,7 +931,7 @@ int main(int argc, char** argv)
 
         /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
         #ifdef MPI_ON
-          mpi_communicate_grid_properties(my_rank, p, nstart, ndo, nts, titer, buffer, HUGEE, buffer2, HUGEE2);
+          mpi_communicate_grid_properties(my_rank, p, nstart, ndo, nts, titer, mpi_grid_buffer, mpi_grid_buffer_size, mpi_nlte_buffer, mpi_nlte_buffer_size);
         #endif
 
         /// If this is not the 0th time step of the current job step,
@@ -1260,33 +1258,33 @@ int main(int argc, char** argv)
         if (my_rank == n)
         {
           position = 0;
-          MPI_Pack(&ndo, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+          MPI_Pack(&ndo, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           for (mgi = nstart; mgi < (nstart+ndo); mgi++)
           {
-            MPI_Pack(&mgi, 1, MPI_INT, buffer, HUGEE, &position, MPI_COMM_WORLD);
+            MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
             if (mg_associated_cells[mgi] > 0)
             {
-              MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-              MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-              MPI_Pack(&modelgrid[mgi].TR, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
-              MPI_Pack(&modelgrid[mgi].W, 1, MPI_DOUBLE, buffer, HUGEE, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].TR, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].W, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
             }
           }
         }
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(buffer, HUGEE, MPI_PACKED, n, MPI_COMM_WORLD);
+        MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, n, MPI_COMM_WORLD);
 
         position = 0;
-        MPI_Unpack(buffer, HUGEE, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
         for (int nn = 0; nn < nlp; nn++)
         {
-          MPI_Unpack(buffer, HUGEE, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
           if (mg_associated_cells[mgi] > 0)
           {
-            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].TR, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-            MPI_Unpack(buffer, HUGEE, &position, &modelgrid[mgi].W, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TR, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].W, 1, MPI_DOUBLE, MPI_COMM_WORLD);
           }
         }
       }
@@ -1319,8 +1317,8 @@ int main(int argc, char** argv)
     /// code.
 
     #ifdef MPI_ON
-      free(buffer);
-      free(buffer2);
+      free(mpi_grid_buffer);
+      free(mpi_nlte_buffer);
     #endif
   }
 

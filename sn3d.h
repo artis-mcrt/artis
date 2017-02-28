@@ -46,7 +46,7 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 
 
 #if !defined DO_EXSPEC && !defined MPI_ON
-  // #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
+  #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
 #endif
 
 #ifdef MPI_ON
@@ -63,9 +63,9 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 #endif
 
 
-//#define HUGEE 2000018
-//#define HUGEE 50000
-//double buffer[HUGEE];
+//#define mpi_grid_buffer_size 2000018
+//#define mpi_grid_buffer_size 50000
+//double buffer[mpi_grid_buffer_size];
 //float *buffer;
 
 /// fundamental constants
