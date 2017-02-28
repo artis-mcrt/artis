@@ -22,7 +22,7 @@ static const double boost_region_nu_upper = (CLIGHT / (2100e-8));  // in Angstro
 static const double boost_region_factor = 1.0;
 static const bool boost_region_on = false;
 
-static double J_normfactor[MMODELGRID+1];
+static double J_normfactor[MMODELGRID + 1];
 
 static bool radfield_initialized = false;
 
@@ -52,9 +52,22 @@ struct radfieldbin_current
   // enum_bin_fit_type fit_type;
 };
 
-static double *radfieldbin_nu_upper; // array of upper frequency boundaries of bins
+static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequency boundaries of bins
 static struct radfieldbin_current *radfieldbin_current[MMODELGRID + 1];
 static struct radfieldbin_previous *radfieldbin_previous[MMODELGRID + 1];
+
+static double J[MMODELGRID + 1];
+#ifdef DO_TITER
+  static double J_reduced_save[MMODELGRID + 1];
+#endif
+
+#ifndef FORCE_LTE
+  static double nuJ[MMODELGRID + 1];
+  #ifdef DO_TITER
+    static double nuJ_reduced_save[MMODELGRID + 1];
+  #endif
+#endif
+
 
 typedef enum
 {
@@ -106,8 +119,6 @@ void radfield_init(int my_rank)
           "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
           "nuJ","J","J_nu_avg","ncontrib","T_R","W");
   fflush(radfieldfile);
-
-  radfieldbin_nu_upper = (double *) calloc(RADFIELDBINCOUNT, sizeof(double));
 
   double prev_nu_upper = nu_lower_first_initial;
   const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
@@ -402,6 +413,8 @@ void radfield_zero_estimators(int modelgridindex)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
 {
+  J[modelgridindex] = 0.; // this is required even if FORCE_LTE is on
+#ifndef FORCE_LTE
   nuJ[modelgridindex] = 0.;
 
   if (MULTIBIN_RADFIELD_MODEL_ON && radfield_initialized && mg_associated_cells[modelgridindex] > 0)
@@ -422,12 +435,38 @@ void radfield_zero_estimators(int modelgridindex)
     }
     radfield_set_J_normfactor(modelgridindex, -1.0);
   }
+#endif
 }
 
 
 inline
-void radfield_update_binned_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf)
+void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf)
 {
+  #ifdef _OPENMP
+    #pragma omp atomic
+  #endif
+  J[modelgridindex] += distance_e_cmf;
+  #ifdef DEBUG_ON
+    if (!isfinite(J[modelgridindex]))
+    {
+      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+      abort();
+    }
+  #endif
+
+#ifndef FORCE_LTE
+  #ifdef _OPENMP
+    #pragma omp atomic
+  #endif
+  nuJ[modelgridindex] += distance_e_cmf * nu_cmf;
+  #ifdef DEBUG_ON
+    if (!isfinite(nuJ[modelgridindex]))
+    {
+      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+      abort();
+    }
+  #endif
+
   // int binindex = 0;
   // if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
   // {
@@ -474,6 +513,7 @@ void radfield_update_binned_estimators(int modelgridindex, double distance_e_cmf
   //   printout("           modelgridindex %d binindex %d nu_lower_first %g nu_upper_last %g \n",
   //            modelgridindex, binindex, nu_lower_first, radfield_get_bin_nu_upper(modelgridindex,RADFIELDBINCOUNT - 1));
   // }
+#endif
 }
 
 
@@ -913,10 +953,74 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor)
 }
 
 
+void radfield_normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi)
+{
+  assert(isfinite(J[modelgridindex]));
+  J[modelgridindex] *= estimator_normfactor_over4pi;
+}
+
+
+void radfield_normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi)
+{
+  assert(isfinite(nuJ[modelgridindex]));
+  nuJ[modelgridindex] *= estimator_normfactor_over4pi;
+}
+
+
+double get_T_R_from_J(const int modelgridindex)
+{
+  double T_R = pow(PI / STEBO * J[modelgridindex], 1/4);
+  if (isfinite(T_R))
+  {
+    /// Make sure that T is in the allowed temperature range.
+    if (T_R > MAXTEMP)
+      T_R = MAXTEMP;
+    if (T_R < MINTEMP)
+      T_R = MINTEMP;
+  }
+  else
+  {
+    /// keep old value of T_R
+    printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n", modelgridindex);
+    T_R = modelgrid[modelgridindex].TR;
+  }
+  return T_R;
+}
+
+
+#ifdef DO_TITER
+void radfield_titer_J(const int modelgridindex)
+{
+  if (J_reduced_save[modelgridindex] >= 0)
+  {
+    J[modelgridindex] = (J[modelgridindex] + J_reduced_save[modelgridindex]) / 2;
+  }
+  J_reduced_save[modelgridindex] = J[modelgridindex];
+}
+
+
+#ifndef FORCE_LTE
+void radfield_titer_nuJ(const int modelgridindex)
+{
+  if (nuJ_reduced_save[modelgridindex] >= 0)
+  {
+    nuJ[modelgridindex] = (nuJ[modelgridindex] + nuJ_reduced_save[modelgridindex]) / 2;
+  }
+  nuJ_reduced_save[modelgridindex] = nuJ[modelgridindex];
+}
+#endif
+#endif
+
+
 #ifdef MPI_ON
-void radfield_reduce_binned_estimators(void)
+void radfield_reduce_estimators(void)
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
+  MPI_Allreduce(MPI_IN_PLACE, &J, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  #ifndef FORCE_LTE
+    MPI_Allreduce(MPI_IN_PLACE, &nuJ, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  #endif
+
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
   printout("Reducing binned radiation field estimators\n");

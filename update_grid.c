@@ -440,18 +440,9 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
 
 
 #ifdef DO_TITER
+#ifndef FORCE_LTE
   static void titer_average_estimators(const int n)
   {
-    if (J_reduced_save[n] >= 0)
-    {
-      J[n] = (J[n] + J_reduced_save[n]) / 2;
-    }
-    J_reduced_save[n] = J[n];
-    if (nuJ_reduced_save[n] >= 0)
-    {
-      nuJ[n] = (nuJ[n] + nuJ_reduced_save[n]) / 2;
-    }
-    nuJ_reduced_save[n] = nuJ[n];
     if (ffheatingestimator_save[n] >= 0)
     {
       ffheatingestimator[n] = (ffheatingestimator[n] + ffheatingestimator_save[n]) / 2;
@@ -463,6 +454,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
     }
     colheatingestimator_save[n] = colheatingestimator[n];
   }
+#endif
 #endif
 
 
@@ -572,44 +564,20 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         /// Then update T_R and W using the estimators.
         /// (This could in principle also be done for empty cells)
 
-        #ifndef FORCE_LTE
         const double estimator_normfactor = 1 / (deltaV * deltat) / nprocs / assoc_cells;
         const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
+        #ifndef FORCE_LTE
         if (initial_iteration || modelgrid[n].thick == 1)
         #endif
         {
-          /// LTE version of the code
-          if (!isfinite(J[n]))
-          {
-            printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
-            abort();
-          }
-          J[n] *= estimator_normfactor_over4pi;
+          radfield_normalise_J(n, estimator_normfactor_over4pi);
 
           #ifdef DO_TITER
-            if (J_reduced_save[n] >= 0)
-            {
-              J[n] = (J[n] + J_reduced_save[n]) / 2;
-            }
-            J_reduced_save[n] = J[n];
+            radfield_titer_J(n);
           #endif
 
-          double T_R = pow(PI / STEBO * J[n], 1/4);
-          if (isfinite(T_R))
-          {
-            /// Make sure that T is in the allowed temperature range.
-            if (T_R > MAXTEMP)
-              T_R = MAXTEMP;
-            if (T_R < MINTEMP)
-              T_R = MINTEMP;
-          }
-          else
-          {
-            /// keep old value of T_R
-            printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",n);
-            T_R = modelgrid[n].TR;
-          }
+          double T_R = get_T_R_from_J(n);
           set_TR(n, T_R);
           set_Te(n, T_R);
           set_TJ(n, T_R);
@@ -636,20 +604,17 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         else // not (initial_iteration || modelgrid[n].thick == 1)
         {
           /// Calculate estimators
-          if (!isfinite(nuJ[n]) || !isfinite(J[n]))
-          {
-            printout("[fatal] update_grid: non finite estimator before normalisation ... abort\n");
-            abort();
-          }
 
-          J[n] *= estimator_normfactor_over4pi;
-          nuJ[n] *= estimator_normfactor_over4pi;
+          radfield_normalise_J(n, estimator_normfactor_over4pi);
           radfield_set_J_normfactor(n, estimator_normfactor_over4pi);
+          radfield_normalise_nuJ(n, estimator_normfactor_over4pi);
 
           ffheatingestimator[n] *= estimator_normfactor;
           colheatingestimator[n] *= estimator_normfactor;
 
           #ifdef DO_TITER
+            radfield_titer_J(n);
+            radfield_titer_nuJ(n);
             titer_average_estimators(n);
           #endif
 
