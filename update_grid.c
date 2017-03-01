@@ -1438,59 +1438,35 @@ void write_grid_restart_data(void)
     abort();
   }
 
-  for (int n = 0; n < npts_model; n++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    if (mg_associated_cells[n] > 0)
+    bool nonemptycell = (mg_associated_cells[mgi] > 0);
+    if (nonemptycell)
     {
-      fprintf(gridsave_file,"%d %g %g %g %g %d %lg", n, get_TR(n), get_Te(n), get_W(n), get_TJ(n), modelgrid[n].thick, rpkt_emiss[n]);
-      #ifndef FORCE_LTE
-        #if (!NO_LUT_PHOTOION)
-          for (int element = 0; element < nelements; element++)
-          {
-            const int nions = get_nions(element);
-            for (int ion = 0; ion < nions; ion++)
-            {
-              fprintf(gridsave_file,"%g ",corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]);
-            }
-          }
-          for (int element = 0; element < nelements; element++)
-          {
-            const int nions = get_nions(element);
-            for (int ion = 0; ion < nions; ion++)
-            {
-              fprintf(gridsave_file,"%g ",gammaestimator[n*nelements*maxion+element*maxion+ion]);
-            }
-          }
-        #endif
-      #endif
+      fprintf(gridsave_file, "%d %g %g %g %g %hd %lg",
+              mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
+              modelgrid[mgi].thick, rpkt_emiss[mgi]);
     }
     else
     {
-      ///Write zeros for cells which are non-represented in the simulation grid
-      fprintf(gridsave_file,"%d %g %g %g %g %d %lg",n,0.,0.,0.,0.,0,0.);
-
-      #ifndef FORCE_LTE
-        #if (!NO_LUT_PHOTOION)
-        for (int element = 0; element < nelements; element++)
-        {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++)
-          {
-            fprintf(gridsave_file,"%g ",0.);
-          }
-        }
-        for (int element = 0; element < nelements; element++)
-        {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions; ion++)
-          {
-            fprintf(gridsave_file,"%g ",0.);
-          }
-        }
-        #endif
-      #endif
-
+      fprintf(gridsave_file, "%d %g %g %g %g %d %lg", mgi, 0., 0., 0., 0., 0, 0.);
     }
+
+    #ifndef FORCE_LTE
+      #if (!NO_LUT_PHOTOION)
+        for (int element = 0; element < nelements; element++)
+        {
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
+          {
+            const int estimindex = mgi * nelements * maxion + element * maxion + ion;
+            fprintf(gridsave_file, "%lg %lg ",
+                    (nonemptycell ? corrphotoionrenorm[estimindex] : 0.),
+                    (nonemptycell ? gammaestimator[estimindex] : 0.));
+          }
+        }
+      #endif
+    #endif
     fprintf(gridsave_file,"\n");
   }
 
