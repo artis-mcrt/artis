@@ -469,13 +469,13 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
     }
   }
 
-  static void zero_corrphotoionrenorm(const int modelgridindex)
+  static void set_all_corrphotoionrenorm(const int modelgridindex, const double value)
   {
     for (int element = 0; element < nelements; element++)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)
-        corrphotoionrenorm[modelgridindex * nelements * maxion + element * maxion + ion] = 0.;
+        corrphotoionrenorm[modelgridindex * nelements * maxion + element * maxion + ion] = value;
     }
   }
 #endif
@@ -519,14 +519,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         #if (!NO_LUT_PHOTOION)
           if (!simulation_continued_from_saved)
           {
-            for (int element = 0; element < nelements; element++)
-            {
-              const int nions = get_nions(element);
-              for (int ion = 0; ion < nions; ion++)
-              {
-                corrphotoionrenorm[n * nelements * maxion + element * maxion + ion] = 1.;
-              }
-            }
+            set_all_corrphotoionrenorm(n, 1.);
           }
         #endif
         #endif
@@ -584,17 +577,9 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
           set_W(n, 1);
 
           #ifndef FORCE_LTE
-          /// These don't depend on T_e, therefore take them out of the T_e iteration
-          #if (!NO_LUT_PHOTOION)
-            for (int element = 0; element < nelements; element++)
-            {
-              const int nions = get_nions(element);
-              for (int ion = 0; ion < nions-1; ion++)
-              {
-                corrphotoionrenorm[n * nelements * maxion + element * maxion + ion] = 1.;
-              }
-            }
-          #endif
+            #if (!NO_LUT_PHOTOION)
+              set_all_corrphotoionrenorm(n, 1.);
+            #endif
           #endif
 
           precalculate_partfuncts(n);
@@ -715,7 +700,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
     #ifndef FORCE_LTE
       #if (!NO_LUT_PHOTOION)
         zero_gammaestimator(n);
-        zero_corrphotoionrenorm(n);
+        set_all_corrphotoionrenorm(n, 0.);
       #endif
     #endif
   }

@@ -368,13 +368,13 @@ static void density_1d_read(void)
     if (mg_associated_cells[mgi] > 0)
     {
       const double helper = rho_model[mgi] * pow(t_model / tmin, 3);
-      set_rhoinit(mgi,helper);
-      set_rho(mgi,helper);
-      set_ffe(mgi,ffegrp_model[mgi]);
-      set_f56ni(mgi,fni_model[mgi]);
-      set_fco(mgi,fco_model[mgi]);
-      set_f52fe(mgi,f52fe_model[mgi]);
-      set_f48cr(mgi,f48cr_model[mgi]);
+      set_rhoinit(mgi, helper);
+      set_rho(mgi, helper);
+      set_ffe(mgi, ffegrp_model[mgi]);
+      set_f56ni(mgi, fni_model[mgi]);
+      set_fco(mgi, fco_model[mgi]);
+      set_f52fe(mgi, f52fe_model[mgi]);
+      set_f48cr(mgi, f48cr_model[mgi]);
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
       for (int element = 0; element < nelements; element++)
@@ -394,21 +394,21 @@ static void density_1d_read(void)
 
         if (anumber == 28)
         {
-          set_fnistable(mgi,abundance - get_f56ni(mgi));
+          set_fnistable(mgi, abundance - get_f56ni(mgi));
           //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
         }
         else if (anumber == 27)
-          set_fcostable(mgi,abundance - get_fco(mgi));
+          set_fcostable(mgi, abundance - get_fco(mgi));
         else if (anumber == 26)
-          set_ffestable(mgi,abundance - get_f52fe(mgi));
+          set_ffestable(mgi, abundance - get_f52fe(mgi));
         else if (anumber == 25)
-          set_fmnstable(mgi,abundance);
+          set_fmnstable(mgi, abundance);
         else if (anumber == 24)
-          set_fcrstable(mgi,abundance - get_f48cr(mgi));
+          set_fcrstable(mgi, abundance - get_f48cr(mgi));
         else if (anumber == 23)
-          set_fvstable(mgi,abundance);
+          set_fvstable(mgi, abundance);
         else if (anumber == 22)
-          set_ftistable(mgi,abundance);
+          set_ftistable(mgi, abundance);
       }
 
       if (get_rhoinit(mgi) < 0)
@@ -421,17 +421,17 @@ static void density_1d_read(void)
 
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
-  set_rhoinit(MMODELGRID,0.);
-  set_rho(MMODELGRID,0.);
-  set_nne(MMODELGRID,0.);
-  set_ffe(MMODELGRID,0.);
-  set_fco(MMODELGRID,0.);
-  set_f56ni(MMODELGRID,0.);
-  set_f48cr(MMODELGRID,0.);
-  set_f52fe(MMODELGRID,0.);
-  set_Te(MMODELGRID,MINTEMP);
-  set_TJ(MMODELGRID,MINTEMP);
-  set_TR(MMODELGRID,MINTEMP);
+  set_rhoinit(MMODELGRID, 0.);
+  set_rho(MMODELGRID, 0.);
+  set_nne(MMODELGRID, 0.);
+  set_ffe(MMODELGRID, 0.);
+  set_fco(MMODELGRID, 0.);
+  set_f56ni(MMODELGRID, 0.);
+  set_f48cr(MMODELGRID, 0.);
+  set_f52fe(MMODELGRID, 0.);
+  set_Te(MMODELGRID, MINTEMP);
+  set_TJ(MMODELGRID, MINTEMP);
+  set_TR(MMODELGRID, MINTEMP);
   allocate_compositiondata(MMODELGRID);
 
   /// First pass through to get normalisation coefficients
@@ -782,14 +782,14 @@ static void density_2d_read(void)
   {
     if (mg_associated_cells[mgi] > 0)
     {
-      const double helper = rho_model[mgi] * pow( (t_model/tmin), 3.);
-      set_rhoinit(mgi,helper);
-      set_rho(mgi,helper);
-      set_ffe(mgi,ffegrp_model[mgi]);
-      set_f56ni(mgi,fni_model[mgi]);
-      set_fco(mgi,fco_model[mgi]);
-      set_f52fe(mgi,f52fe_model[mgi]);
-      set_f48cr(mgi,f48cr_model[mgi]);
+      const double helper = rho_model[mgi] * pow( (t_model / tmin), 3.);
+      set_rhoinit(mgi, helper);
+      set_rho(mgi, helper);
+      set_ffe(mgi, ffegrp_model[mgi]);
+      set_f56ni(mgi, fni_model[mgi]);
+      set_fco(mgi, fco_model[mgi]);
+      set_f52fe(mgi, f52fe_model[mgi]);
+      set_f48cr(mgi, f48cr_model[mgi]);
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
       for (int element = 0; element < nelements; element++)
@@ -962,9 +962,9 @@ static void density_3d_read(void)
   {
     //printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d\n", n,grid_type,cell[n].modelgridindex,ngrid);
     double dcen[3];
-    dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
-    dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
-    dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
+    dcen[0] = cell[n].pos_init[0] + (0.5 * wid_init);
+    dcen[1] = cell[n].pos_init[1] + (0.5 * wid_init);
+    dcen[2] = cell[n].pos_init[2] + (0.5 * wid_init);
     //printout("grid_init2: n = %d\n", n);
 
     double radial_pos = vec_len(dcen);
@@ -1046,7 +1046,7 @@ static void density_3d_read(void)
   {
     int mgi = cell[n].modelgridindex;
     if (rank_global == 0 && mgi != MMODELGRID)
-      fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
+      fprintf(grid_file,"%d %d\n", n, mgi); ///write only non-empty cells to grid file
 
     if (get_rhoinit(mgi) > 0)
     {
@@ -1060,12 +1060,12 @@ static void density_3d_read(void)
       }
       else if (opacity_case == 2)
       {
-        const double opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
+        const double opcase2_normal = GREY_OP * rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
         set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffe(mgi)) + 0.1));
       }
       else if (opacity_case == 3)
       {
-        opcase3_normal = GREY_OP*rho_sum / opcase3_sum;
+        opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
         set_kappagrey(mgi, get_kappagrey(mgi) * opcase3_normal);
       }
       else if (opacity_case == 4)
@@ -1360,13 +1360,17 @@ static void abundances_3d_read(void)
   /// i.e. in total one integer and 30 floats.
   for (int n = 0; n < ngrid; n++)
   {
-    int mgi = cell[n].modelgridindex;
+    const int mgi = cell[n].modelgridindex;
 
     float dum[30];
     int cellnumber;
-    fscanf(abundance_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
+    fscanf(abundance_file,
+      "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g",
+           &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9],
+           &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19],
+           &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
 
-    if (n != cellnumber-1)
+    if (n != cellnumber - 1)
     {
       printout("[fatal] abundances_3d_read: grid cell mismatch ... abort\n");
       printout("[fatal] n %d, cellnumber %d\n",n,cellnumber);
@@ -1377,34 +1381,29 @@ static void abundances_3d_read(void)
     {
       ///now set the abundances (by mass) of included elements, i.e.
       ///read out the abundances specified in the atomic data file
-      int anumber = get_element(element);
-      float abundance = dum[anumber-1];
+      const int anumber = get_element(element);
+      const float abundance = dum[anumber - 1];
       modelgrid[mgi].composition[element].abundance = abundance;
 
       if (anumber == 28)
       {
-        set_fnistable(mgi,abundance - get_f56ni(mgi));
+        set_fnistable(mgi, abundance - get_f56ni(mgi));
         //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
       }
-      if (anumber == 27)
-        set_fcostable(mgi,abundance - get_fco(mgi));
-
-      if (anumber == 26)
-        set_ffestable(mgi,abundance - get_f52fe(mgi));
-
-      if (anumber == 25)
-      set_fmnstable(mgi,abundance);
-
-      if (anumber == 24)
-        set_fcrstable(mgi,abundance - get_f48cr(mgi));
-
-      if (anumber == 23)
-        set_fvstable(mgi,abundance);
-
-      if (anumber == 22)
-        set_ftistable(mgi,abundance);
-      }
+      else if (anumber == 27)
+        set_fcostable(mgi, abundance - get_fco(mgi));
+      else if (anumber == 26)
+        set_ffestable(mgi, abundance - get_f52fe(mgi));
+      else if (anumber == 25)
+        set_fmnstable(mgi, abundance);
+      else if (anumber == 24)
+        set_fcrstable(mgi, abundance - get_f48cr(mgi));
+      else if (anumber == 23)
+        set_fvstable(mgi, abundance);
+      else if (anumber == 22)
+        set_ftistable(mgi, abundance);
     }
+  }
 
   fclose(abundance_file);
 }
@@ -1429,7 +1428,11 @@ static void abundances_1d_read(void)
   {
     int cellnumber;
     float dum[30];
-    fscanf(abundance_file, "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
+    fscanf(abundance_file,
+           "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g",
+           &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9],
+           &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19],
+           &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
 
     float norm = 0.;
     for (int nn = 0; nn < 30; nn++)
@@ -1463,8 +1466,6 @@ static void read_grid_restart_data(void)
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
-    //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g %g %d\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy,&dummy,&idummy);
     int mgi_in;
     float T_R;
     float T_e;

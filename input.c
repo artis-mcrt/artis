@@ -38,7 +38,9 @@ static void read_phixs_data(void)
   }
 
   fscanf(phixsdata,"%d\n",&NPHIXSPOINTS);
+  assert(NPHIXSPOINTS > 0);
   fscanf(phixsdata,"%lg\n",&NPHIXSNUINCREMENT);
+  assert(NPHIXSNUINCREMENT > 0.);
   int Z;
   int upperion;
   int upperlevel;
@@ -46,6 +48,11 @@ static void read_phixs_data(void)
   int lowerlevel;
   while (fscanf(phixsdata,"%d %d %d %d %d\n",&Z,&upperion,&upperlevel,&lowerion,&lowerlevel) != EOF)
   {
+    assert(Z > 0);
+    assert(upperion >= 2);
+    assert(upperlevel > 0);
+    assert(lowerion >= 1);
+    assert(lowerlevel > 0);
     bool skip_this_phixs_table = false;
     //printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel, %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
     /// translate readin anumber to element index
@@ -1451,7 +1458,7 @@ static void read_1d_model(void)
   /* Now do the rest. */
   for (int n = 1; n < npts_model; n++)
   {
-    mass_in_shell = rho_model[n] * (pow(vout_model[n],3.) - pow(vout_model[n-1],3.)) * 4. * PI * pow(t_model,3.) / 3.;
+    mass_in_shell = rho_model[n] * (pow(vout_model[n], 3) - pow(vout_model[n - 1], 3)) * 4 * PI * pow(t_model, 3) / 3;
     mtot += mass_in_shell;
     mni56 += mass_in_shell * fni_model[n];
     mfe52 += mass_in_shell * f52fe_model[n];
@@ -1459,9 +1466,9 @@ static void read_1d_model(void)
     mfeg += mass_in_shell * ffegrp_model[n];
   }
 
-  printout("Total mass: %g. Ni mass: %g.  52Fe mass: %g.  48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
+  printout("Total mass: %g. 56Ni mass: %g. 52Fe mass: %g. 48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
 
-  vmax = vout_model[npts_model-1];
+  vmax = vout_model[npts_model - 1];
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
   printout("rmax %g\n", rmax);
@@ -1618,7 +1625,7 @@ static void read_3d_model(void)
     {
       mg_associated_cells[mgi] = 1;
       cell[n].modelgridindex = mgi;
-      helper=rho_model * pow( (t_model/tmin), 3.);
+      helper = rho_model * pow( (t_model/tmin), 3.);
       //printout("mgi %d, helper %g\n",mgi,helper);
       set_rhoinit(mgi,helper);
       //printout("mgi %d, rho_init %g\n",mgi,get_rhoinit(mgi));
