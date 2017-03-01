@@ -1,6 +1,7 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <unistd.h>
 #include <stdbool.h>
 
 #define DEBUG_ON
@@ -41,8 +42,6 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 // #define VPKT_ON
 
 #include "types.h"
-#include <unistd.h>
-#include <stdbool.h>
 
 
 #if !defined DO_EXSPEC && !defined MPI_ON

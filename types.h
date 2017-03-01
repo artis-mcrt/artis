@@ -7,7 +7,6 @@
 #include <math.h>
 #include <time.h>
 #include <gsl/gsl_rng.h>
-#include "sn3d.h"
 //#include <gsl/gsl_sf_expint.h>
 
 #define MGRID  125000 //125000 //1000000 //1000000//262144 //2100000 //125000 //1000000  /* Max number of grid cells.*/
