@@ -1465,16 +1465,20 @@ static void read_grid_restart_data(void)
   {
     //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy);
     //fscanf(inputtemperatures_file,"%d %g %g %g %g %g %g %g %g %d\n",&cellnumber,&T_R,&T_e,&W,&T_D,&W_D,&dummy,&dummy,&dummy,&idummy);
-    double T_R,T_e,W,T_J;
-    int mgi_in,thick;
-    fscanf(gridsave_file,"%d %lg %lg %lg %lg %d %lg", &mgi_in, &T_R, &T_e, &W, &T_J, &thick, &rpkt_emiss[mgi]);
+    int mgi_in;
+    float T_R;
+    float T_e;
+    float W;
+    float T_J;
+    fscanf(gridsave_file, "%d %g %g %g %g %hd %lg",
+           &mgi_in, &T_R, &T_e, &W, &T_J,
+           &modelgrid[mgi].thick, &rpkt_emiss[mgi]);
     if (mgi_in == mgi)
     {
       set_TR(mgi, T_R);
       set_Te(mgi, T_e);
       set_W(mgi, W);
       set_TJ(mgi, T_J);
-      modelgrid[mgi].thick = thick;
 
       #ifndef FORCE_LTE
         #if (!NO_LUT_PHOTOION)
@@ -1483,20 +1487,8 @@ static void read_grid_restart_data(void)
             const int nions = get_nions(element);
             for (int ion = 0; ion < nions; ion++)
             {
-              double Gamma;
-              fscanf(gridsave_file, "%lg ", &Gamma);
-              corrphotoionrenorm[mgi * nelements * maxion + element * maxion + ion] = Gamma;
-            }
-          }
-
-          for (int element = 0; element < nelements; element++)
-          {
-            const int nions = get_nions(element);
-            for (int ion = 0; ion < nions; ion++)
-            {
-              double Gamma;
-              fscanf(gridsave_file, "%lg ", &Gamma);
-              gammaestimator[mgi * nelements * maxion + element * maxion + ion] = Gamma;
+              const int estimindex = mgi * nelements * maxion + element * maxion + ion;
+              fscanf(gridsave_file, "%lg %lg ", &corrphotoionrenorm[estimindex], &gammaestimator[estimindex]);
             }
           }
         #endif
