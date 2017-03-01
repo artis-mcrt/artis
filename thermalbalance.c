@@ -297,12 +297,12 @@ void calculate_heating_rates(int modelgridindex)
   //int nlevels_lowerion = 0;
   for (int element = 0; element < nelements; element++)
   {
-    mastate[tid].element = element;
+    // mastate[tid].element = element;
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       #ifdef DIRECT_COL_HEAT
-      mastate[tid].ion = ion;
+      // mastate[tid].ion = ion;
       const int nlevels = get_nlevels(element,ion);
       const int nbflevels = get_bfcontinua(element,ion);
 //      if (ion > 0) nlevels_lowerion = get_nlevels(element,ion-1);
