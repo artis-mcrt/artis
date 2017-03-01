@@ -29,11 +29,11 @@ static bool radfield_initialized = false;
 static const double T_R_min = MINTEMP;
 static const double T_R_max = MAXTEMP * 2;
 
-typedef enum
-{
-  FIT_DILUTED_BLACKBODY = 0,
-  FIT_CONSTANT = 1,
-} enum_bin_fit_type;
+// typedef enum
+// {
+//   FIT_DILUTED_BLACKBODY = 0,
+//   FIT_CONSTANT = 1,
+// } enum_bin_fit_type;
 
 struct radfieldbin_previous
 {
