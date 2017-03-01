@@ -435,32 +435,30 @@ double get_gam_freq(const LIST *restrict line_list, int n)
     return 0.0;
   }
   // returns the frequency of line n
-  else if (line_list->type[n] == NI_GAM_LINE_ID)
+  switch (line_list->type[n])
   {
-    freq = nickel_spec.energy[line_list->index[n]] / H;
-  }
-  else if (line_list->type[n] == CO_GAM_LINE_ID)
-  {
-    freq = cobalt_spec.energy[line_list->index[n]] / H;
-  }
-  else if (line_list->type[n] == FAKE_GAM_LINE_ID)
-  {
-    freq = fakeg_spec.energy[line_list->index[n]] / H;
-  }
-  else if (line_list->type[n] == CR48_GAM_LINE_ID)
-  {
-    freq = cr48_spec.energy[line_list->index[n]] / H;
-  }
-  else if (line_list->type[n] == V48_GAM_LINE_ID)
-  {
-    freq = v48_spec.energy[line_list->index[n]] / H;
-  }
-  else
-  {
-    printout("Unknown line. %d Abort.\n", n);
-    printout("line_list->type[n] %d line_list->index[n] %d\n", line_list->type[n], line_list->index[n]);
-    printout(" %d %d \n", gam_line_list.type[n], gam_line_list.index[n]);
-    abort();
+    case NI_GAM_LINE_ID:
+      freq = nickel_spec.energy[line_list->index[n]] / H;
+      break;
+    case CO_GAM_LINE_ID:
+      freq = cobalt_spec.energy[line_list->index[n]] / H;
+      break;
+    case FAKE_GAM_LINE_ID:
+      freq = fakeg_spec.energy[line_list->index[n]] / H;
+      break;
+    case CR48_GAM_LINE_ID:
+      freq = cr48_spec.energy[line_list->index[n]] / H;
+      break;
+    case V48_GAM_LINE_ID:
+      freq = v48_spec.energy[line_list->index[n]] / H;
+      break;
+    default:
+    {
+      printout("Unknown line. %d Abort.\n", n);
+      printout("line_list->type[n] %d line_list->index[n] %d\n", line_list->type[n], line_list->index[n]);
+      printout(" %d %d \n", gam_line_list.type[n], gam_line_list.index[n]);
+      abort();
+    }
   }
 
   return freq;
