@@ -1470,6 +1470,7 @@ void write_grid_restart_data(void)
       fprintf(gridsave_file,"%d %g %g %g %g %d %lg",n,0.,0.,0.,0.,0,0.);
 
       #ifndef FORCE_LTE
+        #if (!NO_LUT_PHOTOION)
         for (int element = 0; element < nelements; element++)
         {
           const int nions = get_nions(element);
@@ -1486,6 +1487,7 @@ void write_grid_restart_data(void)
             fprintf(gridsave_file,"%g ",0.);
           }
         }
+        #endif
       #endif
 
     }
