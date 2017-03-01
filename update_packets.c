@@ -60,7 +60,7 @@ void update_packets(int nts)
     //copyin(debuglevel,nuJ,J)
   #endif
   {
-    time_t time_of_last_packet_printout = 0;
+    // time_t time_of_last_packet_printout = 0;
     #ifdef _OPENMP
     #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
     #endif
@@ -69,7 +69,7 @@ void update_packets(int nts)
       // if ((time(NULL) - time_of_last_packet_printout > 1) || n == npkts - 1)
       if ((n % 10000 == 0) || n == npkts - 1)
       {
-        time_of_last_packet_printout = time(NULL);
+        // time_of_last_packet_printout = time(NULL);
         printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
       }
 
