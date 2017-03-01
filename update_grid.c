@@ -144,11 +144,11 @@ static void write_to_estimators_file(int n, int timestep)
 
     for (int element = 0; element < nelements; element++)
     {
-      fprintf(estimators_file, "populations Z=%2d: ", get_element(element));
+      fprintf(estimators_file, "populations Z=%2d ", get_element(element));
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)
       {
-        fprintf(estimators_file, " %d: %8.2e", get_ionstage(element, ion), ionstagepop(n, element, ion));
+        fprintf(estimators_file, " %d: %9.3e", get_ionstage(element, ion), ionstagepop(n, element, ion));
         if (ion < nions - 1)
           fprintf(estimators_file, ",");
       }
@@ -188,8 +188,8 @@ static void write_to_estimators_file(int n, int timestep)
   }
   else
   {
-    ///Treat modelgrid cells which are not represented in the simulation grid
-    fprintf(estimators_file, "timestep %d modelgridindex %d EMPTY\n", timestep, n);
+    // modelgrid cells which are not represented in the simulation grid
+    fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n", timestep, n);
   }
 
   fflush(estimators_file);
@@ -1434,7 +1434,7 @@ void write_grid_restart_data(void)
     }
     else
     {
-      fprintf(gridsave_file, "%d %g %g %g %g %hd %lg", mgi, 0., 0., 0., 0., 0, 0.);
+      fprintf(gridsave_file, "%d %g %g %g %g %d %lg", mgi, 0., 0., 0., 0., 0, 0.);
     }
 
     #ifndef FORCE_LTE

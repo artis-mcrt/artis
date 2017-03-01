@@ -50,7 +50,6 @@ static void read_phixs_data(void)
   {
     assert(Z > 0);
     assert(upperion >= 2);
-    assert(upperlevel > 0);
     assert(lowerion >= 1);
     assert(lowerlevel > 0);
     bool skip_this_phixs_table = false;
@@ -58,7 +57,7 @@ static void read_phixs_data(void)
     /// translate readin anumber to element index
     int element = get_elementindex(Z);
 
-    /// store only photoionization crosssections for elements which are part of the current model atom
+    /// store only photoionization crosssections for elements that are part of the current model atom
     if (element >= 0)
     {
       /// translate readin ionstages to ion indices
@@ -68,7 +67,7 @@ static void read_phixs_data(void)
       upperlevel--;
       lowerion -= lowermost_ionstage;
       lowerlevel--;
-      /// store only photoionization crosssections for ions which are part of the current model atom
+      /// store only photoionization crosssections for ions that are part of the current model atom
       /// for limited model atoms we further have to make sure that the lowerlevel is inside the limited model atom
       if (lowerion >= 0 && lowerlevel < get_nlevels(element,lowerion) && upperion < get_nions(element))
       {
@@ -97,13 +96,21 @@ static void read_phixs_data(void)
                 printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
                 abort();
               }
+              double probability_sum = 0.;
               for (int i = 0; i < in_nphixstargets; i++)
               {
                 double phixstargetprobability;
                 int in_upperlevel;
                 fscanf(phixsdata,"%d %lg\n",&in_upperlevel,&phixstargetprobability);
+                assert(in_upperlevel > 0);
+                assert(phixstargetprobability > 0);
                 elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = in_upperlevel - 1;//subtract one to get index
                 elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].probability = phixstargetprobability;
+                probability_sum += phixstargetprobability;
+              }
+              if (fabs(probability_sum - 1.0) > 0.01)
+              {
+                printout("WARNING: photoionisation table for Z=%d ionstage %d has probabilities that sum to %g", Z, get_ionstage(element, lowerion), probability_sum);
               }
               elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
             }
