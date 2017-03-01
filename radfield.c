@@ -402,9 +402,6 @@ void radfield_close_file(void)
         free(radfieldbin_previous[modelgridindex]);
       }
     }
-    free(radfieldbin_nu_upper);
-
-    //free(radfieldbins);
   }
 }
 
