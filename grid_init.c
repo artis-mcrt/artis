@@ -1489,7 +1489,7 @@ static void read_grid_restart_data(void)
             for (int ion = 0; ion < nions; ion++)
             {
               const int estimindex = mgi * nelements * maxion + element * maxion + ion;
-              fscanf(gridsave_file, "%lg %lg ", &corrphotoionrenorm[estimindex], &gammaestimator[estimindex]);
+              fscanf(gridsave_file, " %lg %lg", &corrphotoionrenorm[estimindex], &gammaestimator[estimindex]);
             }
           }
         #endif

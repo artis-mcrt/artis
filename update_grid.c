@@ -1434,7 +1434,7 @@ void write_grid_restart_data(void)
     }
     else
     {
-      fprintf(gridsave_file, "%d %g %g %g %g %d %lg", mgi, 0., 0., 0., 0., 0, 0.);
+      fprintf(gridsave_file, "%d %g %g %g %g %hd %lg", mgi, 0., 0., 0., 0., 0, 0.);
     }
 
     #ifndef FORCE_LTE
@@ -1445,7 +1445,7 @@ void write_grid_restart_data(void)
           for (int ion = 0; ion < nions; ion++)
           {
             const int estimindex = mgi * nelements * maxion + element * maxion + ion;
-            fprintf(gridsave_file, "%lg %lg ",
+            fprintf(gridsave_file, " %lg %lg",
                     (nonemptycell ? corrphotoionrenorm[estimindex] : 0.),
                     (nonemptycell ? gammaestimator[estimindex] : 0.));
           }
