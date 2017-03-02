@@ -4,35 +4,31 @@
 
 static void identify_gam_line(int ele_type, int ele_index, double *eret, double *pret)
 {
-  if (ele_type == NI_GAM_LINE_ID)
+  switch (ele_type)
   {
-    *eret = nickel_spec.energy[ele_index];
-    *pret = nickel_spec.probability[ele_index];
-  }
-  else if (ele_type == CO_GAM_LINE_ID)
-  {
-    *eret = cobalt_spec.energy[ele_index];
-    *pret = cobalt_spec.probability[ele_index];
-  }
-  else if (ele_type == FAKE_GAM_LINE_ID)
-  {
-    *eret = fakeg_spec.energy[ele_index];
-    *pret = fakeg_spec.probability[ele_index];
-  }
-  else if (ele_type == CR48_GAM_LINE_ID)
-  {
-    *eret = cr48_spec.energy[ele_index];
-    *pret = cr48_spec.probability[ele_index];
-  }
-  else if (ele_type == V48_GAM_LINE_ID)
-  {
-    *eret = v48_spec.energy[ele_index];
-    *pret = v48_spec.probability[ele_index];
-  }
-  else
-  {
-    printout("Identify_gam_line failed. Abort.\n");
-    abort();
+    case NI_GAM_LINE_ID:
+      *eret = nickel_spec.energy[ele_index];
+      *pret = nickel_spec.probability[ele_index];
+      break;
+    case CO_GAM_LINE_ID:
+      *eret = cobalt_spec.energy[ele_index];
+      *pret = cobalt_spec.probability[ele_index];
+      break;
+    case FAKE_GAM_LINE_ID:
+      *eret = fakeg_spec.energy[ele_index];
+      *pret = fakeg_spec.probability[ele_index];
+      break;
+    case CR48_GAM_LINE_ID:
+      *eret = cr48_spec.energy[ele_index];
+      *pret = cr48_spec.probability[ele_index];
+      break;
+    case V48_GAM_LINE_ID:
+      *eret = v48_spec.energy[ele_index];
+      *pret = v48_spec.probability[ele_index];
+      break;
+    default:
+      printout("Identify_gam_line failed. Abort.\n");
+      abort();
   }
 }
 
@@ -48,7 +44,7 @@ void get_gam_ll(void)
   for (int i = 0; i < fakeg_spec.nlines; i++)
   {
     fakeg_spec.energy[i] = ((nusyn_min) + deltanu * (i-1)) * H;
-    fakeg_spec.probability[i]= 0.0;
+    fakeg_spec.probability[i] = 0.0;
   }
 
   /* Now do the sorting. */
