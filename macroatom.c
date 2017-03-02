@@ -188,7 +188,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
           epsilon_trans = epsilon_current - epsilon_target;
           R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
           //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
-          C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
+          C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
           rad_recomb += R * epsilon_trans;
           col_recomb += C * epsilon_trans;
           internal_down_lower += (R + C) * epsilon_target;
@@ -670,7 +670,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
         const double epsilon_target = epsilon(element,ion-1,lower);
         epsilon_trans = epsilon_current - epsilon_target;
         R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
-        C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
+        C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
         rate += (R + C) * epsilon_target;
         if (zrand*internal_down_lower < rate) break;
       }
@@ -780,7 +780,7 @@ double do_ma(PKT *restrict pkt_ptr, const double t1, const double t2, const int 
             const double epsilon_target = epsilon(element,ion-1,lower);
             epsilon_trans = epsilon_current - epsilon_target;
             R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
-            C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
+            C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
             printout("[debug]    recombination to ion %d, level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",ion-1,lower,epsilon_target,epsilon_trans,R,C);
           }
         }
@@ -1175,11 +1175,9 @@ double col_excitation_ratecoeff(float T_e, float nne, int lineindex, double epsi
 }
 
 
-double col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower, double epsilon_trans)
+double col_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper, int lower, double epsilon_trans)
 {
-  const float T_e = get_Te(modelgridindex);
   const double fac1 = epsilon_trans / KB / T_e;
-  const float nne = get_nne(modelgridindex);
   const int ionstage = get_ionstage(element,upperion);
   const float sigma_bf_all_targets = elements[element].ions[upperion-1].levels[lower].photoion_xs[0];
 
