@@ -293,38 +293,41 @@ static inline
 int radfield_select_bin(double nu)
 {
   // linear search one by one until found
-  if (nu < radfield_get_bin_nu_lower(0))
-    return -1; // out of range, nu lower than lowest bin
-
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  if (nu >= radfieldbin_nu_upper[RADFIELDBINCOUNT - 1])
+    return -1; // out of range, nu higher than highest bin
+  else if (nu < radfield_get_bin_nu_lower(0))
+    return -2; // out of range, nu lower than lowest bin
+  else
   {
-    if (radfieldbin_nu_upper[binindex] > nu)
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      return binindex;
+      if (radfieldbin_nu_upper[binindex] > nu)
+      {
+        return binindex;
+      }
     }
-  }
-  return -1; // out of range, nu higher than higher bin
 
-  // binary search for bin with nu_lower <= nu > nu_upper
-  // int low = 0;
-  // int high = RADFIELDBINCOUNT - 1;
-  // while (low <= high)
-  // {
-  //   int mid = low + ((high - low) / 2);
-  //   if (radfieldbin_nu_upper[mid] <= nu)
-  //   {
-  //     low = mid + 1;
-  //   }
-  //   else if (radfield_get_bin_nu_lower(mid) > nu)
-  //   {
-  //     high = mid - 1;
-  //   }
-  //   else
-  //   {
-  //     return mid;
-  //   }
-  //  }
-  //  return -1;
+    // binary search for bin with nu_lower <= nu > nu_upper
+    // int low = 0;
+    // int high = RADFIELDBINCOUNT - 1;
+    // while (low <= high)
+    // {
+    //   int mid = low + ((high - low) / 2);
+    //   if (radfieldbin_nu_upper[mid] <= nu)
+    //   {
+    //     low = mid + 1;
+    //   }
+    //   else if (radfield_get_bin_nu_lower(mid) > nu)
+    //   {
+    //     high = mid - 1;
+    //   }
+    //   else
+    //   {
+    //     return mid;
+    //   }
+    //  }
+    assert(false);
+  }
 }
 
 
