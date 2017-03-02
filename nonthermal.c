@@ -829,8 +829,7 @@ static double calculate_nt_frac_excitation(int modelgridindex, int element, int 
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
 
       get_xs_excitation_vector(xs_excitation_epsilontrans_vec, lineindex, epsilon_trans);
-      gsl_vector_scale(xs_excitation_epsilontrans_vec, epsilon_trans / EV);
-      gsl_vector_add(xs_excitation_vec_sum_alltrans, xs_excitation_epsilontrans_vec);
+      gsl_blas_daxpy(epsilon_trans / EV, xs_excitation_epsilontrans_vec, xs_excitation_vec_sum_alltrans);
     }
   }
 
@@ -1117,20 +1116,16 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, int element, int ion, 
         *E_0 = epsilon_trans / EV;
 
       get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans);
-      gsl_vector_scale(vec_xs_excitation_nnion_deltae, nnion * DELTA_E);
+      gsl_blas_dscal(nnion * DELTA_E, vec_xs_excitation_nnion_deltae);
 
       for (int i = 0; i < SFPTS; i++)
       {
         const double en = gsl_vector_get(envec, i);
         const int stopindex = get_energyindex_ev(en + epsilon_trans_ev);
 
-        for (int j = i; j <= stopindex; j++)
-        {
-          // const double endash = gsl_vector_get(envec, j);
-          // *gsl_matrix_ptr(sfmatrix, i, j) += nnion * xs_excitation(lineindex, epsilon_trans, endash * EV) * DELTA_E;
-
-          *gsl_matrix_ptr(sfmatrix, i, j) += gsl_vector_get(vec_xs_excitation_nnion_deltae, j);
-        }
+        gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i + 1);
+        gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnion_deltae, i, stopindex - i + 1);
+        gsl_vector_add(&a.vector, &b.vector);
       }
     }
   }
@@ -1169,18 +1164,14 @@ static void sfmatrix_add_ionisation(gsl_matrix *sfmatrix, const int Z, const int
             const double epsilon_upper = (endash + ionpot_ev) / 2;
             double epsilon_lower = endash - en;
             // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
-            *gsl_matrix_ptr(sfmatrix, i, j) += prefactor * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * DELTA_E;
+            double ij_contribution = prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
 
             if (j >= secondintegralstartindex)
             {
               epsilon_lower = en + ionpot_ev;
-              // double deltaendash;
-              // if (j == secondintegralstartindex)
-              //   deltaendash = endash + DELTA_E - (2 * en + ionpot_ev);
-              // else
-              //   deltaendash = DELTA_E;
-              *gsl_matrix_ptr(sfmatrix, i, j) -= prefactor * (atan((epsilon_upper - ionpot_ev)/J) - atan((epsilon_lower - ionpot_ev)/J)) * DELTA_E;
+              ij_contribution -= prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
             }
+            *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
         }
       }
       // break; // consider only the valence shell
@@ -1253,6 +1244,7 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
   }
 }
 
+
 void nt_solve_spencerfano(int modelgridindex, int timestep)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
@@ -1271,11 +1263,9 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     {
       printout("Near-zero non-thermal deposition in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
 
-      // if (STORE_NT_SPECTRUM)
+      // if (!STORE_NT_SPECTRUM)
       // {
       //   nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
-      //   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
-      //   gsl_vector_set_zero(&yvecview.vector);
       // }
 
       // nt_write_to_file(modelgridindex, timestep);
@@ -1304,11 +1294,9 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
     *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
 
-    double source_integral_to_emax = 0.;
-    for (int j = i; j < SFPTS; j++) // integral of source function from en to EMAX
-    {
-      source_integral_to_emax += gsl_vector_get(sourcevec, j) * DELTA_E;
-    }
+    gsl_vector_const_view source_e_to_emax = gsl_vector_const_subvector(sourcevec, i, SFPTS - i);
+    const double source_integral_to_emax = gsl_blas_dasum(&source_e_to_emax.vector) * DELTA_E;
+
     gsl_vector_set(rhsvec, i, source_integral_to_emax);
   }
   // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at EMAX
