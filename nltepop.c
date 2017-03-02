@@ -552,7 +552,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
             // recombination
             const double R_recomb = rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
-            const double C_recomb = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
+            const double C_recomb = col_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, epsilon_trans);
 
             const double s_renorm_upper = ((!is_nlte(element, ion + 1, upper)) && (upper != 0)) ?
               superlevel_boltzmann(modelgridindex, element, ion + 1, upper) / superlevel_partfunc[ion + 1] : 1.0;
@@ -1030,7 +1030,7 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
             R = rad_recombination_ratecoeff(modelgridindex, element, ion+1, upper, level);
             //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
             //printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
-            C = col_recombination_ratecoeff(modelgridindex,element,ion+1,upper,level,epsilon_trans);
+            C = col_recombination_ratecoeff(T_e, nne,element,ion+1,upper,level,epsilon_trans);
             //C=C*1.e-10;
 
             double upper_renorm = calculate_exclevelpop(modelgridindex,element,ion+1,upper) / upperion_partition;
