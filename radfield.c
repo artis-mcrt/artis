@@ -520,7 +520,7 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)) // && radfieldbins[modelgridindex] != NULL
+  if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {
     const int binindex = radfield_select_bin(nu);
     if (binindex >= 0)
@@ -1204,4 +1204,47 @@ void radfield_read_restart_data(FILE *gridsave_file)
       }
     }
   }
+}
+
+inline
+int radfield_integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr)
+{
+  if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
+  {
+    double *pts = malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
+    int binindex_a = radfield_select_bin(nu_a);
+    int binindex_b = radfield_select_bin(nu_b);
+    int npts = 0;
+    pts[npts++] = nu_a;
+    if (binindex_a == binindex_b) // both higher, both lower, or match the same bin
+    {
+      // region doesn't contain any bins
+      pts[npts++] = nu_b;
+    }
+    else
+    {
+      if (binindex_a < 0) // a is below the first bin
+      {
+        binindex_a = 0;
+        pts[npts++] = radfield_get_bin_nu_lower(0);
+      }
+
+      const int maxbinplusone = (binindex_b < 0) ? RADFIELDBINCOUNT : binindex_b;
+
+      for (int binindex = binindex_a; binindex < maxbinplusone; binindex++)
+        pts[npts++] = radfield_get_bin_nu_upper(binindex);
+
+      pts[npts++] = nu_b;
+    }
+    // for (int e = 0; e < npts; e++)
+    // {
+    //   printout("radfield_integrate singular point number %d at nu %g, (nu_a %g, nu_b %g), radfield_low %g radfield_high %g\n",
+    //            e, pts[e], nu_a, nu_b, radfield(pts[e] * 0.9999, 0), radfield(pts[e] * 1.0001, 0));
+    // }
+    const int status = gsl_integration_qagp(f, pts, npts, epsabs, epsrel, limit, workspace, result, abserr);
+    free(pts);
+    return status;
+  }
+  else
+    return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
 }

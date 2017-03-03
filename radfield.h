@@ -2,6 +2,7 @@
 #define RADFIELD_H
 
 #include "sn3d.h"
+#include <gsl/gsl_integration.h>
 
 void radfield_zero_estimators(int modelgridindex);
 void radfield_init(int my_rank);
@@ -20,6 +21,9 @@ void radfield_reduce_estimators(void);
 void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo);
 void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);
+int radfield_integrate(
+  const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
+  size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);
 
 
 inline double radfield_dbb(double nu, float T, float W)
