@@ -313,7 +313,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions-1; ion++)
           {
-            double trial = fabs(solve_nlte_pops(element, ion, n, nts) - 1);
+            double trial = fabs(solve_nlte_pops_ion(element, ion, n, nts) - 1);
 
             if (trial > nlte_test)
               nlte_test = trial;
