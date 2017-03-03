@@ -22,11 +22,12 @@ int get_nlte_vector_index(const int element, const int ion, const int level)
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into modelgrid[modelgridindex].nlte_pops that contains all elements
 {
-  const int gs_index = (
-    elements[element].ions[ion].first_nlte - elements[element].ions[0].first_nlte + ion);
+  // have to convert from nlte_pops index to nlte_vector index
+  // the difference is that nlte vectors are apply to a single element, and include ground states
+  const int gs_index = elements[element].ions[ion].first_nlte - elements[element].ions[0].first_nlte + ion;
 
-  const int level_index = gs_index + (
-    is_nlte(element, ion, level) ? level : get_nlevels_nlte(element, ion) + 1);
+  // add in level or superlevel number
+  const int level_index = gs_index + (is_nlte(element, ion, level) ? level : (get_nlevels_nlte(element, ion) + 1));
 
   return level_index;
 }
@@ -34,6 +35,7 @@ int get_nlte_vector_index(const int element, const int ion, const int level)
 
 static void get_ion_level_of_nlte_vector_index(const int index, const int element, int *ion, int *level)
 {
+  // this could easily be optimized if need be
   for (int dion = 0; dion < get_nions(element); dion++)
   {
     for (int dlevel = 0; dlevel < get_nlevels(element,dion); dlevel++)
@@ -52,8 +54,8 @@ static void get_ion_level_of_nlte_vector_index(const int index, const int elemen
 static void eliminate_nlte_matrix_rowcol(
   const int index,
   const int gs_index,
-  gsl_matrix *const rate_matrix,
-  gsl_vector *const balance_vector)
+  gsl_matrix *restrict rate_matrix,
+  gsl_vector *restrict balance_vector)
 {
   const gsl_matrix rate_matrix_var = *rate_matrix;
   const int colcount = rate_matrix_var.size2;
@@ -72,9 +74,9 @@ static void eliminate_nlte_matrix_rowcol(
 
 static void filter_nlte_matrix(
   const int element,
-  gsl_matrix *const rate_matrix,
-  gsl_vector *const balance_vector,
-  const gsl_vector *pop_norm_factor_vec)
+  gsl_matrix *restrict rate_matrix,
+  gsl_vector *restrict balance_vector,
+  const gsl_vector *restrict pop_norm_factor_vec)
 // find rows and columns that barely interaction with other levels, and effectively
 // removing them by zeroing their interactions and setting their departure
 // coeff to 1.0
@@ -124,7 +126,8 @@ static void filter_nlte_matrix(
 }
 
 
-static double get_total_rate_in(const int index_to, const gsl_matrix *rate_matrix, const gsl_vector *popvec)
+static double get_total_rate_in(
+  const int index_to, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec)
 {
   const gsl_matrix rate_matrix_var = *rate_matrix;
   gsl_vector *rates_in_vec = gsl_vector_alloc(rate_matrix_var.size1);
@@ -138,7 +141,8 @@ static double get_total_rate_in(const int index_to, const gsl_matrix *rate_matri
 }
 
 
-static double get_total_rate_out(const int index_from, const gsl_matrix *rate_matrix, const gsl_vector *popvec)
+static double get_total_rate_out(
+  const int index_from, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec)
 {
   const gsl_matrix rate_matrix_var = *rate_matrix;
   gsl_vector *rates_out_vec = gsl_vector_alloc(rate_matrix_var.size2);
@@ -153,8 +157,8 @@ static double get_total_rate_out(const int index_from, const gsl_matrix *rate_ma
 
 
 static void print_level_rates(
-  const int modelgridindex, const int element, const int selected_ion, const int selected_level,
-  const gsl_vector *popvec,
+  const int element, const int selected_ion, const int selected_level,
+  const gsl_vector *restrict popvec,
   const gsl_matrix *rate_matrix_rad_bb,
   const gsl_matrix *rate_matrix_coll_bb,
   const gsl_matrix *rate_matrix_rad_bf,
@@ -479,11 +483,11 @@ static void nltepop_matrix_normalise(
 
 
 static void nltepop_matrix_solve(
-  const gsl_matrix *rate_matrix,
+  const int element,
+  const gsl_matrix *restrict rate_matrix,
   const gsl_vector *restrict balance_vector,
   gsl_vector *restrict popvec,
-  const gsl_vector *restrict pop_normfactor_vec,
-  const int element)
+  const gsl_vector *restrict pop_normfactor_vec)
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
 {
@@ -601,7 +605,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   printout("Solving for NLTE populations in cell %d at timestep %d for element Z=%d\n",
            modelgridindex, timestep, atomic_number);
 
-  // LTE test
+  // LTE test, make sure binned radfield is off
   //set_TR(modelgridindex,3000);
   //set_W(modelgridindex,1.0);
   //printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
@@ -713,7 +717,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   gsl_vector *popvec = gsl_vector_alloc(nlte_dimension); // the true population densities
 
-  nltepop_matrix_solve(rate_matrix, balance_vector, popvec, pop_norm_factor_vec, element);
+  nltepop_matrix_solve(element, rate_matrix, balance_vector, popvec, pop_norm_factor_vec);
 
   // double ion_populations[nions];
   for (int ion = 0; ion < nions; ion++)
@@ -808,13 +812,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   {
     if (atomic_number == 26 && timestep % 20 == 0)
     {
-      // print_level_rates(modelgridindex, element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      // print_level_rates(modelgridindex, element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 1, 35, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 1, 75, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(modelgridindex, element, 1, 76, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      // print_level_rates(modelgridindex, element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      // print_level_rates(modelgridindex, element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, 1, 35, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, 1, 75, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, 1, 76, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      // print_level_rates(element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     gsl_matrix_free(rate_matrix_rad_bb);
