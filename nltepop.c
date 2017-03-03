@@ -297,9 +297,11 @@ static int get_element_nlte_dimension(
 
 
 static void nltepop_matrix_add_boundbound(
-  const int modelgridindex, const float T_e, const float nne, const int element, const int ion,
-  const double t_mid, double *restrict s_renorm_all, gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb)
+  const int modelgridindex, const int element, const int ion,
+  const double t_mid, double *restrict s_renorm, gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb)
 {
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++)
   {
@@ -313,8 +315,8 @@ static void nltepop_matrix_add_boundbound(
       const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
       const int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
 
-      const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid) * s_renorm_all[level];
-      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * s_renorm_all[level];
+      const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid) * s_renorm[level];
+      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * s_renorm[level];
 
       const int upper_index = level_index;
       const int lower_index = get_nlte_vector_index(element,ion,lower);
@@ -335,8 +337,8 @@ static void nltepop_matrix_add_boundbound(
       const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
 
-      const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm_all[level];
-      const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm_all[level];
+      const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
+      const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
 
       // if ((element == 0) && (ion == 1) && ((level <= 5) || (level == 35)) && (upper >= 74) && (upper <= 77))
       // {
@@ -354,6 +356,83 @@ static void nltepop_matrix_add_boundbound(
       if ((R < 0) || (C < 0))
         printout("  WARNING: Negative excitation rate from ion %d level %d to level %d\n", get_ionstage(element, ion), level, upper);
     }
+  }
+}
+
+
+static void nltepop_matrix_add_ionisation(
+  const int modelgridindex, const int element, const int ion,
+  double *restrict s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf)
+{
+  assert(ion + 1 < get_nions(element)); // can't ionise the top ion
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const int nionisinglevels = get_bfcontinua(element, ion);
+  for (int level = 0; level < nionisinglevels; level++)
+  {
+    const int level_index = get_nlte_vector_index(element, ion, level);
+
+    // thermal collisional ionization, photoionisation and recombination processes
+    const double epsilon_current = epsilon(element, ion, level);
+    const int lower_index = level_index;
+
+    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
+    {
+      const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+      const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
+      const double epsilon_trans = epsilon(element, ion + 1 ,upper) - epsilon_current;
+
+      // ionization
+      const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+      const double C_ionisation = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+
+      *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, lower_index) -= R_ionisation * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, lower_index) += R_ionisation * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, lower_index) -= C_ionisation * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index) += C_ionisation * s_renorm[level];
+
+      if ((R_ionisation < 0) || (C_ionisation < 0))
+        printout("  WARNING: Negative ionization rate from ion_stage %d level %d phixstargetindex %d\n",
+                 get_ionstage(element, ion), level, phixstargetindex);
+
+      // recombination
+      const double R_recomb = rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
+      const double C_recomb = col_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, epsilon_trans);
+
+      *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
+      *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm[upper];
+      *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm[upper];
+      *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm[upper];
+
+      if ((R_recomb < 0) || (C_recomb < 0))
+        printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
+                 get_ionstage(element, ion), level, phixstargetindex);
+    }
+  }
+}
+
+
+static void nltepop_matrix_add_nt_ionisation(
+  const int modelgridindex, const int element, const int ion,
+  const double *restrict s_renorm, gsl_matrix *restrict rate_matrix_ntcoll_bf)
+{
+  // collisional ionization by non-thermal electrons
+
+  assert(ion + 1 < get_nions(element)); // can't ionise the top ion
+  const double Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
+  if (Y_nt < 0.)
+  {
+    printout("  WARNING: Negative NT_ionization rate from ion_stage %d\n", get_ionstage(element, ion));
+  }
+  const int upper_groundstate_index = get_nlte_vector_index(element, ion + 1, 0);
+
+  const int nlevels = get_nlevels(element, ion);
+  for (int level = 0; level < nlevels; level++)
+  {
+    const int lower_index = get_nlte_vector_index(element, ion, level);
+
+    *gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index) -= Y_nt * s_renorm[level];
+    *gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_groundstate_index, lower_index) += Y_nt * s_renorm[level];
   }
 }
 
@@ -527,8 +606,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   //set_W(modelgridindex,1.0);
   //printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
 
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
   double superlevel_partfunc[nions]; // space is allocated for every ion, even if it does not have a superlevel
   const int nlte_dimension = get_element_nlte_dimension(modelgridindex, element, nions, superlevel_partfunc);
 
@@ -566,94 +643,29 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     abort();
   }
 
-  printout("  Adding rates for ion stages: ");
+  printout("  Adding rates for ion stages:");
   for (int ion = 0; ion < nions; ion++)
   {
     const int ionstage = get_ionstage(element, ion);
     printout(" %d", ionstage);
 
-    double Y_nt = 0.; // rate coeff for collisional ionization by non-thermal electrons
-    int upper_groundstate_index = -1;
-    if (NT_ON && ion < nions - 1)
-    {
-      upper_groundstate_index = get_nlte_vector_index(element, ion + 1, 0);
-      Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
-      if (Y_nt < 0.)
-      {
-        printout("  WARNING: Negative NT_ionization rate from ion_stage %d\n", ionstage);
-      }
-    }
-
     const int nlevels = get_nlevels(element, ion);
-    double s_renorm_all[nlevels];
-
+    double s_renorm[nlevels];
     for (int level = 0; level < nlevels; level++)
     {
-      s_renorm_all[level] = ((!is_nlte(element, ion, level)) && (level != 0)) ?
+      s_renorm[level] = ((!is_nlte(element, ion, level)) && (level != 0)) ?
         superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion] : 1.0;
+    }
 
-      const double s_renorm = s_renorm_all[level];
+    nltepop_matrix_add_boundbound(modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb);
 
-      const int level_index = get_nlte_vector_index(element, ion, level);
-
-      // collisional ionization by non-thermal electrons
-      if (Y_nt > 0.)
-      {
-        const int lower_index = level_index;
-
-        *gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index) -= Y_nt * s_renorm;
-        *gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_groundstate_index, lower_index) += Y_nt * s_renorm;
-      }
-
-      // thermal collisional ionization, photoionisation and recombination processes
-      const int nionisinglevels = get_bfcontinua(element, ion);
-      if ((ion < nions - 1) && (level < nionisinglevels))
-      {
-        const double epsilon_current = epsilon(element, ion, level);
-        const int lower_index = level_index;
-
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
-        {
-          const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-          const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
-          const double epsilon_trans = epsilon(element, ion + 1 ,upper) - epsilon_current;
-
-          // ionization
-          const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-          const double C_ionisation = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
-
-          *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, lower_index) -= R_ionisation * s_renorm;
-          *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, lower_index) += R_ionisation * s_renorm;
-          *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, lower_index) -= C_ionisation * s_renorm;
-          *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index) += C_ionisation * s_renorm;
-
-          if ((R_ionisation < 0) || (C_ionisation < 0))
-            printout("  WARNING: Negative ionization rate from ion_stage %d level %d phixstargetindex %d\n",
-                     get_ionstage(element, ion), level, phixstargetindex);
-
-          // recombination
-          const double R_recomb = rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
-          const double C_recomb = col_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, epsilon_trans);
-
-          const double s_renorm_upper = ((!is_nlte(element, ion + 1, upper)) && (upper != 0)) ?
-            superlevel_boltzmann(modelgridindex, element, ion + 1, upper) / superlevel_partfunc[ion + 1] : 1.0;
-
-          *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm_upper;
-          *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm_upper;
-          *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm_upper;
-          *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm_upper;
-
-          if ((R_recomb < 0) || (C_recomb < 0))
-            printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
-                     get_ionstage(element, ion), level, phixstargetindex);
-        }
-
-      } // if (level is an ionising level)
-
-    } // level loop
-
-    nltepop_matrix_add_boundbound(modelgridindex, T_e, nne, element, ion, t_mid, s_renorm_all, rate_matrix_rad_bb, rate_matrix_coll_bb);
-  } // ion loop
+    if (ion < nions - 1)
+    {
+      nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf);
+      if (NT_ON)
+        nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_ntcoll_bf);
+    }
+  }
   printout("\n");
 
   if (individual_process_matricies)
@@ -824,32 +836,27 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
 {
-  int lower, level_use, lower_use, upper_use;
-
-  double *rate_matrix;
-  double *balance_vector;
-
-  int ionisinglevels, ndowntrans, nuptrans, i;
-  double epsilon_current;
-  double R, C;
-  double t_mid;
-  double epsilon_trans;
-  int lineindex;
-  double s_renorm;
-
-  int nlte_size, nlte_start;
-
-  double test_ratio;//,lag, check;
-  double test_ratio_upper;
-
-  int super_level;
-  const float T_e = get_Te(modelgridindex);
-  const float nne = get_nne(modelgridindex);
-
   if (get_nlevels(element,ion) > 1)
   {
-    //double nne = get_nne(modelgridindex);
-    //double T_e = get_Te(modelgridindex);
+    int lower, level_use, lower_use, upper_use;
+
+    double *rate_matrix;
+    double *balance_vector;
+
+    int ionisinglevels, ndowntrans, nuptrans, i;
+    double epsilon_current;
+    double R, C;
+    double t_mid;
+    double epsilon_trans;
+    int lineindex;
+
+    int nlte_size, nlte_start;
+
+    double test_ratio;//,lag, check;
+    int super_level;
+
+    const float T_e = get_Te(modelgridindex);
+    const float nne = get_nne(modelgridindex);
 
     printout("Solving for NLTE populations in cell %d. Doing element %d, ion %d. I think it's timestep %d\n", modelgridindex, element, ion, timestep);
     //printout("Current Te %g and ne %g\n",T_e, nne);
@@ -926,6 +933,8 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         epsilon_current = epsilon(element,ion,level);
         ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
         nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+
+        double s_renorm;
 
         // deexcitation
         for (i = 1; i <= ndowntrans; i++)
@@ -1174,6 +1183,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         test_ratio = 0.0;
       }
 
+      double test_ratio_upper;
       if ((get_groundlevelpop(modelgridindex,element,ion+1) > (1.1 * MINPOP)) && (gsl_vector_get(x,nlte_size-1) > (1.1 * MINPOP)))
       {
         test_ratio_upper = get_groundlevelpop(modelgridindex,element,ion+1) * modelgrid[modelgridindex].composition[element].partfunct[ion+1]
