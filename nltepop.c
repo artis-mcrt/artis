@@ -372,6 +372,7 @@ static void nltepop_matrix_add_ionisation(
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const int nionisinglevels = get_bfcontinua(element, ion);
+
   for (int level = 0; level < nionisinglevels; level++)
   {
     const int level_index = get_nlte_vector_index(element, ion, level);
@@ -384,9 +385,11 @@ static void nltepop_matrix_add_ionisation(
     {
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
       const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
-      const double epsilon_trans = epsilon(element, ion + 1 ,upper) - epsilon_current;
+      const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
 
       // ionization
+
+      // the R part is slow!
       const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
       const double C_ionisation = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
@@ -665,6 +668,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
     if (ion < nions - 1)
     {
+      // this is the slowest component
       nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf);
       if (NT_ON)
         nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_ntcoll_bf);
