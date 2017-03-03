@@ -16,26 +16,19 @@
 
 static FILE *nlte_file;
 
-static int get_nlte_vector_index(const int element_in, const int ion_in, const int level_in)
+
+static inline
+int get_nlte_vector_index(const int element, const int ion, const int level)
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into modelgrid[modelgridindex].nlte_pops that contains all elements
 {
-  int index = 0;
-  for (int ion = 0; ion < ion_in; ion++)
-  {
-    const int nlevels_nlte = get_nlevels_nlte(element_in,ion);
+  const int gs_index = (
+    elements[element].ions[ion].first_nlte - elements[element].ions[0].first_nlte + ion);
 
-    index += nlevels_nlte + 1;
-    if (nlevels_nlte != (get_nlevels(element_in,ion) - 1))
-      index++; // there's a superlevel here
-  }
-  const int nlevels_nlte = get_nlevels_nlte(element_in,ion_in);
-  if (is_nlte(element_in, ion_in, level_in) == true)
-    index += level_in;
-  else
-    index += nlevels_nlte + 1; //the index of the superlevel
+  const int level_index = gs_index + (
+    is_nlte(element, ion, level) ? level : get_nlevels_nlte(element, ion) + 1);
 
-  return index;
+  return level_index;
 }
 
 
