@@ -1207,7 +1207,10 @@ void radfield_read_restart_data(FILE *gridsave_file)
 }
 
 inline
-int radfield_integrate(const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel, size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr)
+int radfield_integrate(
+  const gsl_function *f, double nu_a, double nu_b, double epsabs,
+  double epsrel, size_t limit, int key, gsl_integration_workspace *workspace,
+  double *result, double *abserr)
 {
   if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {

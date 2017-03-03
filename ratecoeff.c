@@ -896,11 +896,11 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   const double epsrel = 1e-4;
   const double epsabs = 0.;
 
-  gsl_integration_workspace *restrict workspace = gsl_integration_workspace_alloc(16384);
+  gsl_integration_workspace *restrict workspace = gsl_integration_workspace_alloc(8192);
 
-  const int upperlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
+  const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-  const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
+  const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
@@ -917,15 +917,15 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler_off();
   double gammacorr = 0.0;
   const int status = gsl_integration_qag(
-    &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 16384, GSL_INTEG_GAUSS31, workspace, &gammacorr, &error);
+    &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 8192, GSL_INTEG_GAUSS31, workspace, &gammacorr, &error);
 
   if (status != 0)
   {
-    printout("corrphotoioncoeff integrator status %d. Integral value %g.\n",status,gammacorr);
+    printout("corrphotoioncoeff integrator status %d. Integral value %g.\n", status, gammacorr);
   }
   gsl_set_error_handler(gsl_error_handler_old);
 
-  gammacorr *= FOURPI * get_phixsprobability(element,ion,level,phixstargetindex);
+  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
   gsl_integration_workspace_free(workspace);
 
@@ -1063,10 +1063,14 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   gsl_error_handler_t *gsl_error_handler_old = gsl_set_error_handler_off();
 
   const int status = gsl_integration_qag(
-  // const int status = gsl_integration_qags(
-  // const int status = radfield_integrate(
     &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-    8192, GSL_INTEG_GAUSS15, workspace_bfheating, &bfheating, &error);
+     8192, GSL_INTEG_GAUSS15, workspace_bfheating, &bfheating, &error);
+  // const int status = gsl_integration_qags(
+  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
+  //   8192, workspace_bfheating, &bfheating, &error);
+  // const int status = radfield_integrate(
+  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
+  //    8192, GSL_INTEG_GAUSS61, workspace_bfheating, &bfheating, &error);
 
   if (status != 0)
   {
