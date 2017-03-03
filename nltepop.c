@@ -773,7 +773,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
 
 // this does single ion solving and will be deprecated at some point
-double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
+double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
 //solves for nlte correction factors to level populations for levels
 {
   int lower, level_use, lower_use, upper_use;
@@ -1229,10 +1229,10 @@ double solve_nlte_pops(int element, int ion, int modelgridindex, int timestep)
 double superlevel_boltzmann(const int modelgridindex, const int element, const int ion, const int level)
 {
   const double T_exc = get_TJ(modelgridindex);
-  const double E_level = epsilon(element,ion,level);
-  const double E_superlevel = epsilon(element,ion,get_nlevels_nlte(element,ion)+1);
+  const double E_level = epsilon(element, ion, level);
+  const double E_superlevel = epsilon(element, ion, get_nlevels_nlte(element,ion) + 1);
 
-  return stat_weight(element,ion,level) * exp(-(E_level-E_superlevel)/KB/T_exc);
+  return stat_weight(element, ion, level) * exp(- (E_level - E_superlevel) / KB / T_exc);
 }
 
 

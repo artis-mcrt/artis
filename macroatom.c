@@ -871,7 +871,7 @@ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int 
     const double nu_trans = epsilon_trans / H;
 
     const double A_ul = einstein_spontaneous_emission(lineindex);
-    const double B_ul = CLIGHTSQUAREDOVERTWOH/pow(nu_trans,3) * A_ul;
+    const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
     const double B_lu = statweight / statweight_target * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;

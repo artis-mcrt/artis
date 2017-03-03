@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 void solve_nlte_pops_element(const int element, const int modelgridindex, const int timestep);
-double solve_nlte_pops(const int element, const int ion, const int modelgridindex, const int timestep);
+double solve_nlte_pops_ion(const int element, const int ion, const int modelgridindex, const int timestep);
 double superlevel_boltzmann(const int modelgridindex, const int element, const int ion, const int level);
 void nltepop_write_to_file(const int n, const int timestep);
 void nltepop_open_file(const int my_rank);
