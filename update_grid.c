@@ -196,11 +196,15 @@ static void write_to_estimators_file(int n, int timestep)
 }
 
 
-static void cellhistory_clear(void)
+void cellhistory_reset(const int cellnumber, const bool set_population)
 {
   /// All entries of the cellhistory stack must be flagged as empty at the
-  /// onset of the new timestep.
-  cellhistory[tid].cellnumber = -99;
+  /// onset of the new timestep. Also, boundary crossing?
+  /// Calculate the level populations for this cell, and flag the other entries
+  /// as empty.
+  /// Make known that cellhistory[tid] contains information about the
+  /// cell given by cellnumber. (-99 if invalid)
+  cellhistory[tid].cellnumber = cellnumber;
   //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   for (int element = 0; element < nelements; element++)
   {
@@ -211,7 +215,8 @@ static void cellhistory_clear(void)
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = -99.;
+        const double population = set_population ? calculate_exclevelpop(cellnumber,element,ion,level) : -99;
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
 
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
@@ -223,9 +228,32 @@ static void cellhistory_clear(void)
         }
         /// This is the only flag needed for all of the following MA stuff!
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc = -99.;
+        /*
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = -99.;
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb = -99.;
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same = -99.;
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same = -99.;
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower = -99.;
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = -99.;
+
+        ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+        nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        for (i = 0; i < ndowntrans; i++)
+        {
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = -99.;
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = -99.;
+        }
+        for (i = 0; i < nuptrans; i++)
+        {
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = -99.;
+        }
+        */
       }
     }
   }
+  //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
+  //cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
 }
 
 
@@ -901,7 +929,7 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
     use_cellhist = false;
-    cellhistory_clear();
+    cellhistory_reset(-99, false);
 
     /// Reset histindex to unknown
     //printout("thread%d _ update_grid histindex %d\n",tid,histindex);

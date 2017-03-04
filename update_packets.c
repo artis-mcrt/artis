@@ -3,6 +3,7 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "packet_prop.h"
+#include "update_grid.h"
 #include "update_packets.h"
 #include "rpkt.h"
 
@@ -319,62 +320,7 @@ void update_cell(int cellnumber)
 {
   updatecellcounter++;
 
-  /// Make known that cellhistory[tid] contains information about the
-  /// cell given by cellnumber.
-  cellhistory[tid].cellnumber = cellnumber;
-
-  /// Calculate the level populations for this cell, and flag the other entries
-  /// as empty.
-  //printout("update cell %d at histindex %d\n",cellnumber,histindex);
-  for (int element = 0; element < nelements; element++)
-  {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++)
-    {
-      cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution = COOLING_UNDEFINED;
-      const int nlevels = get_nlevels(element,ion);
-      for (int level = 0; level < nlevels; level++)
-      {
-        const double population = calculate_exclevelpop(cellnumber,element,ion,level);
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
-
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
-        {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
-        }
-
-        /// This is the only flag needed for all of the following MA stuff!
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc = -99.;
-        /*
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = -99.;
-
-        ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-        nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-        for (i = 0; i < ndowntrans; i++)
-        {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = -99.;
-        }
-        for (i = 0; i < nuptrans; i++)
-        {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = -99.;
-        }
-        */
-      }
-    }
-  }
-  //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
-  //cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
+  cellhistory_reset(cellnumber, true);
 }
 
 ///***************************************************************************/
