@@ -3,9 +3,11 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "packet_prop.h"
-#include "update_grid.h"
 #include "update_packets.h"
 #include "rpkt.h"
+
+
+extern void update_cell(int cellnumber);
 
 
 static int compare_packets_bymodelgriddensity(const void *restrict p1, const void *restrict p2)
@@ -312,16 +314,6 @@ void update_packets(int nts)
   return overwrite_histindex;
 }*/
 
-
-///***************************************************************************/
-void update_cell(int cellnumber)
-///=calculate_levelpops for non isothermal homogeneous grids
-///
-{
-  updatecellcounter++;
-
-  cellhistory_reset(cellnumber, true);
-}
 
 ///***************************************************************************/
 /*void copy_populations_to_phixslist()
