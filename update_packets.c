@@ -100,7 +100,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
         // It's an active macroatom - apply transition probabilities
         //printout("MA-packet handling\n");
 
-        t_current = do_ma(pkt_ptr, t_current, t2, nts);
+        t_current = do_macroatom(pkt_ptr, t_current, t2, nts);
         break;
 
       default:
