@@ -212,9 +212,9 @@ endif
 
 ### use pg when you want to use gprof the profiler
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
-sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c linelist.c ltepop.c macroatom.c move.c nltepop.c nonthermal.c packet_init.c packet_prop.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c time_init.c update_grid.c update_packets.c vectors.c vpkt.c
+sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c linelist.c ltepop.c macroatom.c move.c nltepop.c nonthermal.c packet_init.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c time_init.c update_grid.c update_packets.c vectors.c vpkt.c
 
-sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o linelist.o ltepop.o macroatom.o move.o nltepop.o nonthermal.o packet_init.o packet_prop.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o time_init.o update_grid.o update_packets.o vectors.o vpkt.o
+sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o linelist.o ltepop.o macroatom.o move.o nltepop.o nonthermal.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o time_init.o update_grid.o update_packets.o vectors.o vpkt.o
 
 sn3d: clean version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
@@ -225,22 +225,22 @@ sn3dmpi: clean version
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
-exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c packet_prop.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c
+exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c
 
 exspec: version
 	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exspec
 
-exgamma_objects = exgamma.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o packet_prop.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o radfield.o
+exgamma_objects = exgamma.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o radfield.o
 
 exgamma: $(exgamma_objects)
 	$(CC) $(CFLAGS) $(exgamma_objects) $(LDFLAGS) -o exgamma
 
-sn3dsyn_objects = sn3dsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o radfield.o
+sn3dsyn_objects = sn3dsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o radfield.o
 
 sn3dsyn: $(sn3dsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dsyn_objects) $(LDFLAGS) -o sn3dsyn
 
-sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o packet_prop.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o radfield.o
+sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o radfield.o
 
 sn3dlcsyn: $(sn3dlcsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
