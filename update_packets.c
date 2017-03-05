@@ -125,9 +125,9 @@ static void update_inactive_pellet(
   {
     /**It won't decay in this timestep just need to move it on.*/
 
-    pkt_ptr->pos[0] *= (ts + tw) / ts;
-    pkt_ptr->pos[1] *= (ts + tw) / ts;
-    pkt_ptr->pos[2] *= (ts + tw) / ts;
+    pkt_ptr->pos[0] = pkt_ptr->pos[0] * (ts + tw) / ts;
+    pkt_ptr->pos[1] = pkt_ptr->pos[1] * (ts + tw) / ts;
+    pkt_ptr->pos[2] = pkt_ptr->pos[2] * (ts + tw) / ts;
 
     /**That's all that needs to be done for the inactive pellet. */
   }
@@ -136,9 +136,9 @@ static void update_inactive_pellet(
     /**These are the packets decaying in this timestep.*/
     if (decay_to_kpkt)
     {
-      pkt_ptr->pos[0] *= tdecay / ts;
-      pkt_ptr->pos[1] *= tdecay / ts;
-      pkt_ptr->pos[2] *= tdecay / ts;
+      pkt_ptr->pos[0] = pkt_ptr->pos[0] * tdecay / ts;
+      pkt_ptr->pos[1] = pkt_ptr->pos[1] * tdecay / ts;
+      pkt_ptr->pos[2] = pkt_ptr->pos[2] * tdecay / ts;
 
       pkt_ptr->type = TYPE_KPKT;
       pkt_ptr->absorptiontype = -6;
@@ -159,7 +159,7 @@ static void update_inactive_pellet(
     /** The position is already set at tmin so don't need to move it. Assume
     that it is fixed in place from decay to tmin - i.e. short mfp. */
 
-    pkt_ptr->e_cmf *= tdecay / tmin;
+    pkt_ptr->e_cmf = pkt_ptr->e_cmf * tdecay / tmin;
     //pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
