@@ -544,6 +544,7 @@ void calculate_cooling_rates(int modelgridindex)
             //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             //double epsilon_upper = epsilon(element,ion+1,upper);
             //double epsilon_trans = epsilon_upper - epsilon_current;
+            // TODO: pass in a workspace rather than allocating within the function that is called many times
             C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
           }
           C_fb += C;
