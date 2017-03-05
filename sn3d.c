@@ -1030,7 +1030,7 @@ int main(int argc, char** argv)
             MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
             const time_t time_communicate_estimators_start = time(NULL);
           #endif
-          printout("time after update packets %d (took %d seconds)\n", time(NULL), time(NULL) - time_update_packets_start);
+          printout("timestep %d: time after update packets %d (took %d seconds)\n", nts, time(NULL), time(NULL) - time_update_packets_start);
 
           #ifdef MPI_ON
             // All the processes have their own versions of the estimators for this time step now.
