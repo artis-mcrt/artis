@@ -5,7 +5,7 @@
 
 void update_packets(int nts);
 
-inline void update_cell(int cellnumber)
+inline void update_cell(const int cellnumber)
 ///=calculate_levelpops for non isothermal homogeneous grids
 ///
 {
