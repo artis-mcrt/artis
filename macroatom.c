@@ -185,10 +185,17 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   bool end_packet = false;
   while (!end_packet)
   {
-    double rad_deexc,rad_recomb,col_deexc,col_recomb;
-    double internal_down_same,internal_down_lower,internal_up_same,internal_up_higher;
+    double rad_deexc;
+    double rad_recomb;
+    double col_deexc;
+    double col_recomb;
+    double internal_down_same;
+    double internal_down_lower;
+    double internal_up_same;
+    double internal_up_higher;
 
-    double R,C;
+    double R;
+    double C;
     double rate;
 
     int lineindex;
