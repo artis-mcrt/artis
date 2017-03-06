@@ -49,12 +49,14 @@ static void set_cellhistory_transitionrates(
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
     const int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
+
     const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
     const double individ_rad_deexc = R * epsilon_trans;
     const double individ_col_deexc = C * epsilon_trans;
     const double individ_internal_down_same = (R + C) * epsilon_target;
+
     cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = individ_rad_deexc;
     cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = individ_internal_down_same;
 
@@ -84,11 +86,14 @@ static void set_cellhistory_transitionrates(
     {
       const double epsilon_target = epsilon(element, ion - 1, lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
+
       const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
       //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
       const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
+
       rad_recomb += R * epsilon_trans;
       col_recomb += C * epsilon_trans;
+
       internal_down_lower += (R + C) * epsilon_target;
     }
   }
@@ -105,11 +110,12 @@ static void set_cellhistory_transitionrates(
     const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
     const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
     const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
+
     const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
 
-    //individ_internal_up_same = (C) * epsilon_current;
     const double individ_internal_up_same = (R + C) * epsilon_current;
+
     cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = individ_internal_up_same;
 
     internal_up_same += individ_internal_up_same;
@@ -130,12 +136,294 @@ static void set_cellhistory_transitionrates(
     {
       const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
       const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
+
       const double R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+
       internal_up_higher += (R + C) * epsilon_current;
     }
   }
   cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = internal_up_higher;
+}
+
+
+static void do_macroatom_raddeexcitation(
+  PKT *restrict pkt_ptr, const int element, const int ion, const int level, const double rad_deexc,
+  const double total_transitions, const double t_current)
+{
+
+  ///radiative deexcitation of MA: emitt rpkt
+  ///randomly select which line transitions occurs
+  const double zrand = gsl_rng_uniform(rng);
+  //zrand = 1. - 1e-14; /// ONLY FOR DEBUG!!!
+  double rate = 0.;
+  int linelistindex = -99;
+  int i;
+  const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+  double epsilon_trans = -100;
+  for (i = 1; i <= ndowntrans; i++)
+  {
+    rate += get_individ_rad_deexc(element, ion, level, i);
+    if (zrand * rad_deexc < rate)
+    {
+      const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
+      #endif
+      epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
+      linelistindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
+      //linelistindex = elements[element].ions[ion].levels[level].transitions[level-lower-1].linelistindex;
+      #ifdef RECORD_LINESTAT
+        if (tid == 0) ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
+                                                    /// With an atomic pragma or a thread-private structure with subsequent
+                                                    /// reduction this could be extended to all threads. However, I'm not
+                                                    /// sure if this is worth the additional computational expenses.
+      #endif
+      break;
+    }
+  }
+  double oldnucmf;
+  if (pkt_ptr->last_event == 1)
+    oldnucmf = pkt_ptr->nu_cmf;
+  pkt_ptr->nu_cmf = epsilon_trans / H;
+  //if (tid == 0)
+  //{
+  if (pkt_ptr->last_event == 1)
+  {
+    if (oldnucmf < pkt_ptr->nu_cmf)
+      upscatter++;
+    else
+      downscatter++;
+  }
+  //}
+
+  #ifdef DEBUG_ON
+    if (!isfinite(pkt_ptr->nu_cmf))
+    {
+      printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
+      abort();
+    }
+    if (i > ndowntrans)
+    {
+      printout("[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, i %d, ndowntrans %d\n", zrand, rate, rad_deexc, i, ndowntrans);
+      printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
+      abort();
+    }
+    if (debuglevel == 2)
+      printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA deactivation\n");
+    //if (tid == 0) ma_stat_deactivation_bb++;
+    ma_stat_deactivation_bb++;
+    mastate[tid].lastaction = MA_ACTION_RADDEEXC;
+    pkt_ptr->interactions += 1;
+    pkt_ptr->last_event = 0;
+  #endif
+
+  /// Emit the rpkt in a random direction
+  emitt_rpkt(pkt_ptr, t_current);
+
+  if (linelistindex == mastate[tid].activatingline)
+    resonancescatterings++;
+  else
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+
+  /// NB: the r-pkt can only interact with lines redder than the current one
+  pkt_ptr->next_trans = linelistindex + 1;
+  pkt_ptr->emissiontype = linelistindex;
+  pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
+  pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
+  pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+  pkt_ptr->em_time = t_current;
+  pkt_ptr->nscatterings = 0;
+  //printout("next possible line encounter %d\n",pkt_ptr->next_trans);
+  #ifndef FORCE_LTE
+    //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
+  #endif
+}
+
+
+static void do_macroatom_radrecomb(
+  PKT *restrict pkt_ptr, const int modelgridindex, const int element, const int ion, const int level,
+  const double rad_recomb, const double t_current)
+{
+  const float T_e = get_Te(modelgridindex);
+
+  const double epsilon_current = epsilon(element, ion, level);
+  /// Randomly select a continuum
+  double zrand = gsl_rng_uniform(rng);
+  //zrand = 1. - 1e-14;
+  double rate = 0;
+  //nlevels = get_nlevels(element,ion-1);
+  const int nlevels = get_bfcontinua(element, ion - 1);
+  //nlevels = get_ionisinglevels(element,ion-1);
+  int lower;
+  double epsilon_trans;
+  for (lower = 0; lower < nlevels; lower++)
+  {
+    epsilon_trans = epsilon_current - epsilon(element,ion - 1,lower);
+    const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
+    rate += R * epsilon_trans;
+    #ifdef DEBUG_ON
+      if (debuglevel == 2)
+      {
+        printout("[debug] do_ma:   R %g, deltae %g\n",R,(epsilon(element, ion, level) - epsilon(element, ion - 1, lower)));
+        printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, ion - 1, rate);
+        printout("[debug] do_ma:   zrand*rad_recomb = %g\n", zrand * rad_recomb);
+      }
+    #endif
+    if (zrand * rad_recomb < rate) break;
+  }
+  /// and set its threshold frequency
+  const double nu_threshold = epsilon_trans / H;
+  #ifdef DEBUG_ON
+    if (debuglevel == 2) printout("[debug] do_ma:   going to level %d of ion %d of element %d\n", lower, ion - 1, element);
+  #endif
+
+  /// Then randomly sample the packets frequency according to the continuums
+  /// energy distribution and set some flags
+  //zrand = gsl_rng_uniform(rng);
+  //zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
+  //pkt_ptr->nu_cmf = nu_threshold * (1 - KB*T_e/H/nu_threshold*log(zrand));
+  //pkt_ptr->nu_cmf = nu_threshold;
+
+
+  zrand = gsl_rng_uniform(rng);
+  zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
+  mastate[tid].element = element;
+  mastate[tid].ion = ion - 1;
+  mastate[tid].level = lower;
+  const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
+  gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1024);
+  gslintegration_paras intparas;
+  intparas.T = T_e;
+  intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
+  gsl_function F_alpha_sp;
+  //F_alpha_sp.function = &alpha_sp_integrand_gsl;
+  F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
+  F_alpha_sp.params = &intparas;
+  const double deltanu = nu_threshold * NPHIXSNUINCREMENT;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+  double error;
+  double total_alpha_sp;
+  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_alpha_sp, &error);
+  double alpha_sp_old = total_alpha_sp;
+  double nu_lower = nu_threshold;
+  for (int i = 1; i < NPHIXSPOINTS; i++)
+  // LJS: this loop could probably be made a bit faster
+  // use the overlap with the previous integral and add on a piece each time instead of recalculating the
+  // integral over the entire region
+  {
+    // the reason the lower limit of integration is incremented is that most of the probability distribution is at the low
+    // frequency end, so this minimizes the number of iterations needed
+    double alpha_sp;
+    nu_lower += deltanu;
+    /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+    gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &alpha_sp, &error);
+    //alpha_sp *= FOURPI * sf;
+    //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
+    if (zrand >= alpha_sp / total_alpha_sp)
+    {
+      const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
+      nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
+      break;
+    }
+    //printout("[debug] macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
+    alpha_sp_old = alpha_sp;
+  }
+  gsl_integration_workspace_free(wsp);
+  if (nu_lower == nu_threshold)
+  {
+    nu_lower = nu_max_phixs;
+  }
+
+  pkt_ptr->nu_cmf = nu_lower;
+  //printout("nu_lower %g, nu_threshold %g, nu_left %g, nu_right %g\n",nu_lower,nu_threshold,nu_threshold+(i-1)*deltanu,nu_threshold+(i)*deltanu);
+
+
+  /*
+  ///k-pkt emission rule
+  double bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old;
+  int ii;
+  double bfcooling_integrand_gsl_2(double nu, void *paras);
+  gsl_function F_bfcooling;
+  F_bfcooling.function = &bfcooling_integrand_gsl_2;
+  zrand = gsl_rng_uniform(rng);
+  zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
+  mastate[tid].element = element;
+  mastate[tid].ion = ion-1;
+  mastate[tid].level = lower;
+  intparas.T = T_e;
+  intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
+  F_bfcooling.params = &intparas;
+  deltanu = nu_threshold * NPHIXSNUINCREMENT;
+  gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &total_bfcooling_coeff, &error);
+  bfcooling_coeff = total_bfcooling_coeff;
+  for (ii= 0; ii < NPHIXSPOINTS; ii++)
+  {
+    bfcooling_coeff_old = bfcooling_coeff;
+    if (ii > 0)
+    {
+      nu_lower = nu_threshold + ii*deltanu;
+      /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+      gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling_coeff, &error);
+      //bfcooling_coeff *= FOURPI * sf;
+      //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
+    }
+    //printout("zrand %g, bfcooling_coeff %g, total_bfcooling_coeff %g, nu_lower %g\n",zrand,bfcooling_coeff,total_bfcooling_coeff,nu_lower);
+    if (zrand >= bfcooling_coeff/total_bfcooling_coeff) break;
+  }
+  if (ii==NPHIXSPOINTS)
+  {
+    printout("kpkt emitts bf-photon at upper limit\n");
+    nu_lower = nu_threshold * last_phixs_nuovernuedge; // + ii*deltanu;
+  }
+  else if (ii > 0)
+  {
+    nuoffset = (total_bfcooling_coeff*zrand - bfcooling_coeff_old) / (bfcooling_coeff-bfcooling_coeff_old) * deltanu;
+    nu_lower = nu_threshold + (ii-1)*deltanu + nuoffset;
+  }
+  else
+    nu_lower = nu_threshold; // + ii*deltanu;
+  //printout("emitt at nu %g\n",nu_lower);
+  pkt_ptr->nu_cmf = nu_lower;
+    */
+
+  #ifndef FORCE_LTE
+    //mabfcount[pkt_ptr->where] += pkt_ptr->e_cmf;
+    //mabfcount_thermal[pkt_ptr->where] += pkt_ptr->e_cmf*(1-nu_threshold/pkt_ptr->nu_cmf);
+    //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
+  #endif
+
+/*      if (element == 6)
+  {
+    //printout("%g, %g, %g\n",pkt_ptr->e_cmf,nu_threshold,pkt_ptr->e_cmf/nu_threshold/H);
+    cell[pkt_ptr->where].radrecomb[ion-1] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
+  }*/
+
+  #ifdef DEBUG_ON
+    if (debuglevel == 2) printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
+    if (!isfinite(pkt_ptr->nu_cmf))
+    {
+      printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
+      abort();
+    }
+    //if (tid == 0) ma_stat_deactivation_fb++;
+    ma_stat_deactivation_fb++;
+    mastate[tid].lastaction = MA_ACTION_RADRECOMB;
+    pkt_ptr->interactions += 1;
+    pkt_ptr->last_event = 2;
+    if (debuglevel == 2) printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA recombination\n");
+  #endif
+
+  /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
+  emitt_rpkt(pkt_ptr, t_current);
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+  pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
+  pkt_ptr->emissiontype = get_continuumindex(element, ion - 1, lower);
+  pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
+  pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
+  pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+  pkt_ptr->em_time = t_current;
+  pkt_ptr->nscatterings = 0;
 }
 
 
@@ -144,13 +432,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 {
   double t_current = t1; // this will keep track of time in the calculation
   const double t_mid = time_step[timestep].mid;
-
-  gslintegration_paras intparas;
-  gsl_function F_alpha_sp;
-  //F_alpha_sp.function = &alpha_sp_integrand_gsl;
-  F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
-  const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-  gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1024);
 
   //printout("[debug] do MA\n");
 
@@ -303,7 +584,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     #endif
     if (zrand * total_transitions < rad_deexc)
     {
-      ///radiative deexcitation of MA: emitt rpkt
       #ifdef DEBUG_ON
         if (debuglevel == 2)
         {
@@ -311,100 +591,15 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           printout("[debug] do_ma:   jumps = %d\n",jumps);
         }
       #endif
-
-      ///randomly select which line transitions occurs
-      zrand = gsl_rng_uniform(rng);
-      //zrand = 1. - 1e-14; /// ONLY FOR DEBUG!!!
-      rate = 0.;
-      int linelistindex = -99;
-      int i;
-      for (i = 1; i <= ndowntrans; i++)
-      {
-        rate += get_individ_rad_deexc(element,ion,level,i);
-        if (zrand*rad_deexc < rate)
-        {
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n",lower);
-          #endif
-          lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
-          linelistindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
-          //linelistindex = elements[element].ions[ion].levels[level].transitions[level-lower-1].linelistindex;
-          #ifdef RECORD_LINESTAT
-            if (tid == 0) ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
-                                                           /// With an atomic pragma or a thread-private structure with subsequent
-                                                           /// reduction this could be extended to all threads. However, I'm not
-                                                           /// sure if this is worth the additional computational expenses.
-          #endif
-          break;
-        }
-      }
-      double oldnucmf;
-      if (pkt_ptr->last_event == 1)
-        oldnucmf = pkt_ptr->nu_cmf;
-      pkt_ptr->nu_cmf = epsilon_trans/H;
-      //pkt_ptr->nu_cmf = 3.7474058e+14;
-      //if (tid == 0)
-      //{
-      if (pkt_ptr->last_event == 1)
-      {
-        if (oldnucmf < pkt_ptr->nu_cmf)
-          upscatter++;
-        else
-          downscatter++;
-      }
-      //}
-
-      #ifdef DEBUG_ON
-        if (!isfinite(pkt_ptr->nu_cmf))
-        {
-          printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
-          abort();
-        }
-        if (i > ndowntrans)
-        {
-          printout("[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, i %d, ndowntrans %d\n",zrand,rate,rad_deexc,i,ndowntrans);
-          printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n",total_transitions,element,ion,level);
-          abort();
-        }
-        if (debuglevel == 2)
-          printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA deactivation\n");
-        //if (tid == 0) ma_stat_deactivation_bb++;
-        ma_stat_deactivation_bb++;
-        mastate[tid].lastaction = MA_ACTION_RADDEEXC;
-        pkt_ptr->interactions += 1;
-        pkt_ptr->last_event = 0;
-      #endif
-
-      /// Emitt the rpkt in a random direction
-      emitt_rpkt(pkt_ptr,t_current);
-      if (linelistindex == mastate[tid].activatingline)
-      {
-        resonancescatterings++;
-      }
-      else
-        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
-
-      /// NB: the r-pkt can only interact with lines redder than the current one
-      pkt_ptr->next_trans = linelistindex + 1;
-      pkt_ptr->emissiontype = linelistindex;
-      pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-      pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-      pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
-      pkt_ptr->em_time = t_current;
-      pkt_ptr->nscatterings = 0;
-      //printout("next possible line encounter %d\n",pkt_ptr->next_trans);
+      do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, rad_deexc, total_transitions, t_current);
       end_packet = true;
-      #ifndef FORCE_LTE
-        //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
-      #endif
     }
-    else if (zrand*total_transitions < rad_deexc + col_deexc)
+    else if (zrand * total_transitions < rad_deexc + col_deexc)
     {
       ///collisional deexcitation of macro atom => convert the packet into a k-packet
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   collisonal deexcitation\n");
-        if (debuglevel == 2) printout("[debug] do_ma: jumps = %d\n",jumps);
+        if (debuglevel == 2) printout("[debug] do_ma: jumps = %d\n", jumps);
         //if (tid == 0) ma_stat_deactivation_colldeexc++;
         ma_stat_deactivation_colldeexc++;
         mastate[tid].lastaction = MA_ACTION_COLDEEXC;
@@ -421,7 +616,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
       #endif
     }
-    else if (zrand*total_transitions < rad_deexc + col_deexc + internal_down_same)
+    else if (zrand * total_transitions < rad_deexc + col_deexc + internal_down_same)
     {
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   internal downward jump within current ionstage\n");
@@ -438,7 +633,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       for (int i = 1; i <= ndowntrans; i++)
       {
         rate += get_individ_internal_down_same(element,ion,level,i);
-        if (zrand*internal_down_same < rate)
+        if (zrand * internal_down_same < rate)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
           break;
@@ -461,7 +656,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         }
       #endif
     }
-    else if (zrand*total_transitions < rad_deexc + col_deexc + internal_down_same + rad_recomb)
+    else if (zrand * total_transitions < rad_deexc + col_deexc + internal_down_same + rad_recomb)
     {
       /// Radiative recombination of MA: emitt a continuum-rpkt
       #ifdef DEBUG_ON
@@ -470,173 +665,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         if (debuglevel == 2) printout("[debug] do_ma:   element %d, ion %d, level %d\n",element,ion,level);
       #endif
 
-      /// Randomly select a continuum
-      zrand = gsl_rng_uniform(rng);
-      //zrand = 1. - 1e-14;
-      rate = 0;
-      //nlevels = get_nlevels(element,ion-1);
-      nlevels = get_bfcontinua(element,ion-1);
-      //nlevels = get_ionisinglevels(element,ion-1);
-      for (lower = 0; lower < nlevels; lower++)
-      {
-        epsilon_trans = epsilon_current - epsilon(element,ion-1,lower);
-        R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
-        rate += R * epsilon_trans;
-        #ifdef DEBUG_ON
-          if (debuglevel == 2)
-          {
-            printout("[debug] do_ma:   R %g, deltae %g\n",R,(epsilon(element, ion, level)-epsilon(element,ion-1,lower)));
-            printout("[debug] do_ma:   rate to level %d of ion %d = %g\n",lower,ion-1,rate);
-            printout("[debug] do_ma:   zrand*rad_recomb = %g\n",zrand*rad_recomb);
-          }
-        #endif
-        if (zrand*rad_recomb < rate) break;
-      }
-      /// and set its threshold frequency
-      const double nu_threshold = epsilon_trans/H;
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] do_ma:   going to level %d of ion %d of element %d\n",lower,ion-1,element);
-      #endif
-
-      /// Then randomly sample the packets frequency according to the continuums
-      /// energy distribution and set some flags
-      //zrand = gsl_rng_uniform(rng);
-      //zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
-      //pkt_ptr->nu_cmf = nu_threshold * (1 - KB*T_e/H/nu_threshold*log(zrand));
-      //pkt_ptr->nu_cmf = nu_threshold;
-
-
-      zrand = gsl_rng_uniform(rng);
-      zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
-      mastate[tid].element = element;
-      mastate[tid].ion = ion-1;
-      mastate[tid].level = lower;
-      intparas.T = get_Te(modelgridindex);
-      intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
-      F_alpha_sp.params = &intparas;
-      const double deltanu = nu_threshold * NPHIXSNUINCREMENT;
-      const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-      double error;
-      double total_alpha_sp;
-      gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_alpha_sp, &error);
-      double alpha_sp_old = total_alpha_sp;
-      double nu_lower = nu_threshold;
-      for (int i = 1; i < NPHIXSPOINTS; i++)
-      // LJS: this loop could probably be made a bit faster
-      // use the overlap with the previous integral and add on a piece each time instead of recalculating the
-      // integral over the entire region
-      {
-        // the reason the lower limit of integration is incremented is that most of the probability distribution is at the low
-        // frequency end, so this minimizes the number of iterations needed
-        double alpha_sp;
-        nu_lower += deltanu;
-        /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-        gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &alpha_sp, &error);
-        //alpha_sp *= FOURPI * sf;
-        //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
-        if (zrand >= alpha_sp / total_alpha_sp)
-        {
-          const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
-          nu_lower = nu_threshold + (i - 1) * deltanu + nuoffset;
-          break;
-        }
-        //printout("[debug] macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
-        alpha_sp_old = alpha_sp;
-      }
-      if (nu_lower == nu_threshold)
-      {
-        nu_lower = nu_max_phixs;
-      }
-
-      pkt_ptr->nu_cmf = nu_lower;
-      //printout("nu_lower %g, nu_threshold %g, nu_left %g, nu_right %g\n",nu_lower,nu_threshold,nu_threshold+(i-1)*deltanu,nu_threshold+(i)*deltanu);
-
-
-      /*
-      ///k-pkt emission rule
-      double bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old;
-      int ii;
-      double bfcooling_integrand_gsl_2(double nu, void *paras);
-      gsl_function F_bfcooling;
-      F_bfcooling.function = &bfcooling_integrand_gsl_2;
-      zrand = gsl_rng_uniform(rng);
-      zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
-      mastate[tid].element = element;
-      mastate[tid].ion = ion-1;
-      mastate[tid].level = lower;
-      intparas.T = T_e;
-      intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
-      F_bfcooling.params = &intparas;
-      deltanu = nu_threshold * NPHIXSNUINCREMENT;
-      gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &total_bfcooling_coeff, &error);
-      bfcooling_coeff = total_bfcooling_coeff;
-      for (ii= 0; ii < NPHIXSPOINTS; ii++)
-      {
-        bfcooling_coeff_old = bfcooling_coeff;
-        if (ii > 0)
-        {
-          nu_lower = nu_threshold + ii*deltanu;
-          /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-          gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling_coeff, &error);
-          //bfcooling_coeff *= FOURPI * sf;
-          //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
-        }
-        //printout("zrand %g, bfcooling_coeff %g, total_bfcooling_coeff %g, nu_lower %g\n",zrand,bfcooling_coeff,total_bfcooling_coeff,nu_lower);
-        if (zrand >= bfcooling_coeff/total_bfcooling_coeff) break;
-      }
-      if (ii==NPHIXSPOINTS)
-      {
-        printout("kpkt emitts bf-photon at upper limit\n");
-        nu_lower = nu_threshold * last_phixs_nuovernuedge; // + ii*deltanu;
-      }
-      else if (ii > 0)
-      {
-        nuoffset = (total_bfcooling_coeff*zrand - bfcooling_coeff_old) / (bfcooling_coeff-bfcooling_coeff_old) * deltanu;
-        nu_lower = nu_threshold + (ii-1)*deltanu + nuoffset;
-      }
-      else
-        nu_lower = nu_threshold; // + ii*deltanu;
-      //printout("emitt at nu %g\n",nu_lower);
-      pkt_ptr->nu_cmf = nu_lower;
-        */
-
-      #ifndef FORCE_LTE
-        //mabfcount[pkt_ptr->where] += pkt_ptr->e_cmf;
-        //mabfcount_thermal[pkt_ptr->where] += pkt_ptr->e_cmf*(1-nu_threshold/pkt_ptr->nu_cmf);
-        //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
-      #endif
-
-/*      if (element == 6)
-      {
-        //printout("%g, %g, %g\n",pkt_ptr->e_cmf,nu_threshold,pkt_ptr->e_cmf/nu_threshold/H);
-        cell[pkt_ptr->where].radrecomb[ion-1] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-      }*/
-
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
-        if (!isfinite(pkt_ptr->nu_cmf))
-        {
-          printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
-          abort();
-        }
-        //if (tid == 0) ma_stat_deactivation_fb++;
-        ma_stat_deactivation_fb++;
-        mastate[tid].lastaction = MA_ACTION_RADRECOMB;
-        pkt_ptr->interactions += 1;
-        pkt_ptr->last_event = 2;
-        if (debuglevel == 2) printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA recombination\n");
-      #endif
-
-      /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
-      emitt_rpkt(pkt_ptr,t_current);
-      calculate_kappa_rpkt_cont(pkt_ptr,t_current);
-      pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
-      pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
-      pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-      pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-      pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
-      pkt_ptr->em_time = t_current;
-      pkt_ptr->nscatterings = 0;
+      do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, ion, level, rad_recomb, t_current);
       end_packet = true;
     }
     else if (zrand*total_transitions < rad_deexc + col_deexc + internal_down_same + rad_recomb + col_recomb)
@@ -852,7 +881,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   /// procedure ends only after a change to r or k packets has taken place and
   /// returns then the actual time, which is the same as the input t1
   /// internal transitions are carried out until a type change occurs
-  gsl_integration_workspace_free(wsp);
   return t_current;
 }
 
