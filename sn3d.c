@@ -178,7 +178,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
           }
         }
       }
-      printout("MPI_BUFFER: used %d of %d bytes of MPI buffer\n", position, mpi_grid_buffer_size);
+      printout("MPI_BUFFER: used %d of %d bytes of MPI mpi_grid_buffer buffer\n", position, mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, n, MPI_COMM_WORLD);
