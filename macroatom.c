@@ -466,22 +466,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   bool end_packet = false;
   while (!end_packet)
   {
-    double rad_deexc;
-    double rad_recomb;
-    double col_deexc;
-    double col_recomb;
-    double internal_down_same;
-    double internal_down_lower;
-    double internal_up_same;
-    double internal_up_higher;
-
     double R;
     double C;
     double rate;
 
     int lineindex;
-    int nlevels;
-
     const int ion = mastate[tid].ion;
     const int level = mastate[tid].level;
     // mastate[tid].statweight = stat_weight(element, ion, level);
@@ -528,14 +517,15 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       /// If there are no precalculated rates available we must calculate them
       set_cellhistory_transitionrates(modelgridindex, element, ion, level, t_mid);
     }
-    rad_deexc = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc;
-    col_deexc = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc;
-    rad_recomb = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb;
-    col_recomb = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb;
-    internal_down_same = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same;
-    internal_up_same = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same;
-    internal_down_lower = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower;
-    internal_up_higher = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher;
+
+    const double rad_deexc = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc;
+    const double col_deexc = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc;
+    const double rad_recomb = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb;
+    const double col_recomb = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb;
+    const double internal_down_same = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same;
+    const double internal_up_same = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same;
+    const double internal_down_lower = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower;
+    const double internal_up_higher = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher;
 
     /// select transition according to probabilities /////////////////////////////////////
     double zrand = gsl_rng_uniform(rng);
@@ -705,7 +695,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       //zrand = 1. - 1e-14;
       rate = 0.;
       //nlevels = get_nlevels(element,ion-1);
-      nlevels = get_bfcontinua(element,ion-1);
+      const int nlevels = get_bfcontinua(element,ion-1);
       //nlevels = get_ionisinglevels(element,ion-1);
       for (lower = 0; lower < nlevels; lower++)
       {
@@ -815,7 +805,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         {
           printout("[debug]    check recombination\n");
           //nlevels = get_nlevels(element,ion-1);
-          nlevels = get_bfcontinua(element,ion-1);
+          const int nlevels = get_bfcontinua(element,ion-1);
           //nlevels = get_ionisinglevels(element,ion-1);
           for (lower = 0; lower < nlevels; lower++)
           {
