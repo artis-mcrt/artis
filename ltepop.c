@@ -593,15 +593,14 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
     }
 
     levelpop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
-  }
-
-  if (!use_cellhist || levelpop < 0)
-  {
-    levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
-
-    if (use_cellhist)
+    if (levelpop < 0)
+    {
+      levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = levelpop;
+    }
   }
+  else
+    levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
 
   return levelpop;
 }
