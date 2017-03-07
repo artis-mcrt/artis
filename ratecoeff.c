@@ -44,8 +44,8 @@ static bool read_ratecoeff_dat(void)
 /// Try to readin the precalculated rate coefficients from file
 /// returns true if successful or false otherwise
 {
-  // extern FILE *popen();
-  // int pclose(FILE *stream);
+  extern FILE *popen();
+  int pclose(FILE *stream);
   FILE *popenadatahash = popen("openssl md5 -binary adata.txt | xxd -p", "r");
   fgets(adatafile_hash, 33, popenadatahash);
   printout("MD5(adata.txt) = %s\n", adatafile_hash);

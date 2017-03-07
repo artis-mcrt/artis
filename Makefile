@@ -225,7 +225,7 @@ sn3dmpi: clean version
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
-exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c
+exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c
 
 exspec: version
 	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exspec
