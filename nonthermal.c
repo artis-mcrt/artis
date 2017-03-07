@@ -950,8 +950,8 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
     if (!isfinite(Y_nt))
     {
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-      printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ion_stage %d for cell %d. Using WF approx instead = %g\n",
-               Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
+      // printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ion_stage %d for cell %d. Using WF approx instead = %g\n",
+      //          Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       return Y_nt_wfapprox;
     }
     else if (Y_nt < 0)
@@ -1031,7 +1031,7 @@ static void analyse_sf_solution(int modelgridindex)
 
       double frac_ionization_ion = 0.;
       printout("  Z=%d ion_stage %d:\n", Z, ionstage);
-      printout("    nnion: %g\n", nnion);
+      // printout("    nnion: %g\n", nnion);
       printout("    nnion/nntot: %g\n", nnion / nntot, get_nne(modelgridindex));
       int matching_nlsubshell_count = 0;
       for (int n = 0; n < colliondatacount; n++)
