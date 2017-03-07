@@ -676,7 +676,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_ntcoll_bf);
     }
   }
-  printout("\n");
+  // printout("\n");
 
   if (individual_process_matricies)
   {
