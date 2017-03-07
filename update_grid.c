@@ -196,7 +196,7 @@ static void write_to_estimators_file(int n, int timestep)
 }
 
 
-void cellhistory_reset(const int cellnumber, const bool set_population)
+void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 {
   /// All entries of the cellhistory stack must be flagged as empty at the
   /// onset of the new timestep. Also, boundary crossing?
@@ -204,7 +204,13 @@ void cellhistory_reset(const int cellnumber, const bool set_population)
   /// as empty.
   /// Make known that cellhistory[tid] contains information about the
   /// cell given by cellnumber. (-99 if invalid)
-  cellhistory[tid].cellnumber = cellnumber;
+  if ((modelgridindex == cellhistory[tid].cellnumber) && !new_timestep)
+  {
+    // printout("redundant reset in cell %d\n", modelgridindex);
+    return; //TODO: does this break anything?
+  }
+
+  cellhistory[tid].cellnumber = modelgridindex;
   //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   for (int element = 0; element < nelements; element++)
   {
@@ -215,7 +221,7 @@ void cellhistory_reset(const int cellnumber, const bool set_population)
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        const double population = set_population ? calculate_exclevelpop(cellnumber,element,ion,level) : -99;
+        const double population = (new_timestep) ? -99 : calculate_exclevelpop(modelgridindex,element,ion,level);
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
 
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
@@ -519,7 +525,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
     const time_t sys_time_start_update_cell = time(NULL);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
     const bool log_this_cell = true;
-    //cellnumber = modelgrid[n].cellnumber;
+
     /// Update current mass density of cell
     //n = nonemptycells[my_rank+ncl*nprocs];
     if (log_this_cell)
@@ -929,7 +935,7 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
     use_cellhist = false;
-    cellhistory_reset(-99, false);
+    cellhistory_reset(-99, true);
 
     /// Reset histindex to unknown
     //printout("thread%d _ update_grid histindex %d\n",tid,histindex);
