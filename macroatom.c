@@ -135,7 +135,7 @@ static void set_cellhistory_transitionrates(
   if (ion < get_nions(element) - 1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
   {
     // if (NT_ON)
-    //   internal_up_higher += nt_ionization_ratecoeff(modelgridindex, element, ion);
+    //   internal_up_higher += nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
     {
       const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
@@ -441,7 +441,7 @@ static void do_macroatom_ionisation(
   const double zrand = gsl_rng_uniform(rng);
   double rate = 0.;
   // if (NT_ON)
-  //   rate += nt_ionization_ratecoeff(modelgridindex, element, ion);
+  //   rate += nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
   if (zrand * internal_up_higher < rate)
   {
     upper = 0;
