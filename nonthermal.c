@@ -1307,14 +1307,24 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   {
     const int Z = get_element(element);
     const int nions = get_nions(element);
-    printout("  including Z=%2d ion_stages: ", Z);
+    bool first_included_ion_of_element = true;
     for (int ion = 0; ion < nions; ion++)
     {
-      const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
 
       if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
+      {
         continue;
+      }
+
+      const int ionstage = get_ionstage(element, ion);
+      if (first_included_ion_of_element)
+      {
+        printout("  including Z=%2d ion_stages: ", Z);
+        for (int i = 0; i < ion; i++)
+          printout("  ");
+        first_included_ion_of_element = false;
+      }
 
       printout("%d ", ionstage);
 
