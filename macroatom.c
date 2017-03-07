@@ -34,6 +34,10 @@ static inline double get_individ_internal_up_same(int element, int ion, int leve
 static void get_macroatom_transitionrates(
   const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *restrict processrates)
 {
+  const bool do_internaldownlower = true; //true;
+  const bool do_internalupsame = true; //(mastate[tid].level != 0);
+  const bool do_internaluphigher = true; // (mastate[tid].level != 0);
+
   chlevels_struct *const restrict chlevel = &cellhistory[tid].chelements[element].chions[ion].chlevels[level];
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -94,51 +98,60 @@ static void get_macroatom_transitionrates(
       processrates[MA_ACTION_RADRECOMB] += R * epsilon_trans;
       processrates[MA_ACTION_COLRECOMB] += C * epsilon_trans;
 
-      processrates[MA_ACTION_INTERNALDOWNLOWER] += (R + C) * epsilon_target;
+      if (do_internaldownlower)
+        processrates[MA_ACTION_INTERNALDOWNLOWER] += (R + C) * epsilon_target;
     }
   }
 
   /// Calculate sum for upward internal transitions
   /// transitions within the current ionisation stage
   processrates[MA_ACTION_INTERNALUPSAME] = 0.;
-  const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-  for (int i = 1; i <= nuptrans; i++)
+  if (do_internalupsame)
   {
-    const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-    const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
-    const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
+    const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    for (int i = 1; i <= nuptrans; i++)
+    {
+      const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
+      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
+      const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
 
-    const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-    const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+      const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
+      const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
 
-    const double individ_internal_up_same = (R + C) * epsilon_current;
+      const double individ_internal_up_same = (R + C) * epsilon_current;
 
-    chlevel->individ_internal_up_same[i] = individ_internal_up_same;
+      chlevel->individ_internal_up_same[i] = individ_internal_up_same;
 
-    processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
+      processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
 
-    #ifdef DEBUG_ON
-      if (debuglevel == 2) printout("checking uptrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,upper,R,C,epsilon_trans);
-      if (!isfinite(processrates[MA_ACTION_INTERNALUPSAME])) {printout("fatal: internal_up_same has nan contribution\n");}
-    #endif
+      #ifdef DEBUG_ON
+        if (debuglevel == 2)
+          printout("checking uptrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,upper,R,C,epsilon_trans);
+      #endif
+    }
+    if (!isfinite(processrates[MA_ACTION_INTERNALUPSAME]))
+      printout("fatal: internal_up_same has nan contribution\n");
   }
 
   /// Transitions to higher ionisation stages
   processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
-  const int ionisinglevels = get_bfcontinua(element,ion);
-  if (ion < get_nions(element) - 1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
+  if (do_internaluphigher)
   {
-    // if (NT_ON)
-    //   internal_up_higher += nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
-    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
+    const int ionisinglevels = get_bfcontinua(element,ion);
+    if (ion < get_nions(element) - 1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
     {
-      const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-      const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
+      // if (NT_ON)
+      //   processrates[MA_ACTION_INTERNALUPHIGHER] += nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
+      for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
+      {
+        const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+        const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
 
-      const double R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-      const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+        const double R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
+        const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
-      processrates[MA_ACTION_INTERNALUPHIGHER] += (R + C) * epsilon_current;
+        processrates[MA_ACTION_INTERNALUPHIGHER] += (R + C) * epsilon_current;
+      }
     }
   }
 }
@@ -434,11 +447,11 @@ static void do_macroatom_ionisation(
   double rate = 0.;
   // if (NT_ON)
   //   rate += nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
-  if (zrand * internal_up_higher < rate)
-  {
-    upper = 0;
-  }
-  else
+  // if (zrand * internal_up_higher < rate)
+  // {
+  //   upper = 0;
+  // }
+  // else
   {
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
     {
@@ -881,8 +894,9 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
         break;
 
-      default:
-        break;
+      case (MA_ACTION_COUNT):
+        printout("ERROR: Somehow selected MA_ACTION_COUNT\n");
+        abort();
     }
   }///endwhile
 
