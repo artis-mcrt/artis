@@ -106,7 +106,7 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
 
   double thermalmin = T_e_eqn_heating_minus_cooling(T_min,find_T_e_f.params);
   double thermalmax = T_e_eqn_heating_minus_cooling(T_max,find_T_e_f.params);
-  printout("(heating - cooling) at T_min: %g, at T_max: %g\n",thermalmin,thermalmax);
+  // printout("(heating - cooling) at T_min: %g, at T_max: %g\n",thermalmin,thermalmax);
   if (!isfinite(thermalmin) || !isfinite(thermalmax))
   {
     printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",
@@ -159,9 +159,12 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
       const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
       const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
       status = gsl_root_test_interval(T_e_min, T_e_max, 0, fractional_accuracy);
-      printout("  find T_e: cell %d iter %d, T_e interval [%g, %g], guess %g, status %d\n", modelgridindex, iternum, T_e_min, T_e_max, T_e, status);
+      // printout("iter %d, T_e interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
       if (status != GSL_CONTINUE)
+      {
+        printout("after %d iterations, T_e = %g, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);
         break;
+      }
     }
 
     if (status == GSL_CONTINUE)
