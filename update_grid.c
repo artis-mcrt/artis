@@ -36,88 +36,87 @@ void precalculate_partfuncts(int modelgridindex)
 }
 
 
-static void update_abundances(int modelgridindex, double t_current)
+static void update_abundances(const int modelgridindex, double t_current)
 /// Updates the mass fractions of elements associated with the decay sequence
 /// (56)Ni -> (56)Co -> (56)Fe at the onset of each timestep
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
 ///             - t_current: current time (here mid of current timestep)
 {
   t_current -= t_model;
-  double lambdani = 1./TNICKEL;
-  double lambdaco = 1./TCOBALT;
-  double lambdafe = 1./T52FE;
-  double lambdamn = 1./T52MN;
-  double lambdacr = 1./T48CR;
-  double lambdav = 1./T48V;
+  const double lambdani = 1./TNICKEL;
+  const double lambdaco = 1./TCOBALT;
+  const double lambdafe = 1./T52FE;
+  const double lambdamn = 1./T52MN;
+  const double lambdacr = 1./T48CR;
+  const double lambdav = 1./T48V;
 
   if (homogeneous_abundances)
   {
-    double ni_in = elements[get_elementindex(28)].abundance;
-    double co_in = elements[get_elementindex(27)].abundance;
-    double fe_in = elements[get_elementindex(26)].abundance;
+    const double ni_in = elements[get_elementindex(28)].abundance;
+    const double co_in = elements[get_elementindex(27)].abundance;
+    const double fe_in = elements[get_elementindex(26)].abundance;
     //fe_in = cell[modelgridindex].f_fe_init;
     for (int element = nelements-1; element >= 0; element--)
     {
       if (get_element(element) == 28)
       {
-        double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
+        const double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
-      if (get_element(element) == 27)
+      else if (get_element(element) == 27)
       {
-        double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
+        const double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
-      if (get_element(element) == 26)
+      else if (get_element(element) == 26)
       {
-        double fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
+        const double fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
     }
   }
   else
   {
-    double ni_in = modelgrid[modelgridindex].fni;
-    double co_in = modelgrid[modelgridindex].fco;
-    double fe52_in = modelgrid[modelgridindex].f52fe;
-    double cr48_in = modelgrid[modelgridindex].f48cr;
+    const double ni_in = modelgrid[modelgridindex].fni;
+    const double co_in = modelgrid[modelgridindex].fco;
+    const double fe52_in = modelgrid[modelgridindex].f52fe;
+    const double cr48_in = modelgrid[modelgridindex].f48cr;
     //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe_in);
     for (int element = nelements-1; element >= 0; element--)
     {
       if (get_element(element) == 28)
       {
-        double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
+        const double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
-        //cell[modelgridindex].composition[element].abundance = nifrac;
       }
-      if (get_element(element) == 27)
+      else if (get_element(element) == 27)
       {
-        double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
+        const double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
-      if (get_element(element) == 26)
+      else if (get_element(element) == 26)
       {
-        double fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + modelgrid[modelgridindex].ffestable + (fe52_in* exp(-lambdafe*t_current));
+        const double fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + modelgrid[modelgridindex].ffestable + (fe52_in* exp(-lambdafe*t_current));
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
-      if (get_element(element) == 25)
+      else if (get_element(element) == 25)
       {
-        double mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + modelgrid[modelgridindex].fmnstable;
+        const double mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + modelgrid[modelgridindex].fmnstable;
         modelgrid[modelgridindex].composition[element].abundance = mnfrac;
       }
-      if (get_element(element) == 24)
+      else if (get_element(element) == 24)
       {
-        double crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
+        const double crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
         modelgrid[modelgridindex].composition[element].abundance = crfrac;
       }
-      if (get_element(element) == 23)
+      else if (get_element(element) == 23)
       {
-        double vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + modelgrid[modelgridindex].fvstable;
+        const double vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + modelgrid[modelgridindex].fvstable;
         modelgrid[modelgridindex].composition[element].abundance = vfrac;
       }
-      if (get_element(element) == 22)
+      else if (get_element(element) == 22)
       {
-        double tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
+        const double tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
         modelgrid[modelgridindex].composition[element].abundance = tifrac;
       }
     }
