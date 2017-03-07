@@ -1052,10 +1052,10 @@ static void analyse_sf_solution(int modelgridindex)
       printout("    frac_excitation: %g\n", frac_excitation_ion);
       printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("    eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
-      printout("    workfn approx Gamma: %9.3e\n",
-               nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
-      printout("    Spencer-Fano Gamma:  %9.3e\n",
-               nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
+      // printout("    workfn approx Gamma: %9.3e\n",
+      //          nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
+      // printout("    Spencer-Fano Gamma:  %9.3e\n",
+      //          nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
     }
   }
 
