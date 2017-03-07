@@ -31,18 +31,34 @@ static inline double get_individ_internal_up_same(int element, int ion, int leve
 }
 
 
-static void set_cellhistory_transitionrates(
-  const int modelgridindex, const int element, const int ion, const int level, const double t_mid)
+static void get_macroatom_transitionrates(
+  const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *restrict processrates)
 {
+  chlevels_struct *const restrict chlevel = &cellhistory[tid].chelements[element].chions[ion].chlevels[level];
+  processrates[MA_ACTION_NONE] = 0.;
+  if (chlevel->col_deexc >= 0)
+  {
+    processrates[MA_ACTION_RADDEEXC] = chlevel->rad_deexc;
+    processrates[MA_ACTION_COLDEEXC] = chlevel->col_deexc;
+    processrates[MA_ACTION_INTERNALDOWNSAME] = chlevel->internal_down_same;
+    processrates[MA_ACTION_RADRECOMB] = chlevel->rad_recomb;
+    processrates[MA_ACTION_COLRECOMB] = chlevel->col_recomb;
+    processrates[MA_ACTION_INTERNALDOWNLOWER] = chlevel->internal_down_lower;
+    processrates[MA_ACTION_INTERNALUPSAME] = chlevel->internal_up_same;
+    processrates[MA_ACTION_INTERNALUPHIGHER] = chlevel->internal_up_higher;
+    return;
+  }
+
+  /// If there are no precalculated rates available we must calculate them
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
 
   /// Downward transitions within the current ionisation stage:
   /// radiative/collisional deexcitation and internal downward jumps
-  double rad_deexc = 0.;
-  double col_deexc = 0.;
-  double internal_down_same = 0.;
+  processrates[MA_ACTION_RADDEEXC] = 0.;
+  processrates[MA_ACTION_COLDEEXC] = 0.;
+  processrates[MA_ACTION_INTERNALDOWNSAME] = 0.;
   const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
   for (int i = 1; i <= ndowntrans; i++)
   {
@@ -58,26 +74,26 @@ static void set_cellhistory_transitionrates(
     const double individ_col_deexc = C * epsilon_trans;
     const double individ_internal_down_same = (R + C) * epsilon_target;
 
-    cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = individ_rad_deexc;
-    cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = individ_internal_down_same;
+    chlevel->individ_rad_deexc[i] = individ_rad_deexc;
+    chlevel->individ_internal_down_same[i] = individ_internal_down_same;
 
-    rad_deexc += individ_rad_deexc;
-    col_deexc += individ_col_deexc;
-    internal_down_same += individ_internal_down_same;
+    processrates[MA_ACTION_RADDEEXC] += individ_rad_deexc;
+    processrates[MA_ACTION_COLDEEXC] += individ_col_deexc;
+    processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
     #ifdef DEBUG_ON
       if (debuglevel == 2) printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
     #endif
   }
-  cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = rad_deexc;
-  cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc = col_deexc;
-  cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same = internal_down_same;
+  chlevel->rad_deexc = processrates[MA_ACTION_RADDEEXC];
+  chlevel->col_deexc = processrates[MA_ACTION_COLDEEXC];
+  chlevel->internal_down_same = processrates[MA_ACTION_INTERNALDOWNSAME];
 
   /// Downward transitions to lower ionisation stages:
   /// radiative/collisional recombination and internal downward jumps
-  double rad_recomb = 0.;
-  double col_recomb = 0.;
-  double internal_down_lower = 0.;
+  processrates[MA_ACTION_RADRECOMB] = 0.;
+  processrates[MA_ACTION_COLRECOMB] = 0.;
+  processrates[MA_ACTION_INTERNALDOWNLOWER] = 0.;
   if (ion > 0) ///checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
   {
     //nlevels = get_nlevels(element,ion-1);
@@ -92,19 +108,19 @@ static void set_cellhistory_transitionrates(
       //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
       const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
 
-      rad_recomb += R * epsilon_trans;
-      col_recomb += C * epsilon_trans;
+      processrates[MA_ACTION_RADRECOMB] += R * epsilon_trans;
+      processrates[MA_ACTION_COLRECOMB] += C * epsilon_trans;
 
-      internal_down_lower += (R + C) * epsilon_target;
+      processrates[MA_ACTION_INTERNALDOWNLOWER] += (R + C) * epsilon_target;
     }
   }
-  cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = rad_recomb;
-  cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb = col_recomb;
-  cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower = internal_down_lower;
+  chlevel->rad_recomb = processrates[MA_ACTION_RADRECOMB];
+  chlevel->col_recomb = processrates[MA_ACTION_COLRECOMB];
+  chlevel->internal_down_lower = processrates[MA_ACTION_INTERNALDOWNLOWER];
 
   /// Calculate sum for upward internal transitions
   /// transitions within the current ionisation stage
-  double internal_up_same = 0.;
+  processrates[MA_ACTION_INTERNALUPSAME] = 0.;
   const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
   for (int i = 1; i <= nuptrans; i++)
   {
@@ -117,20 +133,19 @@ static void set_cellhistory_transitionrates(
 
     const double individ_internal_up_same = (R + C) * epsilon_current;
 
-    cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = individ_internal_up_same;
+    chlevel->individ_internal_up_same[i] = individ_internal_up_same;
 
-    internal_up_same += individ_internal_up_same;
+    processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
 
     #ifdef DEBUG_ON
       if (debuglevel == 2) printout("checking uptrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,upper,R,C,epsilon_trans);
-      if (!isfinite(internal_up_same)) {printout("fatal: internal_up_same has nan contribution\n");}
+      if (!isfinite(processrates[MA_ACTION_INTERNALUPSAME])) {printout("fatal: internal_up_same has nan contribution\n");}
     #endif
   }
-  cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same = internal_up_same;
+  chlevel->internal_up_same = processrates[MA_ACTION_INTERNALUPSAME];
 
   /// Transitions to higher ionisation stages
-  double internal_up_higher = 0.;
-
+  processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
   const int ionisinglevels = get_bfcontinua(element,ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
   {
@@ -144,10 +159,10 @@ static void set_cellhistory_transitionrates(
       const double R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
-      internal_up_higher += (R + C) * epsilon_current;
+      processrates[MA_ACTION_INTERNALUPHIGHER] += (R + C) * epsilon_current;
     }
   }
-  cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = internal_up_higher;
+  chlevel->internal_up_higher = processrates[MA_ACTION_INTERNALUPHIGHER];
 }
 
 
@@ -545,25 +560,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       if (debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
       if (debuglevel == 2) printout("[debug] do_ma: col_deexc_stored %g\n",cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc);
     #endif
-    if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc < 0)
-    {
-      /// If there are no precalculated rates available we must calculate them
-      set_cellhistory_transitionrates(modelgridindex, element, ion, level, t_mid);
-    }
-
-    // select transition according to probabilities
 
     double processrates[MA_ACTION_INTERNALUPHIGHER + 1];
-    processrates[MA_ACTION_NONE] = 0.;
-    processrates[MA_ACTION_RADDEEXC] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc;
-    processrates[MA_ACTION_COLDEEXC] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc;
-    processrates[MA_ACTION_INTERNALDOWNSAME] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same;
-    processrates[MA_ACTION_RADRECOMB] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb;
-    processrates[MA_ACTION_COLRECOMB] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb;
-    processrates[MA_ACTION_INTERNALDOWNLOWER] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower;
-    processrates[MA_ACTION_INTERNALUPSAME] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same;
-    processrates[MA_ACTION_INTERNALUPHIGHER] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher;
+    get_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, processrates);
 
+    // select transition according to probabilities
     double total_transitions = 0.;
     for (enum ma_action action = MA_ACTION_RADDEEXC; action <= MA_ACTION_INTERNALUPHIGHER; action++)
       total_transitions += processrates[action];
