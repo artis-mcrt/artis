@@ -67,7 +67,8 @@ static void get_macroatom_transitionrates(
     processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
     #ifdef DEBUG_ON
-      if (debuglevel == 2) printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
+      if (debuglevel == 2)
+        printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
     #endif
   }
 

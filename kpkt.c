@@ -40,7 +40,7 @@ void calculate_kpkt_rates(int modelgridindex)
   //C_exc = 0.;  /// collisional excitation of macroatoms
   //C_ion = 0.;  /// collisional ionisation of macroatoms
   double contrib = 0.;
-  int i = 0;
+  // int i = 0;
   for (int element = 0; element < nelements; element++)
   {
     //printout("[debug] do_kpkt: element %d\n",element);
@@ -76,7 +76,7 @@ void calculate_kpkt_rates(int modelgridindex)
           cellhistory[tid].coolinglist[i].ion = ion;
           cellhistory[tid].coolinglist[i].level = -99;
           cellhistory[tid].coolinglist[i].upperlevel = -99;*/
-          i++;
+          // i++;
         }
 
         for (int level = 0; level < nlevels_currention; level++)
@@ -112,7 +112,7 @@ void calculate_kpkt_rates(int modelgridindex)
             cellhistory[tid].coolinglist[i].level = level;
             cellhistory[tid].coolinglist[i].upperlevel = upper;
             cellhistory[tid].coolinglist[i].lineindex = lineindex;*/
-            i++;
+            // i++;
             //linecounter++;
           }
 
@@ -141,7 +141,7 @@ void calculate_kpkt_rates(int modelgridindex)
             cellhistory[tid].coolinglist[i].ion = ion;
             cellhistory[tid].coolinglist[i].level = level;
             cellhistory[tid].coolinglist[i].upperlevel = upper;*/
-            i++;
+            // i++;
             //}
 
 
@@ -180,7 +180,7 @@ void calculate_kpkt_rates(int modelgridindex)
             cellhistory[tid].coolinglist[i].ion = ion;
             cellhistory[tid].coolinglist[i].level = level;
             cellhistory[tid].coolinglist[i].upperlevel = 0;*/
-            i++;
+            // i++;
           }
         }
 
@@ -433,10 +433,10 @@ static double sample_planck(double T)
 
   double nu;
   bool endloop = false;
-  int i = 0;
+  // int i = 0;
   while (!endloop)
   {
-    i++;
+    // i++;
     double zrand = gsl_rng_uniform(rng);
     double zrand2 = gsl_rng_uniform(rng);
     nu = nu_min_r + zrand * (nu_max_r - nu_min_r);
@@ -499,22 +499,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 //  return do_kpkt_bb(pkt_ptr, t1, t2);
 //}
 {
-  double zrand;
-
-  double coolingsum;
-  double nu_threshold;
-  int i = -1;
-
-  gsl_integration_workspace *wsp;
   gslintegration_paras intparas;
   gsl_function F_bfcooling;
   //F_bfcooling.function = &bfcooling_integrand_gsl_2;
   F_bfcooling.function = &alpha_sp_E_integrand_gsl;
   const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-  double error;
-  double nu_lower,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
-  double rndcool;
-  double oldcoolingsum;
 
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
@@ -553,21 +542,24 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   //double nne = get_nne(modelgridindex);
   const float T_e = get_Te(modelgridindex);
   double deltat = 0.;
-  if (nts < n_kpktdiffusion_timesteps) deltat = kpktdiffusion_timescale * time_step[nts].width;
+  if (nts < n_kpktdiffusion_timesteps)
+    deltat = kpktdiffusion_timescale * time_step[nts].width;
   //double deltat = 1./(nne*1.02e-12*pow(T_e/1e4,0.843));
   //printout("kpkt diffusion time simple %g, advanced %g\n",deltat,1/(nne*1.02e-12*pow(T_e/1e4,0.843)));
   double t_current = t1 + deltat;
 
   if (t_current <= t2)
   {
+    gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1024);
+    double nu_lower,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
+
     pkt_ptr->pos[0] = pkt_ptr->pos[0] * t_current / t1;
     pkt_ptr->pos[1] = pkt_ptr->pos[1] * t_current / t1;
     pkt_ptr->pos[2] = pkt_ptr->pos[2] * t_current / t1;
-    wsp = gsl_integration_workspace_alloc(1024);
 
     /// Randomly select the occuring cooling process out of the important ones
-    coolingsum = 0.;
-    zrand = gsl_rng_uniform(rng);
+    double coolingsum = 0.;
+    double zrand = gsl_rng_uniform(rng);
     //if (debuglevel == 2) printout("do_kpkt: totalcooling %g, zrand %g, cut %g\n",cellhistory[tid].totalcooling,zrand,COOLINGCUT);
     //printout("do_kpkt: totalcooling %g, zrand %g, cut %g\n",cellhistory[tid].totalcooling,zrand,COOLINGCUT);
     /*for (i = 0; i < importantcoolingterms; i++)
@@ -579,8 +571,9 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
     }*/
 
 
-    rndcool = zrand * modelgrid[modelgridindex].totalcooling;
+    const double rndcool = zrand * modelgrid[modelgridindex].totalcooling;
     //printout("rndcool %g\n",rndcool);
+    double oldcoolingsum;
     int element;
     int ion;
     for (element = 0; element < nelements; element++)
@@ -635,6 +628,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
     //low = 0;
     //high = importantcoolingterms - 1;
     //rndcool = zrand*cellhistory[tid].totalcooling;
+    int i = -1;
     while (low <= high)
     {
       i = (low + high) / 2;
@@ -719,7 +713,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       ion = cellhistory[tid].coolinglist[i].ion;
       const int level = cellhistory[tid].coolinglist[i].level;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
-      nu_threshold = (epsilon(element,ion+1,upper) - epsilon(element,ion,level)) / H;
+      const double nu_threshold = (epsilon(element,ion+1,upper) - epsilon(element,ion,level)) / H;
 
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> free-bound\n");
@@ -749,6 +743,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         F_bfcooling.params = &intparas;
         const double deltanu = nu_threshold * NPHIXSNUINCREMENT * 0.9;
         const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+        double error;
         gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_bfcooling_coeff, &error);
         bfcooling_coeff = total_bfcooling_coeff;
         int ii;
@@ -765,7 +760,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
             //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
           }
           //printout("[debug] kpkt: zrand %g, step %d, bfcooling_coeff %g, total_bfcooling_coeff %g, bfcooling_coeff/total_bfcooling_coeff %g, nu_lower %g\n",zrand,ii,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff/total_bfcooling_coeff,nu_lower);
-          if (zrand >= bfcooling_coeff/total_bfcooling_coeff) break;
+          if (zrand >= bfcooling_coeff / total_bfcooling_coeff)
+            break;
         }
         if (ii == NPHIXSPOINTS)
         {
