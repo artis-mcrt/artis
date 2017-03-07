@@ -197,15 +197,23 @@ typedef struct packet
 } PKT;
 
 enum ma_action {
-  MA_ACTION_NONE = 0,
-  MA_ACTION_RADDEEXC = 1,
-  MA_ACTION_COLDEEXC = 2,
-  MA_ACTION_RADRECOMB = 3,
-  MA_ACTION_COLRECOMB = 4,
-  MA_ACTION_INTERNALDOWNSAME = 5,
-  MA_ACTION_INTERNALDOWNLOWER = 6,
-  MA_ACTION_INTERNALUPSAME = 7,
-  MA_ACTION_INTERNALUPHIGHER = 8,
+  /// Radiative deexcitation rate from this level.
+  MA_ACTION_RADDEEXC = 0,
+  /// Collisional deexcitation rate from this level.
+  MA_ACTION_COLDEEXC = 1,
+  /// Radiative recombination from this level.
+  MA_ACTION_RADRECOMB = 2,
+  /// Collisional recombination rate from this level.
+  MA_ACTION_COLRECOMB = 3,
+  /// Rate for internal downward transitions to same ionisation stage.
+  MA_ACTION_INTERNALDOWNSAME = 4,
+  /// Rate for internal upward transitions to same ionisation stage.
+  MA_ACTION_INTERNALDOWNLOWER = 5,
+  /// Rate for internal downward transitions to lower ionisation stage.
+  MA_ACTION_INTERNALUPSAME = 6,
+  /// Rate for internal upward transitions to higher ionisation stage.
+  MA_ACTION_INTERNALUPHIGHER = 7,
+  MA_ACTION_COUNT = 8,
 };
 
 typedef struct mastate_t
@@ -418,7 +426,7 @@ typedef struct levellist_entry
 
 typedef struct ionlist_entry
 {
-  levellist_entry *restrict levels;          /// Carries information for each level: 0,1,...,nlevels-1
+  levellist_entry *levels;                   /// Carries information for each level: 0,1,...,nlevels-1
   int ionstage;                              /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels;                               /// Number of levels for this ionisation stage
   int nlevels_nlte;                          /// number of nlte levels for this ion
@@ -509,15 +517,7 @@ typedef struct
 typedef struct chlevels_struct
 {
   double population;                      /// The level's population
-
-  double rad_deexc;                       /// Radiative deexcitation rate from this level.
-  double col_deexc;                       /// Collisional deexcitation rate from this level.
-  double rad_recomb;                      /// Radiative recombination from this level.
-  double col_recomb;                      /// Collisional recombination rate from this level.
-  double internal_down_same;              /// Rate for internal downward transitions to same ionisation stage.
-  double internal_up_same;                /// Rate for internal upward transitions to same ionisation stage.
-  double internal_down_lower;             /// Rate for internal downward transitions to lower ionisation stage.
-  double internal_up_higher;              /// Rate for internal upward transitions to higher ionisation stage.
+  double processrates[MA_ACTION_INTERNALUPHIGHER + 1];
 
   double *restrict individ_rad_deexc;
   double *restrict individ_internal_down_same;

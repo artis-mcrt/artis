@@ -232,7 +232,7 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
         }
         /// This is the only flag needed for all of the following MA stuff!
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc = -99.;
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
         /*
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = -99.;
