@@ -493,7 +493,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   int upper = -100;
   int lower = -100;
 
-  //debuglevel = 2;
+  // debuglevel = 2;
   #ifdef DEBUG_ON
     if (debuglevel == 2)
       printout("[debug] =============entering do_ma\n");
@@ -501,7 +501,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     int jump = -99;
   #endif
 
-  //debuglevel = 2;
   bool end_packet = false;
   while (!end_packet)
   {
@@ -546,32 +545,24 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       if (debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
       if (debuglevel == 2) printout("[debug] do_ma: col_deexc_stored %g\n",cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc);
     #endif
-    if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc < 0 || level == 0)
+    if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc < 0)
     {
       /// If there are no precalculated rates available we must calculate them
       set_cellhistory_transitionrates(modelgridindex, element, ion, level, t_mid);
     }
 
-    const double col_deexc = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc;
-    const double rad_recomb = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb;
-    const double col_recomb = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb;
-    const double internal_down_same = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same;
-    const double internal_up_same = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same;
-    const double internal_down_lower = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower;
-    const double internal_up_higher = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher;
-
-    /// select transition according to probabilities /////////////////////////////////////
+    // select transition according to probabilities
 
     double processrates[MA_ACTION_INTERNALUPHIGHER + 1];
     processrates[MA_ACTION_NONE] = 0.;
     processrates[MA_ACTION_RADDEEXC] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc;
-    processrates[MA_ACTION_COLDEEXC] = col_deexc;
-    processrates[MA_ACTION_INTERNALDOWNSAME] = internal_down_same;
-    processrates[MA_ACTION_RADRECOMB] = rad_recomb;
-    processrates[MA_ACTION_COLRECOMB] = col_recomb;
-    processrates[MA_ACTION_INTERNALDOWNLOWER] = internal_down_lower;
-    processrates[MA_ACTION_INTERNALUPSAME] = internal_up_same;
-    processrates[MA_ACTION_INTERNALUPHIGHER] = internal_up_higher;
+    processrates[MA_ACTION_COLDEEXC] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_deexc;
+    processrates[MA_ACTION_INTERNALDOWNSAME] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same;
+    processrates[MA_ACTION_RADRECOMB] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb;
+    processrates[MA_ACTION_COLRECOMB] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb;
+    processrates[MA_ACTION_INTERNALDOWNLOWER] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower;
+    processrates[MA_ACTION_INTERNALUPSAME] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same;
+    processrates[MA_ACTION_INTERNALUPHIGHER] = cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher;
 
     double total_transitions = 0.;
     for (enum ma_action action = MA_ACTION_RADDEEXC; action <= MA_ACTION_INTERNALUPHIGHER; action++)
@@ -584,7 +575,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     for (enum ma_action action = MA_ACTION_RADDEEXC; action <= MA_ACTION_INTERNALUPHIGHER; action++)
     {
       rate += processrates[action];
-      if (randomrate < rate)
+      if (rate > randomrate)
       {
         mastate[tid].lastaction = action;
         break;
@@ -594,9 +585,9 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         printout("[fatal] do_ma: problem with random numbers .. abort\n");
         //printout("[debug]    rad_down %g, col_down %g, internal_down %g, internal_up %g\n",rad_down,col_down,internal_down,internal_up);
         printout("[debug] do_ma: element %d, ion %d, level %d, total_transitions %g\n",element,ion,level,total_transitions);
-        printout("[debug]    col_deexc %g, col_recomb %g, rad_deexc %g, rad_recomb %g\n",col_deexc,col_recomb,processrates[MA_ACTION_RADDEEXC],rad_recomb);
-        printout("[debug]    internal_down_same %g, internal_down_lower %g\n",internal_down_same,internal_down_lower);
-        printout("[debug]    internal_up_same %g, internal_up_higher %g\n",internal_up_same,internal_up_higher);
+        printout("[debug]    col_deexc %g, col_recomb %g, rad_deexc %g, rad_recomb %g\n",processrates[MA_ACTION_COLDEEXC],processrates[MA_ACTION_COLRECOMB],processrates[MA_ACTION_RADDEEXC],processrates[MA_ACTION_RADRECOMB]);
+        printout("[debug]    internal_down_same %g, internal_down_lower %g\n",processrates[MA_ACTION_INTERNALDOWNSAME],processrates[MA_ACTION_INTERNALDOWNLOWER]);
+        printout("[debug]    internal_up_same %g, internal_up_higher %g\n",processrates[MA_ACTION_INTERNALUPSAME],processrates[MA_ACTION_INTERNALUPHIGHER]);
         printout("[debug]    zrand %g\n",zrand);
         printout("[debug]    jumps %d\n",jumps);
         printout("[debug]    pkt_ptr->number %d\n",pkt_ptr->number);
@@ -665,14 +656,17 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       if (debuglevel == 2)
       {
         printout("[debug] do_ma: element %d, ion %d, level %d\n",element,ion,level);
-        printout("[debug] do_ma:   rad_deexc %g, col_deexc %g, internal_down_same %g, rad_recomb %g, col_recomb %g, internal_down_lower %g, internal_up_same %g, internal_up_higher %g\n",processrates[MA_ACTION_RADDEEXC],col_deexc,internal_down_same,rad_recomb,col_recomb, internal_down_lower, internal_up_same,internal_up_higher);
+        printout(
+          "[debug] do_ma:   rad_deexc %g, col_deexc %g, internal_down_same %g, rad_recomb %g, col_recomb %g, internal_down_lower %g, internal_up_same %g, internal_up_higher %g\n",
+          processrates[MA_ACTION_RADDEEXC],processrates[MA_ACTION_COLDEEXC],processrates[MA_ACTION_INTERNALDOWNSAME],processrates[MA_ACTION_RADRECOMB],processrates[MA_ACTION_COLRECOMB],
+          processrates[MA_ACTION_INTERNALDOWNLOWER], processrates[MA_ACTION_INTERNALUPSAME],processrates[MA_ACTION_INTERNALUPHIGHER]);
       }
       if (total_transitions <= 0.)
       {
         printout("[debug] do_ma: element %d, ion %d, level %d, total_transitions = %g\n",element,ion,level,total_transitions);
-        printout("[debug]    col_deexc %g, col_recomb %g, rad_deexc %g, rad_recomb %g\n",col_deexc,col_recomb,processrates[MA_ACTION_RADDEEXC],rad_recomb);
-        printout("[debug]    internal_down_same %g, internal_down_lower %g\n",internal_down_same,internal_down_lower);
-        printout("[debug]    internal_up_same %g, internal_up_higher %g\n",internal_up_same,internal_up_higher);
+        printout("[debug]    col_deexc %g, col_recomb %g, rad_deexc %g, rad_recomb %g\n",processrates[MA_ACTION_COLDEEXC],processrates[MA_ACTION_COLRECOMB],processrates[MA_ACTION_RADDEEXC],processrates[MA_ACTION_RADRECOMB]);
+        printout("[debug]    internal_down_same %g, internal_down_lower %g\n",processrates[MA_ACTION_INTERNALDOWNSAME],processrates[MA_ACTION_INTERNALDOWNLOWER]);
+        printout("[debug]    internal_up_same %g, internal_up_higher %g\n",processrates[MA_ACTION_INTERNALUPSAME],processrates[MA_ACTION_INTERNALUPHIGHER]);
         printout("[debug]    zrand %g\n",zrand);
         printout("[debug]    jumps %d, jump %d\n",jumps,jump);
         printout("[debug]    pkt_ptr->number %d, pkt_ptr->where %d\n",pkt_ptr->number,cellindex);
@@ -754,11 +748,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         /// Randomly select the occuring transition
         zrand = gsl_rng_uniform(rng);
         lower = -99;
-        rate = 0.;
+        double rate = 0.;
         for (int i = 1; i <= ndowntrans; i++)
         {
           rate += get_individ_internal_down_same(element, ion, level, i);
-          if (zrand * internal_down_same < rate)
+          if (zrand * processrates[MA_ACTION_INTERNALDOWNSAME] < rate)
           {
             lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
             break;
@@ -793,7 +787,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             printout("[debug] do_ma:   element %d, ion %d, level %d\n",element,ion,level);
           }
         #endif
-        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, ion, level, rad_recomb, t_current);
+        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADRECOMB], t_current);
         end_packet = true;
         break;
 
@@ -844,7 +838,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
           const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
-          if (zrand * internal_down_lower < rate)
+          if (zrand * processrates[MA_ACTION_INTERNALDOWNLOWER] < rate)
             break;
         }
         /// and set the macroatom's new state
@@ -854,7 +848,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         #ifdef DEBUG_ON
           if (lower >= nlevels)
           {
-            printout("internal_down_lower  %g\n",internal_down_lower);
+            printout("internal_down_lower  %g\n", processrates[MA_ACTION_INTERNALDOWNLOWER]);
             printout("abort at rate %g, zrand %g\n",rate,zrand);
             abort();
           }
@@ -885,7 +879,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         for (int i = 1; i <= nuptrans; i++)
         {
           rate += get_individ_internal_up_same(element, ion, level, i);
-          if (zrand * internal_up_same < rate)
+          if (zrand * processrates[MA_ACTION_INTERNALUPSAME] < rate)
           {
             upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
             break;
@@ -904,7 +898,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           jump = 3;
         #endif
 
-        do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current, internal_up_higher);
+        do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
         break;
 
       default:
