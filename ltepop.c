@@ -579,17 +579,12 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
 /// entry of the cellhistory.
 {
 //printout("get_levelpop histindex %d\n",histindex);
+  double levelpop;
   if (use_cellhist)
+    levelpop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
+
+  if (!use_cellhist || levelpop < 0)
   {
-    const double pop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
-    if (pop > -1)
-      return pop;
-    else
-    {
-      printout("Abort: get_levelpop called, but no population in cellhistory for element %d ion %d level %d",
-               element,ion,level);
-      abort();
-    }
     const int cellmgi = cell[cellhistory[tid].cellnumber].modelgridindex;
 
     if (cellmgi != modelgridindex)
@@ -598,11 +593,13 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
                cellmgi,modelgridindex);
       abort();
     }
+    levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
+
+    if (use_cellhist)
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = levelpop;
   }
-  else
-  {
-    return calculate_exclevelpop(modelgridindex,element,ion,level);
-  }
+
+  return levelpop;
 }
 
 
