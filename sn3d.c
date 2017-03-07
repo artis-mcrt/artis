@@ -140,10 +140,10 @@ static void pkt_action_counters_printout(void)
 #ifdef MPI_ON
 static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int ndo, int nts, int titer, char *mpi_grid_buffer, int mpi_grid_buffer_size, char* mpi_nlte_buffer, int mpi_nlte_buffer_size)
 {
-  MPI_Barrier(MPI_COMM_WORLD);
   int position = 0;
   for (int n = 0; n < p; n++)
   {
+    MPI_Barrier(MPI_COMM_WORLD);
     if (MULTIBIN_RADFIELD_MODEL_ON)
       radfield_MPI_Bcast(n, my_rank, nstart, ndo);
     if (NT_ON && NT_SOLVE_SPENCERFANO)
@@ -803,25 +803,22 @@ int main(int argc, char** argv)
 
       #ifdef TIMED_RESTARTS
         const time_t time_timestep_start = time(NULL);
-        if (estimated_time_for_clean_exit > -1)
+        if (my_rank == 0 && estimated_time_for_clean_exit > -1)
         {
           const int wallclock_used_seconds = time_timestep_start - real_time_start;
           const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
           printout("TIMED_RESTARTS: Used %d of %d seconds of wall time. Estimated time for clean exit is %d seconds\n",
                    wallclock_used_seconds, WALLTIMELIMITSECONDS, estimated_time_for_clean_exit);
           if (wallclock_remaining_seconds < 1.5 * estimated_time_for_clean_exit + 30)
-          {
-            do_this_full_loop = false; // This flag will make it do a write out then quit, hopefully
-            printout("TIMED_RESTARTS: Going to terminate since time remaining < 1.5 * estimated_time_for_clean_exit + 30\n");
-          }
-          else
-          {
-            printout("TIMED_RESTARTS: Going to continue since time remaining >= 1.5 * estimated_time_for_clean_exit. + 30\n");
-          }
-          #ifdef MPI_ON
-            MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-          #endif
+            do_this_full_loop = false; // This flag will make it complete the timestep, update_grid, and then exit
         }
+        #ifdef MPI_ON
+          MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+        #endif
+        if (do_this_full_loop)
+          printout("TIMED_RESTARTS: Going to continue since time remaining >= 1.5 * estimated_time_for_clean_exit. + 30\n");
+        else
+          printout("TIMED_RESTARTS: Going to terminate since time remaining < 1.5 * estimated_time_for_clean_exit + 30\n");
       #endif
 
       #ifdef DO_TITER
