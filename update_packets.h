@@ -5,13 +5,13 @@
 
 void update_packets(int nts);
 
-inline void update_cell(int cellnumber)
+inline void update_cell(const int mgi)
 ///=calculate_levelpops for non isothermal homogeneous grids
 ///
 {
   updatecellcounter++;
 
-  cellhistory_reset(cellnumber, true);
+  cellhistory_reset(mgi, false);
 }
 
 #endif //UPDATE_PACKETS_H

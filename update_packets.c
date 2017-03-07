@@ -7,7 +7,7 @@
 #include "rpkt.h"
 
 
-extern void update_cell(int cellnumber);
+extern void update_cell(const int mgi);
 
 
 static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, const int nts)
