@@ -1227,8 +1227,9 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
   }
   if (error_best >= 0.)
   {
-    printout("  SF solver LU_refine: After %d iterations, keeping solution vector that had a max residual of %g\n",
-             iteration, error_best);
+    if (error_best > 1e-10)
+      printout("  SF solver LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING)\n",
+               iteration, error_best);
     gsl_vector_memcpy(yvec, yvec_best);
   }
   gsl_vector_free(yvec_best);

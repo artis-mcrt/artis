@@ -546,7 +546,7 @@ static void nltepop_matrix_solve(
   {
     // printout("  NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of %g\n",iteration,error_best);
     if (error_best > 1e-10)
-      printout("  NLTE solver matrix LU_refine: After %d iterations, best solution vector had a max residual of %g (WARNING!)\n",iteration,error_best);
+      printout("  NLTE solver matrix LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING!)\n",iteration,error_best);
     gsl_vector_memcpy(x, x_best);
   }
   gsl_matrix_free(rate_matrix_LU_decomp);

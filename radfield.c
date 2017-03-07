@@ -1206,6 +1206,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
   }
 }
 
+
 inline
 int radfield_integrate(
   const gsl_function *f, double nu_a, double nu_b, double epsabs,
