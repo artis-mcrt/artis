@@ -929,16 +929,13 @@ int main(int argc, char** argv)
         /// If this is not the 0th time step of the current job step,
         /// write out a snapshot of the grid properties for further restarts
         /// and update input.txt accordingly
-        if (nts - itstep != 0)
+        if (((nts - itstep) != 0) && (my_rank == 0))
         {
-          if (my_rank == 0)
-          {
-            printout("Write grid restart data\n");
-            write_grid_restart_data();
-            printout("Update input.txt for restart at time step %d\n", nts);
-            update_parameterfile(nts);
-            printout("input.txt successfully updated\n");
-          }
+          printout("Write grid restart data\n");
+          write_grid_restart_data();
+          printout("Update input.txt for restart at time step %d\n", nts);
+          update_parameterfile(nts);
+          printout("input.txt successfully updated\n");
         }
 
 
