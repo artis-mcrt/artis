@@ -140,6 +140,7 @@ static void pkt_action_counters_printout(void)
 #ifdef MPI_ON
 static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int ndo, int nts, int titer, char *mpi_grid_buffer, int mpi_grid_buffer_size, char* mpi_nlte_buffer, int mpi_nlte_buffer_size)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   int position = 0;
   for (int n = 0; n < p; n++)
   {
@@ -178,7 +179,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
           }
         }
       }
-      printout("MPI_BUFFER: used %d of %d bytes of MPI mpi_grid_buffer buffer\n", position, mpi_grid_buffer_size);
+      printout("MPI_BUFFER: used %d of %d bytes of MPI mpi_grid_buffer\n", position, mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, n, MPI_COMM_WORLD);
