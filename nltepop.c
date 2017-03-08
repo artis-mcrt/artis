@@ -346,13 +346,15 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
       const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
 
-      if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
-      {
-        const double tau_sobolev = get_tau_sobolev(modelgridindex, lineindex, t_mid);
-        const double nu_trans = epsilon_trans / H;
-        const double lambda = 1e8 * CLIGHT / nu_trans; // should be in Angstroms
-        printout("Z=%d lower %d upper %d lambda %6.1fÅ tau_sobolev=%g\n",Z, ionstage, level, upper, lambda, tau_sobolev);
-      }
+      // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
+      // {
+      //   const double tau_sobolev = get_tau_sobolev(modelgridindex, lineindex, t_mid);
+      //   const double nu_trans = epsilon_trans / H;
+      //   const double lambda = 1e8 * CLIGHT / nu_trans; // should be in Angstroms
+      //   printout("Z=%d ionstage %d lower %d upper %d lambda %6.1fÅ tau_sobolev=%g einstein_A %g osc_strength %g coll_str %g\n",
+      //            Z, ionstage, level, upper, lambda, tau_sobolev,
+      //            linelist[lineindex].einstein_A, linelist[lineindex].osc_strength, linelist[lineindex].coll_str);
+      // }
 
       const int lower_index = level_index;
       const int upper_index = get_nlte_vector_index(element,ion,upper);
