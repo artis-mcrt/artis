@@ -35,7 +35,7 @@ static void get_macroatom_transitionrates(
   const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *restrict processrates)
 {
   const bool do_internaldownlower = true; //true;
-  const bool do_internalupsame = true; //(mastate[tid].level != 0);
+  const bool do_internalupsame = true; // (mastate[tid].level != 0);
   const bool do_internaluphigher = true; // (mastate[tid].level != 0);
 
   chlevels_struct *const restrict chlevel = &cellhistory[tid].chelements[element].chions[ion].chlevels[level];
@@ -494,9 +494,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
   /// initialization we should see errors
-  double epsilon_trans = -100.;
-  int upper = -100;
-  int lower = -100;
 
   // debuglevel = 2;
   #ifdef DEBUG_ON
@@ -593,10 +590,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           //nlevels = get_nlevels(element,ion-1);
           const int nlevels = get_bfcontinua(element, ion - 1);
           //nlevels = get_ionisinglevels(element,ion-1);
-          for (lower = 0; lower < nlevels; lower++)
+          for (int lower = 0; lower < nlevels; lower++)
           {
             const double epsilon_target = epsilon(element, ion - 1,lower);
-            epsilon_trans = epsilon_current - epsilon_target;
+            const double epsilon_trans = epsilon_current - epsilon_target;
             const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
             const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
             printout("[debug]    recombination to ion %d, level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",ion-1,lower,epsilon_target,epsilon_trans,R,C);
@@ -607,8 +604,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         printout("[debug]    ndowntrans %d %d\n",ndowntrans,elements[element].ions[ion].levels[level].downtrans[0].targetlevel);
         for (int i = 1; i <= ndowntrans; i++)
         {
-          lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
+          const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
+          const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
           const int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
           const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
           const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
@@ -619,10 +616,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         printout("[debug]    nuptrans %d %d\n",nuptrans,elements[element].ions[ion].levels[level].uptrans[0].targetlevel);
         for (int i = 1; i <= nuptrans; i++)
         {
-          upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-          epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
+          const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
+          const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
           const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
-          const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_mid);
+          const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
           const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
           printout("[debug]    excitation to level %d, epsilon_trans %g, R %g, C %g\n",upper,epsilon_trans,R,C);
         }
@@ -632,8 +629,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           printout("[debug]    check ionisation\n");
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
           {
-            upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-            epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
+            const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+            const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
             const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
             const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
             printout("[debug]    ionisation to ion %d, level %d, epsilon_trans %g, R %g, C %g\n", ion + 1, upper, epsilon_trans, R, C);
@@ -670,20 +667,20 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         double C = 0.0;
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
         {
-          upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-          epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
+          const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+          const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
           R += get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
           C += col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
           printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current);
         }
 
-        float T_R = get_TR(modelgridindex);
-        float W = get_W(modelgridindex);
+        const float T_R = get_TR(modelgridindex);
+        const float W = get_W(modelgridindex);
         printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,get_Te(modelgridindex),W,get_TJ(modelgridindex));
         #if (!NO_LUT_PHOTOION)
-          double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
-          int index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-          double renorm  = corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimor];
+          const double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
+          const int index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+          const double renorm  = corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimor];
           printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
         #endif
 
@@ -740,7 +737,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
         /// Randomly select the occuring transition
         zrand = gsl_rng_uniform(rng);
-        lower = -99;
+        int lower = -99;
         double rate = 0.;
         for (int i = 1; i <= ndowntrans; i++)
         {
@@ -827,7 +824,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         for (lower = 0; lower < nlevels; lower++)
         {
           const double epsilon_target = epsilon(element, ion - 1, lower);
-          epsilon_trans = epsilon_current - epsilon_target;
+          const double epsilon_trans = epsilon_current - epsilon_target;
           const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
           const double C = col_recombination_ratecoeff(T_e, nne, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
@@ -867,7 +864,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
         ///randomly select the occuring transition
         zrand = gsl_rng_uniform(rng);
-        upper = -99;
+        int upper = -99;
         rate = 0.;
         for (int i = 1; i <= nuptrans; i++)
         {
