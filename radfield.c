@@ -789,7 +789,7 @@ static float find_T_R(int modelgridindex, int binindex)
 }
 
 
-static void get_radfield_params_fullspec(double J, double nuJ, int modelgridindex, float *T_J, float *T_R, float *W)
+static void get_radfield_params_fullspec(const double J, const double nuJ, const int modelgridindex, float *T_J, float *T_R, float *W)
 {
   const double nubar = nuJ / J;
   if (!isfinite(nubar) || nubar == 0.)
@@ -886,7 +886,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       const double J_bin = radfield_get_bin_J(modelgridindex, binindex, true);
       float T_R_bin = -1.0;
       float W_bin = -1.0;
-      int contribcount = radfield_get_bin_contribcount(modelgridindex, binindex, true);
+      const int contribcount = radfield_get_bin_contribcount(modelgridindex, binindex, true);
 
       if (contribcount > 10)
       {
