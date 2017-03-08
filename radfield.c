@@ -96,6 +96,52 @@ double radfield_get_bin_nu_upper(int binindex)
   return radfieldbin_nu_upper[binindex];
 }
 
+static void
+setup_bin_boundaries(void)
+{
+  double prev_nu_upper = nu_lower_first_initial;
+  const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+  //const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+
+  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  {
+    //const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
+    radfieldbin_nu_upper[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
+
+    // Align the bin edges with bound-free edges, except for the last one
+    if (binindex < RADFIELDBINCOUNT - 1)
+    {
+      for (int i = 0; i < nbfcontinua_ground; i++)
+      {
+        const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+        const double eV_edge = H * nu_edge / EV;
+        const double angstrom_edge = 1e8 * CLIGHT / nu_edge;
+        const int Z = get_element(phixslist[tid].groundcont[i].element);
+        const int ion_stage = get_ionstage(phixslist[tid].groundcont[i].element, phixslist[tid].groundcont[i].ion);
+        const int level = phixslist[tid].groundcont[i].level;
+
+        //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
+
+        // this is compares the highest and lowest bins to the bound-free list, only do it once, i.e. binindex == 0
+        if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
+        {
+          printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e Hz, Z=%d ion_stage %d level %d\n",
+                   nu_edge, eV_edge, angstrom_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
+        }
+
+        const double bin_nu_upper = radfield_get_bin_nu_upper(binindex);
+        if ((nu_edge > prev_nu_upper) && (nu_edge < bin_nu_upper))
+        {
+          printout("Shifting bin %d nu_upper from %12.5e Hz to bf edge at %12.5e Hz (%6.2f eV, %6.1f A) for Z=%d ion_stage %d level %d\n",
+                   binindex, bin_nu_upper, nu_edge, eV_edge, angstrom_edge, Z, ion_stage, level);
+          radfieldbin_nu_upper[binindex] = nu_edge;
+        }
+      }
+    }
+    prev_nu_upper = radfield_get_bin_nu_upper(binindex);
+  }
+}
+
 
 void radfield_init(int my_rank)
 {
@@ -120,42 +166,7 @@ void radfield_init(int my_rank)
           "nuJ","J","J_nu_avg","ncontrib","T_R","W");
   fflush(radfieldfile);
 
-  double prev_nu_upper = nu_lower_first_initial;
-  const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
-  //const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
-
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-  {
-    //const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
-    radfieldbin_nu_upper[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
-
-    // Align the bin edges with bound-free edges, except for the last one
-    if (binindex < RADFIELDBINCOUNT - 1)
-    {
-      for (int i = 0; i < nbfcontinua_ground; i++)
-      {
-        const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
-        const int Z = get_element(phixslist[tid].groundcont[i].element);
-        const int ion_stage = get_ionstage(phixslist[tid].groundcont[i].element, phixslist[tid].groundcont[i].ion);
-        const int level = phixslist[tid].groundcont[i].level;
-        //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
-        if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
-        {
-          printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e Hz, Z=%d ion_stage %d level %d\n",
-                   nu_edge, H * nu_edge / EV, 1e8 * CLIGHT / nu_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level);
-        }
-
-        if ((nu_edge > prev_nu_upper) && (nu_edge < radfield_get_bin_nu_upper(binindex)))
-        {
-          radfieldbin_nu_upper[binindex] = nu_edge;
-          printout("Shifting bin %d nu_upper to bf edge at %12.5e Hz (%6.2f eV, %6.1f A) for Z=%d ion_stage %d level %d\n",
-                   binindex, nu_edge, H * nu_edge / EV, 1e8 * CLIGHT / nu_edge, Z, ion_stage, level);
-        }
-      }
-    }
-    prev_nu_upper = radfield_get_bin_nu_upper(binindex);
-  }
-
+  setup_bin_boundaries();
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
