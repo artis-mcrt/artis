@@ -100,12 +100,16 @@ static void
 setup_bin_boundaries(void)
 {
   double prev_nu_upper = nu_lower_first_initial;
-  const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
-  //const double delta_lambda = ((1 / nu_lower_first_initial) - (1 / nu_upper_last_initial)) / RADFIELDBINCOUNT; // upper limit if no edges are crossed
+
+  // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
+  const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT;
+  // const double lambda_lower_first_initial = 1e8 * CLIGHT / nu_lower_first_initial;
+  // const double lambda_upper_last_initial = 1e8 * CLIGHT / nu_upper_last_initial;
+  // const double delta_lambda = (lambda_upper_last_initial - lambda_lower_first_initial) / RADFIELDBINCOUNT;
 
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
   {
-    //const double delta_nu = pow(prev_nu_upper,2) * delta_lambda; // equally spaced in wavelength
+    // radfieldbin_nu_upper[binindex] = 1e8 * CLIGHT / (lambda_lower_first_initial + (binindex + 1) * delta_lambda);
     radfieldbin_nu_upper[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
 
     // Align the bin edges with bound-free edges, except for the last one
@@ -581,8 +585,8 @@ double radfield(double nu, int modelgridindex)
 
 static double gsl_integrand_planck(double nu, void *restrict paras)
 {
-  double T_R = ((gsl_planck_integral_paras *) paras)->T_R;
-  enum_prefactor prefactor = ((gsl_planck_integral_paras *) paras)->prefactor;
+  const double T_R = ((gsl_planck_integral_paras *) paras)->T_R;
+  const enum_prefactor prefactor = ((gsl_planck_integral_paras *) paras)->prefactor;
 
   double integrand = TWOHOVERCLIGHTSQUARED * pow(nu,3) / (expm1(HOVERKB * nu / T_R));
 
@@ -601,7 +605,7 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc(65536);
+  gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(65536);
 
   gsl_planck_integral_paras intparas;
   intparas.T_R = T_R;
@@ -671,17 +675,17 @@ static double delta_nu_bar(double T_R, void *restrict paras)
 // difference between the average nu and the average nu of a planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {
-  int modelgridindex = ((gsl_T_R_solver_paras *) paras)->modelgridindex;
-  int binindex = ((gsl_T_R_solver_paras *) paras)->binindex;
+  const int modelgridindex = ((gsl_T_R_solver_paras *) paras)->modelgridindex;
+  const int binindex = ((gsl_T_R_solver_paras *) paras)->binindex;
 
-  double nu_lower = radfield_get_bin_nu_lower(binindex);
-  double nu_upper = radfield_get_bin_nu_upper(binindex);
+  const double nu_lower = radfield_get_bin_nu_lower(binindex);
+  const double nu_upper = radfield_get_bin_nu_upper(binindex);
 
-  double nu_bar_estimator = radfield_get_bin_nu_bar(modelgridindex, binindex);
+  const double nu_bar_estimator = radfield_get_bin_nu_bar(modelgridindex, binindex);
 
-  double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
-  double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
-  double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
+  const double nu_times_planck_numerical = planck_integral(T_R, nu_lower, nu_upper, TIMES_NU);
+  const double planck_integral_numerical = planck_integral(T_R, nu_lower, nu_upper, ONE);
+  const double nu_bar_planck_T_R = nu_times_planck_numerical / planck_integral_numerical;
 
   /*double nu_times_planck_integral = planck_integral_analytic(T_R, nu_lower, nu_upper, TIMES_NU);
   double planck_integral_result = planck_integral_analytic(T_R, nu_lower, nu_upper, ONE);
@@ -699,7 +703,7 @@ static double delta_nu_bar(double T_R, void *restrict paras)
     nu_bar_planck = nu_bar_planck_numerical;
   }*/
 
-  double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
+  const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
   if (!isfinite(delta_nu_bar))
   {
@@ -952,8 +956,8 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       printout("bin %4d: J %g, T_R %7.1f, W %12.5e\n",
              binindex, J_bin, T_R_bin, W_bin);
     }*/
-    if (timestep % 2 == 0)
-      radfield_write_to_file(modelgridindex, timestep);
+    // if (timestep % 2 == 0)
+    radfield_write_to_file(modelgridindex, timestep);
   }
 }
 
