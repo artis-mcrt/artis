@@ -300,13 +300,15 @@ static int get_element_nlte_dimension(
 }
 
 
-static void nltepop_matrix_add_boundbound(
-  const int modelgridindex, const int element, const int ion,
-  const double t_mid, double *restrict s_renorm, gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb)
+static void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion,
+                                          const double t_mid, double *restrict s_renorm,
+                                          gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const int nlevels = get_nlevels(element, ion);
+  const int Z = get_element(element);
+  const int ionstage = get_ionstage(element, ion);
   for (int level = 0; level < nlevels; level++)
   {
     const int level_index = get_nlte_vector_index(element, ion, level);
@@ -344,11 +346,13 @@ static void nltepop_matrix_add_boundbound(
       const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
       const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
 
-      // if ((element == 0) && (ion == 1) && ((level <= 5) || (level == 35)) && (upper >= 74) && (upper <= 77))
-      // {
-      //   const double tau_sobolev = get_tau_sobolev(modelgridindex, lineindex, t_mid);
-      //   printout("timestep %d lower %d upper %d tau_sobolev=%g\n", timestep, level, upper, tau_sobolev);
-      // }
+      if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
+      {
+        const double tau_sobolev = get_tau_sobolev(modelgridindex, lineindex, t_mid);
+        const double nu_trans = epsilon_trans / H;
+        const double lambda = 1e8 * CLIGHT / nu_trans; // should be in Angstroms
+        printout("Z=%d lower %d upper %d lambda %6.1fÅ tau_sobolev=%g\n",Z, ionstage, level, upper, lambda, tau_sobolev);
+      }
 
       const int lower_index = level_index;
       const int upper_index = get_nlte_vector_index(element,ion,upper);
