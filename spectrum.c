@@ -222,12 +222,12 @@ static void init_spectrum(void)
 
   for (int n = 0; n < ntbins; n++)
   {
-    spectra[n].lower_time = exp( log(tmin) + (n * (dlogt)));
-    spectra[n].delta_t = exp( log(tmin) + ((n + 1) * (dlogt))) - spectra[n].lower_time;
+    spectra[n].lower_time = exp(log(tmin) + (n * (dlogt)));
+    spectra[n].delta_t = exp(log(tmin) + ((n + 1) * (dlogt))) - spectra[n].lower_time;
     for (int m = 0; m < nnubins; m++)
     {
-      spectra[n].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
-      spectra[n].delta_freq[m] = exp( log(nu_min_r) + ((m + 1) * (dlognu))) - spectra[n].lower_freq[m];
+      spectra[n].lower_freq[m] = exp(log(nu_min_r) + (m * (dlognu)));
+      spectra[n].delta_freq[m] = exp(log(nu_min_r) + ((m + 1) * (dlognu))) - spectra[n].lower_freq[m];
       spectra[n].flux[m] = 0.0;
       for (int i = 0; i < 2 * nelements * maxion + 1; i++)
         spectra[n].stat[m].emission[i] = 0;  ///added
