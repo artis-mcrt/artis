@@ -264,6 +264,7 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 
 static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int titer)
 {
+  const double covergence_tolerance = 0.03;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
   {
     int duration_solve_spencerfano = -1;
@@ -361,9 +362,9 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
         precalculate_partfuncts(n);
         calculate_electron_densities(n); // sets nne
         nlte_test = fabs((get_nne(n) / oldnne) - 1);
-        printout("NLTE (Te/pops/NT_ion) solver cell %d timestep %d iteration %d: time spent on Spencer-Fano %ds, T_e %ds, NLTE pops %ds\n",
+        printout("NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, populations %ds\n",
                  n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
-        printout("NLTE (Te/pops/NT_ion) solver cell %d timestep %d iteration %d: previous nne is %g, new nne is %g, difference fraction is %g\n",
+        printout("NLTE (Te/pops/NT_ion) solver cell %d timestep %d iteration %d: previous nne is %g, new nne is %g, fractional difference is %g\n",
                  n, nts, nlte_iter, oldnne, get_nne(n), nlte_test);
         //set_nne(n, (get_nne(n) + oldnne) / 2.);
       }
@@ -373,9 +374,9 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
                  n, nts, nlte_test);
       }
 
-      if (nlte_test <= 0.03)
+      if (nlte_test <= covergence_tolerance)
       {
-        printout("NLTE solver converged to tolerance %g after %d iterations.\n", nlte_test, nlte_iter + 1);
+        printout("NLTE solver converged to tolerance %g < %g after %d iterations.\n", nlte_test, covergence_tolerance, nlte_iter + 1);
         break;
       }
       else if (nlte_iter == NLTEITER)
