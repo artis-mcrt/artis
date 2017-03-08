@@ -334,7 +334,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
 }
 
 
-static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
+static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
 {
   //double nnionlevel,nnlevel,nne;
   //double ma_prob,p_maactivate,p_bf,prob;
@@ -518,8 +518,6 @@ static int rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curren
       #endif
     }
   }
-
-  return 0;
 }
 
 
