@@ -793,6 +793,7 @@ int main(int argc, char** argv)
 
     #ifdef TIMED_RESTARTS
       int estimated_time_for_clean_exit = -1;
+      time_t time_timestep_start = time(NULL);
     #endif
     while (nts < last_loop)
     {
@@ -802,23 +803,27 @@ int main(int argc, char** argv)
       #endif
 
       #ifdef TIMED_RESTARTS
-        const time_t time_timestep_start = time(NULL);
+        const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
+        time_timestep_start = time(NULL);
         if (my_rank == 0 && estimated_time_for_clean_exit > -1)
         {
           const int wallclock_used_seconds = time_timestep_start - real_time_start;
           const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
-          printout("TIMED_RESTARTS: Used %d of %d seconds of wall time. Estimated time for clean exit is %d seconds\n",
-                   wallclock_used_seconds, WALLTIMELIMITSECONDS, estimated_time_for_clean_exit);
-          if (wallclock_remaining_seconds < 1.5 * estimated_time_for_clean_exit + 30)
-            do_this_full_loop = false; // This flag will make it complete the timestep, update_grid, and then exit
+          printout("TIMED_RESTARTS: Used %d of %d seconds of wall time. Estimated time for full timestep is %d plus final update_grid time of %d seconds\n",
+                   wallclock_used_seconds, WALLTIMELIMITSECONDS, estimated_time_per_timestep, estimated_time_for_clean_exit);
+
+          if (wallclock_remaining_seconds < 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit))
+          {
+            do_this_full_loop = false; // This flag being false will make it update_grid, and then exit
+          }
         }
         #ifdef MPI_ON
           MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
         #endif
         if (do_this_full_loop)
-          printout("TIMED_RESTARTS: Going to continue since time remaining >= 1.5 * estimated_time_for_clean_exit. + 30\n");
+          printout("TIMED_RESTARTS: Going to continue since remaining time >= 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit)\n");
         else
-          printout("TIMED_RESTARTS: Going to terminate since time remaining < 1.5 * estimated_time_for_clean_exit + 30\n");
+          printout("TIMED_RESTARTS: Going to terminate since remaining time < 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit)\n");
       #endif
 
       #ifdef DO_TITER
