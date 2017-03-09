@@ -1067,14 +1067,14 @@ void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart
   // double nu_lower_first;
   if (root_ndo > 0)
   {
-    if (root == my_rank)
-    {
-      printout("radfield_MPI_Bcast root process %d will send data for cells %d to %d\n", my_rank, root_nstart, root_nstart + root_ndo - 1);
-    }
-    else
-    {
-      printout("radfield_MPI_Bcast process %d will recieve data for cells %d to %d\n", my_rank, root_nstart, root_nstart + root_ndo - 1);
-    }
+    // if (root == my_rank)
+    // {
+    //   printout("radfield_MPI_Bcast root process %d will send data for cells %d to %d\n", my_rank, root_nstart, root_nstart + root_ndo - 1);
+    // }
+    // else
+    // {
+    //   printout("radfield_MPI_Bcast process %d will receive data for cells %d to %d\n", my_rank, root_nstart, root_nstart + root_ndo - 1);
+    // }
   }
 
   for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)

@@ -1501,7 +1501,7 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
     }
     else
     {
-      printout("nonthermal_MPI_Bcast process %d will recieve cells %d to %d from process %d\n",
+      printout("nonthermal_MPI_Bcast process %d will receive cells %d to %d from process %d\n",
                my_rank, root_nstart, root_nstart + root_ndo - 1, root);
     }
   }
