@@ -1539,7 +1539,7 @@ void nt_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
     }
     else
     {
-      printout("Skipping empty grid cell %d.\n", modelgridindex);
+      // printout("nonthermal_MPI_Bcast Skipping empty grid cell %d.\n", modelgridindex);
     }
   }
 
