@@ -809,7 +809,7 @@ int main(int argc, char** argv)
         {
           const int wallclock_used_seconds = time_timestep_start - real_time_start;
           const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
-          printout("TIMED_RESTARTS: Used %d of %d seconds of wall time. Estimated time for full timestep is %d plus final update_grid time of %d seconds\n",
+          printout("TIMED_RESTARTS: Used %d of %d seconds of wall time remaining. Estimated time for full timestep is %d plus final update_grid time of %d seconds\n",
                    wallclock_used_seconds, WALLTIMELIMITSECONDS, estimated_time_per_timestep, estimated_time_for_clean_exit);
 
           if (wallclock_remaining_seconds < 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit))
@@ -821,9 +821,9 @@ int main(int argc, char** argv)
           MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
         #endif
         if (do_this_full_loop)
-          printout("TIMED_RESTARTS: Going to continue since remaining time >= 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit)\n");
+          printout("TIMED_RESTARTS: Going to continue since remaining time %ds >= 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit)\n", wallclock_remaining_seconds);
         else
-          printout("TIMED_RESTARTS: Going to terminate since remaining time < 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit)\n");
+          printout("TIMED_RESTARTS: Going to terminate since remaining time %ds< 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit)\n", wallclock_remaining_seconds);
       #endif
 
       #ifdef DO_TITER
