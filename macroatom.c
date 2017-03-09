@@ -267,12 +267,20 @@ static void do_macroatom_radrecomb(
       }
     #endif
     if (zrand * rad_recomb < rate)
+    {
+      // if (debuglevel == 2)
       break;
+    }
+  }
+  if (zrand * rad_recomb >= rate)
+  {
+    printout("%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. zrand %g * rad_recomb %g >= rate %g",
+             __func__, get_element(element), get_ionstage(element, ion), level, zrand, rad_recomb, rate);
+    abort();
   }
   /// and set its threshold frequency
   const double nu_threshold = epsilon_trans / H;
   #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug] do_ma:   going to level %d of ion %d of element %d\n", lower, ion - 1, element);
   #endif
 
   /// Then randomly sample the packets frequency according to the continuums
@@ -397,7 +405,12 @@ static void do_macroatom_radrecomb(
   }*/
 
   #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
+    if (debuglevel == 2)
+    {
+      printout("%s: From Z=%d ionstage %d level %d, recombining to ionstage %d level %d\n",
+               __func__, get_element(element), get_ionstage(element, ion), level, get_ionstage(element, ion - 1), lower);
+      printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
+    }
     if (!isfinite(pkt_ptr->nu_cmf))
     {
       printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
@@ -451,6 +464,12 @@ static void do_macroatom_ionisation(
       rate += (R + C) * epsilon_current;
       if (zrand * internal_up_higher < rate)
         break;
+    }
+    if (zrand * internal_up_higher >= rate)
+    {
+      printout("%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher %g >= rate %g\n",
+               __func__, get_element(element), get_ionstage(element, ion), level, zrand, internal_up_higher, rate);
+      abort();
     }
   }
 
@@ -543,7 +562,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       get_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, processrates);
 
     // processrates[MA_ACTION_INTERNALDOWNLOWER] = 0.;
-    // processrates[MA_ACTION_INTERNALUPSAME] = 0.;
     // processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
 
     // select transition according to probabilities
