@@ -138,17 +138,35 @@ static void pkt_action_counters_printout(void)
 }
 
 #ifdef MPI_ON
-static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int ndo, int nts, int titer, char *mpi_grid_buffer, int mpi_grid_buffer_size, char* mpi_nlte_buffer, int mpi_nlte_buffer_size)
+static void mpi_communicate_grid_properties(const int my_rank, const int p, const int nstart, const int ndo, const int nts, const int titer, char *mpi_grid_buffer, const int mpi_grid_buffer_size)
 {
   int position = 0;
-  for (int n = 0; n < p; n++)
+  for (int root = 0; root < p; root++)
   {
     MPI_Barrier(MPI_COMM_WORLD);
+    int root_nstart = nstart;
+    MPI_Bcast(&root_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
+    int root_ndo = ndo;
+    MPI_Bcast(&root_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
+
     if (MULTIBIN_RADFIELD_MODEL_ON)
-      radfield_MPI_Bcast(n, my_rank, nstart, ndo);
+      radfield_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
+
     if (NT_ON && NT_SOLVE_SPENCERFANO)
-      nt_MPI_Bcast(n, my_rank, nstart, ndo);
-    if (my_rank == n)
+      nt_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
+
+    if (NLTE_POPS_ON)
+    {
+      for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
+      {
+        if (mg_associated_cells[modelgridindex] > 0)
+        {
+          MPI_Bcast(modelgrid[modelgridindex].nlte_pops, total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        }
+      }
+    }
+
+    if (root == my_rank)
     {
       position = 0;
       MPI_Pack(&ndo, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
@@ -182,7 +200,7 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
       printout("MPI_BUFFER: used %d of %d bytes of MPI mpi_grid_buffer\n", position, mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, n, MPI_COMM_WORLD);
+    MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
 
     position = 0;
     int nlp;
@@ -210,46 +228,6 @@ static void mpi_communicate_grid_properties(int my_rank, int p, int nstart, int 
           MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
           MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
           MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
-        }
-      }
-    }
-  }
-
-  if (NLTE_POPS_ON)
-  {
-    for (int n = 0; n < p; n++)
-    {
-      if (my_rank == n)
-      {
-        position = 0;
-        MPI_Pack(&ndo, 1, MPI_INT, mpi_nlte_buffer, mpi_nlte_buffer_size, &position, MPI_COMM_WORLD);
-        for (int mgi = nstart; mgi < (nstart + ndo); mgi++)
-        //for (int nncl = 0; nncl < ndo; nncl++)
-        {
-          //nn = nonemptycells[my_rank+nncl*nprocs];
-          MPI_Pack(&mgi, 1, MPI_INT, mpi_nlte_buffer, mpi_nlte_buffer_size, &position, MPI_COMM_WORLD);
-          //if (cell[nn].rho > MINDENSITY)
-          if (mg_associated_cells[mgi] > 0)
-          {
-            MPI_Pack(modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, mpi_nlte_buffer, mpi_nlte_buffer_size, &position, MPI_COMM_WORLD);
-          }
-        }
-        printout("MPI_BUFFER: used %d of %d bytes of MPI mpi_nlte_buffer\n", position, mpi_nlte_buffer_size);
-      }
-      MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Bcast(mpi_nlte_buffer, mpi_nlte_buffer_size, MPI_PACKED, n, MPI_COMM_WORLD);
-
-      position = 0;
-      int nlp;
-      MPI_Unpack(mpi_nlte_buffer, mpi_nlte_buffer_size, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
-      for (int nn = 0; nn < nlp; nn++)
-      {
-        int mgi;
-        MPI_Unpack(mpi_nlte_buffer, mpi_nlte_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
-        //if (cell[ncl].rho > MINDENSITY)
-        if (mg_associated_cells[mgi] > 0)
-        {
-          MPI_Unpack(mpi_nlte_buffer, mpi_nlte_buffer_size, &position, modelgrid[mgi].nlte_pops, total_nlte_levels, MPI_DOUBLE, MPI_COMM_WORLD);
         }
       }
     }
@@ -713,14 +691,6 @@ int main(int argc, char** argv)
         printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
         abort();
       }
-      int mpi_nlte_buffer_size = 4 + 4 * (nblock + 1) + 8 * (nblock + 1) * total_nlte_levels;
-      printout("reserve mpi_nlte_buffer_size %d space for MPI communication mpi_nlte_buffer for NLTE\n", mpi_nlte_buffer_size);
-      char *mpi_nlte_buffer = malloc(mpi_nlte_buffer_size * sizeof(char));
-      if (mpi_nlte_buffer == NULL)
-      {
-        printout("[fatal] input: not enough memory to initialize MPI NLTE buffer ... abort.\n");
-        abort();
-      }
     #else
       const int nstart = 0;
       //ndo = ngrid;
@@ -928,7 +898,7 @@ int main(int argc, char** argv)
 
         /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
         #ifdef MPI_ON
-          mpi_communicate_grid_properties(my_rank, p, nstart, ndo, nts, titer, mpi_grid_buffer, mpi_grid_buffer_size, mpi_nlte_buffer, mpi_nlte_buffer_size);
+          mpi_communicate_grid_properties(my_rank, p, nstart, ndo, nts, titer, mpi_grid_buffer, mpi_grid_buffer_size);
         #endif
 
         /// If this is not the 0th time step of the current job step,
@@ -1312,7 +1282,6 @@ int main(int argc, char** argv)
 
     #ifdef MPI_ON
       free(mpi_grid_buffer);
-      free(mpi_nlte_buffer);
     #endif
   }
 

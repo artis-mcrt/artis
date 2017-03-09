@@ -18,7 +18,7 @@ double get_T_R_from_J(const int modelgridindex);
 void radfield_titer_J(const int modelgridindex);
 void radfield_titer_nuJ(const int modelgridindex);
 void radfield_reduce_estimators(void);
-void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo);
+void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart, const int root_ndo);
 void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);
 int radfield_integrate(

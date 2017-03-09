@@ -13,6 +13,6 @@ float get_nt_frac_heating(int modelgridindex);
 double calculate_nt_excitation_rate(int modelgridindex, int element, int ion, int lowerlevel, int upperlevel);
 void nt_write_restart_data(FILE *gridsave_file);
 void nt_read_restart_data(FILE *gridsave_file);
-void nt_MPI_Bcast(int root, int my_rank, int nstart, int ndo);
+void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, const int root_ndo);
 
 #endif //NONTHERMAL_H

@@ -1482,43 +1482,38 @@ void nt_read_restart_data(FILE *gridsave_file)
 
 
 #ifdef MPI_ON
-void nt_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
+void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, const int root_ndo)
 {
   if (!nonthermal_initialized)
     return;
 
-  // const int logged_element_z = 26;
-  // const int logged_ion_index = 1;
-  // const int logged_element_index = get_elementindex(logged_element_z);
-  // const int logged_ion_stage = get_ionstage(logged_element_index, logged_ion_index);
+  const int logged_element_z = 26;
+  const int logged_ion_index = 1;
+  const int logged_element_index = get_elementindex(logged_element_z);
+  const int logged_ion_stage = get_ionstage(logged_element_index, logged_ion_index);
 
-  int sender_nstart;
-  int sender_ndo;
-  if (root == my_rank)
+  if (root_ndo > 0)
   {
-    sender_nstart = nstart;
-    sender_ndo = ndo;
-    // if (ndo > 0)
-    //   printout("nonthermal_MPI_Bcast root process %d will broadcast cells %d to %d\n",
-    //            my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+    if (my_rank == root)
+    {
+      printout("nonthermal_MPI_Bcast root process %d will broadcast cells %d to %d\n",
+               my_rank, root_nstart, root_nstart + root_ndo - 1);
+    }
+    else
+    {
+      printout("nonthermal_MPI_Bcast process %d will recieve cells %d to %d from process %d\n",
+               my_rank, root_nstart, root_nstart + root_ndo - 1, root);
+    }
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Bcast(&sender_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&sender_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
-  // if (my_rank != root && sender_ndo > 0)
-  // {
-  //   printout("nonthermal_MPI_Bcast process %d will recieve cells %d to %d from process %d\n",
-  //            my_rank, sender_nstart, sender_nstart + sender_ndo - 1, root);
-  // }
 
-  for (int modelgridindex = sender_nstart; modelgridindex < sender_nstart + sender_ndo; modelgridindex++)
+  for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
   {
     if (mg_associated_cells[modelgridindex] > 0)
     {
-      // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-      //          modelgridindex, logged_element_z, logged_ion_stage,
-      //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
-      //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
+      printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
+               modelgridindex, logged_element_z, logged_ion_stage,
+               nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
+               get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
       MPI_Barrier(MPI_COMM_WORLD);
       if (STORE_NT_SPECTRUM)
       {
@@ -1533,14 +1528,14 @@ void nt_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
         const int nions = get_nions(element);
         MPI_Bcast(&nt_solution[modelgridindex].eff_ionpot[element], nions, MPI_FLOAT, root, MPI_COMM_WORLD);
       }
-      // printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-      //          modelgridindex, logged_element_z, logged_ion_stage,
-      //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
-      //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
+      printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
+               modelgridindex, logged_element_z, logged_ion_stage,
+               nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
+               get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
     }
     else
     {
-      // printout("nonthermal_MPI_Bcast Skipping empty grid cell %d.\n", modelgridindex);
+      printout("nonthermal_MPI_Bcast Skipping empty grid cell %d.\n", modelgridindex);
     }
   }
 

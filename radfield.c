@@ -1060,27 +1060,24 @@ void radfield_reduce_estimators(void)
 }
 
 
-void radfield_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
+void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart, const int root_ndo)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 {
-  int sender_nstart;
-  int sender_ndo;
   // double nu_lower_first;
-  if (root == my_rank)
+  if (root_ndo > 0)
   {
-    sender_nstart = nstart;
-    sender_ndo = ndo;
-    // if (ndo > 0)
-      // printout("radfield_MPI_Bcast root process %d will send data for cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
+    if (root == my_rank)
+    {
+      printout("radfield_MPI_Bcast root process %d will send data for cells %d to %d\n", my_rank, root_nstart, root_nstart + root_ndo - 1);
+    }
+    else
+    {
+      printout("radfield_MPI_Bcast process %d will recieve data for cells %d to %d\n", my_rank, root_nstart, root_nstart + root_ndo - 1);
+    }
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Bcast(&sender_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&sender_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
-  // if (my_rank != root && sender_ndo > 0)
-    // printout("radfield_MPI_Bcast process %d will recieve data for cells %d to %d\n", my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
 
-  for (int modelgridindex = sender_nstart; modelgridindex < sender_nstart + sender_ndo; modelgridindex++)
+  for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
   {
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
