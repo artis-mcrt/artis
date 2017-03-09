@@ -1484,12 +1484,13 @@ void nt_read_restart_data(FILE *gridsave_file)
 #ifdef MPI_ON
 void nt_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
 {
-  const int logged_element_z = 26;
-  const int logged_ion_index = 1;
-  const int logged_element_index = get_elementindex(logged_element_z);
-  const int logged_ion_stage = get_ionstage(logged_element_index, logged_ion_index);
   if (!nonthermal_initialized)
     return;
+
+  // const int logged_element_z = 26;
+  // const int logged_ion_index = 1;
+  // const int logged_element_index = get_elementindex(logged_element_z);
+  // const int logged_ion_stage = get_ionstage(logged_element_index, logged_ion_index);
 
   int sender_nstart;
   int sender_ndo;
@@ -1502,8 +1503,8 @@ void nt_MPI_Bcast(int root, int my_rank, int nstart, int ndo)
     //            my_rank, sender_nstart, sender_nstart + sender_ndo - 1);
   }
   MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Bcast(&sender_nstart, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-  MPI_Bcast(&sender_ndo, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast(&sender_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&sender_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
   // if (my_rank != root && sender_ndo > 0)
   // {
   //   printout("nonthermal_MPI_Bcast process %d will recieve cells %d to %d from process %d\n",
