@@ -1,5 +1,6 @@
-#include "sn3d.h"
+#include <assert.h>
 #include <gsl/gsl_integration.h>
+#include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
 #include "ltepop.h"
@@ -526,23 +527,17 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     mastate[tid].nnlevel = 1.;
     //mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,level);
 
+    //if (element == 1 && ion == 1 && level == 61) debuglevel = 2;
     #ifdef DEBUG_ON
-      //if (element == 1 && ion == 1 && level == 149) debuglevel = 2;
-      //if (element == 1 && ion == 1 && level == 150) debuglevel = 2;
-      //if (element == 1 && ion == 1 && level == 151) debuglevel = 2;
-      //if (element == 1 && ion == 1 && level == 61) debuglevel = 2;
-      if (get_ionstage(element,ion) == 0 && level == 0)
-      {
-        printout("element %d, ion %d, level %d, ionstage %d\n",element,ion,level,get_ionstage(element,ion));
-        debuglevel = 2;
-      }
-      if (ion >= get_nions(element))
-      {
-        printout("[fatal] do_ma: ion does not exist ... abort\n");
-        abort();
-      }
-      if (debuglevel == 2) printout("[debug] do_ma: element %d, ion %d, level %d:\n",element,ion,level);
-      if (debuglevel == 2) printout("[debug] do_ma: jumps = %d\n",jumps);
+      const int Z = get_element(element);
+      const int ionstage = get_ionstage(element,ion);
+      // if (Z == 26 && ionstage == 0) debuglevel = 2;
+
+      if (debuglevel == 2)
+        printout("[debug] %s Z=%d ionstage %d level %d, jumps %d\n", __func__, Z, ionstage, level, jumps);
+
+      assert(ion >= 0);
+      assert(ion < get_nions(element));
     #endif
 
     const double epsilon_current = epsilon(element, ion, level);
