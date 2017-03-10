@@ -177,13 +177,13 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
 
       //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
       const double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans-1);
-      const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
-      const double B_lu = stat_weight(element,ion,upper)/stat_weight(element,ion,lower) * B_ul;
+      const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+      const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-      const double n_u = get_levelpop(modelgridindex,element,ion,upper);
-      const double n_l = get_levelpop(modelgridindex,element,ion,lower);
+      const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+      const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
-      double tau_line = (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_current;
+      double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
       //if (element == 7) fprintf(tau_file,"%g %g %d\n",nu_trans,tau_line,ion);
       if (tau_line < 0)
       {
