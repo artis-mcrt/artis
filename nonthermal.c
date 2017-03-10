@@ -1322,7 +1322,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
       if (first_included_ion_of_element)
       {
         printout("  including Z=%2d ion_stages: ", Z);
-        for (int i = 0; i < get_ionstage(element, ion); i++)
+        for (int i = 1; i < get_ionstage(element, ion); i++)
           printout("  ");
         first_included_ion_of_element = false;
       }
