@@ -583,11 +583,12 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       {
         oldcoolingsum = coolingsum;
         coolingsum += modelgrid[modelgridindex].cooling[element].contrib[ion];
-        //printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
+        // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion), coolingsum);
         if (coolingsum > rndcool) break;
       }
       if (coolingsum > rndcool) break;
     }
+    // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
 
   //  #ifdef DEBUG_ON
       if (element >= nelements || ion >= get_nions(element))
@@ -744,7 +745,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         const double deltanu = nu_threshold * NPHIXSNUINCREMENT * 0.9;
         const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
         double error;
-        gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_bfcooling_coeff, &error);
+        gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS31, wsp, &total_bfcooling_coeff, &error);
         bfcooling_coeff = total_bfcooling_coeff;
         int ii;
         for (ii = 0; ii < NPHIXSPOINTS; ii++)
@@ -753,9 +754,9 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
           bfcooling_coeff_old = bfcooling_coeff;
           if (ii > 0)
           {
-            nu_lower = nu_threshold + ii*deltanu;
+            nu_lower = nu_threshold + ii * deltanu;
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-            gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &bfcooling_coeff, &error);
+            gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS31, wsp, &bfcooling_coeff, &error);
             //bfcooling_coeff *= FOURPI * sf;
             //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
           }
@@ -765,7 +766,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         }
         if (ii == NPHIXSPOINTS)
         {
-          printout("kpkt emitts bf-photon at upper limit\n");
+          printout("kpkt emitts bf-photon at upper limit. Z=%d ionstage %d level %d\n", get_element(element), get_ionstage(element, ion), level);
           nu_lower = nu_max_phixs;
         }
         else if (ii > 0)
