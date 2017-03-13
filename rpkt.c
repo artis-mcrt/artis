@@ -131,8 +131,8 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
   //propagationcounter = 0;
-  int endloop = 0;
-  while (endloop == 0)
+  bool endloop = false;
+  while (!endloop)
   {
     /// calculate distance to next line encounter ldist
     /// first select the closest transition in frequency
@@ -263,7 +263,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
           /// the line and its parameters were already selected by closest_transition!
-          endloop = 1;
+          endloop = true;
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop   %d\n",edist,abort_dist,edist-abort_dist,endloop);
           #endif
@@ -278,7 +278,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
           if (debuglevel == 2) printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n",edist, abort_dist);
         #endif
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
-        endloop = 1;
+        endloop = true;
       }
     }
     else
@@ -303,7 +303,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
           if (debuglevel == 2) printout("[debug] get_event:       travel out of cell or time step\n");
         #endif
         edist = abort_dist+1e20;
-        endloop = 1;
+        endloop = true;
       }
       else
       {
@@ -313,7 +313,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
           if (debuglevel == 2) printout("[debug] get_event:       continuum process occurs at edist %g\n",edist);
         #endif
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
-        endloop = 1;
+        endloop = true;
       }
     }
     //propagationcounter++;
