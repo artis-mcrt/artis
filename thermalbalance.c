@@ -162,7 +162,7 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
       // printout("iter %d, T_e interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
       if (status != GSL_CONTINUE)
       {
-        printout("after %d iterations, T_e = %g, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);
+        printout("after %d iterations, T_e = %g K, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);
         break;
       }
     }
