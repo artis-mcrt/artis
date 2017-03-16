@@ -183,6 +183,7 @@ typedef struct packet
                           /// photoelectric effect of gammas (-4), pair production of gammas (-5)
                           /// decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
                           /// onset of the simulation (-7)
+  int trueemissiontype;  // emission type coming from a kpkt to rpkt (last thermal emission)
   double absorptionfreq;  /// records nu_cmf of packet at last absorption
   double absorptiondir[3]; /// Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a unit vector.
   //short timestep;
