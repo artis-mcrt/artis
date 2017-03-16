@@ -868,9 +868,9 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       ma_stat_activation_collion++;
       //if (tid == 0) k_stat_to_ma_collion++;
       k_stat_to_ma_collion++;
-      pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 9;
+      pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
       #ifndef FORCE_LTE
         //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
