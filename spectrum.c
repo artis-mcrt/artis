@@ -145,7 +145,11 @@ static void add_to_spec(const EPKT *pkt_ptr)
       const double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
       spectra[nt].flux[nnu] += deltaE;
 
+      #ifdef USETRUEEMISSION
+      int et = pkt_ptr->trueemissiontype;
+      #else
       int et = pkt_ptr->emissiontype;
+      #endif
       int nproc;
       if (et >= 0)
       {
@@ -184,8 +188,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
       nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
       if (nnu >= 0 && nnu < MNUBINS)
       {
-        const double deltaE_bb = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
-        printout("compare: %g %g\n", deltaE, deltaE_bb);
+        const double deltaE_absorption = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
         const int at = pkt_ptr->absorptiontype;
         if (at >= 0)
         {
@@ -193,7 +196,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
           const int element = linelist[at].elementindex;
           const int ion = linelist[at].ionindex;
           nproc = element * maxion + ion;
-          spectra[nt].stat[nnu].absorption[nproc] += deltaE_bb;
+          spectra[nt].stat[nnu].absorption[nproc] += deltaE_absorption;
         }
       }
     }
@@ -375,7 +378,11 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
         if (do_emission_res == 1)
         {
           int nproc;
+          #ifdef USETRUEEMISSION
+          int et = pkt_ptr->trueemissiontype;
+          #else
           int et = pkt_ptr->emissiontype;
+          #endif
           if (et >= 0)
           {
             /// bb-emission
