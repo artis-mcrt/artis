@@ -98,23 +98,23 @@ void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
   {
     /// ????????????????????????????????????????????????????????????????????????????????????????????????
     /// WHY HERE OTHER CALCULATION OF "SPECTRA.MIDTIME" THAN FOR time_step.mid ?????????????????????????
-    fprintf(spec_file, "%g ", (spectra[p].lower_time + (spectra[p].delta_t/2))/DAY);
+    fprintf(spec_file, "%g ", (spectra[p].lower_time + (spectra[p].delta_t/2)) / DAY);
   }
   fprintf(spec_file, "\n");
 
   for (int m = 0; m < nnubins; m++)
   {
-    fprintf(spec_file, "%g ", ((spectra[0].lower_freq[m]+(spectra[0].delta_freq[m]/2))));
+    fprintf(spec_file, "%g ", ((spectra[0].lower_freq[m] + (spectra[0].delta_freq[m] / 2))));
 
     for (int p = 0; p < ntbins; p++)
     {
       fprintf(spec_file, "%g ", spectra[p].flux[m]);
       if (do_emission_res == 1)
       {
-        for (int i = 0; i < 2*nelements*maxion+1; i++)
+        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
           fprintf(emission_file, "%g ", spectra[p].stat[m].emission[i]);
         fprintf(emission_file, "\n");
-        for (int i = 0; i < nelements*maxion; i++)
+        for (int i = 0; i < nelements * maxion; i++)
           fprintf(absorption_file, "%g ", spectra[p].stat[m].absorption[i]);
         fprintf(absorption_file, "\n");
       }
@@ -142,7 +142,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
     if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
     {
       int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-      double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
+      const double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
       spectra[nt].flux[nnu] += deltaE;
 
       int et = pkt_ptr->emissiontype;
@@ -184,7 +184,8 @@ static void add_to_spec(const EPKT *pkt_ptr)
       nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
       if (nnu >= 0 && nnu < MNUBINS)
       {
-        deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+        const double deltaE_bb = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
+        printout("compare: %g %g\n", deltaE, deltaE_bb);
         const int at = pkt_ptr->absorptiontype;
         if (at >= 0)
         {
@@ -192,7 +193,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
           const int element = linelist[at].elementindex;
           const int ion = linelist[at].ionindex;
           nproc = element * maxion + ion;
-          spectra[nt].stat[nnu].absorption[nproc] += deltaE;
+          spectra[nt].stat[nnu].absorption[nproc] += deltaE_bb;
         }
       }
     }
