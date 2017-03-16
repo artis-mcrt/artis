@@ -934,6 +934,9 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     //debuglevel = 2;
   #endif
 
+  if (pkt_ptr->trueemissiontype < 0)
+    pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
+
   /// procedure ends only after a change to r or k packets has taken place and
   /// returns then the actual time, which is the same as the input t1
   /// internal transitions are carried out until a type change occurs
