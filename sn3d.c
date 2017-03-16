@@ -76,6 +76,7 @@ static void pkt_action_counters_reset(void)
   ma_stat_deactivation_collrecomb = 0;
   ma_stat_deactivation_bb = 0;
   ma_stat_deactivation_fb = 0;
+  ma_stat_internaluphighernt = 0;
   k_stat_to_ma_collexc = 0;
   k_stat_to_ma_collion = 0;
   k_stat_to_r_ff = 0;
@@ -107,34 +108,35 @@ static void pkt_action_counters_printout(void)
   printout("mean number of interactions per packet = %g\n",meaninteractions);
 
   /// Printout packet statistics
-  printout("ma_stat_activation_collexc = %d\n",ma_stat_activation_collexc);
-  printout("ma_stat_activation_collion = %d\n",ma_stat_activation_collion);
-  printout("ma_stat_activation_bb = %d\n",ma_stat_activation_bb);
-  printout("ma_stat_activation_bf = %d\n",ma_stat_activation_bf);
-  printout("ma_stat_deactivation_colldeexc = %d\n",ma_stat_deactivation_colldeexc);
-  printout("ma_stat_deactivation_collrecomb = %d\n",ma_stat_deactivation_collrecomb);
-  printout("ma_stat_deactivation_bb = %d\n",ma_stat_deactivation_bb);
-  printout("ma_stat_deactivation_fb = %d\n",ma_stat_deactivation_fb);
+  printout("ma_stat_activation_collexc = %d\n", ma_stat_activation_collexc);
+  printout("ma_stat_activation_collion = %d\n", ma_stat_activation_collion);
+  printout("ma_stat_activation_bb = %d\n", ma_stat_activation_bb);
+  printout("ma_stat_activation_bf = %d\n", ma_stat_activation_bf);
+  printout("ma_stat_deactivation_colldeexc = %d\n", ma_stat_deactivation_colldeexc);
+  printout("ma_stat_deactivation_collrecomb = %d\n", ma_stat_deactivation_collrecomb);
+  printout("ma_stat_deactivation_bb = %d\n", ma_stat_deactivation_bb);
+  printout("ma_stat_deactivation_fb = %d\n", ma_stat_deactivation_fb);
+  printout("ma_stat_internaluphighernt = %d\n", ma_stat_internaluphighernt);
 
-  printout("k_stat_to_ma_collexc = %d\n",k_stat_to_ma_collexc);
-  printout("k_stat_to_ma_collion = %d\n",k_stat_to_ma_collion);
-  printout("k_stat_to_r_ff = %d\n",k_stat_to_r_ff);
-  printout("k_stat_to_r_fb = %d\n",k_stat_to_r_fb);
-  printout("k_stat_to_r_bb = %d\n",k_stat_to_r_bb);
-  printout("k_stat_from_ff = %d\n",k_stat_from_ff);
-  printout("k_stat_from_bf = %d\n",k_stat_from_bf);
-  printout("k_stat_from_gamma = %d\n",k_stat_from_gamma);
-  printout("k_stat_from_eminus = %d\n",k_stat_from_eminus);
-  printout("k_stat_from_earlierdecay = %d\n",k_stat_from_earlierdecay);
+  printout("k_stat_to_ma_collexc = %d\n", k_stat_to_ma_collexc);
+  printout("k_stat_to_ma_collion = %d\n", k_stat_to_ma_collion);
+  printout("k_stat_to_r_ff = %d\n", k_stat_to_r_ff);
+  printout("k_stat_to_r_fb = %d\n", k_stat_to_r_fb);
+  printout("k_stat_to_r_bb = %d\n", k_stat_to_r_bb);
+  printout("k_stat_from_ff = %d\n", k_stat_from_ff);
+  printout("k_stat_from_bf = %d\n", k_stat_from_bf);
+  printout("k_stat_from_gamma = %d\n", k_stat_from_gamma);
+  printout("k_stat_from_eminus = %d\n", k_stat_from_eminus);
+  printout("k_stat_from_earlierdecay = %d\n", k_stat_from_earlierdecay);
 
-  printout("escounter = %d\n",escounter);
-  printout("cellcrossing  = %d\n",cellcrossings);
-  printout("updatecellcounter  = %d\n",updatecellcounter);
-  printout("coolingratecalccounter = %d\n",coolingratecalccounter);
-  printout("resonancescatterings  = %d\n",resonancescatterings);
+  printout("escounter = %d\n", escounter);
+  printout("cellcrossing  = %d\n", cellcrossings);
+  printout("updatecellcounter  = %d\n", updatecellcounter);
+  printout("coolingratecalccounter = %d\n", coolingratecalccounter);
+  printout("resonancescatterings  = %d\n", resonancescatterings);
 
-  printout("upscatterings  = %d\n",upscatter);
-  printout("downscatterings  = %d\n",downscatter);
+  printout("upscatterings  = %d\n", upscatter);
+  printout("downscatterings  = %d\n", downscatter);
 }
 
 #ifdef MPI_ON

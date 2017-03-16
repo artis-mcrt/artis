@@ -213,7 +213,9 @@ enum ma_action {
   MA_ACTION_INTERNALUPSAME = 6,
   /// Rate for internal upward transitions to higher ionisation stage.
   MA_ACTION_INTERNALUPHIGHER = 7,
-  MA_ACTION_COUNT = 8,
+  /// Rate for internal upward transitions to higher ionisation stage due to non-thermal collisions.
+  MA_ACTION_INTERNALUPHIGHERNT = 8,
+  MA_ACTION_COUNT = 9,
 };
 
 typedef struct mastate_t
@@ -517,7 +519,7 @@ typedef struct
 typedef struct chlevels_struct
 {
   double population;                      /// The level's population
-  double processrates[MA_ACTION_INTERNALUPHIGHER + 1];
+  double processrates[MA_ACTION_COUNT];
 
   double *restrict individ_rad_deexc;
   double *restrict individ_internal_down_same;
