@@ -777,10 +777,10 @@ int main(int argc, char** argv)
       #ifdef TIMED_RESTARTS
         const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
         time_timestep_start = time(NULL);
+        const int wallclock_used_seconds = time_timestep_start - real_time_start;
+        const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
         if (my_rank == 0 && estimated_time_for_clean_exit > -1)
         {
-          const int wallclock_used_seconds = time_timestep_start - real_time_start;
-          const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
           printout("TIMED_RESTARTS: Used %d of %d seconds of wall time remaining. Estimated time for full timestep is %d plus final update_grid time of %d seconds\n",
                    wallclock_used_seconds, WALLTIMELIMITSECONDS, estimated_time_per_timestep, estimated_time_for_clean_exit);
 
