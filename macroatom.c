@@ -467,7 +467,7 @@ static void do_macroatom_ionisation(
   if (zrand * internal_up_higher >= rate)
   {
     printout("%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher %g >= rate %g\n",
-             __func__, get_element(element), get_ionstage(element, ion), level, zrand, internal_up_higher, rate);
+             __func__, get_element(element), get_ionstage(element, *ion), level, zrand, internal_up_higher, rate);
     abort();
   }
 
