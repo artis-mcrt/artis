@@ -224,9 +224,6 @@ static void do_macroatom_raddeexcitation(
   else
   {
     calculate_kappa_rpkt_cont(pkt_ptr, t_current);
-    mastate[tid].element = element;
-    mastate[tid].ion = ion;
-    mastate[tid].level = level;
   }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
@@ -245,31 +242,31 @@ static void do_macroatom_raddeexcitation(
 
 
 static void do_macroatom_radrecomb(
-  PKT *restrict pkt_ptr, const int modelgridindex, const int element, const int ion, const int level,
+  PKT *restrict pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
   const double rad_recomb, const double t_current)
 {
   const float T_e = get_Te(modelgridindex);
 
-  const double epsilon_current = epsilon(element, ion, level);
+  const double epsilon_current = epsilon(element, *ion, *level);
   /// Randomly select a continuum
   double zrand = gsl_rng_uniform(rng);
   //zrand = 1. - 1e-14;
   double rate = 0;
-  //nlevels = get_nlevels(element,ion-1);
-  const int nlevels = get_bfcontinua(element, ion - 1);
-  //nlevels = get_ionisinglevels(element,ion-1);
+  //nlevels = get_nlevels(element,*ion-1);
+  const int nlevels = get_bfcontinua(element, *ion - 1);
+  //nlevels = get_ionisinglevels(element,*ion-1);
   int lower;
   double epsilon_trans;
   for (lower = 0; lower < nlevels; lower++)
   {
-    epsilon_trans = epsilon_current - epsilon(element,ion - 1,lower);
-    const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
+    epsilon_trans = epsilon_current - epsilon(element, *ion - 1, lower);
+    const double R = rad_recombination_ratecoeff(modelgridindex, element, *ion, *level, lower);
     rate += R * epsilon_trans;
     #ifdef DEBUG_ON
       if (debuglevel == 2)
       {
-        printout("[debug] do_ma:   R %g, deltae %g\n",R,(epsilon(element, ion, level) - epsilon(element, ion - 1, lower)));
-        printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, ion - 1, rate);
+        printout("[debug] do_ma:   R %g, deltae %g\n",R,(epsilon(element, *ion, *level) - epsilon(element, *ion - 1, lower)));
+        printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, *ion - 1, rate);
         printout("[debug] do_ma:   zrand*rad_recomb = %g\n", zrand * rad_recomb);
       }
     #endif
@@ -282,13 +279,14 @@ static void do_macroatom_radrecomb(
   if (zrand * rad_recomb >= rate)
   {
     printout("%s: From Z=%d ionstage %d level %d, could not select lower level to recombine to. zrand %g * rad_recomb %g >= rate %g",
-             __func__, get_element(element), get_ionstage(element, ion), level, zrand, rad_recomb, rate);
+             __func__, get_element(element), get_ionstage(element, *ion), *level, zrand, rad_recomb, rate);
     abort();
   }
-  /// and set its threshold frequency
+
+  /// set the new state and theshold
+  *ion -= 1;
+  *level = lower;
   const double nu_threshold = epsilon_trans / H;
-  #ifdef DEBUG_ON
-  #endif
 
   /// Then randomly sample the packets frequency according to the continuums
   /// energy distribution and set some flags
@@ -300,9 +298,10 @@ static void do_macroatom_radrecomb(
 
   zrand = gsl_rng_uniform(rng);
   zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
+  // mastate needs to be set for photoionization_crosssection() which is called by alpha_sp_E_integrand_gsl()
   mastate[tid].element = element;
-  mastate[tid].ion = ion - 1;
-  mastate[tid].level = lower;
+  mastate[tid].ion = *ion;
+  mastate[tid].level = *level;
   const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1024);
   gslintegration_paras intparas;
@@ -414,8 +413,8 @@ static void do_macroatom_radrecomb(
   #ifdef DEBUG_ON
     if (debuglevel == 2)
     {
-      printout("%s: From Z=%d ionstage %d level %d, recombining to ionstage %d level %d\n",
-               __func__, get_element(element), get_ionstage(element, ion), level, get_ionstage(element, ion - 1), lower);
+      printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
+               __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
       printout("[debug] do_ma:   pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
     }
     if (!isfinite(pkt_ptr->nu_cmf))
@@ -434,7 +433,7 @@ static void do_macroatom_radrecomb(
   emitt_rpkt(pkt_ptr, t_current);
   calculate_kappa_rpkt_cont(pkt_ptr, t_current);
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
-  pkt_ptr->emissiontype = get_continuumindex(element, ion - 1, lower);
+  pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower);
   pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
   pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
   pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
@@ -474,8 +473,6 @@ static void do_macroatom_ionisation(
   /// and set the macroatom's new state
   *ion += 1;
   *level = upper;
-  mastate[tid].ion = *ion;
-  mastate[tid].level = *level;
 }
 
 
@@ -499,6 +496,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   /// is much larger than number of pellets (next question: connection to number of
   /// photons)
   const int element = mastate[tid].element;
+  int ion = mastate[tid].ion;
+  int level = mastate[tid].level;
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
   /// initialization we should see errors
@@ -514,8 +513,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   bool end_packet = false;
   while (!end_packet)
   {
-    int ion = mastate[tid].ion;
-    int level = mastate[tid].level;
     // mastate[tid].statweight = stat_weight(element, ion, level);
     //ionisinglevels = get_ionisinglevels(element,ion);
 
@@ -559,11 +556,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     //   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
     //   printout("macroatom element %d ion %d level %d\n", element, ion, level);
     //
-    //   const char *actionlabel[MA_ACTION_COUNT] = {
-    //     "MA_ACTION_RADDEEXC", "MA_ACTION_COLDEEXC", "MA_ACTION_RADRECOMB",
-    //     "MA_ACTION_COLRECOMB", "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
-    //     "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
-    //
+      const char *actionlabel[MA_ACTION_COUNT] = {
+        "MA_ACTION_RADDEEXC", "MA_ACTION_COLDEEXC", "MA_ACTION_RADRECOMB",
+        "MA_ACTION_COLRECOMB", "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
+        "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
+
     //   for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
     //     printout("actions: %30s %g\n", actionlabel[action], processrates[action]);
     // }
@@ -770,9 +767,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             break;
           }
         }
-        /// and set the macroatom's new state
-        mastate[tid].ion = ion;
-        mastate[tid].level = lower;
+
+        level = lower;
 
         #ifdef DEBUG_ON
           if (debuglevel == 2)
@@ -799,7 +795,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             printout("[debug] do_ma:   element %d, ion %d, level %d\n",element,ion,level);
           }
         #endif
-        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADRECOMB], t_current);
+        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current);
         end_packet = true;
         break;
 
@@ -854,8 +850,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             break;
         }
         /// and set the macroatom's new state
-        mastate[tid].ion = ion - 1;
-        mastate[tid].level = lower;
+        ion -= 1;
+        level = lower;
 
         #ifdef DEBUG_ON
           if (lower >= nlevels)
@@ -898,8 +894,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           }
         }
         ///and set the macroatom's new state
-        mastate[tid].ion = ion;
-        mastate[tid].level = upper;
+        level = upper;
         break;
 
       case MA_ACTION_INTERNALUPHIGHER:
@@ -915,12 +910,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
       case MA_ACTION_INTERNALUPHIGHERNT:
         pkt_ptr->interactions += 1;
-        ion = ion + 1;
+        ion += 1;
         level = 0;
-        mastate[tid].ion = ion;
-        mastate[tid].level = level;
         ma_stat_internaluphighernt++;
-        // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), mastate[tid].ion, mastate[tid].level);
+        // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion, level);
         break;
 
       case MA_ACTION_COUNT:
@@ -1188,8 +1181,6 @@ double col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, in
   }
 
   #ifdef DEBUG_ON
-    //int element = mastate[tid].element;
-    //int ion = mastate[tid].ion;
     /*if (debuglevel == 2)
     {
       //printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
@@ -1255,8 +1246,6 @@ double col_excitation_ratecoeff(float T_e, float nne, int lineindex, double epsi
   }
 
   #ifdef DEBUG_ON
-    //int element = mastate[tid].element;
-    //int ion = mastate[tid].ion
     // if (debuglevel == 2)
     // {
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);

@@ -488,7 +488,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
             mastate[tid].ion     = ion+1;
             const int upper = 0; //TODO: this should come from phixsupperlevel;
             mastate[tid].level   = upper;
-            mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+            // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
             mastate[tid].activatingline = -99;
             //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
           }
