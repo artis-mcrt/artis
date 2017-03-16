@@ -556,10 +556,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     //   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
     //   printout("macroatom element %d ion %d level %d\n", element, ion, level);
     //
-      const char *actionlabel[MA_ACTION_COUNT] = {
-        "MA_ACTION_RADDEEXC", "MA_ACTION_COLDEEXC", "MA_ACTION_RADRECOMB",
-        "MA_ACTION_COLRECOMB", "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
-        "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
+    // const char *actionlabel[MA_ACTION_COUNT] = {
+    //   "MA_ACTION_RADDEEXC", "MA_ACTION_COLDEEXC", "MA_ACTION_RADRECOMB",
+    //   "MA_ACTION_COLRECOMB", "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
+    //   "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
 
     //   for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
     //     printout("actions: %30s %g\n", actionlabel[action], processrates[action]);
