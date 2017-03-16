@@ -143,6 +143,7 @@ void normalise_grey(int nts)
     const double dV = vol_init() * helper; //vol_init(&cell[n]) in future coordinate systems
 
     rpkt_emiss[n] = rpkt_emiss[n] * ONEOVER4PI / dV / dt / nprocs / assoc_cells;
+    calculate_deposition_rate_density(n, nts);
   }
 }
 

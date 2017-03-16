@@ -127,12 +127,13 @@ static void get_macroatom_transitionrates(
     printout("fatal: internal_up_same has nan contribution\n");
 
   /// Transitions to higher ionisation stages
+  processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
   processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
   const int ionisinglevels = get_bfcontinua(element,ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
   {
-    // if (NT_ON)
-    //   processrates[MA_ACTION_INTERNALUPHIGHER] += nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
+    if (NT_ON)
+      processrates[MA_ACTION_INTERNALUPHIGHERNT] = nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
     {
       const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
@@ -221,7 +222,12 @@ static void do_macroatom_raddeexcitation(
   if (linelistindex == mastate[tid].activatingline)
     resonancescatterings++;
   else
+  {
     calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+    mastate[tid].element = element;
+    mastate[tid].ion = ion;
+    mastate[tid].level = level;
+  }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
   pkt_ptr->next_trans = linelistindex + 1;
@@ -438,8 +444,8 @@ static void do_macroatom_radrecomb(
 
 
 static void do_macroatom_ionisation(
-  const int modelgridindex, const int element, const int ion, const int level, const double epsilon_current,
-  const double internal_up_higher)
+  const int modelgridindex, const int element, int *ion, int *level,
+  const double epsilon_current, const double internal_up_higher)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -448,35 +454,28 @@ static void do_macroatom_ionisation(
   /// Randomly select the occuring transition
   const double zrand = gsl_rng_uniform(rng);
   double rate = 0.;
-  // if (NT_ON)
-  //   rate += nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
-  // if (zrand * internal_up_higher < rate)
-  // {
-  //   upper = 0;
-  // }
-  // else
+  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, *ion, *level); phixstargetindex++)
   {
-    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
-    {
-      upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
-      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-      const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
-      rate += (R + C) * epsilon_current;
-      if (zrand * internal_up_higher < rate)
-        break;
-    }
-    if (zrand * internal_up_higher >= rate)
-    {
-      printout("%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher %g >= rate %g\n",
-               __func__, get_element(element), get_ionstage(element, ion), level, zrand, internal_up_higher, rate);
-      abort();
-    }
+    upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
+    const double epsilon_trans = epsilon(element, *ion + 1, upper) - epsilon_current;
+    const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
+    const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
+    rate += (R + C) * epsilon_current;
+    if (zrand * internal_up_higher < rate)
+      break;
+  }
+  if (zrand * internal_up_higher >= rate)
+  {
+    printout("%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher %g >= rate %g\n",
+             __func__, get_element(element), get_ionstage(element, ion), level, zrand, internal_up_higher, rate);
+    abort();
   }
 
   /// and set the macroatom's new state
-  mastate[tid].ion = ion + 1;
-  mastate[tid].level = upper;
+  *ion += 1;
+  *level = upper;
+  mastate[tid].ion = *ion;
+  mastate[tid].level = *level;
 }
 
 
@@ -515,8 +514,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   bool end_packet = false;
   while (!end_packet)
   {
-    const int ion = mastate[tid].ion;
-    const int level = mastate[tid].level;
+    int ion = mastate[tid].ion;
+    int level = mastate[tid].level;
     // mastate[tid].statweight = stat_weight(element, ion, level);
     //ionisinglevels = get_ionisinglevels(element,ion);
 
@@ -555,8 +554,25 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     if (processrates[MA_ACTION_COLDEEXC] < 0)
       get_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, processrates);
 
+    // for debugging the transition rates:
+    // {
+    //   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
+    //   printout("macroatom element %d ion %d level %d\n", element, ion, level);
+    //
+    //   const char *actionlabel[MA_ACTION_COUNT] = {
+    //     "MA_ACTION_RADDEEXC", "MA_ACTION_COLDEEXC", "MA_ACTION_RADRECOMB",
+    //     "MA_ACTION_COLRECOMB", "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
+    //     "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
+    //
+    //   for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
+    //     printout("actions: %30s %g\n", actionlabel[action], processrates[action]);
+    // }
+
     // processrates[MA_ACTION_INTERNALDOWNLOWER] = 0.;
     // processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
+    // processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
+    // processrates[MA_ACTION_RADRECOMB] = 0.;
+    // processrates[MA_ACTION_COLRECOMB] = 0.;
 
     // select transition according to probabilities
     double total_transitions = 0.;
@@ -693,12 +709,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         //abort();
       }
     #endif
-
-    // const char *actionlabel[8] = {
-    //   "MA_ACTION_RADDEEXC", "MA_ACTION_COLDEEXC", "MA_ACTION_RADRECOMB",
-    //   "MA_ACTION_COLRECOMB", "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
-    //   "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER"};
-    // printout("action: %s\n", actionlabel[mastate[tid].lastaction]);
 
     switch (mastate[tid].lastaction)
     {
@@ -900,10 +910,20 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           jump = 3;
         #endif
 
-        do_macroatom_ionisation(modelgridindex, element, ion, level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
+        do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
         break;
 
-      case (MA_ACTION_COUNT):
+      case MA_ACTION_INTERNALUPHIGHERNT:
+        pkt_ptr->interactions += 1;
+        ion = ion + 1;
+        level = 0;
+        mastate[tid].ion = ion;
+        mastate[tid].level = level;
+        ma_stat_internaluphighernt++;
+        // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), mastate[tid].ion, mastate[tid].level);
+        break;
+
+      case MA_ACTION_COUNT:
         printout("ERROR: Somehow selected MA_ACTION_COUNT\n");
         abort();
     }

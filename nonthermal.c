@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <gsl/gsl_integration.h>
@@ -70,6 +71,7 @@ struct nt_solution_struct {
   float eff_ionpot[MELEMENTS][MIONS]; // need to keep these (even if the spectrum is not kept) to
                                       // calculate the non-thermal ionization rate
   float frac_heating;           // energy fractions should add up to 1.0 if the solution is good
+  double deposition_rate_density;
   int timestep;                 // the quantities above were calculated for this timestep
 };
 
@@ -159,6 +161,7 @@ void nt_init(int my_rank)
       nt_solution[modelgridindex].frac_heating = 1.0;
       nt_solution[modelgridindex].timestep = -1;
       nt_solution[modelgridindex].E_0 = 0.;
+      nt_solution[modelgridindex].deposition_rate_density = -1.;
 
       if (STORE_NT_SPECTRUM && mg_associated_cells[modelgridindex] > 0)
       {
@@ -212,13 +215,13 @@ void nt_init(int my_rank)
 }
 
 
-double get_deposition_rate_density(int modelgridindex)
+void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
 // should be in erg / s / cm^3
 {
   const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
   // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
 
-  const double t = time_step[nts_global].mid;
+  const double t = time_step[timestep].mid;
   const double rho = get_rho(modelgridindex);
 
   const double co56_positron_dep = (0.610 * 0.19 * MEV) *
@@ -233,7 +236,16 @@ double get_deposition_rate_density(int modelgridindex)
   //printout("nt_deposition_rate: gammadep: %g, poscobalt %g pos48v %g\n",
   //         gamma_deposition,co56_positron_dep,v48_positron_dep);
 
-  return gamma_deposition + co56_positron_dep + v48_positron_dep;
+  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + co56_positron_dep + v48_positron_dep;
+}
+
+
+double get_deposition_rate_density(const int modelgridindex)
+// should be in erg / s / cm^3
+{
+  const double deposition_rate_density = nt_solution[modelgridindex].deposition_rate_density;
+  assert(deposition_rate_density >= 0);
+  return deposition_rate_density;
 }
 
 
@@ -917,13 +929,13 @@ static float get_eff_ionpot(int modelgridindex, int element, int ion)
 static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int ion)
 // Kozma & Fransson 1992 equation 13
 {
-  const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
   if (mg_associated_cells[modelgridindex] <= 0)
   {
     printout("ERROR: nt_ionization_ratecoeff_sf called on empty cell %d\n", modelgridindex);
     abort();
   }
 
+  const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
   if (deposition_rate_density > 0.)
     return deposition_rate_density / get_tot_nion(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
   else
@@ -949,20 +961,23 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
     double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
     if (!isfinite(Y_nt))
     {
+      // probably because eff_ionpot = 0 because the solver hasn't been run yet
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
       // printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ion_stage %d for cell %d. Using WF approx instead = %g\n",
       //          Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       return Y_nt_wfapprox;
     }
-    else if (Y_nt < 0)
+    else if (Y_nt <= 0)
     {
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-      printout("Warning: Spencer-Fano solver gives negative ionization rate (%g) for element %d ion_stage %d cell %d. Using WF approx instead = %g\n",
+      printout("Warning: Spencer-Fano solver gives negative or zero ionization rate (%g) for element %d ion_stage %d cell %d. Using WF approx instead = %g\n",
                Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       return Y_nt_wfapprox;
     }
     else
+    {
       return Y_nt;
+    }
   }
   else
     return nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
