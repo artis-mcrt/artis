@@ -1,6 +1,8 @@
 #ifndef EXSPEC_H
 #define EXSPEC_H
 
+#define USETRUEEMISSION  // use trueemissiontype which is set when a macroatom is deactivated following activation from a KPKT
+
 /// Spectrum data structure
 #define MNUBINS   1000
 #define MABINS    100
@@ -66,6 +68,7 @@ typedef struct
   float arrive_time; /// Time at which is passes out of the grid.
   float arrive_time_cmf; /// Time at which is passes out of the grid.
   int emissiontype;   /// records how the packet was emitted if it is a r-pkt
+  int trueemissiontype; /// records how the packet was emitted directly after coming from a kpkt
   int absorptiontype;   /// records how the packet was emitted if it is a r-pkt
   double absorptionfreq;   /// records how the packet was emitted if it is a r-pkt
   double em_pos[3]; /// Position of the packet (x,y,z) at last emission process
