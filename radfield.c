@@ -806,7 +806,7 @@ static void get_radfield_params_fullspec(const double J, const double nuJ, const
   }
   else
   {
-    *T_J = pow(PI / STEBO * J, 1 / 4.);
+    *T_J = pow(J * PI / STEBO, 1 / 4.);
     if (*T_J > MAXTEMP)
     {
       printout("[warning] update_grid: temperature estimator T_J=%g exceeds T_max=%g in cell %d. Set T_J = T_max!\n",*T_J,MAXTEMP,modelgridindex);
@@ -819,6 +819,7 @@ static void get_radfield_params_fullspec(const double J, const double nuJ, const
     }
 
     *T_R = H * nubar / KB / 3.832229494;
+    printout("nubar = %5.1f Angstroms\n", 1e8 * CLIGHT / nubar);
     if (*T_R > MAXTEMP)
     {
       printout("[warning] update_grid: temperature estimator T_R=%g exceeds T_max=%g in cell %d. Set T_R = T_max!\n",*T_R,MAXTEMP,modelgridindex);
@@ -830,7 +831,7 @@ static void get_radfield_params_fullspec(const double J, const double nuJ, const
       *T_R = MINTEMP;
     }
 
-    *W = PI * J / STEBO / pow(*T_R, 4);
+    *W = J * PI / STEBO / pow(*T_R, 4);
   }
 }
 
@@ -847,6 +848,13 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
   set_TR(modelgridindex, T_R);
   set_W(modelgridindex, W);
 
+  const float T_R_fullspec = get_TR(modelgridindex);
+  const double J_fullspec = J[modelgridindex];
+  //double planck_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
+
+  printout("Full-spectrum fit radfield params for cell %d at timestep %d: J %g, T_R %g, W %g\n",
+           modelgridindex, timestep, J_fullspec, T_R_fullspec, get_W(modelgridindex));
+
   if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     if (J_normfactor[modelgridindex] <= 0)
@@ -854,13 +862,6 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       printout("radfield: FATAL J_normfactor = %g in cell %d at call to radfield_fit_parameters", J_normfactor[modelgridindex], modelgridindex);
       abort();
     }
-
-    const float T_R_fullspec = get_TR(modelgridindex);
-    const double J_fullspec = J[modelgridindex];
-    //double planck_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
-
-    printout("Full-spectrum fit radfield params for cell %d at timestep %d: J %g, T_R %g, W %g\n",
-             modelgridindex, timestep, J_fullspec, T_R_fullspec, get_W(modelgridindex));
 
     double J_bin_sum = 0.;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
