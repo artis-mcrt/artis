@@ -179,7 +179,7 @@ int main(int argc, char** argv)
         abort();
       }
       #ifdef USETRUEEMISSION
-      FILE *emission_file = fopen("trueemission.out", "w");
+      FILE *emission_file = fopen("emissiontrue.out", "w");
       #else
       FILE *emission_file = fopen("emission.out", "w");
       #endif
