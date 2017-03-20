@@ -10,6 +10,7 @@
 *********************************************************************/
 
 /*************************** HEADER FILES ***************************/
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
@@ -198,7 +199,6 @@ void md5_file(const char filename[], char hashout[33])
 
   FILE *infile = fopen(filename, "r");
 
-  /* quit if the file does not exist */
   assert(infile != NULL);
 
   BYTE buffer[1024];
