@@ -1,16 +1,18 @@
-#include "sn3d.h"
-#include "atomic.h"
-#include "input.h"
-#include "ltepop.h"
-#include "macroatom.h"
-#include "radfield.h"
-#include "ratecoeff.h"
-#include "grid_init.h"
+#include <assert.h>
 #include <string.h>
 #include <gsl/gsl_integration.h>
 #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <stdio.h>
+#include "sn3d.h"
+#include "atomic.h"
+#include "input.h"
+#include "ltepop.h"
+#include "macroatom.h"
+#include "md5.h"
+#include "radfield.h"
+#include "ratecoeff.h"
+#include "grid_init.h"
 
 // typedef struct gslintegration_ffheatingparas
 // {
@@ -39,27 +41,23 @@ typedef struct
   // double Te_TR_factor;
 } gsl_integral_paras_bfheating;
 
+static char adatafile_hash[33];
+static char compositionfile_hash[33];
+static char phixsfile_hash[33];
+
 
 static bool read_ratecoeff_dat(void)
 /// Try to readin the precalculated rate coefficients from file
 /// returns true if successful or false otherwise
 {
-  extern FILE *popen();
-  int pclose(FILE *stream);
-  FILE *popenadatahash = popen("openssl md5 -binary adata.txt | xxd -p", "r");
-  fgets(adatafile_hash, 33, popenadatahash);
-  printout("MD5(adata.txt) = %s\n", adatafile_hash);
-  pclose(popenadatahash);
+  md5_file("adata.txt", adatafile_hash);
+  printout("MD5 adata.txt = %s\n", adatafile_hash);
 
-  FILE *popencomphash = popen("openssl md5 -binary compositiondata.txt | xxd -p", "r");
-  fgets(compositionfile_hash, 33, popencomphash);
-  printout("MD5(compositiondata.txt) = %s\n", compositionfile_hash);
-  pclose(popencomphash);
+  md5_file("compositiondata.txt", compositionfile_hash);
+  printout("MD5 compositiondata.txt = %s\n", compositionfile_hash);
 
-  FILE *popenphixshash = popen("openssl md5 -binary phixsdata_v2.txt | xxd -p", "r");
-  fgets(phixsfile_hash, 33, popenphixshash);
-  printout("MD5(phixsdata_v2.txt) = %s\n", phixsfile_hash);
-  pclose(popenphixshash);
+  md5_file("phixsdata_v2.txt", phixsfile_hash);
+  printout("MD5 phixsdata_v2.txt = %s\n", phixsfile_hash);
 
   FILE *ratecoeff_file;
   if ((ratecoeff_file = fopen("ratecoeff.dat", "r")) != NULL)
@@ -70,34 +68,34 @@ static bool read_ratecoeff_dat(void)
 
     char adatafile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",adatafile_hash_in);
-    printout("ratecoeff.dat: require MD5(adata.txt) = %s ",adatafile_hash_in);
+    printout("ratecoeff.dat: MD5 adata.txt = %s ",adatafile_hash_in);
     if (strcmp(adatafile_hash, adatafile_hash_in) == 0)
       printout("(pass)\n");
     else
     {
-      printout("MISMATCH: MD5(adata.txt) = %s\n", adatafile_hash);
+      printout("MISMATCH: MD5 adata.txt = %s\n", adatafile_hash);
       fileisamatch = false;
     }
 
     char compositionfile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",compositionfile_hash_in);
-    printout("ratecoeff.dat: require MD5(compositiondata.txt) %s ",compositionfile_hash_in);
+    printout("ratecoeff.dat: MD5 compositiondata.txt %s ",compositionfile_hash_in);
     if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0)
       printout("(pass)\n");
     else
     {
-      printout("Hash mismatch: MD5(compositiondata.txt) = %s\n",compositionfile_hash);
+      printout("Hash mismatch: MD5 compositiondata.txt = %s\n",compositionfile_hash);
       fileisamatch = false;
     }
 
     char phixsfile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",phixsfile_hash_in);
-    printout("ratecoeff.dat: require MD5(phixsdata_v2.txt) = %s ",phixsfile_hash_in);
+    printout("ratecoeff.dat: MD5 phixsdata_v2.txt = %s ",phixsfile_hash_in);
     if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0)
       printout("(pass)\n");
     else
     {
-      printout("Hash mismatch: MD5(phixsdata_v2.txt) = %s\n",phixsfile_hash);
+      printout("Hash mismatch: MD5 phixsdata_v2.txt = %s\n",phixsfile_hash);
       fileisamatch = false;
     }
 
@@ -143,7 +141,7 @@ static bool read_ratecoeff_dat(void)
       if (SKIPRATECOEFFVALIDATION && !fileisamatch)
         printout("SKIPRATECOEFFVALIDATION on, ignoring checks and forcing use ratecoeff.dat\n");
 
-      printout("[info] ratecoefficients_init:  Matching ratecoeff.dat file found. Readin this file ...\n");
+      printout("Matching ratecoeff.dat file found. Readin this file ...\n");
       for (int element = 0; element < nelements; element++)
       {
         int nions = get_nions(element) - 1;
