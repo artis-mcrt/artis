@@ -161,7 +161,7 @@ void nt_init(int my_rank)
       nt_solution[modelgridindex].frac_heating = 1.0;
       nt_solution[modelgridindex].timestep = -1;
       nt_solution[modelgridindex].E_0 = 0.;
-      nt_solution[modelgridindex].deposition_rate_density = -1.;
+      nt_solution[modelgridindex].deposition_rate_density = 0.;
 
       if (STORE_NT_SPECTRUM && mg_associated_cells[modelgridindex] > 0)
       {
