@@ -53,6 +53,7 @@ int main(int argc, char** argv)
     }
     setvbuf(output_file, NULL, _IOLBF, 1);
 
+    const time_t sys_time_start = time(NULL);
     printout("Begining do_exspec.\n");
 
     /// Get input stuff
@@ -135,7 +136,7 @@ int main(int argc, char** argv)
         for (int ii = 0; ii < npkts; ii++)
         {
           PKT *pkt_ptr = &pkt[ii];
-          if (pkt_ptr->type == TYPE_ESCAPE && pkt_ptr->escape_type == TYPE_RPKT)
+          if (pkt_ptr->escape_type == TYPE_RPKT && pkt_ptr->type == TYPE_ESCAPE)
           {
             //printout("add packet %d\n",j);
             /// We know that a packet escaped at "escape_time". However, we have
@@ -266,7 +267,7 @@ int main(int argc, char** argv)
     //grid_init();
     //syn_gamma();
 
-    printout("simulation finished at %d\n",time(NULL));
+    printout("exspec finished at %d (tstart + %d seconds)\n", time(NULL), time(NULL) - sys_time_start);
     fclose(output_file);
   }
 
