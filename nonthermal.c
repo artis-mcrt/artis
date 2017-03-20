@@ -243,9 +243,13 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 double get_deposition_rate_density(const int modelgridindex)
 // should be in erg / s / cm^3
 {
-  const double deposition_rate_density = nt_solution[modelgridindex].deposition_rate_density;
-  assert(deposition_rate_density >= 0);
-  return deposition_rate_density;
+  if (nt_solution[modelgridindex].deposition_rate_density < 0)
+  {
+    calculate_deposition_rate_density(modelgridindex, nts_global);
+    printout("No deposition_rate_density for cell %d. Calculated value of %g has been stored.\n",
+             modelgridindex, nt_solution[modelgridindex].deposition_rate_density);
+  }
+  return nt_solution[modelgridindex].deposition_rate_density;
 }
 
 
@@ -1414,11 +1418,12 @@ void nt_write_restart_data(FILE *gridsave_file)
   {
     if (mg_associated_cells[modelgridindex] > 0)
     {
-      fprintf(gridsave_file, "%d %d %lg %g ",
+      fprintf(gridsave_file, "%d %d %lg %g %lg ",
               modelgridindex,
               nt_solution[modelgridindex].timestep,
               nt_solution[modelgridindex].E_0,
-              nt_solution[modelgridindex].frac_heating);
+              nt_solution[modelgridindex].frac_heating,
+              nt_solution[modelgridindex].deposition_rate_density);
 
       for (int element = 0; element < nelements; element++)
       {
@@ -1472,11 +1477,12 @@ void nt_read_restart_data(FILE *gridsave_file)
     if (mg_associated_cells[modelgridindex] > 0)
     {
       int mgi_in;
-      fscanf(gridsave_file, "%d %d %lg %g ",
+      fscanf(gridsave_file, "%d %d %lg %g %lg ",
              &mgi_in,
              &nt_solution[modelgridindex].timestep,
              &nt_solution[modelgridindex].E_0,
-             &nt_solution[modelgridindex].frac_heating);
+             &nt_solution[modelgridindex].frac_heating,
+             &nt_solution[modelgridindex].deposition_rate_density);
       if (mgi_in != modelgridindex)
       {
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
@@ -1538,6 +1544,7 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
       MPI_Bcast(&nt_solution[modelgridindex].timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].E_0, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].deposition_rate_density, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
       for (int element = 0; element < nelements; element++)
       {
         const int nions = get_nions(element);
