@@ -145,7 +145,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
       const double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
       spectra[nt].flux[nnu] += deltaE;
 
-      #ifdef USETRUEEMISSION
+      #if USETRUEEMISSION
       int et = pkt_ptr->trueemissiontype;
       #else
       int et = pkt_ptr->emissiontype;
@@ -378,7 +378,7 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
         if (do_emission_res == 1)
         {
           int nproc;
-          #ifdef USETRUEEMISSION
+          #if USETRUEEMISSION
           int et = pkt_ptr->trueemissiontype;
           #else
           int et = pkt_ptr->emissiontype;
