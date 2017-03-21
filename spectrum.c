@@ -241,6 +241,7 @@ static void init_spectrum(void)
   }
 }
 
+
 void gather_spectrum(int depth)
 {
   /// Set up the spectrum grid and initialise the bins to zero.
