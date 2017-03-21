@@ -156,8 +156,8 @@ int main(int argc, char** argv)
             epkts[j].nu_rf = pkt_ptr->nu_rf;
             epkts[j].e_rf = pkt_ptr->e_rf;
             epkts[j].e_cmf = pkt_ptr->e_cmf;
-            epkts[j].emissiontype = pkt_ptr->trueemissiontype;
-            epkts[j].trueemissiontype = pkt_ptr->emissiontype;
+            epkts[j].emissiontype = pkt_ptr->emissiontype;
+            epkts[j].trueemissiontype = pkt_ptr->trueemissiontype;
             epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
             epkts[j].absorptiontype = pkt_ptr->absorptiontype;
             j++;
@@ -180,7 +180,7 @@ int main(int argc, char** argv)
         printout("Cannot open spec.out\n");
         abort();
       }
-      #ifdef USETRUEEMISSION
+      #if USETRUEEMISSION
       FILE *emission_file = fopen("emissiontrue.out", "w");
       #else
       FILE *emission_file = fopen("emission.out", "w");

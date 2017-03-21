@@ -1,7 +1,7 @@
 #ifndef EXSPEC_H
 #define EXSPEC_H
 
-#define USETRUEEMISSION  // use trueemissiontype which is set when a macroatom is deactivated following activation from a KPKT
+#define USETRUEEMISSION  true // use trueemissiontype which is set when a macroatom is deactivated following activation from a KPKT
 
 /// Spectrum data structure
 #define MNUBINS   1000
