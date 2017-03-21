@@ -26,255 +26,233 @@
 
 int main(int argc, char** argv)
 {
-  int my_rank;
-  int p;
-
-  #ifdef MPI_ON
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &p);
-  #else
-    my_rank = 0;
-    p = 1;
-  #endif
-
-  nprocs = p;              /// Global variable which holds the number of MPI processes
-  rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
-  if (my_rank == 0)
+  const int my_rank = 0;
+  char filename[100];
+  sprintf(filename,"exspec.txt");
+  output_file = fopen(filename, "w");
+  if (output_file == NULL)
   {
-    tid = 0;
-    nthreads = 1;
-    char filename[100];
-    sprintf(filename,"exspec_%d-%d.txt",my_rank,tid);
-    output_file = fopen(filename, "w");
-    if (output_file == NULL)
+    printf("Cannot open %s.\n",filename);
+    abort();
+  }
+  setvbuf(output_file, NULL, _IOLBF, 1);
+
+  const time_t sys_time_start = time(NULL);
+  printout("Begining do_exspec.\n");
+
+  /// Get input stuff
+  printout("time before input %d\n",time(NULL));
+  input(my_rank);
+  printout("time after input %d\n",time(NULL));
+  nprocs = nprocs_exspec;
+
+  /// Read binary packet files and create ASCII packets files out of them
+  /*
+  npkts=MPKTS;
+  for (i = 0; i < nprocs; i++)
+  {
+    /// Read in the next bunch of packets to work on
+    sprintf(filename,"packets%d_%d.tmp",0,i);
+    printout("%s\n",filename);
+    if ((packets_file = fopen(filename, "rb")) == NULL)
+    //sprintf(filename,"packets%.2d_%.4d.out",0,i);
+    //if ((packets_file = fopen(filename, "r")) == NULL)
     {
-      printf("Cannot open %s.\n",filename);
+      printf("Cannot open packets file %s\n",filename);
       abort();
     }
-    setvbuf(output_file, NULL, _IOLBF, 1);
+    fread(&pkt[0], sizeof(PKT), npkts, packets_file);
+    //read_packets(packets_file);
+    /// Close the current file.
+    fclose(packets_file);
 
-    const time_t sys_time_start = time(NULL);
-    printout("Begining do_exspec.\n");
 
-    /// Get input stuff
-    printout("time before input %d\n",time(NULL));
-    input(my_rank);
-    printout("time after input %d\n",time(NULL));
-    nprocs = nprocs_exspec;
-
-    /// Read binary packet files and create ASCII packets files out of them
-    /*
-    npkts=MPKTS;
-    for (i = 0; i < nprocs; i++)
+    /// Read in the next bunch of packets to work on
+    sprintf(filename,"packets%.2d_%.4d.out",0,i);
+    printout("%s\n",filename);
+    if ((packets_file = fopen(filename, "w")) == NULL)
     {
-      /// Read in the next bunch of packets to work on
-      sprintf(filename,"packets%d_%d.tmp",0,i);
-      printout("%s\n",filename);
-      if ((packets_file = fopen(filename, "rb")) == NULL)
-      //sprintf(filename,"packets%.2d_%.4d.out",0,i);
-      //if ((packets_file = fopen(filename, "r")) == NULL)
-      {
-        printf("Cannot open packets file %s\n",filename);
-        abort();
-      }
-      fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-      //read_packets(packets_file);
-      /// Close the current file.
-      fclose(packets_file);
-
-
-      /// Read in the next bunch of packets to work on
-      sprintf(filename,"packets%.2d_%.4d.out",0,i);
-      printout("%s\n",filename);
-      if ((packets_file = fopen(filename, "w")) == NULL)
-      {
-        printf("Cannot open packets file %s\n",filename);
-        abort();
-      }
-      write_packets(packets_file);
-      //read_packets(packets_file);
-      /// Close the current file.
-      fclose(packets_file);
+      printf("Cannot open packets file %s\n",filename);
+      abort();
     }
-    abort();
-    */
+    write_packets(packets_file);
+    //read_packets(packets_file);
+    /// Close the current file.
+    fclose(packets_file);
+  }
+  abort();
+  */
 
-    for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
+  for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
+  {
+    /// Initialise the grid. Call routine that sets up the initial positions
+    /// and sizes of the grid cells.
+    //grid_init();
+    time_init();
+
+    if ((epkts = malloc((nprocs * npkts) * sizeof(EPKT))) == NULL)
     {
-      /// Initialise the grid. Call routine that sets up the initial positions
-      /// and sizes of the grid cells.
-      //grid_init();
-      time_init();
+      printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
+      abort();
+    }
 
-      if ((epkts = malloc((nprocs * npkts) * sizeof(EPKT))) == NULL)
+    /// Loop over all packets in all the packets files of the simulation and check if
+    /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
+    /// epkts array, which is then used for the binning.
+    int j = 0;
+    for (int i = 0; i < nprocs; i++)
+    {
+      /// Read in the next bunch of packets to work on
+      //sprintf(filename,"packets%d_%d.tmp",0,i);
+      sprintf(filename,"packets%.2d_%.4d.out", 0, i);
+      printout("reading %s, (last id is %d)\n", filename, nprocs-1);
+      //if ((packets_file = fopen(filename, "rb")) == NULL)
+      FILE *packets_file;
+      if ((packets_file = fopen(filename, "r")) == NULL)
       {
-        printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
+        printf("Cannot open packets file %s\n",filename);
         abort();
       }
+      //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
+      read_packets(packets_file);
+      fclose(packets_file);
 
-      /// Loop over all packets in all the packets files of the simulation and check if
-      /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
-      /// epkts array, which is then used for the binning.
-      int j = 0;
-      for (int i = 0; i < nprocs; i++)
+      for (int ii = 0; ii < npkts; ii++)
       {
-        /// Read in the next bunch of packets to work on
-        //sprintf(filename,"packets%d_%d.tmp",0,i);
-        sprintf(filename,"packets%.2d_%.4d.out",0,i);
-        printout("reading %s, id %5d of %d procs\n",filename,i,nprocs);
-        //if ((packets_file = fopen(filename, "rb")) == NULL)
-        FILE *packets_file;
-        if ((packets_file = fopen(filename, "r")) == NULL)
+        PKT *pkt_ptr = &pkt[ii];
+        if (pkt_ptr->escape_type == TYPE_RPKT && pkt_ptr->type == TYPE_ESCAPE)
         {
-          printf("Cannot open packets file %s\n",filename);
-          abort();
+          //printout("add packet %d\n",j);
+          /// We know that a packet escaped at "escape_time". However, we have
+          /// to allow for travel time. Use the formula in Leon's paper. The extra
+          /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
+          const double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+          epkts[j].arrive_time = t_arrive;
+
+          /// Now do the cmf time.
+          const double t_arrive_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
+          epkts[j].arrive_time_cmf = t_arrive_cmf;
+
+          epkts[j].dir[0] = pkt_ptr->dir[0];
+          epkts[j].dir[1] = pkt_ptr->dir[1];
+          epkts[j].dir[2] = pkt_ptr->dir[2];
+          epkts[j].nu_rf = pkt_ptr->nu_rf;
+          epkts[j].e_rf = pkt_ptr->e_rf;
+          epkts[j].e_cmf = pkt_ptr->e_cmf;
+          epkts[j].emissiontype = pkt_ptr->emissiontype;
+          epkts[j].trueemissiontype = pkt_ptr->trueemissiontype;
+          epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
+          epkts[j].absorptiontype = pkt_ptr->absorptiontype;
+          j++;
         }
-        //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-        read_packets(packets_file);
-        fclose(packets_file);
+      }
+    }
+    nepkts = j;
 
-        for (int ii = 0; ii < npkts; ii++)
+
+    /// Extract angle-averaged spectra and light curves
+    FILE *lc_file = fopen("light_curve.out", "w");
+    if (lc_file == NULL)
+    {
+      printout("Cannot open light_curve.out\n");
+      abort();
+    }
+    FILE *spec_file = fopen("spec.out", "w");
+    if (spec_file == NULL)
+    {
+      printout("Cannot open spec.out\n");
+      abort();
+    }
+    #if USETRUEEMISSION
+    FILE *emission_file = fopen("emissiontrue.out", "w");
+    #else
+    FILE *emission_file = fopen("emission.out", "w");
+    #endif
+    if (emission_file == NULL)
+    {
+      printf("Cannot open emission.out\n");
+      abort();
+    }
+    FILE *absorption_file = fopen("absorption.out", "w");
+    if (absorption_file == NULL)
+    {
+      printf("Cannot open absorption.out\n");
+      abort();
+    }
+
+    gather_spectrum(-1);
+    gather_light_curve();
+    write_spectrum(spec_file,emission_file,absorption_file);
+    write_light_curve(lc_file,-1);
+    //make_gamma_light_curve();
+
+    fclose(lc_file);
+    fclose(spec_file);
+    fclose(emission_file);
+    fclose(absorption_file);
+
+    printout("finished angle-averaged stuff\n");
+
+    /// Extract LOS dependent spectra and light curves
+    if (model_type != RHO_1D_READ)
+    {
+      if ((lc_file = fopen("light_curve_res.out", "w")) == NULL)
+      {
+        printout("Cannot open light_curve_res.out\n");
+        abort();
+      }
+      if ((spec_file = fopen("spec_res.out", "w")) == NULL)
+      {
+        printout("Cannot open spec_res.out\n");
+        abort();
+      }
+      for (int i = 0; i < MABINS; i++)
+      {
+        if (do_emission_res == 1)
         {
-          PKT *pkt_ptr = &pkt[ii];
-          if (pkt_ptr->escape_type == TYPE_RPKT && pkt_ptr->type == TYPE_ESCAPE)
+          sprintf(filename,"emission_res_%.2d.out",i);
+          printout("%s \n",filename);
+          if ((emission_file = fopen(filename, "w")) == NULL)
           {
-            //printout("add packet %d\n",j);
-            /// We know that a packet escaped at "escape_time". However, we have
-            /// to allow for travel time. Use the formula in Leon's paper. The extra
-            /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-            const double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
-            epkts[j].arrive_time = t_arrive;
+            printf("Cannot open emission_res.out\n");
+            abort();
+          }
 
-            /// Now do the cmf time.
-            const double t_arrive_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
-            epkts[j].arrive_time_cmf = t_arrive_cmf;
-
-            epkts[j].dir[0] = pkt_ptr->dir[0];
-            epkts[j].dir[1] = pkt_ptr->dir[1];
-            epkts[j].dir[2] = pkt_ptr->dir[2];
-            epkts[j].nu_rf = pkt_ptr->nu_rf;
-            epkts[j].e_rf = pkt_ptr->e_rf;
-            epkts[j].e_cmf = pkt_ptr->e_cmf;
-            epkts[j].emissiontype = pkt_ptr->emissiontype;
-            epkts[j].trueemissiontype = pkt_ptr->trueemissiontype;
-            epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
-            epkts[j].absorptiontype = pkt_ptr->absorptiontype;
-            j++;
+          sprintf(filename,"absorption_res_%.2d.out",i);
+          printout("%s \n",filename);
+          if ((absorption_file = fopen(filename, "w")) == NULL)
+          {
+            printf("Cannot open absorption_res.out\n");
+            abort();
           }
         }
-      }
-      nepkts = j;
+        gather_spectrum_res(i);
+        gather_light_curve_res(i);
 
+        write_spectrum(spec_file,emission_file,absorption_file);
+        write_light_curve(lc_file,i);
 
-      /// Extract angle-averaged spectra and light curves
-      FILE *lc_file = fopen("light_curve.out", "w");
-      if (lc_file == NULL)
-      {
-        printout("Cannot open light_curve.out\n");
-        abort();
+        if (do_emission_res == 1)
+        {
+          fclose(emission_file);
+          fclose(absorption_file);
+        }
+        printout("Did %d of %d angle bins.\n",i+1,MABINS);
       }
-      FILE *spec_file = fopen("spec.out", "w");
-      if (spec_file == NULL)
-      {
-        printout("Cannot open spec.out\n");
-        abort();
-      }
-      #if USETRUEEMISSION
-      FILE *emission_file = fopen("emissiontrue.out", "w");
-      #else
-      FILE *emission_file = fopen("emission.out", "w");
-      #endif
-      if (emission_file == NULL)
-      {
-        printf("Cannot open emission.out\n");
-        abort();
-      }
-      FILE *absorption_file = fopen("absorption.out", "w");
-      if (absorption_file == NULL)
-      {
-        printf("Cannot open absorption.out\n");
-        abort();
-      }
-
-      gather_spectrum(-1);
-      gather_light_curve();
-      write_spectrum(spec_file,emission_file,absorption_file);
-      write_light_curve(lc_file,-1);
-      //make_gamma_light_curve();
-
       fclose(lc_file);
       fclose(spec_file);
-      fclose(emission_file);
-      fclose(absorption_file);
-
-      printout("finished angle-averaged stuff\n");
-
-      /// Extract LOS dependent spectra and light curves
-      if (model_type != RHO_1D_READ)
-      {
-        if ((lc_file = fopen("light_curve_res.out", "w")) == NULL)
-        {
-          printout("Cannot open light_curve_res.out\n");
-          abort();
-        }
-        if ((spec_file = fopen("spec_res.out", "w")) == NULL)
-        {
-          printout("Cannot open spec_res.out\n");
-          abort();
-        }
-        for (int i = 0; i < MABINS; i++)
-        {
-          if (do_emission_res == 1)
-          {
-            sprintf(filename,"emission_res_%.2d.out",i);
-            printout("%s \n",filename);
-            if ((emission_file = fopen(filename, "w")) == NULL)
-            {
-              printf("Cannot open emission_res.out\n");
-              abort();
-            }
-
-            sprintf(filename,"absorption_res_%.2d.out",i);
-            printout("%s \n",filename);
-            if ((absorption_file = fopen(filename, "w")) == NULL)
-            {
-              printf("Cannot open absorption_res.out\n");
-              abort();
-            }
-          }
-          gather_spectrum_res(i);
-          gather_light_curve_res(i);
-
-          write_spectrum(spec_file,emission_file,absorption_file);
-          write_light_curve(lc_file,i);
-
-          if (do_emission_res == 1)
-          {
-            fclose(emission_file);
-            fclose(absorption_file);
-          }
-          printout("Did %d of %d angle bins.\n",i+1,MABINS);
-        }
-        fclose(lc_file);
-        fclose(spec_file);
-      }
     }
-
-    //fclose(ldist_file);
-    //fclose(output_file);
-
-    /* Spec syn. */
-    //grid_init();
-    //syn_gamma();
-
-    printout("exspec finished at %d (tstart + %d seconds)\n", time(NULL), time(NULL) - sys_time_start);
-    fclose(output_file);
   }
 
-  #ifdef MPI_ON
-    MPI_Finalize();
-  #endif
+  //fclose(ldist_file);
+  //fclose(output_file);
+
+  /* Spec syn. */
+  //grid_init();
+  //syn_gamma();
+
+  printout("exspec finished at %d (tstart + %d seconds)\n", time(NULL), time(NULL) - sys_time_start);
+  fclose(output_file);
 
   return 0;
 }
