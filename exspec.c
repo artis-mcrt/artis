@@ -10,6 +10,8 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
+#include <assert.h>
+#include <stdarg.h>  // needed for printout()
 #include "threadprivate.h"
 #include "exspec.h"
 #include "sn3d.h"
@@ -20,7 +22,6 @@
 #include "packet_init.h"
 #include "spectrum.h"
 #include "vectors.h"
-#include <stdarg.h>  // needed for printout()
 
 
 int main(int argc, char** argv)
@@ -142,12 +143,12 @@ int main(int argc, char** argv)
             /// We know that a packet escaped at "escape_time". However, we have
             /// to allow for travel time. Use the formula in Leon's paper. The extra
             /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-            int t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
+            const double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
             epkts[j].arrive_time = t_arrive;
 
             /// Now do the cmf time.
-            t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-            epkts[j].arrive_time_cmf = t_arrive;
+            const double t_arrive_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
+            epkts[j].arrive_time_cmf = t_arrive_cmf;
 
             epkts[j].dir[0] = pkt_ptr->dir[0];
             epkts[j].dir[1] = pkt_ptr->dir[1];
