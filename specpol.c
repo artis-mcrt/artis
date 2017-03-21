@@ -217,7 +217,7 @@ int add_to_specpol(const EPKT *pkt_ptr)
       stokes_q[nt].flux[nnu] += deltaq;
       stokes_u[nt].flux[nnu] += deltau;
 
-      #ifdef USETRUEEMISSION
+      #if USETRUEEMISSION
       int et = pkt_ptr->trueemissiontype;
       #else
       int et = pkt_ptr->emissiontype;
@@ -365,7 +365,7 @@ int add_to_specpol_res(const EPKT *pkt_ptr, int current_abin)
 
         if (do_emission_res == 1)
         {
-          #ifdef USETRUEEMISSION
+          #if USETRUEEMISSION
           int et = pkt_ptr->trueemissiontype;
           #else
           int et = pkt_ptr->emissiontype;
