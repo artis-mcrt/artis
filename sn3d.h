@@ -31,8 +31,6 @@ static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 #define RECORD_LINESTAT
 static const bool SKIPRATECOEFFVALIDATION = false;
 
-// #define TIMED_RESTARTS
-#define WALLTIMELIMITSECONDS (24 * 3600)   // for use with TIMED_RESTARTS
 
 // Polarisation for real packets
 //#define DIPOLE

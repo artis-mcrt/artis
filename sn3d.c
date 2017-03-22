@@ -763,7 +763,7 @@ int main(int argc, char** argv)
       }
     #endif
 
-    #ifdef TIMED_RESTARTS
+    #ifdef WALLTIMELIMITSECONDS
       int estimated_time_for_clean_exit = -1;
       time_t time_timestep_start = time(NULL);
     #endif
@@ -774,7 +774,7 @@ int main(int argc, char** argv)
         MPI_Barrier(MPI_COMM_WORLD);
       #endif
 
-      #ifdef TIMED_RESTARTS
+      #ifdef WALLTIMELIMITSECONDS
         const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
         time_timestep_start = time(NULL);
         const int wallclock_used_seconds = time_timestep_start - real_time_start;
@@ -930,7 +930,7 @@ int main(int argc, char** argv)
         zero_estimators();
 
         // MPI_Barrier(MPI_COMM_WORLD);
-        #ifdef TIMED_RESTARTS
+        #ifdef WALLTIMELIMITSECONDS
           estimated_time_for_clean_exit = time(NULL) - time_timestep_start;
         #endif
         if ((nts < ftstep) && do_this_full_loop)
