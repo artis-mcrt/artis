@@ -2,7 +2,9 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-ifneq (,$(findstring raijin, $(HOST)))
+RAIJINDIRAC := $(or $(findstring dirac,$(HOSTNAME)),$(findstring raijin,$(HOSTNAME)))
+
+ifneq (,$(RAIJINDIRAC))
 	# NCI Raijin cluster
 	# needs:
 	# module load intel-cc/
