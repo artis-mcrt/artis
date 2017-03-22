@@ -1281,7 +1281,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
     const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
     if (deposition_rate_density_ev < 1e-2)
     {
-      printout("Near-zero non-thermal deposition in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
+      printout("Non-thermal deposition rate of %g eV/cm/s/cm^3 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", deposition_rate_density_ev, modelgridindex, timestep);
 
       // if (!STORE_NT_SPECTRUM)
       // {
