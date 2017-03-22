@@ -543,6 +543,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
       /// Update abundances of radioactive isotopes
       //printout("call update abundances for timestep %d in model cell %d\n",m,n);
       update_abundances(n, time_step[nts].mid);
+      calculate_deposition_rate_density(n, nts);
 
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
