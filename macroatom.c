@@ -547,13 +547,12 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
     double *restrict processrates = cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
 
-    /// If there are no precalculated rates available we must calculate them
+    /// If there are no precalculated rates available then calculate them
     if (processrates[MA_ACTION_COLDEEXC] < 0)
       get_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, processrates);
 
     // for debugging the transition rates:
     // {
-    //   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
     //   printout("macroatom element %d ion %d level %d\n", element, ion, level);
     //
     // const char *actionlabel[MA_ACTION_COUNT] = {
