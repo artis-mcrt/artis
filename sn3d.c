@@ -249,6 +249,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       }
     #endif
   #endif
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 
