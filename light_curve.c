@@ -15,7 +15,7 @@
 }
 */
 
-int add_to_lc(const EPKT *pkt_ptr)
+void add_to_lc(const EPKT *pkt_ptr)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
 {
@@ -35,8 +35,6 @@ int add_to_lc(const EPKT *pkt_ptr)
     int nt = (log(t_arrive) - log(tmin)) / dlogtlc;
     light_curve_cmf[nt].lum += pkt_ptr->e_cmf / light_curve[nt].delta_t / nprocs / sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
   }
-
-  return 0;
 }
 
 
@@ -64,7 +62,7 @@ void init_light_curve(void)
 }
 
 
-int write_light_curve(FILE *lc_file, int current_abin)
+void write_light_curve(FILE *lc_file, int current_abin)
 {
   /*
   FILE *lc_file;
@@ -146,15 +144,12 @@ int write_light_curve(FILE *lc_file, int current_abin)
       fprintf(lc_file, "%g %g %g\n", time_step[m].mid/DAY, (time_step[m].gamma_dep/LSUN/time_step[m].width),  (time_step[m].cmf_lum/time_step[m].width/LSUN));
     }
   }
-
-  return 0;
 }
 
 
-int gather_light_curve(void)
+void gather_light_curve(void)
 {
   //void read_packets(FILE *packets_file);
-  EPKT *pkt_ptr;
   //int i,n,p;
 
   /// Set up the light curve grid and initialise the bins to zero.
@@ -164,15 +159,13 @@ int gather_light_curve(void)
   /// appropriate bins.
   for (int p = 0; p < nepkts; p++)
   {
-    pkt_ptr = &epkts[p];
+    EPKT *pkt_ptr = &epkts[p];
     add_to_lc(pkt_ptr);
   }
-
-  return 0;
 }
 
 
-int add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
+void add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
 {
@@ -214,16 +207,13 @@ int add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
       light_curve[nt].lum += pkt_ptr->e_rf / light_curve[nt].delta_t * MALCBINS / nprocs;
     }
   }
-
-  return 0;
 }
 
 
-int gather_light_curve_res(int current_abin)
+void gather_light_curve_res(int current_abin)
 {
   //void read_packets(FILE *packets_file);
   //int i,n,p,nn;
-  EPKT *pkt_ptr;
 
   /// Set up the light curve grid and initialise the bins to zero.
   init_light_curve();
@@ -232,8 +222,7 @@ int gather_light_curve_res(int current_abin)
   /// appropriate bins.
   for (int p = 0; p < nepkts; p++)
   {
-    pkt_ptr = &epkts[p];
+    EPKT *pkt_ptr = &epkts[p];
     add_to_lc_res(pkt_ptr,current_abin);
   }
-  return 0;
 }

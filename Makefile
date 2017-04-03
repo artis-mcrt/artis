@@ -29,7 +29,7 @@ else
  # CC = mpicc
  # CC = icc
   INCLUDE = -I/usr/local/Cellar/gsl/2.3/include -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/opt/gperftools/include
-  LIB = -L/usr/local/Cellar/gsl/2.3/lib -L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
+  LIB = -L/usr/local/Cellar/gsl/2.3/lib #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
   CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
 
 # in GCC6, -Wmisleading-indentation will be useful
@@ -227,25 +227,15 @@ sn3dmpi: clean version
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
 
-exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c gamma_light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
+exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
 
-exspec: version
+exspec: clean version
 	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exspec
 
-exgamma_objects = exgamma.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o compton.o macroatom.o rpkt.o kpkt.o photo_electric.o linelist.o emissivities.o grey_emissivities.o ltepop.o atomic.o ratecoeff.o thermalbalance.o light_curve.o gamma_light_curve.o spectrum.o polarization.o nltepop.o radfield.o md5.o
+exgamma_files = exgamma.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c linelist.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
 
-exgamma: $(exgamma_objects)
-	$(CC) $(CFLAGS) $(exgamma_objects) $(LDFLAGS) -o exgamma
-
-sn3dsyn_objects = sn3dsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o radfield.o md5.o
-
-sn3dsyn: $(sn3dsyn_objects)
-	$(CC) $(CFLAGS) $(sn3dsyn_objects) $(LDFLAGS) -o sn3dsyn
-
-sn3dlcsyn_objects = sn3dlcsyn.o grid_init.o input.o vectors.o packet_init.o time_init.o update_grid.o update_packets.o gamma.o boundary.o move.o spectrum.o compton.o rpkt.o light_curve.o kpkt.o photo_electric.o linelist.o syn_gamma.o ray_prop.o update_gamma_rays.o emissivities.o gamma_light_curve.o grey_emissivities.o syn_lc.o light_curve_res.o polarization.o nltepop.o radfield.o md5.o
-
-sn3dlcsyn: $(sn3dlcsyn_objects)
-	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn
+exgamma: clean version
+	$(CC) $(CFLAGS) $(exgamma_files) $(LDFLAGS) -o exgamma
 
 
 .PHONY: clean version
