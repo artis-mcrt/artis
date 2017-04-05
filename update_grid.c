@@ -58,17 +58,18 @@ static void update_abundances(const int modelgridindex, double t_current)
     //fe_in = cell[modelgridindex].f_fe_init;
     for (int element = nelements-1; element >= 0; element--)
     {
-      if (get_element(element) == 28)
+      const int atomic_number = get_element(element);
+      if (atomic_number == 28)
       {
         const double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
-      else if (get_element(element) == 27)
+      else if (atomic_number == 27)
       {
         const double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
-      else if (get_element(element) == 26)
+      else if (atomic_number == 26)
       {
         const double fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
@@ -84,37 +85,38 @@ static void update_abundances(const int modelgridindex, double t_current)
     //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe_in);
     for (int element = nelements-1; element >= 0; element--)
     {
-      if (get_element(element) == 28)
+      const int atomic_number = get_element(element);
+      if (atomic_number == 28)
       {
         const double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
-      else if (get_element(element) == 27)
+      else if (atomic_number == 27)
       {
         const double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + modelgrid[modelgridindex].fcostable;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
-      else if (get_element(element) == 26)
+      else if (atomic_number == 26)
       {
         const double fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + modelgrid[modelgridindex].ffestable + (fe52_in* exp(-lambdafe*t_current));
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
-      else if (get_element(element) == 25)
+      else if (atomic_number == 25)
       {
         const double mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + modelgrid[modelgridindex].fmnstable;
         modelgrid[modelgridindex].composition[element].abundance = mnfrac;
       }
-      else if (get_element(element) == 24)
+      else if (atomic_number == 24)
       {
         const double crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + modelgrid[modelgridindex].fcrstable + (cr48_in * exp(-lambdacr*t_current));
         modelgrid[modelgridindex].composition[element].abundance = crfrac;
       }
-      else if (get_element(element) == 23)
+      else if (atomic_number == 23)
       {
         const double vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + modelgrid[modelgridindex].fvstable;
         modelgrid[modelgridindex].composition[element].abundance = vfrac;
       }
-      else if (get_element(element) == 22)
+      else if (atomic_number == 22)
       {
         const double tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + modelgrid[modelgridindex].ftistable;
         modelgrid[modelgridindex].composition[element].abundance = tifrac;
@@ -122,8 +124,6 @@ static void update_abundances(const int modelgridindex, double t_current)
     }
     //printout("model cell %d, has ni_in %g, co_in %g, fe_in %g, abund %g, %g, %g, stable %g,%g\n",modelgridindex,ni_in,co_in,fe_in,nifrac,cofrac,fefrac,modelgrid[modelgridindex].fnistable,modelgrid[modelgridindex].fcostable);
   }
-  //printout("nifrac_old %g, cofrac_old %g, fefrac_old %g\n",nifrac_old,cofrac_old,fefrac_old);
-  //printout("nifrac_new %g, cofrac_new %g, fefrac_new %g\n",nifrac_new,cofrac_new,fefrac_new);
 }
 
 
