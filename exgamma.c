@@ -25,12 +25,6 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  int nts;
-
-  //void init_spectrum();
-
-  FILE *emission_file,*lc_file,*spec_file,*absorption_file;
-  int j,t_arrive;
   PKT *pkt_ptr;
 
   //int make_spectrum_res();
@@ -40,30 +34,10 @@ int main(int argc, char** argv)
   //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
   //int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
   //int gather_gamma_light_curve(), write_gamma_light_curve();
-  int i,ii,iii,interactions;
-  double meaninteractions;
-  FILE *syn_file;
-  FILE *linestat_file;
   FILE *packets_file;
-  FILE *temperature_file;
-  int middle_iteration;
   int my_rank;
   int p;
-  int nnn, nn, n;
-  int element;
-  int nstart, nknown, ndo;
-  double rho_tot, te_tot, tr_tot, w_tot, n_count;
-  int position, nlp, ncl, nncl, mgi;
-  double T_R_max,T_R_min,T_R_step;
-  double T_e_max,T_e_min,T_e_step;
-  double rho_max,rho_min,rho_step;
   char filename[100];
-  double nntot;
-  int titer;
-
-  double deltaV,deltat;
-  int assoc_cells;
-
 
   my_rank = 0;
   p = 1;
@@ -145,8 +119,8 @@ int main(int argc, char** argv)
     /// Loop over all packets in all the packets files of the simulation and check if
     /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
     /// epkts array, which is then used for the binning.
-    j=0;
-    for (i = 0; i < nprocs; i++)
+    int j = 0;
+    for (int i = 0; i < nprocs; i++)
     {
       /// Read in the next bunch of packets to work on
       //sprintf(filename,"packets%d_%d.tmp",0,i);
@@ -162,7 +136,7 @@ int main(int argc, char** argv)
       read_packets(packets_file);
       fclose(packets_file);
 
-      for (ii = 0; ii < npkts; ii++)
+      for (int ii = 0; ii < npkts; ii++)
       {
         pkt_ptr = &pkt[ii];
         if (pkt_ptr->type == TYPE_ESCAPE && pkt_ptr->escape_type == TYPE_GAMMA)
@@ -171,12 +145,12 @@ int main(int argc, char** argv)
           /// We know that a packet escaped at "escape_time". However, we have
           /// to allow for travel time. Use the formula in Leon's paper. The extra
           /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-          t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
+          double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
           epkts[j].arrive_time = t_arrive;
 
           /// Now do the cmf time.
-          t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-          epkts[j].arrive_time_cmf = t_arrive;
+          double t_arrive_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
+          epkts[j].arrive_time_cmf = t_arrive_cmf;
 
           epkts[j].dir[0] = pkt_ptr->dir[0];
           epkts[j].dir[1] = pkt_ptr->dir[1];
@@ -195,11 +169,13 @@ int main(int argc, char** argv)
 
 
     /// Extract angle-averaged spectra and light curves
+    FILE *lc_file;
     if ((lc_file = fopen("gamma_light_curve.out", "w")) == NULL)
     {
       printout("Cannot open gamma_light_curve.out\n");
       abort();
     }
+    FILE *spec_file;
     if ((spec_file = fopen("gamma_spec.out", "w")) == NULL)
     {
       printout("Cannot open spec.out\n");
@@ -229,7 +205,7 @@ int main(int argc, char** argv)
         printout("Cannot open gamma_spec_res.out\n");
         abort();
       }
-      for (i = 0; i < MABINS; i++)
+      for (int i = 0; i < MABINS; i++)
       {
         gather_spectrum_res(i);
         gather_light_curve_res(i);
