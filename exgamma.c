@@ -25,22 +25,11 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  PKT *pkt_ptr;
-
-  //int make_spectrum_res();
-  //int make_spectrum();
-  //int make_gamma_light_curve();
-  int outer_iteration;
-  //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
-  //int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
-  //int gather_gamma_light_curve(), write_gamma_light_curve();
   FILE *packets_file;
-  int my_rank;
-  int p;
   char filename[100];
 
-  my_rank = 0;
-  p = 1;
+  int my_rank = 0;
+  int p = 1;
 
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
@@ -58,7 +47,7 @@ int main(int argc, char** argv)
 
   /// Get input stuff
   printout("time before input %d\n",time(NULL));
-  input (0);
+  input(0);
   printout("time after input %d\n",time(NULL));
   nprocs = nprocs_exspec;
 
@@ -103,7 +92,7 @@ int main(int argc, char** argv)
   do_emission_res = 0;         /// We don't record information on gamma packet last interactions, thus create no emission/absorption files.
   nu_min_r = 0.05 * MEV / H;   /// Lower frequency boundary for gamma spectra
   nu_max_r = 4 * MEV / H;      /// Upper frequency boundary for gamma spectra
-  for (outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
+  for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
   {
     /// Initialise the grid. Call routine that sets up the initial positions
     /// and sizes of the grid cells.
@@ -138,18 +127,18 @@ int main(int argc, char** argv)
 
       for (int ii = 0; ii < npkts; ii++)
       {
-        pkt_ptr = &pkt[ii];
+        PKT *pkt_ptr = &pkt[ii];
         if (pkt_ptr->type == TYPE_ESCAPE && pkt_ptr->escape_type == TYPE_GAMMA)
         {
           //printout("add packet %d\n",j);
           /// We know that a packet escaped at "escape_time". However, we have
           /// to allow for travel time. Use the formula in Leon's paper. The extra
           /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-          double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
+          const double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
           epkts[j].arrive_time = t_arrive;
 
           /// Now do the cmf time.
-          double t_arrive_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
+          const double t_arrive_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
           epkts[j].arrive_time_cmf = t_arrive_cmf;
 
           epkts[j].dir[0] = pkt_ptr->dir[0];
@@ -222,10 +211,6 @@ int main(int argc, char** argv)
 
   //fclose(ldist_file);
   //fclose(output_file);
-
-  /* Spec syn. */
-  //grid_init();
-  //syn_gamma();
 
   printout("simulation finished at %d\n",time(NULL));
   fclose(output_file);
