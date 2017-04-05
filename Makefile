@@ -17,7 +17,7 @@ ifneq (,$(RAIJINDIRAC))
 
   sn3d: CFLAGS += -DMPI_ON
   exspec: CFLAGS += -DDO_EXSPEC
-  exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
+  exgamma: CFLAGS += -DDO_EXSPEC
 
 else
 	# macOS laptop
@@ -41,7 +41,7 @@ else
   LDFLAGS = $(LIB) -lgsl -lgslcblas
  # sn3d: CFLAGS += -fopenmp
   exspec: CFLAGS += -DDO_EXSPEC
-  exgamma: override CFLAGS =  -O3 $(INCLUDE) -DDO_EXSPEC
+  exgamma: CFLAGS += -DDO_EXSPEC
 
 endif
 
@@ -222,7 +222,7 @@ sn3d: clean version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3dmpi: clean version
-		mpicc $(CFLAGS) -DMPI_ON $(sn3d_files) $(LDFLAGS) -o sn3d
+	mpicc $(CFLAGS) -DMPI_ON $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
