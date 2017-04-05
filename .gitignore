@@ -11,6 +11,6 @@ tags
 browse.VC.db
 *.optrpt
 sn3d.dSYM
-.tags
+.tags*
 .tags_swap
 .vscode
