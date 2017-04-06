@@ -16,15 +16,16 @@
 #define TRACE_EMISSION_REGION_ON
 
 #ifdef TRACE_EMISSION_REGION_ON
-  #define traceemiss_nulower (CLIGHT / (4500e-8))  // in Angstroms
-  #define traceemiss_nuupper (CLIGHT / (4200e-8))  // in Angstroms
-  #define traceemiss_timestepmin 15
-  #define traceemiss_timestepmax 25
+  #define traceemiss_nulower (CLIGHT / (7700e-8))  // in Angstroms
+  #define traceemiss_nuupper (CLIGHT / (7200e-8))  // in Angstroms
+  #define traceemiss_timestepmin 34
+  #define traceemiss_timestepmax 57
 
   typedef struct emissioncontrib
   {
     double fluxcontrib;
-    int lineindex;
+    double emiss_velocity_sum;
+    int lineindex;   // this will be important when the list gets sorted
   } emissioncontrib;
 
   struct emissioncontrib *traceemisscontributions;
@@ -164,6 +165,11 @@ static void add_to_spec(const EPKT *pkt_ptr)
           {
             traceemisscontributions[et].fluxcontrib += deltaE;
             traceemiss_totalflux += deltaE;
+
+            double vel_vec[3];
+            get_velocity(pkt_ptr->em_pos, vel_vec, pkt_ptr->em_time);
+            traceemisscontributions[et].emiss_velocity_sum += vec_len(vel_vec) * deltaE;
+
             // printout("packet in range, Z=%d ion_stage %d upperlevel %4d lowerlevel %4d fluxcontrib %g linecontrib %g index %d nlines %d\n",
                     //  get_element(element), get_ionstage(element, ion), linelist[et].upperlevelindex, linelist[et].lowerlevelindex, deltaE, traceemisscontributions[et].fluxcontrib, et, nlines);
           }
@@ -253,6 +259,7 @@ void gather_spectrum(int depth)
   for (int i = 0; i < nlines; i++)
   {
     traceemisscontributions[i].fluxcontrib = 0.;
+    traceemisscontributions[i].emiss_velocity_sum = 0.;
     traceemisscontributions[i].lineindex = i; // this will be important when the list gets sorted
   }
   #endif
@@ -300,6 +307,7 @@ void gather_spectrum(int depth)
   const int nlines_limited = nlines;
   if (nlines > 50)
     nlines = 50;
+  printout("%17s %5s %9s %5s %5s %8s %8s %6s %6s %7s\n", "flux", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forbid", "lambda", "<v_rad>");
   for (int i = 0; i < nlines_limited; i++)
   {
     const double fluxcontrib = traceemisscontributions[i].fluxcontrib;
@@ -309,11 +317,13 @@ void gather_spectrum(int depth)
       const int element = linelist[lineindex].elementindex;
       const int ion = linelist[lineindex].ionindex;
       const double linelambda = 1e8 * CLIGHT / linelist[lineindex].nu;
-      printout("flux %7.2e (%5.1f%%) Z=%d ion_stage %d upperlevel %4d lowerlevel %4d coll_str %5.1f A %8.2e forbidden %d lambda %5.1f\n",
+      // flux-weighted average radial velocity of emission in km/s
+      const double v_rad = traceemisscontributions[i].emiss_velocity_sum / traceemisscontributions[i].fluxcontrib / 1e5;
+      printout("%7.2e (%5.1f%%) %5d %9d %5d %5d %8.1f %8.2e %6d %6.1f %7.1f\n",
                fluxcontrib, 100 * fluxcontrib / traceemiss_totalflux, get_element(element),
                get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
                linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden,
-               linelambda);
+               linelambda, v_rad);
      }
      else
       break;
