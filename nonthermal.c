@@ -1351,7 +1351,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
       sfmatrix_add_excitation(sfmatrix, element, ion, nnion, &E_0);
       sfmatrix_add_ionisation(sfmatrix, Z, ionstage, nnion, &E_0);
     }
-    printout("\n");
+    if (!first_included_ion_of_element)
+      printout("\n");
   }
 
   // printout("SF matrix | RHS vector:\n");
