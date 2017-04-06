@@ -138,6 +138,10 @@ int main(int argc, char** argv)
           epkts[j].nu_rf = pkt_ptr->nu_rf;
           epkts[j].e_rf = pkt_ptr->e_rf;
           epkts[j].e_cmf = pkt_ptr->e_cmf;
+          epkts[j].em_pos[0] = pkt_ptr->em_pos[0];
+          epkts[j].em_pos[1] = pkt_ptr->em_pos[1];
+          epkts[j].em_pos[2] = pkt_ptr->em_pos[2];
+          epkts[j].em_time = pkt_ptr->em_time;
           epkts[j].emissiontype = pkt_ptr->emissiontype;
           epkts[j].trueemissiontype = pkt_ptr->trueemissiontype;
           epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
