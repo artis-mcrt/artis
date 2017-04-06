@@ -1508,22 +1508,22 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
   if (!nonthermal_initialized)
     return;
 
-  const int logged_element_z = 26;
-  const int logged_ion_index = 1;
-  const int logged_element_index = get_elementindex(logged_element_z);
-  const int logged_ion_stage = get_ionstage(logged_element_index, logged_ion_index);
+  // const int logged_element_z = 26;
+  // const int logged_ion_index = 1;
+  // const int logged_element_index = get_elementindex(logged_element_z);
+  // const int logged_ion_stage = get_ionstage(logged_element_index, logged_ion_index);
 
   if (root_ndo > 0)
   {
     if (my_rank == root)
     {
-      printout("nonthermal_MPI_Bcast root process %d will broadcast cells %d to %d\n",
-               my_rank, root_nstart, root_nstart + root_ndo - 1);
+      // printout("nonthermal_MPI_Bcast root process %d will broadcast cells %d to %d\n",
+      //          my_rank, root_nstart, root_nstart + root_ndo - 1);
     }
     else
     {
-      printout("nonthermal_MPI_Bcast process %d will receive cells %d to %d from process %d\n",
-               my_rank, root_nstart, root_nstart + root_ndo - 1, root);
+      // printout("nonthermal_MPI_Bcast process %d will receive cells %d to %d from process %d\n",
+      //          my_rank, root_nstart, root_nstart + root_ndo - 1, root);
     }
   }
 
@@ -1531,15 +1531,15 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
   {
     if (mg_associated_cells[modelgridindex] > 0)
     {
-      printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-               modelgridindex, logged_element_z, logged_ion_stage,
-               nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
-               get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
+      // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
+      //          modelgridindex, logged_element_z, logged_ion_stage,
+      //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
+      //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
       MPI_Barrier(MPI_COMM_WORLD);
       if (STORE_NT_SPECTRUM)
       {
         MPI_Bcast(&nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
+        // printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
       }
       MPI_Bcast(&nt_solution[modelgridindex].timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
@@ -1550,14 +1550,14 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
         const int nions = get_nions(element);
         MPI_Bcast(&nt_solution[modelgridindex].eff_ionpot[element], nions, MPI_FLOAT, root, MPI_COMM_WORLD);
       }
-      printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-               modelgridindex, logged_element_z, logged_ion_stage,
-               nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
-               get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
+      // printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
+      //          modelgridindex, logged_element_z, logged_ion_stage,
+      //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
+      //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
     }
     else
     {
-      printout("nonthermal_MPI_Bcast Skipping empty grid cell %d.\n", modelgridindex);
+      // printout("nonthermal_MPI_Bcast Skipping empty grid cell %d.\n", modelgridindex);
     }
   }
 
