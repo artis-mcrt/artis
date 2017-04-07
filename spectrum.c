@@ -16,8 +16,8 @@
 #define TRACE_EMISSION_REGION_ON
 
 #ifdef TRACE_EMISSION_REGION_ON
-  #define traceemiss_nulower (CLIGHT / (7700e-8))  // in Angstroms
-  #define traceemiss_nuupper (CLIGHT / (7200e-8))  // in Angstroms
+  #define traceemiss_nulower (CLIGHT / (5700e-8))  // in Angstroms
+  #define traceemiss_nuupper (CLIGHT / (4200e-8))  // in Angstroms
   #define traceemiss_timestepmin 34
   #define traceemiss_timestepmax 57
 
