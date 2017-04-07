@@ -1,11 +1,14 @@
-#include "types.h"
+#ifndef THREADPRIVATE_H
+#define THREADPRIVATE_H
 
+#include "types.h"
+#include <stdbool.h>
 
 int tid;
-short use_cellhist;
 //int histindex;
-short neutral_flag;
-gsl_rng *rng; 
+bool use_cellhist;
+bool neutral_flag;
+gsl_rng *rng;
 
 //int debuglevel;
 //int propagationcounter;
@@ -17,9 +20,9 @@ gsl_rng *rng;
 //rpkt_cont_opacity_struct kappa_rpkt_cont;
 //coolingrates_t coolingrates;
 //heatingrates_t heatingrates;
-//short elements_uppermost_ion[MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element 
-//                                                 /// in a given cell. Be aware that this must not be used outside of the update_grid 
-//                                                 /// routine and their doughters. 
+//short elements_uppermost_ion[MELEMENTS];  /// Highest ionisation stage which has a decent population for a particular element
+//                                                 /// in a given cell. Be aware that this must not be used outside of the update_grid
+//                                                 /// routine and their doughters.
 
 //cellhistory_struct *cellhistory;
 //phixslist_t *phixslist;
@@ -34,5 +37,7 @@ gsl_rng *rng;
 //float T_Dsum[MSAMPLEGRID];
 //int associatedcells[MSAMPLEGRID];
 
-FILE *output_file;
+FILE *restrict output_file;
 //short output_file_open;
+
+#endif
