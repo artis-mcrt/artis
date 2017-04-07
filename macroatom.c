@@ -1113,7 +1113,6 @@ double rad_recombination_ratecoeff(int modelgridindex, int element, int upperion
   }
 
   #ifdef DEBUG_ON
-    //printout("[debug]    rad_recombiantion: R %g\n",R);
     if (!isfinite(R))
     {
       printout("fatal a2: abort\n");
