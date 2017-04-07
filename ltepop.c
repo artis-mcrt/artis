@@ -619,8 +619,8 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
   const double nnground = get_groundlevelpop(modelgridindex,element,ion);
 
   nn = nnground * W *
-       stat_weight(element,ion,level) / stat_weight(element,ion,0) *
-       exp(-(E_level - E_ground)/KB/T_exc);
+       stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
+       exp(-(E_level - E_ground) / KB / T_exc);
 
   return nn;
 }
@@ -632,9 +632,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 /// approximation (or nebular approximation).
 {
   double nn;
-
-  const double T_exc = get_TJ(modelgridindex);
-  const double W = 1;
 
   bool use_lte_pop = false;
   int nlte_levels;
@@ -714,11 +711,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 
   if (use_lte_pop)
   {
-    const double E_level = epsilon(element,ion,level);
-    const double E_ground = epsilon(element,ion,0);
-    nn = get_groundlevelpop(modelgridindex,element,ion) * W *
-         stat_weight(element,ion,level)/stat_weight(element,ion,0) *
-         exp(-(E_level-E_ground)/KB/T_exc);
+    nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
   }
 
   if (nn < MINPOP)
