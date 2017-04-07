@@ -1,8 +1,8 @@
 /* 2007-10-30 -- MK
-   Non-grey treatment of UVOIR opacity as opacity_case 4 added. 
+   Non-grey treatment of UVOIR opacity as opacity_case 4 added.
    Still not fully commented.
    Comments are marked by ///  Deactivated code by // */
-/* 2007-01-17 -- MK 
+/* 2007-01-17 -- MK
    Several minor modifications (some marked in the code with //MK), these include
      - global printout() routine (located in sn3d.c)
      - opacity_cases 2 and 3 added (changes in grid_init.c and update_grid.c,
@@ -19,52 +19,17 @@
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  void initialise_photoionestimators();
-//  void precalculate_partfuncts(int cellnumber);
-  void tabulate_bb_rad();
-  void tabulate_ratecoefficients_gsl();
-  void read_packets(FILE *packets_file);
-  void write_packets(FILE *packets_file);
-  void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element);
-
-  int get_element(int element);
-  int get_ionstage(int element, int ion);
-  int time_init();
-  int grid_init();
-  int packet_init(int middle_iteration, int my_rank);
-  int input();
   int nts;
-  int update_grid(int m, int my_rank, int nstart, int nblock, int titer);
-  int update_packets();
-  
-  //void init_spectrum();
-  int gather_spectrum(int depth);
-  int gather_spectrum_res(int current_abin);
-  int gather_light_curve();
-  int gather_light_curve_res(int current_abin);
-  int write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file);
-  int write_light_curve(FILE *lc_file, int current_abin);
-  double dot();
-  
+
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
   int j,t_arrive;
   PKT *pkt_ptr;
 
-  //int make_spectrum_res();
-  //int make_spectrum();
-  //int make_light_curve();
-  //int make_light_curve_res();
-  //int make_gamma_light_curve();
   double syn_gamma();
-  int estim_switch();
   int outer_iteration;
-  int zero_estimators(), normalise_estimators(), write_estimators();
-  int normalise_grey(), write_grey();
   //int gather_spectrum(), write_spectrum(), gather_light_curve(), write_light_curve();
   //int gather_spectrum_res(), write_spectrum_res(), gather_light_curve_res(), write_light_curve_res();
   //int gather_gamma_light_curve(), write_gamma_light_curve();
-  double calculate_populations(int cellnumber, int first_nonempty_cell);
-  //void determine_important_bfcontinua(int cellnumber, int timestep, int samplecell);
   int i,ii,iii,interactions;
   double meaninteractions;
   FILE *syn_file;
@@ -88,16 +53,16 @@ int main(int argc, char** argv)
   double T_e_max,T_e_min,T_e_step;
   double rho_max,rho_min,rho_step;
   char filename[100];
-  int HUGEE2;
-  char *buffer2;
+  int mpi_nlte_buffer_size;
+  char *mpi_nlte_buffer;
   double nntot;
   int titer;
-  
+
   double deltaV,deltat;
   int assoc_cells;
-  
-//  int HUGEE;
-  
+
+//  int mpi_grid_buffer_size;
+
   #ifdef MPI_ON
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -106,13 +71,13 @@ int main(int argc, char** argv)
     my_rank = 0;
     p=1;
   #endif
-  
+
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
   if (my_rank == 0)
   {
-    
-    
+
+
     tid = 0;
     nthreads = 1;
     sprintf(filename,"exspec_dd_%d-%d.txt",my_rank,tid);
@@ -122,15 +87,15 @@ int main(int argc, char** argv)
       abort();
     }
     setvbuf(output_file, NULL, _IOLBF, 1);
-  
+
     printout("Begining do_exspec_dd.\n");
-  
+
     /// Get input stuff
     printout("time before input %d\n",time(NULL));
     input (0);
     printout("time after input %d\n",time(NULL));
     nprocs = nprocs_exspec;
-    
+
     /// Read binary packet files and create ASCII packets files out of them
     /*
     npkts=MPKTS;
@@ -150,8 +115,8 @@ int main(int argc, char** argv)
       //read_packets(packets_file);
       /// Close the current file.
       fclose(packets_file);
-    
-      
+
+
       /// Read in the next bunch of packets to work on
       sprintf(filename,"packets%.2d_%.4d.out",0,i);
       printout("%s\n",filename);
@@ -165,22 +130,22 @@ int main(int argc, char** argv)
       /// Close the current file.
       fclose(packets_file);
     }
-    exit(0);
+    abort();
     */
-  
+
     for (outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
     {
       /// Initialise the grid. Call routine that sets up the initial positions
       /// and sizes of the grid cells.
       //grid_init();
       time_init();
-      
+
       if ((epkts = (EPKT *) malloc((nprocs*npkts)*sizeof(EPKT))) == NULL)
       {
         printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
-        exit(0);
+        abort();
       }
-      
+
       /// Loop over all packets in all the packets files of the simulation and check if
       /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
       /// epkts array, which is then used for the binning.
@@ -200,21 +165,21 @@ int main(int argc, char** argv)
         //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
         read_packets(packets_file);
         fclose(packets_file);
-        
+
         for (ii = 0; ii < npkts; ii++)
         {
           pkt_ptr = &pkt[ii];
           if (pkt_ptr->type == TYPE_ESCAPE && pkt_ptr->escape_type == TYPE_RPKT)
           {
             //printout("add packet %d\n",j);
-            /// We know that a packet escaped at "escape_time". However, we have 
+            /// We know that a packet escaped at "escape_time". However, we have
             /// to allow for travel time. Use the formula in Leon's paper. The extra
             /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
             t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir)/CLIGHT_PROP);
             epkts[j].arrive_time = t_arrive;
-            
+
             /// Now do the cmf time.
-            t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHT2));
+            t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
             epkts[j].arrive_time_cmf = t_arrive;
 
             epkts[j].dir[0] = pkt_ptr->dir[0];
@@ -230,19 +195,19 @@ int main(int argc, char** argv)
             epkts[j].em_time = pkt_ptr->em_time;
             epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
             epkts[j].absorptiontype = pkt_ptr->absorptiontype;
-            j += 1;
+            j++;
           }
         }
       }
       nepkts = j;
-      
-      
+
+
       /// Extract angle-averaged spectra and light curves
       /// Start with light curves
       if ((lc_file = fopen("light_curve.out", "w")) == NULL)
       {
         printout("Cannot open light_curve.out\n");
-        exit(0);
+        abort();
       }
       gather_light_curve();
       write_light_curve(lc_file,-1);
@@ -254,11 +219,11 @@ int main(int argc, char** argv)
       {
         sprintf(filename,"spec%d.out",i);
         printout("%s \n",filename);
-	
+
         if ((spec_file = fopen(filename, "w")) == NULL)
         {
           printout("Cannot open spec.out\n");
-          exit(0);
+          abort();
         }
 
         sprintf(filename,"emission%d.out",i);
@@ -266,15 +231,15 @@ int main(int argc, char** argv)
         if ((emission_file = fopen(filename, "w")) == NULL)
         {
           printf("Cannot open emission_res.out\n");
-          exit(0);
+          abort();
         }
-            
+
         sprintf(filename,"absorption%d.out",i);
         printout("%s \n",filename);
         if ((absorption_file = fopen(filename, "w")) == NULL)
         {
           printf("Cannot open absorption_res.out\n");
-          exit(0);
+          abort();
         }
 
         gather_spectrum(i);
@@ -285,21 +250,21 @@ int main(int argc, char** argv)
         fclose(absorption_file);
       }
 
-      
+
       printout("finished angle-averaged stuff\n");
-      
+
       /// Extract LOS dependent spectra and light curves
       if (model_type != RHO_1D_READ)
       {
         if ((lc_file = fopen("light_curve_res.out", "w")) == NULL)
         {
           printout("Cannot open light_curve_res.out\n");
-          exit(0);
+          abort();
         }
         if ((spec_file = fopen("spec_res.out", "w")) == NULL)
         {
           printout("Cannot open spec_res.out\n");
-          exit(0);
+          abort();
         }
         for (i = 0; i < MABINS; i++)
         {
@@ -310,25 +275,25 @@ int main(int argc, char** argv)
             if ((emission_file = fopen(filename, "w")) == NULL)
             {
               printf("Cannot open emission_res.out\n");
-              exit(0);
+              abort();
             }
-            
+
             sprintf(filename,"absorption_res_%.2d.out",i);
             printout("%s \n",filename);
             if ((absorption_file = fopen(filename, "w")) == NULL)
             {
               printf("Cannot open absorption_res.out\n");
-              exit(0);
+              abort();
             }
           }
           gather_spectrum_res(i);
           gather_light_curve_res(i);
-          
+
           write_spectrum(spec_file,emission_file,absorption_file);
           write_light_curve(lc_file,i);
-          
-          if (do_emission_res == 1) 
-          { 
+
+          if (do_emission_res == 1)
+          {
             fclose(emission_file);
             fclose(absorption_file);
           }
@@ -338,102 +303,37 @@ int main(int argc, char** argv)
         fclose(spec_file);
       }
     }
-  
+
     //fclose(ldist_file);
     //fclose(output_file);
-  
+
     /* Spec syn. */
     //grid_init();
     //syn_gamma();
-  
+
     printout("simulation finished at %d\n",time(NULL));
     fclose(output_file);
   }
-  
+
   #ifdef MPI_ON
     MPI_Finalize();
-  #endif  
+  #endif
 
   return 0;
 }
 
 
-/// Generalized output routine
-/// following section 7.3 of "C. Programming Language." 
-/// by Brian W. Kernighan and Dennis Ritchie
-/// As it stands it is only capable to printout floating point variables as %g
-/// specifiers which determine the number of digits don't work!
-void printout(char *fmt, ...)
+// printout should be used instead of printf throughout the whole code for output messages
+int printout(const char *restrict format, ...)
 {
-  va_list ap;
-  char *p, *sval;
-  int ival;
-  double dval;
-  char filename[100];
-  //FILE *output_file;
-  
-  /// To be able to follow the messages interactively the file is continuously 
-  /// opened and closed. As this happens always with the "a" argument the file
-  /// is so far never really initialized: a existing output.txt will be continued!
-/*      sprintf(filename,"output_%d-%d.txt",rank_global,tid);
-      if (output_file_open == 0)
-      {
-        if ((output_file = fopen(filename, "a")) == NULL)
-        {
-          printf("Cannot open %s.\n",filename);
-          abort();
-  //    exit(0);
-        }
-        output_file_open = 1;
-      }*/
-  
-      va_start(ap, fmt);
-      for (p = fmt; *p; p++)
-      {
-        if (*p != '%')
-        {
-      //putchar(*p); ///for output on the screen
-          fputc(*p,output_file);
-          continue;
-        }
-        switch (*++p)
-        {
-          case 'd': 
-            ival = va_arg(ap, int);
-        //printf(output_file,"%d", ival);  ///for output on the screen
-            fprintf(output_file,"%d", ival);
-            break;
-          case 'f': 
-            dval = va_arg(ap, double);
-            fprintf(output_file,"%f", dval);
-            break;
-          case 'g': 
-            dval = va_arg(ap, double);
-            fprintf(output_file,"%g", dval);
-            break;
-          case 's': 
-            for (sval = va_arg(ap, char *); *sval; sval++)
-              fputc(*sval,output_file);
-            break;
-          default:
-            fputc(*p,output_file);
-            break;
-        }
-      }
-      va_end(ap);
-  
-      //fclose(output_file);
+   int ret_status = 0;
+
+   va_list args;
+   va_start(args,format);
+   ret_status = vfprintf(output_file,format,args);
+   va_end(args);
+   return ret_status;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -456,4 +356,3 @@ void printout(char *fmt, ...)
   #endif
   return adr;
 }*/
-
