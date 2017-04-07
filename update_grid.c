@@ -148,8 +148,10 @@ static void write_to_estimators_file(int n, int timestep)
 
     for (int element = 0; element < nelements; element++)
     {
-      fprintf(estimators_file, "populations Z=%2d ", get_element(element));
+      fprintf(estimators_file, "populations  Z=%2d", get_element(element));
       const int nions = get_nions(element);
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "             ");
       for (int ion = 0; ion < nions; ion++)
       {
         fprintf(estimators_file, " %d: %9.3e", get_ionstage(element, ion), ionstagepop(n, element, ion));
