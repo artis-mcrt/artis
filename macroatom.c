@@ -13,6 +13,8 @@
 // constant for van-Regemorter approximation.
 #define C_0 (5.465e-11)
 
+static FILE *macroatom_file;
+
 
 static inline double get_individ_rad_deexc(int element, int ion, int level, int i)
 {
@@ -148,7 +150,7 @@ static void get_macroatom_transitionrates(
 }
 
 
-static void do_macroatom_raddeexcitation(
+static int do_macroatom_raddeexcitation(
   PKT *restrict pkt_ptr, const int element, const int ion, const int level, const double rad_deexc,
   const double total_transitions, const double t_current)
 {
@@ -158,6 +160,7 @@ static void do_macroatom_raddeexcitation(
   double rate = 0.;
   int linelistindex = -99;
   int i;
+  int lower = -1;
   const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
   double epsilon_trans = -100;
   for (i = 1; i <= ndowntrans; i++)
@@ -165,7 +168,7 @@ static void do_macroatom_raddeexcitation(
     rate += get_individ_rad_deexc(element, ion, level, i);
     if (zrand * rad_deexc < rate)
     {
-      const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
+      lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
       #endif
@@ -238,6 +241,8 @@ static void do_macroatom_raddeexcitation(
   #ifndef FORCE_LTE
     //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif
+
+  return lower;
 }
 
 
@@ -496,8 +501,14 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   /// is much larger than number of pellets (next question: connection to number of
   /// photons)
   const int element = mastate[tid].element;
+  const int Z = get_element(element);
   int ion = mastate[tid].ion;
   int level = mastate[tid].level;
+
+  const int ion_in = ion;
+  const int level_in = level;
+  const double nu_cmf_in = pkt_ptr->nu_cmf;
+  const double nu_rf_in = pkt_ptr->nu_rf;
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
   /// initialization we should see errors
@@ -524,7 +535,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     //mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,level);
 
     #ifdef DEBUG_ON
-      const int Z = get_element(element);
       const int ionstage = get_ionstage(element,ion);
       // if (Z == 26 && ionstage == 1) debuglevel = 2000;
 
@@ -716,7 +726,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             printout("[debug] do_ma:   jumps = %d\n",jumps);
           }
         #endif
-        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current);
+        level = do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current);
+
+        fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n",
+                timestep, modelgridindex, Z, get_ionstage(element, ion_in), get_ionstage(element, ion),
+                level_in, level, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
         end_packet = true;
         break;
 
@@ -937,6 +951,27 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
 
 /// Calculation of radiative rates ///////////////////////////////////////////////////////
+
+
+void macroatom_open_file(const int my_rank)
+{
+  char filename[100];
+  sprintf(filename, "macroatom_%.4d.out",my_rank);
+  if ((macroatom_file = fopen(filename, "w")) == NULL)
+  {
+    printout("Cannot open %s.\n",filename);
+    abort();
+  }
+  fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %11s %11s %11s %11s %9s\n",
+          "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in", "level_out",
+          "nu_cmf_in", "nu_cmf_out", "nu_rf_in", "nu_rf_out", "jumps");
+}
+
+
+void macroatom_close_file(void)
+{
+  fclose(macroatom_file);
+}
 
 
 double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans, int lineindex, double t_current)
