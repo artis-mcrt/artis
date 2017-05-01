@@ -17,6 +17,7 @@
 #include "grid_init.h"
 #include "input.h"
 #include "ltepop.h"
+#include "macroatom.h"
 #include "move.h"
 #include "nltepop.h"
 #include "nonthermal.h"
