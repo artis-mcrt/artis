@@ -5,6 +5,9 @@
 #include "sn3d.h"
 #include "types.h"
 
+void macroatom_open_file(const int my_rank);
+void macroatom_close_file(void);
+
 double do_macroatom(PKT *restrict pkt_ptr, double t1, double t2, int timestep);
 
 double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans, int lineindex, double t_current);

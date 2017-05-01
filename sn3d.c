@@ -553,6 +553,8 @@ int main(int argc, char** argv)
   //}
   //setvbuf(tb_file, NULL, _IOLBF, 1);
 
+  macroatom_open_file(my_rank);
+
   sprintf(filename, "estimators_%.4d.out", my_rank);
   if ((estimators_file = fopen(filename, "w")) == NULL)
   {
@@ -1346,6 +1348,7 @@ int main(int argc, char** argv)
   printout("simulation finished at %d\n", time(NULL));
   //fclose(tb_file);
   fclose(estimators_file);
+  macroatom_close_file();
   nltepop_close_file();
   radfield_close_file();
   if (NT_ON && NT_SOLVE_SPENCERFANO)
