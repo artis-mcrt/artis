@@ -682,7 +682,7 @@ static void precalculate_rate_coefficient_integrals(void)
 }
 
 
-static double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T)
+double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T)
 {
   /*int lowerindex = floor((T-MINTEMP)/T_step);
   int upperindex = lowerindex + 1;
@@ -775,8 +775,8 @@ static void calculate_ion_alpha_sp(void)
         // zeta = interpolate_spontrecombcoeff(element,ion,0,T_e) / zeta;
         // elements[element].ions[ion].zeta[iter] = zeta;
 
-        // printout("Alpha result: Z=%2d element %d ion %d temperature %g Alpha %g\n",
-        //          get_element(element), element, ion, T_e, zeta);
+        printout("Alpha result: temperature %g Z=%2d ionstage %d alpha %g\n",
+                 T_e, get_element(element), get_ionstage(element, ion), zeta);
       }
     }
   }
