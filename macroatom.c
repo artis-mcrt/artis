@@ -12,6 +12,7 @@
 
 // constant for van-Regemorter approximation.
 #define C_0 (5.465e-11)
+#define LOG_MACROATOM true
 
 static FILE *macroatom_file;
 
@@ -150,7 +151,7 @@ static void get_macroatom_transitionrates(
 }
 
 
-static int do_macroatom_raddeexcitation(
+static void do_macroatom_raddeexcitation(
   PKT *restrict pkt_ptr, const int element, const int ion, const int level, const double rad_deexc,
   const double total_transitions, const double t_current)
 {
@@ -241,8 +242,6 @@ static int do_macroatom_raddeexcitation(
   #ifndef FORCE_LTE
     //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif
-
-  return lower;
 }
 
 
@@ -505,6 +504,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   int ion = mastate[tid].ion;
   int level = mastate[tid].level;
 
+  const int activatingline = mastate[tid].activatingline;
+
   const int ion_in = ion;
   const int level_in = level;
   const double nu_cmf_in = pkt_ptr->nu_cmf;
@@ -726,11 +727,15 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             printout("[debug] do_ma:   jumps = %d\n",jumps);
           }
         #endif
-        level = do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current);
+        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current);
 
-        fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n",
-                timestep, modelgridindex, Z, get_ionstage(element, ion_in), get_ionstage(element, ion),
-                level_in, level, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
+        if (LOG_MACROATOM)
+        {
+          fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n",
+                  timestep, modelgridindex, Z, get_ionstage(element, ion_in), get_ionstage(element, ion),
+                  level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
+        }
+
         end_packet = true;
         break;
 
@@ -955,6 +960,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
 void macroatom_open_file(const int my_rank)
 {
+  if (!LOG_MACROATOM)
+    return;
   char filename[100];
   sprintf(filename, "macroatom_%.4d.out",my_rank);
   if ((macroatom_file = fopen(filename, "w")) == NULL)
@@ -962,14 +969,16 @@ void macroatom_open_file(const int my_rank)
     printout("Cannot open %s.\n",filename);
     abort();
   }
-  fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %11s %11s %11s %11s %9s\n",
-          "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in", "level_out",
+  fprintf(macroatom_file, "%8s %14s %2s %12s %12s %9s %9s %9s %11s %11s %11s %11s %9s\n",
+          "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in", "level_out", "activline"
           "nu_cmf_in", "nu_cmf_out", "nu_rf_in", "nu_rf_out", "jumps");
 }
 
 
 void macroatom_close_file(void)
 {
+  if (!LOG_MACROATOM)
+    return;
   fclose(macroatom_file);
 }
 
