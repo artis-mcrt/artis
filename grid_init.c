@@ -808,19 +808,19 @@ static void density_2d_read(void)
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
 
         if (anumber == 28)
-          set_fnistable(mgi,abundance - get_f56ni(mgi));
+          set_fnistable(mgi, abundance - get_f56ni(mgi));
         else if (anumber == 27)
-          set_fcostable(mgi,abundance - get_fco(mgi));
+          set_fcostable(mgi, abundance - get_fco(mgi));
         else if (anumber == 26)
-          set_ffestable(mgi,abundance - get_f52fe(mgi));
+          set_ffestable(mgi, abundance - get_f52fe(mgi));
         else if (anumber == 25)
-          set_fmnstable(mgi,abundance);
+          set_fmnstable(mgi, abundance);
         else if (anumber == 24)
-          set_fcrstable(mgi,abundance - get_f48cr(mgi));
+          set_fcrstable(mgi, abundance - get_f48cr(mgi));
         else if (anumber == 23)
-          set_fvstable(mgi,abundance);
+          set_fvstable(mgi, abundance);
         else if (anumber == 22)
-          set_ftistable(mgi,abundance);
+          set_ftistable(mgi, abundance);
       }
 
       if (get_rhoinit(mgi) < 0)
