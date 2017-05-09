@@ -82,7 +82,7 @@ static void update_abundances(const int modelgridindex, double t_current)
     const double co_in = modelgrid[modelgridindex].fco;
     const double fe52_in = modelgrid[modelgridindex].f52fe;
     const double cr48_in = modelgrid[modelgridindex].f48cr;
-    printout("model cell %d, has input ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe52_in);
+    printout("model cell %d, has input radioactive ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe52_in);
     for (int element = nelements-1; element >= 0; element--)
     {
       const int atomic_number = get_element(element);
@@ -122,12 +122,12 @@ static void update_abundances(const int modelgridindex, double t_current)
         modelgrid[modelgridindex].composition[element].abundance = tifrac;
       }
     }
-    printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g, Fe %g\n",
+    printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
              modelgridindex, t_current,
              modelgrid[modelgridindex].composition[get_elementindex(28)].abundance,
              modelgrid[modelgridindex].composition[get_elementindex(27)].abundance,
              modelgrid[modelgridindex].composition[get_elementindex(26)].abundance,
-             modelgrid[modelgridindex].fnistable,modelgrid[modelgridindex].fcostable);
+             modelgrid[modelgridindex].fnistable, modelgrid[modelgridindex].fcostable, modelgrid[modelgridindex].ffestable);
   }
 }
 
@@ -186,8 +186,8 @@ static double calculate_recomb_ion(
     }
     zeta /= pfunc;
 
-    printout("Alpha result: Te %g TJ %g Z=%2d ionstage %d alpha_lte %g alpha %g\n",
-             T_e, T_J, get_element(element), get_ionstage(element, lowerion), zeta, alpha);
+    // printout("Alpha result: Te %g TJ %g Z=%2d ionstage %d alpha_lte %g alpha %g\n",
+    //          T_e, T_J, get_element(element), get_ionstage(element, lowerion), zeta, alpha);
   }
   return alpha;
 }
