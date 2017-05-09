@@ -601,7 +601,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   {
     //abundance of this element is zero, so do not store any NLTE populations
     printout("Not solving for NLTE populations in cell %d at timestep %d for element Z=%d due to zero abundance\n",
-             modelgridindex, timestep, element);
+             modelgridindex, timestep, atomic_number);
 
     nltepop_reset_element(modelgridindex, element);
     return;
