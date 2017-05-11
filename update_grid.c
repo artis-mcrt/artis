@@ -133,8 +133,11 @@ static void update_abundances(const int modelgridindex, double t_current)
 
 
 static double calculate_recomb_ion(
-  const int modelgridindex, const int element, const int lowerion, const bool assume_lte)
+  const int modelgridindex, const int element, const int upperion, const bool assume_lte)
 {
+  const int lowerion = upperion - 1;
+  if (lowerion < 0)
+    return 0.;
   double alpha = 0.;
   if (lowerion < get_nions(element) - 1)
   {
@@ -252,20 +255,20 @@ static void write_to_estimators_file(int n, int timestep)
         fprintf(estimators_file, "             ");
       for (int ion = 0; ion < nions; ion++)
       {
-        fprintf(estimators_file, " %d: %9.3e", get_ionstage(element, ion), ionstagepop(n, element, ion));
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(n, element, ion));
       }
       fprintf(estimators_file, "\n");
     }
 
     for (int element = 0; element < nelements; element++)
     {
-      fprintf(estimators_file, "recomb coeff Z=%2d", get_element(element));
+      fprintf(estimators_file, "recomb_coeff Z=%2d", get_element(element));
       const int nions = get_nions(element);
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "             ");
-      for (int ion = 0; ion < nions - 1; ion++)
+      for (int ion = 0; ion < nions; ion++)
       {
-        fprintf(estimators_file, " %d: %9.3e", get_ionstage(element, ion), calculate_recomb_ion(n, element, ion, false));
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), calculate_recomb_ion(n, element, ion, false));
       }
       fprintf(estimators_file, "\n");
     }
