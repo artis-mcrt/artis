@@ -133,7 +133,8 @@ static void update_abundances(const int modelgridindex, double t_current)
 
 
 static double calculate_recomb_ion(
-  const int modelgridindex, const int element, const int upperion, const bool assume_lte)
+  const int modelgridindex, const int element, const int upperion, const bool assume_lte,
+  const bool radiative, const bool collisional)
 {
   const int lowerion = upperion - 1;
   if (lowerion < 0)
@@ -142,52 +143,68 @@ static double calculate_recomb_ion(
   if (lowerion < get_nions(element) - 1)
   {
     double nnupperion = 0.;
-    // const float T_e = get_Te(modelgridindex);
+    const float T_e = get_Te(modelgridindex);
     const float nne = get_nne(modelgridindex);
 
     for (int upper = 0; upper < get_nlevels(element, lowerion + 1); upper++)
     {
-      // const double nnlevel = calculate_exclevelpop(modelgridindex, element, upperion, upper);
-      const double nnlevel = assume_lte ?
-        calculate_levelpop_lte(modelgridindex, element, lowerion + 1, upper) :
-        calculate_exclevelpop(modelgridindex, element, lowerion + 1, upper);
+      double nnlevel;
+      if (assume_lte)
+      {
+        const double T_exc = get_Te(modelgridindex);
+        const double E_level = epsilon(element, lowerion + 1 , upper);
+        const double E_ground = epsilon(element, lowerion + 1, 0);
+        const double nnground = get_groundlevelpop(modelgridindex, element, lowerion + 1);
+
+        nnlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
+                   exp(-(E_level - E_ground) / KB / T_exc));
+      }
+      else
+      {
+        nnlevel = calculate_exclevelpop(modelgridindex, element, lowerion + 1, upper);
+      }
 
       nnupperion += nnlevel;
       for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
       {
-        // const double epsilon_trans = epsilon(element, upperion, upper) - epsilon(element, upperion - 1, lower);
-        alpha += nnlevel * stat_weight(element, lowerion + 1, 0) / get_groundlevelpop(modelgridindex, element, lowerion + 1) * rad_recombination_ratecoeff(modelgridindex, element, lowerion + 1, upper, lower) / nne;
-        // recomb += nnlevel * col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
+        const double epsilon_trans = epsilon(element, upperion, upper) - epsilon(element, upperion - 1, lower);
+        double recomb_coeff = 0.;
+        if (radiative)
+          recomb_coeff += rad_recombination_ratecoeff(modelgridindex, element, lowerion + 1, upper, lower);
+        if (collisional)
+          recomb_coeff += col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
+
+        alpha += nnlevel * stat_weight(element, lowerion + 1, 0) / get_groundlevelpop(modelgridindex, element, lowerion + 1) * recomb_coeff / nne;
       }
     }
     const double partfunc = nnupperion * stat_weight(element, lowerion + 1, 0) / get_groundlevelpop(modelgridindex, element, lowerion + 1);
     alpha /= partfunc;
 
-    const double T_J = get_TJ(modelgridindex);
-    const double T_e = get_Te(modelgridindex);
-    const int nlevels = get_bfcontinua(element, lowerion); /// number of ionising levels used in the simulation
-    const int nlevelsupperion = get_nlevels(element, lowerion + 1);
-    double zeta = 0.;
-    double pfunc = 0.;
-    for (int upperlevel = 0; upperlevel < nlevelsupperion; upperlevel++)
-    {
-      const double energy_diff = epsilon(element, lowerion + 1, upperlevel) - epsilon(element, lowerion + 1, 0);
-      const double boltzfac = exp(- energy_diff / KB / T_J); // Boltzmann factor
-      pfunc += stat_weight(element, lowerion + 1, upperlevel) * boltzfac; // partition function
-    }
-    for (int level = 0; level < nlevels; level++)
-    {
-      const int nphixstargets = get_nphixstargets(element, lowerion, level);
-      for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-      {
-        const int upperlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
-        const double energy_diff = epsilon(element, lowerion + 1, upperlevel) - epsilon(element, lowerion + 1, 0);
-        const double boltzfac = exp(-energy_diff / KB / T_J); // Boltzmann factor
-        zeta += interpolate_spontrecombcoeff(element, lowerion, level, phixstargetindex, T_e) * boltzfac *
-                stat_weight(element, lowerion + 1, upperlevel);
-      }
-    }
-    zeta /= pfunc;
+    // const double T_J = get_TJ(modelgridindex);
+    // // const double T_e = get_Te(modelgridindex);
+    // const int nlevels = get_bfcontinua(element, lowerion); /// number of ionising levels used in the simulation
+    // const int nlevelsupperion = get_nlevels(element, lowerion + 1);
+    // double zeta = 0.;
+    // double pfunc = 0.;
+    // for (int upperlevel = 0; upperlevel < nlevelsupperion; upperlevel++)
+    // {
+    //   const double energy_diff = epsilon(element, lowerion + 1, upperlevel) - epsilon(element, lowerion + 1, 0);
+    //   const double boltzfac = exp(- energy_diff / KB / T_J); // Boltzmann factor
+    //   pfunc += stat_weight(element, lowerion + 1, upperlevel) * boltzfac; // partition function
+    // }
+    // for (int level = 0; level < nlevels; level++)
+    // {
+    //   const int nphixstargets = get_nphixstargets(element, lowerion, level);
+    //   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+    //   {
+    //     const int upperlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
+    //     const double energy_diff = epsilon(element, lowerion + 1, upperlevel) - epsilon(element, lowerion + 1, 0);
+    //     const double boltzfac = exp(-energy_diff / KB / T_J); // Boltzmann factor
+    //     zeta += interpolate_spontrecombcoeff(element, lowerion, level, phixstargetindex, T_e) * boltzfac *
+    //             stat_weight(element, lowerion + 1, upperlevel);
+    //   }
+    // }
+    // zeta /= pfunc;
 
     // printout("Alpha result: Te %g TJ %g Z=%2d ionstage %d alpha_lte %g alpha %g\n",
     //          T_e, T_J, get_element(element), get_ionstage(element, lowerion), zeta, alpha);
@@ -196,39 +213,51 @@ static double calculate_recomb_ion(
 }
 
 
-static void write_nickel_recomb(const int modelgridindex)
+static void write_recomb_debug(const int modelgridindex)
 {
   const double T_J = get_TJ(modelgridindex);
   const double T_e = get_Te(modelgridindex);
-  const int element = get_elementindex(28);
-  const int lowerion = 0;
-  double alpha = 0.;
+  const int element = get_elementindex(26);
+  const int lowerionstage = 3;
+  const int lowerion = lowerionstage - get_ionstage(element, 0);
   if (lowerion < get_nions(element) - 1)
   {
-    double nnupperion = 0.;
     // const float T_e = get_Te(modelgridindex);
     const float nne = get_nne(modelgridindex);
 
-    for (int upper = 0; upper <= 2; upper++)
+    const double nnupperion = ionstagepop(modelgridindex, element, lowerion + 1);
+
+    double alpha = 0.;
+    for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
     {
       // const double nnlevel = calculate_exclevelpop(modelgridindex, element, upperion, upper);
-      const double nnlevel = calculate_exclevelpop(modelgridindex, element, lowerion + 1, upper);
+      double alpha_tothislowerlevel = 0.;
 
-      nnupperion += nnlevel;
-      for (int lower = 0; lower <= 1; lower++)
+      for (int upper = 0; upper < get_nlevels(element, lowerion + 1); upper++)
       {
+        const double nnlevel = calculate_exclevelpop(modelgridindex, element, lowerion + 1, upper);
         // const double epsilon_trans = epsilon(element, upperion, upper) - epsilon(element, upperion - 1, lower);
         const double R_upperlower = nnlevel * rad_recombination_ratecoeff(modelgridindex, element, lowerion + 1, upper, lower) / nne;
-        alpha += R_upperlower;
+        const double alpha_level = R_upperlower / nnupperion;
+        alpha_tothislowerlevel += alpha_level;
         // recomb += nnlevel * col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
-        fprintf(estimators_file, "Nickel: Te %g TJ %g Z=%2d ionstage %d upperlevel %d lowerlevel %d alpha %g\n",
-                 T_e, T_J, get_element(element), get_ionstage(element, lowerion), upper, lower, R_upperlower / nnlevel);
+        if (alpha_level > 0.01 * alpha)
+        {
+          fprintf(estimators_file, "recomb_debug: Te %g TJ %g Z=%2d ionstage %d->%d upperlevel %5d lowerlevel %5d alpha %g\n",
+                   T_e, T_J, get_element(element), get_ionstage(element, lowerion + 1),
+                   get_ionstage(element, lowerion), upper, lower, alpha_level);
+        }
       }
+      if (alpha_tothislowerlevel > 1e-2 * alpha)
+      {
+        fprintf(estimators_file, "recomb_debug: Te %g TJ %g Z=%2d ionstage %d->%d upperlevel [all] lowerlevel %5d alpha %g\n",
+                 T_e, T_J, get_element(element), get_ionstage(element, lowerion + 1),
+                 get_ionstage(element, lowerion), lower, alpha_tothislowerlevel);
+      }
+      alpha += alpha_tothislowerlevel;
     }
-    alpha /= nnupperion;
-
-    fprintf(estimators_file, "Nickel: Te %g TJ %g Z=%2d ionstage %d upperlevel [above] lowerlevel [above] alpha %g\n",
-             T_e, T_J, get_element(element), get_ionstage(element, lowerion), alpha);
+    fprintf(estimators_file, "recomb_debug: Te %g TJ %g Z=%2d ionstage %d->%d upperlevel [all] lowerlevel [all] Alpha %g\n",
+             T_e, T_J, get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
 }
 
@@ -249,10 +278,10 @@ static void write_to_estimators_file(int n, int timestep)
 
     for (int element = 0; element < nelements; element++)
     {
-      fprintf(estimators_file, "populations  Z=%2d", get_element(element));
+      fprintf(estimators_file, "populations        Z=%2d", get_element(element));
       const int nions = get_nions(element);
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "             ");
+        fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(n, element, ion));
@@ -262,13 +291,13 @@ static void write_to_estimators_file(int n, int timestep)
 
     for (int element = 0; element < nelements; element++)
     {
-      fprintf(estimators_file, "recomb_coeff Z=%2d", get_element(element));
+      fprintf(estimators_file, "recomb_coeff_R_LTE Z=%2d", get_element(element));
       const int nions = get_nions(element);
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "             ");
+        fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), calculate_recomb_ion(n, element, ion, false));
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), calculate_recomb_ion(n, element, ion, true, true, false));
       }
       fprintf(estimators_file, "\n");
     }
