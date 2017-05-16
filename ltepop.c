@@ -614,9 +614,9 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
   const double T_exc = get_TJ(modelgridindex);
   const double W = 1.;
 
-  const double E_level = epsilon(element,ion,level);
-  const double E_ground = epsilon(element,ion,0);
-  const double nnground = get_groundlevelpop(modelgridindex,element,ion);
+  const double E_level = epsilon(element, ion, level);
+  const double E_ground = epsilon(element, ion, 0);
+  const double nnground = get_groundlevelpop(modelgridindex, element, ion);
 
   nn = nnground * W *
        stat_weight(element, ion, level) / stat_weight(element, ion, 0) *
