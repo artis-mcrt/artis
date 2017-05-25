@@ -199,7 +199,7 @@ double phi(int element, int ion, int modelgridindex)
           const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
           mastate[tid].nnlevel = nnlevel;
           const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
-          Col_rec_unnormed += nnlevel * col_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, epsilon_trans);
+          Col_rec_unnormed += nnlevel * col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
           Alpha_sp_unnormed += nnlevel * rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
         }
         Col_rec += Col_rec_unnormed / ionstagepop(modelgridindex, element, ion + 1) / get_nne(modelgridindex);
