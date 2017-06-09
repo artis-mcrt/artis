@@ -711,7 +711,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       ion = cellhistory[tid].coolinglist[i].ion;
       const int level = cellhistory[tid].coolinglist[i].level;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
-      const double nu_threshold = (epsilon(element,ion+1,upper) - epsilon(element,ion,level)) / H;
+      const double nu_threshold = (epsilon(element,ion+1,upper) - epsilon(element,ion,level)) / H; // TODO: use get_phixs_threshold?
 
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> free-bound\n");

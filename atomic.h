@@ -151,6 +151,21 @@ inline int get_phixsupperlevel(int element, int ion, int level, int phixstargeti
 }
 
 
+inline double get_phixs_threshold(int element, int ion, int level)
+/// Returns the energy of (element,ion,level).
+{
+  const double phixs_threshold_stored = elements[element].ions[ion].levels[level].phixs_threshold;
+  if (phixs_threshold_stored > 0.)
+    return phixs_threshold_stored;
+  else
+  {
+    const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
+    const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+    return E_threshold;
+  }
+}
+
+
 inline double get_phixsprobability(int element, int ion, int level, int phixstargetindex)
 /// Returns the probability of a target state for photoionization of (element,ion,level).
 {
@@ -238,9 +253,9 @@ inline double xs_photoionization(int element, int ion, int level, double nu_edge
   }
   else
   {
-    int i = floor((nu/nu_edge - 1.0)/NPHIXSNUINCREMENT);
+    const double ireal = (nu / nu_edge - 1.0) / NPHIXSNUINCREMENT;
+    const int i = floor(ireal);
 
-    #ifdef DEBUG_ON
     if (i < 0)
     {
       sigma_bf = 0.0;
@@ -251,11 +266,13 @@ inline double xs_photoionization(int element, int ion, int level, double nu_edge
       //abort();
     }
     else if (i < NPHIXSPOINTS)
-    #else
-    if (i < NPHIXSPOINTS)
-    #endif
     {
       sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
+
+      // const double sigma_bf_a = elements[element].ions[ion].levels[level].photoion_xs[i];
+      // const double sigma_bf_b = elements[element].ions[ion].levels[level].photoion_xs[i + 1];
+      // const double factor_b = ireal - i;
+      // sigma_bf = ((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b);
     }
     else
     {
@@ -263,7 +280,7 @@ inline double xs_photoionization(int element, int ion, int level, double nu_edge
       /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       /// so far the highest grid point, otherwise the cross-section is not continuous
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs/nu, 3);
+      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs / nu, 3);
     }
   }
 
