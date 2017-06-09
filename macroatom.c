@@ -91,7 +91,7 @@ static void get_macroatom_transitionrates(
       const double epsilon_target = epsilon(element, ion - 1, lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
 
-      const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
+      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower);
       //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
       const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
 
@@ -250,7 +250,7 @@ static void do_macroatom_radrecomb(
   const double rad_recomb, const double t_current)
 {
   const float T_e = get_Te(modelgridindex);
-
+  const float nne = get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
   /// Randomly select a continuum
   double zrand = gsl_rng_uniform(rng);
@@ -264,7 +264,7 @@ static void do_macroatom_radrecomb(
   for (lower = 0; lower < nlevels; lower++)
   {
     epsilon_trans = epsilon_current - epsilon(element, *ion - 1, lower);
-    const double R = rad_recombination_ratecoeff(modelgridindex, element, *ion, *level, lower);
+    const double R = rad_recombination_ratecoeff(T_e, nne, element, *ion, *level, lower);
     rate += R * epsilon_trans;
     #ifdef DEBUG_ON
       if (debuglevel == 2)
@@ -334,7 +334,7 @@ static void do_macroatom_radrecomb(
     /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
     gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &alpha_sp, &error);
     //alpha_sp *= FOURPI * sf;
-    //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,pkt_ptr->where)) break;
+    //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,get_Te(pkt_ptr->where))) break;
     if (zrand >= alpha_sp / total_alpha_sp)
     {
       const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
@@ -624,7 +624,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         {
           const double epsilon_target = epsilon(element, ion - 1,lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower);
           const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
           printout("[debug]    recombination to ion %d, level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",ion-1,lower,epsilon_target,epsilon_trans,R,C);
         }
@@ -861,7 +861,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         {
           const double epsilon_target = epsilon(element, ion - 1, lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(modelgridindex, element, ion, level, lower);
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower);
           const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
           if (zrand * processrates[MA_ACTION_INTERNALDOWNLOWER] < rate)
@@ -1140,18 +1140,17 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
 }
 
 
-double rad_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower)
+double rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper, int lower)
 ///radiative recombination rate: paperII 3.5.2
 {
-  const float nne = get_nne(modelgridindex);
   double R = 0.0;
   const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
     if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
     {
-      R = nne * get_spontrecombcoeff(element,upperion-1,lower,phixstargetindex,modelgridindex);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
-      //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, pkt_ptr->where));
+      R = nne * get_spontrecombcoeff(element, upperion - 1, lower, phixstargetindex, T_e);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
+      //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, T_e));
       break;
     }
   }

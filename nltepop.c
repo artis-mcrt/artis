@@ -409,7 +409,7 @@ static void nltepop_matrix_add_ionisation(
                  get_ionstage(element, ion), level, phixstargetindex);
 
       // recombination
-      const double R_recomb = rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
+      const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level);
       const double C_recomb = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
 
       *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
@@ -1100,7 +1100,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
             mastate[tid].level = upper;
             // mastate[tid].statweight = stat_weight(element,ion+1,upper);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            R = rad_recombination_ratecoeff(modelgridindex, element, ion+1, upper, level);
+            R = rad_recombination_ratecoeff(T_e, nne, element, ion+1, upper, level);
             //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
             //printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
             C = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);

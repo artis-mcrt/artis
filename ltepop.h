@@ -13,6 +13,9 @@ double get_levelpop(int modelgridindex, int element, int ion, int level);
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);
+double get_groundmultiplet_pop(
+  const int modelgridindex, const float T_e, const int element, const int ion, const bool assume_lte);
+
 void initialise_photoionestimators(void);
 
 inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)

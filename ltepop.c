@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
@@ -161,10 +162,13 @@ double phi(int element, int ion, int modelgridindex)
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
       #if NO_LUT_PHOTOION
-        const double Gamma = calculate_gamma_ion(modelgridindex, element, ion);
+        const double Gamma = calculate_gamma_ion_per_gspop(modelgridindex, element, ion);
       #else
         const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
       #endif
+
+      // Gamma is the photoionization rate per ground level pop
+      const double Gamma_ion = (Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
       if (Gamma == 0. && (!NT_ON || (rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && modelgrid[modelgridindex].fni == 0.)))
       {
@@ -174,103 +178,19 @@ double phi(int element, int ion, int modelgridindex)
 
       //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
       double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
-      double Alpha_sp = 0.;
-      //double Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
-      double Col_rec = 0.;
 
-      //     if (ion > 0)
-      //	{
-      const float nne = get_nne(modelgridindex);
+      const double Alpha_sp = calculate_recombcoeff_ion_per_ionpop(modelgridindex, T_e, element, ion + 1, false, false, false, false);
 
-      const int ionisinglevels = get_bfcontinua(element,ion);
-      mastate[tid].element = element;
-      mastate[tid].ion = ion+1;
-
-      //nlevelsupperion = get_nlevels(element,ion+1);
-      for (int level = 0; level < ionisinglevels; level++)
-      {
-        double Alpha_sp_unnormed = 0.;
-        double Col_rec_unnormed = 0.;
-        const int nphixstargets = get_nphixstargets(element,ion,level);
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-        {
-          const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-          mastate[tid].level = upper;
-          const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
-          mastate[tid].nnlevel = nnlevel;
-          const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon(element,ion,level);
-          Col_rec_unnormed += nnlevel * col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
-          Alpha_sp_unnormed += nnlevel * rad_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level);
-        }
-        Col_rec += Col_rec_unnormed / ionstagepop(modelgridindex, element, ion + 1) / get_nne(modelgridindex);
-        Alpha_sp += Alpha_sp_unnormed / ionstagepop(modelgridindex, element, ion + 1) / get_nne(modelgridindex);
-      }
-
-	  //	}
+      const double Col_rec = calculate_recombcoeff_ion_per_ionpop(modelgridindex, T_e, element, ion + 1, false, true, false, false);
 
       const double recomb_total = Alpha_sp + Alpha_st + Col_rec;
 
-      /* NT TEST LINES */
       double Y_nt = 0.0;
 
       if (NT_ON)
       {
         Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
-
-      /*
-      const int nlevels = get_nlevels(element,ion);
-      double run_tot=0.0;
-      for (level = 0; level < nlevels; level++)
-      {
-        run_tot += calculate_exclevelpop(modelgridindex,element,ion,level);
       }
-      Y_nt = Y_nt * run_tot/get_groundlevelpop(modelgridindex, element, ion);
-      */
-
-      /*
-        if (elements[element].anumber > 20)
-          {
-            for (element_in = 0; element_in < nelements; element_in++)
-              {
-                if (elements[element_in].anumber > 20)
-                  {
-                    nions_in = get_nions(element_in);
-                    for (ion_in = 0; ion_in < nions_in -1 ; ion_in++)
-                      {
-                        ionpot_in = epsilon(element_in,ion_in+1,0) - epsilon(element_in,ion_in,0);
-                        {
-                          // This is to compute the population-weighted ionization potential
-                          K_nt += ionstagepop(modelgridindex,element_in,ion_in) * ionpot_in;
-                        }
-                      }
-                  }
-              }
-            if (K_nt < 0.0)
-              {
-                printout("negative K_nt?\n");
-                abort();
-              }
-
-            if (K_nt > 0.0)
-              {
-                rate_use = rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI;
-                // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-                rate_use += (0.610*0.19*MEV)*(exp(-1.*time_step[nts_global].mid/TCOBALT) - exp(-1.*time_step[nts_global].mid/TNICKEL))/(TCOBALT-TNICKEL)*modelgrid[modelgridindex].fni*get_rho(modelgridindex)/MNI56;
-                rate_use += (0.290*0.499*MEV)*(exp(-1.*time_step[nts_global].mid/T48V) - exp(-1.*time_step[nts_global].mid/T48CR))/(T48V-T48CR)*modelgrid[modelgridindex].f48cr*get_rho(modelgridindex)/MCR48;
-
-                // This is the rate-coefficient calculation - K_nt should finally have dimensions like Gamma.
-                K_nt = f_nt * rate_use / K_nt ;
-
-                if (K_nt > 0.0)
-                  {
-		    //                    printout("[NT-print] element %d ion %d K_nt %g Gamma %g Alpha_sp %g Alpha_st %g ne %g cell %d gamma_rate %g total_rate %g \n", element, ion, K_nt, Gamma, Alpha_sp, Alpha_st, get_nne(modelgridindex), modelgridindex, rpkt_emiss[modelgridindex] * 1.e20 * 4. * PI, rate_use);
-                  }
-              }
-          }
-      */
-
-      }
-      /* END OF NT LINES */
 
       // || !isfinite(Gamma))
       //return phi_lte(element,ion,cellnumber);
@@ -289,9 +209,8 @@ double phi(int element, int ion, int modelgridindex)
       // recombinations / ionizations
       //printout("[debug-luke] phi for ion %d Gamma-part %g, Y_nt %g\n",ion,(Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]),Y_nt);
       //Gamma = 0.0; //TODO: testing testing no gamma part
-      phi = recomb_total
-          //* (stat_weight(element,ion+1,0) / modelgrid[modelgridindex].composition[element].partfunct[ion+1])
-            / ((Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]) + Y_nt);
+
+      phi = recomb_total / (Gamma_ion + Y_nt);
 
       // Y_nt should generally be higher than the Gamma term for nebular epoch
 
@@ -869,4 +788,38 @@ void initialise_photoionestimators(void)
       }
     #endif
   }
+}
+
+
+double get_groundmultiplet_pop(
+  const int modelgridindex, const float T_e, const int element, const int ion, const bool assume_lte)
+{
+  // add up the population of the ground multiplet of the upper ion,
+  // assuming the phixs targets of the lower ion's zeroth level are the ground multiplet of the upper ion
+  assert(ion > 0);
+  double nnupperion = 0.;
+  // for (int upper = 0; upper < get_nlevels(element, lowerion + 1); upper++)
+  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion - 1, 0); phixstargetindex++)
+  {
+    const int upper = get_phixsupperlevel(element, ion - 1, 0, phixstargetindex);
+    double nnupperlevel;
+    if (assume_lte)
+    {
+      const double T_exc = T_e; // remember, other parts of the code in LTE mode use TJ, not T_e
+      const double E_level = epsilon(element, ion, upper);
+      const double E_ground = epsilon(element, ion, 0);
+      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.0;
+
+      nnupperlevel = (
+        nnground * stat_weight(element, ion, upper) / stat_weight(element, ion, 0) *
+        exp(-(E_level - E_ground) / KB / T_exc));
+    }
+    else
+    {
+      nnupperlevel = calculate_exclevelpop(modelgridindex, element, ion, upper);
+    }
+    nnupperion += nnupperlevel;
+  }
+
+  return nnupperion;
 }

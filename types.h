@@ -387,6 +387,7 @@ typedef struct levellist_entry
   transitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
 
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
+  double phixs_threshold;                    /// Energy of first point in the photion_xs table
   phixstarget_entry *restrict phixstargets;  /// pointer to table of target states and probabilities
   float *restrict photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets;                         /// length of phixstargets array:
@@ -438,7 +439,6 @@ typedef struct ionlist_entry
   int coolingoffset;
   int ncoolingterms;
   double ionpot;                             /// Ionisation threshold to the next ionstage
-  double *Alpha_sp;
   //int nbfcontinua;
   //ionsphixslist_t *phixslist;
 } ionlist_entry;
