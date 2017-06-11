@@ -3,9 +3,9 @@
 
 #include "sn3d.h"
 
-void update_grid(const int nts, const int my_rank, const int nstart, const int ndo, const int titer);
+void update_grid(int nts, int my_rank, int nstart, int ndo, int titer);
 void precalculate_partfuncts(int modelgridindex);
-void cellhistory_reset(const int cellnumber, const bool set_population);
+void cellhistory_reset(int cellnumber, bool set_population);
 double calculate_populations(int modelgridindex);
 double calculate_electron_densities(int modelgridindex);
 void write_grid_restart_data(void);
