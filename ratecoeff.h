@@ -17,19 +17,19 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 
 double calculate_gamma_ion_per_gspop(int modelgridindex, int element, int ion);
 double calculate_gamma_ion_per_ionpop(
-  const int modelgridindex, const float T_e, const int element, const int lowerion,
-  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug);
+  int modelgridindex, float T_e, int element, int lowerion,
+  bool assume_lte, bool collisional_not_radiative, bool printdebug);
 
 double calculate_recombcoeff_ion_per_gmpop(
-  const int modelgridindex, const float T_e,
-  const int element, const int upperion,
-  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-  const bool lower_superlevel_only);
+  int modelgridindex, float T_e,
+  int element, int upperion,
+  bool assume_lte, bool collisional_not_radiative, bool printdebug,
+  bool lower_superlevel_only);
 
 double calculate_recombcoeff_ion_per_ionpop(
-  const int modelgridindex, const float T_e,
-  const int element, const int upperion,
-  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-  const bool lower_superlevel_only);
+  int modelgridindex, float T_e,
+  int element, int upperion,
+  bool assume_lte, bool collisional_not_radiative, bool printdebug,
+  bool lower_superlevel_only);
 
 #endif //RATECOEFF_H

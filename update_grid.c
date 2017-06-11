@@ -161,66 +161,68 @@ static void write_to_estimators_file(int n, int timestep)
       }
       fprintf(estimators_file, "\n");
 
+      const bool printdebug = false;
+
       bool assume_lte = true;
 
-      fprintf(estimators_file, "RRC_LTE_Nahar   Z=%2d", get_element(element));
+      fprintf(estimators_file, "RRC_LTE_Nahar  Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_recombcoeff_ion_per_gmpop(n, T_e, element, ion, assume_lte, false, false, false));
+                calculate_recombcoeff_ion_per_gmpop(n, T_e, element, ion, assume_lte, false, false, printdebug));
       }
       fprintf(estimators_file, "\n");
 
       assume_lte = false;
 
-      fprintf(estimators_file, "recomb_coeff_R  Z=%2d", get_element(element));
+      fprintf(estimators_file, "Alpha_R*nne    Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_recombcoeff_ion_per_ionpop(n, T_e, element, ion, assume_lte, false, false, false) * nne);
+                calculate_recombcoeff_ion_per_ionpop(n, T_e, element, ion, assume_lte, false, false, printdebug) * nne);
       }
       fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "recomb_coeff_C  Z=%2d", get_element(element));
+      fprintf(estimators_file, "Alpha_C*nne    Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_recombcoeff_ion_per_ionpop(n, T_e, element, ion, assume_lte, true, false, false) * nne);
+                calculate_recombcoeff_ion_per_ionpop(n, T_e, element, ion, assume_lte, true, false, printdebug) * nne);
       }
       fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "gamma_R         Z=%2d", get_element(element));
+      fprintf(estimators_file, "gamma_R        Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_gamma_ion_per_ionpop(n, T_e, element, ion, assume_lte, false, false));
+                calculate_gamma_ion_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug));
       }
       fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "gamma_C         Z=%2d", get_element(element));
+      fprintf(estimators_file, "gamma_C        Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_gamma_ion_per_ionpop(n, T_e, element, ion, assume_lte, true, false));
+                calculate_gamma_ion_per_ionpop(n, T_e, element, ion, assume_lte, true, printdebug));
       }
       fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "gamma_NT        Z=%2d", get_element(element));
+      fprintf(estimators_file, "gamma_NT       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
