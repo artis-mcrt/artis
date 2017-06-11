@@ -879,6 +879,10 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         J_bin_max = J_bin;
     }
 
+    // int contribcount_allbins = 0;
+    // for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    //   contribcount_allbins += radfield_get_bin_contribcount(modelgridindex, binindex, true);
+
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
       const double nu_lower = radfield_get_bin_nu_lower(binindex);
@@ -935,11 +939,11 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         //   W_bin = -1.;
         // }
       }
-      else if (contribcount == 0)
-      {
-        T_R_bin = 0.;
-        W_bin = 0.;
-      }
+      // else if (contribcount == 0)
+      // {
+      //   T_R_bin = 0.;
+      //   W_bin = 0.;
+      // }
       else
       {
         T_R_bin = -1;
