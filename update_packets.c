@@ -183,7 +183,7 @@ static int compare_packets_bymodelgriddensity(const void *restrict p1, const voi
   const int a1_where = ((PKT *)p1)->where;
   const int a2_where = ((PKT *)p2)->where;
 
-  const double rho_diff = modelgrid[cell[a1_where].modelgridindex].rho - modelgrid[cell[a2_where].modelgridindex].rho;
+  const double rho_diff = get_rho(cell[a1_where].modelgridindex) - get_rho(cell[a2_where].modelgridindex);
   if (rho_diff < 0)
     return 1;
   else if (rho_diff > 0)
