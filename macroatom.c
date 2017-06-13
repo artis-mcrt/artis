@@ -302,7 +302,7 @@ static void do_macroatom_radrecomb(
 
   zrand = gsl_rng_uniform(rng);
   zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
-  // mastate needs to be set for photoionization_crosssection() which is called by alpha_sp_E_integrand_gsl()
+  // mastate needs to be set for photoionization_crosssection_macroatom() which is called by alpha_sp_E_integrand_gsl()
   mastate[tid].element = element;
   mastate[tid].ion = *ion;
   mastate[tid].level = *level;

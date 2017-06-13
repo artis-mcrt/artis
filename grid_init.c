@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
@@ -1362,13 +1363,18 @@ static void abundances_3d_read(void)
   {
     const int mgi = cell[n].modelgridindex;
 
-    float dum[30];
+    float abundances_in[30];
     int cellnumber;
-    fscanf(abundance_file,
+    fscanf(
+      abundance_file,
       "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g",
-           &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9],
-           &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19],
-           &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
+      &cellnumber, &abundances_in[0], &abundances_in[1], &abundances_in[2], &abundances_in[3],
+      &abundances_in[4], &abundances_in[5], &abundances_in[6], &abundances_in[7], &abundances_in[8],
+      &abundances_in[9], &abundances_in[10], &abundances_in[11], &abundances_in[12], &abundances_in[13],
+      &abundances_in[14], &abundances_in[15], &abundances_in[16], &abundances_in[17], &abundances_in[18],
+      &abundances_in[19], &abundances_in[20], &abundances_in[21], &abundances_in[22], &abundances_in[23],
+      &abundances_in[24], &abundances_in[25], &abundances_in[26], &abundances_in[27], &abundances_in[28],
+      &abundances_in[29]);
 
     if (n != cellnumber - 1)
     {
@@ -1382,7 +1388,8 @@ static void abundances_3d_read(void)
       ///now set the abundances (by mass) of included elements, i.e.
       ///read out the abundances specified in the atomic data file
       const int anumber = get_element(element);
-      const float abundance = dum[anumber - 1];
+      const float abundance = abundances_in[anumber - 1];
+      assert(abundance >= 0);
       modelgrid[mgi].composition[element].abundance = abundance;
 
       if (anumber == 28)
@@ -1427,25 +1434,28 @@ static void abundances_1d_read(void)
   for (int n = 0; n < npts_model; n++)
   {
     int cellnumber;
-    float dum[30];
+    float abundances_in[30];
     fscanf(abundance_file,
            "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g",
-           &cellnumber, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9],
-           &dum[10], &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18], &dum[19],
-           &dum[20], &dum[21], &dum[22], &dum[23], &dum[24], &dum[25], &dum[26], &dum[27], &dum[28], &dum[29]);
+           &cellnumber, &abundances_in[0], &abundances_in[1], &abundances_in[2], &abundances_in[3],
+           &abundances_in[4], &abundances_in[5], &abundances_in[6], &abundances_in[7], &abundances_in[8],
+           &abundances_in[9], &abundances_in[10], &abundances_in[11], &abundances_in[12], &abundances_in[13],
+           &abundances_in[14], &abundances_in[15], &abundances_in[16], &abundances_in[17], &abundances_in[18],
+           &abundances_in[19], &abundances_in[20], &abundances_in[21], &abundances_in[22], &abundances_in[23], &abundances_in[24], &abundances_in[25], &abundances_in[26], &abundances_in[27], &abundances_in[28], &abundances_in[29]);
 
     float norm = 0.;
     for (int nn = 0; nn < 30; nn++)
     {
-      abund_model[n][nn] = dum[nn];
-      norm += dum[nn];
+      assert(abundances_in[nn] >= 0);
+      abund_model[n][nn] = abundances_in[nn];
+      norm += abundances_in[nn];
     }
 
     if (norm > 0)
     {
       for (int nn = 0; nn < 30; nn++)
       {
-        abund_model[n][nn] *= 1./norm;
+        abund_model[n][nn] *= 1. / norm;
       }
     }
   }

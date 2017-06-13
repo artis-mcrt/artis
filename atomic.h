@@ -151,7 +151,7 @@ inline int get_phixsupperlevel(int element, int ion, int level, int phixstargeti
 }
 
 
-inline double get_phixs_threshold(int element, int ion, int level)
+inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex)
 /// Returns the energy of (element,ion,level).
 {
   const double phixs_threshold_stored = elements[element].ions[ion].levels[level].phixs_threshold;
@@ -239,12 +239,10 @@ inline double statw_lower(int lineindex)
 }
 
 
-inline double xs_photoionization(int element, int ion, int level, double nu_edge, double nu)
+inline double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
-///        - BE AWARE: the elements of the global structure variable mastate
-///                    must fit to the bound state of the desired bf-continuum!!!
 {
   float sigma_bf;
   if (nu == nu_edge)
@@ -267,12 +265,12 @@ inline double xs_photoionization(int element, int ion, int level, double nu_edge
     }
     else if (i < NPHIXSPOINTS)
     {
-      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
+      // sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
 
-      // const double sigma_bf_a = elements[element].ions[ion].levels[level].photoion_xs[i];
-      // const double sigma_bf_b = elements[element].ions[ion].levels[level].photoion_xs[i + 1];
-      // const double factor_b = ireal - i;
-      // sigma_bf = ((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b);
+      const double sigma_bf_a = elements[element].ions[ion].levels[level].photoion_xs[i];
+      const double sigma_bf_b = elements[element].ions[ion].levels[level].photoion_xs[i + 1];
+      const double factor_b = ireal - i;
+      sigma_bf = ((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b);
     }
     else
     {
@@ -298,7 +296,7 @@ inline double xs_photoionization(int element, int ion, int level, double nu_edge
 }
 
 
-inline double photoionization_crosssection(double nu_edge, double nu)
+inline double photoionization_crosssection_macroatom(double nu_edge, double nu)
 ///        - BE AWARE: the elements of the global structure variable mastate
 ///                    must fit to the bound state of the desired bf-continuum!!!
 {
@@ -306,7 +304,7 @@ inline double photoionization_crosssection(double nu_edge, double nu)
   const int ion = mastate[tid].ion;
   const int level = mastate[tid].level;
 
-  return xs_photoionization(element, ion, level, nu_edge, nu);
+  return photoionization_crosssection(element, ion, level, nu_edge, nu);
 }
 
 /*static double osc_strength_old(int lineindex)

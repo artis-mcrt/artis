@@ -12,6 +12,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
+#include "update_grid.h"
 #include "sn3d.h"
 
 #define SFPTS 2048  // number of energy points in the Spencer-Fano solution vector
@@ -974,7 +975,7 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
     else if (Y_nt <= 0)
     {
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-      printout("Warning: Spencer-Fano solver gives negative or zero ionization rate (%g) for element %d ion_stage %d cell %d. Using WF approx instead = %g\n",
+      printout("Warning: Spencer-Fano solver gives negative or zero ionization rate (%g) for element Z=%d ion_stage %d cell %d. Using WF approx instead = %g\n",
                Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
       return Y_nt_wfapprox;
     }
@@ -1045,8 +1046,11 @@ static void analyse_sf_solution(int modelgridindex)
 
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
+
       // if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
-        // continue;
+      if (nnion <= 0.) // skip negligible ions
+        continue;
+
 
       double frac_ionization_ion = 0.;
       printout("  Z=%d ion_stage %d:\n", Z, ionstage);
