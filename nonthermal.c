@@ -656,7 +656,7 @@ static double get_mean_binding_energy(int element, int ion)
   double total;
 
   const int ioncharge = get_ionstage(element,ion) - 1;
-  const int nbound = elements[element].anumber - ioncharge; //number of bound electrons
+  const int nbound = get_element(element) - ioncharge; //number of bound electrons
 
   if (nbound > 0)
   {
@@ -754,7 +754,7 @@ static double get_mean_binding_energy(int element, int ion)
     }
 
     //      printout("For element %d ion %d I got q's of: %d %d %d %d %d %d %d %d %d %d\n", element, ion, q[0], q[1], q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9]);
-    //printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[elements[element].anumber-1][0], electron_binding[elements[element].anumber-1][1], electron_binding[elements[element].anumber-1][2],electron_binding[elements[element].anumber-1][3],electron_binding[elements[element].anumber-1][4],electron_binding[elements[element].anumber-1][5],electron_binding[elements[element].anumber-1][6],electron_binding[elements[element].anumber-1][7],electron_binding[elements[element].anumber-1][8],electron_binding[elements[element].anumber-1][9]);
+    //printout("%g %g %g %g %g %g %g %g %g %g\n", electron_binding[get_element(element)-1][0], electron_binding[get_element(element)-1][1], electron_binding[get_element(element)-1][2],electron_binding[get_element(element)-1][3],electron_binding[get_element(element)-1][4],electron_binding[get_element(element)-1][5],electron_binding[get_element(element)-1][6],electron_binding[get_element(element)-1][7],electron_binding[get_element(element)-1][8],electron_binding[get_element(element)-1][9]);
 
     total = 0.0;
     for (int electron_loop = 0; electron_loop < M_NT_SHELLS; electron_loop++)
@@ -762,12 +762,12 @@ static double get_mean_binding_energy(int element, int ion)
       const double electronsinshell = q[electron_loop];
       if ((electronsinshell) > 0)
       {
-        double use2 = electron_binding[elements[element].anumber - 1][electron_loop];
+        double use2 = electron_binding[get_element(element) - 1][electron_loop];
         const double use3 = elements[element].ions[ion].ionpot;
         if (use2 <= 0)
         {
-          use2 = electron_binding[elements[element].anumber - 1][electron_loop-1];
-          //  to get total += electronsinshell/electron_binding[elements[element].anumber-1][electron_loop-1];
+          use2 = electron_binding[get_element(element) - 1][electron_loop-1];
+          //  to get total += electronsinshell/electron_binding[get_element(element)-1][electron_loop-1];
           //  set use3 = 0.
           if (electron_loop != 8)
           {
