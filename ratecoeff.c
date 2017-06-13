@@ -562,7 +562,7 @@ static void precalculate_rate_coefficient_integrals(void)
     for (int ion = 0; ion < nions; ion++)
     {
       //nlevels = get_nlevels(element,ion);
-      const int atomic_number = elements[element].anumber;
+      const int atomic_number = get_element(element);
       const int ionstage = get_ionstage(element,ion);
       const int nlevels = get_ionisinglevels(element,ion);
       /// That's only an option for pure LTE
