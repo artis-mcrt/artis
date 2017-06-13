@@ -231,7 +231,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 
   const double v48_positron_dep = (0.290 * 0.499 * MEV) *
         (exp(-t / T48V) - exp(-t / T48CR)) /
-        (T48V - T48CR) * modelgrid[modelgridindex].f48cr * rho / MCR48;
+        (T48V - T48CR) * get_f48cr(modelgridindex) * rho / MCR48;
 
   //printout("nt_deposition_rate: element: %d, ion %d\n",element,ion);
   //printout("nt_deposition_rate: gammadep: %g, poscobalt %g pos48v %g\n",
