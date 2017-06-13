@@ -264,7 +264,7 @@ static void nltepop_reset_element(const int modelgridindex, const int element)
 }
 
 
-static int get_element_nlte_dimension(
+static int get_element_nlte_dimension_and_slpartfunc(
   const int modelgridindex, const int element, const int nions, double *restrict superlevel_partfunc)
 {
   int nlte_dimension = 0;
@@ -622,7 +622,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   //printout("T_E %g T_R was %g, setting to 3000 \n",get_Te(modelgridindex),get_TR(modelgridindex));
 
   double superlevel_partfunc[nions]; // space is allocated for every ion, even if it does not have a superlevel
-  const int nlte_dimension = get_element_nlte_dimension(modelgridindex, element, nions, superlevel_partfunc);
+  const int nlte_dimension = get_element_nlte_dimension_and_slpartfunc(modelgridindex, element, nions, superlevel_partfunc);
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
@@ -1019,7 +1019,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           else
           {
             level_use = nlevels_nlte+1;
-            s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level)/superlevel_partition;
+            s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level) / superlevel_partition;
           }
           if ((upper == 0) || (is_nlte(element, ion, upper) == 1))
           {
