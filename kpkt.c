@@ -896,7 +896,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 }
 
 
-/*int compare_coolinglistentry(const void *p1, const void *p2)
+/*static int compare_coolinglistentry(const void *p1, const void *p2)
 /// Helper function to sort the coolinglist by the strength of the
 /// individual cooling contributions.
 {

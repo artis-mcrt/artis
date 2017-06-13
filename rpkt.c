@@ -1511,37 +1511,6 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
 }
 
 
-int compare_phixslistentry_bynuedge(const void *restrict p1, const void *restrict p2)
-/// Helper function to sort the phixslist by ascending threshold frequency.
-{
-  const fullphixslist_t *restrict a1 = (fullphixslist_t *)(p1);
-  const fullphixslist_t *restrict a2 = (fullphixslist_t *)(p2);
-
-  double edge_diff = a1->nu_edge - a2->nu_edge;
-  if (edge_diff < 0)
-    return -1;
-  else if (edge_diff > 0)
-    return 1;
-  else
-    return 0;
-}
-
-
-int compare_groundphixslistentry_bynuedge(const void *restrict p1, const void *restrict p2)
-/// Helper function to sort the groundphixslist by ascending threshold frequency.
-{
-  const groundphixslist_t *restrict a1 = (groundphixslist_t *)(p1);
-  const groundphixslist_t *restrict a2 = (groundphixslist_t *)(p2);
-
-  double edge_diff = a1->nu_edge - a2->nu_edge;
-  if (edge_diff < 0)
-    return -1;
-  else if (edge_diff > 0)
-    return 1;
-  else
-    return 0;
-}
-
 
 // double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
 // // Routine for moving an r-packet. Similar to do_gamma in objective.

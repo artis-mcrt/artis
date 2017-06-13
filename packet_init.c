@@ -4,6 +4,102 @@
 #include "vectors.h"
 
 
+static double f56ni(const CELL *restrict grid_ptr)
+/// Subroutine that gives the Ni56 mass fraction.
+{
+  if (model_type == RHO_UNIFORM)
+  {
+    double dcen[3];
+    dcen[0] = grid_ptr->pos_init[0] + (0.5 * wid_init);
+    dcen[1] = grid_ptr->pos_init[1] + (0.5 * wid_init);
+    dcen[2] = grid_ptr->pos_init[2] + (0.5 * wid_init);
+
+    const double r_on_rmax = vec_len(dcen) / rmax;
+    const double m_r = pow(r_on_rmax, 3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
+
+    if (m_r < 0.5)
+      return 1.0;
+    else if (m_r < 0.75)
+      return (1.0 - ((m_r - 0.5) * 4));
+    else
+      return 0.0;
+  }
+  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
+  {
+    /* This is a 1-D model read in. Just find value from input file and return. */
+    /*
+    double dcen[3];
+    dcen[0] = grid_ptr->pos_init[0] + (0.5*wid_init);
+    dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
+    dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
+
+    double radial_pos = vec_len(dcen);
+    if (radial_pos < rmax)
+    {
+      fraction = fni_model[0];
+      for (m = 0; m < (npts_model-1); m++)
+      {
+        if (radial_pos > (vout_model[m] * tmin))
+        {
+          fraction = fni_model[m+1];
+        }
+      }
+    }
+    else
+    {
+      fraction = 0.0;
+    }*/
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f56ni(mgi);
+  }
+  else
+  {
+    printout("Unknown model_type (packet_init). Abort.\n");
+    abort();
+  }
+}
+
+
+static double f52fe(const CELL *restrict grid_ptr)
+/// Subroutine that gives the Fe52 mass fraction.
+{
+  if (model_type == RHO_UNIFORM)
+  {
+    return 0.0;
+  }
+  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
+  {
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f52fe(mgi);
+  }
+  else
+  {
+    printout("Unknown model_type (packet_init). Abort.\n");
+    abort();
+  }
+}
+
+
+static double f48cr(const CELL *restrict grid_ptr)
+/// Subroutine that gives the Cr48 mass fraction.
+{
+  if (model_type == RHO_UNIFORM)
+  {
+    return 0.0;
+  }
+  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
+  {
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f48cr(mgi);
+  }
+  else
+  {
+    printout("Unknown model_type (packet_init). Abort.\n");
+    abort();
+  }
+}
+
+
 static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
@@ -284,102 +380,6 @@ void packet_init(int middle_iteration, int my_rank)
 }
 }
   */
-}
-
-
-double f56ni(const CELL *restrict grid_ptr)
-/// Subroutine that gives the Ni56 mass fraction.
-{
-  if (model_type == RHO_UNIFORM)
-  {
-    double dcen[3];
-    dcen[0] = grid_ptr->pos_init[0] + (0.5 * wid_init);
-    dcen[1] = grid_ptr->pos_init[1] + (0.5 * wid_init);
-    dcen[2] = grid_ptr->pos_init[2] + (0.5 * wid_init);
-
-    const double r_on_rmax = vec_len(dcen) / rmax;
-    const double m_r = pow(r_on_rmax, 3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
-
-    if (m_r < 0.5)
-      return 1.0;
-    else if (m_r < 0.75)
-      return (1.0 - ((m_r - 0.5) * 4));
-    else
-      return 0.0;
-  }
-  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
-  {
-    /* This is a 1-D model read in. Just find value from input file and return. */
-    /*
-    double dcen[3];
-    dcen[0] = grid_ptr->pos_init[0] + (0.5*wid_init);
-    dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
-    dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
-
-    double radial_pos = vec_len(dcen);
-    if (radial_pos < rmax)
-    {
-      fraction = fni_model[0];
-      for (m = 0; m < (npts_model-1); m++)
-      {
-        if (radial_pos > (vout_model[m] * tmin))
-        {
-          fraction = fni_model[m+1];
-        }
-      }
-    }
-    else
-    {
-      fraction = 0.0;
-    }*/
-    const int mgi = grid_ptr->modelgridindex;
-    return get_f56ni(mgi);
-  }
-  else
-  {
-    printout("Unknown model_type (packet_init). Abort.\n");
-    abort();
-  }
-}
-
-
-double f52fe(const CELL *restrict grid_ptr)
-/// Subroutine that gives the Fe52 mass fraction.
-{
-  if (model_type == RHO_UNIFORM)
-  {
-    return 0.0;
-  }
-  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
-  {
-    const int mgi = grid_ptr->modelgridindex;
-    return get_f52fe(mgi);
-  }
-  else
-  {
-    printout("Unknown model_type (packet_init). Abort.\n");
-    abort();
-  }
-}
-
-
-double f48cr(const CELL *restrict grid_ptr)
-/// Subroutine that gives the Cr48 mass fraction.
-{
-  if (model_type == RHO_UNIFORM)
-  {
-    return 0.0;
-  }
-  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
-  {
-    const int mgi = grid_ptr->modelgridindex;
-    return get_f48cr(mgi);
-  }
-  else
-  {
-    printout("Unknown model_type (packet_init). Abort.\n");
-    abort();
-  }
 }
 
 

@@ -5,7 +5,7 @@
 
 void angle_ab(const double *dir1, const double *vel, double *dir2);
 double doppler(const double *dir1, const double *vel);
-void scatter_dir(const double *dir_in, const double cos_theta, double *dir_out);
+void scatter_dir(const double *dir_in, double cos_theta, double *dir_out);
 
 inline double vec_len(const double x[3])
 // Routine for getting the magnitude of a vector.

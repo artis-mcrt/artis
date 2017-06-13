@@ -977,7 +977,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           else
           {
             level_use = nlevels_nlte + 1;
-            s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level)/superlevel_partition;
+            s_renorm = superlevel_boltzmann(modelgridindex,element,ion,level) / superlevel_partition;
           }
 
           if ((lower == 0) || (is_nlte(element, ion, lower) == 1))
@@ -1249,7 +1249,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       {
         //printout("I thought the super level was: %g\n", modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]);
 
-        modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = gsl_vector_get(x,nlevels_nlte+1)/modelgrid[modelgridindex].rho/superlevel_partition;
+        modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = gsl_vector_get(x,nlevels_nlte+1) / modelgrid[modelgridindex].rho / superlevel_partition;
         //	      modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = ((lag*modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]) + gsl_vector_get(x,nlevels_nlte+1))/(lag + 1.0)/modelgrid[modelgridindex].rho/superlevel_partition;
 
         //printout("Now I think it is: %g\n", modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte]);
@@ -1302,11 +1302,12 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
 
 double superlevel_boltzmann(const int modelgridindex, const int element, const int ion, const int level)
 {
+  const int superlevel_index = get_nlevels_nlte(element,ion) + 1;
   const double T_exc = get_TJ(modelgridindex);
   const double E_level = epsilon(element, ion, level);
-  const double E_superlevel = epsilon(element, ion, get_nlevels_nlte(element,ion) + 1);
+  const double E_superlevel = epsilon(element, ion, superlevel_index);
 
-  return stat_weight(element, ion, level) * exp(- (E_level - E_superlevel) / KB / T_exc);
+  return stat_weight(element, ion, level) / stat_weight(element, ion, superlevel_index) * exp(- (E_level - E_superlevel) / KB / T_exc);
 }
 
 
