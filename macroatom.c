@@ -989,6 +989,7 @@ double rad_deexcitation_ratecoeff(
   const int modelgridindex, const int element, const int ion, const int upper, const int lower,
   const double epsilon_trans, const int lineindex, const double t_current)
 ///radiative deexcitation rate: paperII 3.5.2
+// multiply by upper level population to get a rate per second
 {
   #ifdef DEBUG_ON
   if (upper <= lower)
@@ -1061,6 +1062,7 @@ double rad_excitation_ratecoeff(
   const int modelgridindex, const int element, const int ion, const int lower,
   const int upper, const double epsilon_trans, const int lineindex, const double t_current)
 ///radiative excitation rate: paperII 3.5.2
+// multiply by lower level population to get a rate per second
 {
   #ifdef DEBUG_ON
   if (upper <= lower)
@@ -1149,6 +1151,7 @@ double rad_excitation_ratecoeff(
 double rad_recombination_ratecoeff(
   const float T_e, const float nne, const int element, const int upperion, const int upper, const int lower)
 ///radiative recombination rate: paperII 3.5.2
+// multiply by upper level population to get a rate per second
 {
   double R = 0.0;
   const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
@@ -1179,6 +1182,7 @@ double rad_recombination_ratecoeff(
 
 
 double col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int lineindex)
+// multiply by upper level population to get a rate per second
 {
   double C;
   const double coll_str_thisline = get_coll_str(lineindex);
@@ -1243,6 +1247,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
 
 
 double col_excitation_ratecoeff(const float T_e, const float nne, const int lineindex, const double epsilon_trans)
+// multiply by lower level population to get a rate per second
 {
   double C;
   const double coll_strength = get_coll_str(lineindex);
@@ -1313,6 +1318,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
 
 double col_recombination_ratecoeff(
   const int modelgridindex, const int element, const int upperion, const int upper, const int lower, const double epsilon_trans)
+// multiply by upper level population to get a rate per second
 {
   const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
@@ -1365,6 +1371,7 @@ double col_ionization_ratecoeff(
   const float T_e, const float nne, const int element, const int ion, const int lower,
   const int phixstargetindex, const double epsilon_trans)
 /// collisional ionization rate: paperII 3.5.1
+// multiply by lower level population to get a rate per second
 {
   #ifdef DEBUG_ON
   if (phixstargetindex > get_nphixstargets(element,ion,lower))
