@@ -584,7 +584,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     else
     {
       //printout("Using an nlte population!\n");
-      nn = nltepop_over_rho * modelgrid[modelgridindex].rho;
+      nn = nltepop_over_rho * get_rho(modelgridindex);
       if (!isfinite(nn))
       {
         printout("[fatal] NLTE population failure.\n");
