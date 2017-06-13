@@ -12,6 +12,8 @@
 
 // constant for van-Regemorter approximation.
 #define C_0 (5.465e-11)
+
+// save to the macroatom_*.out file
 #define LOG_MACROATOM true
 
 static FILE *macroatom_file;
@@ -983,7 +985,9 @@ void macroatom_close_file(void)
 }
 
 
-double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans, int lineindex, double t_current)
+double rad_deexcitation_ratecoeff(
+  const int modelgridindex, const int element, const int ion, const int upper, const int lower,
+  const double epsilon_trans, const int lineindex, const double t_current)
 ///radiative deexcitation rate: paperII 3.5.2
 {
   #ifdef DEBUG_ON
@@ -1053,7 +1057,9 @@ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int 
 }
 
 
-double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex, double t_current)
+double rad_excitation_ratecoeff(
+  const int modelgridindex, const int element, const int ion, const int lower,
+  const int upper, const double epsilon_trans, const int lineindex, const double t_current)
 ///radiative excitation rate: paperII 3.5.2
 {
   #ifdef DEBUG_ON
@@ -1140,7 +1146,8 @@ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lo
 }
 
 
-double rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper, int lower)
+double rad_recombination_ratecoeff(
+  const float T_e, const float nne, const int element, const int upperion, const int upper, const int lower)
 ///radiative recombination rate: paperII 3.5.2
 {
   double R = 0.0;
@@ -1171,7 +1178,7 @@ double rad_recombination_ratecoeff(float T_e, float nne, int element, int upperi
 ///***************************************************************************/
 
 
-double col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, int lineindex)
+double col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int lineindex)
 {
   double C;
   const double coll_str_thisline = get_coll_str(lineindex);
@@ -1228,18 +1235,14 @@ double col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans, in
       printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
     }*/
     //printout("col_deexc(%d,%d,%d,%d) %g\n",element,ion,upper,lower,C);
-    if (!isfinite(C))
-    {
-      printout("fatal a7: abort\n");
-      abort();
-    }
+    assert(isfinite(C));
   #endif
 
   return C;
 }
 
 
-double col_excitation_ratecoeff(float T_e, float nne, int lineindex, double epsilon_trans)
+double col_excitation_ratecoeff(const float T_e, const float nne, const int lineindex, const double epsilon_trans)
 {
   double C;
   const double coll_strength = get_coll_str(lineindex);
@@ -1308,30 +1311,30 @@ double col_excitation_ratecoeff(float T_e, float nne, int lineindex, double epsi
 }
 
 
-double col_recombination_ratecoeff(int modelgridindex, int element, int upperion, int upper, int lower, double epsilon_trans)
+double col_recombination_ratecoeff(
+  const int modelgridindex, const int element, const int upperion, const int upper, const int lower, const double epsilon_trans)
 {
-  const float nne = get_nne(modelgridindex);
-  const float T_e = get_Te(modelgridindex);
-  const double fac1 = epsilon_trans / KB / T_e;
-  const int ionstage = get_ionstage(element,upperion);
-  const float sigma_bf_all_targets = elements[element].ions[upperion-1].levels[lower].photoion_xs[0];
-
   const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
     if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
     {
+      const float nne = get_nne(modelgridindex);
+      const float T_e = get_Te(modelgridindex);
+      const double fac1 = epsilon_trans / KB / T_e;
+      const int ionstage = get_ionstage(element, upperion);
+
       ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
       ///select gaunt factor according to ionic charge
       double g;
-      if (ionstage-1 == 1)
+      if (ionstage - 1 == 1)
         g = 0.1;
-      else if (ionstage-1 == 2)
+      else if (ionstage - 1 == 2)
         g = 0.2;
       else
         g = 0.3;
 
-      const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,upperion-1,lower,phixstargetindex);
+      const double sigma_bf = elements[element].ions[upperion-1].levels[lower].photoion_xs[0] * get_phixsprobability(element,upperion-1,lower,phixstargetindex);
 
       double C = nne * nne * get_sahafact(element,upperion-1,lower,phixstargetindex,T_e,epsilon_trans) *
                        1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
@@ -1358,7 +1361,9 @@ double col_recombination_ratecoeff(int modelgridindex, int element, int upperion
 }
 
 
-double col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int lower, int phixstargetindex, double epsilon_trans)
+double col_ionization_ratecoeff(
+  const float T_e, const float nne, const int element, const int ion, const int lower,
+  const int phixstargetindex, const double epsilon_trans)
 /// collisional ionization rate: paperII 3.5.1
 {
   #ifdef DEBUG_ON
@@ -1382,18 +1387,13 @@ double col_ionization_ratecoeff(float T_e, float nne, int element, int ion, int 
 
   const double fac1 = epsilon_trans / KB / T_e;
 
-  const float sigma_bf_all_targets = elements[element].ions[ion].levels[lower].photoion_xs[0];
-  const double sigma_bf = sigma_bf_all_targets * get_phixsprobability(element,ion,lower,phixstargetindex);
+  const double sigma_bf = elements[element].ions[ion].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion,lower,phixstargetindex);
   const double C = nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
   #ifdef DEBUG_ON
     if (debuglevel == 777)
       printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
-    if (!isfinite(C))
-    {
-      printout("fatal a6: abort\n");
-      abort();
-    }
+    assert(isfinite(C));
   #endif
 
   return C;

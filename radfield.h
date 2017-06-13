@@ -12,13 +12,13 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
 double radfield(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex, int timestep);
 void radfield_set_J_normfactor(int modelgridindex, double normfactor);
-void radfield_normalise_J(const int modelgridindex, const double estimator_normfactor_over4pi);
-void radfield_normalise_nuJ(const int modelgridindex, const double estimator_normfactor_over4pi);
-double get_T_R_from_J(const int modelgridindex);
-void radfield_titer_J(const int modelgridindex);
-void radfield_titer_nuJ(const int modelgridindex);
+void radfield_normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
+void radfield_normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
+double get_T_R_from_J(int modelgridindex);
+void radfield_titer_J(int modelgridindex);
+void radfield_titer_nuJ(int modelgridindex);
 void radfield_reduce_estimators(void);
-void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart, const int root_ndo);
+void radfield_MPI_Bcast(int my_rank, int root, int root_nstart, int root_ndo);
 void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);
 int radfield_integrate(
