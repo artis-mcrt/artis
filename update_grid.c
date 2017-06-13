@@ -61,7 +61,7 @@ static void update_abundances(const int modelgridindex, double t_current)
       const int atomic_number = get_element(element);
       if (atomic_number == 28)
       {
-        const double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
+        const double nifrac = ni_in * exp(-lambdani*t_current) + get_fnistable(modelgridindex);
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
       else if (atomic_number == 27)
@@ -78,7 +78,7 @@ static void update_abundances(const int modelgridindex, double t_current)
   }
   else
   {
-    const double ni_in = modelgrid[modelgridindex].fni;
+    const double ni_in = get_f56ni(modelgridindex);
     const double co_in = modelgrid[modelgridindex].fco;
     const double fe52_in = modelgrid[modelgridindex].f52fe;
     const double cr48_in = modelgrid[modelgridindex].f48cr;
@@ -88,7 +88,7 @@ static void update_abundances(const int modelgridindex, double t_current)
       const int atomic_number = get_element(element);
       if (atomic_number == 28)
       {
-        const double nifrac = ni_in * exp(-lambdani*t_current) + modelgrid[modelgridindex].fnistable;
+        const double nifrac = ni_in * exp(-lambdani*t_current) + get_fnistable(modelgridindex);
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
       else if (atomic_number == 27)
@@ -127,7 +127,7 @@ static void update_abundances(const int modelgridindex, double t_current)
     //          modelgrid[modelgridindex].composition[get_elementindex(28)].abundance,
     //          modelgrid[modelgridindex].composition[get_elementindex(27)].abundance,
     //          modelgrid[modelgridindex].composition[get_elementindex(26)].abundance,
-    //          modelgrid[modelgridindex].fnistable, modelgrid[modelgridindex].fcostable, modelgrid[modelgridindex].ffestable);
+    //          get_fnistabel(modelgridindex), modelgrid[modelgridindex].fcostable, modelgrid[modelgridindex].ffestable);
   }
 }
 
@@ -1185,7 +1185,7 @@ double calculate_populations(const int modelgridindex)
           #endif
 
           if ((Gamma == 0) &&
-             (!NT_ON || ((rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (modelgrid[modelgridindex].fni == 0.))))
+             (!NT_ON || ((rpkt_emiss[modelgridindex] == 0.) && (modelgrid[modelgridindex].f48cr == 0.) && (get_f56ni(modelgridindex) == 0.))))
             break;
         }
         uppermost_ion = ion;

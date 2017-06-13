@@ -227,7 +227,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 
   const double co56_positron_dep = (0.610 * 0.19 * MEV) *
         (exp(-t / TCOBALT) - exp(-t / TNICKEL)) /
-        (TCOBALT - TNICKEL) * modelgrid[modelgridindex].fni * rho / MNI56;
+        (TCOBALT - TNICKEL) * get_f56ni(modelgridindex) * rho / MNI56;
 
   const double v48_positron_dep = (0.290 * 0.499 * MEV) *
         (exp(-t / T48V) - exp(-t / T48CR)) /
