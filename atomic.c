@@ -17,7 +17,6 @@ extern inline int get_continuumindex(int element, int ion, int level);
 extern inline int get_nphixstargets(int element, int ion, int level);
 extern inline int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 extern inline double get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-extern inline int transitioncheck(int upper, int lower);
 extern inline double einstein_spontaneous_emission(int lineindex);
 extern inline double osc_strength(int lineindex);
 extern inline double get_coll_str(int lineindex);
