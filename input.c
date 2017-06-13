@@ -271,6 +271,15 @@ static int compare_linelistentry(const void *restrict p1, const void *restrict p
 }
 
 
+static int transitioncheck(int upper, int lower)
+{
+  const int index = (upper - lower) - 1;
+  const int flag = transitions[upper].to[index];
+
+  return flag;
+}
+
+
 static void read_atomicdata_files(void)
 {
   int totaluptrans = 0;

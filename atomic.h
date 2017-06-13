@@ -182,17 +182,6 @@ inline double get_phixsprobability(int element, int ion, int level, int phixstar
 }
 
 
-inline int transitioncheck(int upper, int lower)
-/// reads A_ul from levellist which consists of
-/// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
-{
-  const int index = (upper - lower) - 1;
-  const int flag = transitions[upper].to[index];
-
-  return flag;
-}
-
-
 inline double einstein_spontaneous_emission(int lineindex)
 //double einstein_spontaneous_emission(int element, int ion, int upper, int lower)
 /// reads A_ul from levellist which consists of
