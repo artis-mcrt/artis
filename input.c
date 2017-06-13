@@ -16,6 +16,8 @@
 
 const int nlevels_requiretransitions = 0; // first n levels will be collisionally coupled to all other levels
 
+const int groundstate_index_in = 1; // starting level index in the input files
+
 typedef struct
 {
   int lower;
@@ -42,17 +44,16 @@ static void read_phixs_data(void)
   fscanf(phixsdata,"%lg\n",&NPHIXSNUINCREMENT);
   assert(NPHIXSNUINCREMENT > 0.);
   int Z;
-  int upperion;
-  int upperlevel;
-  int lowerion;
-  int lowerlevel;
+  int upperionstage;
+  int upperlevel_in;
+  int lowerionstage;
+  int lowerlevel_in;
   double phixs_threshold_ev;
-  while (fscanf(phixsdata,"%d %d %d %d %d %lg\n",&Z,&upperion,&upperlevel,&lowerion,&lowerlevel,&phixs_threshold_ev) != EOF)
+  while (fscanf(phixsdata,"%d %d %d %d %d %lg\n",&Z,&upperionstage,&upperlevel_in,&lowerionstage,&lowerlevel_in,&phixs_threshold_ev) != EOF)
   {
     assert(Z > 0);
-    assert(upperion >= 2);
-    assert(lowerion >= 1);
-    assert(lowerlevel > 0);
+    assert(upperionstage >= 2);
+    assert(lowerionstage >= 1);
     bool skip_this_phixs_table = false;
     //printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel, %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
     /// translate readin anumber to element index
@@ -62,18 +63,21 @@ static void read_phixs_data(void)
     if (element >= 0)
     {
       /// translate readin ionstages to ion indices
-      //printout("[debug] element %d, lowermost_ionstage %d\n",element,elements[element].ions[0].ionstage);
-      const int lowermost_ionstage = elements[element].ions[0].ionstage;
-      upperion -= lowermost_ionstage;
-      upperlevel--;
-      lowerion -= lowermost_ionstage;
-      lowerlevel--;
+
+      const int upperion = upperionstage - get_ionstage(element, 0);
+      const int lowerion = lowerionstage - get_ionstage(element, 0);
+      const int upperlevel = upperlevel_in - groundstate_index_in;
+      const int lowerlevel = lowerlevel_in - groundstate_index_in;
+      assert(upperion >= 0);
+      assert(lowerion >= 0);
+      assert(upperlevel >= 0);
+      assert(lowerlevel >= 0);
       /// store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && lowerlevel < get_nlevels(element, lowerion) && upperion < get_nions(element))
       {
           //double phixs_threshold_ev = (epsilon(element, upperion, upperlevel) - epsilon(element, lowerion, lowerlevel)) / EV;
           elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = phixs_threshold_ev * EV;
-          if (upperlevel >= 0) // file gives photoionisation to a single target state only
+          if (upperlevel_in >= 0) // file gives photoionisation to a single target state only
           {
             elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
             if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
@@ -92,6 +96,7 @@ static void read_phixs_data(void)
             {
               int in_nphixstargets;
               fscanf(phixsdata,"%d\n", &in_nphixstargets);
+              assert(in_nphixstargets >= 0);
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets, sizeof(phixstarget_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
@@ -101,11 +106,10 @@ static void read_phixs_data(void)
               for (int i = 0; i < in_nphixstargets; i++)
               {
                 double phixstargetprobability;
-                int in_upperlevel;
-                fscanf(phixsdata,"%d %lg\n", &in_upperlevel, &phixstargetprobability);
-                assert(in_upperlevel > 0);
+                fscanf(phixsdata,"%d %lg\n", &upperlevel_in, &phixstargetprobability);
+                assert(upperlevel_in > 0);
                 assert(phixstargetprobability > 0);
-                elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = in_upperlevel - 1;//subtract one to get index
+                elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = upperlevel_in - groundstate_index_in;
                 elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].probability = phixstargetprobability;
                 probability_sum += phixstargetprobability;
               }
@@ -186,14 +190,14 @@ static void read_phixs_data(void)
     }
     if (skip_this_phixs_table) // for ions or elements that are not part of the current model atom, proceed through the lines and throw away the data
     {
-      if (upperlevel < 0) // a table of target states and probabilities exists, so read through those lines
+      if (upperlevel_in < 0) // a table of target states and probabilities will follow, so read past those lines
       {
         int nphixstargets;
         fscanf(phixsdata,"%d\n",&nphixstargets);
         for (int i = 0; i < nphixstargets; i++)
         {
           double phixstargetprobability;
-          fscanf(phixsdata,"%d %lg\n",&upperlevel,&phixstargetprobability);
+          fscanf(phixsdata,"%d %lg\n",&upperlevel_in,&phixstargetprobability);
         }
       }
       for (int i = 0; i < NPHIXSPOINTS; i++) //skip through cross section list
@@ -359,7 +363,6 @@ static void read_atomicdata_files(void)
     double ionpot = 0.;
     for (int ion = 0; ion < nions; ion++)
     {
-      int groundstate_index_input = 0;
       int nlevelsmax = nlevelsmax_readin;
       printout("ion %d\n", ion);
       /// calculate the current levels ground level energy
@@ -480,8 +483,8 @@ static void read_atomicdata_files(void)
             double coll_str;
             int intforbidden;
             fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden);
-            const int lower = lower_in - 1; // TODO: remove the minus one after we change the level indicies to start at zero in transitiondata.txt
-            const int upper = upper_in - 1;
+            const int lower = lower_in - groundstate_index_in;
+            const int upper = upper_in - groundstate_index_in;
 
             // this entire block can be removed if we don't want to add in extra collisonal
             // transitions between the first n levels
@@ -572,12 +575,12 @@ static void read_atomicdata_files(void)
         }
         for (int level = 0; level < nlevels; level++)
         {
-          int levelindex;
+          int levelindex_in;
           double levelenergy;
           double statweight;
           int ntransitions;
-          fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions);
-          assert(levelindex == level + 1);
+          fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions);
+          assert(levelindex_in == level + groundstate_index_in);
           //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
           if (level < nlevelsmax)
           {
