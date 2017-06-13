@@ -599,8 +599,8 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   else if (NLTE_POPS_ON && (nlte_levels = get_nlevels_nlte(element,ion)) > 0)
   {
     // Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
-    const double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte + nlte_levels];
-    if (nltepop_over_rho < -0.9) //TODO: should change this to less than zero?
+    const double superlevelpop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte + nlte_levels];
+    if (superlevelpop_over_rho < -0.9) //TODO: should change this to less than zero?
     {
       // Case for when no NLTE level information is available yet
       use_lte_pop = true;
@@ -608,12 +608,12 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     else
     {
       //printout("Using a superlevel population!\n");
-      nn = nltepop_over_rho * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level);
+      nn = superlevelpop_over_rho * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level);
       if (!isfinite(nn))
       {
         printout("[fatal] NLTE population failure.\n");
         printout("element %d ion %d level %d\n", element, ion, level);
-        printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, modelgrid[modelgridindex].rho);
+        printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho, modelgrid[modelgridindex].rho);
         printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
         abort();
       }
