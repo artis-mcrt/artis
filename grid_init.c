@@ -1484,33 +1484,38 @@ static void read_grid_restart_data(void)
     fscanf(gridsave_file, "%d %g %g %g %g %hd %lg",
            &mgi_in, &T_R, &T_e, &W, &T_J,
            &modelgrid[mgi].thick, &rpkt_emiss[mgi]);
-    if (mgi_in == mgi)
-    {
-      set_TR(mgi, T_R);
-      set_Te(mgi, T_e);
-      set_W(mgi, W);
-      set_TJ(mgi, T_J);
 
-      #ifndef FORCE_LTE
-        #if (!NO_LUT_PHOTOION)
-          for (int element = 0; element < nelements; element++)
-          {
-            const int nions = get_nions(element);
-            for (int ion = 0; ion < nions; ion++)
-            {
-              const int estimindex = mgi * nelements * maxion + element * maxion + ion;
-              fscanf(gridsave_file, " %lg %lg", &corrphotoionrenorm[estimindex], &gammaestimator[estimindex]);
-            }
-          }
-        #endif
-      #endif
-    }
-    else
+    if (mgi_in != mgi)
     {
       printout("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort\n");
       printout("[fatal] read_grid_restart_data: read cellnumber %d, expected cellnumber %d\n",mgi_in,mgi);
       abort();
     }
+
+    assert(T_R >= 0);
+    assert(T_e >= 0);
+    assert(W >= 0);
+    assert(T_J >= 0);
+    assert(rpkt_emiss[mgi] >= 0);
+
+    set_TR(mgi, T_R);
+    set_Te(mgi, T_e);
+    set_W(mgi, W);
+    set_TJ(mgi, T_J);
+
+    #ifndef FORCE_LTE
+      #if (!NO_LUT_PHOTOION)
+        for (int element = 0; element < nelements; element++)
+        {
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions; ion++)
+          {
+            const int estimindex = mgi * nelements * maxion + element * maxion + ion;
+            fscanf(gridsave_file, " %lg %lg", &corrphotoionrenorm[estimindex], &gammaestimator[estimindex]);
+          }
+        }
+      #endif
+    #endif
   }
 
   // the order of these calls is very important!
