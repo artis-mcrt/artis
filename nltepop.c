@@ -749,7 +749,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     for (int level = 1; level <= nlevels_nlte; level++)
     {
       const int index = get_nlte_vector_index(element, ion, level);
-      modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = gsl_vector_get(popvec, index) / modelgrid[modelgridindex].rho;
+      modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = gsl_vector_get(popvec, index) / get_rho(modelgridindex);
       solution_ion_pop += gsl_vector_get(popvec, index);
     }
 
@@ -1239,9 +1239,9 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       // Write the NLTE level populations to the array
       for (int level = 1; level < nlevels_nlte+1; level++)
       {
-        modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = gsl_vector_get(x,level)/modelgrid[modelgridindex].rho;
+        modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = gsl_vector_get(x,level)/get_rho(modelgridindex);
         //printout("I have interfered with index %d.\n", nlte_start+level-1);
-        //modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = ((lag*modelgrid[modelgridindex].nlte_pops[nlte_start+level-1]) + gsl_vector_get(x,level))/(lag + 1.0)/modelgrid[modelgridindex].rho;
+        //modelgrid[modelgridindex].nlte_pops[nlte_start+level-1] = ((lag*modelgrid[modelgridindex].nlte_pops[nlte_start+level-1]) + gsl_vector_get(x,level))/(lag + 1.0)/get_rho(modelgridindex);
       }
       // If there is a superlevel then write that too
 
