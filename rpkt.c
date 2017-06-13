@@ -1283,7 +1283,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
                 {
                     ///calculate population of ionstage ...
                     nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
-                    ionpops_local[element][ion] = nnion/get_nnetot(modelgridindex);
+                    ionpops_local[element][ion] = nnion / get_nnetot(modelgridindex);
                     //Z = get_element(element);  ///atomic number
                     //if (get_ionstage(element,ion) > 1)
                     /// Z is ionic charge in the following formula

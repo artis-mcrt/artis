@@ -798,7 +798,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             printout("internal downward transition to ground level occured ... abort\n");
             printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
             printout("Z %d, ionstage %d, energy %g\n",
-                     elements[element].anumber, get_ionstage(element,ion), elements[element].ions[ion].levels[lower].epsilon);
+                     get_element(element), get_ionstage(element,ion), elements[element].ions[ion].levels[lower].epsilon);
             printout("[debug] do_ma:   internal downward jump within current ionstage\n");
             abort();
           }
@@ -885,7 +885,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           {
             printout("internal downward transition to ground level occured ... abort\n");
             printout("element %d, ion %d, level %d, lower %d\n",element,ion,level,lower);
-            printout("Z %d, ionstage %d, energy %g\n",elements[element].anumber,get_ionstage(element,ion-1),elements[element].ions[ion-1].levels[lower].epsilon);
+            printout("Z %d, ionstage %d, energy %g\n",get_element(element),get_ionstage(element,ion-1),elements[element].ions[ion-1].levels[lower].epsilon);
             printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
             abort();
           }
