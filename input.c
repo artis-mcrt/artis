@@ -66,11 +66,9 @@ static void read_phixs_data(void)
 
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
-      const int upperlevel = upperlevel_in - groundstate_index_in;
       const int lowerlevel = lowerlevel_in - groundstate_index_in;
       assert(upperion >= 0);
       assert(lowerion >= 0);
-      assert(upperlevel >= 0);
       assert(lowerlevel >= 0);
       /// store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && lowerlevel < get_nlevels(element, lowerion) && upperion < get_nions(element))
@@ -79,6 +77,8 @@ static void read_phixs_data(void)
           elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = phixs_threshold_ev * EV;
           if (upperlevel_in >= 0) // file gives photoionisation to a single target state only
           {
+            const int upperlevel = upperlevel_in - groundstate_index_in;
+            assert(upperlevel >= 0);
             elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
             if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
             {
@@ -107,9 +107,10 @@ static void read_phixs_data(void)
               {
                 double phixstargetprobability;
                 fscanf(phixsdata,"%d %lg\n", &upperlevel_in, &phixstargetprobability);
-                assert(upperlevel_in > 0);
+                const int upperlevel = upperlevel_in - groundstate_index_in;
+                assert(upperlevel >= 0);
                 assert(phixstargetprobability > 0);
-                elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = upperlevel_in - groundstate_index_in;
+                elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].levelindex = upperlevel;
                 elements[element].ions[lowerion].levels[lowerlevel].phixstargets[i].probability = phixstargetprobability;
                 probability_sum += phixstargetprobability;
               }
