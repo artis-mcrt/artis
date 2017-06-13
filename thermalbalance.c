@@ -18,7 +18,7 @@ typedef struct Te_solution_paras
 } Te_solution_paras;
 
 
-static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
+static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
   const int modelgridindex = ((Te_solution_paras *) paras)->cellnumber;
@@ -73,7 +73,7 @@ static double T_e_eqn_heating_minus_cooling(double T_e, void *paras)
 }
 
 
-double call_T_e_finder(int modelgridindex, double t_current, double T_min, double T_max)
+double call_T_e_finder(const int modelgridindex, const double t_current, const double T_min, const double T_max)
 {
   printout("Finding T_e in cell %d...", modelgridindex);
 
@@ -267,7 +267,7 @@ double call_T_e_finder(int modelgridindex, double t_current, double T_min, doubl
 }
 
 
-void calculate_heating_rates(int modelgridindex)
+void calculate_heating_rates(const int modelgridindex)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
@@ -455,7 +455,7 @@ void calculate_heating_rates(int modelgridindex)
 }
 
 
-void calculate_cooling_rates(int modelgridindex)
+void calculate_cooling_rates(const int modelgridindex)
 /// Calculate the cooling rates for a given cell. Results are returned
 /// via the elements of the global coolingrates data structure.
 {

@@ -15,12 +15,12 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 
-double calculate_gamma_ion_per_gspop(int modelgridindex, int element, int ion);
-double calculate_gamma_ion_per_ionpop(
+double calculate_iongamma_per_gspop(int modelgridindex, int element, int ion);
+double calculate_iongamma_per_ionpop(
   int modelgridindex, float T_e, int element, int lowerion,
   bool assume_lte, bool collisional_not_radiative, bool printdebug);
 
-double calculate_recombcoeff_ion_per_gmpop(
+double calculate_ionrecombcoeff_per_gmpop(
   int modelgridindex, float T_e,
   int element, int upperion,
   bool assume_lte, bool collisional_not_radiative, bool printdebug,

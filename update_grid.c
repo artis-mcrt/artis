@@ -151,7 +151,10 @@ static void write_to_estimators_file(int n, int timestep)
 
     for (int element = 0; element < nelements; element++)
     {
-      fprintf(estimators_file, "populations     Z=%2d", get_element(element));
+      if (get_abundance(n, element) <= 0.) // skip elements with no abundance
+        continue;
+
+      fprintf(estimators_file, "populations    Z=%2d", get_element(element));
       const int nions = get_nions(element);
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -172,7 +175,18 @@ static void write_to_estimators_file(int n, int timestep)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_recombcoeff_ion_per_gmpop(n, T_e, element, ion, assume_lte, false, false, printdebug));
+                calculate_ionrecombcoeff_per_gmpop(n, T_e, element, ion, assume_lte, false, false, printdebug));
+      }
+      fprintf(estimators_file, "\n");
+
+      fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                calculate_recombcoeff_ion_per_ionpop(n, T_e, element, ion, assume_lte, false, false, printdebug) * nne);
       }
       fprintf(estimators_file, "\n");
 
@@ -207,7 +221,7 @@ static void write_to_estimators_file(int n, int timestep)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_gamma_ion_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug));
+                calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug));
       }
       fprintf(estimators_file, "\n");
 
@@ -218,7 +232,7 @@ static void write_to_estimators_file(int n, int timestep)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_gamma_ion_per_ionpop(n, T_e, element, ion, assume_lte, true, printdebug));
+                calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, true, printdebug));
       }
       fprintf(estimators_file, "\n");
 
@@ -237,7 +251,7 @@ static void write_to_estimators_file(int n, int timestep)
     // const int element = get_elementindex(26);
     // const int lowerionstage = 1;
     // const int lowerion = lowerionstage - get_ionstage(element, 0);
-    // calculate_recombcoeff_ion_per_gmpop(n, T_e, element, lowerion + 1, true, true, false);
+    // calculate_ionrecombcoeff_per_gmpop(n, T_e, element, lowerion + 1, true, true, false);
 
     #ifndef FORCE_LTE
       #if (!NO_LUT_PHOTOION)
@@ -263,9 +277,9 @@ static void write_to_estimators_file(int n, int timestep)
         fprintf(estimators_file,"\n");
       #endif
 
-      fprintf(estimators_file, "heating: ff %g bf %g coll %g     gamma %g\n",
+      fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e     gamma %11.5e\n",
               heatingrates[tid].ff, heatingrates[tid].bf, heatingrates[tid].collisional, heatingrates[tid].gamma);
-      fprintf(estimators_file, "cooling: ff %g fb %g coll %g adiabatic %g\n",
+      fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
               coolingrates[tid].ff, coolingrates[tid].fb, coolingrates[tid].collisional, coolingrates[tid].adiabatic);
     #endif
     fprintf(estimators_file,"\n");
@@ -525,7 +539,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
           const int ionestimindex = n * nelements * maxion + element * maxion + ion;
 
           #if (!NO_LUT_PHOTOION)
-            gammaestimator[ionestimindex] = calculate_gamma_ion_per_gspop(n, element, ion);
+            gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion);
             //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
           #endif
 
@@ -1113,7 +1127,7 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
 }
 
 
-double calculate_populations(int modelgridindex)
+double calculate_populations(const int modelgridindex)
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
@@ -1165,7 +1179,7 @@ double calculate_populations(int modelgridindex)
           //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
           //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
           #if NO_LUT_PHOTOION
-            const double Gamma = calculate_gamma_ion_per_gspop(modelgridindex, element, ion);
+            const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
           #else
             const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
           #endif
@@ -1371,9 +1385,9 @@ double calculate_populations(int modelgridindex)
 }
 
 
-double calculate_electron_densities(int modelgridindex)
+double calculate_electron_densities(const int modelgridindex)
 // Determines the free and total electron number densities
-// for a given cell and stores them, assuming fixed ion populations (ground_level_pop and partfunc)
+// for a given cell and stores them, assuming ion populations (ground_level_pop and partfunc)
 // are fixed (determined by NLTE all-ion solver)
 {
   double nne_tot = 0.; // total electron density

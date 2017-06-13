@@ -162,7 +162,7 @@ double phi(int element, int ion, int modelgridindex)
     {
       //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
       #if NO_LUT_PHOTOION
-        const double Gamma = calculate_gamma_ion_per_gspop(modelgridindex, element, ion);
+        const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
       #else
         const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
       #endif

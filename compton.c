@@ -6,7 +6,7 @@
 
 // Stuff for compton scattering.
 
-static double sigma_compton_partial(double x, double f)
+static double sigma_compton_partial(const double x, const double f)
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
 //  is the energy loss factor up to which we wish to integrate.

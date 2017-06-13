@@ -23,9 +23,9 @@ extern inline double osc_strength(int lineindex);
 extern inline double get_coll_str(int lineindex);
 extern inline double statw_upper(int lineindex);
 extern inline double statw_lower(int lineindex);
-extern inline double photoionization_crosssection(double nu_edge, double nu);
-extern inline double xs_photoionization(int element, int ion, int level, double nu_edge, double nu);
-extern inline double get_phixs_threshold(int element, int ion, int level);
+extern inline double photoionization_crosssection_macroatom(double nu_edge, double nu);
+extern inline double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
+extern inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 {
