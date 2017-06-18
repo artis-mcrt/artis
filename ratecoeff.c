@@ -961,13 +961,18 @@ static void read_recombrate_file(void)
           printout("  input_rrc_low_n: %10.3e\n", input_rrc_low_n);
 
           const double phixs_multiplier = input_rrc_low_n / rrc;
-          printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
+          if (phixs_multiplier >= 0.5 && phixs_multiplier < 1.0)
+          {
+            printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
 
-          for (int level = 0; level < nlevels; level++)
-            scale_level_phixs(element, ion - 1, level, phixs_multiplier);
+            for (int level = 0; level < nlevels; level++)
+              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
 
-          rrc = calculate_ionrecombcoeff_per_gmpop(-1, Te_estimate, element, ion, true, false, false, false);
-          printout("              rrc: %10.3e\n", rrc);
+            rrc = calculate_ionrecombcoeff_per_gmpop(-1, Te_estimate, element, ion, true, false, false, false);
+            printout("              rrc: %10.3e\n", rrc);
+          }
+          else
+            printout("    Not scaling phixs of all levels by %.3f (because < 0.5 or >= 1.0)\n", phixs_multiplier);
         }
 
         // hopefully the RRC now matches the low_n value well, if it was defined

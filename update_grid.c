@@ -175,7 +175,7 @@ static void write_to_estimators_file(int n, int timestep)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_ionrecombcoeff_per_gmpop(n, T_e, element, ion, assume_lte, false, false, printdebug));
+                calculate_ionrecombcoeff_per_gmpop(-1, T_e, element, ion, assume_lte, false, false, printdebug));
       }
       fprintf(estimators_file, "\n");
 
