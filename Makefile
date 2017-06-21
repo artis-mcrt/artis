@@ -28,8 +28,8 @@ else
  # CC = gcc-6
  # CC = mpicc
  # CC = icc
-  INCLUDE = -I/usr/local/Cellar/gsl/2.3/include -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/opt/gperftools/include
-  LIB = -L/usr/local/Cellar/gsl/2.3/lib #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
+  INCLUDE = -I/usr/local/Cellar/gsl/2.4/include -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/opt/gperftools/include
+  LIB = -L/usr/local/Cellar/gsl/2.4/lib #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
   CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
 
 # in GCC6, -Wmisleading-indentation will be useful
