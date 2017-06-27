@@ -591,7 +591,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       if (element >= nelements || ion >= get_nions(element))
       {
         printout("do_kpkt: problem selecting a cooling process ... abort\n");
-        printout("do_kpkt: tried to select element %d, ion %d\n",element,ion);
+        printout("do_kpkt: tried to select element %d, ion %d (Z=%d ionstage %d)\n",element, ion, get_element(element), get_ionstage(element, ion));
         printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool %g\n",modelgrid[modelgridindex].totalcooling,coolingsum,rndcool);
         printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n",modelgridindex,pkt_ptr->where,get_nne(modelgridindex));
         for (element = 0; element < nelements; element++)
@@ -711,6 +711,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       ion = cellhistory[tid].coolinglist[i].ion;
       const int level = cellhistory[tid].coolinglist[i].level;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
+      // const double nu_threshold = get_phixs_threshold(element, ion, level, phixstargetindex)
       const double nu_threshold = (epsilon(element,ion+1,upper) - epsilon(element,ion,level)) / H; // TODO: use get_phixs_threshold?
 
       #ifdef DEBUG_ON
