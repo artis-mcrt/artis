@@ -401,7 +401,7 @@ static double xs_excitation(int lineindex, double epsilon_trans, double energy)
 
 static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, int lineindex, double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
-// energies are in erg
+// epsilon_trans is in erg
 {
   const double coll_str = get_coll_str(lineindex);
   const int en_startindex = 0; // energy point corresponding to epsilon_trans
@@ -492,6 +492,23 @@ static double xs_impactionization(double energy_ev, int collionindex)
     const double D = colliondata[collionindex].D;
 
     return 1e-14 * (A * (1 - 1/u) + B * pow((1 - 1/u), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
+  }
+}
+
+
+static void get_xs_ionization_vector(gsl_vector *xs_vec, const int collionindex)
+// xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
+{
+  const double ionpot_ev = colliondata[collionindex].ionpot_ev;
+  const int startindex = get_energyindex_ev(ionpot_ev);
+
+  for (int i = 0; i < startindex; i++)
+    gsl_vector_set(xs_vec, i, 0.);
+
+  for (int i = startindex; i < SFPTS; i++)
+  {
+    const double endash = gsl_vector_get(envec, i);
+    gsl_vector_set(xs_vec, i, xs_impactionization(endash, collionindex));
   }
 }
 
@@ -862,22 +879,13 @@ static double calculate_nt_frac_excitation(int modelgridindex, int element, int 
 
 
 static double calculate_nt_frac_ionization_shell(int modelgridindex, int element, int ion, int collionindex)
+// the fraction of deposition energy that goes into ionising electrons in this particular shell
 {
   const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
-  // cross_section_vec will contain impact ionization cross sections for E > ionpot_ev (otherwise zeros)
 
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
-  const int startindex = get_energyindex_ev(ionpot_ev);
-
-  for (int i = 0; i < startindex; i++)
-    gsl_vector_set(cross_section_vec, i, 0.);
-
-  for (int i = startindex; i < SFPTS; i++)
-  {
-    double endash = gsl_vector_get(envec, i);
-    gsl_vector_set(cross_section_vec, i, xs_impactionization(endash, collionindex));
-  }
+  get_xs_ionization_vector(cross_section_vec, collionindex);
 
   double y_dot_crosssection = 0.;
   gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
@@ -1087,6 +1095,7 @@ static void analyse_sf_solution(int modelgridindex)
   // calculate number density of non-thermal electrons
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
+
   double nne_nt_max = 0.0;
   for (int i = 0; i < SFPTS; i++)
   {
