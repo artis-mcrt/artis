@@ -785,7 +785,7 @@ double calculate_ionrecombcoeff(
     if (per_groundmultipletpop)
     {
       const int nphixstargets = get_nphixstargets(element, lowerion, 0);
-      upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets) + 1;
+      upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets - 1) + 1;
     }
     else
       upper_nlevels = get_nlevels(element, lowerion + 1);
