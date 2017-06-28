@@ -168,6 +168,7 @@ static void write_to_estimators_file(int n, int timestep)
 
       bool assume_lte = true;
       bool per_gmpop = true;
+      const bool lower_superlevel_only = false;
 
       fprintf(estimators_file, "RRC_LTE_Nahar  Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -176,9 +177,11 @@ static void write_to_estimators_file(int n, int timestep)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_ionrecombcoeff(-1, T_e, element, ion, assume_lte, false, false, printdebug, per_gmpop));
+                calculate_ionrecombcoeff(-1, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop));
       }
       fprintf(estimators_file, "\n");
+
+      per_gmpop = false;
 
       fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -187,12 +190,11 @@ static void write_to_estimators_file(int n, int timestep)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, false, printdebug, per_gmpop) * nne);
+                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop) * nne);
       }
       fprintf(estimators_file, "\n");
 
       assume_lte = false;
-      per_gmpop = false;
 
       fprintf(estimators_file, "Alpha_R*nne    Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -201,7 +203,7 @@ static void write_to_estimators_file(int n, int timestep)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, false, printdebug, per_gmpop) * nne);
+                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop) * nne);
       }
       fprintf(estimators_file, "\n");
 
@@ -212,7 +214,7 @@ static void write_to_estimators_file(int n, int timestep)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, true, false, printdebug, per_gmpop) * nne);
+                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, true, printdebug, lower_superlevel_only, per_gmpop) * nne);
       }
       fprintf(estimators_file, "\n");
 
