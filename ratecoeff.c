@@ -762,12 +762,12 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
 }
 
 
-double calculate_ionrecombcoeff_per_gmpop(
+double calculate_ionrecombcoeff(
   const int modelgridindex, const float T_e,
   const int element, const int upperion,
   const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-  const bool lower_superlevel_only)
-// multiply by upper ion population and nne to get a rate
+  const bool lower_superlevel_only, const bool per_groundmultipletpop)
+// multiply by upper ion population (or ground population if per_groundmultipletpop is true) if and nne to get a rate
 {
   const int lowerion = upperion - 1;
   if (lowerion < 0)
@@ -779,7 +779,36 @@ double calculate_ionrecombcoeff_per_gmpop(
     // this gets divided and cancelled out in the radiative case anyway
     const double nne = (modelgridindex >= 0) ? get_nne(modelgridindex) : 1.0;
 
-    const double nnupperion = get_groundmultiplet_pop(modelgridindex, T_e, element, upperion, assume_lte);
+    double nnupperion = 0;
+    // nnupperion = get_groundmultiplet_pop(modelgridindex, T_e, element, upperion, assume_lte);
+    int upper_nlevels;
+    if (per_groundmultipletpop)
+    {
+      const int nphixstargets = get_nphixstargets(element, lowerion, 0);
+      upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets) + 1;
+    }
+    else
+      upper_nlevels = get_nlevels(element, lowerion + 1);
+    for (int upper = 0; upper < upper_nlevels; upper++)
+    {
+      double nnupperlevel;
+      if (assume_lte)
+      {
+        const double T_exc = T_e;
+        const double E_level = epsilon(element, lowerion + 1, upper);
+        const double E_ground = epsilon(element, lowerion + 1, 0);
+        const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, lowerion + 1) : 1.0;
+
+        nnupperlevel = (
+          nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
+          exp(-(E_level - E_ground) / KB / T_exc));
+      }
+      else
+      {
+        nnupperlevel = calculate_exclevelpop(modelgridindex, element, lowerion + 1, upper);
+      }
+      nnupperion += nnupperlevel;
+    }
 
     double nnupperlevel_so_far = 0.;
     for (int upper = 0; upper < get_nlevels(element, lowerion + 1); upper++)
@@ -837,25 +866,6 @@ double calculate_ionrecombcoeff_per_gmpop(
              get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
   return alpha;
-}
-
-
-double calculate_recombcoeff_ion_per_ionpop(
-  const int modelgridindex, const float T_e,
-  const int element, const int upperion,
-  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-  const bool lower_superlevel_only)
-// multiply by upper ground multiplet population and nne to get a rate
-{
-  const int lowerion = upperion - 1;
-  if (lowerion < 0)
-    return 0.;
-
-  return (
-    calculate_ionrecombcoeff_per_gmpop(modelgridindex, T_e, element, upperion, assume_lte,
-                                        collisional_not_radiative, printdebug, lower_superlevel_only)
-    * get_groundmultiplet_pop(modelgridindex, T_e, element, upperion, assume_lte)
-    / ionstagepop(modelgridindex, element, upperion));
 }
 
 
@@ -953,7 +963,9 @@ static void read_recombrate_file(void)
         const double input_rrc_low_n = x * T_highestbelow.rrc_low_n + (1 - x) * T_lowestabove.rrc_low_n;
         const double input_rrc_total = x * T_highestbelow.rrc_total + (1 - x) * T_lowestabove.rrc_total;
 
-        double rrc = calculate_ionrecombcoeff_per_gmpop(-1, Te_estimate, element, ion, true, false, false, false);
+        const bool per_groundmultipletpop = true;
+
+        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, true, false, false, false, per_groundmultipletpop);
         printout("              rrc: %10.3e\n", rrc);
 
         if (input_rrc_low_n >= 0)  // if it's < 0, ignore it
@@ -968,7 +980,7 @@ static void read_recombrate_file(void)
             for (int level = 0; level < nlevels; level++)
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
 
-            rrc = calculate_ionrecombcoeff_per_gmpop(-1, Te_estimate, element, ion, true, false, false, false);
+            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, true, false, false, false, per_groundmultipletpop);
             printout("              rrc: %10.3e\n", rrc);
           }
           else
@@ -982,7 +994,7 @@ static void read_recombrate_file(void)
 
         if (rrc < input_rrc_total)
         {
-          const double rrc_superlevel = calculate_ionrecombcoeff_per_gmpop(-1, Te_estimate, element, ion, true, false, false, true);
+          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, true, false, false, true, per_groundmultipletpop);
           printout("  rrc(superlevel): %10.3e\n", rrc_superlevel);
 
           if (rrc_superlevel > 0)
@@ -1006,7 +1018,7 @@ static void read_recombrate_file(void)
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
           }
 
-          rrc = calculate_ionrecombcoeff_per_gmpop(-1, Te_estimate, element, ion, true, false, false, false);
+          rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, true, false, false, false, per_groundmultipletpop);
           printout("              rrc: %10.3e\n", rrc);
         }
         else
