@@ -789,6 +789,7 @@ double calculate_ionrecombcoeff(
     }
     else
       upper_nlevels = get_nlevels(element, lowerion + 1);
+
     for (int upper = 0; upper < upper_nlevels; upper++)
     {
       double nnupperlevel;

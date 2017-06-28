@@ -787,36 +787,3 @@ void initialise_photoionestimators(void)
   }
 }
 
-
-double get_groundmultiplet_pop(
-  const int modelgridindex, const float T_e, const int element, const int ion, const bool assume_lte)
-{
-  // add up the population of the ground multiplet of the upper ion,
-  // assuming the phixs targets of the lower ion's zeroth level are the ground multiplet of the upper ion
-  assert(ion > 0);
-  double nnupperion = 0.;
-  // for (int upper = 0; upper < get_nlevels(element, lowerion + 1); upper++)
-  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion - 1, 0); phixstargetindex++)
-  {
-    const int upper = get_phixsupperlevel(element, ion - 1, 0, phixstargetindex);
-    double nnupperlevel;
-    if (assume_lte)
-    {
-      const double T_exc = T_e; // remember, other parts of the code in LTE mode use TJ, not T_e
-      const double E_level = epsilon(element, ion, upper);
-      const double E_ground = epsilon(element, ion, 0);
-      const double nnground = (modelgridindex >= 0) ? get_groundlevelpop(modelgridindex, element, ion) : 1.0;
-
-      nnupperlevel = (
-        nnground * stat_weight(element, ion, upper) / stat_weight(element, ion, 0) *
-        exp(-(E_level - E_ground) / KB / T_exc));
-    }
-    else
-    {
-      nnupperlevel = calculate_exclevelpop(modelgridindex, element, ion, upper);
-    }
-    nnupperion += nnupperlevel;
-  }
-
-  return nnupperion;
-}
