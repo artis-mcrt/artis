@@ -87,6 +87,8 @@ struct nt_solution_struct {
                   // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
   float eff_ionpot[MELEMENTS][MIONS]; // need to keep these (even if the spectrum is not kept) to
                                       // calculate the non-thermal ionization rate
+  // float nt_ioncoeff[MELEMENTS][MIONS]; // need to keep these for performance, and in case the
+  //                                      // spectrum is freed before packet propt
   float frac_heating;           // energy fractions should add up to 1.0 if the solution is good
   double deposition_rate_density;
   int timestep;                 // the quantities above were calculated for this timestep
