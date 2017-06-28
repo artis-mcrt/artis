@@ -909,6 +909,42 @@ static double nt_ionization_ratecoeff_wfapprox(int modelgridindex, int element, 
 }
 
 
+static double calculate_nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
+// Integrate the ionisation cross section over the electron degradation function to get the ionisation rate coefficient
+// i.e. multipy by the return value ion population to get a rate of ionisation per second
+// Do not call during packet propagation, as the y vector may not be in memory!
+{
+  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
+  gsl_vector *cross_section_vec_allshells = gsl_vector_calloc(SFPTS);
+
+  const int Z = get_element(element);
+  const int ionstage = get_ionstage(element, ion);
+
+  for (int collionindex = 0; collionindex < colliondatacount; collionindex++)
+  {
+    if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1)
+    {
+      get_xs_ionization_vector(cross_section_vec, collionindex);
+
+      gsl_vector_add(cross_section_vec_allshells, cross_section_vec);
+    }
+  }
+
+  gsl_vector_free(cross_section_vec);
+
+  double y_dot_crosssection = 0.;
+  gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+  gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec_allshells, &y_dot_crosssection);
+
+  gsl_vector_free(cross_section_vec_allshells);
+
+  const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
+  const double yscalefactor = deposition_rate_density_ev / E_init_ev;
+
+  return yscalefactor * y_dot_crosssection * DELTA_E;
+}
+
+
 static float calculate_eff_ionpot(int modelgridindex, int element, int ion)
 // Kozma & Fransson 1992 equation 12
 // result is in erg
@@ -952,7 +988,11 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
 
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
   if (deposition_rate_density > 0.)
+  {
     return deposition_rate_density / get_tot_nion(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
+    // alternatively, if the y vector is still in memory:
+    // return calculate_nt_ionization_ratecoeff(modelgridindex, element, ion);
+  }
   else
     return 0.;
 }
