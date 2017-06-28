@@ -20,16 +20,10 @@ double calculate_iongamma_per_ionpop(
   int modelgridindex, float T_e, int element, int lowerion,
   bool assume_lte, bool collisional_not_radiative, bool printdebug);
 
-double calculate_ionrecombcoeff_per_gmpop(
+double calculate_ionrecombcoeff(
   int modelgridindex, float T_e,
   int element, int upperion,
   bool assume_lte, bool collisional_not_radiative, bool printdebug,
-  bool lower_superlevel_only);
-
-double calculate_recombcoeff_ion_per_ionpop(
-  int modelgridindex, float T_e,
-  int element, int upperion,
-  bool assume_lte, bool collisional_not_radiative, bool printdebug,
-  bool lower_superlevel_only);
+  bool lower_superlevel_only, bool per_groundmultipletpop);
 
 #endif //RATECOEFF_H
