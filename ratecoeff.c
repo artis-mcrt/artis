@@ -964,9 +964,11 @@ static void read_recombrate_file(void)
         const double input_rrc_low_n = x * T_highestbelow.rrc_low_n + (1 - x) * T_lowestabove.rrc_low_n;
         const double input_rrc_total = x * T_highestbelow.rrc_total + (1 - x) * T_lowestabove.rrc_total;
 
+        const bool assume_lte = true;
+        const bool printdebug = false;
         const bool per_groundmultipletpop = true;
 
-        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, true, false, false, false, per_groundmultipletpop);
+        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
         printout("              rrc: %10.3e\n", rrc);
 
         if (input_rrc_low_n >= 0)  // if it's < 0, ignore it
@@ -981,7 +983,7 @@ static void read_recombrate_file(void)
             for (int level = 0; level < nlevels; level++)
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
 
-            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, true, false, false, false, per_groundmultipletpop);
+            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
             printout("              rrc: %10.3e\n", rrc);
           }
           else
@@ -995,7 +997,7 @@ static void read_recombrate_file(void)
 
         if (rrc < input_rrc_total)
         {
-          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, true, false, false, true, per_groundmultipletpop);
+          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, true, per_groundmultipletpop);
           printout("  rrc(superlevel): %10.3e\n", rrc_superlevel);
 
           if (rrc_superlevel > 0)
@@ -1019,7 +1021,7 @@ static void read_recombrate_file(void)
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
           }
 
-          rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, true, false, false, false, per_groundmultipletpop);
+          rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
           printout("              rrc: %10.3e\n", rrc);
         }
         else
