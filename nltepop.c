@@ -460,6 +460,8 @@ static void nltepop_matrix_normalise(
   assert(rate_matrix->size1 == nlte_dimension);
   assert(rate_matrix->size2 == nlte_dimension);
 
+  // TODO: consider replacing normalisation by LTE populations with
+  // GSL's gsl_linalg_balance_matrix(gsl_matrix * A, gsl_vector * D) function instead
   for (unsigned int column = 0; column < nlte_dimension; column++)
   {
     int ion, level;
@@ -560,8 +562,10 @@ static void nltepop_matrix_solve(
   gsl_vector_free(x_best);
   gsl_vector_free(gsl_work_vector);
 
-  gsl_vector_memcpy(popvec, x);                          // are equal to the normed pops multiplied
-  gsl_vector_mul(popvec, pop_normfactor_vec);           // by the normalisation factors
+  // get the real populations using the x vector and the normalisation factors
+  gsl_vector_memcpy(popvec, x);
+  gsl_vector_mul(popvec, pop_normfactor_vec);
+  // popvec will be used contains the real population densities
 
   for (unsigned int row = 0; row < nlte_dimension; row++)
   {
