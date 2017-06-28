@@ -19,6 +19,7 @@
 #define EMAX 1000. // eV
 #define EMIN 1. // eV
 
+#define yscalefactoroverride(mgi) (0)
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
 // #define yscalefactoroverride(mgi) (1e10)
@@ -28,6 +29,21 @@
 // #define SFPTS 10000  // number of energy points in the Spencer-Fano solution vector
 // #define EMAX 3000. // eV
 // #define EMIN 1. // eV
+//
+// static double ionstagepop_override(const int modelgridindex, const int element, const int ion)
+// Fake the composition to test the NT solver
+// {
+//   const double nntot = get_tot_nion(modelgridindex);
+//   if (get_element(element) == 8)
+//   {
+//     const int ion_stage = get_ionstage(element, ion);
+//     if (ion_stage == 1)
+//       return 0.99 * nntot;
+//     else if (ion_stage == 2)
+//       return 0.01 * nntot;
+//   }
+//   return 0.;
+// }
 
 #define STORE_NT_SPECTRUM false // if this is on, the non-thermal energy spectrum will be kept in memory
                                 // for every grid cell during packet propagation, which
@@ -486,22 +502,6 @@ static double Psecondary(double e_p, double epsilon, double I, double J)
 {
   const double e_s = epsilon - I;
   return 1 / (J * atan((e_p - I) / 2 / J) * (1 + pow(e_s / J, 2)));
-}
-
-
-// Fake the composition to test the NT solver
-static double ionstagepop_override(const int modelgridindex, const int element, const int ion)
-{
-  const double nntot = get_tot_nion(modelgridindex);
-  if (get_element(element) == 8)
-  {
-    const int ion_stage = get_ionstage(element, ion);
-    if (ion_stage == 1)
-      return 0.99 * nntot;
-    else if (ion_stage == 2)
-      return 0.01 * nntot;
-  }
-  return 0.;
 }
 
 
