@@ -367,6 +367,26 @@ static int get_y(int modelgridindex, double energy_ev)
 }
 
 
+static double electron_loss_rate(double energy, double nne)
+// -dE / dx for fast electrons
+// energy is in ergs
+// return units are erg / cm
+{
+  const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
+  const double zetae = H  * omegap / 2 / PI;
+  const double v = sqrt(2 * energy / ME);
+  if (energy > 14 * EV)
+  {
+    return nne * 2 * PI * pow(QE,4) / energy * log(2 * energy / zetae);
+  }
+  else
+  {
+    const double eulergamma = 0.577215664901532;
+    return nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (eulergamma * pow(QE, 2) * omegap));
+  }
+}
+
+
 static double xs_excitation(int lineindex, double epsilon_trans, double energy)
 // collisional excitation cross section in cm^2
 // energies are in erg
@@ -455,27 +475,7 @@ static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, int lineinde
 }
 
 
-static double electron_loss_rate(double energy, double nne)
-// -dE / dx for fast electrons
-// energy is in ergs
-// return units are erg / cm
-{
-  const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
-  const double zetae = H  * omegap / 2 / PI;
-  const double v = sqrt(2 * energy / ME);
-  if (energy > 14 * EV)
-  {
-    return nne * 2 * PI * pow(QE,4) / energy * log(2 * energy / zetae);
-  }
-  else
-  {
-    const double eulergamma = 0.577215664901532;
-    return nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (eulergamma * pow(QE, 2) * omegap));
-  }
-}
-
-
-static double xs_impactionization(double energy_ev, int collionindex)
+static double xs_impactionization(const double energy_ev, const int collionindex)
 // impact ionization cross section in cm^2
 // energy and ionization_potential should be in eV
 // fitting forumula of Younger 1981
@@ -542,7 +542,7 @@ static double get_J(const int Z, const int ionstage, const double ionpot_ev)
 }
 
 
-static double N_e(int modelgridindex, double energy)
+static double N_e(const int modelgridindex, const double energy)
 // Kozma & Fransson equation 6.
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
 // possibly not valid for energy > E_0
@@ -821,7 +821,7 @@ static double get_mean_binding_energy(int element, int ion)
 }
 
 
-static double get_oneoverw(int element, int ion, int modelgridindex)
+static double get_oneoverw(const int element, const int ion, const int modelgridindex)
 {
   // Routine to compute the work per ion pair for doing the NT ionization calculation.
   // Makes use of EXTREMELY SIMPLE approximations - high energy limits only
@@ -830,16 +830,16 @@ static double get_oneoverw(int element, int ion, int modelgridindex)
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
   // denominator is extremely simplified. Need to get the mean Z value.
 
-  double Zbar = 0.0;
+  double Zbar = 0.0;  // mass-weighted average atomic number
   for (int ielement = 0; ielement < nelements; ielement++)
   {
     Zbar += modelgrid[modelgridindex].composition[ielement].abundance * elements[ielement].anumber;
   }
   //printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
 
-  double Aconst = 1.33e-14 * EV * EV;
-  double binding = get_mean_binding_energy(element, ion);
-  double oneoverW = Aconst * binding / Zbar / (2 * 3.14159 * pow(QE, 4));
+  const double Aconst = 1.33e-14 * EV * EV;
+  const double binding = get_mean_binding_energy(element, ion);
+  const double oneoverW = Aconst * binding / Zbar / (2 * 3.14159 * pow(QE, 4));
   //printout("For element %d ion %d I got W of %g (eV)\n", element, ion, 1./oneoverW/EV);
 
   return oneoverW;
@@ -852,7 +852,7 @@ static double calculate_nt_frac_excitation(int modelgridindex, int element, int 
 {
   const double nnion = ionstagepop(modelgridindex, element, ion);
   gsl_vector *xs_excitation_vec_sum_alltrans = gsl_vector_calloc(SFPTS);
-  gsl_vector *xs_excitation_epsilontrans_vec = gsl_vector_alloc(SFPTS);
+  gsl_vector *xs_excitation_epsilontrans_vec = gsl_vector_calloc(SFPTS);
 
   // for (int level = 0; level < get_nlevels(element,ion); level++)
   const int level = 0; // just consider excitation from the ground level
@@ -884,14 +884,15 @@ static double calculate_nt_frac_ionization_shell(int modelgridindex, int element
 // the fraction of deposition energy that goes into ionising electrons in this particular shell
 {
   const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
-  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
-
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
+
+  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
   get_xs_ionization_vector(cross_section_vec, collionindex);
 
+  gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+
   double y_dot_crosssection = 0.;
-  gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
-  gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec, &y_dot_crosssection);
+  gsl_blas_ddot(&yvecview.vector, cross_section_vec, &y_dot_crosssection);
   gsl_vector_free(cross_section_vec);
 
   return nnion * ionpot_ev * y_dot_crosssection * DELTA_E / E_init_ev;
@@ -899,7 +900,7 @@ static double calculate_nt_frac_ionization_shell(int modelgridindex, int element
 
 
 static double nt_ionization_ratecoeff_wfapprox(int modelgridindex, int element, int ion)
-// this is actually a non-thermal ionization rate coefficient (multiply by population to get rate)
+// non-thermal ionization rate coefficient (multiply by population to get rate)
 {
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
   // to get the non-thermal ionization rate we need to divide the energy deposited
@@ -910,8 +911,8 @@ static double nt_ionization_ratecoeff_wfapprox(int modelgridindex, int element, 
 
 
 static double calculate_nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
-// Integrate the ionisation cross section over the electron degradation function to get the ionisation rate coefficient
-// i.e. multipy by the return value ion population to get a rate of ionisation per second
+// Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
+// i.e. multiply this by ion population to get a rate of ionizations per second
 // Do not call during packet propagation, as the y vector may not be in memory!
 {
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
@@ -925,7 +926,6 @@ static double calculate_nt_ionization_ratecoeff(int modelgridindex, int element,
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1)
     {
       get_xs_ionization_vector(cross_section_vec, collionindex);
-
       gsl_vector_add(cross_section_vec_allshells, cross_section_vec);
     }
   }
@@ -946,30 +946,40 @@ static double calculate_nt_ionization_ratecoeff(int modelgridindex, int element,
 
 
 static float calculate_eff_ionpot(int modelgridindex, int element, int ion)
-// Kozma & Fransson 1992 equation 12
-// result is in erg
+// Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
+// the result is in ergs
 {
   const int Z = get_element(element);
   const int ionstage = get_ionstage(element, ion);
   const double nnion = ionstagepop(modelgridindex, element, ion); // ions/cm^3
   const double tot_nion = get_tot_nion(modelgridindex);
-  double fracionization_over_ionpot_sum = 0.;
-  for (int n = 0; n < colliondatacount; n++)
-  {
-    if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
-    {
-      const double ionpot = colliondata[n].ionpot_ev * EV;
-      const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, n);
+  const double X_ion = nnion / tot_nion; // molar fraction of this ion
 
-      fracionization_over_ionpot_sum += frac_ionization_shell / ionpot;
+  // The ionization rates of all shells of an ion add to make the ion's total ionization rate,
+  // i.e., Gamma_ion = Gamma_shell_a + Gamma_shell_b + ...
+  // And since the ionization rate is inversely proportional to the effective ion potential,
+  // we solve:
+  // (eta_ion / ionpot_ion) = (eta_shell_a / ionpot_shell_a) + (eta_shell_b / ionpot_shell_b) + ...
+  // where eta is the fraction of the deposition energy going into ionization of the ion or shell
+
+  double eta_over_ionpot_sum = 0.;
+  for (int collionindex = 0; collionindex < colliondatacount; collionindex++)
+  {
+    if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1)
+    {
+      const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionindex);
+      const double ionpot = colliondata[collionindex].ionpot_ev * EV;
+
+      eta_over_ionpot_sum += frac_ionization_shell / ionpot;
     }
   }
-  // this inverse of sum of inverses should mean that the ionization rates of the shells sum together
-  return nnion / tot_nion / fracionization_over_ionpot_sum;
+
+  return X_ion / eta_over_ionpot_sum;
 }
 
 
 static float get_eff_ionpot(int modelgridindex, int element, int ion)
+// get the effective ion potential from the stored value
 {
   return nt_solution[modelgridindex].eff_ionpot[element][ion];
   // OR
@@ -1125,10 +1135,12 @@ static void analyse_sf_solution(int modelgridindex)
       printout("    frac_excitation: %g\n", frac_excitation_ion);
       printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("    eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
-      // printout("    workfn approx Gamma: %9.3e\n",
-      //          nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
-      // printout("    Spencer-Fano Gamma:  %9.3e\n",
-      //          nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
+      printout("    workfn approx Gamma: %9.3e\n",
+               nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
+      printout("    Spencer-Fano Gamma:  %9.3e\n",
+               nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
+      printout("    SF integral Gamma:   %9.3e\n",
+               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion));
     }
   }
 
@@ -1207,9 +1219,10 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, int element, int ion, 
 }
 
 
-static void sfmatrix_add_ionisation(gsl_matrix *sfmatrix, const int Z, const int ionstage, const double nnion, double *E_0)
+static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int ionstage, const double nnion, double *E_0)
 {
-  // ionization terms
+  // add the ionization terms to the Spencer-Fano matrix
+  // update the value of E_0, the minimum energy for excitation/ionization
   for (int n = 0; n < colliondatacount; n++)
   {
     if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
@@ -1218,7 +1231,7 @@ static void sfmatrix_add_ionisation(gsl_matrix *sfmatrix, const int Z, const int
       const double J = get_J(Z, ionstage, ionpot_ev);
 
       if (ionpot_ev < *E_0 || *E_0 < 0.)
-        *E_0 = ionpot_ev; // new minimum energy for excitation/ionization
+        *E_0 = ionpot_ev; // this ionization potential is the new minimum energy
 
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
@@ -1248,7 +1261,6 @@ static void sfmatrix_add_ionisation(gsl_matrix *sfmatrix, const int Z, const int
             *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
         }
       }
-      // break; // consider only the valence shell
     }
   }
 }
@@ -1404,7 +1416,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
       printout("%d ", ionstage);
 
       sfmatrix_add_excitation(sfmatrix, element, ion, nnion, &E_0);
-      sfmatrix_add_ionisation(sfmatrix, Z, ionstage, nnion, &E_0);
+      sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion, &E_0);
     }
     if (!first_included_ion_of_element)
       printout("\n");
