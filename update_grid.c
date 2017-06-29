@@ -374,7 +374,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
     if (NT_ON && NT_SOLVE_SPENCERFANO)
     {
       const time_t sys_time_start = time(NULL);
-      nt_solve_spencerfano(n, nts);  // depends on the ionisation balance, and weakly on nne
+      nt_solve_spencerfano(n, nts);  // depends on the ionization balance, and weakly on nne
       duration_solve_spencerfano = time(NULL) - sys_time_start;
     }
 
@@ -652,7 +652,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
       /// applying any temperature correction
       if ((nts - itstep) == 0 && titer == 0)
       {
-        /// Determine renormalisation factor for corrected photoionisation cross-sections
+        /// Determine renormalisation factor for corrected photoionization cross-sections
         #ifndef FORCE_LTE
         #if (!NO_LUT_PHOTOION)
           if (!simulation_continued_from_saved)
@@ -1338,7 +1338,7 @@ double calculate_populations(const int modelgridindex)
       const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
 
-      /// Use ionisationfractions to calculate the groundlevel populations
+      /// Use ionizationfractions to calculate the groundlevel populations
       for (int ion = 0; ion < nions; ion++)
       {
         double nnion;
@@ -1404,7 +1404,7 @@ double calculate_electron_densities(const int modelgridindex)
     const double nnelement = elem_abundance / elements[element].mass * get_rho(modelgridindex);
     nne_tot += nnelement * get_element(element);
 
-    // Use ionisation fractions to calculate the free electron contributions
+    // Use ionization fractions to calculate the free electron contributions
     if (elem_abundance > 0)
     {
       const int nions = get_nions(element);
