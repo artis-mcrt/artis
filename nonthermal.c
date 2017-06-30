@@ -52,7 +52,7 @@
                                 // non-thermal excitation rates because there are
                                 // many more transitions to store than there are spectrum samples
 
-static const double DELTA_E = (EMAX - EMIN) / SFPTS;
+static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
 
 static const double minionfraction = 1.e-4;  // minimum number fraction of the total population to include in SF solution
 
