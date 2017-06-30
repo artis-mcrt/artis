@@ -1382,8 +1382,14 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
     *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
 
-    gsl_vector_const_view source_e_to_emax = gsl_vector_const_subvector(sourcevec, i, SFPTS - i);
-    const double source_integral_to_emax = gsl_blas_dasum(&source_e_to_emax.vector) * DELTA_E;
+    double source_integral_to_emax;
+    if (i < SFPTS - 1)
+    {
+      gsl_vector_const_view source_e_to_emax = gsl_vector_const_subvector(sourcevec, i + 1, SFPTS - i - 1);
+      source_integral_to_emax = gsl_blas_dasum(&source_e_to_emax.vector) * DELTA_E;
+    }
+    else
+      source_integral_to_emax = 0;
 
     gsl_vector_set(rhsvec, i, source_integral_to_emax);
   }
