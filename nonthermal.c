@@ -210,9 +210,9 @@ void nt_init(int my_rank)
         gsl_vector_set(sourcevec, s, 1. / (DELTA_E * source_spread_pts));
     }
 
-    double en_dot_sourcevec;
-    gsl_blas_ddot(envec, sourcevec, &en_dot_sourcevec);
-    E_init_ev = en_dot_sourcevec * DELTA_E;
+    double envec_dot_sourcevec;
+    gsl_blas_ddot(envec, sourcevec, &envec_dot_sourcevec);
+    E_init_ev = envec_dot_sourcevec * DELTA_E;
 
     // or put all of the source into one point at EMAX
     // gsl_vector_set_zero(sourcevec);
