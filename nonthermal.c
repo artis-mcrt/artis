@@ -376,7 +376,7 @@ static double electron_loss_rate(double energy, double nne)
   const double v = sqrt(2 * energy / ME);
   if (energy > 14 * EV)
   {
-    return nne * 2 * PI * pow(QE,4) / energy * log(2 * energy / zetae);
+    return nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
   }
   else
   {
@@ -623,7 +623,9 @@ static double N_e(const int modelgridindex, const double energy)
 static float calculate_frac_heating(int modelgridindex)
 // Kozma & Fransson equation 3
 {
+  // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
+
   const float nne = get_nne(modelgridindex);
   const double E_0 = nt_solution[modelgridindex].E_0;
 
