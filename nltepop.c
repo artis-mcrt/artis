@@ -493,6 +493,27 @@ static void nltepop_matrix_normalise(
 }
 
 
+static bool matrix_is_singular(const gsl_matrix * LU)
+{
+  size_t i, n = LU->size1;
+
+  for (i = 0; i < n; i++)
+  {
+    const double u = gsl_matrix_get(LU, i, i);
+    if (u == 0) return true;
+  }
+
+ return false;
+}
+
+
+void nlte_gsl_error (const char * reason, const char * file, int line, int gsl_errno)
+{
+  printout("gsl: %s:%d: %s: %s (ERRNO: %d)\n", file, line, "ERROR", reason, gsl_errno);
+  abort();
+}
+
+
 static void nltepop_matrix_solve(
   const int element,
   const gsl_matrix *restrict rate_matrix,
@@ -518,8 +539,18 @@ static void nltepop_matrix_solve(
   int s; // sign of the transformation
   gsl_linalg_LU_decomp(rate_matrix_LU_decomp, p, &s);
 
+  if (matrix_is_singular(rate_matrix_LU_decomp))
+  {
+    printout("ERROR: NLTE matrix is singular for element Z=%d!", get_element(element));
+    abort();
+  }
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(nlte_gsl_error);
+
   // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
   gsl_linalg_LU_solve(rate_matrix_LU_decomp, p, balance_vector, x);
+
+  gsl_set_error_handler(previous_handler);
 
   //gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
 
