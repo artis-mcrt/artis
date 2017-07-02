@@ -512,5 +512,6 @@ extern bool use_cellhist;
 #endif
 
 int printout(const char *restrict format, ...);
+void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
 
 #endif // SN3D_H

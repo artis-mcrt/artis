@@ -1384,6 +1384,13 @@ int printout(const char *restrict format, ...)
 }
 
 
+void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno)
+{
+  printout("gsl: %s:%d: %s: %s (ERRNO: %d)\n", file, line, "ERROR", reason, gsl_errno);
+  abort();
+}
+
+
 /*void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element)
 {
   int nions,nlevels,nuptrans;
