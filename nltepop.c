@@ -507,13 +507,6 @@ static bool matrix_is_singular(const gsl_matrix * LU)
 }
 
 
-void nlte_gsl_error (const char * reason, const char * file, int line, int gsl_errno)
-{
-  printout("gsl: %s:%d: %s: %s (ERRNO: %d)\n", file, line, "ERROR", reason, gsl_errno);
-  abort();
-}
-
-
 static void nltepop_matrix_solve(
   const int element,
   const gsl_matrix *restrict rate_matrix,
@@ -545,7 +538,7 @@ static void nltepop_matrix_solve(
     abort();
   }
 
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(nlte_gsl_error);
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
   // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
   gsl_linalg_LU_solve(rate_matrix_LU_decomp, p, balance_vector, x);
