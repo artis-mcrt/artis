@@ -1,4 +1,4 @@
-#include <assert.h>
+#include "assert.h"
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"

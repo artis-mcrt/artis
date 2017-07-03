@@ -10,7 +10,7 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-#include <assert.h>
+#include "assert.h"
 #include <stdarg.h>  // needed for printout()
 #include "threadprivate.h"
 #include "exspec.h"
