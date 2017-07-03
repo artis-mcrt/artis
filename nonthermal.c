@@ -15,9 +15,9 @@
 #include "update_grid.h"
 #include "sn3d.h"
 
-#define SFPTS 4096  // number of energy points in the Spencer-Fano solution vector
-#define EMAX 5000. // eV
-#define EMIN 1. // eV
+#define SFPTS 10000  // number of energy points in the Spencer-Fano solution vector
+#define EMAX 1000. // eV
+#define EMIN 0.0516 // eV
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
