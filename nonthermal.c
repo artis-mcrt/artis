@@ -1004,7 +1004,7 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
   }
 
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-  if (deposition_rate_density > 0.)
+  if (deposition_rate_density > MINDEPRATE)
   {
     return deposition_rate_density / get_tot_nion(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
     // alternatively, if the y vector is still in memory:
