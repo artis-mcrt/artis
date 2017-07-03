@@ -1108,7 +1108,7 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 
 static double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  const double epsrel = 1e-4;
+  const double epsrel = 2e-4;
   const double epsabs = 0.;
 
   gsl_integration_workspace *restrict workspace = gsl_integration_workspace_alloc(8192);
