@@ -1137,13 +1137,16 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   const int status = gsl_integration_qag(
     &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 8192, GSL_INTEG_GAUSS31, workspace, &gammacorr, &error);
 
-  if (status != 0)
-  {
-    printout("corrphotoioncoeff integrator status %d. Integral value %g.\n", status, gammacorr);
-  }
   gsl_set_error_handler(previous_handler);
 
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+
+  if (status != 0)
+  {
+    error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+    printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d gamma %g error %g\n",
+             status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
+  }
 
   gsl_integration_workspace_free(workspace);
 
