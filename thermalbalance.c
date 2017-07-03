@@ -46,7 +46,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   /// If selected take direct gamma heating into account
   if (do_rlc_est == 3)
   {
-    heatingrates[tid].gamma = get_deposition_rate_density(modelgridindex);// * get_nt_frac_heating(modelgridindex);
+    heatingrates[tid].gamma = get_deposition_rate_density(modelgridindex) * get_nt_frac_heating(modelgridindex);
   }
   else
   {
