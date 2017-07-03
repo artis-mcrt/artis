@@ -493,7 +493,7 @@ static void nltepop_matrix_normalise(
 }
 
 
-static bool matrix_is_singular(const gsl_matrix * LU)
+static bool lumatrix_is_singular(const gsl_matrix * LU)
 {
   size_t i, n = LU->size1;
 
@@ -507,7 +507,7 @@ static bool matrix_is_singular(const gsl_matrix * LU)
 }
 
 
-static void nltepop_matrix_solve(
+static bool nltepop_matrix_solve(
   const int element,
   const gsl_matrix *restrict rate_matrix,
   const gsl_vector *restrict balance_vector,
@@ -516,6 +516,7 @@ static void nltepop_matrix_solve(
 // solve rate_matrix * x = balance_vector,
 // then popvec[i] = x[i] / pop_norm_factor_vec[i]
 {
+  bool completed_solution;
   const unsigned int nlte_dimension = balance_vector->size;
   assert(pop_normfactor_vec->size == nlte_dimension);
   assert(rate_matrix->size1 == nlte_dimension);
@@ -532,90 +533,97 @@ static void nltepop_matrix_solve(
   int s; // sign of the transformation
   gsl_linalg_LU_decomp(rate_matrix_LU_decomp, p, &s);
 
-  if (matrix_is_singular(rate_matrix_LU_decomp))
+  if (lumatrix_is_singular(rate_matrix_LU_decomp))
   {
     printout("ERROR: NLTE matrix is singular for element Z=%d!", get_element(element));
-    abort();
+    // abort();
+    completed_solution = false;
   }
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-  // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
-  gsl_linalg_LU_solve(rate_matrix_LU_decomp, p, balance_vector, x);
-
-  gsl_set_error_handler(previous_handler);
-
-  //gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
-
-  const double TOLERANCE = 1e-40;
-
-  gsl_vector *gsl_work_vector = gsl_vector_alloc(nlte_dimension);
-  double error_best = -1.;
-  gsl_vector *x_best = gsl_vector_alloc(nlte_dimension); //population solution vector with lowest error
-  gsl_vector *residual_vector = gsl_vector_alloc(nlte_dimension);
-  int iteration;
-  for (iteration = 0; iteration < 10; iteration++)
+  else
   {
-    if (iteration > 0)
-      gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_work_vector);
+    gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
-    gsl_vector_memcpy(residual_vector, balance_vector);
-    gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, x, -1.0, residual_vector); // calculate Ax - b = residual
-    const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector))); // value of the largest absolute residual
+    // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
+    gsl_linalg_LU_solve(rate_matrix_LU_decomp, p, balance_vector, x);
 
-    if (error < error_best || error_best < 0.)
+    gsl_set_error_handler(previous_handler);
+
+    //gsl_linalg_HH_solve (&m.matrix, &b.vector, x);
+
+    const double TOLERANCE = 1e-40;
+
+    gsl_vector *gsl_work_vector = gsl_vector_alloc(nlte_dimension);
+    double error_best = -1.;
+    gsl_vector *x_best = gsl_vector_alloc(nlte_dimension); //population solution vector with lowest error
+    gsl_vector *residual_vector = gsl_vector_alloc(nlte_dimension);
+    int iteration;
+    for (iteration = 0; iteration < 10; iteration++)
     {
-      gsl_vector_memcpy(x_best, x);
-      error_best = error;
+      if (iteration > 0)
+        gsl_linalg_LU_refine(rate_matrix, rate_matrix_LU_decomp, p, balance_vector, x, gsl_work_vector);
+
+      gsl_vector_memcpy(residual_vector, balance_vector);
+      gsl_blas_dgemv(CblasNoTrans, 1.0, rate_matrix, x, -1.0, residual_vector); // calculate Ax - b = residual
+      const double error = fabs(gsl_vector_get(residual_vector, gsl_blas_idamax(residual_vector))); // value of the largest absolute residual
+
+      if (error < error_best || error_best < 0.)
+      {
+        gsl_vector_memcpy(x_best, x);
+        error_best = error;
+      }
+      //printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
+      if (error < TOLERANCE)
+      {
+        break;
+      }
     }
-    //printout("Linear algebra solver iteration %d has a maximum residual of %g\n",iteration,error);
-    if (error < TOLERANCE)
+    if (error_best >= 0.)
     {
-      break;
+      // printout("  NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of %g\n",iteration,error_best);
+      if (error_best > 1e-10)
+        printout("  NLTE solver matrix LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING!)\n",iteration,error_best);
+      gsl_vector_memcpy(x, x_best);
     }
+    gsl_permutation_free(p);
+    gsl_vector_free(x_best);
+    gsl_vector_free(gsl_work_vector);
+
+    // get the real populations using the x vector and the normalisation factors
+    gsl_vector_memcpy(popvec, x);
+    gsl_vector_mul(popvec, pop_normfactor_vec);
+    // popvec will be used contains the real population densities
+
+    for (unsigned int row = 0; row < nlte_dimension; row++)
+    {
+      double recovered_balance_vector_elem = 0.;
+      gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
+      gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
+
+      int ion, level;
+      get_ion_level_of_nlte_vector_index(row, element, &ion, &level);
+
+      // printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e departure ratio %.4f\n",
+      //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
+      //          recovered_balance_vector_elem, gsl_vector_get(x,row),
+      //          gsl_vector_get(popvec, row),
+      //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
+
+      if (gsl_vector_get(popvec, row) < 0.0)
+      {
+        printout("  WARNING: NLTE solver gave negative population to index %d (Z=%d ion_stage %d level %d), pop = %g. Forcing departure coeff to 1.0\n",
+                 row, get_element(element), get_ionstage(element, ion), level, gsl_vector_get(x, row) * gsl_vector_get(pop_normfactor_vec, row));
+        gsl_vector_set(popvec, row, 1.);
+      }
+    }
+
+    gsl_vector_free(residual_vector);
+    completed_solution = true;
   }
-  if (error_best >= 0.)
-  {
-    // printout("  NLTE solver matrix LU_refine: After %d iterations, keeping solution vector with a max residual of %g\n",iteration,error_best);
-    if (error_best > 1e-10)
-      printout("  NLTE solver matrix LU_refine: After %d iterations, best solution vector has a max residual of %g (WARNING!)\n",iteration,error_best);
-    gsl_vector_memcpy(x, x_best);
-  }
+  gsl_vector_free(x);
   gsl_matrix_free(rate_matrix_LU_decomp);
   gsl_permutation_free(p);
-  gsl_vector_free(x_best);
-  gsl_vector_free(gsl_work_vector);
 
-  // get the real populations using the x vector and the normalisation factors
-  gsl_vector_memcpy(popvec, x);
-  gsl_vector_mul(popvec, pop_normfactor_vec);
-  // popvec will be used contains the real population densities
-
-  for (unsigned int row = 0; row < nlte_dimension; row++)
-  {
-    double recovered_balance_vector_elem = 0.;
-    gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, row);
-    gsl_blas_ddot(&row_view.vector, x, &recovered_balance_vector_elem);
-
-    int ion, level;
-    get_ion_level_of_nlte_vector_index(row, element, &ion, &level);
-
-    // printout("index %4d (ion_stage %d level%4d): residual %+.2e recovered balance: %+.2e normed pop %.2e pop %.2e departure ratio %.4f\n",
-    //          row,get_ionstage(element,ion),level, gsl_vector_get(residual_vector,row),
-    //          recovered_balance_vector_elem, gsl_vector_get(x,row),
-    //          gsl_vector_get(popvec, row),
-    //          gsl_vector_get(x, row) / gsl_vector_get(x,get_nlte_vector_index(element,ion,0)));
-
-    if (gsl_vector_get(popvec, row) < 0.0)
-    {
-      printout("  WARNING: NLTE solver gave negative population to index %d (Z=%d ion_stage %d level %d), pop = %g. Forcing departure coeff to 1.0\n",
-               row, get_element(element), get_ionstage(element, ion), level, gsl_vector_get(x, row) * gsl_vector_get(pop_normfactor_vec, row));
-      gsl_vector_set(popvec, row, 1.);
-    }
-  }
-
-  gsl_vector_free(x);
-  gsl_vector_free(residual_vector);
+  return completed_solution;
 }
 
 
@@ -757,100 +765,127 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   gsl_vector *popvec = gsl_vector_alloc(nlte_dimension); // the true population densities
 
-  nltepop_matrix_solve(element, rate_matrix, balance_vector, popvec, pop_norm_factor_vec);
+  const bool matrix_solve_success = nltepop_matrix_solve(element, rate_matrix, balance_vector, popvec, pop_norm_factor_vec);
 
-  // double ion_populations[nions];
-  for (int ion = 0; ion < nions; ion++)
+  if (!matrix_solve_success)
   {
-    const int nlevels_nlte = get_nlevels_nlte(element, ion);
-    const int index_gs = get_nlte_vector_index(element, ion, 0);
-    // const int ion_stage = get_ionstage(element, ion);
-    // printout("  [ion_stage %d]\n", ion_stage);
-    //
-    // printout("    For ion_stage %d, the ground state populations are %g (function) and %g (matrix result with normed pop %g, ltepopnormfactor %g)\n",get_ionstage(element,ion),
-    //          get_groundlevelpop(modelgridindex, element, ion), gsl_vector_get(popvec, index_gs),
-    //          gsl_vector_get(x, index_gs), gsl_vector_get(pop_norm_factor_vec, index_gs));
+    printout("WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix. Attempting to use LTE solution instead\n",
+             modelgridindex, timestep, atomic_number);
 
-    // store the NLTE level populations
-    const int nlte_start = elements[element].ions[ion].first_nlte;
-    double solution_ion_pop = 0.0;
-    for (int level = 1; level <= nlevels_nlte; level++)
+    nltepop_reset_element(modelgridindex, element);
+
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
+      modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
+
+    const float nne = get_nne(modelgridindex);
+    const double abundance = get_abundance(modelgridindex,element);
+    const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
+    for (int ion = 0; ion < nions; ion++)
     {
-      const int index = get_nlte_vector_index(element, ion, level);
-      modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = gsl_vector_get(popvec, index) / get_rho(modelgridindex);
-      solution_ion_pop += gsl_vector_get(popvec, index);
+      double nnion;
+      if (ion == 0)
+        nnion = nnelement * ionfract(element, ion, modelgridindex, nne);
+      else
+        nnion = MINPOP;
+
+      modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
+        nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+      assert(isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
+    }
+  }
+  {
+    // double ion_populations[nions];
+    for (int ion = 0; ion < nions; ion++)
+    {
+      const int nlevels_nlte = get_nlevels_nlte(element, ion);
+      const int index_gs = get_nlte_vector_index(element, ion, 0);
+      // const int ion_stage = get_ionstage(element, ion);
+      // printout("  [ion_stage %d]\n", ion_stage);
+      //
+      // printout("    For ion_stage %d, the ground state populations are %g (function) and %g (matrix result with normed pop %g, ltepopnormfactor %g)\n",get_ionstage(element,ion),
+      //          get_groundlevelpop(modelgridindex, element, ion), gsl_vector_get(popvec, index_gs),
+      //          gsl_vector_get(x, index_gs), gsl_vector_get(pop_norm_factor_vec, index_gs));
+
+      // store the NLTE level populations
+      const int nlte_start = elements[element].ions[ion].first_nlte;
+      double solution_ion_pop = 0.0;
+      for (int level = 1; level <= nlevels_nlte; level++)
+      {
+        const int index = get_nlte_vector_index(element, ion, level);
+        modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = gsl_vector_get(popvec, index) / get_rho(modelgridindex);
+        solution_ion_pop += gsl_vector_get(popvec, index);
+      }
+
+      // store the superlevel population if there is one
+      if (nlevels_nlte != (get_nlevels(element,ion) - 1)) //a superlevel exists
+      {
+        const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
+        modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = gsl_vector_get(popvec, index_sl) /
+                                                                       modelgrid[modelgridindex].rho /
+                                                                       superlevel_partfunc[ion];
+
+        solution_ion_pop += gsl_vector_get(popvec, index_sl);
+      }
+      // printout("    I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n",
+      //          modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
+      //          modelgrid[modelgridindex].composition[element].partfunct[ion],
+      //          (modelgrid[modelgridindex].composition[element].partfunct[ion] *
+      //            modelgrid[modelgridindex].composition[element].groundlevelpop[ion]
+      //            / stat_weight(element, ion, 0)));
+
+      // ionstagepop here must be called before setting the new ground level population
+      // printout("    For ion_stage %d the total population is %g, but was previously %g\n",
+      //          ion_stage,solution_ion_pop,ionstagepop(modelgridindex, element, ion));
+
+      // store the ground level population
+      modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
+      solution_ion_pop += gsl_vector_get(popvec, index_gs);
+
+      precalculate_partfuncts(modelgridindex);
+
+      // ion_populations[ion] = solution_ion_pop;
+      // if (ion > 0)
+      // {
+      //   const double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
+      //
+      //   const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
+      //   const float T_e = get_Te(modelgridindex);
+      //   const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion-1] / modelgrid[modelgridindex].composition[element].partfunct[ion];
+      //   const double gs_g_ratio = stat_weight(element,ion-1,0) / stat_weight(element,ion,0);
+      //   const double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
+      //   const double solution_ion_pop_ratio = ion_populations[ion-1] / ion_populations[ion];
+      //   const double sbphi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
+      //
+      //   printout("    The ratio of groundlevel pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
+      //            get_ionstage(element,ion-1),ion_stage,gspopratio,sbphi_gs,gspopratio/sbphi_gs);
+      //   printout("    The ratio of total pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
+      //            get_ionstage(element,ion-1),ion_stage,solution_ion_pop_ratio,sbphi,solution_ion_pop_ratio/sbphi);
+      //   const float nne = get_nne(modelgridindex);
+      //   // calculate_partfunct(element, ion, modelgridindex) * modelgrid[modelgridindex].composition[element].groundlevelpop[ion] / stat_weight(element,ion,0))
+      //   printout("    The corresponding phi-factor is: %g\n", (solution_ion_pop_ratio / nne));
+      //   printout("    The ionization solver gives phi(ion_stage=%d / %d) = %g\n",
+      //            get_ionstage(element, ion-1), get_ionstage(element, ion), phi(element, ion-1, modelgridindex));
+      // }
+
+
+      //double nne = get_nne(modelgridindex);
+      //printout("  From ion fract, the ion pop should be %g\n", ionfract(element, ion, modelgridindex, nne)*get_abundance(modelgridindex,element)/ elements[element].mass * get_rho(modelgridindex));
+      //printout("  I think that the element population is: %g (from abundance %g and rho %g)\n", get_abundance(modelgridindex,element)/elements[element].mass*get_rho(modelgridindex), get_abundance(modelgridindex,element), get_rho(modelgridindex));
+      //printout("  I currently think that the top ion is: %d\n", elements_uppermost_ion[tid][element]);
     }
 
-    // store the superlevel population if there is one
-    if (nlevels_nlte != (get_nlevels(element,ion) - 1)) //a superlevel exists
+    const double elem_pop_abundance = get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex);
+    const double elem_pop_matrix = gsl_blas_dasum(popvec);
+    const double elem_pop_error_percent = fabs((elem_pop_abundance / elem_pop_matrix) - 1) * 100;
+    if (elem_pop_error_percent > 1.0)
     {
-      const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
-      modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = gsl_vector_get(popvec, index_sl) /
-                                                                     modelgrid[modelgridindex].rho /
-                                                                     superlevel_partfunc[ion];
-
-      solution_ion_pop += gsl_vector_get(popvec, index_sl);
+      printout("  WARNING: The element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %d%%\n",
+               elem_pop_abundance, elem_pop_matrix, elem_pop_error_percent);
     }
-    // printout("    I had a ground level pop of %g, a part fn of %g and therefore an ion pop of %g\n",
-    //          modelgrid[modelgridindex].composition[element].groundlevelpop[ion],
-    //          modelgrid[modelgridindex].composition[element].partfunct[ion],
-    //          (modelgrid[modelgridindex].composition[element].partfunct[ion] *
-    //            modelgrid[modelgridindex].composition[element].groundlevelpop[ion]
-    //            / stat_weight(element, ion, 0)));
 
-    // ionstagepop here must be called before setting the new ground level population
-    // printout("    For ion_stage %d the total population is %g, but was previously %g\n",
-    //          ion_stage,solution_ion_pop,ionstagepop(modelgridindex, element, ion));
-
-    // store the ground level population
-    modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = gsl_vector_get(popvec, index_gs);
-    solution_ion_pop += gsl_vector_get(popvec, index_gs);
-
-    precalculate_partfuncts(modelgridindex);
-
-    // ion_populations[ion] = solution_ion_pop;
-    // if (ion > 0)
-    // {
-    //   const double gspopratio = modelgrid[modelgridindex].composition[element].groundlevelpop[ion-1] / modelgrid[modelgridindex].composition[element].groundlevelpop[ion];
-    //
-    //   const double ionpot = epsilon(element,ion,0) - epsilon(element,ion-1,0);
-    //   const float T_e = get_Te(modelgridindex);
-    //   const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion-1] / modelgrid[modelgridindex].composition[element].partfunct[ion];
-    //   const double gs_g_ratio = stat_weight(element,ion-1,0) / stat_weight(element,ion,0);
-    //   const double sbphi_gs = gs_g_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
-    //   const double solution_ion_pop_ratio = ion_populations[ion-1] / ion_populations[ion];
-    //   const double sbphi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e) * get_nne(modelgridindex);
-    //
-    //   printout("    The ratio of groundlevel pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
-    //            get_ionstage(element,ion-1),ion_stage,gspopratio,sbphi_gs,gspopratio/sbphi_gs);
-    //   printout("    The ratio of total pops (ion %d)/(ion %d) is %g, Saha-Boltzmann value is %g ratio %g\n",
-    //            get_ionstage(element,ion-1),ion_stage,solution_ion_pop_ratio,sbphi,solution_ion_pop_ratio/sbphi);
-    //   const float nne = get_nne(modelgridindex);
-    //   // calculate_partfunct(element, ion, modelgridindex) * modelgrid[modelgridindex].composition[element].groundlevelpop[ion] / stat_weight(element,ion,0))
-    //   printout("    The corresponding phi-factor is: %g\n", (solution_ion_pop_ratio / nne));
-    //   printout("    The ionization solver gives phi(ion_stage=%d / %d) = %g\n",
-    //            get_ionstage(element, ion-1), get_ionstage(element, ion), phi(element, ion-1, modelgridindex));
-    // }
-
-
-    //double nne = get_nne(modelgridindex);
-    //printout("  From ion fract, the ion pop should be %g\n", ionfract(element, ion, modelgridindex, nne)*get_abundance(modelgridindex,element)/ elements[element].mass * get_rho(modelgridindex));
-    //printout("  I think that the element population is: %g (from abundance %g and rho %g)\n", get_abundance(modelgridindex,element)/elements[element].mass*get_rho(modelgridindex), get_abundance(modelgridindex,element), get_rho(modelgridindex));
-    //printout("  I currently think that the top ion is: %d\n", elements_uppermost_ion[tid][element]);
-  }
-
-  const double elem_pop_abundance = get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex);
-  const double elem_pop_matrix = gsl_blas_dasum(popvec);
-  const double elem_pop_error_percent = fabs((elem_pop_abundance / elem_pop_matrix) - 1) * 100;
-  if (elem_pop_error_percent > 1.0)
-  {
-    printout("  WARNING: The element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %d%%\n",
-             elem_pop_abundance, elem_pop_matrix, elem_pop_error_percent);
-  }
-
-  if (individual_process_matricies)
-  {
-    if (atomic_number == 26 && timestep % 20 == 0)
+    if (individual_process_matricies && (atomic_number == 26 && timestep % 20 == 0))
     {
       // print_level_rates(element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
@@ -860,7 +895,10 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       // print_level_rates(element, 2, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(element, 3, 50, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
+  }
 
+  if (individual_process_matricies)
+  {
     gsl_matrix_free(rate_matrix_rad_bb);
     gsl_matrix_free(rate_matrix_coll_bb);
     gsl_matrix_free(rate_matrix_rad_bf);
