@@ -55,6 +55,7 @@
 static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
 
 static const double minionfraction = 1.e-4;  // minimum number fraction of the total population to include in SF solution
+static const double MINDEPRATE = 1e-2; // minimum deposition rate density to solve SF equation
 
 static const double A_naught_squared = 2.800285203e-17; // Bohr radius squared in cm^2
 
@@ -1041,8 +1042,11 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
     else if (Y_nt <= 0)
     {
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
-      printout("Warning: Spencer-Fano solver gives negative or zero ionization rate (%g) for element Z=%d ion_stage %d cell %d. Using WF approx instead = %g\n",
-               Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
+      if (Y_nt_wfapprox > 0)
+      {
+        printout("Warning: Spencer-Fano solver gives negative or zero ionization rate (%g) for element Z=%d ion_stage %d cell %d. Using WF approx instead = %g\n",
+                 Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
+      }
       return Y_nt_wfapprox;
     }
     else
