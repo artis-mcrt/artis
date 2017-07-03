@@ -206,7 +206,7 @@ void nt_init(int my_rank)
       // spread the source over some energy width
       if (s < SFPTS - source_spread_pts)
         gsl_vector_set(sourcevec, s, 0.);
-      else
+      else if (s < SFPTS)
         gsl_vector_set(sourcevec, s, 1. / (DELTA_E * source_spread_pts));
     }
 
@@ -338,7 +338,7 @@ void nt_close_file(void)
 static int get_energyindex_ev(double energy_ev)
 // finds the nearest energy point to energy_ev (may be above or below)
 {
-  int index = round((energy_ev - EMIN) / DELTA_E);
+  int index = floor((energy_ev - EMIN) / DELTA_E);
   if (index < 0)
     return 0;
   else if (index > SFPTS - 1)
@@ -350,11 +350,14 @@ static int get_energyindex_ev(double energy_ev)
 
 static int get_y(int modelgridindex, double energy_ev)
 {
-  int index = (energy_ev - EMIN) / DELTA_E;
-  if (index <= 0)
-    return get_y_sample(modelgridindex, 0);
-  else if (index >= SFPTS - 1)
-    return get_y_sample(modelgridindex, SFPTS - 1);
+  const int index = (energy_ev - EMIN) / DELTA_E;
+  // assert(index > 0);
+  if (index < 0)
+  {
+    return 0.;
+  }
+  else if (index > SFPTS - 1)
+    return 0.;
   else
   {
     const double enbelow = gsl_vector_get(envec, index);
@@ -484,7 +487,9 @@ static double xs_impactionization(const double energy_ev, const int collionindex
   const double u = energy_ev / ionpot_ev;
 
   if (u <= 1.)
+  {
     return 0;
+  }
   else
   {
     const double A = colliondata[collionindex].A;
@@ -595,12 +600,12 @@ static double N_e(const int modelgridindex, const double energy)
           {
             double endash = gsl_vector_get(envec, i);
 
-            if (i >= integral1startindex && i <= integral1stopindex)
+            if (i >= integral1startindex && i <= integral1stopindex) // integral from ionpot up to lambda
             {
               N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, n) * Psecondary(energy_ev + endash, endash, ionpot_ev, J) * DELTA_E;
             }
 
-            if (i >= integral2startindex)
+            if (i >= integral2startindex) // integral from 2E + I up to E_max
             {
               N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, n) * Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * DELTA_E;
             }
@@ -660,7 +665,7 @@ static float calculate_frac_heating(int modelgridindex)
 
 float get_nt_frac_heating(int modelgridindex)
 {
-  if (nt_solution[modelgridindex].frac_heating < 0)
+  if (nt_solution[modelgridindex].frac_heating <= 0)
   {
     printout("ERROR: get_nt_frac_heating called with no valid solution stored for cell %d\n", modelgridindex);
     abort();
@@ -1183,7 +1188,7 @@ static void analyse_sf_solution(int modelgridindex)
 }
 
 
-static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, int element, int ion, double nnion, double *E_0)
+static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int element, const int ion, const double nnion, double *E_0)
 {
   // excitation terms
   gsl_vector *vec_xs_excitation_nnion_deltae = gsl_vector_alloc(SFPTS);
@@ -1209,10 +1214,12 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, int element, int ion, 
       {
         const double en = gsl_vector_get(envec, i);
         const int stopindex = get_energyindex_ev(en + epsilon_trans_ev);
-
-        gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i + 1);
-        gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnion_deltae, i, stopindex - i + 1);
-        gsl_vector_add(&a.vector, &b.vector);
+        if (stopindex < SFPTS - 1)
+        {
+          gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i + 1);
+          gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnion_deltae, i, stopindex - i + 1);
+          gsl_vector_add(&a.vector, &b.vector);
+        }
       }
     }
   }
@@ -1221,9 +1228,9 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, int element, int ion, 
 
 
 static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int ionstage, const double nnion, double *E_0)
+// add the ionization terms to the Spencer-Fano matrix
+// also, update the value of E_0, the minimum energy for excitation/ionization
 {
-  // add the ionization terms to the Spencer-Fano matrix
-  // update the value of E_0, the minimum energy for excitation/ionization
   for (int n = 0; n < colliondatacount; n++)
   {
     if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
@@ -1245,21 +1252,22 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
 
         for (int j = i; j < SFPTS; j++)
         {
-            const double endash = gsl_vector_get(envec, j);
+          // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E' = envec(j)
+          const double endash = gsl_vector_get(envec, j);
 
-            const double prefactor = nnion * xs_impactionization(endash, n) / atan((endash - ionpot_ev) / 2 / J);
+          const double prefactor = nnion * xs_impactionization(endash, n) / atan((endash - ionpot_ev) / 2 / J);
 
-            const double epsilon_upper = (endash + ionpot_ev) / 2;
-            double epsilon_lower = endash - en;
-            // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
-            double ij_contribution = prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
+          const double epsilon_upper = (endash + ionpot_ev) / 2;
+          double epsilon_lower = endash - en;
+          // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
+          double ij_contribution = prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
 
-            if (j >= secondintegralstartindex)
-            {
-              epsilon_lower = en + ionpot_ev;
-              ij_contribution -= prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
-            }
-            *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
+          if (j >= secondintegralstartindex)
+          {
+            epsilon_lower = en + ionpot_ev;
+            ij_contribution -= prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
+          }
+          *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
         }
       }
     }
