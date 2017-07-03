@@ -1246,6 +1246,7 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
 
       for (int i = 0; i < SFPTS; i++)
       {
+        // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
         const double en = gsl_vector_get(envec, i);
 
         const int secondintegralstartindex = get_energyindex_ev(2 * en + ionpot_ev);
