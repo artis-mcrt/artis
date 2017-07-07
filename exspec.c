@@ -274,6 +274,12 @@ int printout(const char *restrict format, ...)
 }
 
 
+void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno)
+{
+  printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
+  // abort();
+}
+
 
 
 /*void *my_malloc(size_t size)
