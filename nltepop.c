@@ -1436,10 +1436,9 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
         const double nnlevelnlte = (level == 0) ? nnlevellte : (
           modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
 
-        fprintf(nlte_file,"%11.5e %11.5e\n",
-                nnlevellte, nnlevelnlte);
-        }
+        fprintf(nlte_file,"%11.5e %11.5e\n", nnlevellte, nnlevelnlte);
       }
+    }
   }
 
   fflush(nlte_file);
