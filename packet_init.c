@@ -421,12 +421,13 @@ void write_packets(FILE *restrict packets_file)
 
 void read_packets(FILE *restrict packets_file)
 {
-  for (int i = 0; i < npkts; i++)
+  int i;
+  for (i = 0; i < npkts; i++)
   {
-    const int status = fscanf(packets_file, "%d ", &pkt[i].number);
-    if (status != 1)
+    const int readstatus = fscanf(packets_file, "%d ", &pkt[i].number);
+    if (readstatus != 1)
     {
-      printout("Read failed at packet %d (expecting %d packets). Wrong number of packets?\n", i, npkts);
+      printout("ERROR: Read failed at packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n", i, npkts);
       abort();
     }
     fscanf(packets_file, "%d ", &pkt[i].where);
@@ -462,5 +463,13 @@ void read_packets(FILE *restrict packets_file)
     fscanf(packets_file, "%lg %lg %lg ", &pkt[i].stokes[0], &pkt[i].stokes[1], &pkt[i].stokes[2]);
     fscanf(packets_file, "%lg %lg %lg ", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2]);
     fscanf(packets_file, "\n");
+  }
+
+  int inputint;
+  const int readstatus = fscanf(packets_file, "%d ", &inputint);
+  if (readstatus != 0)
+  {
+    printout("ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n", i, npkts);
+    abort();
   }
 }
