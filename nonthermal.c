@@ -262,7 +262,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 double get_deposition_rate_density(const int modelgridindex)
 // should be in erg / s / cm^3
 {
-  if (nt_solution[modelgridindex].deposition_rate_density < 0)
+  if (nt_solution[modelgridindex].deposition_rate_density <= 0)
   {
     calculate_deposition_rate_density(modelgridindex, nts_global);
     printout("No deposition_rate_density for cell %d. Calculated value of %g has been stored.\n",
