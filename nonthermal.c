@@ -256,18 +256,21 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   //         gamma_deposition,co56_positron_dep,v48_positron_dep);
 
   nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + co56_positron_dep + v48_positron_dep;
+  nt_solution[modelgridindex].timestep = timestep;
 }
 
 
 double get_deposition_rate_density(const int modelgridindex)
 // should be in erg / s / cm^3
 {
-  if (nt_solution[modelgridindex].deposition_rate_density <= 0)
-  {
-    calculate_deposition_rate_density(modelgridindex, nts_global);
-    printout("No deposition_rate_density for cell %d. Calculated value of %g has been stored.\n",
-             modelgridindex, nt_solution[modelgridindex].deposition_rate_density);
-  }
+  // if (nt_solution[modelgridindex].deposition_rate_density <= 0)
+  // {
+  //   calculate_deposition_rate_density(modelgridindex, nts_global);
+  //   printout("No deposition_rate_density for cell %d. Calculated value of %g has been stored.\n",
+  //            modelgridindex, nt_solution[modelgridindex].deposition_rate_density);
+  // }
+  assert(nt_solution[modelgridindex].timestep == nts_global);
+  assert(nt_solution[modelgridindex].deposition_rate_density >= 0);
   return nt_solution[modelgridindex].deposition_rate_density;
 }
 
@@ -1350,7 +1353,8 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
-  nt_solution[modelgridindex].timestep = timestep;
+  // timestep now records when the deposition rate density was set
+  // nt_solution[modelgridindex].timestep = timestep;
   if (mg_associated_cells[modelgridindex] < 1)
   {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
