@@ -467,9 +467,10 @@ void read_packets(FILE *restrict packets_file)
 
   int inputint;
   const int readstatus = fscanf(packets_file, "%d ", &inputint);
-  if (readstatus != 0)
+  if (readstatus > 0)
   {
-    printout("ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n", i, npkts);
+    printout("ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n",
+             i, npkts);
     abort();
   }
 }
