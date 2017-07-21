@@ -867,8 +867,9 @@ int main(int argc, char** argv)
 
         // Update the matter quantities in the grid for the new timestep.
 
+        const time_t sys_time_start_update_grid = time(NULL);
         printout("\ntimestep %d: time before update grid %d (tstart + %d)\n",
-                 nts, time(NULL), time(NULL) - real_time_start);
+                 nts, sys_time_start_update_grid, sys_time_start_update_grid - real_time_start);
 
         #ifndef FORCE_LTE
           #if (!NO_LUT_PHOTOION)
@@ -898,22 +899,27 @@ int main(int argc, char** argv)
         #ifdef MPI_ON
           MPI_Barrier(MPI_COMM_WORLD);
         #endif
-        printout("time after update grid %d\n", time(NULL));
+        printout("time after update grid %d (took %d seconds)\n", time(NULL), time(NULL) - sys_time_start_update_grid);
         //printout("histindex %d\n",histindex);
 
+        const time_t sys_time_start_communicate_grid = time(NULL);
 
         /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
         #ifdef MPI_ON
           mpi_communicate_grid_properties(my_rank, p, nstart, ndo, nts, titer, mpi_grid_buffer, mpi_grid_buffer_size);
         #endif
 
+        printout("time after grid properties have been communicated %d (took %d seconds)\n", time(NULL), time(NULL) - sys_time_start_communicate_grid);
+
         /// If this is not the 0th time step of the current job step,
         /// write out a snapshot of the grid properties for further restarts
         /// and update input.txt accordingly
         if (((nts - itstep) != 0) && (my_rank == 0))
         {
-          printout("Write grid restart data\n");
+          const time_t sys_time_start_write_restart = time(NULL);
+          printout("Write grid restart data...");
           write_grid_restart_data();
+          printout("done in %d seconds.\n", time(NULL) - sys_time_start_write_restart);
           printout("Update input.txt for restart at time step %d\n", nts);
           update_parameterfile(nts);
           printout("input.txt successfully updated\n");
@@ -925,7 +931,6 @@ int main(int argc, char** argv)
         {
           modelgrid[n].totalcooling = COOLING_UNDEFINED;
         }*/
-        printout("time after grid properties have been communicated %d\n", time(NULL));
 
 
         // set all the estimators to zero before moving packets. This is now done
