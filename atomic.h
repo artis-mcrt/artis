@@ -154,10 +154,10 @@ inline int get_phixsupperlevel(int element, int ion, int level, int phixstargeti
 inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex)
 /// Returns the energy of (element,ion,level).
 {
-  const double phixs_threshold_stored = elements[element].ions[ion].levels[level].phixs_threshold;
-  if (phixs_threshold_stored > 0.)
-    return phixs_threshold_stored;
-  else
+  // const double phixs_threshold_stored = elements[element].ions[ion].levels[level].phixs_threshold;
+  // if (phixs_threshold_stored > 0.)
+  //   return phixs_threshold_stored;
+  // else
   {
     const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
     const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
