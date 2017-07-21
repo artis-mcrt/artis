@@ -185,16 +185,16 @@ static void write_to_estimators_file(int n, int timestep)
 
       per_gmpop = false;
 
-      fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_element(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions; ion++)
-      {
-        fprintf(estimators_file, "  %d: %9.3e",
-                get_ionstage(element, ion),
-                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop) * nne);
-      }
-      fprintf(estimators_file, "\n");
+      // fprintf(estimators_file, "AlphaLTE_R*nne Z=%2d", get_element(element));
+      // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+      //   fprintf(estimators_file, "              ");
+      // for (int ion = 0; ion < nions; ion++)
+      // {
+      //   fprintf(estimators_file, "  %d: %9.3e",
+      //           get_ionstage(element, ion),
+      //           calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop) * nne);
+      // }
+      // fprintf(estimators_file, "\n");
 
       assume_lte = false;
 
@@ -209,16 +209,16 @@ static void write_to_estimators_file(int n, int timestep)
       }
       fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "Alpha_C*nne    Z=%2d", get_element(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions; ion++)
-      {
-        fprintf(estimators_file, "  %d: %9.3e",
-                get_ionstage(element, ion),
-                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, true, printdebug, lower_superlevel_only, per_gmpop) * nne);
-      }
-      fprintf(estimators_file, "\n");
+      // fprintf(estimators_file, "Alpha_C*nne    Z=%2d", get_element(element));
+      // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+      //   fprintf(estimators_file, "              ");
+      // for (int ion = 0; ion < nions; ion++)
+      // {
+      //   fprintf(estimators_file, "  %d: %9.3e",
+      //           get_ionstage(element, ion),
+      //           calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, true, printdebug, lower_superlevel_only, per_gmpop) * nne);
+      // }
+      // fprintf(estimators_file, "\n");
 
       fprintf(estimators_file, "gamma_R        Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -231,16 +231,16 @@ static void write_to_estimators_file(int n, int timestep)
       }
       fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "gamma_C        Z=%2d", get_element(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions - 1; ion++)
-      {
-        fprintf(estimators_file, "  %d: %9.3e",
-                get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, true, printdebug));
-      }
-      fprintf(estimators_file, "\n");
+      // fprintf(estimators_file, "gamma_C        Z=%2d", get_element(element));
+      // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+      //   fprintf(estimators_file, "              ");
+      // for (int ion = 0; ion < nions - 1; ion++)
+      // {
+      //   fprintf(estimators_file, "  %d: %9.3e",
+      //           get_ionstage(element, ion),
+      //           calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, true, printdebug));
+      // }
+      // fprintf(estimators_file, "\n");
 
       fprintf(estimators_file, "gamma_NT       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -254,10 +254,13 @@ static void write_to_estimators_file(int n, int timestep)
     }
 
 
-    // const int element = get_elementindex(26);
-    // const int lowerionstage = 1;
-    // const int lowerion = lowerionstage - get_ionstage(element, 0);
-    // calculate_ionrecombcoeff_per_gmpop(n, T_e, element, lowerion + 1, true, true, false);
+    const int element = get_elementindex(28);
+    const int lowerionstage = 2;
+    const int lowerion = lowerionstage - get_ionstage(element, 0);
+    const bool printdebug = false;
+    const bool lower_superlevel_only = false;
+    const bool per_gmpop = false;
+    calculate_ionrecombcoeff(n, T_e, element, lowerion + 1, false, false, printdebug, lower_superlevel_only, per_gmpop);
 
     #ifndef FORCE_LTE
       #if (!NO_LUT_PHOTOION)
@@ -843,14 +846,6 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
       #endif
     #endif
   }
-
-  //maybe want to add omp ordered here if the modelgrid cells should be output in order
-  #ifdef _OPENMP
-  #pragma omp critical(estimators_file)
-  #endif
-  {
-    write_to_estimators_file(n,nts);
-  }
 }
 
 
@@ -971,6 +966,7 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
   else
   {
     deltat = time_step[nts].width;
+    deltaV = pow(wid_init * tratmid, 3);
   }
 
   printout("timestep %d, titer %d\n", nts, titer);
@@ -1058,10 +1054,20 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
     for (int n = 0; n < npts_model; n++)
     {
       /// Check if this task should work on the current model grid cell.
-      /// If yes, update the cell
+      /// If yes, update the cell and write out the estimators
       if (n >= nstart && n < nstart + ndo)
       {
         update_grid_cell(n, nts, titer, tratmid, deltaV, deltat, mps);
+
+        use_cellhist = true; // this will speed up writing some of the estimators out
+
+        //maybe want to add omp ordered here if the modelgrid cells should be output in order
+        #ifdef _OPENMP
+        #pragma omp critical(estimators_file)
+        #endif
+        {
+          write_to_estimators_file(n, nts);
+        }
       }
       else
       {
@@ -1073,9 +1079,11 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
         #endif
       }
     } /// end parallel for loop over all modelgrid cells
+
     /// Now after all the relevant taks of update_grid have been finished activate
     /// the use of the cellhistory for all OpenMP tasks, in what follows (update_packets)
     use_cellhist = true;
+
   } /// end OpenMP parallel section
 
   // alterative way to write out estimators. this keeps the modelgrid cells in order but heatingrates are not valid.
