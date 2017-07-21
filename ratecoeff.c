@@ -1058,7 +1058,7 @@ void ratecoefficients_init(void)
 
 
 #if (!NO_LUT_PHOTOION)
-  static double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
+  double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
   {
     const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
     if (lowerindex < TABLESIZE-1)

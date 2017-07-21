@@ -397,7 +397,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++)
           {
-            gammaestimator[n * nelements * maxion + element * maxion + ion] = calculate_gamma_ion(n, element, ion);
+            gammaestimator[n * nelements * maxion + element * maxion + ion] = calculate_iongamma_per_gspop(n, element, ion);
           }
         }
       }
