@@ -36,7 +36,7 @@ void precalculate_partfuncts(int modelgridindex)
 }
 
 
-static void update_abundances(const int modelgridindex, double t_current)
+static void update_abundances(const int modelgridindex, const int timestep, double t_current)
 /// Updates the mass fractions of elements associated with the decay sequence
 /// (56)Ni -> (56)Co -> (56)Fe at the onset of each timestep
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
@@ -129,6 +129,8 @@ static void update_abundances(const int modelgridindex, double t_current)
     //          modelgrid[modelgridindex].composition[get_elementindex(26)].abundance,
     //          get_fnistabel(modelgridindex), get_fcostable(modelgridindex), get_ffestable(modelgridindex));
   }
+
+  calculate_deposition_rate_density(modelgridindex, timestep);
 }
 
 
@@ -645,8 +647,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
     {
       /// Update abundances of radioactive isotopes
       //printout("call update abundances for timestep %d in model cell %d\n",m,n);
-      update_abundances(n, time_step[nts].mid);
-      calculate_deposition_rate_density(n, nts);
+      update_abundances(n, nts, time_step[nts].mid);
 
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
