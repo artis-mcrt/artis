@@ -1020,15 +1020,21 @@ static void read_recombrate_file(void)
             for (int level = 0; level < nlevels; level++)
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
           }
-
-          rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
-          printout("              rrc: %10.3e\n", rrc);
         }
         else
         {
-          printout("rrc >= input_rrc_total! Recombination rate is too high, so doing nothing\n");
+          printout("rrc >= input_rrc_total!\n");
+          const double phixs_multiplier = input_rrc_total / rrc;
+          printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
+          assert(phixs_multiplier >= 0);
+
+          for (int level = 0; level < nlevels; level++)
+            scale_level_phixs(element, ion - 1, level, phixs_multiplier);
         }
-}
+
+        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
+        printout("              rrc: %10.3e\n", rrc);
+      }
     }
   }
   fclose(recombrate_file);
