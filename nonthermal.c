@@ -15,7 +15,7 @@
 #include "update_grid.h"
 #include "sn3d.h"
 
-#define SFPTS 10000  // number of energy points in the Spencer-Fano solution vector
+#define SFPTS 4096  // number of energy points in the Spencer-Fano solution vector
 #define EMAX 1000. // eV
 #define EMIN 0.0516 // eV
 
@@ -180,7 +180,7 @@ void nt_init(int my_rank)
       nt_solution[modelgridindex].frac_heating = 1.0;
       nt_solution[modelgridindex].timestep = -1;
       nt_solution[modelgridindex].E_0 = 0.;
-      nt_solution[modelgridindex].deposition_rate_density = 0.;
+      nt_solution[modelgridindex].deposition_rate_density = -1.;
 
       if (STORE_NT_SPECTRUM && mg_associated_cells[modelgridindex] > 0)
       {
@@ -1007,7 +1007,7 @@ static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int io
   }
 
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-  if (deposition_rate_density > MINDEPRATE)
+  if (deposition_rate_density > 0.)
   {
     return deposition_rate_density / get_tot_nion(modelgridindex) / get_eff_ionpot(modelgridindex, element, ion);
     // alternatively, if the y vector is still in memory:
@@ -1364,7 +1364,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   else
   {
     const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
-    if (deposition_rate_density_ev < 1e-2)
+    if (deposition_rate_density_ev < MINDEPRATE)
     {
       printout("Non-thermal deposition rate of %g eV/cm/s/cm^3 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", deposition_rate_density_ev, modelgridindex, timestep);
 
@@ -1412,7 +1412,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
   }
   // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at EMAX
 
-  double E_0 = -1.; // reset E_0 so it can be found it again
+  double E_0 = 0.; // reset E_0 so it can be found it again
 
   for (int element = 0; element < nelements; element++)
   {
