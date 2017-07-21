@@ -960,22 +960,21 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
     {
       /// Set these values, but they will not be used
       deltat = time_step[nts].width;
-      deltaV = pow(wid_init * tratmid,3);
+      deltaV = pow(wid_init * tratmid, 3);
     }
     else
     {
       deltat = time_step[nts - 1].width;
-      deltaV = pow(wid_init * time_step[nts - 1].mid / tmin,3);
+      deltaV = pow(wid_init * time_step[nts - 1].mid / tmin, 3);
     }
   }
   else
   {
     deltat = time_step[nts].width;
-    deltaV = pow(wid_init * tratmid,3);
   }
 
-  printout("timestep %d, titer %d\n",nts,titer);
-  printout("deltaV %g, deltat %g\n",deltaV,deltat);
+  printout("timestep %d, titer %d\n", nts, titer);
+  printout("deltaV %g, deltat %g\n", deltaV, deltat);
 
   /*
   FILE *photoion_file;
