@@ -498,32 +498,30 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
 /// entry of the cellhistory.
 {
 //printout("get_levelpop histindex %d\n",histindex);
-  double levelpop;
   if (use_cellhist)
   {
     const int cellmgi = cellhistory[tid].cellnumber;
 
     if (cellmgi < 0)
-      return calculate_exclevelpop(modelgridindex,element,ion,level);
+      return calculate_exclevelpop(modelgridindex, element, ion, level);
 
     if (cellmgi != modelgridindex)
     {
-      printout("Abort: get_levelpop called, but cellhistory mgi %d != argument modelgridindex %d",
+      printout("WARNING: get_levelpop called, but cellhistory mgi %d != argument modelgridindex %d. Ignoring cell history",
                cellmgi, modelgridindex);
-      abort();
+      return calculate_exclevelpop(modelgridindex, element, ion, level);
+      // abort();
     }
 
-    levelpop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
+    double levelpop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
     if (levelpop < 0)
     {
-      levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
+      levelpop = calculate_exclevelpop(modelgridindex, element, ion, level);
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = levelpop;
     }
   }
   else
-    levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
-
-  return levelpop;
+    return calculate_exclevelpop(modelgridindex, element, ion, level);
 }
 
 
