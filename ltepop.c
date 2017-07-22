@@ -501,13 +501,15 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
   double levelpop;
   if (use_cellhist)
   {
-    // const int cellmgi = cell[cellhistory[tid].cellnumber].modelgridindex;
     const int cellmgi = cellhistory[tid].cellnumber;
+
+    if (cellmgi < 0)
+      return calculate_exclevelpop(modelgridindex,element,ion,level);
 
     if (cellmgi != modelgridindex)
     {
       printout("Abort: get_levelpop called, but cellhistory mgi %d != argument modelgridindex %d",
-               cellmgi,modelgridindex);
+               cellmgi, modelgridindex);
       abort();
     }
 
