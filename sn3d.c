@@ -891,6 +891,9 @@ int main(int argc, char** argv)
 
         update_grid(nts, my_rank, nstart, ndo, titer);
 
+        //printout("[debug] update_grid: update for timestep %d finished\n",m);
+        printout("[debug] update_grid: process %d finished update_grid at %d (took %d seconds)\n", my_rank, time(NULL), time(NULL) - sys_time_start_update_grid);
+
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
           if (nts == 0)

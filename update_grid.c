@@ -1132,10 +1132,6 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
   //#ifndef FORCE_LTE
   //  fclose(heating_file);
   //#endif
-
-  //printout("[debug] update_grid: update for timestep %d finished\n",m);
-  //printf("time %ld\n",time(NULL));
-  printout("[debug] update_grid: process %d finished update_grid at %d\n",my_rank,time(NULL));
 }
 
 
@@ -1572,7 +1568,7 @@ void write_grid_restart_data(void)
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
     const bool nonemptycell = (mg_associated_cells[mgi] > 0);
-    
+
     if (nonemptycell)
     {
       fprintf(gridsave_file, "%d %g %g %g %g %hd %lg",
