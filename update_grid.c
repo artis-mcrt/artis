@@ -291,13 +291,13 @@ static void write_to_estimators_file(int n, int timestep)
       fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
               coolingrates[tid].ff, coolingrates[tid].fb, coolingrates[tid].collisional, coolingrates[tid].adiabatic);
     #endif
-    fprintf(estimators_file,"\n");
   }
   else
   {
     // modelgrid cells which are not represented in the simulation grid
     fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n", timestep, n);
   }
+  fprintf(estimators_file,"\n");
 
   fflush(estimators_file);
 }
