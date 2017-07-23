@@ -669,13 +669,16 @@ static float calculate_frac_heating(int modelgridindex)
 
 float get_nt_frac_heating(int modelgridindex)
 {
-  if (nt_solution[modelgridindex].frac_heating <= 0)
+  const float frac_heating = nt_solution[modelgridindex].frac_heating;
+
+  if (frac_heating <= 0 || !isfinite(frac_heating))
   {
-    printout("ERROR: get_nt_frac_heating called with no valid solution stored for cell %d\n", modelgridindex);
+    printout("ERROR: get_nt_frac_heating called with no valid solution stored for cell %d. frac_heating = %g\n",
+             modelgridindex, frac_heating);
     abort();
   }
 
-  return nt_solution[modelgridindex].frac_heating;
+  return frac_heating;
 }
 
 
@@ -1211,7 +1214,7 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int element, con
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
       const double epsilon_trans_ev = epsilon_trans / EV;
 
-      if (epsilon_trans / EV < *E_0 || *E_0 < 0.)
+      if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
       get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans);
@@ -1245,7 +1248,7 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
       const double ionpot_ev = colliondata[n].ionpot_ev;
       const double J = get_J(Z, ionstage, ionpot_ev);
 
-      if (ionpot_ev < *E_0 || *E_0 < 0.)
+      if (ionpot_ev < *E_0 || *E_0 <= 0.)
         *E_0 = ionpot_ev; // this ionization potential is the new minimum energy
 
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
