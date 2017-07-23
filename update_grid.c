@@ -1059,6 +1059,8 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
       {
         update_grid_cell(n, nts, titer, tratmid, deltaV, deltat, mps);
 
+        use_cellhist = true; // this will speed up writing some of the estimators out
+
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
         #ifdef _OPENMP
         #pragma omp critical(estimators_file)
