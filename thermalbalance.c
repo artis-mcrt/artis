@@ -109,7 +109,7 @@ double call_T_e_finder(const int modelgridindex, const double t_current, const d
   // printout("(heating - cooling) at T_min: %g, at T_max: %g\n",thermalmin,thermalmax);
   if (!isfinite(thermalmin) || !isfinite(thermalmax))
   {
-    printout("[abort request] call_T_e_finder: non-finte results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",
+    printout("[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",
              modelgridindex, get_TR(modelgridindex), get_W(modelgridindex));
     thermalmax = thermalmin = -1;
   }
