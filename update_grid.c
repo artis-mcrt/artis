@@ -1571,7 +1571,8 @@ void write_grid_restart_data(void)
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    bool nonemptycell = (mg_associated_cells[mgi] > 0);
+    const bool nonemptycell = (mg_associated_cells[mgi] > 0);
+    
     if (nonemptycell)
     {
       fprintf(gridsave_file, "%d %g %g %g %g %hd %lg",
