@@ -469,7 +469,10 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
         const double oldnne = get_nne(n);
         precalculate_partfuncts(n);
         calculate_electron_densities(n); // sets nne
-        nlte_test = fabs((get_nne(n) / oldnne) - 1);
+        if (oldnne > 0.)
+          nlte_test = fabs((get_nne(n) / oldnne) - 1);
+        else
+          nlte_test = 0.;
         printout("NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, populations %ds\n",
                  n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
         printout("NLTE (Te/pops/NT_ion) solver cell %d timestep %d iteration %d: previous nne is %g, new nne is %g, fractional difference is %g\n",
