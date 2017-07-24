@@ -663,7 +663,15 @@ static float calculate_frac_heating(int modelgridindex)
     frac_heating_Einit += N_e(modelgridindex, endash * EV) * endash * delta_endash;
   }
 
-  return frac_heating_Einit / E_init_ev;
+  const float frac_heating = frac_heating_Einit / E_init_ev;
+
+  if (!isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0)
+  {
+    printout("calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n");
+    return 1.0;
+  }
+
+  return frac_heating;
 }
 
 
