@@ -618,6 +618,7 @@ static bool nltepop_matrix_solve(
     gsl_vector_free(residual_vector);
     completed_solution = true;
   }
+
   gsl_vector_free(x);
   gsl_matrix_free(rate_matrix_LU_decomp);
   gsl_permutation_free(p);
@@ -794,6 +795,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       assert(isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
     }
   }
+  else
   {
     // double ion_populations[nions];
     for (int ion = 0; ion < nions; ion++)
