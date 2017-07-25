@@ -882,8 +882,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     const double elem_pop_error_percent = fabs((elem_pop_abundance / elem_pop_matrix) - 1) * 100;
     if (elem_pop_error_percent > 1.0)
     {
-      printout("  WARNING: The element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %d%%\n",
+      printout("  ERROR: The element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %d%%\n",
                elem_pop_abundance, elem_pop_matrix, elem_pop_error_percent);
+      abort();
     }
 
     if (individual_process_matricies && (atomic_number == 26 && timestep % 20 == 0))

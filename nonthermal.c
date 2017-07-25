@@ -667,7 +667,7 @@ static float calculate_frac_heating(int modelgridindex)
 
   if (!isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0)
   {
-    printout("calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n");
+    printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n");
     return 1.0;
   }
 
@@ -1386,6 +1386,7 @@ void nt_solve_spencerfano(int modelgridindex, int timestep)
 
       // nt_write_to_file(modelgridindex, timestep);
 
+      nt_solution[modelgridindex].timestep = timestep;
       nt_solution[modelgridindex].frac_heating = 1.0;
       nt_solution[modelgridindex].E_0 = 0.;
 
