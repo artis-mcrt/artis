@@ -328,8 +328,8 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        // const double population = (new_timestep) ? -99 : calculate_exclevelpop(modelgridindex,element,ion,level);
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = -99.;
+        const double population = (new_timestep) ? -99 : calculate_exclevelpop(modelgridindex,element,ion,level);
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
 
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
@@ -469,10 +469,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
         const double oldnne = get_nne(n);
         precalculate_partfuncts(n);
         calculate_electron_densities(n); // sets nne
-        if (oldnne > 0.)
-          nlte_test = fabs((get_nne(n) / oldnne) - 1);
-        else
-          nlte_test = 0.;
+        nlte_test = fabs((get_nne(n) / oldnne) - 1);
         printout("NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, populations %ds\n",
                  n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
         printout("NLTE (Te/pops/NT_ion) solver cell %d timestep %d iteration %d: previous nne is %g, new nne is %g, fractional difference is %g\n",
@@ -1061,8 +1058,6 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
       if (n >= nstart && n < nstart + ndo)
       {
         update_grid_cell(n, nts, titer, tratmid, deltaV, deltat, mps);
-
-        use_cellhist = true; // this will speed up writing some of the estimators out
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
         #ifdef _OPENMP

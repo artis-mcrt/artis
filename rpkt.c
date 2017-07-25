@@ -1033,7 +1033,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
           //printout("i %d, nu_edge %g\n",i,nu_edge);
           if (nu >= nu_edge)
           {
-            const double nnlevel = get_levelpop(modelgridindex,element,ion,level);
+            const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
             //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
 
             //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
@@ -1050,10 +1050,10 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             const int nphixstargets = get_nphixstargets(element,ion,level);
             if (nphixstargets > 0)
             {
-              const int upper = get_phixsupperlevel(element,ion,level,0);
-              const double probability = get_phixsprobability(element,ion,level,0);
-              const double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
-              const double sf = get_sahafact(element,ion,level,0,T_e,H*nu_edge);
+              const int upper = get_phixsupperlevel(element, ion, level, 0);
+              const double probability = get_phixsprobability(element, ion, level, 0);
+              const double nnionlevel = get_levelpop(modelgridindex, element,ion + 1, upper);
+              const double sf = get_sahafact(element, ion, level, 0, T_e, H * nu_edge);
               const double helper = nnlevel * sigma_bf * probability;
               const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
@@ -1071,9 +1071,9 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             for (int phixstargetindex = 1; phixstargetindex < nphixstargets; phixstargetindex++)
             {
               const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-              const double nnionlevel = get_levelpop(modelgridindex,element,ion+1,upper);
-              const double sf = get_sahafact(element,ion,level,phixstargetindex,T_e,H*nu_edge);
-              const double helper = nnlevel * sigma_bf * get_phixsprobability(element,ion,level,phixstargetindex);
+              const double nnionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+              const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_edge);
+              const double helper = nnlevel * sigma_bf * get_phixsprobability(element, ion, level, phixstargetindex);
               const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
               kappa_bf_contr += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
@@ -1106,8 +1106,9 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
               {
                 printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",kappa_bf_contr);
                 printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
+                printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
                 printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
-                printout("[fatal] nne %g, nnlevel %g, \n",nne,nnlevel);
+                printout("[fatal] nne %g, nnlevel %g, (or %g)\n", nne, nnlevel, calculate_exclevelpop(modelgridindex,element,ion,level));
                 printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,T_e,nu,nu_edge);
                 abort();
               }
