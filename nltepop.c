@@ -496,26 +496,27 @@ static void nltepop_matrix_normalise(
 static void set_element_pops_lte(const int modelgridindex, const int element)
 {
   nltepop_reset_element(modelgridindex, element);
+  calculate_populations(modelgridindex);
 
-  const int nions = get_nions(element);
-  for (int ion = 0; ion < nions; ion++)
-    modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
-
-  const float nne = get_nne(modelgridindex);
-  const double nnelement = get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex);
-  for (int ion = 0; ion < nions; ion++)
-  {
-    double nnion;
-    if (ion == 0)
-      nnion = nnelement * ionfract(element, ion, modelgridindex, nne);
-    else
-      nnion = MINPOP;
-
-    modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
-      nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
-
-    assert(isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
-  }
+  // const int nions = get_nions(element);
+  // for (int ion = 0; ion < nions; ion++)
+  //   modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
+  //
+  // const float nne = get_nne(modelgridindex);
+  // const double nnelement = get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex);
+  // for (int ion = 0; ion < nions; ion++)
+  // {
+  //   double nnion;
+  //   if (ion == 0)
+  //     nnion = nnelement * ionfract(element, ion, modelgridindex, nne);
+  //   else
+  //     nnion = MINPOP;
+  //
+  //   modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
+  //     nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
+  //
+  //   assert(isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
+  // }
 }
 
 
@@ -888,7 +889,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     {
       printout("  WARNING: The Z=%d element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %.1f%%. Forcing element pops to LTE.\n",
                atomic_number, elem_pop_abundance, elem_pop_matrix, elem_pop_error_percent);
-      set_element_pops_lte(modelgridindex, element);
+      // set_element_pops_lte(modelgridindex, element);
     }
     else if (individual_process_matricies && (atomic_number == 26 && timestep % 20 == 0))
     {
