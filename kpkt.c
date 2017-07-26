@@ -85,7 +85,7 @@ void calculate_kpkt_rates(int modelgridindex)
           const double epsilon_current = epsilon(element,ion,level);
           // mastate[tid].level = level;
           ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          const double nnlevel = get_levelpop(modelgridindex,element,ion,level);
+          const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
 
           /// excitation to same ionization stage
           /// -----------------------------------
