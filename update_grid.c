@@ -32,6 +32,7 @@ void precalculate_partfuncts(int modelgridindex)
       //cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
       modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element,ion,modelgridindex);
     }
+
   }
 }
 
@@ -134,7 +135,7 @@ static void update_abundances(const int modelgridindex, const int timestep, doub
 }
 
 
-static void write_to_estimators_file(int n, int timestep)
+static void write_to_estimators_file(const int n, const int timestep)
 {
   if (mg_associated_cells[n] > 0)
   {
