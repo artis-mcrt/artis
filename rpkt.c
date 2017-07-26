@@ -1033,7 +1033,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
           //printout("i %d, nu_edge %g\n",i,nu_edge);
           if (nu >= nu_edge)
           {
-            const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+            const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
             //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
 
             //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
