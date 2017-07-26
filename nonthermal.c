@@ -99,7 +99,7 @@ static struct nt_solution_struct nt_solution[MMODELGRID+1];
 
 
 #ifndef get_tot_nion
-static double get_tot_nion(int modelgridindex)
+static double get_tot_nion(const int modelgridindex)
 {
   double result = 0.;
   for (int element = 0; element < nelements; element++)
@@ -147,7 +147,7 @@ static void read_collion_data(void)
 }
 
 
-static void zero_all_effionpot(int modelgridindex)
+static void zero_all_effionpot(const int modelgridindex)
 {
   for (int element = 0; element < nelements; element++)
   {
@@ -158,7 +158,7 @@ static void zero_all_effionpot(int modelgridindex)
   }
 }
 
-void nt_init(int my_rank)
+void nt_init(const int my_rank)
 {
   if (nonthermal_initialized == false)
   {
@@ -275,7 +275,7 @@ double get_deposition_rate_density(const int modelgridindex)
 }
 
 
-static double get_y_sample(int modelgridindex, int index)
+static double get_y_sample(const int modelgridindex, const int index)
 {
   if (nt_solution[modelgridindex].yfunc != NULL)
   {
@@ -290,7 +290,7 @@ static double get_y_sample(int modelgridindex, int index)
 }
 
 
-static void nt_write_to_file(int modelgridindex, int timestep)
+static void nt_write_to_file(const int modelgridindex, const int timestep)
 {
 # ifdef _OPENMP
 # pragma omp critical (nonthermal_out_file)
@@ -339,7 +339,7 @@ void nt_close_file(void)
 }
 
 
-static int get_energyindex_ev(double energy_ev)
+static int get_energyindex_ev(const double energy_ev)
 // finds the nearest energy point to energy_ev (may be above or below)
 {
   int index = floor((energy_ev - EMIN) / DELTA_E);
@@ -352,7 +352,7 @@ static int get_energyindex_ev(double energy_ev)
 }
 
 
-static int get_y(int modelgridindex, double energy_ev)
+static int get_y(const int modelgridindex, const double energy_ev)
 {
   const int index = (energy_ev - EMIN) / DELTA_E;
   // assert(index > 0);
@@ -373,7 +373,7 @@ static int get_y(int modelgridindex, double energy_ev)
 }
 
 
-static double electron_loss_rate(double energy, double nne)
+static double electron_loss_rate(const double energy, const double nne)
 // -dE / dx for fast electrons
 // energy is in ergs
 // return units are erg / cm
@@ -393,7 +393,7 @@ static double electron_loss_rate(double energy, double nne)
 }
 
 
-static double xs_excitation(int lineindex, double epsilon_trans, double energy)
+static double xs_excitation(const int lineindex, const double epsilon_trans, const double energy)
 // collisional excitation cross section in cm^2
 // energies are in erg
 {
@@ -427,7 +427,7 @@ static double xs_excitation(int lineindex, double epsilon_trans, double energy)
 }
 
 
-static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, int lineindex, double epsilon_trans)
+static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int lineindex, const double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
 {
@@ -523,7 +523,7 @@ static void get_xs_ionization_vector(gsl_vector *xs_vec, const int collionindex)
 }
 
 
-static double Psecondary(double e_p, double epsilon, double I, double J)
+static double Psecondary(const double e_p, const double epsilon, const double I, const double J)
 // distribution of secondary electron energies for primary electron with energy e_p
 // Opal, Peterson, & Beaty (1971)
 {
@@ -629,7 +629,7 @@ static double N_e(const int modelgridindex, const double energy)
 }
 
 
-static float calculate_frac_heating(int modelgridindex)
+static float calculate_frac_heating(const int modelgridindex)
 // Kozma & Fransson equation 3
 {
   // frac_heating multiplied by E_init, which will be divided out at the end
@@ -675,7 +675,7 @@ static float calculate_frac_heating(int modelgridindex)
 }
 
 
-float get_nt_frac_heating(int modelgridindex)
+float get_nt_frac_heating(const int modelgridindex)
 {
   const float frac_heating = nt_solution[modelgridindex].frac_heating;
 
@@ -690,7 +690,7 @@ float get_nt_frac_heating(int modelgridindex)
 }
 
 
-static double get_mean_binding_energy(int element, int ion)
+static double get_mean_binding_energy(const int element, const int ion)
 {
   int q[M_NT_SHELLS];
   double total;
@@ -867,7 +867,7 @@ static double get_oneoverw(const int element, const int ion, const int modelgrid
 }
 
 
-static double calculate_nt_frac_excitation(int modelgridindex, int element, int ion)
+static double calculate_nt_frac_excitation(const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson equation 4, but summed over all transitions for given ion
 // integral in Kozma & Fransson equation 9
 {
@@ -901,7 +901,7 @@ static double calculate_nt_frac_excitation(int modelgridindex, int element, int 
 }
 
 
-static double calculate_nt_frac_ionization_shell(int modelgridindex, int element, int ion, int collionindex)
+static double calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion, const int collionindex)
 // the fraction of deposition energy that goes into ionising electrons in this particular shell
 {
   const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
@@ -920,7 +920,7 @@ static double calculate_nt_frac_ionization_shell(int modelgridindex, int element
 }
 
 
-static double nt_ionization_ratecoeff_wfapprox(int modelgridindex, int element, int ion)
+static double nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element, const int ion)
 // non-thermal ionization rate coefficient (multiply by population to get rate)
 {
   const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
@@ -931,7 +931,7 @@ static double nt_ionization_ratecoeff_wfapprox(int modelgridindex, int element, 
 }
 
 
-static double calculate_nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
+static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion)
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
 // i.e. multiply this by ion population to get a rate of ionizations per second
 // Do not call during packet propagation, as the y vector may not be in memory!
@@ -966,7 +966,7 @@ static double calculate_nt_ionization_ratecoeff(int modelgridindex, int element,
 }
 
 
-static float calculate_eff_ionpot(int modelgridindex, int element, int ion)
+static float calculate_eff_ionpot(const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
 // the result is in ergs
 {
@@ -999,8 +999,9 @@ static float calculate_eff_ionpot(int modelgridindex, int element, int ion)
 }
 
 
-static float get_eff_ionpot(int modelgridindex, int element, int ion)
+static float get_eff_ionpot(const int modelgridindex, const int element, int const ion)
 // get the effective ion potential from the stored value
+// a value of 0. should be treated as invalid
 {
   return nt_solution[modelgridindex].eff_ionpot[element][ion];
   // OR
@@ -1008,7 +1009,7 @@ static float get_eff_ionpot(int modelgridindex, int element, int ion)
 }
 
 
-static double nt_ionization_ratecoeff_sf(int modelgridindex, int element, int ion)
+static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson 1992 equation 13
 {
   if (mg_associated_cells[modelgridindex] <= 0)
@@ -1047,7 +1048,7 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
     double Y_nt = nt_ionization_ratecoeff_sf(modelgridindex, element, ion);
     if (!isfinite(Y_nt))
     {
-      // probably because eff_ionpot = 0 because the solver hasn't been run yet
+      // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionization cross sections exist
       const double Y_nt_wfapprox = nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion);
       // printout("Warning: Spencer-Fano solver gives non-finite ionization rate (%g) for element %d ion_stage %d for cell %d. Using WF approx instead = %g\n",
       //          Y_nt, get_element(element), get_ionstage(element, ion), modelgridindex, Y_nt_wfapprox);
@@ -1360,7 +1361,7 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
 }
 
 
-void nt_solve_spencerfano(int modelgridindex, int timestep)
+void nt_solve_spencerfano(const int modelgridindex, const int timestep)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
