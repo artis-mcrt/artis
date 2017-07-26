@@ -307,8 +307,8 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const int nlevels = get_nlevels(element, ion);
-  const int Z = get_element(element);
-  const int ionstage = get_ionstage(element, ion);
+  // const int Z = get_element(element);
+  // const int ionstage = get_ionstage(element, ion);
   for (int level = 0; level < nlevels; level++)
   {
     const int level_index = get_nlte_vector_index(element, ion, level);
@@ -489,6 +489,32 @@ static void nltepop_matrix_normalise(
     // apply the normalisation factor to this column in the rate_matrix
     gsl_vector_view column_view = gsl_matrix_column(rate_matrix, column);
     gsl_vector_scale(&column_view.vector, gsl_vector_get(pop_norm_factor_vec, column));
+  }
+}
+
+
+static void set_element_pops_lte(const int modelgridindex, const int element)
+{
+  nltepop_reset_element(modelgridindex, element);
+
+  const int nions = get_nions(element);
+  for (int ion = 0; ion < nions; ion++)
+    modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
+
+  const float nne = get_nne(modelgridindex);
+  const double nnelement = get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex);
+  for (int ion = 0; ion < nions; ion++)
+  {
+    double nnion;
+    if (ion == 0)
+      nnion = nnelement * ionfract(element, ion, modelgridindex, nne);
+    else
+      nnion = MINPOP;
+
+    modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
+      nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+    assert(isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
   }
 }
 
@@ -735,7 +761,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector_view first_row_view = gsl_matrix_row(rate_matrix, 0);
   gsl_vector_set_all(&first_row_view.vector, 1.0);
   // set first balance vector entry to the element population (all other entries will be zero)
-  const double element_population = get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex);
+  const double element_population = get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex);
   gsl_vector_set(balance_vector, 0, element_population);
 
   // calculate the normalisation factors and apply them to the matrix
@@ -771,29 +797,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   {
     printout("WARNING: Can't solve for NLTE populations in cell %d at timestep %d for element Z=%d due to singular matrix. Attempting to use LTE solution instead\n",
              modelgridindex, timestep, atomic_number);
-
-    nltepop_reset_element(modelgridindex, element);
-
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++)
-      modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
-
-    const float nne = get_nne(modelgridindex);
-    const double abundance = get_abundance(modelgridindex,element);
-    const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
-    for (int ion = 0; ion < nions; ion++)
-    {
-      double nnion;
-      if (ion == 0)
-        nnion = nnelement * ionfract(element, ion, modelgridindex, nne);
-      else
-        nnion = MINPOP;
-
-      modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
-        nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
-
-      assert(isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]));
-    }
+    set_element_pops_lte(modelgridindex, element);
   }
   else
   {
@@ -877,17 +881,16 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       //printout("  I currently think that the top ion is: %d\n", elements_uppermost_ion[tid][element]);
     }
 
-    const double elem_pop_abundance = get_abundance(modelgridindex,element) / elements[element].mass * get_rho(modelgridindex);
+    const double elem_pop_abundance = get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex);
     const double elem_pop_matrix = gsl_blas_dasum(popvec);
     const double elem_pop_error_percent = fabs((elem_pop_abundance / elem_pop_matrix) - 1) * 100;
     if (elem_pop_error_percent > 1.0)
     {
-      printout("  ERROR: The element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %.1f%%\n",
+      printout("  WARNING: The element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %.1f%%. Forcing element pops to LTE.\n",
                elem_pop_abundance, elem_pop_matrix, elem_pop_error_percent);
-      abort();
+      set_element_pops_lte(modelgridindex, element);
     }
-
-    if (individual_process_matricies && (atomic_number == 26 && timestep % 20 == 0))
+    else if (individual_process_matricies && (atomic_number == 26 && timestep % 20 == 0))
     {
       // print_level_rates(element, 0, 61, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       // print_level_rates(element, 0, 62, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
