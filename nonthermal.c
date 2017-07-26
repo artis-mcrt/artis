@@ -55,7 +55,7 @@
 static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
 
 static const double minionfraction = 1.e-4;  // minimum number fraction of the total population to include in SF solution
-static const double MINDEPRATE = 1; // minimum deposition rate density (eV/s/cm^3) to solve SF equation
+static const double MINDEPRATE = 0.; // minimum deposition rate density (eV/s/cm^3) to solve SF equation
 
 static const double A_naught_squared = 2.800285203e-17; // Bohr radius squared in cm^2
 
