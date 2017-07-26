@@ -891,8 +891,8 @@ int main(int argc, char** argv)
 
         update_grid(nts, my_rank, nstart, ndo, titer);
 
-        //printout("[debug] update_grid: update for timestep %d finished\n",m);
-        printout("[debug] update_grid: process %d finished update_grid at %d (took %d seconds)\n", my_rank, time(NULL), time(NULL) - sys_time_start_update_grid);
+        printout("timestep %d: update_grid: process %d finished update_grid at %d (took %d seconds)\n",
+                 nts, my_rank, time(NULL), time(NULL) - sys_time_start_update_grid);
 
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
@@ -902,7 +902,8 @@ int main(int argc, char** argv)
         #ifdef MPI_ON
           MPI_Barrier(MPI_COMM_WORLD);
         #endif
-        printout("time after update grid %d (took %d seconds)\n", time(NULL), time(NULL) - sys_time_start_update_grid);
+        printout("timestep %d: time after update grid %d (took %d seconds)\n",
+                 nts, time(NULL), time(NULL) - sys_time_start_update_grid);
         //printout("histindex %d\n",histindex);
 
         const time_t sys_time_start_communicate_grid = time(NULL);
@@ -912,7 +913,8 @@ int main(int argc, char** argv)
           mpi_communicate_grid_properties(my_rank, p, nstart, ndo, nts, titer, mpi_grid_buffer, mpi_grid_buffer_size);
         #endif
 
-        printout("time after grid properties have been communicated %d (took %d seconds)\n", time(NULL), time(NULL) - sys_time_start_communicate_grid);
+        printout("timestep %d: time after grid properties have been communicated %d (took %d seconds)\n",
+                 nts, time(NULL), time(NULL) - sys_time_start_communicate_grid);
 
         /// If this is not the 0th time step of the current job step,
         /// write out a snapshot of the grid properties for further restarts
@@ -949,7 +951,7 @@ int main(int argc, char** argv)
         {
           /// Now process the packets.
           const time_t time_update_packets_start = time(NULL);
-          printout("time before update packets %d\n", time_update_packets_start);
+          printout("timestep %d: time before update packets %d\n", nts, time_update_packets_start);
           update_packets(nts);
 
           /*
@@ -1048,7 +1050,7 @@ int main(int argc, char** argv)
           #ifdef MPI_ON
             // The master thread has normalised the rpkt and compton estimators and printed out a bunch of stuff. Now redistribute the estimators ready for the next run.
             mpi_broadcast_estimators();
-            printout("time after estimators have been communicated %d (took %d seconds)\n", time(NULL), time(NULL) - time_communicate_estimators_start);
+            printout("timestep %d: time after estimators have been communicated %d (took %d seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);
           #endif
 
           printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n",
