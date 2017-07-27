@@ -58,7 +58,7 @@ static void eliminate_nlte_matrix_rowcol(
   gsl_vector *restrict balance_vector)
 {
   const gsl_matrix rate_matrix_var = *rate_matrix;
-  
+
   const int colcount = rate_matrix_var.size2;
   for (int column = 0; column < colcount; column++)
     gsl_matrix_set(rate_matrix, index, column, 0.0);
@@ -639,7 +639,7 @@ static bool nltepop_matrix_solve(
       {
         printout("  WARNING: NLTE solver gave negative population to index %d (Z=%d ion_stage %d level %d), pop = %g. Forcing departure coeff to 1.0\n",
                  row, get_element(element), get_ionstage(element, ion), level, gsl_vector_get(x, row) * gsl_vector_get(pop_normfactor_vec, row));
-        gsl_vector_set(popvec, row, 1.);
+        gsl_vector_set(popvec, row, gsl_vector_get(pop_normfactor_vec, row));
       }
     }
 
