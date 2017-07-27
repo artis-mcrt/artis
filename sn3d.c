@@ -785,7 +785,7 @@ int main(int argc, char** argv)
         const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
         if (my_rank == 0 && estimated_time_for_clean_exit > -1)
         {
-          printout("TIMED_RESTARTS: Used %d of %d seconds of wall time remaining. Estimated time for full timestep is %d plus final update_grid time of %d seconds\n",
+          printout("TIMED_RESTARTS: Used %d of %d seconds of wall time. Estimated time for full timestep is %d plus final update_grid time of %d seconds\n",
                    wallclock_used_seconds, WALLTIMELIMITSECONDS, estimated_time_per_timestep, estimated_time_for_clean_exit);
 
           if (wallclock_remaining_seconds < 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit))
