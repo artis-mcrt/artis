@@ -58,16 +58,17 @@ static void eliminate_nlte_matrix_rowcol(
   gsl_vector *restrict balance_vector)
 {
   const gsl_matrix rate_matrix_var = *rate_matrix;
+  
   const int colcount = rate_matrix_var.size2;
   for (int column = 0; column < colcount; column++)
     gsl_matrix_set(rate_matrix, index, column, 0.0);
 
   const int rowcount = rate_matrix_var.size1;
   for (int row = 1; row < rowcount; row++)
-    gsl_matrix_set(rate_matrix, row, index,0.0);
+    gsl_matrix_set(rate_matrix, row, index, 0.0);
 
-  gsl_matrix_set(rate_matrix, index,gs_index, -1.0);
-  gsl_matrix_set(rate_matrix, index,index, 1.0);
+  gsl_matrix_set(rate_matrix, index, gs_index, -1.0);
+  gsl_matrix_set(rate_matrix, index, index, 1.0);
   gsl_vector_set(balance_vector, index, 0.0);
 }
 
@@ -116,8 +117,8 @@ static void filter_nlte_matrix(
       }
       else
       {
-        double gs_index = get_nlte_vector_index(element,ion,0);
-        eliminate_nlte_matrix_rowcol(index,gs_index,rate_matrix,balance_vector);
+        double gs_index = get_nlte_vector_index(element,ion, 0);
+        eliminate_nlte_matrix_rowcol(index,gs_index, rate_matrix, balance_vector);
         // printout("(forcing LTE population)");
       }
     }
