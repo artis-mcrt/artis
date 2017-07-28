@@ -27,6 +27,5 @@ mkdir ${PBS_JOBID}
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    scriptname=$(basename $0)
-    qsub $scriptname
+    qsub artis-raijin.sh
 fi
