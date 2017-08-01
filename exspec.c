@@ -104,7 +104,7 @@ int main(int argc, char** argv)
       /// Read in the next bunch of packets to work on
       //sprintf(filename,"packets%d_%d.tmp",0,i);
       sprintf(filename,"packets%.2d_%.4d.out", 0, i);
-      printout("reading %s, (last id is %d)\n", filename, nprocs-1);
+      printout("reading %s, (file %d of %d)\n", filename, i + 1, nprocs);
       //if ((packets_file = fopen(filename, "rb")) == NULL)
       FILE *packets_file;
       if ((packets_file = fopen(filename, "r")) == NULL)
