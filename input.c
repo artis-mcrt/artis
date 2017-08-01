@@ -2070,7 +2070,12 @@ void input(int rank)
         }
         if ((spectra[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
         {
-          printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
+          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
+          abort();
+        }
+        if ((spectra[n].stat[m].trueemission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
+        {
+          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
           abort();
         }
         /*

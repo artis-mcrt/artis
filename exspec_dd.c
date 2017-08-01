@@ -14,13 +14,12 @@
 #include "threadprivate.h"
 #include "exspec.h"
 #include "sn3d.h"
+#include "spectrum.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
 /* Main - top level routine. */
 int main(int argc, char** argv)
 {
-  int nts;
-
   FILE *emission_file,*lc_file,*spec_file,*absorption_file;
   int j,t_arrive;
   PKT *pkt_ptr;

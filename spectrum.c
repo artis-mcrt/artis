@@ -46,7 +46,7 @@
 
 
 
-void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
+void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *trueemission_file, FILE *absorption_file)
 {
   //FILE *spec_file,*emission_file;
 
@@ -115,6 +115,11 @@ void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
         for (int i = 0; i < 2 * nelements * maxion + 1; i++)
           fprintf(emission_file, "%g ", spectra[p].stat[m].emission[i]);
         fprintf(emission_file, "\n");
+
+        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+          fprintf(trueemission_file, "%g ", spectra[p].stat[m].trueemission[i]);
+        fprintf(trueemission_file, "\n");
+
         for (int i = 0; i < nelements * maxion; i++)
           fprintf(absorption_file, "%g ", spectra[p].stat[m].absorption[i]);
         fprintf(absorption_file, "\n");
@@ -127,6 +132,31 @@ void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *absorption_file)
   fclose(spec_file);
   fclose(emission_file);
   */
+}
+
+
+static int columnindex_from_emissiontype(const int et)
+{
+  if (et >= 0)
+  {
+    /// bb-emission
+    const int element = linelist[et].elementindex;
+    const int ion = linelist[et].ionindex;
+    return element * maxion + ion;
+  }
+  else if (et == -9999999)
+  {
+    /// ff-emission
+    return 2 * nelements * maxion;
+  }
+  else
+  {
+    /// bf-emission
+    const int et_new = -1 * et - 1;
+    const int element = bflist[et_new].elementindex;
+    const int ion = bflist[et_new].ionindex;
+    return nelements * maxion + element * maxion + ion;
+  }
 }
 
 
@@ -146,19 +176,16 @@ static void add_to_spec(const EPKT *pkt_ptr)
       const double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
       spectra[nt].flux[nnu] += deltaE;
 
-      #if USETRUEEMISSION
-      int et = pkt_ptr->trueemissiontype;
-      #else
-      int et = pkt_ptr->emissiontype;
-      #endif
-      int nproc;
+      const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
+      spectra[nt].stat[nnu].emission[nproc] += deltaE;
+
+      const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
+      spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
+
+      #ifdef TRACE_EMISSION_REGION_ON
+      const int et = pkt_ptr->trueemissiontype;
       if (et >= 0)
       {
-        /// bb-emission
-        const int element = linelist[et].elementindex;
-        const int ion = linelist[et].ionindex;
-        nproc = element * maxion + ion;
-        #ifdef TRACE_EMISSION_REGION_ON
         if (nt >= traceemiss_timestepmin && nt <= traceemiss_timestepmax)
         {
           if (pkt_ptr->nu_rf >= traceemiss_nulower && pkt_ptr->nu_rf <= traceemiss_nuupper)
@@ -174,22 +201,8 @@ static void add_to_spec(const EPKT *pkt_ptr)
                     //  get_element(element), get_ionstage(element, ion), linelist[et].upperlevelindex, linelist[et].lowerlevelindex, deltaE, traceemisscontributions[et].fluxcontrib, et, nlines);
           }
         }
-        #endif
       }
-      else if (et == -9999999)
-      {
-        /// ff-emission
-        nproc = 2 * nelements * maxion;
-      }
-      else
-      {
-        /// bf-emission
-        et = -1 * et - 1;
-        const int element = bflist[et].elementindex;
-        const int ion = bflist[et].ionindex;
-        nproc = nelements * maxion + element * maxion + ion;
-      }
-      spectra[nt].stat[nnu].emission[nproc] += deltaE;
+      #endif
 
       nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
       if (nnu >= 0 && nnu < MNUBINS)
@@ -201,8 +214,7 @@ static void add_to_spec(const EPKT *pkt_ptr)
           /// bb-emission
           const int element = linelist[at].elementindex;
           const int ion = linelist[at].ionindex;
-          nproc = element * maxion + ion;
-          spectra[nt].stat[nnu].absorption[nproc] += deltaE_absorption;
+          spectra[nt].stat[nnu].absorption[element * maxion + ion] += deltaE_absorption;
         }
       }
     }
@@ -227,8 +239,8 @@ static void init_spectrum(void)
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
   ///Should be moved to input.c or exspec.c
-  dlogt = (log(tmax) - log(tmin))/ntbins;
-  dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
+  dlogt = (log(tmax) - log(tmin)) / ntbins;
+  dlognu = (log(nu_max_r) - log(nu_min_r)) / nnubins;
 
   for (int n = 0; n < ntbins; n++)
   {
@@ -240,9 +252,12 @@ static void init_spectrum(void)
       spectra[n].delta_freq[m] = exp(log(nu_min_r) + ((m + 1) * (dlognu))) - spectra[n].lower_freq[m];
       spectra[n].flux[m] = 0.0;
       for (int i = 0; i < 2 * nelements * maxion + 1; i++)
-        spectra[n].stat[m].emission[i] = 0;  ///added
+      {
+        spectra[n].stat[m].emission[i] = 0;
+        spectra[n].stat[m].trueemission[i] = 0;
+      }
       for (int i = 0; i < nelements * maxion; i++)
-        spectra[n].stat[m].absorption[i] = 0;  ///added
+        spectra[n].stat[m].absorption[i] = 0;
     }
   }
 }
@@ -388,33 +403,11 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
 
         if (do_emission_res == 1)
         {
-          int nproc;
-          #if USETRUEEMISSION
-          int et = pkt_ptr->trueemissiontype;
-          #else
-          int et = pkt_ptr->emissiontype;
-          #endif
-          if (et >= 0)
-          {
-            /// bb-emission
-            const int element = linelist[et].elementindex;
-            const int ion = linelist[et].ionindex;
-            nproc = element * maxion + ion;
-          }
-          else if (et == -9999999)
-          {
-            /// ff-emission
-            nproc = 2 * nelements * maxion;
-          }
-          else
-          {
-            /// bf-emission
-            et = -1 * et - 1;
-            const int element = bflist[et].elementindex;
-            const int ion = bflist[et].ionindex;
-            nproc = nelements*maxion + element*maxion+ion;
-          }
+          const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
           spectra[nt].stat[nnu].emission[nproc] += deltaE;
+
+          const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
+          spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
 
           nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
           if (nnu >= 0 && nnu < MNUBINS)
@@ -426,8 +419,7 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
               /// bb-emission
               const int element = linelist[at].elementindex;
               const int ion = linelist[at].ionindex;
-              nproc = element * maxion + ion;
-              spectra[nt].stat[nnu].absorption[nproc] += deltaE;
+              spectra[nt].stat[nnu].absorption[element * maxion + ion] += deltaE;
             }
           }
         }
@@ -437,7 +429,7 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
 }
 
 
-void gather_spectrum_res(int current_abin)
+void gather_spectrum_res(const int current_abin)
 {
   /// Set up the spectrum grid and initialise the bins to zero.
   init_spectrum();

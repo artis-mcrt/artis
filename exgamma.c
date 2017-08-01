@@ -173,8 +173,8 @@ int main(int argc, char** argv)
 
     gather_spectrum(-1);
     gather_light_curve();
-    write_spectrum(spec_file,NULL,NULL);
-    write_light_curve(lc_file,-1);
+    write_spectrum(spec_file, NULL, NULL, NULL);
+    write_light_curve(lc_file, -1);
 
     fclose(lc_file);
     fclose(spec_file);
@@ -199,7 +199,7 @@ int main(int argc, char** argv)
         gather_spectrum_res(i);
         gather_light_curve_res(i);
 
-        write_spectrum(spec_file,NULL,NULL);
+        write_spectrum(spec_file, NULL, NULL, NULL);
         write_light_curve(lc_file,i);
 
         printout("Did %d of %d angle bins.\n",i+1,MABINS);
