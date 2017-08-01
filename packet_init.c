@@ -107,6 +107,7 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
   /// n is the index of the packet. m is the index for the grid cell.
   pkt[n].where = m;
   pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
+  pkt[n].originated_from_positron = false;
 
   double zrand = gsl_rng_uniform_pos(rng);
   pkt[n].pos[0] = grid_ptr->pos_init[0] + (zrand * wid_init);
@@ -144,6 +145,7 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
       else
       {
         pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
+        pkt[n].originated_from_positron = true;
       }
 
       zrand = gsl_rng_uniform(rng);
@@ -413,6 +415,7 @@ void write_packets(FILE *restrict packets_file)
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].absorptiondir[0], pkt[i].absorptiondir[1], pkt[i].absorptiondir[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].stokes[0], pkt[i].stokes[1], pkt[i].stokes[2]);
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].pol_dir[0], pkt[i].pol_dir[1], pkt[i].pol_dir[2]);
+    fprintf(packets_file, "%d ", pkt[i].originated_from_positron);
     fprintf(packets_file, "\n");
   }
 }
@@ -461,6 +464,9 @@ void read_packets(FILE *restrict packets_file)
     fscanf(packets_file, "%lg %lg %lg ", &pkt[i].absorptiondir[0], &pkt[i].absorptiondir[1], &pkt[i].absorptiondir[2]);
     fscanf(packets_file, "%lg %lg %lg ", &pkt[i].stokes[0], &pkt[i].stokes[1], &pkt[i].stokes[2]);
     fscanf(packets_file, "%lg %lg %lg ", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2]);
+    int int_originated_from_positron;
+    fscanf(packets_file, "%d ", &int_originated_from_positron);
+    pkt[i].originated_from_positron = int_originated_from_positron != 0;
     fscanf(packets_file, "\n");
   }
 
