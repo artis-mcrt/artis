@@ -166,16 +166,21 @@ int main(int argc, char** argv)
       printout("Cannot open spec.out\n");
       abort();
     }
-    #if USETRUEEMISSION
-    FILE *emission_file = fopen("emissiontrue.out", "w");
-    #else
+
     FILE *emission_file = fopen("emission.out", "w");
-    #endif
     if (emission_file == NULL)
     {
       printf("Cannot open emission.out\n");
       abort();
     }
+
+    FILE *trueemission_file = fopen("emissiontrue.out", "w");
+    if (trueemission_file == NULL)
+    {
+      printf("Cannot open emissiontrue.out\n");
+      abort();
+    }
+
     FILE *absorption_file = fopen("absorption.out", "w");
     if (absorption_file == NULL)
     {
@@ -185,13 +190,14 @@ int main(int argc, char** argv)
 
     gather_spectrum(-1);
     gather_light_curve();
-    write_spectrum(spec_file,emission_file,absorption_file);
-    write_light_curve(lc_file,-1);
+    write_spectrum(spec_file, emission_file, trueemission_file, absorption_file);
+    write_light_curve(lc_file, -1);
     //make_gamma_light_curve();
 
     fclose(lc_file);
     fclose(spec_file);
     fclose(emission_file);
+    fclose(trueemission_file);
     fclose(absorption_file);
 
     printout("finished angle-averaged stuff\n");
@@ -213,16 +219,24 @@ int main(int argc, char** argv)
       {
         if (do_emission_res == 1)
         {
-          sprintf(filename,"emission_res_%.2d.out",i);
-          printout("%s \n",filename);
+          sprintf(filename, "emission_res_%.2d.out", i);
+          printout("%s \n", filename);
           if ((emission_file = fopen(filename, "w")) == NULL)
           {
             printf("Cannot open emission_res.out\n");
             abort();
           }
 
-          sprintf(filename,"absorption_res_%.2d.out",i);
-          printout("%s \n",filename);
+          sprintf(filename, "emissiontrue_res_%.2d.out", i);
+          printout("%s \n", filename);
+          if ((trueemission_file = fopen(filename, "w")) == NULL)
+          {
+            printf("Cannot open emissiontrue_res.out\n");
+            abort();
+          }
+
+          sprintf(filename, "absorption_res_%.2d.out", i);
+          printout("%s \n", filename);
           if ((absorption_file = fopen(filename, "w")) == NULL)
           {
             printf("Cannot open absorption_res.out\n");
@@ -232,12 +246,13 @@ int main(int argc, char** argv)
         gather_spectrum_res(i);
         gather_light_curve_res(i);
 
-        write_spectrum(spec_file,emission_file,absorption_file);
-        write_light_curve(lc_file,i);
+        write_spectrum(spec_file, emission_file, trueemission_file, absorption_file);
+        write_light_curve(lc_file, i);
 
         if (do_emission_res == 1)
         {
           fclose(emission_file);
+          fclose(trueemission_file);
           fclose(absorption_file);
         }
         printout("Did %d of %d angle bins.\n",i+1,MABINS);
