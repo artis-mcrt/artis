@@ -2,7 +2,7 @@
 #include "grid_init.h"
 #include "packet_init.h"
 #include "vectors.h"
-
+#include <stdio.h>
 
 static double f56ni(const CELL *restrict grid_ptr)
 /// Subroutine that gives the Ni56 mass fraction.
@@ -423,59 +423,125 @@ void write_packets(FILE *restrict packets_file)
 
 void read_packets(FILE *restrict packets_file)
 {
-  int i;
-  for (i = 0; i < npkts; i++)
+  char *line = malloc(sizeof(char) * 1024);
+  char *linestart = line;
+
+  int packets_read = 0;
+  while (!feof(packets_file))
   {
-    const int readstatus = fscanf(packets_file, "%d ", &pkt[i].number);
-    if (readstatus != 1)
+    line = linestart;
+    if (line != fgets(line, 1024, packets_file))
+      break;
+
+    packets_read++;
+    const int i = packets_read - 1;
+
+    if (i > npkts - 1)
     {
-      printout("ERROR: Read failed at packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n", i, npkts);
+      printout("ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n",
+               packets_read, npkts);
       abort();
     }
-    fscanf(packets_file, "%d ", &pkt[i].where);
+
+    int offset = 0;
+    sscanf(line, "%d%n", &pkt[i].number, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].where, &offset);
+    line += offset;
+
     int pkt_type_in;
-    fscanf(packets_file, "%d ", &pkt_type_in);
+    sscanf(line, "%d%n", &pkt_type_in, &offset);
+    line += offset;
     pkt[i].type = pkt_type_in;
-    fscanf(packets_file, "%lg %lg %lg ", &pkt[i].pos[0], &pkt[i].pos[1], &pkt[i].pos[2]);
-    fscanf(packets_file, "%lg %lg %lg ", &pkt[i].dir[0], &pkt[i].dir[1], &pkt[i].dir[2]);
+
+    sscanf(line, "%lg %lg %lg%n", &pkt[i].pos[0], &pkt[i].pos[1], &pkt[i].pos[2], &offset);
+    line += offset;
+
+    sscanf(line, "%lg %lg %lg%n", &pkt[i].dir[0], &pkt[i].dir[1], &pkt[i].dir[2], &offset);
+    line += offset;
+
     int last_cross_in;
-    fscanf(packets_file, "%d ", &last_cross_in);
+    sscanf(line, "%d%n", &last_cross_in, &offset);
+    line += offset;
     pkt[i].last_cross = last_cross_in;
-    fscanf(packets_file, "%lg ", &pkt[i].tdecay);
-    fscanf(packets_file, "%lg ", &pkt[i].e_cmf);
-    fscanf(packets_file, "%lg ", &pkt[i].e_rf);
-    fscanf(packets_file, "%lg ", &pkt[i].nu_cmf);
-    fscanf(packets_file, "%lg ", &pkt[i].nu_rf);
+
+    sscanf(line, "%lg%n", &pkt[i].tdecay, &offset);
+    line += offset;
+
+    sscanf(line, "%lg%n", &pkt[i].e_cmf, &offset);
+    line += offset;
+
+    sscanf(line, "%lg%n", &pkt[i].e_rf, &offset);
+    line += offset;
+
+    sscanf(line, "%lg%n", &pkt[i].nu_cmf, &offset);
+    line += offset;
+
+    sscanf(line, "%lg%n", &pkt[i].nu_rf, &offset);
+    line += offset;
+
     int escape_type;
-    fscanf(packets_file, "%d ", &escape_type);
+    sscanf(line, "%d%n", &escape_type, &offset);
+    line += offset;
     pkt[i].escape_type = escape_type;
-    fscanf(packets_file, "%d ", &pkt[i].escape_time);
-    fscanf(packets_file, "%d ", &pkt[i].scat_count);
-    fscanf(packets_file, "%d ", &pkt[i].next_trans);
-    fscanf(packets_file, "%d ", &pkt[i].interactions);
-    fscanf(packets_file, "%d ", &pkt[i].last_event);
-    fscanf(packets_file, "%d ", &pkt[i].emissiontype);
-    fscanf(packets_file, "%d ", &pkt[i].trueemissiontype);
-    fscanf(packets_file, "%lg %lg %lg ", &pkt[i].em_pos[0], &pkt[i].em_pos[1], &pkt[i].em_pos[2]);
-    fscanf(packets_file, "%d ", &pkt[i].absorptiontype);
-    fscanf(packets_file, "%lg ", &pkt[i].absorptionfreq);
-    fscanf(packets_file, "%d ", &pkt[i].nscatterings);
-    fscanf(packets_file, "%d ", &pkt[i].em_time);
-    fscanf(packets_file, "%lg %lg %lg ", &pkt[i].absorptiondir[0], &pkt[i].absorptiondir[1], &pkt[i].absorptiondir[2]);
-    fscanf(packets_file, "%lg %lg %lg ", &pkt[i].stokes[0], &pkt[i].stokes[1], &pkt[i].stokes[2]);
-    fscanf(packets_file, "%lg %lg %lg ", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2]);
+
+    sscanf(line, "%d%n", &pkt[i].escape_time, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].scat_count, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].next_trans, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].interactions, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].last_event, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].emissiontype, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].trueemissiontype, &offset);
+    line += offset;
+
+    sscanf(line, "%lg %lg %lg%n", &pkt[i].em_pos[0], &pkt[i].em_pos[1], &pkt[i].em_pos[2], &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].absorptiontype, &offset);
+    line += offset;
+
+    sscanf(line, "%lg%n", &pkt[i].absorptionfreq, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].nscatterings, &offset);
+    line += offset;
+
+    sscanf(line, "%d%n", &pkt[i].em_time, &offset);
+    line += offset;
+
+    sscanf(line, "%lg %lg %lg%n", &pkt[i].absorptiondir[0], &pkt[i].absorptiondir[1], &pkt[i].absorptiondir[2], &offset);
+    line += offset;
+
+    sscanf(line, "%lg %lg %lg%n", &pkt[i].stokes[0], &pkt[i].stokes[1], &pkt[i].stokes[2], &offset);
+    line += offset;
+
+    sscanf(line, "%lg %lg %lg%n", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2], &offset);
+    line += offset;
+
     int int_originated_from_positron;
-    fscanf(packets_file, "%d ", &int_originated_from_positron);
-    pkt[i].originated_from_positron = int_originated_from_positron != 0;
-    fscanf(packets_file, "\n");
+    sscanf(line, "%d%n", &int_originated_from_positron, &offset);
+    line += offset;
+    pkt[i].originated_from_positron = (int_originated_from_positron != 0);
   }
 
-  int inputint;
-  const int readstatus = fscanf(packets_file, "%d ", &inputint);
-  if (readstatus > 0)
+  if (packets_read < npkts)
   {
-    printout("ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n",
-             i, npkts);
+    printout("ERROR: Read failed after packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n",
+             packets_read, npkts);
     abort();
   }
+  free(line);
 }
