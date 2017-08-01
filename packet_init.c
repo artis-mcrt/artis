@@ -130,24 +130,24 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
     if (zrand < (ENICKEL / (ENICKEL + ECOBALT)))
     {
       pkt[n].type = TYPE_NICKEL_PELLET;
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -TNICKEL * log(zrand);
     }
     else
     {
       zrand = gsl_rng_uniform(rng);
 
-      pkt[n].type = (zrand < ECOBALT_GAMMA / ECOBALT) ? TYPE_COBALT_PELLET : TYPE_COBALT_POSITRON_PELLET;
-    }
+      if (zrand < ECOBALT_GAMMA / ECOBALT)
+      {
+        pkt[n].type = TYPE_COBALT_PELLET;
+      }
+      else
+      {
+        pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
+      }
 
-    /// Now choose the decay time.
-    if (pkt[n].type == TYPE_NICKEL_PELLET)
-    {
       zrand = gsl_rng_uniform(rng);
-      pkt[n].tdecay = -TNICKEL * log(zrand);
-    }
-    else if (pkt[n].type == TYPE_COBALT_PELLET || pkt[n].type == TYPE_COBALT_POSITRON_PELLET)
-    {
-      zrand = gsl_rng_uniform(rng);
-      double zrand2 = gsl_rng_uniform(rng);
+      const double zrand2 = gsl_rng_uniform(rng);
       pkt[n].tdecay = (-TNICKEL * log(zrand)) + (-TCOBALT * log(zrand2));
     }
   }
@@ -155,18 +155,17 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
   {
     /// Now choose whether it's going to be a 52Fe or 52Mn pellet and
     /// mark it as such.
-    pkt[n].type = (zrand < (E52FE / (E52FE + E52MN))) ? TYPE_52FE_PELLET : TYPE_52MN_PELLET;
-
-    /// Now choose the decay time.
-    if (pkt[n].type == TYPE_52FE_PELLET)
+    if (zrand < (E52FE / (E52FE + E52MN)))
     {
+      pkt[n].type = TYPE_52FE_PELLET;
       zrand = gsl_rng_uniform(rng);
       pkt[n].tdecay = -T52FE * log(zrand);
     }
-    else if (pkt[n].type == TYPE_52MN_PELLET)
+    else
     {
+      pkt[n].type = TYPE_52MN_PELLET;
       zrand = gsl_rng_uniform(rng);
-      double zrand2 = gsl_rng_uniform(rng);
+      const double zrand2 = gsl_rng_uniform(rng);
       pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
     }
   }
@@ -175,16 +174,16 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
     /// Now choose whether it's going to be a 48Cr or 48V pellet and
     /// mark it as such.
     zrand = gsl_rng_uniform(rng);
-    pkt[n].type = (zrand < (E48CR / (E48CR + E48V))) ? TYPE_48CR_PELLET : TYPE_48V_PELLET;
-
-    /// Now choose the decay time.
-    zrand = gsl_rng_uniform(rng);
-    if (pkt[n].type == TYPE_48CR_PELLET)
+    if (zrand < (E48CR / (E48CR + E48V)))
     {
+      pkt[n].type = TYPE_48CR_PELLET;
+      zrand = gsl_rng_uniform(rng);
       pkt[n].tdecay = -T48CR * log(zrand);
     }
-    else if (pkt[n].type == TYPE_48V_PELLET)
+    else
     {
+      pkt[n].type = TYPE_48V_PELLET;
+      zrand = gsl_rng_uniform(rng);
       const double zrand2 = gsl_rng_uniform(rng);
       pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
     }
