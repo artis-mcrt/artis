@@ -700,11 +700,12 @@ static void read_atomicdata_files(void)
       }
       else if (nlevels >= nlevelsmax)
       {
-        printout("[info] read_atomicdata: reduce number of levels from %d to %d for ion %d of element %d\n",nlevels,nlevelsmax,ion,element);
+        printout("[info] read_atomicdata: reduce number of levels from %d to %d for ion %d of element %d\n", nlevels, nlevelsmax, ion, element);
       }
       else
       {
-        printout("[warning] read_atomicdata: requested nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduced nlevelsmax to nlevels\n",nlevelsmax,nlevels,ion,element);
+        printout("[warning] read_atomicdata: requested nlevelsmax=%d > nlevels=%d for ion %d of element %d ... reduced nlevelsmax to nlevels\n",
+                 nlevelsmax, nlevels, ion, element);
         nlevelsmax = nlevels;
       }
 
@@ -753,10 +754,10 @@ static void read_atomicdata_files(void)
         if (transitiontable == NULL)
         {
           if (tottransitions > 0)
-            {
-              printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
-              abort();
-            }
+          {
+            printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
+            abort();
+          }
         }
 
         read_ion_transitions(transitiondata, nlevelsmax, tottransitions_in, &tottransitions, transitiontable);
