@@ -291,6 +291,98 @@ static void read_ion_levels(
 }
 
 
+static void read_ion_transitions(
+  FILE *transitiondata, const int nlevelsmax, const int tottransitions_in,
+  int *tottransitions, transitiontable_entry *transitiontable)
+{
+  if (tottransitions == 0)
+  {
+    for (int i = 0; i < tottransitions_in; i++)
+    {
+      double A, coll_str;
+      int lower,upper,intforbidden;
+      fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden);
+      //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
+    }
+  }
+  else
+  {
+    int prev_upper = -1;
+    int prev_lower = 0;
+    for (int i = 0; i < *tottransitions; i++)
+    {
+      int lower_in;
+      int upper_in;
+      double A;
+      double coll_str;
+      int intforbidden;
+      fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden);
+      const int lower = lower_in - groundstate_index_in;
+      const int upper = upper_in - groundstate_index_in;
+
+      // this entire block can be removed if we don't want to add in extra collisonal
+      // transitions between the first n levels
+      if (prev_lower < nlevels_requiretransitions && prev_upper < nlevelsmax - 1)
+      {
+        if (lower == prev_lower && upper > prev_upper + 1) // same lower level, but skipped some upper levels
+        {
+          printout("+adding transitions from lower level %d starting at lineindex %d\n", prev_lower, i);
+          for (int tmplevel = prev_upper + 1; tmplevel < upper; tmplevel++)
+          {
+            if (tmplevel == prev_lower)
+              continue;
+            (*tottransitions)++;
+            transitiontable = realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
+            if (transitiontable == NULL)
+            {
+              printout("Could not reallocate transitiontable\n");
+              abort();
+            }
+            transitiontable[i].lower = prev_lower;
+            transitiontable[i].upper = tmplevel;
+            transitiontable[i].A = 0.;
+            transitiontable[i].coll_str = -2.;
+            transitiontable[i].forbidden = true;
+            // printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
+            i++;
+          }
+        }
+        else if (lower > prev_lower) // we've moved onto another lower level, but the previous one was missing some required transitions
+        {
+          for (int tmplevel = prev_upper + 1; tmplevel < nlevelsmax; tmplevel++)
+          {
+            (*tottransitions)++;
+            transitiontable = realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
+            if (transitiontable == NULL)
+            {
+              printout("Could not reallocate transitiontable\n");
+              abort();
+            }
+            transitiontable[i].lower = prev_lower;
+            transitiontable[i].upper = tmplevel;
+            transitiontable[i].A = 0.;
+            transitiontable[i].coll_str = -2.;
+            transitiontable[i].forbidden = true;
+            printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
+            i++;
+          }
+        }
+      }
+
+      transitiontable[i].lower = lower;
+      transitiontable[i].upper = upper;
+      transitiontable[i].A = A;
+      transitiontable[i].coll_str = coll_str;
+      transitiontable[i].forbidden = (intforbidden == 1);
+      //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
+      // printout("reading transition index %d lower %d upper %d\n", i, transitiontable[i].lower, transitiontable[i].upper);
+      prev_lower = lower;
+      prev_upper = upper;
+    }
+  }
+}
+
+
 static int compare_linelistentry(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the linelist by frequency.
 {
@@ -359,7 +451,7 @@ static int transitioncheck(int upper, int lower)
 }
 
 
-static void add_transitiontable_to_linelist(
+static void add_transitions_to_linelist(
   const int element, const int ion, const int nlevelsmax, const int tottransitions,
   transitiontable_entry *transitiontable, int *nuparr, int *ndownarr, int *lineindex)
 {
@@ -568,7 +660,7 @@ static void read_atomicdata_files(void)
     for (int ion = 0; ion < nions; ion++)
     {
       int nlevelsmax = nlevelsmax_readin;
-      printout("ion %d\n", ion);
+      printout("element %d ion %d\n", element, ion);
       /// calculate the current levels ground level energy
       energyoffset += ionpot;
 
@@ -632,15 +724,16 @@ static void read_atomicdata_files(void)
           int intforbidden;
           fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden);
         }
-        int readtransdata = fscanf(transitiondata,"%d %d %d", &transdata_Z_in,&transdata_ionstage_in,&tottransitions_in);
+        const int readtransdata = fscanf(transitiondata,"%d %d %d", &transdata_Z_in, &transdata_ionstage_in, &tottransitions_in);
         if (readtransdata == EOF)
         {
           printout("End of file in transition data");
           abort();
         }
       }
+
       printout("transdata header matched: transdata_Z_in %d, transdata_ionstage_in %d, tottransitions %d\n",
-                 transdata_Z_in, transdata_ionstage_in, tottransitions_in);
+               transdata_Z_in, transdata_ionstage_in, tottransitions_in);
       assert(tottransitions_in >= 0);
 
       int tottransitions = tottransitions_in;
@@ -666,91 +759,7 @@ static void read_atomicdata_files(void)
             }
         }
 
-        if (tottransitions == 0)
-        {
-          for (int i = 0; i < tottransitions_in; i++)
-          {
-            double A, coll_str;
-            int lower,upper,intforbidden;
-            fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden);
-            //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
-          }
-        }
-        else
-        {
-          int prev_upper = -1;
-          int prev_lower = 0;
-          for (int i = 0; i < tottransitions; i++)
-          {
-            int lower_in;
-            int upper_in;
-            double A;
-            double coll_str;
-            int intforbidden;
-            fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden);
-            const int lower = lower_in - groundstate_index_in;
-            const int upper = upper_in - groundstate_index_in;
-
-            // this entire block can be removed if we don't want to add in extra collisonal
-            // transitions between the first n levels
-            if (prev_lower < nlevels_requiretransitions && prev_upper < nlevelsmax - 1)
-            {
-              if (lower == prev_lower && upper > prev_upper + 1) // same lower level, but skipped some upper levels
-              {
-                printout("+adding transitions from lower level %d starting at lineindex %d\n", prev_lower, i);
-                for (int tmplevel = prev_upper + 1; tmplevel < upper; tmplevel++)
-                {
-                  if (tmplevel == prev_lower)
-                    continue;
-                  tottransitions += 1;
-                  transitiontable = realloc(transitiontable, tottransitions * sizeof(transitiontable_entry));
-                  if (transitiontable == NULL)
-                  {
-                    printout("Could not reallocate transitiontable\n");
-                    abort();
-                  }
-                  transitiontable[i].lower = prev_lower;
-                  transitiontable[i].upper = tmplevel;
-                  transitiontable[i].A = 0.;
-                  transitiontable[i].coll_str = -2.;
-                  transitiontable[i].forbidden = true;
-                  // printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
-                  i++;
-                }
-              }
-              else if (lower > prev_lower) // we've moved onto another lower level, but the previous one was missing some required transitions
-              {
-                for (int tmplevel = prev_upper + 1; tmplevel < nlevelsmax; tmplevel++)
-                {
-                  tottransitions += 1;
-                  transitiontable = realloc(transitiontable, tottransitions * sizeof(transitiontable_entry));
-                  if (transitiontable == NULL)
-                  {
-                    printout("Could not reallocate transitiontable\n");
-                    abort();
-                  }
-                  transitiontable[i].lower = prev_lower;
-                  transitiontable[i].upper = tmplevel;
-                  transitiontable[i].A = 0.;
-                  transitiontable[i].coll_str = -2.;
-                  transitiontable[i].forbidden = true;
-                  printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
-                  i++;
-                }
-              }
-            }
-
-            transitiontable[i].lower = lower;
-            transitiontable[i].upper = upper;
-            transitiontable[i].A = A;
-            transitiontable[i].coll_str = coll_str;
-            transitiontable[i].forbidden = (intforbidden == 1);
-            //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
-            // printout("reading transition index %d lower %d upper %d\n", i, transitiontable[i].lower, transitiontable[i].upper);
-            prev_lower = lower;
-            prev_upper = upper;
-          }
-        }
+        read_ion_transitions(transitiondata, nlevelsmax, tottransitions_in, &tottransitions, transitiontable);
 
         /// store the ions data to memory and set up the ions zeta and levellist
         elements[element].ions[ion].ionstage = ionstage;
@@ -779,10 +788,9 @@ static void read_atomicdata_files(void)
           abort();
         }
 
-
         read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, &cont_index, nuparr, ndownarr);
 
-        add_transitiontable_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, nuparr, ndownarr, &lineindex);
+        add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, nuparr, ndownarr, &lineindex);
 
         //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
         //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
@@ -828,7 +836,7 @@ static void read_atomicdata_files(void)
   if (nlines > 0)
   {
     /// and release empty memory from the linelist
-    if ((linelist = realloc(linelist, nlines*sizeof(linelist_entry))) == NULL)
+    if ((linelist = realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
       abort();
