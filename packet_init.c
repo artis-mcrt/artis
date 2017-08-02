@@ -424,12 +424,10 @@ void write_packets(FILE *restrict packets_file)
 void read_packets(FILE *restrict packets_file)
 {
   char *line = malloc(sizeof(char) * 1024);
-  char *linestart = line;
 
   int packets_read = 0;
   while (!feof(packets_file))
   {
-    line = linestart;
     if (line != fgets(line, 1024, packets_file))
       break;
 
@@ -443,97 +441,63 @@ void read_packets(FILE *restrict packets_file)
       abort();
     }
 
+    char *linepos = line;
     int offset = 0;
-    sscanf(line, "%d%n", &pkt[i].number, &offset);
-    line += offset;
-
-    sscanf(line, "%d%n", &pkt[i].where, &offset);
-    line += offset;
 
     int pkt_type_in;
-    sscanf(line, "%d%n", &pkt_type_in, &offset);
-    line += offset;
+    sscanf(linepos, "%d %d %d%n", &pkt[i].number, &pkt[i].where, &pkt_type_in, &offset);
+    linepos += offset;
     pkt[i].type = pkt_type_in;
 
-    sscanf(line, "%lg %lg %lg%n", &pkt[i].pos[0], &pkt[i].pos[1], &pkt[i].pos[2], &offset);
-    line += offset;
+    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].pos[0], &pkt[i].pos[1], &pkt[i].pos[2], &offset);
+    linepos += offset;
 
-    sscanf(line, "%lg %lg %lg%n", &pkt[i].dir[0], &pkt[i].dir[1], &pkt[i].dir[2], &offset);
-    line += offset;
+    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].dir[0], &pkt[i].dir[1], &pkt[i].dir[2], &offset);
+    linepos += offset;
 
     int last_cross_in;
-    sscanf(line, "%d%n", &last_cross_in, &offset);
-    line += offset;
+    sscanf(linepos, "%d%n", &last_cross_in, &offset);
+    linepos += offset;
     pkt[i].last_cross = last_cross_in;
 
-    sscanf(line, "%lg%n", &pkt[i].tdecay, &offset);
-    line += offset;
+    sscanf(linepos, "%lg%n", &pkt[i].tdecay, &offset);
+    linepos += offset;
 
-    sscanf(line, "%lg%n", &pkt[i].e_cmf, &offset);
-    line += offset;
-
-    sscanf(line, "%lg%n", &pkt[i].e_rf, &offset);
-    line += offset;
-
-    sscanf(line, "%lg%n", &pkt[i].nu_cmf, &offset);
-    line += offset;
-
-    sscanf(line, "%lg%n", &pkt[i].nu_rf, &offset);
-    line += offset;
+    sscanf(linepos, "%lg %lg %lg %lg%n", &pkt[i].e_cmf, &pkt[i].e_rf, &pkt[i].nu_cmf, &pkt[i].nu_rf, &offset);
+    linepos += offset;
 
     int escape_type;
-    sscanf(line, "%d%n", &escape_type, &offset);
-    line += offset;
+    sscanf(linepos, "%d %d %d%n", &escape_type, &pkt[i].escape_time, &pkt[i].scat_count, &offset);
+    linepos += offset;
     pkt[i].escape_type = escape_type;
 
-    sscanf(line, "%d%n", &pkt[i].escape_time, &offset);
-    line += offset;
+    sscanf(linepos, "%d %d %d%n", &pkt[i].next_trans, &pkt[i].interactions, &pkt[i].last_event, &offset);
+    linepos += offset;
 
-    sscanf(line, "%d%n", &pkt[i].scat_count, &offset);
-    line += offset;
+    sscanf(linepos, "%d %d%n", &pkt[i].emissiontype, &pkt[i].trueemissiontype, &offset);
+    linepos += offset;
 
-    sscanf(line, "%d%n", &pkt[i].next_trans, &offset);
-    line += offset;
+    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].em_pos[0], &pkt[i].em_pos[1], &pkt[i].em_pos[2], &offset);
+    linepos += offset;
 
-    sscanf(line, "%d%n", &pkt[i].interactions, &offset);
-    line += offset;
+    sscanf(linepos, "%d %lg %d%n", &pkt[i].absorptiontype, &pkt[i].absorptionfreq, &pkt[i].nscatterings, &offset);
+    linepos += offset;
 
-    sscanf(line, "%d%n", &pkt[i].last_event, &offset);
-    line += offset;
+    sscanf(linepos, "%d%n", &pkt[i].em_time, &offset);
+    linepos += offset;
 
-    sscanf(line, "%d%n", &pkt[i].emissiontype, &offset);
-    line += offset;
+    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].absorptiondir[0], &pkt[i].absorptiondir[1], &pkt[i].absorptiondir[2], &offset);
+    linepos += offset;
 
-    sscanf(line, "%d%n", &pkt[i].trueemissiontype, &offset);
-    line += offset;
+    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].stokes[0], &pkt[i].stokes[1], &pkt[i].stokes[2], &offset);
+    linepos += offset;
 
-    sscanf(line, "%lg %lg %lg%n", &pkt[i].em_pos[0], &pkt[i].em_pos[1], &pkt[i].em_pos[2], &offset);
-    line += offset;
-
-    sscanf(line, "%d%n", &pkt[i].absorptiontype, &offset);
-    line += offset;
-
-    sscanf(line, "%lg%n", &pkt[i].absorptionfreq, &offset);
-    line += offset;
-
-    sscanf(line, "%d%n", &pkt[i].nscatterings, &offset);
-    line += offset;
-
-    sscanf(line, "%d%n", &pkt[i].em_time, &offset);
-    line += offset;
-
-    sscanf(line, "%lg %lg %lg%n", &pkt[i].absorptiondir[0], &pkt[i].absorptiondir[1], &pkt[i].absorptiondir[2], &offset);
-    line += offset;
-
-    sscanf(line, "%lg %lg %lg%n", &pkt[i].stokes[0], &pkt[i].stokes[1], &pkt[i].stokes[2], &offset);
-    line += offset;
-
-    sscanf(line, "%lg %lg %lg%n", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2], &offset);
-    line += offset;
+    sscanf(linepos, "%lg %lg %lg%n", &pkt[i].pol_dir[0], &pkt[i].pol_dir[1], &pkt[i].pol_dir[2], &offset);
+    linepos += offset;
 
     int int_originated_from_positron;
-    sscanf(line, "%d%n", &int_originated_from_positron, &offset);
-    line += offset;
+    sscanf(linepos, "%d%n", &int_originated_from_positron, &offset);
+    linepos += offset;
     pkt[i].originated_from_positron = (int_originated_from_positron != 0);
   }
 
