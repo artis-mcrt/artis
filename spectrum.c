@@ -442,5 +442,3 @@ void gather_spectrum_res(const int current_abin)
   }
 
 }
-
-

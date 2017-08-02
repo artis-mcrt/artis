@@ -212,6 +212,85 @@ static void read_phixs_data(void)
 }
 
 
+static void read_ion_levels(
+  FILE* adata, int element, int ion, int nions, int nlevels, int nlevelsmax,
+  double energyoffset, double ionpot,
+  int *cont_index, int *nuparr, int *ndownarr)
+{
+  for (int level = 0; level < nlevels; level++)
+  {
+    int levelindex_in;
+    double levelenergy;
+    double statweight;
+    int ntransitions;
+    fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions);
+    assert(levelindex_in == level + groundstate_index_in);
+    assert((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
+    //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
+    if (level < nlevelsmax)
+    {
+      ndownarr[level] = 1;
+      nuparr[level] = 1;
+      //elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
+      const double currentlevelenergy = (energyoffset + levelenergy) * EV;
+      //if (element == 1 && ion == 0) printf("%d %16.10e\n",levelindex,currentlevelenergy);
+      //printout("energy for level %d of ionstage %d of element %d is %g\n",level,ionstage,element,currentlevelenergy/EV);
+      elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
+      //printout("epsilon(%d,%d,%d)=%g",element,ion,level,elements[element].ions[ion].levels[level].epsilon);
+
+      //if (level == 0 && ion == 0) energyoffset = levelenergy;
+      elements[element].ions[ion].levels[level].stat_weight = statweight;
+      ///Moved to the section with ionising levels below
+      //elements[element].ions[ion].levels[level].cont_index = cont_index;
+      //cont_index--;
+      /// Initialise the metastable flag to true. Set it to false if a downward transition exists.
+      elements[element].ions[ion].levels[level].metastable = true;
+      //elements[element].ions[ion].levels[level].main_qn = mainqn;
+
+      /// The level contributes to the ionisinglevels if its energy
+      /// is below the ionization potential and the level doesn't
+      /// belong to the topmost ion included.
+      /// Rate coefficients are only available for ionising levels.
+      if (levelenergy < ionpot && ion < nions - 1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
+      {
+        elements[element].ions[ion].ionisinglevels++;
+
+        elements[element].ions[ion].levels[level].cont_index = *cont_index;
+        (*cont_index)--;
+      }
+
+
+      /// store the possible downward transitions from the current level in following order to memory
+      ///     A_level,level-1; A_level,level-2; ... A_level,1
+      /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
+      if ((transitions[level].to = calloc(level, sizeof(int))) == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize transitionlist ... abort\n");
+        abort();
+      }
+      for (int i = 0; i < level; i++)
+      {
+        transitions[level].to[i] = -99.;
+      }
+      if ((elements[element].ions[ion].levels[level].downtrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize downtranslist ... abort\n");
+        abort();
+      }
+      /// initialize number of downward transitions to zero
+      elements[element].ions[ion].levels[level].downtrans[0].targetlevel = 0;
+      if ((elements[element].ions[ion].levels[level].uptrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize uptranslist ... abort\n");
+        abort();
+      }
+      /// initialize number of upward transitions to zero
+      elements[element].ions[ion].levels[level].uptrans[0].targetlevel = 0;
+    }
+  }
+}
+
+
 static int compare_linelistentry(const void *restrict p1, const void *restrict p2)
 /// Helper function to sort the linelist by frequency.
 {
@@ -477,7 +556,7 @@ static void read_atomicdata_files(void)
           {
             double A, coll_str;
             int lower,upper,intforbidden;
-            fscanf(transitiondata,"%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden);
+            fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower, &upper, &A, &coll_str, &intforbidden);
             //printout("index %d, lower %d, upper %d, A %g\n",transitionindex,lower,upper,A);
           }
         }
@@ -583,77 +662,7 @@ static void read_atomicdata_files(void)
           printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
           abort();
         }
-        for (int level = 0; level < nlevels; level++)
-        {
-          int levelindex_in;
-          double levelenergy;
-          double statweight;
-          int ntransitions;
-          fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions);
-          assert(levelindex_in == level + groundstate_index_in);
-          assert((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
-          //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
-          if (level < nlevelsmax)
-          {
-            ndownarr[level] = 1;
-            nuparr[level] = 1;
-            //elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
-            const double currentlevelenergy = (energyoffset + levelenergy) * EV;
-            //if (element == 1 && ion == 0) printf("%d %16.10e\n",levelindex,currentlevelenergy);
-            //printout("energy for level %d of ionstage %d of element %d is %g\n",level,ionstage,element,currentlevelenergy/EV);
-            elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
-            //printout("epsilon(%d,%d,%d)=%g",element,ion,level,elements[element].ions[ion].levels[level].epsilon);
-
-            //if (level == 0 && ion == 0) energyoffset = levelenergy;
-            elements[element].ions[ion].levels[level].stat_weight = statweight;
-            ///Moved to the section with ionising levels below
-            //elements[element].ions[ion].levels[level].cont_index = cont_index;
-            //cont_index--;
-            /// Initialise the metastable flag to true. Set it to false if a downward transition exists.
-            elements[element].ions[ion].levels[level].metastable = true;
-            //elements[element].ions[ion].levels[level].main_qn = mainqn;
-
-            /// The level contributes to the ionisinglevels if its energy
-            /// is below the ionization potential and the level doesn't
-            /// belong to the topmost ion included.
-            /// Rate coefficients are only available for ionising levels.
-            if (levelenergy < ionpot && ion < nions - 1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
-            {
-              elements[element].ions[ion].ionisinglevels++;
-
-              elements[element].ions[ion].levels[level].cont_index = cont_index;
-              cont_index--;
-            }
-
-
-            /// store the possible downward transitions from the current level in following order to memory
-            ///     A_level,level-1; A_level,level-2; ... A_level,1
-            /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-            if ((transitions[level].to = calloc(level, sizeof(int))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize transitionlist ... abort\n");
-              abort();
-            }
-            for (int i = 0; i < level; i++)
-            {
-              transitions[level].to[i] = -99.;
-            }
-            if ((elements[element].ions[ion].levels[level].downtrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize downtranslist ... abort\n");
-              abort();
-            }
-            /// initialize number of downward transitions to zero
-            elements[element].ions[ion].levels[level].downtrans[0].targetlevel = 0;
-            if ((elements[element].ions[ion].levels[level].uptrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize uptranslist ... abort\n");
-              abort();
-            }
-            /// initialize number of upward transitions to zero
-            elements[element].ions[ion].levels[level].uptrans[0].targetlevel = 0;
-          }
-        }
+        read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, &cont_index, nuparr, ndownarr);
 
         for (int ii = 0; ii < tottransitions; ii++)
         {

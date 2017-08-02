@@ -15,7 +15,7 @@
 }
 */
 
-void add_to_lc(const EPKT *pkt_ptr)
+static void add_to_lc(const EPKT *pkt_ptr)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
 {
@@ -165,7 +165,7 @@ void gather_light_curve(void)
 }
 
 
-void add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
+static void add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
 {
