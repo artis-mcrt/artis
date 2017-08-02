@@ -213,8 +213,8 @@ static void read_phixs_data(void)
 
 
 static void read_ion_levels(
-  FILE* adata, int element, int ion, int nions, int nlevels, int nlevelsmax,
-  double energyoffset, double ionpot,
+  FILE* adata, const int element, const int ion, const int nions, const int nlevels, const int nlevelsmax,
+  const double energyoffset, const double ionpot,
   int *cont_index, int *nuparr, int *ndownarr)
 {
   for (int level = 0; level < nlevels; level++)
@@ -356,6 +356,121 @@ static int transitioncheck(int upper, int lower)
   const int flag = transitions[upper].to[index];
 
   return flag;
+}
+
+
+static void add_transitiontable_to_linelist(
+  const int element, const int ion, const int nlevelsmax, const int tottransitions,
+  transitiontable_entry *transitiontable, int *nuparr, int *ndownarr, int *lineindex)
+{
+  for (int ii = 0; ii < tottransitions; ii++)
+  {
+    const int level = transitiontable[ii].upper;
+    const double epsilon_upper = epsilon(element, ion, level);
+    if (level < nlevelsmax)
+    {
+      const int targetlevel = transitiontable[ii].lower;
+      const double epsilon_lower = epsilon(element, ion, targetlevel);
+
+      //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
+      //{
+      //printout("ii %d\n",ii);
+      //printout("transtable upper %d, lower %d, A %g, iii %d\n",transitiontable[ii].upper,transitiontable[ii].lower, transitiontable[ii].A,iii);
+      /// Make sure that we don't allow duplicate. In that case take only the lines
+      /// first occurrence
+      if (transitioncheck(level,targetlevel) == -99)
+      {
+        transitions[level].to[level-targetlevel-1] = *lineindex;
+        const double A_ul = transitiontable[ii].A;
+        const double coll_str = transitiontable[ii].coll_str;
+        //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
+
+        const double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
+        const double g = stat_weight(element,ion,level) / stat_weight(element,ion,targetlevel);
+        const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+        //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
+        //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+
+        //printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu %g\n",*lineindex,element,ion,level-i-1,level,nu_trans);
+        linelist[*lineindex].elementindex = element;
+        linelist[*lineindex].ionindex = ion;
+        linelist[*lineindex].lowerlevelindex = targetlevel;
+        linelist[*lineindex].upperlevelindex = level;
+        linelist[*lineindex].nu = nu_trans;
+        linelist[*lineindex].einstein_A = A_ul;
+        linelist[*lineindex].osc_strength = f_ul;
+        linelist[*lineindex].coll_str = coll_str;
+        linelist[*lineindex].forbidden = transitiontable[ii].forbidden;
+        (*lineindex)++;
+        if (*lineindex % MLINES == 0)
+        {
+          printout("[info] read_atomicdata: increase linelistsize from %d to %d\n", *lineindex, *lineindex + MLINES);
+          if ((linelist = realloc(linelist, (*lineindex + MLINES) * sizeof(linelist_entry))) == NULL)
+          {
+            printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
+            abort();
+          }
+        }
+
+        /// This is not a metastable level.
+        elements[element].ions[ion].levels[level].metastable = false;
+
+        elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
+        if ((elements[element].ions[ion].levels[level].downtrans
+            = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level] + 1) * sizeof(transitionlist_entry))) == NULL)
+        {
+          printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
+          abort();
+        }
+        elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
+        elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon_trans = epsilon_upper - epsilon_lower;
+        //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
+        //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
+        ndownarr[level]++;
+
+        elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
+        if ((elements[element].ions[ion].levels[targetlevel].uptrans
+            = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel] + 1) * sizeof(transitionlist_entry))) == NULL)
+        {
+          printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
+          abort();
+        }
+        elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
+        elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon_trans = epsilon_upper - epsilon_lower;
+        nuparr[targetlevel]++;
+      }
+      else
+      {
+        // This is a new branch to deal with lines that have different types of transition. It should trip after a transition is already known.
+        const int linelistindex = transitions[level].to[level - targetlevel - 1];
+        const double A_ul = transitiontable[ii].A;
+        const double coll_str = transitiontable[ii].coll_str;
+        //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
+
+        const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
+        const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
+        const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
+        //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
+        //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
+
+        if ((linelist[linelistindex].elementindex != element) || (linelist[linelistindex].ionindex != ion) || (linelist[linelistindex].upperlevelindex != level) || (linelist[linelistindex].lowerlevelindex != targetlevel))
+        {
+          printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
+          printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
+          printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n", transitions[level].to[level - targetlevel - 1]);
+          printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
+          printout("[input.c]   linelist[linelistindex].elementindex %d, linelist[linelistindex].ionindex %d, linelist[linelistindex].upperlevelindex %d, linelist[linelistindex].lowerlevelindex %d\n", linelist[linelistindex].elementindex, linelist[linelistindex].ionindex, linelist[linelistindex].upperlevelindex,linelist[linelistindex].lowerlevelindex);
+          abort();
+        }
+        linelist[linelistindex].einstein_A += A_ul;
+        linelist[linelistindex].osc_strength += f_ul;
+        if (coll_str > linelist[linelistindex].coll_str)
+        {
+          linelist[linelistindex].coll_str = coll_str;
+        }
+      }
+    }
+  }
 }
 
 
@@ -550,6 +665,7 @@ static void read_atomicdata_files(void)
               abort();
             }
         }
+
         if (tottransitions == 0)
         {
           for (int i = 0; i < tottransitions_in; i++)
@@ -662,116 +778,12 @@ static void read_atomicdata_files(void)
           printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
           abort();
         }
+
+
         read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, &cont_index, nuparr, ndownarr);
 
-        for (int ii = 0; ii < tottransitions; ii++)
-        {
-          const int level = transitiontable[ii].upper;
-          const double epsilon_upper = epsilon(element, ion, level);
-          if (level < nlevelsmax)
-          {
-            const int targetlevel = transitiontable[ii].lower;
-            const double epsilon_lower = epsilon(element, ion, targetlevel);
+        add_transitiontable_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, nuparr, ndownarr, &lineindex);
 
-            //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
-            //{
-            //printout("ii %d\n",ii);
-            //printout("transtable upper %d, lower %d, A %g, iii %d\n",transitiontable[ii].upper,transitiontable[ii].lower, transitiontable[ii].A,iii);
-            /// Make sure that we don't allow duplicate. In that case take only the lines
-            /// first occurrence
-            if (transitioncheck(level,targetlevel) == -99)
-            {
-              transitions[level].to[level-targetlevel-1] = lineindex;
-              const double A_ul = transitiontable[ii].A;
-              const double coll_str = transitiontable[ii].coll_str;
-              //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
-
-              const double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
-              const double g = stat_weight(element,ion,level) / stat_weight(element,ion,targetlevel);
-              const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
-              //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-              //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
-
-              //printout("lineindex %d, element %d, ion %d, lower %d, upper %d, nu %g\n",lineindex,element,ion,level-i-1,level,nu_trans);
-              linelist[lineindex].elementindex = element;
-              linelist[lineindex].ionindex = ion;
-              linelist[lineindex].lowerlevelindex = targetlevel;
-              linelist[lineindex].upperlevelindex = level;
-              linelist[lineindex].nu = nu_trans;
-              linelist[lineindex].einstein_A = A_ul;
-              linelist[lineindex].osc_strength = f_ul;
-              linelist[lineindex].coll_str = coll_str;
-              linelist[lineindex].forbidden = transitiontable[ii].forbidden;
-              lineindex++;
-              if (lineindex % MLINES == 0)
-              {
-                printout("[info] read_atomicdata: increase linelistsize from %d to %d\n", lineindex, lineindex + MLINES);
-                if ((linelist = realloc(linelist, (lineindex + MLINES) * sizeof(linelist_entry))) == NULL)
-                {
-                  printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-                  abort();
-                }
-              }
-
-              /// This is not a metastable level.
-              elements[element].ions[ion].levels[level].metastable = false;
-
-              elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
-              if ((elements[element].ions[ion].levels[level].downtrans
-                  = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level] + 1) * sizeof(transitionlist_entry))) == NULL)
-              {
-                printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
-                abort();
-              }
-              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
-              elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon_trans = epsilon_upper - epsilon_lower;
-              //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
-              //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
-              ndownarr[level]++;
-
-              elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
-              if ((elements[element].ions[ion].levels[targetlevel].uptrans
-                  = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel] + 1) * sizeof(transitionlist_entry))) == NULL)
-              {
-                printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
-                abort();
-              }
-              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
-              elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon_trans = epsilon_upper - epsilon_lower;
-              nuparr[targetlevel]++;
-            }
-            else
-            {
-              // This is a new branch to deal with lines that have different types of transition. It should trip after a transition is already known.
-              const int linelistindex = transitions[level].to[level - targetlevel - 1];
-              const double A_ul = transitiontable[ii].A;
-              const double coll_str = transitiontable[ii].coll_str;
-              //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
-
-              const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
-              const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
-              const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
-              //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
-              //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].oscillator_strength = g * ME*pow(CLIGHT,3)/(8*pow(QE*nu_trans*PI,2)) * A_ul;
-
-              if ((linelist[linelistindex].elementindex != element) || (linelist[linelistindex].ionindex != ion) || (linelist[linelistindex].upperlevelindex != level) || (linelist[linelistindex].lowerlevelindex != targetlevel))
-              {
-                printout("[input.c] Failure to identify level pair for duplicate bb-transition ... going to abort now\n");
-                printout("[input.c]   element %d ion %d targetlevel %d level %d\n", element, ion, targetlevel, level);
-                printout("[input.c]   transitions[level].to[level-targetlevel-1]=linelistindex %d\n", transitions[level].to[level - targetlevel - 1]);
-                printout("[input.c]   A_ul %g, coll_str %g\n", A_ul, coll_str);
-                printout("[input.c]   linelist[linelistindex].elementindex %d, linelist[linelistindex].ionindex %d, linelist[linelistindex].upperlevelindex %d, linelist[linelistindex].lowerlevelindex %d\n", linelist[linelistindex].elementindex, linelist[linelistindex].ionindex, linelist[linelistindex].upperlevelindex,linelist[linelistindex].lowerlevelindex);
-                abort();
-              }
-              linelist[linelistindex].einstein_A += A_ul;
-              linelist[linelistindex].osc_strength += f_ul;
-              if (coll_str > linelist[linelistindex].coll_str)
-              {
-                linelist[linelistindex].coll_str = coll_str;
-              }
-            }
-          }
-        }
         //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
         //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
 
