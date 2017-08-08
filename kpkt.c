@@ -769,8 +769,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         }
         else if (ii > 0)
         {
-          nuoffset = (total_bfcooling_coeff*zrand - bfcooling_coeff_old) / (bfcooling_coeff-bfcooling_coeff_old) * deltanu;
-          nu_lower = nu_threshold + (ii-1)*deltanu + nuoffset;
+          nuoffset = (total_bfcooling_coeff * zrand - bfcooling_coeff_old) / (bfcooling_coeff - bfcooling_coeff_old) * deltanu;
+          nu_lower = nu_threshold + (ii-1) * deltanu + nuoffset;
         }
         else
           nu_lower = nu_threshold; // + ii*deltanu;
@@ -844,6 +844,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 8;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
+      pkt_ptr->trueemissionvelocity = -1;
       #ifndef FORCE_LTE
         //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
@@ -854,7 +855,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       /// the k-packet activates a macro-atom due to collisional ionisation
       if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
       element = cellhistory[tid].coolinglist[i].element;
-      ion = cellhistory[tid].coolinglist[i].ion+1;
+      ion = cellhistory[tid].coolinglist[i].ion + 1;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
       mastate[tid].element = element;
       mastate[tid].ion = ion;
@@ -869,6 +870,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 9;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
+      pkt_ptr->trueemissionvelocity = -1;
       #ifndef FORCE_LTE
         //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;

@@ -196,6 +196,7 @@ typedef struct packet
   int scat_count;  /// WHAT'S THAT???
   int number;     /// A unique number to identify which packet caused potential troubles.
   bool originated_from_positron; // first-non-pellet packet type was positron
+  float trueemissionvelocity;
 } PKT;
 
 enum ma_action {
