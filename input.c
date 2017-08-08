@@ -85,18 +85,19 @@ static void read_phixs_data(void)
               printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
               abort();
             }
-            // if (upperion == get_nions(element)-1) // top ion has only one level, so send it to that level
-            //   upperlevel = 0;
+            if (upperion == get_nions(element)-1) // top ion has only one level, so send it to that level
+              upperlevel = 0;
             elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
             elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
           }
           else // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
           {
+            int in_nphixstargets;
+            fscanf(phixsdata,"%d\n", &in_nphixstargets);
+            assert(in_nphixstargets >= 0);
             // read in a table of target states and probabilities and store them
+            if (upperion < get_nions(element)-1)// if nlevelsmax = 1 for the top ion
             {
-              int in_nphixstargets;
-              fscanf(phixsdata,"%d\n", &in_nphixstargets);
-              assert(in_nphixstargets >= 0);
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets, sizeof(phixstarget_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
@@ -120,7 +121,24 @@ static void read_phixs_data(void)
               }
               elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
             }
-
+            else // file has table of target states and probabilities but our top ion is limited to one level
+            {
+              for (int i = 0; i < in_nphixstargets; i++)
+              {
+                double phixstargetprobability;
+                int in_upperlevel;
+                fscanf(phixsdata,"%d %lg\n", &in_upperlevel, &phixstargetprobability);
+              }
+              if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
+              {
+                printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
+                abort();
+              }
+              // send it to the ground state of the top ion
+              elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
+              elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
+              elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
+            }
           }
 
           /// The level contributes to the ionisinglevels if its energy
@@ -739,11 +757,11 @@ static void read_atomicdata_files(void)
 
       int tottransitions = tottransitions_in;
 
-      // if (ion == nions - 1) // limit the top ion to one level and no transitions
-      // {
-      //   nlevelsmax = 1;
-      //   tottransitions = 0;
-      // }
+      if (ion == nions - 1) // limit the top ion to one level and no transitions
+      {
+        nlevelsmax = 1;
+        tottransitions = 0;
+      }
 
       /// then read in its level and transition data
       if (transdata_Z_in == Z && transdata_ionstage_in == ionstage)
