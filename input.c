@@ -77,7 +77,7 @@ static void read_phixs_data(void)
           elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = phixs_threshold_ev * EV;
           if (upperlevel_in >= 0) // file gives photoionisation to a single target state only
           {
-            const int upperlevel = upperlevel_in - groundstate_index_in;
+            int upperlevel = upperlevel_in - groundstate_index_in;
             assert(upperlevel >= 0);
             elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
             if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
@@ -85,7 +85,7 @@ static void read_phixs_data(void)
               printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
               abort();
             }
-            if (upperion == get_nions(element)-1) // top ion has only one level, so send it to that level
+            if (upperion == get_nions(element) - 1) // top ion has only one level, so send it to that level
               upperlevel = 0;
             elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
             elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
