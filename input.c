@@ -107,7 +107,7 @@ static void read_phixs_data(void)
               for (int i = 0; i < in_nphixstargets; i++)
               {
                 double phixstargetprobability;
-                fscanf(phixsdata,"%d %lg\n", &upperlevel_in, &phixstargetprobability);
+                fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability);
                 const int upperlevel = upperlevel_in - groundstate_index_in;
                 assert(upperlevel >= 0);
                 assert(phixstargetprobability > 0);
@@ -126,7 +126,7 @@ static void read_phixs_data(void)
               for (int i = 0; i < in_nphixstargets; i++)
               {
                 double phixstargetprobability;
-                fscanf(phixsdata,"%d %lg\n", &upperlevel_in, &phixstargetprobability);
+                fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability);
               }
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
               {
