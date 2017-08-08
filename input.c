@@ -98,6 +98,7 @@ static void read_phixs_data(void)
             // read in a table of target states and probabilities and store them
             if (upperion < get_nions(element) - 1) // not the top ion, which has nlevelsmax = 1
             {
+              elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets, sizeof(phixstarget_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
@@ -119,22 +120,21 @@ static void read_phixs_data(void)
               {
                 printout("WARNING: photoionisation table for Z=%d ionstage %d has probabilities that sum to %g", Z, get_ionstage(element, lowerion), probability_sum);
               }
-              elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
             }
             else // file has table of target states and probabilities but our top ion is limited to one level
             {
-              for (int i = 0; i < in_nphixstargets; i++)
-              {
-                double phixstargetprobability;
-                fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability);
-              }
+              elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
                 abort();
               }
+              for (int i = 0; i < in_nphixstargets; i++)
+              {
+                double phixstargetprobability;
+                fscanf(phixsdata, "%d %lg\n", &upperlevel_in, &phixstargetprobability);
+              }
               // send it to the ground state of the top ion
-              elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
               elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
               elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
             }
@@ -312,7 +312,7 @@ static void read_ion_transitions(
   FILE *transitiondata, const int nlevelsmax, const int tottransitions_in,
   int *tottransitions, transitiontable_entry *transitiontable)
 {
-  if (tottransitions == 0)
+  if (*tottransitions == 0)
   {
     for (int i = 0; i < tottransitions_in; i++)
     {
