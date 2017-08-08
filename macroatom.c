@@ -9,6 +9,7 @@
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
+#include "vectors.h"
 
 // constant for van-Regemorter approximation.
 #define C_0 (5.465e-11)
@@ -948,7 +949,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   #endif
 
   if (pkt_ptr->trueemissiontype < 0)
+  {
     pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
+    pkt_ptr->trueemissionvelocity = vec_len(pkt_ptr->em_pos) / pkt_ptr->em_time;
+  }
 
   /// procedure ends only after a change to r or k packets has taken place and
   /// returns then the actual time, which is the same as the input t1
