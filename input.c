@@ -96,7 +96,7 @@ static void read_phixs_data(void)
             fscanf(phixsdata,"%d\n", &in_nphixstargets);
             assert(in_nphixstargets >= 0);
             // read in a table of target states and probabilities and store them
-            if (upperion < get_nions(element)-1)// if nlevelsmax = 1 for the top ion
+            if (upperion < get_nions(element) - 1) // not the top ion, which has nlevelsmax = 1
             {
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets, sizeof(phixstarget_entry))) == NULL)
               {
@@ -126,8 +126,7 @@ static void read_phixs_data(void)
               for (int i = 0; i < in_nphixstargets; i++)
               {
                 double phixstargetprobability;
-                int in_upperlevel;
-                fscanf(phixsdata,"%d %lg\n", &in_upperlevel, &phixstargetprobability);
+                fscanf(phixsdata,"%d %lg\n", &upperlevel_in, &phixstargetprobability);
               }
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
               {
