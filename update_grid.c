@@ -57,7 +57,7 @@ static void update_abundances(const int modelgridindex, const int timestep, doub
     const double co_in = elements[get_elementindex(27)].abundance;
     const double fe_in = elements[get_elementindex(26)].abundance;
     //fe_in = cell[modelgridindex].f_fe_init;
-    for (int element = nelements-1; element >= 0; element--)
+    for (int element = nelements - 1; element >= 0; element--)
     {
       const int atomic_number = get_element(element);
       if (atomic_number == 28)
