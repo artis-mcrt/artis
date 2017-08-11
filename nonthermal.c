@@ -677,6 +677,9 @@ static float calculate_frac_heating(const int modelgridindex)
 
 float get_nt_frac_heating(const int modelgridindex)
 {
+  if (!NT_SOLVE_SPENCERFANO)
+    return 0.98;
+
   const float frac_heating = nt_solution[modelgridindex].frac_heating;
 
   if (frac_heating <= 0 || !isfinite(frac_heating))
