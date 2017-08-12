@@ -1492,7 +1492,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep)
   gsl_matrix_free(sfmatrix);
   gsl_vector_free(rhsvec);
 
-  if (timestep % 2 == 0)
+  if (timestep % 10 == 0)
     nt_write_to_file(modelgridindex, timestep);
 
   nt_solution[modelgridindex].frac_heating = -1.;

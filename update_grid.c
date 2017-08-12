@@ -146,8 +146,8 @@ static void write_to_estimators_file(const int n, const int timestep)
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
-    if (NLTE_POPS_ON && timestep % 2 == 0)
-      nltepop_write_to_file(n,timestep);
+    if (NLTE_POPS_ON)  //  && timestep % 2 == 0
+      nltepop_write_to_file(n, timestep);
 
     const float T_e = get_Te(n);
     const float nne = get_nne(n);
