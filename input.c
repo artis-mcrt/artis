@@ -16,6 +16,8 @@
 
 const int nlevels_requiretransitions = 0; // first n levels will be collisionally coupled to all other levels
 
+const bool single_level_top_ion = false;
+
 const int groundstate_index_in = 1; // starting level index in the input files
 
 typedef struct
@@ -85,7 +87,7 @@ static void read_phixs_data(void)
               printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
               abort();
             }
-            if (upperion == get_nions(element) - 1) // top ion has only one level, so send it to that level
+            if (single_level_top_ion && (upperion == get_nions(element) - 1)) // top ion has only one level, so send it to that level
               upperlevel = 0;
             elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = upperlevel;
             elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
@@ -96,7 +98,7 @@ static void read_phixs_data(void)
             fscanf(phixsdata,"%d\n", &in_nphixstargets);
             assert(in_nphixstargets >= 0);
             // read in a table of target states and probabilities and store them
-            if (upperion < get_nions(element) - 1) // not the top ion, which has nlevelsmax = 1
+            if (!single_level_top_ion || upperion < get_nions(element) - 1) // in case the top ion has nlevelsmax = 1
             {
               elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets, sizeof(phixstarget_entry))) == NULL)
@@ -765,7 +767,7 @@ static void read_atomicdata_files(void)
 
       int tottransitions = tottransitions_in;
 
-      if (ion == nions - 1) // limit the top ion to one level and no transitions
+      if (single_level_top_ion && ion == nions - 1) // limit the top ion to one level and no transitions
       {
         nlevelsmax = 1;
         tottransitions = 0;
