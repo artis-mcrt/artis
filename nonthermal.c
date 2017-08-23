@@ -987,14 +987,18 @@ static float calculate_eff_ionpot(const int modelgridindex, const int element, c
   // where eta is the fraction of the deposition energy going into ionization of the ion or shell
 
   double eta_over_ionpot_sum = 0.;
+  double ionpot_valence = -1;
   for (int collionindex = 0; collionindex < colliondatacount; collionindex++)
   {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1)
     {
       const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionindex);
-      const double ionpot = colliondata[collionindex].ionpot_ev * EV;
+      const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
+      if (ionpot_valence < 0)
+        ionpot_valence = ionpot_shell;
+      assert(ionpot_shell >= ionpot_valence);
 
-      eta_over_ionpot_sum += frac_ionization_shell / ionpot;
+      eta_over_ionpot_sum += frac_ionization_shell / ionpot_valence;
     }
   }
 
@@ -1153,7 +1157,7 @@ static void analyse_sf_solution(int modelgridindex)
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
           printout("      frac_ionization_shell(n=%d,l=%d): %g (ionpot=%.2f eV)\n",
-                   colliondata[n].n, colliondata[n].l, colliondata[n].ionpot_ev);
+                   colliondata[n].n, colliondata[n].l, frac_ionization_ion_shell, colliondata[n].ionpot_ev);
         }
       }
       const double frac_excitation_ion = calculate_nt_frac_excitation(modelgridindex, element, ion);

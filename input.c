@@ -244,7 +244,7 @@ static void read_ion_levels(
     int ntransitions;
     fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex_in, &levelenergy, &statweight, &ntransitions);
     assert(levelindex_in == level + groundstate_index_in);
-    assert((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
+    // assert((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
     //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
     if (level < nlevelsmax)
     {
