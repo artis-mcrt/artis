@@ -62,8 +62,8 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current)
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
     double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
-    double heating_cont = ((meanf_sigma(xx)*get_nnetot(mgi)) + sig_photo_electric(pkt_ptr,t_current) + (sig_pair_prod(pkt_ptr, t_current) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
-    heating_cont = heating_cont * pkt_ptr->e_rf * dist * (1. - (2.*dot(vel_vec, pkt_ptr->dir)/CLIGHT));
+    double heating_cont = ((meanf_sigma(xx) * get_nnetot(mgi)) + sig_photo_electric(pkt_ptr, t_current) + (sig_pair_prod(pkt_ptr, t_current) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+    heating_cont = heating_cont * pkt_ptr->e_rf * dist * (1. - (2. * dot(vel_vec, pkt_ptr->dir) / CLIGHT));
 
     // The terms in the above are for Compton, photoelectric and pair production. The pair production one
     // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
