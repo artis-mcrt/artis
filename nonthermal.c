@@ -1136,7 +1136,7 @@ static void analyse_sf_solution(int modelgridindex)
       const double nnion = ionstagepop(modelgridindex, element, ion);
 
       // if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
-      if (nnion <= 0.) // skip negligible ions
+      if (nnion <= 0.) // skip zero-abundance ions
         continue;
 
 
@@ -1152,7 +1152,8 @@ static void analyse_sf_solution(int modelgridindex)
           const double frac_ionization_ion_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, n);
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
-          // printout("  frac_ionization_shell: %g (n %d l %d)\n", frac_ionization_ion_shell, colliondata[n].n, colliondata[n].l);
+          printout("      frac_ionization_shell(n=%d,l=%d): %g (ionpot=%.2f eV)\n",
+                   colliondata[n].n, colliondata[n].l, colliondata[n].ionpot_ev);
         }
       }
       const double frac_excitation_ion = calculate_nt_frac_excitation(modelgridindex, element, ion);
