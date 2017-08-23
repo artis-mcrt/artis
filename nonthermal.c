@@ -1156,7 +1156,7 @@ static void analyse_sf_solution(int modelgridindex)
           const double frac_ionization_ion_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, n);
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
-          printout("      frac_ionization_shell(n=%d,l=%d): %g (ionpot=%.2f eV)\n",
+          printout("      frac_ionization_shell(n %d l %d): %g (ionpot %.2f eV)\n",
                    colliondata[n].n, colliondata[n].l, frac_ionization_ion_shell, colliondata[n].ionpot_ev);
         }
       }
