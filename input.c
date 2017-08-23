@@ -474,6 +474,15 @@ static void add_transitions_to_linelist(
 {
   for (int ii = 0; ii < tottransitions; ii++)
   {
+    // if (get_element(element) == 28 && get_ionstage(element, ion) == 2)
+    // {
+    //   printout("Disabling coll_str value of %g\n", transitiontable[ii].coll_str);
+    //   if (transitiontable[ii].forbidden)
+    //     transitiontable[ii].coll_str = -2.;
+    //   else
+    //     transitiontable[ii].coll_str = -1.;
+    // }
+
     const int level = transitiontable[ii].upper;
     const double epsilon_upper = epsilon(element, ion, level);
     if (level < nlevelsmax)
