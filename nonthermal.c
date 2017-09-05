@@ -379,7 +379,7 @@ static double electron_loss_rate(const double energy, const double nne)
 // return units are erg / cm
 {
   const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
-  const double zetae = H  * omegap / 2 / PI;
+  const double zetae = H * omegap / 2 / PI;
   const double v = sqrt(2 * energy / ME);
   if (energy > 14 * EV)
   {
@@ -938,6 +938,8 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
 // i.e. multiply this by ion population to get a rate of ionizations per second
 // Do not call during packet propagation, as the y vector may not be in memory!
+// IMPORTANT: we are dividing by the shell potential, not the valence potential here!
+// To change this, include a factor of (ionpot_shell / ionpot_valence)
 {
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
   gsl_vector *cross_section_vec_allshells = gsl_vector_calloc(SFPTS);
