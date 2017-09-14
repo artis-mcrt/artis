@@ -15,8 +15,8 @@
 #include "update_grid.h"
 #include "sn3d.h"
 
-#define SFPTS 2048  // number of energy points in the Spencer-Fano solution vector
-#define EMAX 1000. // eV
+#define SFPTS 8192  // number of energy points in the Spencer-Fano solution vector
+#define EMAX 32000. // eV
 #define EMIN 1.0 // eV
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
