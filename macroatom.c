@@ -1287,6 +1287,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
     else // alterative: (coll_strength > -3.5) to catch -2 or -3
     {
       // forbidden transitions: magnetic dipole, electric quadropole...
+      // Axelrod's approximation (thesis 1980)
       C = nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-eoverkt) * statw_upper(lineindex);
     }
   }
