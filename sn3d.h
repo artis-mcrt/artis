@@ -428,6 +428,7 @@ cellhistory_struct *restrict cellhistory;          /// Global pointer to the beg
 /// Debug/Analysis Counter
 int ma_stat_activation_collexc;
 int ma_stat_activation_collion;
+int ma_stat_activation_ntcollion;
 int ma_stat_activation_bb;
 int ma_stat_activation_bf;
 int ma_stat_deactivation_colldeexc;

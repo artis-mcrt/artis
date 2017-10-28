@@ -71,6 +71,7 @@ static void pkt_action_counters_reset(void)
 {
   ma_stat_activation_collexc = 0;
   ma_stat_activation_collion = 0;
+  ma_stat_activation_ntcollion = 0;
   ma_stat_activation_bb = 0;
   ma_stat_activation_bf = 0;
   ma_stat_deactivation_colldeexc = 0;
@@ -111,6 +112,7 @@ static void pkt_action_counters_printout(void)
   /// Printout packet statistics
   printout("ma_stat_activation_collexc = %d\n", ma_stat_activation_collexc);
   printout("ma_stat_activation_collion = %d\n", ma_stat_activation_collion);
+  printout("ma_stat_activation_ntcollion = %d\n", ma_stat_activation_ntcollion);
   printout("ma_stat_activation_bb = %d\n", ma_stat_activation_bb);
   printout("ma_stat_activation_bf = %d\n", ma_stat_activation_bf);
   printout("ma_stat_deactivation_colldeexc = %d\n", ma_stat_deactivation_colldeexc);

@@ -3,6 +3,7 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "nonthermal.h"
 #include "update_packets.h"
 #include "rpkt.h"
 
@@ -65,16 +66,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
         break;
 
       case TYPE_EMINUS:
-        /*It's an electron - convert to k-packet*/
-        //printout("e-minus propagation\n");
-        pkt_ptr->type = TYPE_KPKT;
-        #ifndef FORCE_LTE
-          //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
-        #endif
-        //pkt_ptr->type = TYPE_PRE_KPKT;
-        //pkt_ptr->type = TYPE_GAMMA_KPKT;
-        //if (tid == 0) k_stat_from_eminus += 1;
-        k_stat_from_eminus += 1;
+        do_nt_electron(pkt_ptr);
         break;
 
       case TYPE_KPKT:
@@ -232,7 +224,7 @@ void update_packets(const int nts)
   {
     // time_t time_of_last_packet_printout = 0;
     #ifdef _OPENMP
-    #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
+    #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_ntcollion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
     #endif
     for (int n = 0; n < npkts; n++)
     {
