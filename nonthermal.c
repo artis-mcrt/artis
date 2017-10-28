@@ -81,6 +81,13 @@ static gsl_vector *envec;            // energy grid on which solution is sampled
 static gsl_vector *sourcevec;        // samples of the source function (energy distribution of deposited energy)
 static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
+struct nt_ionizations_struct
+{
+  double frac_deposition;
+  int element;
+  int ion;
+};
+
 struct nt_solution_struct {
   double E_0;     // the lowest energy ionization or excitation transition in eV
   double *yfunc;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal electron number flux.
@@ -89,13 +96,30 @@ struct nt_solution_struct {
                                       // calculate the non-thermal ionization rate
   // float nt_ioncoeff[MELEMENTS][MIONS]; // need to keep these for performance, and in case the
   //                                      // spectrum is freed before packet propt
-  float frac_heating;           // energy fractions should add up to 1.0 if the solution is good
+  float frac_heating;              // energy fractions should add up to 1.0 if the solution is good
+  float frac_ionization;           // fraction of deposition energy going to ionization
+  float frac_excitation;           // fraction of deposition energy going to excitation
   double deposition_rate_density;
+  struct nt_ionizations_struct *frac_ionizations_list;
+  int frac_ionizations_list_size;
   int timestep;                 // the quantities above were calculated for this timestep
 };
 
 static struct nt_solution_struct nt_solution[MMODELGRID+1];
 
+
+static int compare_ionization_fractions(const void *p1, const void *p2)
+{
+  const struct nt_ionizations_struct *elem1 = p1;
+  const struct nt_ionizations_struct *elem2 = p2;
+
+ if (elem1->frac_deposition < elem2->frac_deposition)
+    return 1;
+ else if (elem1->frac_deposition > elem2->frac_deposition)
+    return -1;
+ else
+    return 0;
+}
 
 
 #ifndef get_tot_nion
@@ -177,7 +201,11 @@ void nt_init(const int my_rank)
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID + 1; modelgridindex++)
     {
-      nt_solution[modelgridindex].frac_heating = 1.0;
+      // should make these negative?
+      nt_solution[modelgridindex].frac_heating = 0.98;
+      nt_solution[modelgridindex].frac_ionization = 0.02;
+      nt_solution[modelgridindex].frac_excitation = 0.0;
+
       nt_solution[modelgridindex].timestep = -1;
       nt_solution[modelgridindex].E_0 = 0.;
       nt_solution[modelgridindex].deposition_rate_density = -1.;
@@ -190,6 +218,12 @@ void nt_init(const int my_rank)
       {
         nt_solution[modelgridindex].yfunc = NULL;
       }
+
+      const int frac_ionizations_list_size = get_nions_allelements();
+      nt_solution[modelgridindex].frac_ionizations_list = calloc(
+        frac_ionizations_list_size, sizeof(struct nt_ionizations_struct));
+      nt_solution[modelgridindex].frac_ionizations_list_size = frac_ionizations_list_size;
+
       zero_all_effionpot(modelgridindex);
     }
 
@@ -681,15 +715,44 @@ float get_nt_frac_heating(const int modelgridindex)
     return 0.98;
 
   const float frac_heating = nt_solution[modelgridindex].frac_heating;
+  // add any debugging checks here?
+  return frac_heating;
+}
 
-  if (frac_heating <= 0 || !isfinite(frac_heating))
+
+float get_nt_frac_ionization(const int modelgridindex)
+{
+  if (!NT_SOLVE_SPENCERFANO)
+    return 0.02;
+
+  const float frac_ionization = nt_solution[modelgridindex].frac_ionization;
+
+  if (frac_ionization < 0 || !isfinite(frac_ionization))
   {
-    printout("ERROR: get_nt_frac_heating called with no valid solution stored for cell %d. frac_heating = %g\n",
-             modelgridindex, frac_heating);
+    printout("ERROR: get_nt_frac_ionization called with no valid solution stored for cell %d. frac_ionization = %g\n",
+             modelgridindex, frac_ionization);
     abort();
   }
 
-  return frac_heating;
+  return frac_ionization;
+}
+
+
+float get_nt_frac_excitation(const int modelgridindex)
+{
+  if (!NT_SOLVE_SPENCERFANO)
+    return 0.;
+
+  const float frac_excitation = nt_solution[modelgridindex].frac_excitation;
+
+  if (frac_excitation < 0 || !isfinite(frac_excitation))
+  {
+    printout("ERROR: get_nt_frac_excitation called with no valid solution stored for cell %d. frac_excitation = %g\n",
+             modelgridindex, frac_excitation);
+    abort();
+  }
+
+  return frac_excitation;
 }
 
 
@@ -1118,6 +1181,58 @@ double calculate_nt_excitation_rate(int modelgridindex, int element, int ion, in
 }
 
 
+void do_nt_electron(PKT *pkt_ptr)
+{
+  const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  double zrand = gsl_rng_uniform(rng);
+  // const double frac_heating = get_nt_frac_heating(modelgridindex);
+  // const double frac_excitation = get_nt_frac_excitation(modelgridindex);
+  const double frac_ionization = get_nt_frac_ionization(modelgridindex);
+
+  if (zrand < frac_ionization)
+  {
+
+    const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
+    for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
+    {
+      const double frac_deposition_ion = nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition;
+      if (zrand < frac_deposition_ion)
+      {
+        const int element = nt_solution[modelgridindex].frac_ionizations_list[allionindex].element;
+        const int lowerion = nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion;
+
+        mastate[tid].element = element;
+        mastate[tid].ion = lowerion + 1;
+        mastate[tid].level = 0;
+        mastate[tid].activatingline = -99;
+        pkt_ptr->type = TYPE_MA;
+        ma_stat_activation_ntcollion++;
+        pkt_ptr->interactions += 1;
+        pkt_ptr->last_event = 9;
+        pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
+        pkt_ptr->trueemissionvelocity = -1;
+
+        printout("e- packet selected nt ionization of Z=%d ionstage %d\n", get_element(element), get_ionstage(element, lowerion));
+
+        return;
+      }
+      zrand -= frac_deposition_ion;
+    }
+  }
+
+  /*It's an electron - convert to k-packet*/
+  //printout("e-minus propagation\n");
+  pkt_ptr->type = TYPE_KPKT;
+  #ifndef FORCE_LTE
+    //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
+  #endif
+  //pkt_ptr->type = TYPE_PRE_KPKT;
+  //pkt_ptr->type = TYPE_GAMMA_KPKT;
+  //if (tid == 0) k_stat_from_eminus += 1;
+  k_stat_from_eminus += 1;
+}
+
+
 static void analyse_sf_solution(int modelgridindex)
 {
   const float nne = get_nne(modelgridindex);
@@ -1128,9 +1243,12 @@ static void analyse_sf_solution(int modelgridindex)
 
   double frac_excitation_total = 0.;
   double frac_ionization_total = 0.;
+
+  int allionindex = 0; // unique index for every ion of all elements
   for (int element = 0; element < nelements; element++)
   {
     const int Z = get_element(element);
+    const int nions = get_nions(element);
     for (int ion = 0; ion < get_nions(element); ion++)
     {
       float eff_ionpot = calculate_eff_ionpot(modelgridindex, element, ion);
@@ -1162,9 +1280,19 @@ static void analyse_sf_solution(int modelgridindex)
                    colliondata[n].n, colliondata[n].l, frac_ionization_ion_shell, colliondata[n].ionpot_ev);
         }
       }
+
+      if (ion < nions - 1)
+      {
+        assert(allionindex < nt_solution[modelgridindex].frac_ionizations_list_size)
+        nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition = frac_ionization_ion;
+        nt_solution[modelgridindex].frac_ionizations_list[allionindex].element = element;
+        nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion = ion;
+        allionindex++;
+        frac_ionization_total += frac_ionization_ion;
+      }
+
       const double frac_excitation_ion = calculate_nt_frac_excitation(modelgridindex, element, ion);
       frac_excitation_total += frac_excitation_ion;
-      frac_ionization_total += frac_ionization_ion;
 
       printout("    frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_nlsubshell_count);
       printout("    frac_excitation: %g\n", frac_excitation_ion);
@@ -1179,6 +1307,21 @@ static void analyse_sf_solution(int modelgridindex)
     }
   }
 
+  if (allionindex < nt_solution[modelgridindex].frac_ionizations_list_size)
+  {
+    // this branch means we neglected some ions, probably due to low abundance
+    for (; allionindex < nt_solution[modelgridindex].frac_ionizations_list_size; allionindex++)
+    {
+      nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition = 0.;
+      nt_solution[modelgridindex].frac_ionizations_list[allionindex].element = -1;
+      nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion = -1;
+    }
+  }
+
+  qsort(nt_solution[modelgridindex].frac_ionizations_list,
+        nt_solution[modelgridindex].frac_ionizations_list_size, sizeof(struct nt_ionizations_struct),
+        compare_ionization_fractions);
+
   const float frac_heating = get_nt_frac_heating(modelgridindex);
 
   // calculate number density of non-thermal electrons
@@ -1192,6 +1335,9 @@ static void analyse_sf_solution(int modelgridindex)
     const double oneovervelocity = sqrt(9.10938e-31 / 2 / endash / 1.60218e-19) / 100; // in sec/cm
     nne_nt_max += yscalefactor * get_y_sample(modelgridindex, i) * oneovervelocity * DELTA_E;
   }
+
+  nt_solution[modelgridindex].frac_excitation = frac_excitation_total;
+  nt_solution[modelgridindex].frac_ionization = frac_ionization_total;
 
   printout("  E_0:         %9.4f eV\n", nt_solution[modelgridindex].E_0);
   printout("  E_init:      %9.2f eV/s/cm^3\n", E_init_ev);
@@ -1463,7 +1609,8 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep)
       printout("%d ", ionstage);
 
       sfmatrix_add_excitation(sfmatrix, element, ion, nnion, &E_0);
-      sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion, &E_0);
+      if (ion < nions - 1)
+        sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion, &E_0);
     }
     if (!first_included_ion_of_element)
       printout("\n");

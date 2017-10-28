@@ -6,6 +6,7 @@
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
+int get_nions_allelements(void);
 
 inline int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.

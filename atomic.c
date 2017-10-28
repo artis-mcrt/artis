@@ -26,6 +26,7 @@ extern inline double photoionization_crosssection_macroatom(double nu_edge, doub
 extern inline double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
 extern inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
+
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 {
   const int element = linelist[lineindex].elementindex;
@@ -46,4 +47,16 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 
   const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
   return tau_sobolev;
+}
+
+
+int get_nions_allelements(void)
+/// Returns the number of ions associated with all elements
+{
+  int nions_tot = 0;
+  for (int element = 0; element < nelements; element++)
+  {
+    nions_tot += get_nions(element);
+  }
+  return nions_tot;
 }
