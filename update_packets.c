@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "assert.h"
 #include "gamma.h"
 #include "kpkt.h"
 #include "ltepop.h"
@@ -65,7 +66,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
         }
         break;
 
-      case TYPE_EMINUS:
+      case TYPE_NTLEPTON:
         do_nt_electron(pkt_ptr);
         break;
 
@@ -104,13 +105,14 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
 
 
 static void update_inactive_pellet(
-  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const int nts, const double ts, const double tw)
+  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_eminus, const int nts, const double ts, const double tw)
 {
   //printout("inactive pellet\n");
   /**It's still an inactive pellet. Need to do two things (a) check if it
   decays in this time step and if it does handle that. (b) if it doesn't decay in
   this time step then just move the packet along with the matter for the
   start of the next time step. */
+  assert(!(decay_to_kpkt && decay_to_eminus));
 
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
   if (tdecay > (ts + tw))
@@ -136,8 +138,19 @@ static void update_inactive_pellet(
       pkt_ptr->absorptiontype = -6;
       packet_prop(pkt_ptr, tdecay, ts + tw, nts);
     }
+    else if (decay_to_eminus)
+    {
+      pkt_ptr->pos[0] *= tdecay / ts;
+      pkt_ptr->pos[1] *= tdecay / ts;
+      pkt_ptr->pos[2] *= tdecay / ts;
+
+      pkt_ptr->type = TYPE_NTLEPTON;
+      pkt_ptr->absorptiontype = -10;
+      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
+    }
     else
     {
+      // decay to gamma ray
       pellet_decay(nts, pkt_ptr);
       //printout("pellet to photon packet and propagation by packet_prop\n");
       packet_prop(pkt_ptr, tdecay, ts + tw, nts);
@@ -290,13 +303,18 @@ void update_packets(const int nts)
         case TYPE_COBALT_PELLET:
         case TYPE_48CR_PELLET:
         case TYPE_48V_PELLET:
-          update_inactive_pellet(pkt_ptr, false, nts, ts, tw);
+          update_inactive_pellet(pkt_ptr, false, false, nts, ts, tw);
           break;
 
         case TYPE_52FE_PELLET:
         case TYPE_52MN_PELLET:
+          // to kpts
+          update_inactive_pellet(pkt_ptr, true, false, nts, ts, tw);
+          break;
+
         case TYPE_COBALT_POSITRON_PELLET:
-          update_inactive_pellet(pkt_ptr, true, nts, ts, tw);
+          // to eminus packets (FIXME)
+          update_inactive_pellet(pkt_ptr, false, true, nts, ts, tw);
           break;
 
         case TYPE_GAMMA:

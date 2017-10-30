@@ -144,7 +144,7 @@ enum packet_type {
   TYPE_RPKT = 11,
   TYPE_KPKT = 12,
   TYPE_MA = 13,
-  TYPE_EMINUS = 20,
+  TYPE_NTLEPTON = 20,
   TYPE_PRE_KPKT = 120,
   TYPE_GAMMA_KPKT = 121,
 };
@@ -183,6 +183,7 @@ typedef struct packet
                           /// photoelectric effect of gammas (-4), pair production of gammas (-5)
                           /// decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
                           /// onset of the simulation (-7)
+                          /// decay of a positron pellet (-10)
   int trueemissiontype;  // emission type coming from a kpkt to rpkt (last thermal emission)
   double absorptionfreq;  /// records nu_cmf of packet at last absorption
   double absorptiondir[3]; /// Direction of propagation (x,y,z) when a packet was last absorbed in a line. Always a unit vector.

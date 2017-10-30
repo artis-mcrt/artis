@@ -155,7 +155,7 @@ void pair_prod(PKT *restrict pkt_ptr, double t_current)
   {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works
     // for consistency with com_sca.
-    pkt_ptr->type = TYPE_EMINUS;
+    pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -5;
   }
   else

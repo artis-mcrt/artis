@@ -240,7 +240,7 @@ void com_sca(PKT *pkt_ptr, double t_current)
   else
   {
     // It's converted to an e-minus packet.
-    pkt_ptr->type = TYPE_EMINUS;
+    pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -3;
   }
 }
