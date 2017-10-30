@@ -567,6 +567,14 @@ double radfield(double nu, int modelgridindex)
     }
     else //binindex < 0
     {
+      // if (nu > radfield_get_bin_nu_upper(RADFIELDBINCOUNT - 1))
+      // {
+      //   // undiluted LTE blueward of the bins
+      //   const double J_nu_LTE = radfield_dbb(nu, get_Te(modelgridindex), 1.0);
+      //   return J_nu_LTE;
+      // }
+      // else
+      //   return 0; // no radfield redwards of the bins
       //printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
       //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
     }
