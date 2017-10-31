@@ -154,7 +154,7 @@ void pair_prod(PKT *restrict pkt_ptr, double t_current)
   if (zrand > prob_gamma)
   {
     // Convert it to an e-minus packet - actually it could be positron EK too, but this works
-    // for consistency with com_sca.
+    // for consistency with compton_scatter.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -5;
   }

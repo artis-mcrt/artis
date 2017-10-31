@@ -119,7 +119,7 @@ static double thomson_angle(void)
 }
 
 
-void com_sca(PKT *pkt_ptr, double t_current)
+void compton_scatter(PKT *pkt_ptr, double t_current)
 // Routine to deal with physical Compton scattering event.
 {
   double f;

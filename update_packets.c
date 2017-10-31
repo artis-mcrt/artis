@@ -104,30 +104,30 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
 }
 
 
-static void update_inactive_pellet(
-  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_eminus, const int nts, const double ts, const double tw)
+static void update_pellet(
+  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double ts, const double tw)
 {
-  //printout("inactive pellet\n");
-  /**It's still an inactive pellet. Need to do two things (a) check if it
-  decays in this time step and if it does handle that. (b) if it doesn't decay in
-  this time step then just move the packet along with the matter for the
-  start of the next time step. */
-  assert(!(decay_to_kpkt && decay_to_eminus));
+  // Handle inactive pellets. Need to do two things (a) check if it
+  // decays in this time step and if it does handle that. (b) if it doesn't decay in
+  // this time step then just move the packet along with the matter for the
+  // start of the next time step.
+
+  assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
 
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
   if (tdecay > (ts + tw))
   {
-    /**It won't decay in this timestep just need to move it on.*/
+    // It won't decay in this timestep, so just need to move it on with the flow.
 
     pkt_ptr->pos[0] *= (ts + tw) / ts;
     pkt_ptr->pos[1] *= (ts + tw) / ts;
     pkt_ptr->pos[2] *= (ts + tw) / ts;
 
-    /**That's all that needs to be done for the inactive pellet. */
+    // That's all that needs to be done for the inactive pellet.
   }
   else if (tdecay > ts)
   {
-    /**These are the packets decaying in this timestep.*/
+    // The packet decays in the current timestep.
     if (decay_to_kpkt)
     {
       pkt_ptr->pos[0] *= tdecay / ts;
@@ -138,7 +138,7 @@ static void update_inactive_pellet(
       pkt_ptr->absorptiontype = -6;
       packet_prop(pkt_ptr, tdecay, ts + tw, nts);
     }
-    else if (decay_to_eminus)
+    else if (decay_to_ntlepton)
     {
       pkt_ptr->pos[0] *= tdecay / ts;
       pkt_ptr->pos[1] *= tdecay / ts;
@@ -158,13 +158,13 @@ static void update_inactive_pellet(
   }
   else if ((tdecay > 0) && (nts == 0))
   {
-    /** These are pellets whose decay times were before the first time step
-    They will be made into r-packets with energy reduced for doing work on the
-    ejects following Lucy 2004. */
-    /** The position is already set at tmin so don't need to move it. Assume
-    that it is fixed in place from decay to tmin - i.e. short mfp. */
+    // These are pellets whose decay times were before the first time step
+    // They will be made into r-packets with energy reduced for doing work on the
+    // ejecta following Lucy 2004.
+    // The position is already set at tmin so don't need to move it. Assume
+    // that it is fixed in place from decay to tmin - i.e. short mfp.
 
-    pkt_ptr->e_cmf = pkt_ptr->e_cmf * tdecay / tmin;
+    pkt_ptr->e_cmf *= tdecay / tmin;
     //pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
@@ -220,7 +220,7 @@ void update_packets(const int nts)
   /// If we want to do that with this version, sorting should be by modelgridcell
   //qsort(pkt,npkts,sizeof(PKT),compare_packets_bymodelgridposition);
   /// For 2D and 3D models sorting by the modelgrid cell's density should be most efficient
-  qsort(pkt,npkts,sizeof(PKT),compare_packets_bymodelgriddensity);
+  qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
   /*for (n = 0; n < npkts; n++)
   {
     printout("pkt[%d].where = %d, mgi %d\n",n,pkt[n].where,cell[pkt[n].where].modelgridindex);
@@ -303,18 +303,18 @@ void update_packets(const int nts)
         case TYPE_COBALT_PELLET:
         case TYPE_48CR_PELLET:
         case TYPE_48V_PELLET:
-          update_inactive_pellet(pkt_ptr, false, false, nts, ts, tw);
+          update_pellet(pkt_ptr, false, false, nts, ts, tw);
           break;
 
         case TYPE_52FE_PELLET:
         case TYPE_52MN_PELLET:
-          // to kpts
-          update_inactive_pellet(pkt_ptr, true, false, nts, ts, tw);
+          // convert to kpts
+          update_pellet(pkt_ptr, true, false, nts, ts, tw);
           break;
 
         case TYPE_COBALT_POSITRON_PELLET:
-          // to eminus packets (FIXME)
-          update_inactive_pellet(pkt_ptr, false, true, nts, ts, tw);
+          // covert to to non-thermal leptons
+          update_pellet(pkt_ptr, false, true, nts, ts, tw);
           break;
 
         case TYPE_GAMMA:
