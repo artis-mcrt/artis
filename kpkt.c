@@ -891,9 +891,9 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   }
   else
   {
-    pkt_ptr->pos[0] = pkt_ptr->pos[0] * t2 / t1;
-    pkt_ptr->pos[1] = pkt_ptr->pos[1] * t2 / t1;
-    pkt_ptr->pos[2] = pkt_ptr->pos[2] * t2 / t1;
+    pkt_ptr->pos[0] *= t2 / t1;
+    pkt_ptr->pos[1] *= t2 / t1;
+    pkt_ptr->pos[2] *= t2 / t1;
     return(PACKET_SAME);
   }
 }
