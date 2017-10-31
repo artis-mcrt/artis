@@ -361,10 +361,10 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
 
       // event occurs. Choose which event and call the appropriate subroutine.
       zrand = gsl_rng_uniform(rng);
-      if (kap_compton > (zrand*kap_tot))
+      if (kap_compton > (zrand * kap_tot))
       {
         // Compton scattering.
-        com_sca(pkt_ptr,t_current);
+        compton_scatter(pkt_ptr, t_current);
         if (pkt_ptr->type != TYPE_GAMMA)
         {
           // It's not a gamma ray any more - return.
