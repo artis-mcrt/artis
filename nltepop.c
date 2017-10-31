@@ -565,7 +565,7 @@ static bool nltepop_matrix_solve(
 
   if (lumatrix_is_singular(rate_matrix_LU_decomp))
   {
-    printout("ERROR: NLTE matrix is singular for element Z=%d!", get_element(element));
+    printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_element(element));
     // abort();
     completed_solution = false;
   }
