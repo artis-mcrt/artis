@@ -14,7 +14,7 @@ double get_deposition_rate_density(int modelgridindex);
 float get_nt_frac_heating(int modelgridindex);
 float get_nt_frac_excitation(const int modelgridindex);
 float get_nt_frac_ionization(const int modelgridindex);
-double calculate_nt_excitation_rate(int modelgridindex, int element, int ion, int lowerlevel, int upperlevel);
+double calculate_nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowerlevel, int upperlevel);
 void do_nt_electron(PKT *pkt_ptr);
 void nt_write_restart_data(FILE *gridsave_file);
 void nt_read_restart_data(FILE *gridsave_file);
