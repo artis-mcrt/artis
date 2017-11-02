@@ -324,7 +324,8 @@ static void density_1d_read(void)
     dcen[1] = cell[n].pos_init[1] + (0.5 * wid_init);
     dcen[2] = cell[n].pos_init[2] + (0.5 * wid_init);
 
-    double radial_pos = vec_len(dcen);
+    const double radial_pos = vec_len(dcen);
+    const double vmin = 0.;
     if (radial_pos < rmax)
     {
       //int mkeep = 0;
@@ -338,7 +339,10 @@ static void density_1d_read(void)
           cell[n].modelgridindex = m + 1;
         }
       }
-      modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
+      if (vout_model[cell[n].modelgridindex] >= vmin)
+        modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
+      else
+        cell[n].modelgridindex = MMODELGRID;
       //renorm[mkeep]++;
     }
     else
