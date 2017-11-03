@@ -362,10 +362,13 @@ void nt_close_file(void)
   gsl_vector_free(sourcevec);
   if (STORE_NT_SPECTRUM)
   {
-    for (int mgi = 0; mgi < MMODELGRID + 1; mgi++)
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID + 1; modelgridindex++)
     {
-      if (mg_associated_cells[mgi] > 0)
-        free(nt_solution[mgi].yfunc);
+      if (mg_associated_cells[modelgridindex] > 0)
+      {
+        free(nt_solution[modelgridindex].yfunc);
+        free(nt_solution[modelgridindex].frac_ionizations_list);
+      }
     }
   }
   free(colliondata);
