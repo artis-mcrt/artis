@@ -162,6 +162,7 @@ static void print_level_rates(
   const gsl_vector *restrict popvec,
   const gsl_matrix *rate_matrix_rad_bb,
   const gsl_matrix *rate_matrix_coll_bb,
+  const gsl_matrix *rate_matrix_ntcoll_bb,
   const gsl_matrix *rate_matrix_rad_bf,
   const gsl_matrix *rate_matrix_coll_bf,
   const gsl_matrix *rate_matrix_ntcoll_bf)
@@ -189,21 +190,23 @@ static void print_level_rates(
 
   const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bb, popvec);
   const double coll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bb, popvec);
+  const double ntcoll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_ntcoll_bb, popvec);
   const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bf, popvec);
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_ntcoll_bf, popvec);
   const double total_rate_in = rad_bb_in_total + coll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
-  printout("  TOTAL rates in:             rad_bb_in  %8.2e coll_bb_in  %8.2e rad_bf_in  %8.2e coll_bf_in  %8.2e ntcoll_bf_in  %8.2e\n",
-           rad_bb_in_total, coll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total);
+  printout("  TOTAL rates in:             rad_bb_in  %7.1e coll_bb_in  %7.1e ntcoll_bb_in  %7.1e rad_bf_in  %7.1e coll_bf_in  %7.1e ntcoll_bf_in  %7.1e\n",
+           rad_bb_in_total, coll_bb_in_total, ntcoll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total);
 
   const double rad_bb_out_total = get_total_rate_out(selected_index, rate_matrix_rad_bb, popvec);
   const double coll_bb_out_total = get_total_rate_out(selected_index, rate_matrix_coll_bb, popvec);
+  const double ntcoll_bb_out_total = get_total_rate_out(selected_index, rate_matrix_ntcoll_bb, popvec);
   const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrix_rad_bf, popvec);
   const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_coll_bf, popvec);
   const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_ntcoll_bf, popvec);
   const double total_rate_out = rad_bb_out_total + coll_bb_out_total + rad_bf_out_total + coll_bf_out_total + ntcoll_bf_out_total;
-  printout("  TOTAL rates out:            rad_bb_out %8.2e coll_bb_out %8.2e rad_bf_out %8.2e coll_bf_out %8.2e ntcoll_bf_out %8.2e\n",
-          rad_bb_out_total, coll_bb_out_total, rad_bf_out_total, coll_bf_out_total, ntcoll_bf_out_total);
+  printout("  TOTAL rates out:            rad_bb_out %7.1e coll_bb_out %7.1e ntcoll_bb_out %7.1e rad_bf_out %7.1e coll_bf_out %7.1e ntcoll_bf_out %7.1e\n",
+          rad_bb_out_total, coll_bb_out_total, ntcoll_bb_out_total, rad_bf_out_total, coll_bf_out_total, ntcoll_bf_out_total);
 
   for (int index = 0; index < nlte_dimension; index++)
   {
@@ -219,6 +222,8 @@ static void print_level_rates(
     const double rad_bb_out = gsl_matrix_get(rate_matrix_rad_bb, index, selected_index) * pop_selectedlevel;
     const double coll_bb_in = gsl_matrix_get(rate_matrix_coll_bb, selected_index, index) * pop;
     const double coll_bb_out = gsl_matrix_get(rate_matrix_coll_bb, index, selected_index) * pop_selectedlevel;
+    const double ntcoll_bb_in = gsl_matrix_get(rate_matrix_ntcoll_bb, selected_index, index) * pop;
+    const double ntcoll_bb_out = gsl_matrix_get(rate_matrix_ntcoll_bb, index, selected_index) * pop_selectedlevel;
     const double rad_bf_in = gsl_matrix_get(rate_matrix_rad_bf, selected_index, index) * pop;
     const double rad_bf_out = gsl_matrix_get(rate_matrix_rad_bf, index, selected_index) * pop_selectedlevel;
     const double coll_bf_in = gsl_matrix_get(rate_matrix_coll_bf, selected_index, index) * pop;
@@ -226,22 +231,22 @@ static void print_level_rates(
     const double ntcoll_bf_in = gsl_matrix_get(rate_matrix_ntcoll_bf, selected_index, index) * pop;
     const double ntcoll_bf_out = gsl_matrix_get(rate_matrix_ntcoll_bf, index, selected_index) * pop_selectedlevel;
 
-    const bool nonzero_rate_in = (fabs(rad_bb_in) > 0. || fabs(coll_bb_in) > 0. || fabs(rad_bf_in) > 0. || fabs(coll_bf_in) > 0. || fabs(ntcoll_bf_in) > 0.);
-    const bool nonzero_rate_out = (fabs(rad_bb_out) > 0. || fabs(coll_bb_out) > 0. || fabs(rad_bf_out) > 0. || fabs(coll_bf_out) > 0. || fabs(ntcoll_bf_out) > 0.);
+    const bool nonzero_rate_in = (fabs(rad_bb_in) > 0. || fabs(coll_bb_in) > 0. || fabs(ntcoll_bb_in) > 0. || fabs(rad_bf_in) > 0. || fabs(coll_bf_in) > 0. || fabs(ntcoll_bf_in) > 0.);
+    const bool nonzero_rate_out = (fabs(rad_bb_out) > 0. || fabs(coll_bb_out) > 0. || fabs(ntcoll_bb_out) > 0. ||fabs(rad_bf_out) > 0. || fabs(coll_bf_out) > 0. || fabs(ntcoll_bf_out) > 0.);
     if (nonzero_rate_in || nonzero_rate_out)
     {
-      const double epsilon_trans = fabs(epsilon(element,ion,level) - epsilon(element,selected_ion,selected_level));
+      const double epsilon_trans = fabs(epsilon(element, ion, level) - epsilon(element, selected_ion, selected_level));
       const double nu_trans = epsilon_trans / H;
       const double lambda = 1e8 * CLIGHT / nu_trans; // should be in Angstroms
-      const double level_rate_in = rad_bb_in + coll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in;
-      const double level_rate_out = rad_bb_out + coll_bb_out + rad_bf_out + coll_bf_out + ntcoll_bf_out;
+      const double level_rate_in = rad_bb_in + coll_bb_in + ntcoll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in;
+      const double level_rate_out = rad_bb_out + coll_bb_out + ntcoll_bb_in + rad_bf_out + coll_bf_out + ntcoll_bf_out;
       const int level_percent_in = round(level_rate_in / total_rate_in * 100);
       const int level_percent_out = round(level_rate_out / total_rate_out * 100);
 
-      printout("  ion_stage %d level %4d (%3d%% rate in)  rad_bb_in  %8.2e coll_bb_in  %8.2e rad_bf_in  %8.2e coll_bf_in  %8.2e ntcoll_bf_in  %8.2e lambda %5.1f\n",
-               ionstage, level, level_percent_in, rad_bb_in, coll_bb_in, rad_bf_in, coll_bf_in, ntcoll_bf_in, lambda);
-      printout("  ion_stage %d level %4d (%3d%% rate out) rad_bb_out %8.2e coll_bb_out %8.2e rad_bf_out %8.2e coll_bf_out %8.2e ntcoll_bf_out %8.2e lambda %5.1f\n",
-               ionstage, level, level_percent_out, rad_bb_out, coll_bb_out, rad_bf_out, coll_bf_out, ntcoll_bf_out, lambda);
+      printout("  ionstage %d level %4d (%3d%% of in)  rad_bb_in  %7.1e coll_bb_in  %7.1e ntcoll_bb_in  %7.1e rad_bf_in  %7.1e coll_bf_in  %7.1e ntcoll_bf_in  %7.1e lambda %5.0f\n",
+               ionstage, level, level_percent_in, rad_bb_in, coll_bb_in, ntcoll_bb_in, rad_bf_in, coll_bf_in, ntcoll_bf_in, lambda);
+      printout("  ionstage %d level %4d (%3d%% of out) rad_bb_out %7.1e coll_bb_out %7.1e ntcoll_bb_out %7.1e rad_bf_out %7.1e coll_bf_out %7.1e ntcoll_bf_out %7.1e lambda %5.0f\n",
+               ionstage, level, level_percent_out, rad_bb_out, coll_bb_out, ntcoll_bb_out, rad_bf_out, coll_bf_out, ntcoll_bf_out, lambda);
     }
   }
   printout("\n");
@@ -305,7 +310,9 @@ static int get_element_nlte_dimension_and_slpartfunc(
 
 static void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion,
                                           const double t_mid, double *restrict s_renorm,
-                                          gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb)
+                                          gsl_matrix *rate_matrix_rad_bb,
+                                          gsl_matrix *rate_matrix_coll_bb,
+                                          gsl_matrix *rate_matrix_ntcoll_bb)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -348,6 +355,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
 
       const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
       const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
+      const double NTC = nt_excitation_ratecoeff(modelgridindex, lineindex) * s_renorm[level];
 
       // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
       // {
@@ -366,6 +374,8 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, lower_index) += R;
       *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, lower_index) -= C;
       *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, lower_index) += C;
+      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, lower_index, lower_index) -= NTC;
+      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, upper_index, lower_index) += NTC;
       if ((R < 0) || (C < 0))
         printout("  WARNING: Negative excitation rate from ion %d level %d to level %d\n", get_ionstage(element, ion), level, upper);
     }
@@ -695,6 +705,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
   gsl_matrix *rate_matrix_rad_bb;
   gsl_matrix *rate_matrix_coll_bb;
+  gsl_matrix *rate_matrix_ntcoll_bb;
   gsl_matrix *rate_matrix_rad_bf;
   gsl_matrix *rate_matrix_coll_bf;
   gsl_matrix *rate_matrix_ntcoll_bf;
@@ -702,6 +713,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   {
     rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+    rate_matrix_ntcoll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     rate_matrix_rad_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     rate_matrix_coll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
     rate_matrix_ntcoll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
@@ -711,6 +723,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     // alias the single matrix accounting for all processes
     rate_matrix_rad_bb = rate_matrix;
     rate_matrix_coll_bb = rate_matrix;
+    rate_matrix_ntcoll_bb = rate_matrix;
     rate_matrix_rad_bf = rate_matrix;
     rate_matrix_coll_bf = rate_matrix;
     rate_matrix_ntcoll_bf = rate_matrix;
@@ -738,7 +751,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
         superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion] : 1.0;
     }
 
-    nltepop_matrix_add_boundbound(modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb);
+    nltepop_matrix_add_boundbound(
+      modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
 
     if (ion < nions - 1)
     {
@@ -755,6 +769,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     // sum the matricies for each transition process to get a total rate matrix
     gsl_matrix_add(rate_matrix, rate_matrix_rad_bb);
     gsl_matrix_add(rate_matrix, rate_matrix_coll_bb);
+    gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bb);
     gsl_matrix_add(rate_matrix, rate_matrix_rad_bf);
     gsl_matrix_add(rate_matrix, rate_matrix_coll_bf);
     gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bf);
@@ -897,15 +912,22 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       // set_element_pops_lte(modelgridindex, element);
     }
 
-    if (individual_process_matricies && (atomic_number == 28 && timestep % 5 == 0))
+    if (individual_process_matricies && (atomic_number == 26 && timestep % 2 == 0))
     {
-      const int ion = 2 - get_ionstage(element, 0);
-      print_level_rates(element, ion, 0, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(element, ion, 1, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(element, ion, 6, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(element, ion, 7, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(element, ion, 22, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-      print_level_rates(element, ion, 30, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      const int ionstage = 2;
+      const int ion = ionstage - get_ionstage(element, 0);
+
+      print_level_rates(element, ion, 0, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 1, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 28, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 29, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 30, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 36, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 37, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 38, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 39, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 40, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_level_rates(element, ion, 41, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
   }
 
@@ -913,6 +935,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   {
     gsl_matrix_free(rate_matrix_rad_bb);
     gsl_matrix_free(rate_matrix_coll_bb);
+    gsl_matrix_free(rate_matrix_ntcoll_bb);
     gsl_matrix_free(rate_matrix_rad_bf);
     gsl_matrix_free(rate_matrix_coll_bf);
     gsl_matrix_free(rate_matrix_ntcoll_bf);
@@ -1398,8 +1421,8 @@ void nltepop_open_file(const int my_rank)
     printout("Cannot open %s.\n",filename);
     abort();
   }
-  fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s\n",
-          "timestep", "modelgridindex", "Z", "ion_stage", "level", "n_LTE", "n_NLTE");
+  fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n",
+          "timestep", "modelgridindex", "Z", "ion_stage", "level", "n_LTE", "n_NLTE", "ion_popfrac");
 }
 
 
@@ -1448,8 +1471,8 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
 
         const double nnlevelnlte = (level == 0) ? nnlevellte : (
           modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
-
-        fprintf(nlte_file,"%11.5e %11.5e\n", nnlevellte, nnlevelnlte);
+        const double ion_popfrac = nnlevelnlte / ionstagepop(modelgridindex, element, ion);
+        fprintf(nlte_file,"%11.5e %11.5e %17g\n", nnlevellte, nnlevelnlte, ion_popfrac);
       }
     }
   }
