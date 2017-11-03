@@ -19,6 +19,8 @@
 #define EMAX 32000. // eV
 #define EMIN 1.0 // eV
 
+#define NLINESBLOCK 1000    // Realloc the excitation list increasing by this blocksize
+
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
 // #define yscalefactoroverride(mgi) (1e10)
@@ -49,8 +51,10 @@
                                 // can take up a lot of memory for large grid sizes
                                 // alternatively, just the non-thermal ionization rates can be stored
                                 // but we will probably need to re-enable this option to incorporate
-                                // non-thermal excitation rates because there are
+                                // non-thermal excitation rates if there are
                                 // many more transitions to store than there are spectrum samples
+
+#define NT_EXCITATION_ON true // if this is on, the non-thermal energy spectrum will be kept in memory
 
 static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
 
@@ -88,6 +92,14 @@ struct nt_ionization_struct
   int ion;
 };
 
+struct nt_excitation_struct
+{
+  double frac_deposition;  // the fraction of the non-thermal deposition energy going to the excitation transition
+  double ratecoeffperdeposition; // the excitation rate coefficient divided by the deposition rate density
+  int lineindex;
+};
+
+
 struct nt_solution_struct {
   double E_0;     // the lowest energy ionization or excitation transition in eV
   double *yfunc;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal electron number flux.
@@ -101,7 +113,9 @@ struct nt_solution_struct {
   float frac_excitation;           // fraction of deposition energy going to excitation
   double deposition_rate_density;
   struct nt_ionization_struct *frac_ionizations_list;
+  struct nt_excitation_struct *frac_excitations_list;
   int frac_ionizations_list_size;
+  int frac_excitations_list_size;
   int timestep;                 // the quantities above were calculated for this timestep
 };
 
@@ -112,6 +126,20 @@ static int compare_ionization_fractions(const void *p1, const void *p2)
 {
   const struct nt_ionization_struct *elem1 = p1;
   const struct nt_ionization_struct *elem2 = p2;
+
+ if (elem1->frac_deposition < elem2->frac_deposition)
+    return 1;
+ else if (elem1->frac_deposition > elem2->frac_deposition)
+    return -1;
+ else
+    return 0;
+}
+
+
+static int compare_excitation_fractions(const void *p1, const void *p2)
+{
+  const struct nt_excitation_struct *elem1 = p1;
+  const struct nt_excitation_struct *elem2 = p2;
 
  if (elem1->frac_deposition < elem2->frac_deposition)
     return 1;
@@ -223,6 +251,14 @@ void nt_init(const int my_rank)
       nt_solution[modelgridindex].frac_ionizations_list = calloc(
         frac_ionizations_list_size, sizeof(struct nt_ionization_struct));
       nt_solution[modelgridindex].frac_ionizations_list_size = frac_ionizations_list_size;
+
+#if NT_EXCITATION_ON
+      nt_solution[modelgridindex].frac_excitations_list = calloc(NLINESBLOCK, sizeof(struct nt_excitation_struct));
+      nt_solution[modelgridindex].frac_excitations_list_size = NLINESBLOCK;
+#else
+      nt_solution[modelgridindex].frac_excitations_list = NULL;
+      nt_solution[modelgridindex].frac_excitations_list_size = 0;
+#endif
 
       zero_all_effionpot(modelgridindex);
     }
@@ -368,6 +404,9 @@ void nt_close_file(void)
       {
         free(nt_solution[modelgridindex].yfunc);
         free(nt_solution[modelgridindex].frac_ionizations_list);
+#if NT_EXCITATION_ON
+        free(nt_solution[modelgridindex].frac_excitations_list);
+#endif
       }
     }
   }
@@ -940,35 +979,35 @@ static double calculate_nt_frac_excitation_ion(const int modelgridindex, const i
 // Kozma & Fransson equation 4, but summed over all transitions for given ion
 // integral in Kozma & Fransson equation 9
 {
-  //FIXME: this should be the sum of nnlevel * xs_excitation_level, not the sum of
-  //nnlevel times the sum of xs_excitation_level (nnion)
-  const double nnion = ionstagepop(modelgridindex, element, ion);
   gsl_vector *xs_excitation_vec_sum_alltrans = gsl_vector_calloc(SFPTS);
-  gsl_vector *xs_excitation_epsilontrans_vec = gsl_vector_calloc(SFPTS);
+  gsl_vector *xs_excitation_nnlevel_epsilontrans_vec = gsl_vector_calloc(SFPTS);
 
-  // for (int level = 0; level < get_nlevels(element,ion); level++)
-  const int level = 0; // just consider excitation from the ground level
+  const int maxlevel = 0; // just consider excitation from the ground level
+  // const int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
+
+  for (int level = 0; level <= maxlevel; level++)
   {
     const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    const int nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
 
     for (int t = 1; t <= nuptrans; t++)
     {
       const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
 
-      get_xs_excitation_vector(xs_excitation_epsilontrans_vec, lineindex, epsilon_trans);
-      gsl_blas_daxpy(epsilon_trans / EV, xs_excitation_epsilontrans_vec, xs_excitation_vec_sum_alltrans);
+      get_xs_excitation_vector(xs_excitation_nnlevel_epsilontrans_vec, lineindex, epsilon_trans);
+      gsl_blas_daxpy(nnlevel * epsilon_trans / EV, xs_excitation_nnlevel_epsilontrans_vec, xs_excitation_vec_sum_alltrans);
     }
   }
 
-  gsl_vector_free(xs_excitation_epsilontrans_vec);
+  gsl_vector_free(xs_excitation_nnlevel_epsilontrans_vec);
 
   double y_dot_crosssection = 0.;
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
   gsl_blas_ddot(&yvecview.vector, xs_excitation_vec_sum_alltrans, &y_dot_crosssection);
   gsl_vector_free(xs_excitation_vec_sum_alltrans);
 
-  return nnion * y_dot_crosssection * DELTA_E / E_init_ev;
+  return y_dot_crosssection * DELTA_E / E_init_ev;
 }
 
 
@@ -1151,56 +1190,58 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
 }
 
 
-double calculate_nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lowerlevel, int upperlevel)
-// Kozma & Fransson equation 9 divided by epsilon_trans and number density to get a rate coefficient
+static double calculate_nt_frac_excitation_perlevelpop(const int modelgridindex, const int lineindex, const double epsilon_trans)
+// Kozma & Fransson equation 9 divided by level population
 {
   if (nt_solution[modelgridindex].yfunc == NULL)
   {
-    printout("ERROR: Call to calculate_nt_excitation_ratecoeff with no y vector in memory.");
+    printout("ERROR: Call to nt_excitation_ratecoeff with no y vector in memory.");
     abort();
   }
+  const double epsilon_trans_ev = epsilon_trans / EV;
 
-  gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
-  gsl_vector *xs_excitation_vec_sum_alltrans = gsl_vector_calloc(SFPTS);
-
-  const int nuptrans = elements[element].ions[ion].levels[lowerlevel].uptrans[0].targetlevel;
-
-  for (int t = 1; t <= nuptrans; t++)
-  {
-    const int transupperlevel = elements[element].ions[ion].levels[lowerlevel].uptrans[t].targetlevel;
-    if (transupperlevel == upperlevel)
-    {
-      const double epsilon_trans = elements[element].ions[ion].levels[lowerlevel].uptrans[t].epsilon_trans;
-      const int lineindex = elements[element].ions[ion].levels[lowerlevel].uptrans[t].lineindex;
-      // const double epsilon_trans_ev = epsilon_trans / EV;
-
-      get_xs_excitation_vector(xs_excitation_vec, lineindex, epsilon_trans);
-      gsl_vector_add(xs_excitation_vec_sum_alltrans, xs_excitation_vec);
-    }
-  }
-
-  gsl_vector_free(xs_excitation_vec);
+  gsl_vector *xs_excitation_vec = gsl_vector_calloc(SFPTS);
+  get_xs_excitation_vector(xs_excitation_vec, lineindex, epsilon_trans);
 
   double y_dot_crosssection = 0.;
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
-  gsl_blas_ddot(xs_excitation_vec_sum_alltrans, &yvecview.vector, &y_dot_crosssection);
-  gsl_vector_free(xs_excitation_vec_sum_alltrans);
+  gsl_blas_ddot(xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
+  gsl_vector_free(xs_excitation_vec);
 
-  return y_dot_crosssection * DELTA_E / E_init_ev;
+  return epsilon_trans_ev * y_dot_crosssection * DELTA_E / E_init_ev;
 }
 
 
-void do_nt_electron(PKT *pkt_ptr)
+double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
+{
+  if (!NT_EXCITATION_ON)
+    return 0.;
+
+  const int list_size = nt_solution[modelgridindex].frac_excitations_list_size;
+  for (int excitationindex = 0; excitationindex < list_size; excitationindex++)
+  {
+    if (nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex == lineindex)
+    {
+      const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+      const double ratecoeffperdeposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
+
+      return ratecoeffperdeposition * deposition_rate_density;
+    }
+  }
+  return 0.;
+}
+
+
+void do_ntlepton(PKT *pkt_ptr)
 {
   const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
   double zrand = gsl_rng_uniform(rng);
   // const double frac_heating = get_nt_frac_heating(modelgridindex);
-  // const double frac_excitation = get_nt_frac_excitation(modelgridindex);
+  const double frac_excitation = get_nt_frac_excitation(modelgridindex);
   const double frac_ionization = get_nt_frac_ionization(modelgridindex);
 
   if (zrand < frac_ionization)
   {
-
     const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
     for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
     {
@@ -1221,13 +1262,48 @@ void do_nt_electron(PKT *pkt_ptr)
         pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
         pkt_ptr->trueemissionvelocity = -1;
 
-        printout("e- packet selected nt ionization of Z=%d ionstage %d\n", get_element(element), get_ionstage(element, lowerion));
+        printout("NTLEPTON packet selected ionization of Z=%d ionstage %d\n", get_element(element), get_ionstage(element, lowerion));
 
         return;
       }
       zrand -= frac_deposition_ion;
     }
   }
+  else if (NT_EXCITATION_ON && zrand < frac_ionization + frac_excitation)
+  {
+    zrand -= frac_ionization;
+    const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
+    for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
+    {
+      const double frac_deposition_exc = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
+      if (zrand < frac_deposition_exc)
+      {
+        const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
+        const int element = linelist[lineindex].elementindex;
+        const int ion = linelist[lineindex].ionindex;
+        const int lower = linelist[lineindex].lowerlevelindex;
+        const int upper = linelist[lineindex].upperlevelindex;
+
+        mastate[tid].element = element;
+        mastate[tid].ion = ion;
+        mastate[tid].level = upper;
+        mastate[tid].activatingline = -99;
+        pkt_ptr->type = TYPE_MA;
+        ma_stat_activation_ntcollexc++;
+        pkt_ptr->interactions += 1;
+        pkt_ptr->last_event = 8;
+        pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
+        pkt_ptr->trueemissionvelocity = -1;
+
+        printout("NTLEPTON packet selected excitation of Z=%d ionstage %d level %d upperlevel %d\n",
+                 get_element(element), get_ionstage(element, ion), lower, upper);
+
+        return;
+      }
+      zrand -= frac_deposition_exc;
+    }
+  }
+
 
   /*It's an electron - convert to k-packet*/
   //printout("e-minus propagation\n");
@@ -1254,6 +1330,7 @@ static void analyse_sf_solution(int modelgridindex)
   double frac_ionization_total = 0.;
 
   int allionindex = 0; // unique index for every ion of all elements
+  int excitationindex = 0; // unique index for every included excitation transition
   for (int element = 0; element < nelements; element++)
   {
     const int Z = get_element(element);
@@ -1272,8 +1349,8 @@ static void analyse_sf_solution(int modelgridindex)
       if (nnion <= 0.) // skip zero-abundance ions
         continue;
 
-
       double frac_ionization_ion = 0.;
+      double frac_excitation_ion = 0.;
       printout("  Z=%d ion_stage %d:\n", Z, ionstage);
       // printout("    nnion: %g\n", nnion);
       printout("    nnion/nntot: %g\n", nnion / nntot, get_nne(modelgridindex));
@@ -1300,7 +1377,49 @@ static void analyse_sf_solution(int modelgridindex)
         frac_ionization_total += frac_ionization_ion;
       }
 
-      const double frac_excitation_ion = calculate_nt_frac_excitation_ion(modelgridindex, element, ion);
+      const int maxlevel = 0; // just consider excitation from the ground level
+      // const int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
+
+      for (int level = 0; level <= maxlevel; level++)
+      {
+        const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        const int nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+
+        for (int t = 1; t <= nuptrans; t++)
+        {
+          const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
+          const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
+
+          const double nt_frac_excitation_perlevelpop = calculate_nt_frac_excitation_perlevelpop(modelgridindex, lineindex, epsilon_trans);
+          const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
+          frac_excitation_ion += frac_excitation_thistrans;
+
+#if NT_EXCITATION_ON
+          const double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
+          nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = frac_excitation_thistrans;
+          nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = ratecoeffperdeposition;
+          nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = lineindex;
+
+          (excitationindex)++;
+          if (excitationindex % NLINESBLOCK == 0)
+          {
+            nt_solution[modelgridindex].frac_excitations_list_size = excitationindex + NLINESBLOCK;
+            nt_solution[modelgridindex].frac_excitations_list = realloc(
+              nt_solution[modelgridindex].frac_excitations_list,
+              (excitationindex + NLINESBLOCK) * sizeof(struct nt_excitation_struct));
+
+            if (nt_solution[modelgridindex].frac_excitations_list == NULL)
+            {
+              printout("ERROR: Not enough memory to reallocate excitation list.\n");
+              abort();
+            }
+          }
+#endif // NT_EXCITATION_ON
+        }
+      }
+
+      // alternative way to calculate it
+      // const double frac_excitation_ion_2 = calculate_nt_frac_excitation_ion(modelgridindex, element, ion);
       frac_excitation_total += frac_excitation_ion;
 
       printout("    frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_nlsubshell_count);
@@ -1330,6 +1449,46 @@ static void analyse_sf_solution(int modelgridindex)
   qsort(nt_solution[modelgridindex].frac_ionizations_list,
         nt_solution[modelgridindex].frac_ionizations_list_size, sizeof(struct nt_ionization_struct),
         compare_ionization_fractions);
+
+#if NT_EXCITATION_ON
+  if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size)
+  {
+    // zero out the remaining excitation transition slots
+    for (; excitationindex < nt_solution[modelgridindex].frac_excitations_list_size; excitationindex++)
+    {
+      nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = 0.;
+      nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = -1;
+    }
+  }
+
+  qsort(nt_solution[modelgridindex].frac_excitations_list,
+        nt_solution[modelgridindex].frac_excitations_list_size, sizeof(struct nt_excitation_struct),
+        compare_excitation_fractions);
+
+  const float T_e = get_Te(modelgridindex);
+  printout("Top non-thermal excitation fractions:\n");
+  int ntransdisplayed = nt_solution[modelgridindex].frac_excitations_list_size;
+  ntransdisplayed = (ntransdisplayed > 20) ? 20 : ntransdisplayed;
+  for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++)
+  {
+    const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
+    const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
+    const int element = linelist[lineindex].elementindex;
+    const int ion = linelist[lineindex].ionindex;
+    const int lower = linelist[lineindex].lowerlevelindex;
+    const int upper = linelist[lineindex].upperlevelindex;
+    const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
+
+    const double ntexc_ratecoeff = nt_excitation_ratecoeff(modelgridindex, lineindex);
+    const double exc_ratecoeff = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+    if (frac_deposition > 0.)
+    {
+      printout("frac_deposition %.3e element Z=%d ionstage %d level %d upperlevel %d ratecoeff %.3e ntratecoeff %.3e nt/t %.3e\n",
+               frac_deposition, get_element(element), get_ionstage(element, ion), lower, upper,
+               exc_ratecoeff, ntexc_ratecoeff, ntexc_ratecoeff / exc_ratecoeff);
+    }
+  }
+#endif // NT_EXCITATION_ON
 
   const float frac_heating = get_nt_frac_heating(modelgridindex);
 
@@ -1364,7 +1523,7 @@ static void analyse_sf_solution(int modelgridindex)
   // double ntexcit_in_a = 0.;
   // for (int level = 0; level < get_nlevels(0, 1); level++)
   // {
-  //   ntexcit_in_a += nnion * calculate_nt_excitation_ratecoeff(modelgridindex, 0, 1, level, 75);
+  //   ntexcit_in_a += nnion * nt_excitation_ratecoeff(modelgridindex, 0, 1, level, 75);
   // }
   // printout("  total nt excitation rate into level 75: %g\n", ntexcit_in_a);
 
@@ -1373,15 +1532,16 @@ static void analyse_sf_solution(int modelgridindex)
 }
 
 
-static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int element, const int ion, const double nnion, double *E_0)
+static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridindex, const int element, const int ion, double *E_0)
 {
   // excitation terms
   gsl_vector *vec_xs_excitation_nnion_deltae = gsl_vector_alloc(SFPTS);
   const int maxlevel = 0; // just consider excitation from the ground level
-  // const int maxlevel = get_nlevels(element,ion); // excitation from all levels (SLOW)
+  // const int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
 
   for (int level = 0; level <= maxlevel; level++)
   {
+    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
     const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
     for (int t = 1; t <= nuptrans; t++)
     {
@@ -1393,7 +1553,7 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int element, con
         *E_0 = epsilon_trans / EV;
 
       get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans);
-      gsl_blas_dscal(nnion * DELTA_E, vec_xs_excitation_nnion_deltae);
+      gsl_blas_dscal(nnlevel * DELTA_E, vec_xs_excitation_nnion_deltae);
 
       for (int i = 0; i < SFPTS; i++)
       {
@@ -1618,7 +1778,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep)
 
       printout("%d ", ionstage);
 
-      sfmatrix_add_excitation(sfmatrix, element, ion, nnion, &E_0);
+      sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion, &E_0);
       if (ion < nions - 1)
         sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion, &E_0);
     }
