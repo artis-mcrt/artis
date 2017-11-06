@@ -19,7 +19,8 @@
 #define EMAX 32000. // eV
 #define EMIN 1.0 // eV
 
-#define NLINESBLOCK 1000    // Realloc the excitation list increasing by this blocksize
+#define BLOCKSIZEEXCITATION 1000    // Realloc the excitation list increasing by this blocksize
+#define BLOCKSIZEIONIZATION 100    // Realloc the ionization list increasing by this blocksize
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
@@ -99,23 +100,25 @@ struct nt_excitation_struct
   int lineindex;
 };
 
-
 struct nt_solution_struct {
   double E_0;     // the lowest energy ionization or excitation transition in eV
   double *yfunc;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal electron number flux.
                   // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
-  float eff_ionpot[MELEMENTS][MIONS]; // need to keep these (even if the spectrum is not kept) to
-                                      // calculate the non-thermal ionization rate
-  // float nt_ioncoeff[MELEMENTS][MIONS]; // need to keep these for performance, and in case the
-  //                                      // spectrum is freed before packet propt
+
+  double deposition_rate_density;
+
   float frac_heating;              // energy fractions should add up to 1.0 if the solution is good
   float frac_ionization;           // fraction of deposition energy going to ionization
   float frac_excitation;           // fraction of deposition energy going to excitation
-  double deposition_rate_density;
-  struct nt_ionization_struct *frac_ionizations_list;
-  struct nt_excitation_struct *frac_excitations_list;
+
+  float eff_ionpot[MELEMENTS][MIONS]; // these are used to calculate the non-thermal ionization rate
+
   int frac_ionizations_list_size;
+  struct nt_ionization_struct *frac_ionizations_list;
+
   int frac_excitations_list_size;
+  struct nt_excitation_struct *frac_excitations_list;
+
   int timestep;                 // the quantities above were calculated for this timestep
 };
 
@@ -247,10 +250,8 @@ void nt_init(const int my_rank)
         nt_solution[modelgridindex].yfunc = NULL;
       }
 
-      const int frac_ionizations_list_size = get_nions_allelements();
-      nt_solution[modelgridindex].frac_ionizations_list = calloc(
-        frac_ionizations_list_size, sizeof(struct nt_ionization_struct));
-      nt_solution[modelgridindex].frac_ionizations_list_size = frac_ionizations_list_size;
+      nt_solution[modelgridindex].frac_ionizations_list = NULL;
+      nt_solution[modelgridindex].frac_ionizations_list_size = 0;
 
       nt_solution[modelgridindex].frac_excitations_list = NULL;
       nt_solution[modelgridindex].frac_excitations_list_size = 0;
@@ -1399,7 +1400,20 @@ static void analyse_sf_solution(int modelgridindex)
 
       if (ion < nions - 1)
       {
-        assert(allionindex < nt_solution[modelgridindex].frac_ionizations_list_size)
+        if (allionindex >= nt_solution[modelgridindex].frac_ionizations_list_size)
+        {
+          nt_solution[modelgridindex].frac_ionizations_list_size += BLOCKSIZEIONIZATION;
+          nt_solution[modelgridindex].frac_ionizations_list = realloc(
+            nt_solution[modelgridindex].frac_ionizations_list,
+            nt_solution[modelgridindex].frac_ionizations_list_size * sizeof(struct nt_ionization_struct));
+
+          if (nt_solution[modelgridindex].frac_ionizations_list == NULL)
+          {
+            printout("ERROR: Not enough memory to reallocate ionization list.\n");
+            abort();
+          }
+        }
+
         nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition = frac_ionization_ion;
         nt_solution[modelgridindex].frac_ionizations_list[allionindex].element = element;
         nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion = ion;
@@ -1429,7 +1443,7 @@ static void analyse_sf_solution(int modelgridindex)
           {
             if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size)
             {
-              nt_solution[modelgridindex].frac_excitations_list_size += NLINESBLOCK;
+              nt_solution[modelgridindex].frac_excitations_list_size += BLOCKSIZEEXCITATION;
               nt_solution[modelgridindex].frac_excitations_list = realloc(
                 nt_solution[modelgridindex].frac_excitations_list,
                 nt_solution[modelgridindex].frac_excitations_list_size * sizeof(struct nt_excitation_struct));
@@ -1470,13 +1484,10 @@ static void analyse_sf_solution(int modelgridindex)
 
   if (allionindex < nt_solution[modelgridindex].frac_ionizations_list_size)
   {
-    // this branch means we neglected some ions, probably due to low abundance
-    for (; allionindex < nt_solution[modelgridindex].frac_ionizations_list_size; allionindex++)
-    {
-      nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition = 0.;
-      nt_solution[modelgridindex].frac_ionizations_list[allionindex].element = -1;
-      nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion = -1;
-    }
+    // shrink the list to match the data
+    nt_solution[modelgridindex].frac_ionizations_list = realloc(
+      nt_solution[modelgridindex].frac_ionizations_list, (allionindex) * sizeof(struct nt_ionization_struct));
+    nt_solution[modelgridindex].frac_ionizations_list_size = allionindex;
   }
 
   qsort(nt_solution[modelgridindex].frac_ionizations_list,
@@ -1486,14 +1497,6 @@ static void analyse_sf_solution(int modelgridindex)
 #if NT_EXCITATION_ON
   if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size)
   {
-    // zero out the remaining excitation transition slots
-    // for (; excitationindex < nt_solution[modelgridindex].frac_excitations_list_size; excitationindex++)
-    // {
-    //   nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = 0.;
-    //   nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = 0.;
-    //   nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = -1;
-    // }
-
     // shrink the list to match the data
     nt_solution[modelgridindex].frac_excitations_list = realloc(
       nt_solution[modelgridindex].frac_excitations_list, (excitationindex) * sizeof(struct nt_excitation_struct));
@@ -1505,7 +1508,8 @@ static void analyse_sf_solution(int modelgridindex)
         compare_excitation_fractions);
 
   const float T_e = get_Te(modelgridindex);
-  printout("Top non-thermal excitation fractions:\n");
+  printout("Top non-thermal excitation fractions (total excitations = %d):\n",
+           nt_solution[modelgridindex].frac_excitations_list_size);
   int ntransdisplayed = nt_solution[modelgridindex].frac_excitations_list_size;
   ntransdisplayed = (ntransdisplayed > 20) ? 20 : ntransdisplayed;
   for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++)
