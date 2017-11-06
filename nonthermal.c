@@ -1398,6 +1398,7 @@ static void analyse_sf_solution(int modelgridindex)
         }
       }
 
+      // do not ionize the top ion
       if (ion < nions - 1)
       {
         if (allionindex >= nt_solution[modelgridindex].frac_ionizations_list_size)
@@ -1824,6 +1825,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep)
       printout("%d ", ionstage);
 
       sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion, &E_0);
+
       if (ion < nions - 1)
         sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion, &E_0);
     }
