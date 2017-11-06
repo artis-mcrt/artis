@@ -252,13 +252,8 @@ void nt_init(const int my_rank)
         frac_ionizations_list_size, sizeof(struct nt_ionization_struct));
       nt_solution[modelgridindex].frac_ionizations_list_size = frac_ionizations_list_size;
 
-#if NT_EXCITATION_ON
-      nt_solution[modelgridindex].frac_excitations_list = calloc(NLINESBLOCK, sizeof(struct nt_excitation_struct));
-      nt_solution[modelgridindex].frac_excitations_list_size = NLINESBLOCK;
-#else
       nt_solution[modelgridindex].frac_excitations_list = NULL;
       nt_solution[modelgridindex].frac_excitations_list_size = 0;
-#endif
 
       zero_all_effionpot(modelgridindex);
     }
@@ -404,9 +399,8 @@ void nt_close_file(void)
       {
         free(nt_solution[modelgridindex].yfunc);
         free(nt_solution[modelgridindex].frac_ionizations_list);
-#if NT_EXCITATION_ON
-        free(nt_solution[modelgridindex].frac_excitations_list);
-#endif
+        if (nt_solution[modelgridindex].frac_excitations_list_size > 0)
+          free(nt_solution[modelgridindex].frac_excitations_list);
       }
     }
   }
@@ -503,14 +497,21 @@ static double xs_excitation(const int lineindex, const double epsilon_trans, con
 }
 
 
-static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int lineindex, const double epsilon_trans)
+static bool get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int lineindex, const double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
+// returns true if any vector components are (or might be) non-zero
+// if it returns false, all vector components are definitely zero
 {
   const double coll_str = get_coll_str(lineindex);
   const int en_startindex = 0; // energy point corresponding to epsilon_trans
   // const int en_startindex = get_energyindex_ev(epsilon_trans_ev);
 
+  // make sure every value of xs_excitation_vec is set
+  // for (int j = 0; j < en_startindex; j++)
+  //   gsl_vector_set(xs_excitation_vec, j, 0.);
+
+  bool hasnonzerovalue = false;
   if (coll_str >= 0)
   {
     // collision strength is available, so use it
@@ -520,7 +521,10 @@ static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int li
     {
       const double energy = gsl_vector_get(envec, j) * EV;
       if (energy >= epsilon_trans)
+      {
         gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
+        hasnonzerovalue = true;
+      }
       else
         gsl_vector_set(xs_excitation_vec, j, 0.);
     }
@@ -545,6 +549,7 @@ static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int li
         const double U = energy / epsilon_trans;
         const double g_bar = A * log(U) + B;
         gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / U);
+        hasnonzerovalue = true;
       }
       else
         gsl_vector_set(xs_excitation_vec, j, 0.);
@@ -554,6 +559,8 @@ static void get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int li
   {
     gsl_vector_set_zero(xs_excitation_vec);
   }
+
+  return hasnonzerovalue;
 }
 
 
@@ -982,6 +989,8 @@ static double calculate_nt_frac_excitation_ion(const int modelgridindex, const i
   gsl_vector *xs_excitation_vec_sum_alltrans = gsl_vector_calloc(SFPTS);
   gsl_vector *xs_excitation_nnlevel_epsilontrans_vec = gsl_vector_calloc(SFPTS);
 
+  bool hasnonzerovalue = false;
+
   const int maxlevel = 0; // just consider excitation from the ground level
   // const int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
 
@@ -995,19 +1004,31 @@ static double calculate_nt_frac_excitation_ion(const int modelgridindex, const i
       const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
 
-      get_xs_excitation_vector(xs_excitation_nnlevel_epsilontrans_vec, lineindex, epsilon_trans);
-      gsl_blas_daxpy(nnlevel * epsilon_trans / EV, xs_excitation_nnlevel_epsilontrans_vec, xs_excitation_vec_sum_alltrans);
+      if (get_xs_excitation_vector(xs_excitation_nnlevel_epsilontrans_vec, lineindex, epsilon_trans))
+      {
+        hasnonzerovalue = true;
+        gsl_blas_daxpy(nnlevel * epsilon_trans / EV, xs_excitation_nnlevel_epsilontrans_vec, xs_excitation_vec_sum_alltrans);
+      }
     }
   }
 
   gsl_vector_free(xs_excitation_nnlevel_epsilontrans_vec);
 
-  double y_dot_crosssection = 0.;
-  gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
-  gsl_blas_ddot(&yvecview.vector, xs_excitation_vec_sum_alltrans, &y_dot_crosssection);
-  gsl_vector_free(xs_excitation_vec_sum_alltrans);
+  if (hasnonzerovalue)
+  {
+    double y_dot_crosssection = 0.;
+    gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+    gsl_blas_ddot(&yvecview.vector, xs_excitation_vec_sum_alltrans, &y_dot_crosssection);
+    gsl_vector_free(xs_excitation_vec_sum_alltrans);
 
-  return y_dot_crosssection * DELTA_E / E_init_ev;
+    return y_dot_crosssection * DELTA_E / E_init_ev;
+  }
+  else
+  {
+    gsl_vector_free(xs_excitation_vec_sum_alltrans);
+
+    return 0.;
+  }
 }
 
 
@@ -1200,15 +1221,22 @@ static double calculate_nt_frac_excitation_perlevelpop(const int modelgridindex,
   }
   const double epsilon_trans_ev = epsilon_trans / EV;
 
-  gsl_vector *xs_excitation_vec = gsl_vector_calloc(SFPTS);
-  get_xs_excitation_vector(xs_excitation_vec, lineindex, epsilon_trans);
+  gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
+  if (get_xs_excitation_vector(xs_excitation_vec, lineindex, epsilon_trans))
+  {
+    double y_dot_crosssection = 0.;
+    gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+    gsl_blas_ddot(xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
+    gsl_vector_free(xs_excitation_vec);
 
-  double y_dot_crosssection = 0.;
-  gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
-  gsl_blas_ddot(xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
-  gsl_vector_free(xs_excitation_vec);
+    return epsilon_trans_ev * y_dot_crosssection * DELTA_E / E_init_ev;
+  }
+  else
+  {
+    gsl_vector_free(xs_excitation_vec);
 
-  return epsilon_trans_ev * y_dot_crosssection * DELTA_E / E_init_ev;
+    return 0.;
+  }
 }
 
 
@@ -1330,7 +1358,9 @@ static void analyse_sf_solution(int modelgridindex)
   double frac_ionization_total = 0.;
 
   int allionindex = 0; // unique index for every ion of all elements
+#if NT_EXCITATION_ON
   int excitationindex = 0; // unique index for every included excitation transition
+#endif
   for (int element = 0; element < nelements; element++)
   {
     const int Z = get_element(element);
@@ -1395,28 +1425,31 @@ static void analyse_sf_solution(int modelgridindex)
           frac_excitation_ion += frac_excitation_thistrans;
 
 #if NT_EXCITATION_ON
-          const double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
-          nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = frac_excitation_thistrans;
-          nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = ratecoeffperdeposition;
-          nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = lineindex;
-
-          (excitationindex)++;
-          if (excitationindex % NLINESBLOCK == 0)
+          // if (frac_excitation_thistrans > 0.)
           {
-            nt_solution[modelgridindex].frac_excitations_list_size = excitationindex + NLINESBLOCK;
-            nt_solution[modelgridindex].frac_excitations_list = realloc(
-              nt_solution[modelgridindex].frac_excitations_list,
-              (excitationindex + NLINESBLOCK) * sizeof(struct nt_excitation_struct));
-
-            if (nt_solution[modelgridindex].frac_excitations_list == NULL)
+            if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size)
             {
-              printout("ERROR: Not enough memory to reallocate excitation list.\n");
-              abort();
+              nt_solution[modelgridindex].frac_excitations_list_size += NLINESBLOCK;
+              nt_solution[modelgridindex].frac_excitations_list = realloc(
+                nt_solution[modelgridindex].frac_excitations_list,
+                nt_solution[modelgridindex].frac_excitations_list_size * sizeof(struct nt_excitation_struct));
+
+              if (nt_solution[modelgridindex].frac_excitations_list == NULL)
+              {
+                printout("ERROR: Not enough memory to reallocate excitation list.\n");
+                abort();
+              }
             }
+
+            const double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
+            nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = frac_excitation_thistrans;
+            nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = ratecoeffperdeposition;
+            nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = lineindex;
+            (excitationindex)++;
           }
 #endif // NT_EXCITATION_ON
-        }
-      }
+        } // for t
+      } // for level
 
       // alternative way to calculate it
       // const double frac_excitation_ion_2 = calculate_nt_frac_excitation_ion(modelgridindex, element, ion);
@@ -1454,11 +1487,17 @@ static void analyse_sf_solution(int modelgridindex)
   if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size)
   {
     // zero out the remaining excitation transition slots
-    for (; excitationindex < nt_solution[modelgridindex].frac_excitations_list_size; excitationindex++)
-    {
-      nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = 0.;
-      nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = -1;
-    }
+    // for (; excitationindex < nt_solution[modelgridindex].frac_excitations_list_size; excitationindex++)
+    // {
+    //   nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = 0.;
+    //   nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = 0.;
+    //   nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = -1;
+    // }
+
+    // shrink the list to match the data
+    nt_solution[modelgridindex].frac_excitations_list = realloc(
+      nt_solution[modelgridindex].frac_excitations_list, (excitationindex) * sizeof(struct nt_excitation_struct));
+    nt_solution[modelgridindex].frac_excitations_list_size = excitationindex;
   }
 
   qsort(nt_solution[modelgridindex].frac_excitations_list,
@@ -1552,18 +1591,20 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans);
-      gsl_blas_dscal(nnlevel * DELTA_E, vec_xs_excitation_nnion_deltae);
-
-      for (int i = 0; i < SFPTS; i++)
+      if (get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans))
       {
-        const double en = gsl_vector_get(envec, i);
-        const int stopindex = get_energyindex_ev(en + epsilon_trans_ev);
-        if (stopindex < SFPTS - 1)
+        gsl_blas_dscal(nnlevel * DELTA_E, vec_xs_excitation_nnion_deltae);
+
+        for (int i = 0; i < SFPTS; i++)
         {
-          gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i + 1);
-          gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnion_deltae, i, stopindex - i + 1);
-          gsl_vector_add(&a.vector, &b.vector);
+          const double en = gsl_vector_get(envec, i);
+          const int stopindex = get_energyindex_ev(en + epsilon_trans_ev);
+          if (stopindex < SFPTS - 1)
+          {
+            gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i + 1);
+            gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnion_deltae, i, stopindex - i + 1);
+            gsl_vector_add(&a.vector, &b.vector); // add b to a and put the result in a
+          }
         }
       }
     }
