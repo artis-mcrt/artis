@@ -343,7 +343,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
 
   //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
 
-  const int cellindex = pkt_ptr->where;
+  // const int cellindex = pkt_ptr->where;
   // const int modelgridindex = cell[cellindex].modelgridindex;
 
   //double nne = get_nne(modelgridindex);
