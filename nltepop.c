@@ -1457,20 +1457,32 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
       for (int level = 0; level <= nlevels_nlte + superlevel; level++)
       {
         double nnlevellte = calculate_levelpop_lte(modelgridindex, element, ion, level);
+        double nnlevelnlte;
 
         fprintf(nlte_file, "%8d %14d %2d %9d ", timestep, modelgridindex, atomic_number, ion_stage);
         if (level < nlevels_nlte + 1)
+        {
           fprintf(nlte_file, "%5d ", level);
+
+          nnlevelnlte = (level == 0) ? nnlevellte : (
+           modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
+        }
         else
         {
           // superlevel, so add the populations of all other levels in the superlevel
+          const double slpopfactor = (
+            modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
+
+          nnlevellte = 0;
+          nnlevelnlte = 0;
           fprintf(nlte_file, "%5d ", -1);
-          for (int level_sl = level + 1; level_sl < get_nlevels(element, ion); level_sl++)
+          for (int level_sl = nlevels_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++)
+          {
             nnlevellte += calculate_levelpop_lte(modelgridindex, element, ion, level_sl);
+            nnlevelnlte += slpopfactor * superlevel_boltzmann(modelgridindex,element,ion,level);
+          }
         }
 
-        const double nnlevelnlte = (level == 0) ? nnlevellte : (
-          modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
         const double ion_popfrac = nnlevelnlte / ionstagepop(modelgridindex, element, ion);
         fprintf(nlte_file,"%11.5e %11.5e %17g\n", nnlevellte, nnlevelnlte, ion_popfrac);
       }
