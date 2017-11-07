@@ -167,7 +167,7 @@ static void print_level_rates(
   const gsl_matrix *rate_matrix_coll_bf,
   const gsl_matrix *rate_matrix_ntcoll_bf)
 {
-  if (element > nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > get_nlevels_nlte(element, selected_ion) - 1)
+  if (element > nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > get_nlevels_nlte(element, selected_ion) + 1)
   {
     printout("print_level_rates: invalid element/ion/level arguments\n");
     abort();
