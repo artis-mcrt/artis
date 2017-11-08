@@ -1487,7 +1487,7 @@ static void analyse_sf_solution(int modelgridindex)
   {
     // shrink the list to match the data
     nt_solution[modelgridindex].frac_ionizations_list = realloc(
-      nt_solution[modelgridindex].frac_ionizations_list, (allionindex) * sizeof(struct nt_ionization_struct));
+      nt_solution[modelgridindex].frac_ionizations_list, allionindex * sizeof(struct nt_ionization_struct));
     nt_solution[modelgridindex].frac_ionizations_list_size = allionindex;
   }
 
@@ -1500,7 +1500,7 @@ static void analyse_sf_solution(int modelgridindex)
   {
     // shrink the list to match the data
     nt_solution[modelgridindex].frac_excitations_list = realloc(
-      nt_solution[modelgridindex].frac_excitations_list, (excitationindex) * sizeof(struct nt_excitation_struct));
+      nt_solution[modelgridindex].frac_excitations_list, excitationindex * sizeof(struct nt_excitation_struct));
     nt_solution[modelgridindex].frac_excitations_list_size = excitationindex;
   }
 
@@ -1509,7 +1509,7 @@ static void analyse_sf_solution(int modelgridindex)
         compare_excitation_fractions);
 
   const float T_e = get_Te(modelgridindex);
-  printout("Top non-thermal excitation fractions (total excitations = %d):\n",
+  printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
            nt_solution[modelgridindex].frac_excitations_list_size);
   int ntransdisplayed = nt_solution[modelgridindex].frac_excitations_list_size;
   ntransdisplayed = (ntransdisplayed > 20) ? 20 : ntransdisplayed;
@@ -1527,7 +1527,7 @@ static void analyse_sf_solution(int modelgridindex)
     const double exc_ratecoeff = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
     if (frac_deposition > 0.)
     {
-      printout("frac_deposition %.3e element Z=%d ionstage %d level %4d upperlevel %4d ratecoeff %.3e ntratecoeff %.3e nt/t %.3e collstr %.3e\n",
+      printout("    frac_deposition %.3e element Z=%d ionstage %d level %4d upperlevel %4d ratecoeff %.3e ntratecoeff %.3e nt/t %.3e collstr %.3e\n",
                frac_deposition, get_element(element), get_ionstage(element, ion), lower, upper,
                exc_ratecoeff, ntexc_ratecoeff, ntexc_ratecoeff / exc_ratecoeff, get_coll_str(lineindex));
     }
