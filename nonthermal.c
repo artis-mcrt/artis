@@ -22,6 +22,8 @@
 #define BLOCKSIZEEXCITATION 1000    // Realloc the excitation list increasing by this blocksize
 #define BLOCKSIZEIONIZATION 100    // Realloc the ionization list increasing by this blocksize
 
+const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the first few levels
+
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
 // #define yscalefactoroverride(mgi) (1e10)
@@ -658,8 +660,11 @@ static double N_e(const int modelgridindex, const double energy)
         continue;
 
       // excitation terms
-      // for (int level = 0; level < get_nlevels(element,ion); level++)
-      const int level = 0; // just consider excitation from the ground level
+
+      const int nlevels_all = get_nlevels(element, ion);
+      const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
+
+      for (int level = 0; level < nlevels; level++)
       {
         const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
         for (int t = 1; t <= nuptrans; t++)
@@ -1373,12 +1378,12 @@ static void analyse_sf_solution(int modelgridindex)
       }
       printout("    frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_nlsubshell_count);
 
-      const int maxlevel = 0; // just consider excitation from the ground level
-      // const int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
-      // int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
-      // maxlevel = (maxlevel > 20) ? 20 : maxlevel;
+      // excitation from all levels is very SLOW
+      const int nlevels_all = get_nlevels(element, ion);
+      // So limit the lower levels to improve performance
+      const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
 
-      for (int level = 0; level <= maxlevel; level++)
+      for (int level = 0; level < nlevels; level++)
       {
         const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
         const int nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
@@ -1530,11 +1535,11 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
 {
   // excitation terms
   gsl_vector *vec_xs_excitation_nnion_deltae = gsl_vector_alloc(SFPTS);
-  const int maxlevel = 0; // just consider excitation from the ground level
-  // int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
-  // maxlevel = (maxlevel > 20) ? 20 : maxlevel;
 
-  for (int level = 0; level <= maxlevel; level++)
+  const int nlevels_all = get_nlevels(element, ion);
+  const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
+
+  for (int level = 0; level < nlevels; level++)
   {
     const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
     const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
