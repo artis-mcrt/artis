@@ -983,56 +983,6 @@ static double get_oneoverw(const int element, const int ion, const int modelgrid
 }
 
 
-static double calculate_nt_frac_excitation_ion(const int modelgridindex, const int element, const int ion)
-// Kozma & Fransson equation 4, but summed over all transitions for given ion
-// integral in Kozma & Fransson equation 9
-{
-  gsl_vector *xs_excitation_vec_sum_alltrans = gsl_vector_calloc(SFPTS);
-  gsl_vector *xs_excitation_nnlevel_epsilontrans_vec = gsl_vector_calloc(SFPTS);
-
-  bool hasnonzerovalue = false;
-
-  const int maxlevel = 0; // just consider excitation from the ground level
-  // const int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
-
-  for (int level = 0; level <= maxlevel; level++)
-  {
-    const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-    const int nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-
-    for (int t = 1; t <= nuptrans; t++)
-    {
-      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
-
-      if (get_xs_excitation_vector(xs_excitation_nnlevel_epsilontrans_vec, lineindex, epsilon_trans))
-      {
-        hasnonzerovalue = true;
-        gsl_blas_daxpy(nnlevel * epsilon_trans / EV, xs_excitation_nnlevel_epsilontrans_vec, xs_excitation_vec_sum_alltrans);
-      }
-    }
-  }
-
-  gsl_vector_free(xs_excitation_nnlevel_epsilontrans_vec);
-
-  if (hasnonzerovalue)
-  {
-    double y_dot_crosssection = 0.;
-    gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
-    gsl_blas_ddot(&yvecview.vector, xs_excitation_vec_sum_alltrans, &y_dot_crosssection);
-    gsl_vector_free(xs_excitation_vec_sum_alltrans);
-
-    return y_dot_crosssection * DELTA_E / E_init_ev;
-  }
-  else
-  {
-    gsl_vector_free(xs_excitation_vec_sum_alltrans);
-
-    return 0.;
-  }
-}
-
-
 static double calculate_nt_frac_ionization_shell(const int modelgridindex, const int element, const int ion, const int collionindex)
 // the fraction of deposition energy that goes into ionising electrons in this particular shell
 {
@@ -1469,8 +1419,6 @@ static void analyse_sf_solution(int modelgridindex)
         } // for t
       } // for level
 
-      // alternative way to calculate it
-      // const double frac_excitation_ion_2 = calculate_nt_frac_excitation_ion(modelgridindex, element, ion);
       frac_excitation_total += frac_excitation_ion;
 
       printout("    frac_excitation: %g\n", frac_excitation_ion);
