@@ -1527,7 +1527,7 @@ static void analyse_sf_solution(int modelgridindex)
     const double exc_ratecoeff = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
     if (frac_deposition > 0.)
     {
-      printout("frac_deposition %.3e element Z=%d ionstage %d level %4d upperlevel %d ratecoeff %.3e ntratecoeff %.3e nt/t %.3e collstr %.3e\n",
+      printout("frac_deposition %.3e element Z=%d ionstage %d level %4d upperlevel %4d ratecoeff %.3e ntratecoeff %.3e nt/t %.3e collstr %.3e\n",
                frac_deposition, get_element(element), get_ionstage(element, ion), lower, upper,
                exc_ratecoeff, ntexc_ratecoeff, ntexc_ratecoeff / exc_ratecoeff, get_coll_str(lineindex));
     }
