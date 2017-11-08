@@ -12,9 +12,9 @@
 
 #include "assert.h"
 #include <stdarg.h>  // needed for printout()
-#include "threadprivate.h"
 #include "exspec.h"
 #include "sn3d.h"
+#include "threadprivate.h"
 #include "input.h"
 #include "time_init.h"
 #include "light_curve.h"
