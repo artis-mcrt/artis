@@ -1421,6 +1421,7 @@ static void analyse_sf_solution(int modelgridindex)
         allionindex++;
         frac_ionization_total += frac_ionization_ion;
       }
+      printout("    frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_nlsubshell_count);
 
       const int maxlevel = 0; // just consider excitation from the ground level
       // const int maxlevel = get_nlevels(element, ion); // excitation from all levels (SLOW)
@@ -1470,7 +1471,6 @@ static void analyse_sf_solution(int modelgridindex)
       // const double frac_excitation_ion_2 = calculate_nt_frac_excitation_ion(modelgridindex, element, ion);
       frac_excitation_total += frac_excitation_ion;
 
-      printout("    frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_nlsubshell_count);
       printout("    frac_excitation: %g\n", frac_excitation_ion);
       printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("    eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
