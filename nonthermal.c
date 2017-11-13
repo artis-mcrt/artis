@@ -1201,6 +1201,10 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
   if (!NT_EXCITATION_ON)
     return 0.;
 
+  // these transitions won't be in the list, so don't waste time searching
+  if (linelist[lineindex].lowerlevelindex > MAX_NLEVELS_LOWER_EXCITATION)
+    return 0.;
+
   const int list_size = nt_solution[modelgridindex].frac_excitations_list_size;
   for (int excitationindex = 0; excitationindex < list_size; excitationindex++)
   {
