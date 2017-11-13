@@ -117,8 +117,13 @@ static void get_macroatom_transitionrates(
 
     const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+#if NT_EXCITATION_ON
+    const double NT = nt_excitation_ratecoeff(modelgridindex, lineindex);
+#else
+    const double NT = 0.;
+#endif
 
-    const double individ_internal_up_same = (R + C) * epsilon_current;
+    const double individ_internal_up_same = (R + C + NT) * epsilon_current;
 
     chlevel->individ_internal_up_same[i] = individ_internal_up_same;
 
