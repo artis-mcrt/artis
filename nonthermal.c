@@ -1205,6 +1205,12 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
   if (linelist[lineindex].lowerlevelindex > MAX_NLEVELS_LOWER_EXCITATION)
     return 0.;
 
+  if (mg_associated_cells[modelgridindex] <= 0)
+  {
+    printout("ERROR: nt_excitation_ratecoeff called on empty cell %d\n", modelgridindex);
+    abort();
+  }
+
   const int list_size = nt_solution[modelgridindex].frac_excitations_list_size;
   for (int excitationindex = 0; excitationindex < list_size; excitationindex++)
   {
@@ -1306,6 +1312,34 @@ void do_ntlepton(PKT *pkt_ptr)
 }
 
 
+static void realloc_frac_ionizations_list(const int modelgridindex)
+{
+  nt_solution[modelgridindex].frac_ionizations_list = realloc(
+    nt_solution[modelgridindex].frac_ionizations_list,
+    nt_solution[modelgridindex].frac_ionizations_list_size * sizeof(struct nt_ionization_struct));
+
+  if (nt_solution[modelgridindex].frac_ionizations_list == NULL)
+  {
+    printout("ERROR: Not enough memory to reallocate NT ionisation list for cell %d.\n", modelgridindex);
+    abort();
+  }
+}
+
+
+static void realloc_frac_excitations_list(const int modelgridindex)
+{
+  nt_solution[modelgridindex].frac_excitations_list = realloc(
+    nt_solution[modelgridindex].frac_excitations_list,
+    nt_solution[modelgridindex].frac_excitations_list_size * sizeof(struct nt_excitation_struct));
+
+  if (nt_solution[modelgridindex].frac_excitations_list == NULL)
+  {
+    printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d.\n", modelgridindex);
+    abort();
+  }
+}
+
+
 static void analyse_sf_solution(int modelgridindex)
 {
   const float nne = get_nne(modelgridindex);
@@ -1363,21 +1397,14 @@ static void analyse_sf_solution(int modelgridindex)
         if (allionindex >= nt_solution[modelgridindex].frac_ionizations_list_size)
         {
           nt_solution[modelgridindex].frac_ionizations_list_size += BLOCKSIZEIONIZATION;
-          nt_solution[modelgridindex].frac_ionizations_list = realloc(
-            nt_solution[modelgridindex].frac_ionizations_list,
-            nt_solution[modelgridindex].frac_ionizations_list_size * sizeof(struct nt_ionization_struct));
-
-          if (nt_solution[modelgridindex].frac_ionizations_list == NULL)
-          {
-            printout("ERROR: Not enough memory to reallocate ionization list.\n");
-            abort();
-          }
+          realloc_frac_ionizations_list(modelgridindex);
         }
 
         nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition = frac_ionization_ion;
         nt_solution[modelgridindex].frac_ionizations_list[allionindex].element = element;
         nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion = ion;
         allionindex++;
+
         frac_ionization_total += frac_ionization_ion;
       }
       printout("    frac_ionization: %g (%d subshells)\n", frac_ionization_ion, matching_nlsubshell_count);
@@ -1407,15 +1434,8 @@ static void analyse_sf_solution(int modelgridindex)
             if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size)
             {
               nt_solution[modelgridindex].frac_excitations_list_size += BLOCKSIZEEXCITATION;
-              nt_solution[modelgridindex].frac_excitations_list = realloc(
-                nt_solution[modelgridindex].frac_excitations_list,
-                nt_solution[modelgridindex].frac_excitations_list_size * sizeof(struct nt_excitation_struct));
 
-              if (nt_solution[modelgridindex].frac_excitations_list == NULL)
-              {
-                printout("ERROR: Not enough memory to reallocate excitation list.\n");
-                abort();
-              }
+              realloc_frac_excitations_list(modelgridindex);
             }
 
             const double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
@@ -1445,9 +1465,8 @@ static void analyse_sf_solution(int modelgridindex)
   if (allionindex < nt_solution[modelgridindex].frac_ionizations_list_size)
   {
     // shrink the list to match the data
-    nt_solution[modelgridindex].frac_ionizations_list = realloc(
-      nt_solution[modelgridindex].frac_ionizations_list, allionindex * sizeof(struct nt_ionization_struct));
     nt_solution[modelgridindex].frac_ionizations_list_size = allionindex;
+    realloc_frac_ionizations_list(modelgridindex);
   }
 
   qsort(nt_solution[modelgridindex].frac_ionizations_list,
@@ -1458,9 +1477,8 @@ static void analyse_sf_solution(int modelgridindex)
   if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size)
   {
     // shrink the list to match the data
-    nt_solution[modelgridindex].frac_excitations_list = realloc(
-      nt_solution[modelgridindex].frac_excitations_list, excitationindex * sizeof(struct nt_excitation_struct));
     nt_solution[modelgridindex].frac_excitations_list_size = excitationindex;
+    realloc_frac_excitations_list(modelgridindex);
   }
 
   qsort(nt_solution[modelgridindex].frac_excitations_list,
@@ -1872,6 +1890,31 @@ void nt_write_restart_data(FILE *gridsave_file)
           fprintf(gridsave_file, "%g ", nt_solution[modelgridindex].eff_ionpot[element][ion]);
         }
       }
+
+      // write NT ionisations
+      fprintf(gridsave_file, "%d ", nt_solution[modelgridindex].frac_ionizations_list_size);
+
+      const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
+      for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
+      {
+        fprintf(gridsave_file, "%lg %d %d ",
+                nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition,
+                nt_solution[modelgridindex].frac_ionizations_list[allionindex].element,
+                nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion);
+      }
+
+      // write NT excitations
+      fprintf(gridsave_file, "%d ", nt_solution[modelgridindex].frac_excitations_list_size);
+
+      const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
+      for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
+      {
+        fprintf(gridsave_file, "%lg %lg %d ",
+                nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
+                nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
+                nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
+      }
+
     }
   }
 }
@@ -1936,6 +1979,42 @@ void nt_read_restart_data(FILE *gridsave_file)
           fscanf(gridsave_file, "%g ", &nt_solution[modelgridindex].eff_ionpot[element][ion]);
         }
       }
+
+      // read NT ionisations
+      const int frac_ionizations_list_size_old = nt_solution[modelgridindex].frac_ionizations_list_size;
+      fscanf(gridsave_file, "%d ", &nt_solution[modelgridindex].frac_ionizations_list_size);
+
+      if (nt_solution[modelgridindex].frac_ionizations_list_size != frac_ionizations_list_size_old)
+      {
+        realloc_frac_ionizations_list(modelgridindex);
+      }
+
+      const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
+      for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
+      {
+        fscanf(gridsave_file, "%lg %d %d ",
+                &nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition,
+                &nt_solution[modelgridindex].frac_ionizations_list[allionindex].element,
+                &nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion);
+      }
+
+      // read NT excitations
+      const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list_size;
+      fscanf(gridsave_file, "%d ", &nt_solution[modelgridindex].frac_excitations_list_size);
+
+      if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_old)
+      {
+        realloc_frac_excitations_list(modelgridindex);
+      }
+
+      const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
+      for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
+      {
+        fscanf(gridsave_file, "%lg %lg %d ",
+                &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
+                &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
+                &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
+      }
     }
   }
 }
@@ -1989,6 +2068,42 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
         const int nions = get_nions(element);
         MPI_Bcast(&nt_solution[modelgridindex].eff_ionpot[element], nions, MPI_FLOAT, root, MPI_COMM_WORLD);
       }
+
+      // communicate NT ionisations
+      const int frac_ionizations_list_size_old = nt_solution[modelgridindex].frac_ionizations_list_size;
+      MPI_Bcast(&nt_solution[modelgridindex].frac_ionizations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+      if (nt_solution[modelgridindex].frac_ionizations_list_size != frac_ionizations_list_size_old)
+      {
+        realloc_frac_ionizations_list(modelgridindex);
+      }
+
+      const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
+      for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
+      {
+        MPI_Bcast(&nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&nt_solution[modelgridindex].frac_ionizations_list[allionindex].element, 1, MPI_INT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion, 1, MPI_INT, root, MPI_COMM_WORLD);
+      }
+
+      // communicate NT excitations
+      const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list_size;
+      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+      if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_old)
+      {
+        realloc_frac_excitations_list(modelgridindex);
+      }
+
+      const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
+      for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
+      {
+        MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root, MPI_COMM_WORLD);
+      }
+
+
       // printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
       //          modelgridindex, logged_element_z, logged_ion_stage,
       //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
