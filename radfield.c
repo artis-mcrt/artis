@@ -27,7 +27,7 @@ static double J_normfactor[MMODELGRID + 1];
 static bool radfield_initialized = false;
 
 static const double T_R_min = MINTEMP;
-static const double T_R_max = MAXTEMP * 2;
+static const double T_R_max = MAXTEMP * 4;
 
 // typedef enum
 // {
