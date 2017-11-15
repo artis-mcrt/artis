@@ -16,14 +16,17 @@
 #include "sn3d.h"
 
 #define SFPTS 8192  // number of energy points in the Spencer-Fano solution vector
-#define EMAX 32000. // eV
+#define EMAX 16000. // eV
 #define EMIN 1.0 // eV
 
-#define BLOCKSIZEEXCITATION 1000    // Realloc the excitation list increasing by this blocksize
-#define BLOCKSIZEIONIZATION 100    // Realloc the ionization list increasing by this blocksize
-
 const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the first few levels
-const int MAX_NT_EXCITATIONS = 10000;
+const int MAX_NT_EXCITATIONS = 8192;  // if this is more than SFPTS, then you might as well just store
+                                      // the NT spectrum instead (although CPU costs)
+
+#define NT_EXCITATION_ON true // if this is on, the non-thermal energy spectrum will be kept in memory
+
+#define BLOCKSIZEEXCITATION 5096    // Realloc the excitation list increasing by this blocksize
+#define BLOCKSIZEIONIZATION 128     // Realloc the ionization list increasing by this blocksize
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
@@ -58,11 +61,9 @@ const int MAX_NT_EXCITATIONS = 10000;
                                 // non-thermal excitation rates if there are
                                 // many more transitions to store than there are spectrum samples
 
-#define NT_EXCITATION_ON true // if this is on, the non-thermal energy spectrum will be kept in memory
-
 static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
 
-static const double minionfraction = 1.e-4;  // minimum number fraction of the total population to include in SF solution
+static const double minionfraction = 1.e-8;  // minimum number fraction of the total population to include in SF solution
 static const double MINDEPRATE = 0.; // minimum deposition rate density (eV/s/cm^3) to solve SF equation
 
 static const double A_naught_squared = 2.800285203e-17; // Bohr radius squared in cm^2
@@ -1249,7 +1250,7 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
   int high = list_size - 1;
   while (low <= high)
   {
-    int excitationindex = low + ((high - low) / 2);
+    const int excitationindex = low + ((high - low) / 2);
     if (nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex < lineindex)
     {
       low = excitationindex + 1;
@@ -1274,13 +1275,22 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
 void do_ntlepton(PKT *pkt_ptr)
 {
   const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+
   double zrand = gsl_rng_uniform(rng);
+  // zrand is initially between [0, 1), but we will subtract off each
+  // component of the deposition fractions
+  // until we end and select transition_ij when zrand < dep_frac_transition_ij
+
   // const double frac_heating = get_nt_frac_heating(modelgridindex);
   const double frac_excitation = get_nt_frac_excitation(modelgridindex);
   const double frac_ionization = get_nt_frac_ionization(modelgridindex);
 
   if (zrand < frac_ionization)
   {
+    // zrand is between zero and frac_ionization
+    // keep subtracting off deposition fractions of ionizations transitions until we hit the right one
+    // e.g. if zrand was less than frac_dep_trans1, then use the first transition
+    // e.g. if zrand was between frac_dep_trans1 and frac_dep_trans2 then use the second transition, etc
     const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
     for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
     {
@@ -1311,6 +1321,8 @@ void do_ntlepton(PKT *pkt_ptr)
   else if (NT_EXCITATION_ON && zrand < frac_ionization + frac_excitation)
   {
     zrand -= frac_ionization;
+    // now zrand is between zero and frac_excitation
+    // the selection algorithm is the same as for the ionization transitions
     const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
     for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
     {
@@ -1341,6 +1353,8 @@ void do_ntlepton(PKT *pkt_ptr)
       }
       zrand -= frac_deposition_exc;
     }
+    // in case we reached here because the excitation reactions that were stored didn't add up to frac_excitation_ion
+    // then just convert it to a kpkt
   }
 
 
