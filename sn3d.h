@@ -466,7 +466,7 @@ int debuglevel;
 /// Rate coefficients
 ///============================================================================
 #define TABLESIZE 100 //200 //100
-#define MINTEMP 2000.
+#define MINTEMP 1000.
 #define MAXTEMP 140000. //1000000.
 double T_step;
 double T_step_log;
