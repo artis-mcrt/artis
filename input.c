@@ -1928,7 +1928,7 @@ void input(int rank)
     abort();
   }
 
-  nu_min_r = 1e14;   /// lower frequency boundary for UVOIR spectra and BB sampling
+  nu_min_r = 5e13;   /// lower frequency boundary for UVOIR spectra and BB sampling
   nu_max_r = 5e15;   /// upper frequency boundary for UVOIR spectra and BB sampling
   #ifdef DO_EXSPEC
     /// Spectra settings
