@@ -16,11 +16,11 @@
 #include "sn3d.h"
 
 #define SFPTS 8192  // number of energy points in the Spencer-Fano solution vector
-#define EMAX 16000. // eV
+#define EMAX 32000. // eV
 #define EMIN 1.0 // eV
 
 const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the first few levels
-const int MAX_NT_EXCITATIONS = 8192;  // if this is more than SFPTS, then you might as well just store
+const int MAX_NT_EXCITATIONS = 10000;  // if this is more than SFPTS, then you might as well just store
                                       // the NT spectrum instead (although CPU costs)
 
 #define NT_EXCITATION_ON true // if this is on, the non-thermal energy spectrum will be kept in memory
