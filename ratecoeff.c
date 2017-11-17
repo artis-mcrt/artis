@@ -629,7 +629,12 @@ static void precalculate_rate_coefficient_integrals(void)
                 printout("alpha_sp integrator status %d. Integral value %9.3e +/- %9.3e\n",status,alpha_sp,error);
             }
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
-            assert(alpha_sp >= 0);
+            if (alpha_sp < 0)
+            {
+              printout("WARNING: alpha_sp was negative for level %d\n", level);
+              alpha_sp = 0;
+            }
+            // assert(alpha_sp >= 0);
             elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
 
             // if (atomic_number == 26 && ionstage == 3 && level < 5)
@@ -667,6 +672,11 @@ static void precalculate_rate_coefficient_integrals(void)
               }
               gammacorr *= FOURPI * phixstargetprobability;
               assert(gammacorr >= 0);
+              if (gammacorr < 0)
+              {
+                printout("WARNING: gammacorr was negative for level %d\n", level);
+                gammacorr = 0;
+              }
               elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter] = gammacorr;
             #endif
 
@@ -681,7 +691,11 @@ static void precalculate_rate_coefficient_integrals(void)
                 printout("bfheating_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status,bfheating_coeff,error);
               }
               bfheating_coeff *= FOURPI * phixstargetprobability;
-              assert(bfheating_coeff >= 0);
+              if (bfheating_coeff < 0)
+              {
+                printout("WARNING: bfheating_coeff was negative for level %d\n", level);
+                bfheating_coeff = 0;
+              }
               elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter] = bfheating_coeff;
             #endif
 
@@ -695,7 +709,11 @@ static void precalculate_rate_coefficient_integrals(void)
               printout("bfcooling_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status,bfcooling_coeff,error);
             }
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
-            assert(bfcooling_coeff >= 0);
+            if (bfcooling_coeff < 0)
+            {
+              printout("WARNING: bfcooling_coeff was negative for level %d\n", level);
+              bfcooling_coeff = 0;
+            }
             elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] = bfcooling_coeff;
           }
         }
