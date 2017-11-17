@@ -1311,7 +1311,7 @@ void do_ntlepton(PKT *pkt_ptr)
         pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
         pkt_ptr->trueemissionvelocity = -1;
 
-        printout("NTLEPTON packet selected ionization of Z=%d ionstage %d\n", get_element(element), get_ionstage(element, lowerion));
+        printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d\n", modelgridindex, get_element(element), get_ionstage(element, lowerion));
 
         return;
       }
@@ -1346,8 +1346,8 @@ void do_ntlepton(PKT *pkt_ptr)
         pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
         pkt_ptr->trueemissionvelocity = -1;
 
-        printout("NTLEPTON packet selected excitation of Z=%d ionstage %d level %d upperlevel %d\n",
-                 get_element(element), get_ionstage(element, ion), lower, upper);
+        printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
+                 modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
 
         return;
       }
