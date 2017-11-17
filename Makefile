@@ -3,6 +3,7 @@ GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
 RAIJINDIRAC := $(or $(findstring dirac,$(HOSTNAME)),$(findstring raijin,$(HOSTNAME)))
+KELVIN := $(findstring kelvin,$(HOSTNAME))
 
 ifneq (,$(RAIJINDIRAC))
 	# NCI Raijin cluster
@@ -14,6 +15,17 @@ ifneq (,$(RAIJINDIRAC))
   CC = mpicc
   CFLAGS = -DWALLTIMELIMITSECONDS=\(10\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
 	LDFLAGS= -lgsl -lgslcblas -lm
+
+  sn3d: CFLAGS += -DMPI_ON
+  exspec: CFLAGS += -DDO_EXSPEC
+  exgamma: CFLAGS += -DDO_EXSPEC
+
+else ifneq (,$(KELVIN))
+  @echo $PWD
+ 
+  CC = mpicc
+  CFLAGS = -DWALLTIMELIMITSECONDS=\(10\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE -I$(GSLINCLUDE) #-fopenmp=libomp
+  LDFLAGS= -lsgl -lgslcblas -lm -L$(GSLLIB)
 
   sn3d: CFLAGS += -DMPI_ON
   exspec: CFLAGS += -DDO_EXSPEC
