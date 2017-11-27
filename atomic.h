@@ -253,7 +253,7 @@ inline double photoionization_crosssection(int element, int ion, int level, doub
       //printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
       //abort();
     }
-    else if (i < NPHIXSPOINTS)
+    else if (i < NPHIXSPOINTS - 1)
     {
       // sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
 
