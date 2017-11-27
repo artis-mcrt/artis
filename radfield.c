@@ -482,52 +482,54 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
     }
   #endif
 
-  // int binindex = 0;
-  // if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
-  // {
-  //   #ifdef DEBUG_ON
-  //   printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
-  //   #endif
-  //   nu_lower_first = nu_cmf;
-  // }
-  // else if (nu_cmf > radfieldbin_nu_upper[modelgridindex][RADFIELDBINCOUNT - 1])
-  // {
-  //   binindex = RADFIELDBINCOUNT - 1;
-  //   #ifdef DEBUG_ON
-  //   printout("radfield: Extending nu_upper_last from %g up to %g\n",radfield_get_bin_nu_upper(modelgridindex,binindex),nu_cmf);
-  //   #endif
-  //   radfield_get_bin_nu_upper(modelgridindex, binindex) = nu_cmf;
-  // }
-  // else
-  // {
-  //   binindex = radfield_select_bin(modelgridindex,nu_cmf);
-  // }
-  const int binindex = radfield_select_bin(nu_cmf);
-
-  if (binindex >= 0)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
-    {
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbin_current[modelgridindex][binindex].J_raw += distance_e_cmf;
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbin_current[modelgridindex][binindex].nuJ_raw += distance_e_cmf * nu_cmf;
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbin_current[modelgridindex][binindex].contribcount += 1;
+    // int binindex = 0;
+    // if (nu_cmf <= radfield_get_bin_nu_lower(modelgridindex,binindex))
+    // {
+    //   #ifdef DEBUG_ON
+    //   printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
+    //   #endif
+    //   nu_lower_first = nu_cmf;
+    // }
+    // else if (nu_cmf > radfieldbin_nu_upper[modelgridindex][RADFIELDBINCOUNT - 1])
+    // {
+    //   binindex = RADFIELDBINCOUNT - 1;
+    //   #ifdef DEBUG_ON
+    //   printout("radfield: Extending nu_upper_last from %g up to %g\n",radfield_get_bin_nu_upper(modelgridindex,binindex),nu_cmf);
+    //   #endif
+    //   radfield_get_bin_nu_upper(modelgridindex, binindex) = nu_cmf;
+    // }
+    // else
+    // {
+    //   binindex = radfield_select_bin(modelgridindex,nu_cmf);
+    // }
+    const int binindex = radfield_select_bin(nu_cmf);
+
+    if (binindex >= 0) {
+      {
+#ifdef _OPENMP
+#pragma omp atomic
+#endif
+        radfieldbin_current[modelgridindex][binindex].J_raw += distance_e_cmf;
+#ifdef _OPENMP
+#pragma omp atomic
+#endif
+        radfieldbin_current[modelgridindex][binindex].nuJ_raw += distance_e_cmf * nu_cmf;
+#ifdef _OPENMP
+#pragma omp atomic
+#endif
+        radfieldbin_current[modelgridindex][binindex].contribcount += 1;
+      }
     }
+    // else
+    // {
+    //   printout("WARNING: radfield_update_estimators dropping packet contribution for nu_cmf %g\n",
+    //            nu_cmf);
+    //   printout("           modelgridindex %d binindex %d nu_lower_first %g nu_upper_last %g \n",
+    //            modelgridindex, binindex, nu_lower_first, radfield_get_bin_nu_upper(modelgridindex,RADFIELDBINCOUNT - 1));
+    // }
   }
-  // else
-  // {
-  //   printout("WARNING: radfield_update_estimators dropping packet contribution for nu_cmf %g\n",
-  //            nu_cmf);
-  //   printout("           modelgridindex %d binindex %d nu_lower_first %g nu_upper_last %g \n",
-  //            modelgridindex, binindex, nu_lower_first, radfield_get_bin_nu_upper(modelgridindex,RADFIELDBINCOUNT - 1));
-  // }
 #endif
 }
 
