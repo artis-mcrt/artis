@@ -506,21 +506,20 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
     // }
     const int binindex = radfield_select_bin(nu_cmf);
 
-    if (binindex >= 0) {
-      {
-#ifdef _OPENMP
-#pragma omp atomic
-#endif
-        radfieldbin_current[modelgridindex][binindex].J_raw += distance_e_cmf;
-#ifdef _OPENMP
-#pragma omp atomic
-#endif
-        radfieldbin_current[modelgridindex][binindex].nuJ_raw += distance_e_cmf * nu_cmf;
-#ifdef _OPENMP
-#pragma omp atomic
-#endif
-        radfieldbin_current[modelgridindex][binindex].contribcount += 1;
-      }
+    if (binindex >= 0)
+    {
+      #ifdef _OPENMP
+      #pragma omp atomic
+      #endif
+      radfieldbin_current[modelgridindex][binindex].J_raw += distance_e_cmf;
+      #ifdef _OPENMP
+      #pragma omp atomic
+      #endif
+      radfieldbin_current[modelgridindex][binindex].nuJ_raw += distance_e_cmf * nu_cmf;
+      #ifdef _OPENMP
+      #pragma omp atomic
+      #endif
+      radfieldbin_current[modelgridindex][binindex].contribcount += 1;
     }
     // else
     // {
