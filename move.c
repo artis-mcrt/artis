@@ -20,8 +20,7 @@ void update_estimators(const PKT *restrict pkt_ptr, const double distance)
     const double nu = pkt_ptr->nu_cmf;
     //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
 
-    if (MULTIBIN_RADFIELD_MODEL_ON)
-      radfield_update_estimators(modelgridindex, distance_e_cmf, nu);
+    radfield_update_estimators(modelgridindex, distance_e_cmf, nu);
 
     #ifndef FORCE_LTE
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
