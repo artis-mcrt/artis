@@ -16,7 +16,7 @@
 #include "sn3d.h"
 
 #define SFPTS 8192  // number of energy points in the Spencer-Fano solution vector
-#define EMAX 32000. // eV
+#define EMAX 16000. // eV
 #define EMIN 1.0 // eV
 
 const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the first few levels
