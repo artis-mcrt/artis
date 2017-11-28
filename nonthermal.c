@@ -1488,7 +1488,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
           frac_excitation_ion += frac_excitation_thistrans;
 
 #if NT_EXCITATION_ON
-          // if (frac_excitation_thistrans > 0.)
+          if (nt_frac_excitation_perlevelpop > 0)
           {
             if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size)
             {
@@ -1497,7 +1497,11 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
               realloc_frac_excitations_list(modelgridindex);
             }
 
-            const double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
+            double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
+
+            if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is unreliable
+              ratecoeffperdeposition = 0.;
+
             nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = frac_excitation_thistrans;
             nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = ratecoeffperdeposition;
             nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = lineindex;
