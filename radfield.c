@@ -999,7 +999,7 @@ void radfield_normalise_nuJ(const int modelgridindex, const double estimator_nor
 
 double get_T_R_from_J(const int modelgridindex)
 {
-  double T_R = pow(PI / STEBO * J[modelgridindex], 1/4);
+  double T_R = pow(PI / STEBO * J[modelgridindex], 1. / 4.);
   if (isfinite(T_R))
   {
     /// Make sure that T is in the allowed temperature range.

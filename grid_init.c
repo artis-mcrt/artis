@@ -1584,7 +1584,7 @@ static void assign_temperature(void)
       //mgi = cell[n].modelgridindex;
       double T_initial = pow(((factor56ni * get_f56ni(n) * get_rhoinit(n))
            + (factor52fe * get_f52fe(n) * get_rhoinit(n))
-           + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1 / 4);
+           + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1. / 4.);
       //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
       //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/TNICKEL))/pow(tmin,3), 1./4.);
       //T_initial = 30615.5;
