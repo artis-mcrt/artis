@@ -805,45 +805,48 @@ static float find_T_R(int modelgridindex, int binindex)
 }
 
 
-static void get_radfield_params_fullspec(const double J, const double nuJ, const int modelgridindex, float *T_J, float *T_R, float *W)
+static void set_radfield_params_fullspec(const int modelgridindex, const int timestep)
 {
-  const double nubar = nuJ / J;
+  const double nubar = nuJ[modelgridindex] / J[modelgridindex];
   if (!isfinite(nubar) || nubar == 0.)
   {
-    /// Return old T_R
-    printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n",modelgridindex);
-    *T_J = modelgrid[modelgridindex].TJ;
-    *T_R = modelgrid[modelgridindex].TR;
-    *W = modelgrid[modelgridindex].W;
+    printout("[warning] update_grid: T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
+             modelgridindex, J[modelgridindex], nuJ[modelgridindex]);
   }
   else
   {
-    *T_J = pow(J * PI / STEBO, 1 / 4.);
-    if (*T_J > MAXTEMP)
+    float T_J = pow(J[modelgridindex] * PI / STEBO, 1 / 4.);
+    if (T_J > MAXTEMP)
     {
-      printout("[warning] update_grid: temperature estimator T_J=%g exceeds T_max=%g in cell %d. Set T_J = T_max!\n",*T_J,MAXTEMP,modelgridindex);
-      *T_J = MAXTEMP;
+      printout("[warning] update_grid: temperature estimator T_J=%g exceeds T_max=%g in cell %d. Set T_J = T_max!\n", T_J, MAXTEMP, modelgridindex);
+      T_J = MAXTEMP;
     }
-    if (*T_J < MINTEMP)
+    else if (T_J < MINTEMP)
     {
-      printout("[warning] update_grid: temperature estimator T_J=%g below T_min %g in cell %d. Set T_J = T_min!\n",*T_J,MINTEMP,modelgridindex);
-      *T_J = MINTEMP;
+      printout("[warning] update_grid: temperature estimator T_J=%g below T_min %g in cell %d. Set T_J = T_min!\n", T_J, MINTEMP, modelgridindex);
+      T_J = MINTEMP;
     }
+    set_TJ(modelgridindex, T_J);
 
-    *T_R = H * nubar / KB / 3.832229494;
-    printout("nubar = %5.1f Angstroms\n", 1e8 * CLIGHT / nubar);
-    if (*T_R > MAXTEMP)
+    float T_R = H * nubar / KB / 3.832229494;
+    if (T_R > MAXTEMP)
     {
-      printout("[warning] update_grid: temperature estimator T_R=%g exceeds T_max=%g in cell %d. Set T_R = T_max!\n",*T_R,MAXTEMP,modelgridindex);
-      *T_R = MAXTEMP;
+      printout("[warning] update_grid: temperature estimator T_R = %g exceeds T_max=%g in cell %d. Set T_R = T_max!\n", T_R, MAXTEMP, modelgridindex);
+      T_R = MAXTEMP;
     }
-    if (*T_R < MINTEMP)
+    else if (T_R < MINTEMP)
     {
-      printout("[warning] update_grid: temperature estimator T_R=%g below T_min %g in cell %d. Set T_R = T_min!\n",*T_R,MINTEMP,modelgridindex);
-      *T_R = MINTEMP;
+      printout("[warning] update_grid: temperature estimator T_R = %g below T_min %g in cell %d. Set T_R = T_min!\n", T_R, MINTEMP, modelgridindex);
+      T_R = MINTEMP;
     }
+    set_TR(modelgridindex, T_R);
 
-    *W = J * PI / STEBO / pow(*T_R, 4);
+    const float W = J[modelgridindex] * PI / STEBO / pow(T_R, 4);
+    set_W(modelgridindex, W);
+
+    printout("Full-spectrum fit radfield for cell %d at timestep %d: J %g, nubar %5.1f Å, T_J %g, T_R %g, W %g\n",
+             modelgridindex, timestep, J[modelgridindex], 1e8 * CLIGHT / nubar,
+             T_J, T_R, W);
   }
 }
 
@@ -852,20 +855,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
 // finds the best fitting W and temperature parameters in each spectral bin
 // using J and nuJ
 {
-  float T_J;
-  float T_R;
-  float W;
-  get_radfield_params_fullspec(J[modelgridindex], nuJ[modelgridindex], modelgridindex, &T_J, &T_R, &W);
-  set_TJ(modelgridindex, T_J);
-  set_TR(modelgridindex, T_R);
-  set_W(modelgridindex, W);
-
-  const float T_R_fullspec = get_TR(modelgridindex);
-  const double J_fullspec = J[modelgridindex];
-  //double planck_integral_zero_inf = STEBO * pow(T_R_fullspec,4) / PI;
-
-  printout("Full-spectrum fit radfield params for cell %d at timestep %d: J %g, T_R %g, W %g\n",
-           modelgridindex, timestep, J_fullspec, T_R_fullspec, get_W(modelgridindex));
+  set_radfield_params_fullspec(modelgridindex, timestep);
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
   {
@@ -1011,12 +1001,12 @@ double get_T_R_from_J(const int modelgridindex)
   /// Make sure that T is in the allowed temperature range.
   else if (T_R > MAXTEMP)
   {
-    printout("[warning] get_T_R_from_J: T_R would be %.1e > MAXTEMP. Clamping to %.1e K\n", T_R, MAXTEMP);
+    printout("[warning] get_T_R_from_J: T_R would be %.1f > MAXTEMP. Clamping to MAXTEMP = %.0f K\n", T_R, MAXTEMP);
     return MAXTEMP;
   }
   else if (T_R < MINTEMP)
   {
-    printout("[warning] get_T_R_from_J: T_R would be %.1e < MINTEMP. Clamping to %.1e K\n", T_R, MINTEMP);
+    printout("[warning] get_T_R_from_J: T_R would be %.1f < MINTEMP. Clamping to MINTEMP = %.0f K\n", T_R, MINTEMP);
     return MINTEMP;
   }
   else
@@ -1130,7 +1120,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
 
-  printout("Writing restart data for binned radiation field\n");
+  printout("data for binned radiation field, ");
 
   fprintf(gridsave_file, "%d\n", 30490824); // special number marking the beginning of radfield data
   fprintf(gridsave_file,"%d %lg %lg %lg %lg\n",

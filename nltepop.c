@@ -1500,7 +1500,7 @@ void nltepop_write_restart_data(FILE *restart_file)
   if (!NLTE_POPS_ON)
     return;
 
-  printout("Writing restart data for NLTE populations\n");
+  printout("data for NLTE populations, ");
 
   fprintf(restart_file, "%d\n", 75618527); // special number marking the beginning of nlte data
   fprintf(restart_file, "%d\n", total_nlte_levels);
