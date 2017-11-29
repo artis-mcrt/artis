@@ -437,9 +437,13 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
     if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
     {
       /// Store population values to the grid
+      const time_t sys_time_start_pops = time(NULL);
       calculate_populations(n);
+      const int duration_solve_pops = time(NULL) - sys_time_start_pops;
       //calculate_cooling_rates(n);
       //calculate_heating_rates(n);
+      printout("Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, T_e %ds, populations %ds\n",
+               n, nts, duration_solve_spencerfano, duration_solve_T_e, duration_solve_pops);
     }
 
     if (NLTE_POPS_ON)
