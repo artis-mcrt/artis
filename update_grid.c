@@ -242,16 +242,18 @@ static void write_to_estimators_file(const int n, const int timestep)
       //           calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, true, printdebug));
       // }
       // fprintf(estimators_file, "\n");
-
-      fprintf(estimators_file, "gamma_NT       Z=%2d", get_element(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions - 1; ion++)
+      if (NT_ON)
       {
-        const double Y_nt = nt_ionization_ratecoeff(n, element, ion);
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), Y_nt);
+        fprintf(estimators_file, "gamma_NT       Z=%2d", get_element(element));
+        for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+          fprintf(estimators_file, "              ");
+        for (int ion = 0; ion < nions - 1; ion++)
+        {
+          const double Y_nt = nt_ionization_ratecoeff(n, element, ion);
+          fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), Y_nt);
+        }
+        fprintf(estimators_file, "\n");
       }
-      fprintf(estimators_file, "\n");
     }
 
 
