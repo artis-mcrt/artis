@@ -1956,7 +1956,7 @@ void nt_write_restart_data(FILE *gridsave_file)
   if (!NT_SOLVE_SPENCERFANO)
     return;
 
-  printout("Writing restart data for non-thermal solver\n");
+  printout("data for non-thermal solver, ");
 
   fprintf(gridsave_file, "%d\n", 24724518); // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %lg %lg\n", SFPTS, EMIN, EMAX);
