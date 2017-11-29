@@ -785,17 +785,23 @@ static float calculate_frac_heating(const int modelgridindex)
 
 float get_nt_frac_heating(const int modelgridindex)
 {
-  if (!NT_SOLVE_SPENCERFANO)
+  if (!NT_ON)
+    return 1.;
+  else if (!NT_SOLVE_SPENCERFANO)
     return 0.98;
-
-  const float frac_heating = nt_solution[modelgridindex].frac_heating;
-  // add any debugging checks here?
-  return frac_heating;
+  else
+  {
+    const float frac_heating = nt_solution[modelgridindex].frac_heating;
+    // add any debugging checks here?
+    return frac_heating;
+  }
 }
 
 
 float get_nt_frac_ionization(const int modelgridindex)
 {
+  if (!NT_ON)
+    return 0.;
   if (!NT_SOLVE_SPENCERFANO)
     return 0.02;
 
@@ -814,7 +820,7 @@ float get_nt_frac_ionization(const int modelgridindex)
 
 float get_nt_frac_excitation(const int modelgridindex)
 {
-  if (!NT_SOLVE_SPENCERFANO)
+  if (!NT_ON || !NT_SOLVE_SPENCERFANO)
     return 0.;
 
   const float frac_excitation = nt_solution[modelgridindex].frac_excitation;
