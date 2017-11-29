@@ -705,17 +705,18 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         const double estimator_normfactor = 1 / (deltaV * deltat) / nprocs / assoc_cells;
         const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
+        radfield_normalise_J(n, estimator_normfactor_over4pi);
+        radfield_set_J_normfactor(n, estimator_normfactor_over4pi);
+
         #ifndef FORCE_LTE
         if (initial_iteration || modelgrid[n].thick == 1)
         #endif
         {
-          radfield_normalise_J(n, estimator_normfactor_over4pi);
-
           #ifdef DO_TITER
             radfield_titer_J(n);
           #endif
 
-          double T_R = get_T_R_from_J(n);
+          const double T_R = get_T_R_from_J(n);
           set_TR(n, T_R);
           set_Te(n, T_R);
           set_TJ(n, T_R);
@@ -735,8 +736,6 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         {
           /// Calculate estimators
 
-          radfield_normalise_J(n, estimator_normfactor_over4pi);
-          radfield_set_J_normfactor(n, estimator_normfactor_over4pi);
           radfield_normalise_nuJ(n, estimator_normfactor_over4pi);
 
           ffheatingestimator[n] *= estimator_normfactor;
@@ -752,7 +751,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
             update_gamma_corrphotoionrenorm_bfheating_estimators(n, estimator_normfactor);
           #endif
 
-          // Get radiation field parameters out of the estimators
+          // Get radiation field parameters out of the (full-spectrum and binned) J and nuJ estimators
           radfield_fit_parameters(n, nts);
 
           grid_cell_solve_Te_nltepops(n, nts, titer);
