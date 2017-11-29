@@ -1429,7 +1429,7 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 }
 
 
-double calculate_iongamma_per_gspop(int modelgridindex, int element, int ion)
+double calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion)
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate
 {
   const int nions = get_nions(element);
@@ -1453,6 +1453,7 @@ double calculate_iongamma_per_gspop(int modelgridindex, int element, int ion)
 
         const double epsilon_trans = epsilon(element,ion + 1,upperlevel) - epsilon(element,ion,level);
         //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
+
         Col_ion += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
       }
     }

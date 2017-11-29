@@ -118,7 +118,7 @@ double ionfract(int element, int ion, int modelgridindex, double nne)
 }
 
 
-double phi(int element, int ion, int modelgridindex)
+double phi(const int element, const int ion, const int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
@@ -128,8 +128,6 @@ double phi(int element, int ion, int modelgridindex)
   //int element_in, ion_in, nions_in;
   //double rate_use;
 
-  const double ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
-  //printout("ionpot for element %d, ion %d is %g\n",element,ion,ionpot/EV);
   const float T_e = get_Te(modelgridindex);
   //double T_R = get_TR(modelgridindex);
 
@@ -144,95 +142,99 @@ double phi(int element, int ion, int modelgridindex)
   //phi = 1./W * 1./(zeta+W*(1-zeta)) * sqrt(T_R/T_e) * partfunct_ratio * SAHACONST * pow(T_R,-1.5) * exp(ionpot/KB/T_R);
 
   /// Newest ionisation formula
-  const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion]/modelgrid[modelgridindex].composition[element].partfunct[ion+1];
-  #ifdef FORCE_LTE
-    phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
-  #else
-    if  (initial_iteration == true || modelgrid[modelgridindex].thick == 1)
-    {
-      phi = partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
-    }
-    else
+
+#ifdef FORCE_LTE
+  const bool use_lte_ratio = true;
+#else
+  const bool use_lte_ratio = (initial_iteration || modelgrid[modelgridindex].thick == 1);
+#endif
+
+  if (use_lte_ratio)
+  {
+    const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
+    //printout("ionpot for element %d, ion %d is %g\n", element, ion, ionpot / EV);
+    const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion]/modelgrid[modelgridindex].composition[element].partfunct[ion+1];
+    phi = partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
+  }
+  else
 // elseif (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
 //     {
 //       const float nne = get_nne(modelgridindex);
 //       phi = ionstagepop(modelgridindex,element,ion) / ionstagepop(modelgridindex,element,ion+1) / nne;
 //     }
 // else
+  {
+    //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
+    #if NO_LUT_PHOTOION
+      const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
+    #else
+      const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
+    #endif
+
+    // Gamma is the photoionization rate per ground level pop
+    const double Gamma_ion = (Gamma * stat_weight(element, ion, 0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
+
+    if (Gamma == 0. && (!NT_ON || (rpkt_emiss[modelgridindex] == 0. && get_f48cr(modelgridindex) == 0. && get_f56ni(modelgridindex) == 0.)))
     {
-      //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
-      #if NO_LUT_PHOTOION
-        const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
-      #else
-        const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
-      #endif
-
-      // Gamma is the photoionization rate per ground level pop
-      const double Gamma_ion = (Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
-
-      if (Gamma == 0. && (!NT_ON || (rpkt_emiss[modelgridindex] == 0. && modelgrid[modelgridindex].f48cr == 0. && get_f56ni(modelgridindex) == 0.)))
-      {
-        printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
-        abort();
-      }
-
-      //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
-      double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
-
-      const double Alpha_sp = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false);
-
-      const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false, false);
-
-      const double recomb_total = Alpha_sp + Alpha_st + Col_rec;
-
-      double Y_nt = 0.0;
-
-      if (NT_ON)
-      {
-        Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
-      }
-
-      // || !isfinite(Gamma))
-      //return phi_lte(element,ion,cellnumber);
-      //gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) + interpolate_photoioncoeff_above(element,ion,0,T_e);
-      //zeta = interpolate_zeta(element,ion,T_e);
-      //alpha_sp = interpolate_spontrecombcoeff(element,ion,0,T_e);
-      //phi = gamma_lte*(Alpha_sp+Apha_st)/(Gamma*alpha_sp) * partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
-
-      //printout("testing: Y_nt/Gamma: %g (%d %d)\n", Y_nt/Gamma/stat_weight(element,ion,0)*modelgrid[modelgridindex].composition[element].partfunct[ion], element, ion);
-      // OLD
-      //phi = (Alpha_sp+Alpha_st)/(Gamma + Y_nt) * modelgrid[modelgridindex].composition[element].partfunct[ion]/
-      //stat_weight(element,ion,0);
-      //
-
-      //changed July14 to include partition function to stat. weight ratio for upper ion
-      // recombinations / ionizations
-      //printout("[debug-luke] phi for ion %d Gamma-part %g, Y_nt %g\n",ion,(Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]),Y_nt);
-      //Gamma = 0.0; //TODO: testing testing no gamma part
-
-      phi = recomb_total / (Gamma_ion + Y_nt);
-
-      // Y_nt should generally be higher than the Gamma term for nebular epoch
-
-      //phi = (Alpha_sp+Alpha_st)/(Y_nt);
-
-      /*if (element == 0)
-      {
-        printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ratio_u %g ratio_l %g Gamma %g T_e %g\n",
-              phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion+1,0)/modelgrid[modelgridindex].composition[element].partfunct[ion+1], stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion],Gamma, T_e);
-      }*/
-
-      if (!isfinite(phi) || phi == 0.0)
-      {
-        printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or lower ionisation stages\n",phi,element,ion,T_e);
-        printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n",Alpha_sp,Alpha_st,Gamma,modelgrid[modelgridindex].composition[element].partfunct[ion],stat_weight(element,ion,0));
-        printout("[fatal] phi: recomb_total %g, upperionpartfunct %g, upperionstatweight %g\n",recomb_total,modelgrid[modelgridindex].composition[element].partfunct[ion+1],stat_weight(element,ion+1,0));
-        printout("[fatal] phi: Y_nt %g Col_rec %g get_nne(modelgridindex) %g\n",Y_nt,Col_rec,get_nne(modelgridindex));
-        //abort();
-      }
+      printout("Fatal: Gamma = 0 for element %d, ion %d in phi ... abort\n",element,ion);
+      abort();
     }
-  #endif
-// #endif //ALL IONS SIMULTANEOUS
+
+    //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
+    double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
+
+    const double Alpha_sp = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false);
+
+    const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false, false);
+
+    const double recomb_total = Alpha_sp + Alpha_st + Col_rec;
+
+    double Y_nt = 0.0;
+
+    if (NT_ON)
+    {
+      Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
+    }
+
+    // || !isfinite(Gamma))
+    //return phi_lte(element,ion,cellnumber);
+    //gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) + interpolate_photoioncoeff_above(element,ion,0,T_e);
+    //zeta = interpolate_zeta(element,ion,T_e);
+    //alpha_sp = interpolate_spontrecombcoeff(element,ion,0,T_e);
+    //phi = gamma_lte*(Alpha_sp+Apha_st)/(Gamma*alpha_sp) * partfunct_ratio * SAHACONST * pow(T_e,-1.5) * exp(ionpot/KB/T_e);
+
+    //printout("testing: Y_nt/Gamma: %g (%d %d)\n", Y_nt/Gamma/stat_weight(element,ion,0)*modelgrid[modelgridindex].composition[element].partfunct[ion], element, ion);
+    // OLD
+    //phi = (Alpha_sp+Alpha_st)/(Gamma + Y_nt) * modelgrid[modelgridindex].composition[element].partfunct[ion]/
+    //stat_weight(element,ion,0);
+    //
+
+    //changed July14 to include partition function to stat. weight ratio for upper ion
+    // recombinations / ionizations
+    //printout("[debug-luke] phi for ion %d Gamma-part %g, Y_nt %g\n",ion,(Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]),Y_nt);
+    //Gamma = 0.0; //TODO: testing testing no gamma part
+
+    phi = recomb_total / (Gamma_ion + Y_nt);
+
+    // Y_nt should generally be higher than the Gamma term for nebular epoch
+
+    //phi = (Alpha_sp+Alpha_st)/(Y_nt);
+
+    /*if (element == 0)
+    {
+      printout("phi %g, Alpha_sp %g, Alpha_st %g, Y_nt %g, element %d, ion %d, Col_rec %g, mgi %d, get_nne %g, ratio_u %g ratio_l %g Gamma %g T_e %g\n",
+            phi, Alpha_sp, Alpha_st, Y_nt, element, ion, Col_rec, modelgridindex, get_nne(modelgridindex), stat_weight(element,ion+1,0)/modelgrid[modelgridindex].composition[element].partfunct[ion+1], stat_weight(element,ion,0)/modelgrid[modelgridindex].composition[element].partfunct[ion],Gamma, T_e);
+    }*/
+
+    if (!isfinite(phi) || phi == 0.)
+    {
+      printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or lower ionisation stages\n", phi, element, ion, T_e);
+      printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Alpha_st, Gamma, modelgrid[modelgridindex].composition[element].partfunct[ion], stat_weight(element, ion, 0));
+      printout("[fatal] phi: recomb_total %g, upperionpartfunct %g, upperionstatweight %g\n", recomb_total, modelgrid[modelgridindex].composition[element].partfunct[ion + 1], stat_weight(element, ion + 1, 0));
+      printout("[fatal] phi: Y_nt %g Col_rec %g get_nne(modelgridindex) %g\n", Y_nt, Col_rec, get_nne(modelgridindex));
+      //abort();
+    }
+  }
 
   return phi;
 }
