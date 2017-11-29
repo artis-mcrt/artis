@@ -391,20 +391,20 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
       /// These don't depend on T_e, therefore take them out of the T_e iteration
       precalculate_partfuncts(n);
     }
-    #if (!NO_LUT_PHOTOION)
-      else if ((nlte_iter != 0))
+#if (!NO_LUT_PHOTOION)
+    else if ((nlte_iter != 0))
+    {
+      // recalculate the Gammas using the current population estimates
+      for (int element = 0; element < nelements; element++)
       {
-        // recalculate the Gammas using the current population estimates
-        for (int element = 0; element < nelements; element++)
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions - 1; ion++)
         {
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions - 1; ion++)
-          {
-            gammaestimator[n * nelements * maxion + element * maxion + ion] = calculate_iongamma_per_gspop(n, element, ion);
-          }
+          gammaestimator[n * nelements * maxion + element * maxion + ion] = calculate_iongamma_per_gspop(n, element, ion);
         }
       }
-    #endif
+    }
+#endif
 
     int duration_solve_T_e = -1;
     const time_t sys_time_start_Te = time(NULL);
@@ -412,9 +412,9 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
     double T_e_old = get_Te(n);
     double T_e;
     if (titer == 0)
-      T_e = call_T_e_finder(n,time_step[nts - 1].mid,MINTEMP,MAXTEMP);
+      T_e = call_T_e_finder(n,time_step[nts - 1].mid, MINTEMP, MAXTEMP);
     else
-      T_e = call_T_e_finder(n,time_step[nts].mid,MINTEMP,MAXTEMP);
+      T_e = call_T_e_finder(n,time_step[nts].mid, MINTEMP, MAXTEMP);
 
     if (T_e > 2 * T_e_old)
     {
@@ -747,12 +747,12 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
             titer_average_estimators(n);
           #endif
 
+          // Get radiation field parameters out of the (full-spectrum and binned) J and nuJ estimators
+          radfield_fit_parameters(n, nts);
+
           #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
             update_gamma_corrphotoionrenorm_bfheating_estimators(n, estimator_normfactor);
           #endif
-
-          // Get radiation field parameters out of the (full-spectrum and binned) J and nuJ estimators
-          radfield_fit_parameters(n, nts);
 
           grid_cell_solve_Te_nltepops(n, nts, titer);
         }
