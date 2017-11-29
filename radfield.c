@@ -61,6 +61,8 @@ static double J[MMODELGRID + 1];
   static double J_reduced_save[MMODELGRID + 1];
 #endif
 
+// J and nuJ are accumulated and then normalised in-place
+// i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 #ifndef FORCE_LTE
   static double nuJ[MMODELGRID + 1];
   #ifdef DO_TITER
@@ -999,22 +1001,26 @@ void radfield_normalise_nuJ(const int modelgridindex, const double estimator_nor
 
 double get_T_R_from_J(const int modelgridindex)
 {
-  double T_R = pow(PI / STEBO * J[modelgridindex], 1. / 4.);
-  if (isfinite(T_R))
-  {
-    /// Make sure that T is in the allowed temperature range.
-    if (T_R > MAXTEMP)
-      T_R = MAXTEMP;
-    if (T_R < MINTEMP)
-      T_R = MINTEMP;
-  }
-  else
+  const double T_R = pow(PI / STEBO * J[modelgridindex], 1. / 4.);
+  if (!isfinite(T_R))
   {
     /// keep old value of T_R
-    printout("[warning] update_grid: T_R estimator infinite in cell %d, use value of last timestep\n", modelgridindex);
-    T_R = modelgrid[modelgridindex].TR;
+    printout("[warning] get_T_R_from_J: T_R estimator infinite in cell %d, use value of last timestep\n", modelgridindex);
+    return get_TR(modelgridindex);
   }
-  return T_R;
+  /// Make sure that T is in the allowed temperature range.
+  else if (T_R > MAXTEMP)
+  {
+    printout("[warning] get_T_R_from_J: T_R would be %.1e > MAXTEMP. Clamping to %.1e K\n", T_R, MAXTEMP);
+    return MAXTEMP;
+  }
+  else if (T_R < MINTEMP)
+  {
+    printout("[warning] get_T_R_from_J: T_R would be %.1e < MINTEMP. Clamping to %.1e K\n", T_R, MINTEMP);
+    return MINTEMP;
+  }
+  else
+    return T_R;
 }
 
 
