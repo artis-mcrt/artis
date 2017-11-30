@@ -888,6 +888,25 @@ double calculate_ionrecombcoeff(
 }
 
 
+double interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T)
+{
+  assert(T >= MINTEMP);
+  int lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  if (lowerindex < TABLESIZE - 1)
+  {
+    int upperindex = lowerindex + 1;
+    double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
+    double T_upper =  MINTEMP * exp(upperindex * T_step_log);
+
+    double f_upper = elements[element].ions[ion].Alpha_sp[upperindex];
+    double f_lower = elements[element].ions[ion].Alpha_sp[lowerindex];
+
+    return f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower);
+  }
+  else
+    return elements[element].ions[ion].Alpha_sp[TABLESIZE-1];
+}
+
 
 static void scale_level_phixs(const int element, const int ion, const int level, const double factor)
 // multiply the cross sections associated with a level by some factor and
@@ -1059,6 +1078,34 @@ static void read_recombrate_file(void)
 }
 
 
+static void precalculate_ion_alpha_sp()
+{
+  for (int iter = 0; iter < TABLESIZE; iter++)
+  {
+    const float T_e = MINTEMP * exp(iter * T_step_log);
+    for (int element = 0; element < nelements; element++)
+    {
+      const int nions = get_nions(element) - 1;
+      for (int ion = 0; ion < nions; ion++)
+      {
+        //nlevels = get_nlevels(element, ion);
+        //nlevels = get_ionisinglevels(element, ion); ///number of levels of the current ion which have an associated photoion cross section
+        const int nlevels = get_bfcontinua(element, ion); /// number of ionising levels used in the simulation
+        double zeta = 0.;
+        for (int level = 0; level < nlevels; level++)
+        {
+          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+          {
+            zeta += interpolate_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
+          }
+        }
+        elements[element].ions[ion].Alpha_sp[iter] = zeta;
+      }
+    }
+  }
+}
+
+
 void ratecoefficients_init(void)
 /// Precalculates the rate coefficients for stimulated and spontaneous
 /// recombination and photoionisation on a given temperature grid using
@@ -1078,6 +1125,8 @@ void ratecoefficients_init(void)
   }
 
   read_recombrate_file();
+
+  precalculate_ion_alpha_sp();
 }
 
 

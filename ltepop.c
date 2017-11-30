@@ -183,7 +183,11 @@ double phi(const int element, const int ion, const int modelgridindex)
     //Alpha_st = stimrecombestimator[cellnumber*nelements*maxion+element*maxion+ion];
     double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
 
-    const double Alpha_sp = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false);
+    double Alpha_sp = 0.;
+    if (NLTE_POPS_ON)
+      Alpha_sp = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false);
+    else
+      Alpha_sp = interpolate_ions_spontrecombcoeff(element, ion, T_e);
 
     const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false, false);
 
