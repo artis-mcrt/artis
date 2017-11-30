@@ -800,9 +800,14 @@ static void read_atomicdata_files(void)
 //             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
 //             abort();
 //           }
+        if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
+        {
+          printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
+          abort();
+        }
         if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
         {
-          printout("[fatal] input: not enough memory to initialize levelist of element %d, ion %d ... abort\n",element,ion);
+          printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n",element,ion);
           abort();
         }
 

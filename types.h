@@ -441,6 +441,7 @@ typedef struct ionlist_entry
   int ionisinglevels;                        /// Number of levels which have a bf-continuum
   int coolingoffset;
   int ncoolingterms;
+  float *Alpha_sp;
   double ionpot;                             /// Ionisation threshold to the next ionstage
   //int nbfcontinua;
   //ionsphixslist_t *phixslist;

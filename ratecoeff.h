@@ -27,4 +27,6 @@ double calculate_ionrecombcoeff(
   bool assume_lte, bool collisional_not_radiative, bool printdebug,
   bool lower_superlevel_only, bool per_groundmultipletpop);
 
+double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
+
 #endif //RATECOEFF_H
