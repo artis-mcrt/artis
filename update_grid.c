@@ -694,14 +694,14 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         radfield_normalise_J(n, estimator_normfactor_over4pi);
         radfield_set_J_normfactor(n, estimator_normfactor_over4pi);
 
+        #ifdef DO_TITER
+          radfield_titer_J(n);
+        #endif
+
         #ifndef FORCE_LTE
         if (initial_iteration || modelgrid[n].thick == 1)
         #endif
         {
-          #ifdef DO_TITER
-            radfield_titer_J(n);
-          #endif
-
           const double T_R = get_T_R_from_J(n);
           set_TR(n, T_R);
           set_Te(n, T_R);
@@ -728,12 +728,11 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
           colheatingestimator[n] *= estimator_normfactor;
 
           #ifdef DO_TITER
-            radfield_titer_J(n);
             radfield_titer_nuJ(n);
             titer_average_estimators(n);
           #endif
 
-          // Get radiation field parameters out of the (full-spectrum and binned) J and nuJ estimators
+          // Get radiation field parameters out of the full-spectrum and binned J and nuJ estimators
           radfield_fit_parameters(n, nts);
 
           #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
@@ -908,54 +907,13 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
   printout("update_grid: rho_crit = %g\n", rho_crit);
   //printf("time %ld\n",time(NULL));
 
-  /// Needed to update abundances of radioactive isotopes.
-  //double dt_elapsed,dt_forward;
-  const double t_current = time_step[nts].start;
-  double t_previous;
-  double deltaV;
-  if (nts == 0)
-  {
-    t_previous = 0.;
-    deltaV = pow(wid_init * trat, 3);  /// volume of grid cell: current or previous cell size???????????????????
-  }
-  else
-  {
-    t_previous = time_step[nts - 1].start;
-    deltaV = pow(wid_init * time_step[nts - 1].mid / tmin, 3);  /// volume of grid cell: current or previous cell size???????????????????
-    /*if (nts == 1)
-    {
-      dt_elapsed = (log(time_step[nts-1].mid) - log(time_step[nts-1].start));
-      dt_forward = (log(time_step[nts].mid) - log(time_step[nts-1].mid));
-    }
-    else
-    {
-      dt_elapsed = (log(time_step[nts-1].mid) - log(time_step[nts-2].mid));
-      dt_forward = (log(time_step[nts].mid) - log(time_step[nts-1].mid));
-    }*/
-  }
+  // const double t_current = time_step[nts].start;
 
-  /// and for the volume estimators
-  double deltat = t_current - t_previous;  /// length of previous timestep
-
-  if (titer == 0)
-  {
-    if (nts == 0)
-    {
-      /// Set these values, but they will not be used
-      deltat = time_step[nts].width;
-      deltaV = pow(wid_init * tratmid, 3);
-    }
-    else
-    {
-      deltat = time_step[nts - 1].width;
-      deltaV = pow(wid_init * time_step[nts - 1].mid / tmin, 3);
-    }
-  }
-  else
-  {
-    deltat = time_step[nts].width;
-    deltaV = pow(wid_init * tratmid, 3);
-  }
+  // These values will not be used if nts == 0, but set them anyway
+  // nts_prev is the previous timestep, unless this is timestep zero
+  const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
+  const double deltat = time_step[nts_prev].width;
+  const double deltaV = pow(wid_init * time_step[nts_prev].mid / tmin, 3);
 
   printout("timestep %d, titer %d\n", nts, titer);
   printout("deltaV %g, deltat %g\n", deltaV, deltat);
