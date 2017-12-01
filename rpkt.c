@@ -1030,10 +1030,10 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
         if ((get_abundance(modelgridindex,element) > 0) && ((ionpops_local[element][ion] > 1.e-6) || (level == 0)))
         {
           const double nu_edge = phixslist[tid].allcont[i].nu_edge;
+          const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
           //printout("i %d, nu_edge %g\n",i,nu_edge);
-          if (nu >= nu_edge)
+          if (nu >= nu_edge && nnlevel > 0)
           {
-            const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
             //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
 
             //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
