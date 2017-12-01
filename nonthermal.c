@@ -17,7 +17,7 @@
 
 #define SFPTS 8192  // number of energy points in the Spencer-Fano solution vector
 #define EMAX 16000. // eV
-#define EMIN 1.0 // eV
+#define EMIN 0.1 // eV
 
 const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the first few levels
 const int MAX_NT_EXCITATIONS = 10000;  // if this is more than SFPTS, then you might as well just store
