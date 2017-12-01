@@ -123,8 +123,6 @@ void compton_scatter(PKT *pkt_ptr, double t_current)
 // Routine to deal with physical Compton scattering event.
 {
   double f;
-  double final_dir[3];
-  double prob_gamma;
 
   //  printout("Compton scattering.\n");
 
@@ -143,15 +141,15 @@ void compton_scatter(PKT *pkt_ptr, double t_current)
    factor by which the energy changes "f" such that
    sigma_partial/sigma_tot = zrand */
 
-  double zrand = gsl_rng_uniform(rng);
-
-  if (xx <  THOMSON_LIMIT)
+  bool stay_gamma;
+  if (xx < THOMSON_LIMIT)
   {
-    f = 1.0; //no energy loss
-    prob_gamma = 1.0;
+    f = 1.0; // no energy loss
+    stay_gamma = true;
   }
   else
   {
+    const double zrand = gsl_rng_uniform(rng);
     f = choose_f(xx, zrand);
 
     /* Check that f lies between 1.0 and (2xx  + 1) */
@@ -162,13 +160,15 @@ void compton_scatter(PKT *pkt_ptr, double t_current)
       abort();
     }
 
-    /* Prob of keeping gamma ray is...*/
+    // Prob of keeping gamma ray is...
 
-    prob_gamma = 1. / f;
+    const double prob_gamma = 1. / f;
+
+    const double zrand2 = gsl_rng_uniform(rng);
+    stay_gamma = (zrand2 < prob_gamma);
   }
 
-  zrand = gsl_rng_uniform(rng);
-  if (zrand < prob_gamma)
+  if (stay_gamma)
   {
     // It stays as a gamma ray. Change frequency and direction in
     // co-moving frame then transfer back to rest frame.
@@ -199,7 +199,7 @@ void compton_scatter(PKT *pkt_ptr, double t_current)
     double new_dir[3];
     scatter_dir(cmf_dir, cos_theta, new_dir);
 
-    double test = dot(new_dir, new_dir);
+    const double test = dot(new_dir, new_dir);
     if (fabs(1. - test) > 1.e-8)
     {
       printout("Not a unit vector - Compton. Abort. %g %g %g\n", f, xx, test);
@@ -209,8 +209,8 @@ void compton_scatter(PKT *pkt_ptr, double t_current)
       abort();
     }
 
-    test = dot(new_dir, cmf_dir);
-    if (fabs(test - cos_theta) > 1.e-8)
+    const double test2 = dot(new_dir, cmf_dir);
+    if (fabs(test2 - cos_theta) > 1.e-8)
     {
       printout("Problem with angle - Compton. Abort.\n");
       abort();
@@ -219,6 +219,7 @@ void compton_scatter(PKT *pkt_ptr, double t_current)
     // Now convert back again.
 
     get_velocity(pkt_ptr->pos, vel_vec, (-1 * t_current));
+    double final_dir[3];
     angle_ab(new_dir, vel_vec, final_dir);
 
     pkt_ptr->dir[0] = final_dir[0];
