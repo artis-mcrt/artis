@@ -148,7 +148,7 @@ static void read_phixs_data(void)
           /// belong to the topmost ion included.
           /// Rate coefficients are only available for ionising levels.
           //  also need (levelenergy < ionpot && ...)?
-          if (lowerion < get_nions(element)-1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
+          if (lowerion < get_nions(element) - 1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
           {
             for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,lowerion,lowerlevel); phixstargetindex++)
             {
@@ -976,10 +976,13 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
   }
   else
   {
-    int i,element,ion;
+    int i;
+    int element;
+    int ion;
     for (i = 1; i < nbfcontinua_ground; i++)
     {
-      if (nu_edge < phixslist[tid].groundcont[i].nu_edge) break;
+      if (nu_edge < phixslist[tid].groundcont[i].nu_edge)
+        break;
     }
 /*    if (i == nbfcontinua_ground)
     {
@@ -990,9 +993,9 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     }*/
     if (i == nbfcontinua_ground)
     {
-      element = phixslist[tid].groundcont[i-1].element;
-      ion = phixslist[tid].groundcont[i-1].ion;
-      int level = phixslist[tid].groundcont[i-1].level;
+      element = phixslist[tid].groundcont[i - 1].element;
+      ion = phixslist[tid].groundcont[i - 1].ion;
+      int level = phixslist[tid].groundcont[i - 1].level;
       if (element == el && ion == in && level == ll)
       {
         index = i - 1;
@@ -1008,28 +1011,19 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
           printout("[fatal]   element %d, ion %d, level %d, energy %g\n",el,in,looplevels,epsilon(el,in,looplevels));
         }
         printout("[fatal] Abort omitted ... MAKE SURE ATOMIC DATA ARE CONSISTENT\n");
-        index = i-1;
+        index = i - 1;
         //abort();
       }
     }
     else
     {
-      double left = nu_edge - phixslist[tid].groundcont[i-1].nu_edge;
-      double right = phixslist[tid].groundcont[i].nu_edge - nu_edge;
-      if (left <= right)
-      {
-        element = phixslist[tid].groundcont[i-1].element;
-        ion = phixslist[tid].groundcont[i-1].ion;
-        index = i-1;
-      }
-      else
-      {
-        element = phixslist[tid].groundcont[i].element;
-        ion = phixslist[tid].groundcont[i].ion;
-        index = i;
-      }
+      const double left_diff = nu_edge - phixslist[tid].groundcont[i - 1].nu_edge;
+      const double right_diff = phixslist[tid].groundcont[i].nu_edge - nu_edge;
+      index = (left_diff <= right_diff) ? i - 1 : i;
+      element = phixslist[tid].groundcont[index].element;
+      ion = phixslist[tid].groundcont[index].ion;
     }
-    *index_in_groundlevelcontestimator = element*maxion + ion;
+    *index_in_groundlevelcontestimator = element * maxion + ion;
   }
 
   return index;
@@ -1308,12 +1302,12 @@ static void setup_phixs_list(void)
         i++;
       }
     }
-    qsort(phixslist[itid].groundcont,nbfcontinua_ground,sizeof(groundphixslist_t),compare_groundphixslistentry_bynuedge);
+    qsort(phixslist[itid].groundcont, nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
 
 
     //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
     //else
-    phixslist[itid].allcont = (fullphixslist_t *) malloc(nbfcontinua*sizeof(fullphixslist_t));
+    phixslist[itid].allcont = (fullphixslist_t *) malloc(nbfcontinua * sizeof(fullphixslist_t));
     if (phixslist[itid].allcont == NULL)
     {
       printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
@@ -1343,7 +1337,7 @@ static void setup_phixs_list(void)
           phixslist[itid].allcont[i].ion = ion;
           phixslist[itid].allcont[i].level = level;
           phixslist[itid].allcont[i].nu_edge = nu_edge;
-          phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge,&index_in_groundlevelcontestimator,element,ion,level);
+          phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
           #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
             if (itid == 0)
               elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
@@ -1921,7 +1915,7 @@ void input(int rank)
   nxgrid = 50;
   nygrid = 50;
   nzgrid = 50;
-  printout("nxgrid %d\n",nxgrid);
+  printout("nxgrid %d\n", nxgrid);
   ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
   if (ngrid > MGRID)
   {
@@ -2429,6 +2423,3 @@ void update_parameterfile(int nts)
 
   fclose(input_file);
 }
-
-
-
