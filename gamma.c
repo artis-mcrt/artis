@@ -15,87 +15,56 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 {
   /* Routine to choose which gamma ray line it'll be. */
 
-  int n = 0;
-  double runtot = 0.;
-  const double zrand = gsl_rng_uniform(rng);
+  struct gamma_spec *gammaspec;
+  double E_gamma;  // Average energy per gamma line of a decay
   switch (pkt_ptr->type)
   {
     case TYPE_NICKEL_PELLET:
-      while (zrand > runtot)
-      {
-        runtot += nickel_spec.probability[n] * nickel_spec.energy[n] / ENICKEL;
-        n++;
-      }
-      n = n - 1 ;
-      if (n >= nickel_spec.nlines)
-      {
-        printout("Failure to choose line (Ni). Abort.\n");
-        abort();
-      }
-      else
-      {
-        pkt_ptr->nu_cmf = nickel_spec.energy[n] / H;
-      }
+      gammaspec = &nickel_spec;
+      E_gamma = ENICKEL;
       break;
 
     case TYPE_COBALT_PELLET:
-      while (zrand > runtot)
-      {
-        runtot += cobalt_spec.probability[n] * cobalt_spec.energy[n] / ECOBALT_GAMMA;
-        n++;
-      }
-      n = n - 1;
-      if (n >= cobalt_spec.nlines)
-      {
-        printout("Failure to choose line (Co). Abort.\n");
-        abort();
-      }
-      else
-      {
-        pkt_ptr->nu_cmf = cobalt_spec.energy[n] / H;
-      }
+      gammaspec = &cobalt_spec;
+      E_gamma = ECOBALT_GAMMA;
       break;
 
     case TYPE_48CR_PELLET:
-      while (zrand > runtot)
-      {
-        runtot += cr48_spec.probability[n] * cr48_spec.energy[n] / E48CR;
-        n++;
-      }
-      n = n -1 ;
-      if (n >= cr48_spec.nlines)
-      {
-        printout("Failure to choose line (Cr48). Abort.\n");
-        abort();
-      }
-      else
-      {
-        pkt_ptr->nu_cmf = cr48_spec.energy[n] / H;
-      }
+      gammaspec = &cr48_spec;
+      E_gamma = E48CR;
       break;
 
     case TYPE_48V_PELLET:
-      while (zrand > runtot)
-      {
-        runtot += v48_spec.probability[n] * v48_spec.energy[n] / E48V;
-        n++;
-      }
-      n = n -1 ;
-      if (n >= v48_spec.nlines)
-      {
-        printout("Failure to choose line (V48). Abort.\n");
-        abort();
-      }
-      else
-      {
-        pkt_ptr->nu_cmf = v48_spec.energy[n] / H;
-      }
+      gammaspec = &v48_spec;
+      E_gamma = E48V;
       break;
 
     default:
       printout("Unrecognised pellet. Abort.\n");
       abort();
   }
+
+  const double zrand = gsl_rng_uniform(rng);
+  int nselected = -1;
+  double runtot = 0.;
+  for (int n = 0; n < gammaspec->nlines; n++)
+  {
+    runtot += gammaspec->probability[n] * gammaspec->energy[n] / E_gamma;
+    if (zrand <= runtot)
+    {
+      nselected = n;
+      break;
+    }
+  }
+
+  if (nselected < 0)
+  {
+    printout("Failure to choose line (%s). Abort. zrand %g runtot %g\n", gammaspec->filename, zrand, runtot);
+    abort();
+  }
+
+  pkt_ptr->nu_cmf = gammaspec->energy[nselected] / H;
+  // printout("%s PELLET %g\n", gammaspec->filename, gammaspec->energy[nselected]);
 }
 
 

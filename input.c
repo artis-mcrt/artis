@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stdio.h>
 //#include <math.h>
 //#include <stdlib.h>
@@ -1875,6 +1876,33 @@ static void read_binding_energies(void)
 }
 
 
+static double read_gamma_spectrum(struct gamma_spec *gammaspec)
+{
+  FILE *filein = fopen(gammaspec->filename, "r");
+  if (filein == NULL)
+  {
+    printout("Cannot open %s.\n", gammaspec->filename);
+    abort();
+  }
+  int dum1 = 0;
+  fscanf(filein, "%d", &dum1);
+  gammaspec->nlines = dum1;
+
+  double E_gamma_avg = 0.0;
+  for (int n = 0; n < dum1; n++)
+  {
+    float dum2, dum3;
+    fscanf(filein, "%g %g", &dum2, &dum3);
+    gammaspec->energy[n] = dum2 * MEV;
+    gammaspec->probability[n] = dum3;
+    E_gamma_avg += dum2 * MEV * dum3;
+  }
+  fclose(filein);
+
+  return E_gamma_avg;
+}
+
+
 void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
@@ -1996,96 +2024,20 @@ void input(int rank)
 
   /// Read in data for gamma ray lines.
   ///======================================================
-  FILE *co_lines;
-  if ((co_lines = fopen("co_lines.txt", "r")) == NULL)
-  {
-    printout("Cannot open co_lines.txt.\n");
-    abort();
-  }
-  int dum1 = 0;
-  fscanf(co_lines, "%d", &dum1);
-  cobalt_spec.nlines = dum1;
-
-  ECOBALT = 0.0;
-  for (int n = 0; n < dum1; n++)
-  {
-    float dum2, dum3;
-    fscanf(co_lines, "%g %g", &dum2, &dum3);
-    cobalt_spec.energy[n] = dum2 * MEV;
-    cobalt_spec.probability[n] = dum3;
-    ECOBALT += dum2 * MEV * dum3;
-  }
+  strcpy(cobalt_spec.filename, "co_lines.txt");
+  ECOBALT_GAMMA = read_gamma_spectrum(&cobalt_spec);
   /// Average energy per gamma line of Co56 decay and positron annihilation
-  ECOBALT_GAMMA = ECOBALT;
   /// For total deposited energy we need to add the kinetic energy per emitted positron
-  ECOBALT += 0.63*MEV * 0.19;
-  //ECOBALT = ECOBALT/5; /// DEBUGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+  ECOBALT = ECOBALT_GAMMA + 0.63 * MEV * 0.19;
 
-  fclose(co_lines);
+  strcpy(nickel_spec.filename, "ni_lines.txt");
+  ENICKEL = read_gamma_spectrum(&nickel_spec);
 
-  FILE *ni_lines;
-  if ((ni_lines = fopen("ni_lines.txt", "r")) == NULL)
-  {
-    printout("Cannot open ni_lines.txt.\n");
-    abort();
-  }
-  fscanf(ni_lines, "%d", &dum1);
-  nickel_spec.nlines = dum1;
+  strcpy(v48_spec.filename, "v48_lines.txt");
+  E48V = read_gamma_spectrum(&v48_spec);
 
-  ENICKEL = 0.0;
-  for (int n = 0; n < dum1; n++)
-  {
-    float dum2, dum3;
-    fscanf(ni_lines, "%g %g", &dum2, &dum3);
-    nickel_spec.energy[n] = dum2 * MEV;
-    nickel_spec.probability[n] = dum3;
-    ENICKEL += dum2 * MEV * dum3;
-  }
-  //ENICKEL = ENICKEL/5; /// DEBUGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-
-  fclose(ni_lines);
-
-  FILE *v48_lines;
-  if ((v48_lines = fopen("v48_lines.txt", "r")) == NULL)
-  {
-    printout("Cannot open v48_lines.txt.\n");
-    abort();
-  }
-  fscanf(v48_lines, "%d", &dum1);
-  v48_spec.nlines = dum1;
-
-  E48V = 0.0;
-  for (int n = 0; n < dum1; n++)
-  {
-    float dum2, dum3;
-    fscanf(v48_lines, "%g %g", &dum2, &dum3);
-    v48_spec.energy[n] = dum2 * MEV;
-    v48_spec.probability[n] = dum3;
-    E48V += dum2 * MEV * dum3;
-  }
-
-  fclose(v48_lines);
-
-  FILE *cr48_lines;
-  if ((cr48_lines = fopen("cr48_lines.txt", "r")) == NULL)
-  {
-    printout("Cannot open cr48_lines.txt.\n");
-    abort();
-  }
-  fscanf(cr48_lines, "%d", &dum1);
-  cr48_spec.nlines = dum1;
-
-  E48CR = 0.0;
-  for (int n = 0; n < dum1; n++)
-  {
-    float dum2, dum3;
-    fscanf(cr48_lines, "%g %g", &dum2, &dum3);
-    cr48_spec.energy[n] = dum2 * MEV;
-    cr48_spec.probability[n] = dum3;
-    E48CR += dum2 * MEV * dum3;
-  }
-
-  fclose(cr48_lines);
+  strcpy(cr48_spec.filename, "cr48_lines.txt");
+  E48CR = read_gamma_spectrum(&cr48_spec);
 
   /// With the lines all ready in, now make a list of them in energy order.
   get_gam_ll();
