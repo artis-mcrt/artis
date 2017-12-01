@@ -267,6 +267,7 @@ struct gamma_spec
   double energy[MGAM_LINES];
   double probability[MGAM_LINES];
   int nlines;
+  char filename[50];
 } cobalt_spec, nickel_spec, fakeg_spec, cr48_spec, v48_spec;
 
 LIST gam_line_list;
