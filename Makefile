@@ -24,8 +24,8 @@ else ifneq (,$(KELVIN))
  # needs
  #  mpi/openmpi/1.8.5/gcc-4.4.7
  #  compilers/gcc/system(default)
- #  libs/gsl/1.16/gcc-4.4.7 
- 
+ #  libs/gsl/1.16/gcc-4.4.7
+
   CC = mpicc
   CFLAGS = -DWALLTIMELIMITSECONDS=\(10\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -I$(GSLINCLUDE) #-fopenmp=libomp
   LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
@@ -45,7 +45,7 @@ else
  # CC = icc
   INCLUDE = -I/usr/local/Cellar/gsl/2.4/include -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/opt/gperftools/include
   LIB = -L/usr/local/Cellar/gsl/2.4/lib #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wunused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
+  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
 
 # in GCC6, -Wmisleading-indentation will be useful
 # also -fopenmp after -I$(INCLUDE)
