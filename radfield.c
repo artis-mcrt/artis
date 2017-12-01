@@ -1049,7 +1049,8 @@ void radfield_reduce_estimators(void)
 
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
-  printout("Reducing binned radiation field estimators\n");
+  const time_t sys_time_start_reduction = time(NULL);
+  printout("Reducing binned radiation field estimators");
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
@@ -1068,6 +1069,8 @@ void radfield_reduce_estimators(void)
       }
     }
   }
+  const int duration_reduction = time(NULL) - sys_time_start_reduction;
+  printout(" (took %d s)\n", duration_reduction);
 }
 
 
