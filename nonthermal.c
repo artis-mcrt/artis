@@ -20,8 +20,8 @@
 #define EMIN 0.1 // eV
 
 const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the first few levels
-const int MAX_NT_EXCITATIONS = 10000;  // if this is more than SFPTS, then you might as well just store
-                                      // the NT spectrum instead (although CPU costs)
+const int MAX_NT_EXCITATIONS = 20000;  // if this is more than SFPTS, then you might as well just store
+                                       // the NT spectrum instead (although CPU costs)
 
 #define NT_EXCITATION_ON true // if this is on, the non-thermal energy spectrum will be kept in memory
 
