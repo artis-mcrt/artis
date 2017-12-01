@@ -563,7 +563,7 @@ int main(int argc, char** argv)
   sprintf(filename, "estimators_%.4d.out", my_rank);
   if ((estimators_file = fopen(filename, "w")) == NULL)
   {
-    printout("Cannot open %s.\n",filename);
+    printout("Cannot open %s.\n", filename);
     abort();
   }
   //setvbuf(estimators_file, NULL, _IOLBF, 1);

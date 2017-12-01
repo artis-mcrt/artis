@@ -244,7 +244,7 @@ void nt_init(const int my_rank)
     nonthermalfile = fopen(filename, "w");
     if (nonthermalfile == NULL)
     {
-      printout("Cannot open %s.\n",filename);
+      printout("Cannot open %s.\n", filename);
       abort();
     }
     fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
