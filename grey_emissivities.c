@@ -13,11 +13,11 @@ static double meanf_sigma(double x)
 {
   double f = 1 + (2 * x);
 
-  double term0 = 2/x;
-  double term1 = ( 1 - (2 / x) - (3/(x*x)) ) * log(f);
-  double term2 = ( (4 / x) + (3/(x*x)) - 1) * 2 * x / f;
-  double term3 = ( 1 - (2 / x) - (1/(x*x))) * 2 * x *(1 + x) / f / f;
-  double term4 =  -2. * x * ((4*x*x) + (6*x) + 3) / 3 / f / f / f;
+  double term0 = 2 / x;
+  double term1 = (1 - (2 / x) - (3 / (x * x)) ) * log(f);
+  double term2 = ((4 / x) + (3 / (x * x)) - 1) * 2 * x / f;
+  double term3 = (1 - (2 / x) - (1 / (x * x))) * 2 * x * (1 + x) / f / f;
+  double term4 =  -2. * x * ((4 * x * x) + (6 * x) + 3) / 3 / f / f / f;
 
   double tot = 3 * SIGMA_T * (term0 + term1 + term2 + term3 + term4) / (8 * x);
 
@@ -54,7 +54,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current)
   // dummy.last_cross = NONE;
 
   const int cellindex = pkt_ptr->where;
-  int mgi = cell[cellindex].modelgridindex;
+  const int mgi = cell[cellindex].modelgridindex;
 
   if (dist > 0)
   {
@@ -115,7 +115,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
     get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
     double cont = (get_kappagrey(mgi) * get_rho(mgi));
-    cont = cont * pkt_ptr->e_rf * dist * (1. - (2.*dot(vel_vec, pkt_ptr->dir)/CLIGHT));
+    cont = cont * pkt_ptr->e_rf * dist * (1. - (2. * dot(vel_vec, pkt_ptr->dir) / CLIGHT));
 
     /* For normalisation this needs to be
        1) divided by volume
