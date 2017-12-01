@@ -226,9 +226,11 @@ static void write_to_estimators_file(const int n, const int timestep)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
       {
+        // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 1);
+        const bool printdebug_gammar = false;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug));
+                calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug_gammar));
       }
       fprintf(estimators_file, "\n");
 
@@ -378,14 +380,14 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
   const double covergence_tolerance = 0.03;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
   {
-    int duration_solve_spencerfano = -1;
+    const time_t sys_time_start_spencerfano = time(NULL);
     if (NT_ON && NT_SOLVE_SPENCERFANO)
     {
-      const time_t sys_time_start = time(NULL);
       nt_solve_spencerfano(n, nts);  // depends on the ionization balance, and weakly on nne
-      duration_solve_spencerfano = time(NULL) - sys_time_start;
     }
+    const int duration_solve_spencerfano = time(NULL) - sys_time_start_spencerfano;
 
+    const time_t sys_time_start_partfuncs_or_gamma = time(NULL);
     if (!NLTE_POPS_ON)
     {
       /// These don't depend on T_e, therefore take them out of the T_e iteration
@@ -405,34 +407,15 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
       }
     }
 #endif
+    const int duration_solve_partfuncs_or_gamma = time(NULL) - sys_time_start_partfuncs_or_gamma;
 
-    int duration_solve_T_e = -1;
-    const time_t sys_time_start_Te = time(NULL);
     /// Find T_e as solution for thermal balance
-    double T_e_old = get_Te(n);
-    double T_e;
-    if (titer == 0)
-      T_e = call_T_e_finder(n,time_step[nts - 1].mid, MINTEMP, MAXTEMP);
-    else
-      T_e = call_T_e_finder(n,time_step[nts].mid, MINTEMP, MAXTEMP);
+    const time_t sys_time_start_Te = time(NULL);
+    const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
-    if (T_e > 2 * T_e_old)
-    {
-      T_e = 2 * T_e_old;
-      printout("use T_e damping in cell %d\n",n);
-      if (T_e > MAXTEMP)
-        T_e = MAXTEMP;
-    }
-    else if (T_e < 0.5 * T_e_old)
-    {
-      T_e = 0.5 * T_e_old;
-      printout("use T_e damping in cell %d\n",n);
-      if (T_e < MINTEMP)
-        T_e = MINTEMP;
-    }
-    //T_e = T_J;
-    set_Te(n, T_e);
-    duration_solve_T_e = time(NULL) - sys_time_start_Te;
+    call_T_e_finder(n, time_step[nts_for_te].mid, MINTEMP, MAXTEMP);
+
+    const int duration_solve_T_e = time(NULL) - sys_time_start_Te;
 
     if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
     {
@@ -442,15 +425,13 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
       const int duration_solve_pops = time(NULL) - sys_time_start_pops;
       //calculate_cooling_rates(n);
       //calculate_heating_rates(n);
-      printout("Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, T_e %ds, populations %ds\n",
-               n, nts, duration_solve_spencerfano, duration_solve_T_e, duration_solve_pops);
+      printout("Grid solver cell %d timestep %d: time spent on: Spencer-Fano %ds, partfuncs/gamma %ds, T_e %ds, populations %ds\n",
+               n, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e, duration_solve_pops);
     }
 
     if (NLTE_POPS_ON)
     {
-      int duration_solve_nltepops = -1;
-
-      const time_t sys_time_start = time(NULL);
+      const time_t sys_time_start_nltepops = time(NULL);
       // fractional difference between previous and current iteration's (nne or max(ground state population change))
       double nlte_test;
       for (int element = 0; element < nelements; element++)
@@ -469,19 +450,20 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
           }
         }
       }
-      duration_solve_nltepops = time(NULL) - sys_time_start;
+      const int duration_solve_nltepops = time(NULL) - sys_time_start_nltepops;
 
       if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
       {
-        const double oldnne = get_nne(n);
+        const double nne_prev = get_nne(n);
         precalculate_partfuncts(n);
         calculate_electron_densities(n); // sets nne
-        nlte_test = fabs((get_nne(n) / oldnne) - 1);
-        printout("NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, populations %ds\n",
+        nlte_test = fabs((get_nne(n) / nne_prev) - 1);
+        printout("NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, NLTE populations %ds\n",
                  n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
-        printout("NLTE (Te/pops/NT_ion) solver cell %d timestep %d iteration %d: previous nne is %g, new nne is %g, fractional difference is %g\n",
-                 n, nts, nlte_iter, oldnne, get_nne(n), nlte_test);
-        //set_nne(n, (get_nne(n) + oldnne) / 2.);
+        printout("NLTE (SpencerFano/Te/pops) solver cell %d timestep %d iteration %d: previous nne was %g, new nne is %g, fractional difference is %g\n",
+                 n, nts, nlte_iter, nne_prev, get_nne(n), nlte_test);
+        // damp changes in nne if oscillating to much
+        //set_nne(n, (get_nne(n) + nne_prev) / 2.);
       }
       else
       {
@@ -491,7 +473,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
 
       if (nlte_test <= covergence_tolerance)
       {
-        printout("NLTE solver converged to tolerance %g < %g after %d iterations.\n", nlte_test, covergence_tolerance, nlte_iter + 1);
+        printout("NLTE solver converged to tolerance %g <= %g after %d iterations.\n", nlte_test, covergence_tolerance, nlte_iter + 1);
         break;
       }
       else if (nlte_iter == NLTEITER)

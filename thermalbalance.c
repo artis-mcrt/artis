@@ -18,256 +18,7 @@ typedef struct Te_solution_paras
 } Te_solution_paras;
 
 
-static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
-/// Thermal balance equation on which we have to iterate to get T_e
-{
-  const int modelgridindex = ((Te_solution_paras *) paras)->cellnumber;
-  const double t_current = ((Te_solution_paras *) paras)->t_current;
-
-  /// Set new T_e guess for the current cell and update populations
-  //cell[cellnumber].T_e = T_e;
-  set_Te(modelgridindex, T_e);
-  double nntot;
-  if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS)
-    nntot = calculate_electron_densities(modelgridindex);
-  else
-    nntot = calculate_populations(modelgridindex);
-
-  /// Then calculate heating and cooling rates
-  calculate_cooling_rates(modelgridindex);
-  calculate_heating_rates(modelgridindex);
-  /// These heating rates using estimators work only for hydrogen!!!
-  //double heating_ff,heating_bf;
-  //double nne = cell[cellnumber].nne;
-  //double W = cell[cellnumber].W;
-  //heating_ff = cell[cellnumber].heating_ff * ionstagepop(cellnumber,0,1)/cell[cellnumber].composition[0].partfunct[1]*nne / sqrt(T_e);
-  //heating_bf = cell[cellnumber].heating_bf * W*ionstagepop(cellnumber,0,0)/cell[cellnumber].composition[0].partfunct[0];
-
-  /// If selected take direct gamma heating into account
-  if (do_rlc_est == 3)
-  {
-    heatingrates[tid].gamma = get_deposition_rate_density(modelgridindex) * get_nt_frac_heating(modelgridindex);
-  }
-  else
-  {
-    heatingrates[tid].gamma = 0.;
-  }
-
-  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL)));
-  //heatingrates[tid].gamma *= 0.01;
-  //double factor = -1./(t_current*(-TCOBALT+TNICKEL));
-  //factor *= (-ENICKEL*exp(-t_current/TNICKEL)*t_current*TCOBALT - ENICKEL*exp(-t_current/TNICKEL)*TNICKEL*TCOBALT + ENICKEL*exp(-t_current/TNICKEL)*t_current*TNICKEL + pow(TNICKEL,2)*ENICKEL*exp(-t_current/TNICKEL) - TCOBALT*t_current*ECOBALT*exp(-t_current/TCOBALT) - pow(TCOBALT,2)*ECOBALT*exp(-t_current/TCOBALT) + ECOBALT*t_current*TNICKEL*exp(-t_current/TNICKEL) + pow(TNICKEL,2)*ECOBALT*exp(-t_current/TNICKEL) + ENICKEL*TCOBALT*TNICKEL - ENICKEL*pow(TNICKEL,2) - pow(TNICKEL,2)*ECOBALT + ECOBALT*pow(TCOBALT,2));
-  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL))) - factor/t_current);
-
-  /// Adiabatic cooling term
-  const double p = nntot * KB * T_e;
-  const double dV = 3 * pow(wid_init / tmin, 3) * pow(t_current, 2);
-  const double V = pow(wid_init * t_current / tmin, 3);
-  //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
-  coolingrates[tid].adiabatic = p * dV / V;
-
-  const double total_heating_rate = heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional + heatingrates[tid].gamma;
-  const double total_coolingrate = coolingrates[tid].ff + coolingrates[tid].fb + coolingrates[tid].collisional + coolingrates[tid].adiabatic;
-
-  return total_heating_rate - total_coolingrate; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
-}
-
-
-double call_T_e_finder(const int modelgridindex, const double t_current, const double T_min, const double T_max)
-{
-  printout("Finding T_e in cell %d...", modelgridindex);
-
-  //double deltat = (T_max - T_min) / 100;
-
-  /// Force tb_info switch to 1 for selected cells in serial calculations
-  /*
-  if (modelgridindex % 14 == 0)
-  {
-    tb_info = 1;
-  }
-  else tb_info = 0;
-  */
-  /// Force tb_info for all cells
-  //tb_info = 1;
-
-  /// Check whether the thermal balance equation has a root in [T_min,T_max]
-  //gsl_root_fsolver *solver;
-  //solver = gsl_root_fsolver_alloc(solvertype);
-  //mintemp_f.function = &mintemp_solution_f;
-  //maxtemp_f.function = &maxtemp_solution_f;
-
-  Te_solution_paras paras;
-  paras.cellnumber = modelgridindex;
-  paras.t_current = t_current;
-
-  gsl_function find_T_e_f;
-  find_T_e_f.function = &T_e_eqn_heating_minus_cooling;
-  find_T_e_f.params = &paras;
-
-  double thermalmin = T_e_eqn_heating_minus_cooling(T_min,find_T_e_f.params);
-  double thermalmax = T_e_eqn_heating_minus_cooling(T_max,find_T_e_f.params);
-  // printout("(heating - cooling) at T_min: %g, at T_max: %g\n",thermalmin,thermalmax);
-  if (!isfinite(thermalmin) || !isfinite(thermalmax))
-  {
-    printout("[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",
-             modelgridindex, get_TR(modelgridindex), get_W(modelgridindex));
-    thermalmax = thermalmin = -1;
-  }
-
-  //double thermalmax = find_T_e(T_max,find_T_e_f.params);
-  double T_e;
-  if (thermalmin * thermalmax < 0)
-  {
-    /// If it has, then solve for the root T_e
-    /// but first of all printout heating and cooling rates if the tb_info switch is set
-    /*if (tb_info == 1)
-    {
-      for (i = 0; i <= 100; i++)
-      {
-        T_e = T_min + i*deltat;
-        thermalmin = find_T_e(T_e,find_T_e_f.params);
-        //fprintf(tb_file,"%d %g %g %g %g %g %g %g %g %g %g %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic);
-        fprintf(tb_file,"%d %g %g %g %g %g %g %g %g %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
-      }
-    }*/
-    /// now start so iterate on T_e solution
-    ///onedimensional gsl root solver, derivative type
-    /*const gsl_root_fdfsolver_type *solvertype;
-    solvertype = gsl_root_fdfsolver_newton;
-    gsl_root_fdfsolver *solver;
-    solver = gsl_root_fdfsolver_alloc(solvertype);
-
-    gsl_function_fdf fdf;
-    fdf.f = &nne_solution_f;
-    fdf.df = &nne_solution_deriv;
-    fdf.fdf = &nne_solution_fdf;*/
-
-    // one-dimensional gsl root solver, bracketing type
-    const gsl_root_fsolver_type *solvertype = gsl_root_fsolver_brent;
-    gsl_root_fsolver *restrict T_e_solver = gsl_root_fsolver_alloc(solvertype);
-
-    gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-    const double fractional_accuracy = 1e-2;
-    const int maxit = 100;
-    int status;
-    for (int iternum = 0; iternum < maxit; iternum++)
-    {
-      gsl_root_fsolver_iterate(T_e_solver);
-      T_e = gsl_root_fsolver_root(T_e_solver);
-      //cell[cellnumber].T_e = T_e;
-      set_Te(modelgridindex, T_e);
-      const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
-      const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
-      status = gsl_root_test_interval(T_e_min, T_e_max, 0, fractional_accuracy);
-      // printout("iter %d, T_e interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
-      if (status != GSL_CONTINUE)
-      {
-        printout("after %d iterations, T_e = %g K, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);
-        break;
-      }
-    }
-
-    if (status == GSL_CONTINUE)
-      printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n", maxit);
-
-    gsl_root_fsolver_free(T_e_solver);
-  }
-  /// Quick solver style: works if we can assume that there is either one or no
-  /// solution on [MINTEM.MAXTEMP] (check that by doing a plot of heating-cooling
-  /// vs. T_e using the tb_info switch)
-  else if (thermalmax < 0)
-  {
-    /// Thermal balance equation always negative ===> T_e = T_min
-    /// Calculate the rates again at this T_e to print them to file
-    T_e = MINTEMP;
-    //if (nts_global >= 15) T_e = MAXTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
-    printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",MINTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
-  }
-  else
-  {
-    /// Thermal balance equation always negative ===> T_e = T_max
-    /// Calculate the rates again at this T_e to print them to file
-    T_e = MAXTEMP;
-    //if (nts_global >= 15) T_e = MINTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
-    printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
-    //printout("hot cell %d, with T_R %g, T_e %g, W %g, nne %g\n",cellnumber,cell[cellnumber].T_R,T_e,cell[cellnumber].W,cell[cellnumber].nne);
-  }
-
-  /// Otherwise the more expensive solver style _might_ work
-  /*
-  else
-  {
-      /// Search for the first temperature point where the cooling rates dominate over
-      /// the heating rates. This determines the interval in which the solution must be
-      double helper = -99.;
-      for (i = 0; i <= 100; i++)
-      {
-        T_e = T_min + i*deltat;
-        thermalmin = find_T_e(T_e,find_T_e_f.params);
-        if (tb_info == 1)
-        {
-          fprintf(tb_file,"%d %g %g %g %g %g %g %g %g %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
-        }
-        if (thermalmin <= 0 && helper < 0)
-        {
-          helper = T_e;
-          if (tb_info != 1) break;
-        }
-        //if (find_T_e(T_e,find_T_e_f.params) <= 0) break;
-      }
-      if (helper < 0) helper = MAXTEMP;
-      T_min = helper-deltat;
-      T_max = helper;
-      //T_min = T_e-deltat;
-      //T_max = T_e;
-      //if (tb_info == 1) printout("T_min %g, T_max %g for cell %d\n",T_min,T_max,modelgridindex);
-
-      if (T_max == MAXTEMP)
-      {
-        printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in cell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
-        T_e = MAXTEMP;
-      }
-      else if (T_min < MINTEMP)
-      {
-        printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in cell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",MINTEMP,modelgridindex,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
-        T_e =  MINTEMP;
-      }
-      else
-      {
-        /// We found an interval which has a solution. Solve for the root
-        T_e_solver = gsl_root_fsolver_alloc(solvertype);
-        gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-        iter2 = 0;
-        do
-        {
-          iter2++;
-          status = gsl_root_fsolver_iterate(T_e_solver);
-          T_e = gsl_root_fsolver_root(T_e_solver);
-          //cell[cellnumber].T_e = T_e;
-          set_Te(modelgridindex,T_e);
-          T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
-          T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
-          status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
-          //printout("[debug] find T_e:   %d [%g, %g] %g %g\n",iter2,x_lo,x_hi,x_0,x_hi-x_lo);
-        }
-        while (status == GSL_CONTINUE && iter2 < maxit);
-        if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
-        gsl_root_fsolver_free(T_e_solver);
-        //printout("%d %g %g %g %g %g %g %g %g %g %g %g %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*nelements*maxion+0*maxion+0],bfheatingestimator[cellnumber*nelements*maxion+0*maxion+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*nelements*maxion+0*maxion+0]+bfheatingestimator[cellnumber*nelements*maxion+0*maxion+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
-      }
-  }
-  */
-
-  //fprintf(heating_file,"%d %g %g %g %g %g %g %g %g\n",modelgridindex,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
-
-  if (neutral_flag)
-    printout("[info] call_T_e_finder: cell %d contains only neutral ions\n",modelgridindex);
-
-  return T_e;
-}
-
-
-void calculate_heating_rates(const int modelgridindex)
+static void calculate_heating_rates(const int modelgridindex)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
@@ -455,7 +206,7 @@ void calculate_heating_rates(const int modelgridindex)
 }
 
 
-void calculate_cooling_rates(const int modelgridindex)
+static void calculate_cooling_rates(const int modelgridindex)
 /// Calculate the cooling rates for a given cell. Results are returned
 /// via the elements of the global coolingrates data structure.
 {
@@ -563,6 +314,268 @@ void calculate_cooling_rates(const int modelgridindex)
   coolingrates[tid].ff = C_ff;
 }
 
+
+static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
+/// Thermal balance equation on which we have to iterate to get T_e
+{
+  const int modelgridindex = ((Te_solution_paras *) paras)->cellnumber;
+  const double t_current = ((Te_solution_paras *) paras)->t_current;
+
+  /// Set new T_e guess for the current cell and update populations
+  //cell[cellnumber].T_e = T_e;
+  set_Te(modelgridindex, T_e);
+  double nntot;
+  if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS)
+    nntot = calculate_electron_densities(modelgridindex);
+  else
+    nntot = calculate_populations(modelgridindex);
+
+  /// Then calculate heating and cooling rates
+  calculate_cooling_rates(modelgridindex);
+  calculate_heating_rates(modelgridindex);
+  /// These heating rates using estimators work only for hydrogen!!!
+  //double heating_ff,heating_bf;
+  //double nne = cell[cellnumber].nne;
+  //double W = cell[cellnumber].W;
+  //heating_ff = cell[cellnumber].heating_ff * ionstagepop(cellnumber,0,1)/cell[cellnumber].composition[0].partfunct[1]*nne / sqrt(T_e);
+  //heating_bf = cell[cellnumber].heating_bf * W*ionstagepop(cellnumber,0,0)/cell[cellnumber].composition[0].partfunct[0];
+
+  /// If selected take direct gamma heating into account
+  if (do_rlc_est == 3)
+  {
+    heatingrates[tid].gamma = get_deposition_rate_density(modelgridindex) * get_nt_frac_heating(modelgridindex);
+  }
+  else
+  {
+    heatingrates[tid].gamma = 0.;
+  }
+
+  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL)));
+  //heatingrates[tid].gamma *= 0.01;
+  //double factor = -1./(t_current*(-TCOBALT+TNICKEL));
+  //factor *= (-ENICKEL*exp(-t_current/TNICKEL)*t_current*TCOBALT - ENICKEL*exp(-t_current/TNICKEL)*TNICKEL*TCOBALT + ENICKEL*exp(-t_current/TNICKEL)*t_current*TNICKEL + pow(TNICKEL,2)*ENICKEL*exp(-t_current/TNICKEL) - TCOBALT*t_current*ECOBALT*exp(-t_current/TCOBALT) - pow(TCOBALT,2)*ECOBALT*exp(-t_current/TCOBALT) + ECOBALT*t_current*TNICKEL*exp(-t_current/TNICKEL) + pow(TNICKEL,2)*ECOBALT*exp(-t_current/TNICKEL) + ENICKEL*TCOBALT*TNICKEL - ENICKEL*pow(TNICKEL,2) - pow(TNICKEL,2)*ECOBALT + ECOBALT*pow(TCOBALT,2));
+  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((ENICKEL/TNICKEL*exp(-t_current/TNICKEL) + ECOBALT/(TCOBALT-TNICKEL)*(exp(-t_current/TCOBALT)-exp(-t_current/TNICKEL))) - factor/t_current);
+
+  /// Adiabatic cooling term
+  const double p = nntot * KB * T_e;
+  const double dV = 3 * pow(wid_init / tmin, 3) * pow(t_current, 2);
+  const double V = pow(wid_init * t_current / tmin, 3);
+  //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
+  coolingrates[tid].adiabatic = p * dV / V;
+
+  const double total_heating_rate = heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional + heatingrates[tid].gamma;
+  const double total_coolingrate = coolingrates[tid].ff + coolingrates[tid].fb + coolingrates[tid].collisional + coolingrates[tid].adiabatic;
+
+  return total_heating_rate - total_coolingrate; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
+}
+
+
+void call_T_e_finder(const int modelgridindex, const double t_current, const double T_min, const double T_max)
+{
+  const double T_e_old = get_Te(modelgridindex);
+  printout("Finding T_e in cell %d...", modelgridindex);
+
+  //double deltat = (T_max - T_min) / 100;
+
+  /// Force tb_info switch to 1 for selected cells in serial calculations
+  /*
+  if (modelgridindex % 14 == 0)
+  {
+    tb_info = 1;
+  }
+  else tb_info = 0;
+  */
+  /// Force tb_info for all cells
+  //tb_info = 1;
+
+  /// Check whether the thermal balance equation has a root in [T_min,T_max]
+  //gsl_root_fsolver *solver;
+  //solver = gsl_root_fsolver_alloc(solvertype);
+  //mintemp_f.function = &mintemp_solution_f;
+  //maxtemp_f.function = &maxtemp_solution_f;
+
+  Te_solution_paras paras;
+  paras.cellnumber = modelgridindex;
+  paras.t_current = t_current;
+
+  gsl_function find_T_e_f;
+  find_T_e_f.function = &T_e_eqn_heating_minus_cooling;
+  find_T_e_f.params = &paras;
+
+  double thermalmin = T_e_eqn_heating_minus_cooling(T_min,find_T_e_f.params);
+  double thermalmax = T_e_eqn_heating_minus_cooling(T_max,find_T_e_f.params);
+  // printout("(heating - cooling) at T_min: %g, at T_max: %g\n",thermalmin,thermalmax);
+  if (!isfinite(thermalmin) || !isfinite(thermalmax))
+  {
+    printout("[abort request] call_T_e_finder: non-finite results in modelcell %d (T_R=%g, W=%g). T_e forced to be MINTEMP\n",
+             modelgridindex, get_TR(modelgridindex), get_W(modelgridindex));
+    thermalmax = thermalmin = -1;
+  }
+
+  //double thermalmax = find_T_e(T_max,find_T_e_f.params);
+  double T_e;
+  if (thermalmin * thermalmax < 0)
+  {
+    /// If it has, then solve for the root T_e
+    /// but first of all printout heating and cooling rates if the tb_info switch is set
+    /*if (tb_info == 1)
+    {
+      for (i = 0; i <= 100; i++)
+      {
+        T_e = T_min + i*deltat;
+        thermalmin = find_T_e(T_e,find_T_e_f.params);
+        //fprintf(tb_file,"%d %g %g %g %g %g %g %g %g %g %g %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic);
+        fprintf(tb_file,"%d %g %g %g %g %g %g %g %g %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
+      }
+    }*/
+    /// now start so iterate on T_e solution
+    ///onedimensional gsl root solver, derivative type
+    /*const gsl_root_fdfsolver_type *solvertype;
+    solvertype = gsl_root_fdfsolver_newton;
+    gsl_root_fdfsolver *solver;
+    solver = gsl_root_fdfsolver_alloc(solvertype);
+
+    gsl_function_fdf fdf;
+    fdf.f = &nne_solution_f;
+    fdf.df = &nne_solution_deriv;
+    fdf.fdf = &nne_solution_fdf;*/
+
+    // one-dimensional gsl root solver, bracketing type
+    const gsl_root_fsolver_type *solvertype = gsl_root_fsolver_brent;
+    gsl_root_fsolver *restrict T_e_solver = gsl_root_fsolver_alloc(solvertype);
+
+    gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
+    const double fractional_accuracy = 1e-2;
+    const int maxit = 100;
+    int status;
+    for (int iternum = 0; iternum < maxit; iternum++)
+    {
+      gsl_root_fsolver_iterate(T_e_solver);
+      T_e = gsl_root_fsolver_root(T_e_solver);
+      const double T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
+      const double T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
+      status = gsl_root_test_interval(T_e_min, T_e_max, 0, fractional_accuracy);
+      // printout("iter %d, T_e interval [%g, %g], guess %g, status %d\n", iternum, T_e_min, T_e_max, T_e, status);
+      if (status != GSL_CONTINUE)
+      {
+        printout("after %d iterations, T_e = %g K, interval [%g, %g]\n", iternum + 1, T_e, T_e_min, T_e_max);
+        break;
+      }
+    }
+
+    if (status == GSL_CONTINUE)
+      printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n", maxit);
+
+    gsl_root_fsolver_free(T_e_solver);
+  }
+  /// Quick solver style: works if we can assume that there is either one or no
+  /// solution on [MINTEM.MAXTEMP] (check that by doing a plot of heating-cooling
+  /// vs. T_e using the tb_info switch)
+  else if (thermalmax < 0)
+  {
+    /// Thermal balance equation always negative ===> T_e = T_min
+    /// Calculate the rates again at this T_e to print them to file
+    T_e = MINTEMP;
+    //if (nts_global >= 15) T_e = MAXTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
+    printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in modelcell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",MINTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+  }
+  else
+  {
+    /// Thermal balance equation always negative ===> T_e = T_max
+    /// Calculate the rates again at this T_e to print them to file
+    T_e = MAXTEMP;
+    //if (nts_global >= 15) T_e = MINTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
+    printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+    //printout("hot cell %d, with T_R %g, T_e %g, W %g, nne %g\n",cellnumber,cell[cellnumber].T_R,T_e,cell[cellnumber].W,cell[cellnumber].nne);
+  }
+
+  /// Otherwise the more expensive solver style _might_ work
+  /*
+  else
+  {
+      /// Search for the first temperature point where the cooling rates dominate over
+      /// the heating rates. This determines the interval in which the solution must be
+      double helper = -99.;
+      for (i = 0; i <= 100; i++)
+      {
+        T_e = T_min + i*deltat;
+        thermalmin = find_T_e(T_e,find_T_e_f.params);
+        if (tb_info == 1)
+        {
+          fprintf(tb_file,"%d %g %g %g %g %g %g %g %g %g\n",modelgridindex,T_e,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
+        }
+        if (thermalmin <= 0 && helper < 0)
+        {
+          helper = T_e;
+          if (tb_info != 1) break;
+        }
+        //if (find_T_e(T_e,find_T_e_f.params) <= 0) break;
+      }
+      if (helper < 0) helper = MAXTEMP;
+      T_min = helper-deltat;
+      T_max = helper;
+      //T_min = T_e-deltat;
+      //T_max = T_e;
+      //if (tb_info == 1) printout("T_min %g, T_max %g for cell %d\n",T_min,T_max,modelgridindex);
+
+      if (T_max == MAXTEMP)
+      {
+        printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in cell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+        T_e = MAXTEMP;
+      }
+      else if (T_min < MINTEMP)
+      {
+        printout("[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary %g in cell %d (T_R=%g,W=%g). T_e forced to be MINTEMP\n",MINTEMP,modelgridindex,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
+        T_e =  MINTEMP;
+      }
+      else
+      {
+        /// We found an interval which has a solution. Solve for the root
+        T_e_solver = gsl_root_fsolver_alloc(solvertype);
+        gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
+        iter2 = 0;
+        do
+        {
+          iter2++;
+          status = gsl_root_fsolver_iterate(T_e_solver);
+          T_e = gsl_root_fsolver_root(T_e_solver);
+          //cell[cellnumber].T_e = T_e;
+          set_Te(modelgridindex,T_e);
+          T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
+          T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
+          status = gsl_root_test_interval(T_e_min,T_e_max,0,fractional_accuracy);
+          //printout("[debug] find T_e:   %d [%g, %g] %g %g\n",iter2,x_lo,x_hi,x_0,x_hi-x_lo);
+        }
+        while (status == GSL_CONTINUE && iter2 < maxit);
+        if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
+        gsl_root_fsolver_free(T_e_solver);
+        //printout("%d %g %g %g %g %g %g %g %g %g %g %g %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*nelements*maxion+0*maxion+0],bfheatingestimator[cellnumber*nelements*maxion+0*maxion+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*nelements*maxion+0*maxion+0]+bfheatingestimator[cellnumber*nelements*maxion+0*maxion+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
+      }
+  }
+  */
+
+  //fprintf(heating_file,"%d %g %g %g %g %g %g %g %g\n",modelgridindex,heatingrates[tid].ff,heatingrates[tid].bf,heatingrates[tid].collisional, heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collisional,coolingrates[tid].adiabatic);
+
+  if (neutral_flag)
+    printout("[info] call_T_e_finder: cell %d contains only neutral ions\n", modelgridindex);
+
+  if (T_e > 2 * T_e_old)
+  {
+    T_e = 2 * T_e_old;
+    printout("use T_e damping in cell %d\n", modelgridindex);
+    if (T_e > MAXTEMP)
+      T_e = MAXTEMP;
+  }
+  else if (T_e < 0.5 * T_e_old)
+  {
+    T_e = 0.5 * T_e_old;
+    printout("use T_e damping in cell %d\n", modelgridindex);
+    if (T_e < MINTEMP)
+      T_e = MINTEMP;
+  }
+
+  set_Te(modelgridindex, T_e);
+}
 
 
 // void calculate_oldheating_rates(int cellnumber)
