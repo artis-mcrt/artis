@@ -33,6 +33,8 @@ inline float get_nnetot(int modelgridindex)
   return modelgrid[modelgridindex].nnetot;
 }
 
+// the abundances referred to below are initial abundances
+
 inline float get_f56ni(int modelgridindex)
 {
   return modelgrid[modelgridindex].fni;
