@@ -1,8 +1,6 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include "sn3d.h"
-
 void grid_init(int my_rank);
 void allocate_compositiondata(int cellnumber);
 void allocate_cooling(int modelgridindex);

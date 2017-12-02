@@ -2,7 +2,6 @@
 #define LIGHT_CURVE_H
 
 #include <stdio.h>
-#include "exspec.h"
 
 void init_light_curve(void);
 void write_light_curve(FILE *lc_file, int current_abin);

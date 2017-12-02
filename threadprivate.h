@@ -1,7 +1,6 @@
 #ifndef THREADPRIVATE_H
 #define THREADPRIVATE_H
 
-#include "types.h"
 #include <stdbool.h>
 
 int tid;

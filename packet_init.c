@@ -2,7 +2,6 @@
 #include "grid_init.h"
 #include "packet_init.h"
 #include "vectors.h"
-#include <stdio.h>
 
 static double f56ni(const CELL *restrict grid_ptr)
 /// Subroutine that gives the Ni56 mass fraction.
