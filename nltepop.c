@@ -1418,11 +1418,7 @@ void nltepop_open_file(const int my_rank)
 {
   char filename[100];
   sprintf(filename, "nlte_%.4d.out",my_rank);
-  if ((nlte_file = fopen(filename, "w")) == NULL)
-  {
-    printout("Cannot open %s.\n",filename);
-    abort();
-  }
+  nlte_file = fopen_required(filename, "w");
   fprintf(nlte_file, "%8s %14s %2s %9s %5s %11s %11s %11s\n",
           "timestep", "modelgridindex", "Z", "ion_stage", "level", "n_LTE", "n_NLTE", "ion_popfrac");
 }

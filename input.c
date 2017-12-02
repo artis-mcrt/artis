@@ -35,12 +35,7 @@ static void read_phixs_data(void)
 {
   printout("readin phixs data\n");
 
-  FILE *restrict phixsdata = fopen("phixsdata_v2.txt", "r");
-  if (phixsdata == NULL)
-  {
-    printout("Cannot open phixsdata_v2.txt.\n");
-    abort();
-  }
+  FILE *restrict phixsdata = fopen_required("phixsdata_v2.txt", "r");
 
   fscanf(phixsdata,"%d\n",&NPHIXSPOINTS);
   assert(NPHIXSPOINTS > 0);
@@ -602,19 +597,9 @@ static void read_atomicdata_files(void)
   int cont_index = -1;
 
   ///open atomic data file
-  FILE *restrict compositiondata = fopen("compositiondata.txt", "r");
-  if (compositiondata == NULL)
-  {
-    printout("Cannot open compositiondata.txt.\n");
-    abort();
-  }
+  FILE *restrict compositiondata = fopen_required("compositiondata.txt", "r");
 
-  FILE *restrict adata = fopen("adata.txt", "r");
-  if (adata == NULL)
-  {
-    printout("Cannot open adata.txt.\n");
-    abort();
-  }
+  FILE *restrict adata = fopen_required("adata.txt", "r");
 
   /// initialize atomic data structure to number of elements
   fscanf(compositiondata,"%d",&nelements);
@@ -642,12 +627,8 @@ static void read_atomicdata_files(void)
     printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
 
   /// open transition data file
-  FILE *restrict transitiondata;
-  if ((transitiondata = fopen("transitiondata.txt", "r")) == NULL)
-  {
-    printout("Cannot open transitiondata.txt.\n");
-    abort();
-  }
+  FILE *restrict transitiondata = fopen_required("transitiondata.txt", "r");
+
   int lineindex = 0;  ///counter to determine the total number of lines, initialisation
 
   /// readin
@@ -890,11 +871,7 @@ static void read_atomicdata_files(void)
 
   ///debug output
   /*
-  FILE *linelist_file;
-  if ((linelist_file = fopen("linelist_unsorted.out", "w")) == NULL){
-    printout("Cannot open linelist.out.\n");
-    abort();
-  }
+  FILE *linelist_file = fopen_required("linelist_unsorted.out", "w");
   for (i = 0; i < nlines; i++)
     fprintf(linelist_file,"element %d, ion %d, ionstage %d, upperindex %d, lowerindex %d, nu %g\n",linelist[i].elementindex, linelist[i].ionindex, elements[linelist[i].elementindex].ions[linelist[i].ionindex].ionstage, linelist[i].upperlevelindex, linelist[i].lowerlevelindex, linelist[i].nu);
   fclose(linelist_file);
@@ -907,12 +884,7 @@ static void read_atomicdata_files(void)
   /// Save sorted linelist into a file
   // if (rank_global == 0)
   // {
-  //   FILE *restrict linelist_file;
-  //   if ((linelist_file = fopen("linelist.dat", "w")) == NULL)
-  //   {
-  //     printout("Cannot open linelist.out.\n");
-  //     abort();
-  //   }
+  //   FILE *restrict linelist_file = fopen_required("linelist.dat", "w");
   //   fprintf(linelist_file,"%d\n",nlines);
   //   for (int i = 0; i < nlines; i++)
   //   {
@@ -1123,11 +1095,8 @@ static void write_bflist_file(int includedionisinglevels)
   FILE *bflist_file;
   if (rank_global == 0)
   {
-    if ((bflist_file = fopen("bflist.dat", "w")) == NULL){
-      printout("Cannot open bflist.dat.\n");
-      abort();
-    }
-    fprintf(bflist_file,"%d\n",includedionisinglevels);
+    bflist_file = fopen_required("bflist.dat", "w");
+    fprintf(bflist_file,"%d\n", includedionisinglevels);
   }
   int i = 0;
   for (int element = 0; element < nelements; element++)
@@ -1483,12 +1452,7 @@ static void read_atomicdata(void)
 static void read_1d_model(void)
 /// Subroutine to read in a 1-D model.
 {
-  FILE *model_input;
-  if ((model_input = fopen("model.txt", "r")) == NULL)
-  {
-    printout("Cannot open model.txt.\n");
-    abort();
-  }
+  FILE *model_input = fopen_required("model.txt", "r");
 
   /* 1st read the number of data points in the table of input model. */
   int dum1;
@@ -1566,12 +1530,7 @@ static void read_1d_model(void)
 static void read_2d_model(void)
 /// Subroutine to read in a 2-D model.
 {
-  FILE *model_input;
-  if ((model_input = fopen("model.txt", "r")) == NULL)
-  {
-    printout("Cannot open model.txt.\n");
-    abort();
-  }
+  FILE *model_input = fopen_required("model.txt", "r");
 
   /* 1st read the number of data points in the table of input model. */
   int dum1, dum12;
@@ -1656,12 +1615,7 @@ static void read_3d_model(void)
   float rho_model;
   double helper;
 
-  FILE *model_input;
-  if ((model_input = fopen("model.txt", "r")) == NULL)
-  {
-    printout("Cannot open model.txt.\n");
-    abort();
-  }
+  FILE *model_input = fopen_required("model.txt", "r");
 
   /// 1st read the number of data points in the table of input model.
   /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
@@ -1839,12 +1793,7 @@ static void read_3d_model(void)
 
 static void read_binding_energies(void)
 {
-  FILE *binding;
-  if ((binding = fopen("binding_energies.txt", "r")) == NULL)
-  {
-    printout("Cannot open binding_energies.txt.\n");
-    abort();
-  }
+  FILE *binding = fopen_required("binding_energies.txt", "r");
 
   int dum1, dum2;
   fscanf(binding, "%d %d", &dum1, &dum2); //dimensions of the table
@@ -1872,12 +1821,7 @@ static void read_binding_energies(void)
 
 static double read_gamma_spectrum(struct gamma_spec *gammaspec)
 {
-  FILE *filein = fopen(gammaspec->filename, "r");
-  if (filein == NULL)
-  {
-    printout("Cannot open %s.\n", gammaspec->filename);
-    abort();
-  }
+  FILE *filein = fopen_required(gammaspec->filename, "r");
   int dum1 = 0;
   fscanf(filein, "%d", &dum1);
   gammaspec->nlines = dum1;
@@ -2111,12 +2055,7 @@ void read_parameterfile(int rank)
 {
   unsigned long int pre_zseed;
 
-  FILE *input_file = fopen("input.txt", "r");
-  if (input_file == NULL)
-  {
-    printout("Cannot open input.txt.\n");
-    abort();
-  }
+  FILE *input_file = fopen_required("input.txt", "r");
 
   int dum1;
   fscanf(input_file, "%d", &dum1);
@@ -2383,12 +2322,7 @@ int compare_linelistentry(const void *p1, const void *p2)
 void update_parameterfile(int nts)
 /// Subroutine to read in input parameters from input.txt.
 {
-  FILE *input_file;
-  if ((input_file = fopen("input.txt", "r+")) == NULL)
-  {
-    printout("Cannot open input.txt.\n");
-    abort();
-  }
+  FILE *input_file = fopen_required("input.txt", "r+");
   //setvbuf(input_file, NULL, _IOLBF, 0);
 
   int dum1;

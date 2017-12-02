@@ -879,22 +879,14 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
   /*
   sprintf(tempfilename,"d%d_thermal_%.4d.out",m,my_rank);
   //sprintf(tempfilename,"t%d_temperature_%d-%d.out",m,nstart,nstart+nblock-1);
-  if ((thermal_file = fopen(tempfilename, "w")) == NULL)
-  {
-    printf("Cannot open %s.\n",tempfilename);
-    abort();
-  }
+  thermal_file = fopen_required(tempfilename, "w");
   setvbuf(thermal_file, NULL, _IOLBF, 1);
   */
 
   //printout("[debug] update_grid: time before initialisation of heating file %d\n",time(NULL));
   //#ifndef FORCE_LTE
   //  sprintf(filename,"h%d-%d_heating_%.4d.out",m,titer,my_rank);
-  //  if ((heating_file = fopen(filename, "w")) == NULL)
-  //  {
-  //    printf("Cannot open %s.\n",filename);
-  //    abort();
-  //  }
+  //  heating_file = fopen_required(filename, "w")) == NULL);
   //  setvbuf(heating_file, NULL, _IOLBF, 1);
   //#endif
   //printout("[debug] update_grid: heating file initialised %d\n",time(NULL));
@@ -925,18 +917,10 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
   if (m != itstep)
   {
     sprintf(photoion_filename,"photoion_%.2d.out",m);
-    if ((photoion_file = fopen(photoion_filename, "w")) == NULL)
-    {
-      printf("Cannot open %s.\n",photoion_filename);
-      abort();
-    }
+    photoion_file = fopen_required(photoion_filename, "w");
     setvbuf(photoion_file, NULL, _IOLBF, 1);
     sprintf(bf_filename,"bf_%.2d.out",m);
-    if ((bf_file = fopen(bf_filename, "w")) == NULL)
-    {
-      printf("Cannot open %s.\n",bf_filename);
-      abort();
-    }
+    bf_file = fopen_required(bf_filename, "w");
     setvbuf(bf_file, NULL, _IOLBF, 1);
 
     for (ncl = 0; ncl < nblock; ncl++)
@@ -965,11 +949,7 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
 //   #ifndef FORCE_LTE
 //     //sprintf(Alphaspfilename,"bfcount%.2d-%.2d_%.4d.out",m,titer,my_rank);
 //     sprintf(Alphaspfilename,"bfcount%d-%d_%.4d.out",m,titer,my_rank);
-//     if ((bfcount_file = fopen(Alphaspfilename, "w")) == NULL)
-//     {
-//       printf("Cannot open %s.\n",Alphaspfilename);
-//       abort();
-//     }
+//     bfcount_file = fopen_required(Alphaspfilename, "w");
 //     setvbuf(bfcount_file, NULL, _IOLBF, 1);
 //   #endif
 
@@ -1502,12 +1482,7 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 
 void write_grid_restart_data(void)
 {
-  FILE *restrict gridsave_file;
-  if ((gridsave_file = fopen("gridsave.dat", "w")) == NULL)
-  {
-    printout("Cannot open gridsave.dat.\n");
-    abort();
-  }
+  FILE *restrict gridsave_file = fopen_required("gridsave.dat", "w");
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {

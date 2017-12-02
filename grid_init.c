@@ -473,12 +473,7 @@ static void density_1d_read(void)
   FILE *grid_file;
   if (rank_global == 0)
   {
-    grid_file = fopen("grid.out", "w");
-    if (grid_file == NULL)
-    {
-      printf("Cannot open grid file.\n");
-      abort();
-    }
+    grid_file = fopen_required("grid.out", "w");
   }
 
   double check1 = 0.0;
@@ -888,11 +883,7 @@ static void density_2d_read(void)
   FILE *grid_file;
   if (rank_global == 0)
   {
-    if ((grid_file = fopen("grid.out", "w")) == NULL)
-    {
-      printf("Cannot open grid file.\n");
-      abort();
-    }
+    grid_file = fopen_required("grid.out", "w");
   }
 
   /// Second pass through allows calculation of normalized kappa_grey
@@ -1036,12 +1027,7 @@ static void density_3d_read(void)
   FILE *grid_file;
   if (rank_global == 0)
   {
-    grid_file = fopen("grid.out", "w");
-    if (grid_file == NULL)
-    {
-      printf("Cannot open grid file.\n");
-      abort();
-    }
+    grid_file = fopen_required("grid.out", "w");
   }
 
   /// Second pass through allows calculation of normalized kappa_grey
@@ -1350,13 +1336,7 @@ void allocate_cooling(int modelgridindex)
 
 static void abundances_3d_read(void)
 {
-  FILE *abundance_file;
-  /// Open the abundances file
-  if ((abundance_file = fopen("abundances.txt", "r")) == NULL)
-  {
-    printout("Cannot open abundances.txt.\n");
-    abort();
-  }
+  FILE *abundance_file = fopen_required("abundances.txt", "r");
 
   /// and process through the grid to read in the abundances per cell
   /// The abundance file should only contain information for non-empty
@@ -1423,12 +1403,7 @@ static void abundances_3d_read(void)
 static void abundances_1d_read(void)
 {
   /// Open the abundances file
-  FILE *abundance_file;
-  if ((abundance_file = fopen("abundances.txt", "r")) == NULL)
-  {
-    printout("Cannot open abundances.txt.\n");
-    abort();
-  }
+  FILE *abundance_file = fopen_required("abundances.txt", "r");
 
   /// and process through the grid to read in the abundances per cell
   /// The abundance file should only contain information for non-empty
@@ -1470,13 +1445,8 @@ static void abundances_1d_read(void)
 
 static void read_grid_restart_data(void)
 {
-  FILE *restrict gridsave_file;
   printout("READIN GRID SNAPSHOT\n");
-  if ((gridsave_file = fopen("gridsave.dat", "r")) == NULL)
-  {
-    printf("[fatal] assign_temperature: Cannot open gridsave.dat.\n");
-    abort();
-  }
+  FILE *restrict gridsave_file = fopen_required("gridsave.dat", "r");
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {

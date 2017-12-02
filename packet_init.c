@@ -330,12 +330,7 @@ void packet_init(int middle_iteration, int my_rank)
   setup_packets(pktnumberoffset);
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
   sprintf(filename, "packets%d_%d_odd.tmp", middle_iteration, my_rank);
-  FILE *packets_file;
-  if ((packets_file = fopen(filename, "wb")) == NULL)
-  {
-    printf("[fatal]: packet_init: Cannot open packets file\n");
-    abort();
-  }
+  FILE *packets_file = fopen_required(filename, "wb");
   fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
   //write_packets(packets_file);
   fclose(packets_file);
@@ -346,11 +341,7 @@ void packet_init(int middle_iteration, int my_rank)
   if (i > 0)
   {
   sprintf(filename,"packets%d_%d.tmp",i-1,my_rank);
-  if ((packets_file = fopen(filename, "rb")) == NULL)
-  {
-  printf("Cannot open packets file\n");
-  abort();
-}
+  packets_file = fopen_required(filename, "rb");
   fread(&testpkt, sizeof(PKT), npkts, packets_file);
   fclose(packets_file);
 
