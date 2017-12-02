@@ -469,8 +469,6 @@ int debuglevel;
 #define TABLESIZE 100 //200 //100
 #define MINTEMP 1000.
 #define MAXTEMP 50000. //1000000.
-double T_step;
-double T_step_log;
 
 bool homogeneous_abundances;
 
