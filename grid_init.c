@@ -9,6 +9,8 @@
 #include "vectors.h"
 
 
+static double abund_model[MMODELGRID][30];
+
 extern inline double vol_init(void);
 extern inline float get_rhoinit(int modelgridindex);
 extern inline float get_rho(int modelgridindex);
