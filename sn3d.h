@@ -343,7 +343,6 @@ double fco_model[MMODELGRID];
 double ffegrp_model[MMODELGRID];
 double f48cr_model[MMODELGRID];
 double f52fe_model[MMODELGRID];
-double abund_model[MMODELGRID][30];
 double t_model; // time at which densities in input model are correct.
 int ncoord1_model, ncoord2_model; // For 2D model, the input grid dimensions
 double dcoord1, dcoord2; // spacings of a 2D model grid - must be uniform grid
