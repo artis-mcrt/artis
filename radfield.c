@@ -161,12 +161,7 @@ void radfield_init(int my_rank)
            H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
   char filename[100];
   sprintf(filename,"radfield_%.4d.out", my_rank);
-  radfieldfile = fopen(filename, "w");
-  if (radfieldfile == NULL)
-  {
-    printout("Cannot open %s.\n",filename);
-    abort();
-  }
+  radfieldfile = fopen_required(filename, "w");
   fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n",
           "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
           "nuJ","J","J_nu_avg","ncontrib","T_R","W");

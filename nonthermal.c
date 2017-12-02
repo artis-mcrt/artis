@@ -199,12 +199,7 @@ static void read_collion_data(void)
 {
   printout("Reading collisional ionization data...\n");
 
-  FILE *cifile = fopen("collion.txt", "r");
-  if (cifile == NULL)
-  {
-    printout("Could not open collion.txt\n");
-    abort();
-  }
+  FILE *cifile = fopen_required("collion.txt", "r");
 
   fscanf(cifile, "%d", &colliondatacount);
   printout("Reading %d collisional transition rows\n", colliondatacount);
@@ -241,12 +236,7 @@ void nt_init(const int my_rank)
     printout("Initializing non-thermal solver\n");
     char filename[100];
     sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
-    nonthermalfile = fopen(filename, "w");
-    if (nonthermalfile == NULL)
-    {
-      printout("Cannot open %s.\n", filename);
-      abort();
-    }
+    nonthermalfile = fopen_required(filename, "w");
     fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
             "timestep","modelgridindex","index","energy_ev","source","y");
     fflush(nonthermalfile);

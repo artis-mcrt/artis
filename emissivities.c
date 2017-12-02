@@ -242,18 +242,10 @@ void write_estimators(int nts)
   char filename[100] = "est_";
   char junk[100];
 
-  if ((dummy = fopen("dummy", "w+")) == NULL)
-  {
-    printout("Cannot open dummy.\n");
-    abort();
-  }
+  dummy = fopen_required("dummy", "w+");
   fprintf(dummy, "%d", nts);
   fclose(dummy);
-  if ((dummy = fopen("dummy", "r")) == NULL)
-  {
-    printout("Cannot open dummy.\n");
-    abort();
-  }
+  dummy = fopen_required("dummy", "r");
   int i = 0;
   while ((chch = fgetc(dummy)) != EOF)
   {
@@ -268,11 +260,7 @@ void write_estimators(int nts)
 
   if (file_set)
   {
-    if ((est_file = fopen(filename, "rb")) == NULL)
-    {
-      printout("Cannot open est_file.txt.\n");
-      abort();
-    }
+    est_file = fopen_required(filename, "rb");
 
       //for (n=0; n < ngrid; n++)
     for (int n = 0; n < npts_model; n++)
@@ -288,12 +276,7 @@ void write_estimators(int nts)
     fclose(est_file);
   }
 
-  if ((est_file = fopen(filename, "wb+")) == NULL)
-  {
-    printout("Cannot open est_file.txt.\n");
-    abort();
-  }
-
+  est_file = fopen_required(filename, "wb+");
 
   //for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
@@ -334,18 +317,10 @@ bool estim_switch(int nts)
 //   char filename[100] = "est_";
 //   char junk[100];
 //
-//   if ((dummy = fopen("dummy", "w+")) == NULL)
-//   {
-//     printout("Cannot open dummy.\n");
-//     abort();
-//   }
+//   dummy = fopen_required("dummy", "w+");
 //   fprintf(dummy, "%d", nts);
 //   fclose(dummy);
-//   if ((dummy = fopen("dummy", "r")) == NULL)
-//   {
-//     printout("Cannot open dummy.\n");
-//     abort();
-//   }
+//   dummy = fopen_required("dummy", "r");
 //   int i = 0;
 //   while ((chch=fgetc(dummy)) != EOF)
 //   {
@@ -358,11 +333,7 @@ bool estim_switch(int nts)
 //   strcat(filename, junk);
 //   strcat(filename, ".out");
 //
-//   if ((est_file = fopen(filename, "r")) == NULL)
-//   {
-//     printout("Cannot open est_file.txt.\n");
-//     abort();
-//   }
+//   est_file = fopen_required(filename, "r");
 //
 //
 //   //for (n=0; n < ngrid; n++)

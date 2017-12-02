@@ -55,11 +55,7 @@ void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *trueemission_fil
   /// The spectra are now done - just need to print them out.
   if (file_set)
   {
-    if ((spec_file = fopen("spec.out", "r")) == NULL)
-    {
-      printout("Cannot open spec_file.txt.\n");
-      abort();
-    }
+    spec_file = fopen_required("spec.out", "r");
     fscanf(spec_file, "%g ", &dum1);
 
     for (p = 0; p < ntbins; p++)
@@ -82,16 +78,9 @@ void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *trueemission_fil
   }
 
 
-  if ((emission_file = fopen("emission.out", "w")) == NULL)
-  {
-    printf("Cannot open emission file\n");
-    abort();
-  }
+  emission_file = fopen_required("emission.out", "w");
   /// write to file
-  if ((spec_file = fopen("spec.out", "w+")) == NULL){
-    printout("Cannot open spec_file.txt.\n");
-    abort();
-  }
+  spec_file = fopen_required("spec.out", "w+");
   */
 
   fprintf(spec_file, "%g ", 0.0);

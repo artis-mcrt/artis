@@ -117,12 +117,7 @@ void get_gam_ll(void)
     energy_last = energy_try;
   }
 
-  FILE *line_list = fopen("line_list.txt", "w+");
-  if (line_list == NULL)
-  {
-    printout("Cannot open line_list.txt.\n");
-    abort();
-  }
+  FILE *line_list = fopen_required("line_list.txt", "w+");
 
   for (int i = 0; i < total_lines; i++)
   {

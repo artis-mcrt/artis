@@ -34,12 +34,7 @@
 
 static FILE *initialise_linestat_file(void)
 {
-  FILE *restrict linestat_file;
-  if ((linestat_file = fopen("linestat.out", "w")) == NULL)
-  {
-    printout("Cannot open line_stat.out.\n");
-    abort();
-  }
+  FILE *restrict linestat_file = fopen_required("linestat.out", "w");
 
   for (int i = 0; i < nlines; i++)
     fprintf(linestat_file, "%g ", CLIGHT/linelist[i].nu);
@@ -414,12 +409,7 @@ static void write_temp_packetsfile(int timestep, int my_rank)
   else
     sprintf(filename,"packets%d_%d_odd.tmp", 0, my_rank);
 
-  FILE *packets_file = fopen(filename, "wb");
-  if (packets_file == NULL)
-  {
-    printout("Cannot write to temporary packets file %s\n",filename);
-    abort();
-  }
+  FILE *packets_file = fopen_required(filename, "wb");
 
   fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
   fclose(packets_file);
@@ -466,11 +456,7 @@ int main(int argc, char** argv)
     tid = omp_get_thread_num();
     /// and initialise the threads outputfile
     sprintf(filename,"output_%d-%d.txt",my_rank,tid);
-    if ((output_file = fopen(filename, "w")) == NULL)
-    {
-      printf("Cannot open %s.\n",filename);
-      abort();
-    }
+    output_file = fopen_required(filename, "w");
     /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
 
@@ -533,39 +519,24 @@ int main(int argc, char** argv)
   /// machine where the simulation is running.
   /// NB: printout also needs some changes to get this working!
   /*
-  if ((output_file = fopen("output.txt", "w")) == NULL)
-  {
-  printf("Cannot open output.txt.\n");
-  abort();
-}
+  output_file = fopen_required("output.txt", "w");
   /// Makes sure that the output_file is written line-by-line
   setvbuf(output_file, NULL, _IOLBF, 1);
   */
 
   /*
-  if ((ldist_file = fopen("ldist.out", "w")) == NULL){
-  printout("Cannot open ldist.out.\n");
-  abort();
-}
+  ldist_file = fopen_required("ldist.out", "w");
   */
 
 
   //sprintf(filename,"tb%.4d.txt",my_rank);
-  //if ((tb_file = fopen(filename, "w")) == NULL)
-  //{
-  //  printf("Cannot open %s.\n",filename);
-  //  abort();
-  //}
+  //(tb_file = fopen_required(filename, "w");
   //setvbuf(tb_file, NULL, _IOLBF, 1);
 
   macroatom_open_file(my_rank);
 
   sprintf(filename, "estimators_%.4d.out", my_rank);
-  if ((estimators_file = fopen(filename, "w")) == NULL)
-  {
-    printout("Cannot open %s.\n", filename);
-    abort();
-  }
+  estimators_file = fopen_required(filename, "w");
   //setvbuf(estimators_file, NULL, _IOLBF, 1);
 
   if (NLTE_POPS_ON)
@@ -607,12 +578,7 @@ int main(int argc, char** argv)
   printout("time after zero estimators %d\n",time(NULL));
 
   /// Record the chosen syn_dir
-  FILE *restrict syn_file;
-  if ((syn_file = fopen("syn_dir.txt", "w")) == NULL)
-  {
-    printout("Cannot open syn_dir.txt.\n");
-    abort();
-  }
+  FILE *restrict syn_file = fopen_required("syn_dir.txt", "w");
   fprintf(syn_file, "%g %g %g", syn_dir[0], syn_dir[1], syn_dir[2]);
   fclose(syn_file);
   printout("time read syn file %d\n",time(NULL));
@@ -745,11 +711,7 @@ int main(int argc, char** argv)
         else
           sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
 
-        if ((packets_file = fopen(filename, "rb")) == NULL)
-        {
-          printout("Cannot read temporary packets file %s\n",filename);
-          abort();
-        }
+        packets_file = fopen_required(filename, "rb");
 
         read_vspecpol(packets_file);
 
@@ -760,11 +722,7 @@ int main(int argc, char** argv)
           else
             sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
 
-          if ((packets_file = fopen(filename, "rb")) == NULL)
-          {
-            printout("Cannot read temporary vpkt_grid file %s\n",filename);
-            abort();
-          }
+          packets_file = fopen_required(filename, "rb");
 
           read_vpkt_grid(packets_file);
         }
@@ -839,12 +797,7 @@ int main(int argc, char** argv)
           sprintf(filename,"packets%d_%d_even.tmp", 0, my_rank);
 
         //sprintf(filename,"packets%d_%d.tmp",0,my_rank);
-        packets_file = fopen(filename, "rb");
-        if (packets_file == NULL)
-        {
-          printout("Cannot read temporary packets file %s\n",filename);
-          abort();
-        }
+        packets_file = fopen_required(filename, "rb");
         fread(&pkt[0], sizeof(PKT), npkts, packets_file);
         //read_packets(packets_file);
         fclose(packets_file);
@@ -965,11 +918,7 @@ int main(int argc, char** argv)
             if (n_middle_it > 1)
             {
               sprintf(filename,"packets%d_%d.tmp",middle_iteration,my_rank);
-              if ((packets_file = fopen(filename, "rb")) == NULL)
-              {
-                printf("Cannot open packets file\n");
-                abort();
-              }
+              packets_file = fopen_required(filename, "rb");
               fread(&pkt[0], sizeof(PKT), npkts, packets_file);
               //read_packets(packets_file);
               fclose(packets_file);
@@ -977,11 +926,7 @@ int main(int argc, char** argv)
 
             /// Update those packets ...
             //sprintf(filename,"tau%d.out",nts);
-            //if ((tau_file = fopen(filename, "w")) == NULL)
-            //{
-            //  printf("Cannot open %s.\n",filename);
-            //  abort();
-            //}
+            //tau_file = fopen_required(filename, "w");
             update_packets(nts);
             //fclose(tau_file);
 
@@ -989,11 +934,7 @@ int main(int argc, char** argv)
             if (n_middle_it > 1)
             {
               sprintf(filename,"packets%d_%d.tmp",middle_iteration,my_rank);
-              if ((packets_file = fopen(filename, "wb")) == NULL)
-              {
-                printf("Cannot open packets file\n");
-                abort();
-              }
+              packets_file = fopen_required(filename, "wb");
               fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
               fclose(packets_file);
             }
@@ -1002,11 +943,7 @@ int main(int argc, char** argv)
             {
               sprintf(filename,"packets%.2d_%.4d.out",nts,my_rank);
               //sprintf(filename,"packets%.2d_%.4d.out",middle_iteration,my_rank);
-              if ((packets_file = fopen(filename, "w")) == NULL)
-              {
-                printf("Cannot open packets file\n");
-                abort();
-              }
+              packets_file = fopen_required(filename, "w")
               write_packets(packets_file);
               fclose(packets_file);
             }
@@ -1100,12 +1037,7 @@ int main(int argc, char** argv)
           else
             sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
 
-          packets_file = fopen(filename, "wb");
-          if (packets_file == NULL)
-          {
-            printout("Cannot write to temporary packets file %s\n",filename);
-            abort();
-          }
+          packets_file = fopen_required(filename, "wb");
 
           write_vspecpol(packets_file);
           fclose(packets_file);
@@ -1119,11 +1051,7 @@ int main(int argc, char** argv)
             else
               sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
 
-            if ((packets_file = fopen(filename, "wb")) == NULL)
-            {
-              printout("Cannot write to vpkt_grid file %s\n", filename);
-              abort();
-            }
+            packets_file = fopen_required(filename, "wb");
 
             write_vpkt_grid(packets_file);
             fclose(packets_file);
@@ -1138,23 +1066,14 @@ int main(int argc, char** argv)
           {
             sprintf(filename,"packets%.2d_%.4d.out", 0, my_rank);
             //sprintf(filename,"packets%.2d_%.4d.out", middle_iteration, my_rank);
-            if ((packets_file = fopen(filename, "w")) == NULL)
-            {
-              printf("Cannot write to final packets file %s\n", filename);
-              abort();
-            }
+            packets_file = fopen_required(filename, "w");
             write_packets(packets_file);
             fclose(packets_file);
 
             // write specpol of the virtual packets
             #ifdef VPKT_ON
               sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
-              FILE *vspecpol_file;
-              if ((vspecpol_file = fopen(filename, "w")) == NULL)
-              {
-                printout("Cannot open %s.\n",filename);
-                abort();
-              }
+              FILE *vspecpol_file= fopen_required(filename, "w");
 
               write_vspecpol(vspecpol_file);
               fclose(vspecpol_file);
@@ -1162,12 +1081,7 @@ int main(int argc, char** argv)
               if (vgrid_flag == 1)
               {
                 sprintf(filename,"vpkt_grid_%d-%d.out",my_rank,tid);
-                FILE *vpkt_grid_file;
-                if ((vpkt_grid_file = fopen(filename, "w")) == NULL)
-                {
-                  printout("Cannot open %s.\n",filename);
-                  abort();
-                }
+                FILE *vpkt_grid_file = fopen_required(filename, "w");
                 write_vpkt_grid(vpkt_grid_file);
                 fclose(vpkt_grid_file);
               }
@@ -1175,19 +1089,6 @@ int main(int argc, char** argv)
 
             printout("time after write final packets file %d\n",time(NULL));
           }
-          /*if (nts % 6 == 0 || nts == 49)
-          {
-            sprintf(filename,"packets%.2d_%.4d.out",nts,my_rank);
-            //sprintf(filename,"packets%.2d_%.4d.out",middle_iteration,my_rank);
-            if ((packets_file = fopen(filename, "w")) == NULL)
-            {
-              printf("Cannot open packets file\n");
-              abort();
-            }
-            write_packets(packets_file);
-            fclose(packets_file);
-          }*/
-
         }
       }
 
@@ -1216,11 +1117,7 @@ int main(int argc, char** argv)
     for (middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
     {
       sprintf(filename,"packets%d_%.4d.out",middle_iteration,my_rank);
-      if ((packets_file = fopen(filename, "w")) == NULL)
-      {
-        printf("Cannot open packets file\n");
-        abort();
-      }
+      packets_file = fopen_required(filename, "w");
       write_finalpackets(packets_file);
       fclose(packets_file);
     }
@@ -1277,11 +1174,7 @@ int main(int argc, char** argv)
 
     if (my_rank == 0)
     {
-      if ((temperature_file = fopen("final_temperatures.dat", "w")) == NULL)
-      {
-        printf("Cannot open final_temperatures.dat\n");
-        abort();
-      }
+      temperature_file = fopen_required("final_temperatures.dat", "w");
       for (n = 0; n < ngrid; n++)
       {
         int mgi = cell[n].modelgridindex;
@@ -1344,12 +1237,7 @@ int main(int argc, char** argv)
   #endif
   if (my_rank == 0)
   {
-    FILE *dep_file = fopen("deposition.out", "w");
-    if (dep_file == NULL)
-    {
-      printf("Cannot open deposition.out\n");
-      abort();
-    }
+    FILE *dep_file = fopen_required("deposition.out", "w");
     for (int i = 0; i < ntstep; i++)
     {
       fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid / DAY,
@@ -1405,6 +1293,19 @@ void gsl_error_handler_printout(const char *reason, const char *file, int line, 
 }
 
 
+FILE *fopen_required(const char *filename, const char *mode)
+{
+  FILE *file = fopen(filename, mode);
+  if (file == NULL)
+  {
+    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
+    abort();
+  }
+  else
+    return file;
+}
+
+
 /*void print_opticaldepth(int cellnumber, int timestep, int samplecell, int element)
 {
   int nions,nlevels,nuptrans;
@@ -1422,11 +1323,7 @@ void gsl_error_handler_printout(const char *reason, const char *file, int line, 
 
 
   sprintf(filename,"tau%.2d_sc%.2d.out",timestep,samplecell);
-  if ((tau_file = fopen(filename, "w")) == NULL)
-  {
-    printf("Cannot open %s.\n",filename);
-    abort();
-  }
+  tau_file = fopen_required(filename, "w");
   setvbuf(tau_file, NULL, _IOLBF, 1);
   fprintf(tau_file,"%d %g %g %g\n",samplecell,T_e,T_R,W);
 

@@ -28,12 +28,7 @@ int main(int argc, char** argv)
   const int my_rank = 0;
   char filename[100];
   sprintf(filename,"exspec.txt");
-  output_file = fopen(filename, "w");
-  if (output_file == NULL)
-  {
-    printf("Cannot open %s.\n",filename);
-    abort();
-  }
+  output_file = fopen_required(filename, "w");
   setvbuf(output_file, NULL, _IOLBF, 1);
 
   const time_t sys_time_start = time(NULL);
@@ -53,13 +48,9 @@ int main(int argc, char** argv)
     /// Read in the next bunch of packets to work on
     sprintf(filename,"packets%d_%d.tmp",0,i);
     printout("%s\n",filename);
-    if ((packets_file = fopen(filename, "rb")) == NULL)
+    packets_file = fopen_required(filename, "rb")) == NULL);
     //sprintf(filename,"packets%.2d_%.4d.out",0,i);
-    //if ((packets_file = fopen(filename, "r")) == NULL)
-    {
-      printf("Cannot open packets file %s\n",filename);
-      abort();
-    }
+    //packets_file = fopen_required(filename, "r");
     fread(&pkt[0], sizeof(PKT), npkts, packets_file);
     //read_packets(packets_file);
     /// Close the current file.
@@ -69,11 +60,7 @@ int main(int argc, char** argv)
     /// Read in the next bunch of packets to work on
     sprintf(filename,"packets%.2d_%.4d.out",0,i);
     printout("%s\n",filename);
-    if ((packets_file = fopen(filename, "w")) == NULL)
-    {
-      printf("Cannot open packets file %s\n",filename);
-      abort();
-    }
+    packets_file = fopen_required(filename, "w");
     write_packets(packets_file);
     //read_packets(packets_file);
     /// Close the current file.
@@ -105,13 +92,8 @@ int main(int argc, char** argv)
       //sprintf(filename,"packets%d_%d.tmp",0,i);
       sprintf(filename,"packets%.2d_%.4d.out", 0, i);
       printout("reading %s (file %d of %d)\n", filename, i + 1, nprocs);
-      //if ((packets_file = fopen(filename, "rb")) == NULL)
-      FILE *packets_file;
-      if ((packets_file = fopen(filename, "r")) == NULL)
-      {
-        printf("Cannot open packets file %s\n", filename);
-        abort();
-      }
+      //packets_file = fopen_required(filename, "rb");
+      FILE *packets_file = fopen_required(filename, "r");
       //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
       read_packets(packets_file);
       fclose(packets_file);
@@ -154,39 +136,11 @@ int main(int argc, char** argv)
 
 
     /// Extract angle-averaged spectra and light curves
-    FILE *lc_file = fopen("light_curve.out", "w");
-    if (lc_file == NULL)
-    {
-      printout("Cannot open light_curve.out\n");
-      abort();
-    }
-    FILE *spec_file = fopen("spec.out", "w");
-    if (spec_file == NULL)
-    {
-      printout("Cannot open spec.out\n");
-      abort();
-    }
-
-    FILE *emission_file = fopen("emission.out", "w");
-    if (emission_file == NULL)
-    {
-      printf("Cannot open emission.out\n");
-      abort();
-    }
-
-    FILE *trueemission_file = fopen("emissiontrue.out", "w");
-    if (trueemission_file == NULL)
-    {
-      printf("Cannot open emissiontrue.out\n");
-      abort();
-    }
-
-    FILE *absorption_file = fopen("absorption.out", "w");
-    if (absorption_file == NULL)
-    {
-      printf("Cannot open absorption.out\n");
-      abort();
-    }
+    FILE *lc_file = fopen_required("light_curve.out", "w");
+    FILE *spec_file = fopen_required("spec.out", "w");
+    FILE *emission_file = fopen_required("emission.out", "w");
+    FILE *trueemission_file = fopen_required("emissiontrue.out", "w");
+    FILE *absorption_file = fopen_required("absorption.out", "w");
 
     gather_spectrum(-1);
     gather_light_curve();
@@ -205,43 +159,23 @@ int main(int argc, char** argv)
     /// Extract LOS dependent spectra and light curves
     if (model_type != RHO_1D_READ)
     {
-      if ((lc_file = fopen("light_curve_res.out", "w")) == NULL)
-      {
-        printout("Cannot open light_curve_res.out\n");
-        abort();
-      }
-      if ((spec_file = fopen("spec_res.out", "w")) == NULL)
-      {
-        printout("Cannot open spec_res.out\n");
-        abort();
-      }
+      lc_file = fopen_required("light_curve_res.out", "w");
+      spec_file = fopen_required("spec_res.out", "w");
       for (int i = 0; i < MABINS; i++)
       {
         if (do_emission_res == 1)
         {
           sprintf(filename, "emission_res_%.2d.out", i);
           printout("%s \n", filename);
-          if ((emission_file = fopen(filename, "w")) == NULL)
-          {
-            printf("Cannot open emission_res.out\n");
-            abort();
-          }
+          emission_file = fopen_required(filename, "w");
 
           sprintf(filename, "emissiontrue_res_%.2d.out", i);
           printout("%s \n", filename);
-          if ((trueemission_file = fopen(filename, "w")) == NULL)
-          {
-            printf("Cannot open emissiontrue_res.out\n");
-            abort();
-          }
+          trueemission_file = fopen_required(filename, "w");
 
           sprintf(filename, "absorption_res_%.2d.out", i);
           printout("%s \n", filename);
-          if ((absorption_file = fopen(filename, "w")) == NULL)
-          {
-            printf("Cannot open absorption_res.out\n");
-            abort();
-          }
+          absorption_file = fopen_required(filename, "w");
         }
         gather_spectrum_res(i);
         gather_light_curve_res(i);
@@ -295,6 +229,18 @@ void gsl_error_handler_printout(const char *reason, const char *file, int line, 
   // abort();
 }
 
+
+FILE *fopen_required(const char *filename, const char *mode)
+{
+  FILE *file = fopen(filename, mode);
+  if (file == NULL)
+  {
+    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
+    abort();
+  }
+  else
+    return file;
+}
 
 
 /*void *my_malloc(size_t size)

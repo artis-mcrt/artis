@@ -66,8 +66,8 @@ static bool read_ratecoeff_dat(void)
   md5_file("phixsdata_v2.txt", phixsfile_hash);
   printout("MD5 phixsdata_v2.txt = %s\n", phixsfile_hash);
 
-  FILE *ratecoeff_file;
-  if ((ratecoeff_file = fopen("ratecoeff.dat", "r")) != NULL)
+  FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
+  if (ratecoeff_file != NULL)
   {
     /// Check whether current atomic data and temperature range match
     /// the precalculated rate coefficients
@@ -214,12 +214,7 @@ static bool read_ratecoeff_dat(void)
 
 static void write_ratecoeff_dat(void)
 {
-  FILE *ratecoeff_file = fopen("ratecoeff.dat", "w");
-  if (ratecoeff_file == NULL)
-  {
-    printout("Cannot open ratecoeff.dat\n");
-    abort();
-  }
+  FILE *ratecoeff_file = fopen_required("ratecoeff.dat", "w");
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
   fprintf(ratecoeff_file, "%32s\n", phixsfile_hash);
@@ -1661,27 +1656,11 @@ void check_interpolation(double T_min, double T_max)
   int level;
   int iter;
 
-
-  FILE *alpha_sp_file;
-  FILE *alpha_st_file;
-  FILE *gamma_file;
-  if ((alpha_sp_file = fopen("alpha_sp.out", "w")) == NULL)
-  {
-    printf("Cannot open alpha_sp.out.\n");
-    abort();
-  }
+  FILE *alpha_sp_file = fopen_required("alpha_sp.out", "w");
   setvbuf(alpha_sp_file, NULL, _IOLBF, 1);
-  if ((alpha_st_file = fopen("alpha_st.out", "w")) == NULL)
-  {
-    printf("Cannot open alpha_st.out.\n");
-    abort();
-  }
+  FILE *alpha_st_file = fopen_required("alpha_st.out", "w");
   setvbuf(alpha_st_file, NULL, _IOLBF, 1);
-  if ((gamma_file = fopen("gamma.out", "w")) == NULL)
-  {
-    printf("Cannot open gamma.out.\n");
-    abort();
-  }
+  FILE *gamma_file = fopen_required("gamma.out", "w");
   setvbuf(gamma_file, NULL, _IOLBF, 1);
 
   /// Works so far only for hydrogen or the first ionisation stage of any element!
