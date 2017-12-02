@@ -26,6 +26,9 @@
 //   int cellnumber;
 // } gslintegration_bfheatingparas;
 
+static double T_step;
+static double T_step_log;
+
 typedef struct
 {
   double nu_edge;
