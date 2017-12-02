@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "assert.h"
 #include "gamma.h"
+#include "grid_init.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"

@@ -1,8 +1,6 @@
 #ifndef UPDATE_GRID_H
 #define UPDATE_GRID_H
 
-#include "sn3d.h"
-
 void update_grid(int nts, int my_rank, int nstart, int ndo, int titer);
 void precalculate_partfuncts(int modelgridindex);
 void cellhistory_reset(int cellnumber, bool set_population);
