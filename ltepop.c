@@ -170,6 +170,10 @@ double phi(const int element, const int ion, const int modelgridindex)
     #else
       const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
     #endif
+    // printout("phicompare element %d ion %d T_e = %g gammaestimator %g calculate_iongamma_per_gspop %g\n",
+    //          element, ion, T_e,
+    //          gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion],
+    //          calculate_iongamma_per_gspop(modelgridindex, element, ion));
 
     // Gamma is the photoionization rate per ground level pop
     const double Gamma_ion = (Gamma * stat_weight(element, ion, 0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
