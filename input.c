@@ -1791,34 +1791,6 @@ static void read_3d_model(void)
 }
 
 
-static void read_binding_energies(void)
-{
-  FILE *binding = fopen_required("binding_energies.txt", "r");
-
-  int dum1, dum2;
-  fscanf(binding, "%d %d", &dum1, &dum2); //dimensions of the table
-  if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING))
-  {
-    printout("Wrong size for the binding energy tables!\n");
-    abort();
-  }
-
-  for (int index1 = 0; index1 < dum2; index1++)
-  {
-    float dum[10];
-    fscanf(binding, "%g %g %g %g %g %g %g %g %g %g",
-           &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9]);
-
-    for (int index2 = 0; index2 < 10; index2++)
-    {
-      electron_binding[index1][index2] = dum[index2] * EV;
-    }
-  }
-
-  fclose(binding);
-}
-
-
 static double read_gamma_spectrum(struct gamma_spec *gammaspec)
 {
   FILE *filein = fopen_required(gammaspec->filename, "r");
@@ -1995,9 +1967,6 @@ void input(int rank)
     printout("Too many points needed for emissivities. Use smaller frequency range or increase EMISS_MAX. Abort.\n");
     abort();
   }
-
-  if (NT_ON)
-    read_binding_energies();
 
   #ifdef DO_EXSPEC
     /// Check if enough  memory for spectra has been assigned

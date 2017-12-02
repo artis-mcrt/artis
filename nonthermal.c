@@ -68,6 +68,13 @@ static const double MINDEPRATE = 0.; // minimum deposition rate density (eV/s/cm
 
 static const double A_naught_squared = 2.800285203e-17; // Bohr radius squared in cm^2
 
+#define M_NT_SHELLS 10
+//specifies max number of shells for which data is known for computing mean binding energies
+#define MAX_Z_BINDING 30
+//maximum number of elements for which binding energy tables are to be used
+
+static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
+
 struct collionrow {
   int Z;
   int nelec;
@@ -195,6 +202,34 @@ static double get_tot_nion(const int modelgridindex)
 #endif
 
 
+static void read_binding_energies(void)
+{
+  FILE *binding = fopen_required("binding_energies.txt", "r");
+
+  int dum1, dum2;
+  fscanf(binding, "%d %d", &dum1, &dum2); //dimensions of the table
+  if ((dum1 != M_NT_SHELLS) || (dum2 != MAX_Z_BINDING))
+  {
+    printout("Wrong size for the binding energy tables!\n");
+    abort();
+  }
+
+  for (int index1 = 0; index1 < dum2; index1++)
+  {
+    float dum[10];
+    fscanf(binding, "%g %g %g %g %g %g %g %g %g %g",
+           &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5], &dum[6], &dum[7], &dum[8], &dum[9]);
+
+    for (int index2 = 0; index2 < 10; index2++)
+    {
+      electron_binding[index1][index2] = dum[index2] * EV;
+    }
+  }
+
+  fclose(binding);
+}
+
+
 static void read_collion_data(void)
 {
   printout("Reading collisional ionization data...\n");
@@ -229,8 +264,14 @@ static void zero_all_effionpot(const int modelgridindex)
   }
 }
 
+
 void nt_init(const int my_rank)
 {
+  read_binding_energies();
+
+  if (!NT_SOLVE_SPENCERFANO)
+    return;
+
   if (nonthermal_initialized == false)
   {
     printout("Initializing non-thermal solver\n");

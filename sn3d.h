@@ -148,13 +148,6 @@ double E48V;
 #define CR48_GAM_LINE_ID 4
 #define V48_GAM_LINE_ID  5
 
-#define M_NT_SHELLS 10
-//specifies max number of shells for which data is known for computing mean binding energies
-#define MAX_Z_BINDING 30
-//maximum number of elements for which binding energy tables are to be used
-
-double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
-
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40
 
