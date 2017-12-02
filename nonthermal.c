@@ -1864,8 +1864,16 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep)
       // nt_write_to_file(modelgridindex, timestep);
 
       nt_solution[modelgridindex].timestep = timestep;
-      nt_solution[modelgridindex].frac_heating = 1.0;
+      nt_solution[modelgridindex].frac_heating = 0.98;
+      nt_solution[modelgridindex].frac_ionization = 0.02;
+      nt_solution[modelgridindex].frac_excitation = 0.;
       nt_solution[modelgridindex].E_0 = 0.;
+
+      free(nt_solution[modelgridindex].frac_ionizations_list);
+      nt_solution[modelgridindex].frac_ionizations_list_size = 0;
+
+      free(nt_solution[modelgridindex].frac_excitations_list);
+      nt_solution[modelgridindex].frac_excitations_list_size = 0;
 
       zero_all_effionpot(modelgridindex);
 
