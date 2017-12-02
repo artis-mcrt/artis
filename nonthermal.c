@@ -20,7 +20,7 @@
 #define EMIN 0.1 // eV
 
 const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the first few levels
-const int MAX_NT_EXCITATIONS = 20000;  // if this is more than SFPTS, then you might as well just store
+const int MAX_NT_EXCITATIONS = 25000;  // if this is more than SFPTS, then you might as well just store
                                        // the NT spectrum instead (although CPU costs)
 
 #define NT_EXCITATION_ON true // if this is on, the non-thermal energy spectrum will be kept in memory
@@ -582,32 +582,32 @@ static bool get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int li
         gsl_vector_set(xs_excitation_vec, j, 0.);
     }
   }
-  // else if (!linelist[lineindex].forbidden)
-  // {
-  //   const double fij = osc_strength(lineindex);
-  //   // permitted E1 electric dipole transitions
-  //
-  //   // const double g_bar = 0.2;
-  //   const double A = 0.28;
-  //   const double B = 0.15;
-  //
-  //   const double prefactor = 45.585750051; // 8 * pi^2/sqrt(3)
-  //   // Eq 4 of Mewe 1972, possibly from Seaton 1962?
-  //   const double constantfactor = prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij;
-  //   for (int j = en_startindex; j < SFPTS; j++)
-  //   {
-  //     const double energy = gsl_vector_get(envec, j) * EV;
-  //     if (energy >= epsilon_trans)
-  //     {
-  //       const double U = energy / epsilon_trans;
-  //       const double g_bar = A * log(U) + B;
-  //       gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / U);
-  //       hasnonzerovalue = true;
-  //     }
-  //     else
-  //       gsl_vector_set(xs_excitation_vec, j, 0.);
-  //   }
-  // }
+  else if (!linelist[lineindex].forbidden)
+  {
+    const double fij = osc_strength(lineindex);
+    // permitted E1 electric dipole transitions
+
+    // const double g_bar = 0.2;
+    const double A = 0.28;
+    const double B = 0.15;
+
+    const double prefactor = 45.585750051; // 8 * pi^2/sqrt(3)
+    // Eq 4 of Mewe 1972, possibly from Seaton 1962?
+    const double constantfactor = prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij;
+    for (int j = en_startindex; j < SFPTS; j++)
+    {
+      const double energy = gsl_vector_get(envec, j) * EV;
+      if (energy >= epsilon_trans)
+      {
+        const double U = energy / epsilon_trans;
+        const double g_bar = A * log(U) + B;
+        gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / U);
+        hasnonzerovalue = true;
+      }
+      else
+        gsl_vector_set(xs_excitation_vec, j, 0.);
+    }
+  }
   else
   {
     gsl_vector_set_zero(xs_excitation_vec);
@@ -1536,8 +1536,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
             double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
 
-            if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is unreliable
-              ratecoeffperdeposition = 0.;
+            // if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is unreliable
+            //   ratecoeffperdeposition = 0.;
 
             nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = frac_excitation_thistrans;
             nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = ratecoeffperdeposition;
