@@ -295,7 +295,6 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     const double epsilon_current = epsilon(element,ion,level);
     // mastate[tid].level = level;
     ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
     const double nnlevel = get_levelpop(modelgridindex,element,ion,level);
 
     /// excitation to same ionization stage
@@ -834,7 +833,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       mastate[tid].element = element;
       mastate[tid].ion = ion;
       mastate[tid].level = upper;
-      // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,upper);
       mastate[tid].activatingline = -99;
       pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collexc++;
@@ -860,7 +858,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       mastate[tid].element = element;
       mastate[tid].ion = ion;
       mastate[tid].level = upper;
-      // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,upper);
       mastate[tid].activatingline = -99;
       pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collion++;

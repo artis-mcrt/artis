@@ -529,15 +529,12 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   bool end_packet = false;
   while (!end_packet)
   {
-    // mastate[tid].statweight = stat_weight(element, ion, level);
     //ionisinglevels = get_ionisinglevels(element,ion);
 
     /// Set this here to 1 to overcome problems in cells which have zero population
     /// in some ionisation stage. This is possible because the dependence on the
     /// originating levels population cancels out in the macroatom transition probabilities
     /// which are based on detailed balance.
-    mastate[tid].nnlevel = 1.;
-    //mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion,level);
 
     #ifdef DEBUG_ON
       const int ionstage = get_ionstage(element,ion);
@@ -694,7 +691,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         printout("[debug]    jumps %d, jump %d\n",jumps,jump);
         printout("[debug]    pkt_ptr->number %d, pkt_ptr->where %d\n",pkt_ptr->number,cellindex);
         printout("[debug]    groundlevelpop of current ion in current cell %g\n",modelgrid[cell[cellindex].modelgridindex].composition[element].groundlevelpop[ion]);
-        printout("[debug]    levelpop %g\n",mastate[tid].nnlevel);
 
         double R = 0.0;
         double C = 0.0;
@@ -1226,7 +1222,6 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
   else //positive values are treated as effective collision strengths
   {
     //from Osterbrock and Ferland, p51
-    //mastate[tid].statweight is UPPER LEVEL stat weight
     //statweight_target is LOWER LEVEL stat weight
     C = nne * 8.629e-6 * pow(T_e, -0.5) * coll_str_thisline / statweight;
     // test test
