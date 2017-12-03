@@ -199,7 +199,7 @@ static int compare_packets_bymodelgriddensity(const void *restrict p1, const voi
 }
 
 
-void update_packets(const int nts)
+void update_packets(const int nts, PKT *pkt)
 /** Subroutine to move the packets and update them during the currect timestep. */
 ///nts the time step we're doing
 {

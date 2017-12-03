@@ -47,7 +47,7 @@ double nne_solution_f(double x, void *restrict paras)
         innersum += (get_ionstage(element,ion)-1) * ionfract(element,ion,n,x);
         if (!isfinite(innersum)) abort();
       }
-      outersum += abundance/elements[element].mass * innersum;
+      outersum += abundance / elements[element].mass * innersum;
       if (!isfinite(outersum))
       {
         printout("nne_solution_f: element %d ion %d uppermostion %d abundance %g, mass %g\n",element,ion,elements_uppermost_ion[tid][element],abundance,elements[element].mass);

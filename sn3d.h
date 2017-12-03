@@ -211,8 +211,6 @@ int n_middle_it;
 #define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-30
 
-PKT pkt[MPKTS];
-
 
 int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;

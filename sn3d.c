@@ -31,6 +31,8 @@
 #include "vpkt.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
+PKT pkt[MPKTS];
+
 
 static FILE *initialise_linestat_file(void)
 {
@@ -95,7 +97,7 @@ static void pkt_action_counters_reset(void)
 }
 
 
-static void pkt_action_counters_printout(void)
+static void pkt_action_counters_printout(PKT *pkt)
 {
   int allpktinteractions = 0;
   for (int i = 0; i < npkts; i++)
@@ -401,7 +403,7 @@ static void mpi_broadcast_estimators(void)
 #endif
 
 
-static void write_temp_packetsfile(int timestep, int my_rank)
+static void write_temp_packetsfile(int timestep, int my_rank, PKT *pkt)
 {
   char filename[100];
   if (timestep % 2 == 0)
@@ -601,7 +603,7 @@ int main(int argc, char** argv)
     {
       /// Create a bunch of npkts packets
       /// and write them to a binary file for later readin.
-      packet_init(middle_iteration, my_rank);
+      packet_init(middle_iteration, my_rank, pkt);
     }
 
     /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
@@ -909,7 +911,7 @@ int main(int argc, char** argv)
           /// Now process the packets.
           const time_t time_update_packets_start = time(NULL);
           printout("timestep %d: time before update packets %d\n", nts, time_update_packets_start);
-          update_packets(nts);
+          update_packets(nts, pkt);
 
           /*
           for (middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
@@ -950,7 +952,7 @@ int main(int argc, char** argv)
           }
           */
 
-          pkt_action_counters_printout();
+          pkt_action_counters_printout(pkt);
 
 
           #ifdef MPI_ON
@@ -1029,7 +1031,7 @@ int main(int argc, char** argv)
           const time_t time_write_packets_file_start = time(NULL);
           printout("time before write temporary packets file %d\n", time_write_packets_file_start);
 
-          write_temp_packetsfile(nts, my_rank);
+          write_temp_packetsfile(nts, my_rank, pkt);
 
           #ifdef VPKT_ON
           if (nts % 2 == 0)
@@ -1067,7 +1069,7 @@ int main(int argc, char** argv)
             sprintf(filename,"packets%.2d_%.4d.out", 0, my_rank);
             //sprintf(filename,"packets%.2d_%.4d.out", middle_iteration, my_rank);
             packets_file = fopen_required(filename, "w");
-            write_packets(packets_file);
+            write_packets(packets_file, pkt);
             fclose(packets_file);
 
             // write specpol of the virtual packets

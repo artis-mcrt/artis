@@ -99,7 +99,7 @@ static double f48cr(const CELL *restrict grid_ptr)
 }
 
 
-static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset)
+static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset, PKT *pkt)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
   /// First choose a position for the pellet. In the cell.
@@ -194,7 +194,7 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
 }
 
 
-static void setup_packets(int pktnumberoffset)
+static void setup_packets(int pktnumberoffset, PKT *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
   float cont[MGRID + 1];
@@ -297,7 +297,7 @@ static void setup_packets(int pktnumberoffset)
 
     /// Pellet is in cell m, pointer is grid_ptr.
     //  printout("Pellet in cell %d\n",m);
-    place_pellet(grid_ptr, e0, m, n, pktnumberoffset);
+    place_pellet(grid_ptr, e0, m, n, pktnumberoffset, pkt);
 
     #ifdef NO_INITIAL_PACKETS
     if (pkt[n].tdecay < tmax && pkt[n].tdecay > tmin)
@@ -321,13 +321,13 @@ static void setup_packets(int pktnumberoffset)
 }
 
 
-void packet_init(int middle_iteration, int my_rank)
+void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 {
   if (simulation_continued_from_saved)
     return;
 
   const int pktnumberoffset = middle_iteration * npkts;
-  setup_packets(pktnumberoffset);
+  setup_packets(pktnumberoffset, pkt);
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
   sprintf(filename, "packets%d_%d_odd.tmp", middle_iteration, my_rank);
   FILE *packets_file = fopen_required(filename, "wb");
@@ -374,7 +374,7 @@ void packet_init(int middle_iteration, int my_rank)
 }
 
 
-void write_packets(FILE *restrict packets_file)
+void write_packets(FILE *restrict packets_file, PKT *pkt)
 {
   for (int i = 0; i < npkts; i++)
   {
@@ -412,7 +412,7 @@ void write_packets(FILE *restrict packets_file)
 }
 
 
-void read_packets(FILE *restrict packets_file)
+void read_packets(FILE *restrict packets_file, PKT *pkt)
 {
   char *line = malloc(sizeof(char) * 1024);
 
