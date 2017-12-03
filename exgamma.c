@@ -12,15 +12,17 @@
 
 #include "assert.h"
 #include <stdarg.h>  // needed for printout()
-#include "threadprivate.h"
 #include "exspec.h"
 #include "sn3d.h"
+#include "threadprivate.h"
 #include "light_curve.h"
 #include "spectrum.h"
 #include "vectors.h"
 #include "input.h"
 #include "packet_init.h"
 #include "time_init.h"
+
+PKT pkt[MPKTS];
 
 /* Main - top level routine. */
 int main(int argc, char** argv)
@@ -122,7 +124,7 @@ int main(int argc, char** argv)
         abort();
       }
       //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-      read_packets(packets_file);
+      read_packets(packets_file, pkt);
       fclose(packets_file);
 
       for (int ii = 0; ii < npkts; ii++)
@@ -231,6 +233,18 @@ int printout(const char *restrict format, ...)
    return ret_status;
 }
 
+
+FILE *fopen_required(const char *filename, const char *mode)
+{
+  FILE *file = fopen(filename, mode);
+  if (file == NULL)
+  {
+    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
+    abort();
+  }
+  else
+    return file;
+}
 
 
 /*void *my_malloc(size_t size)
