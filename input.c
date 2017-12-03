@@ -1221,7 +1221,7 @@ static void setup_phixs_list(void)
   ///======================================================
   printout("[info] read_atomicdata: number of bfcontinua %d\n",nbfcontinua);
   nbfcontinua_ground = includedions - nelements;
-  printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n",nbfcontinua_ground);
+  printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", nbfcontinua_ground);
 
   phixslist = (phixslist_t *) malloc(nthreads * sizeof(phixslist_t));
   if (phixslist == NULL)
@@ -1244,11 +1244,11 @@ static void setup_phixs_list(void)
     /// Number of ground level bf-continua equals the total number of included ions minus the number
     /// of included elements, because the uppermost ionisation stages can't ionise.
     //printout("groundphixslist nbfcontinua_ground %d\n",nbfcontinua_ground);
-    printout("initialising groundphixslist for itid %d\n",itid);
-    phixslist[itid].groundcont = (groundphixslist_t *) malloc(nbfcontinua_ground*sizeof(groundphixslist_t));
+    printout("initialising groundphixslist for itid %d\n", itid);
+    phixslist[itid].groundcont = (groundphixslist_t *) malloc(nbfcontinua_ground * sizeof(groundphixslist_t));
     if (phixslist[itid].groundcont == NULL)
     {
-      printout("[fatal] read_atomicdata: not enough memory to initialize phixslist[%d].groundcont... abort\n",itid);
+      printout("[fatal] read_atomicdata: not enough memory to initialize phixslist[%d].groundcont... abort\n", itid);
       abort();
     }
 
@@ -1289,7 +1289,7 @@ static void setup_phixs_list(void)
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++)
       {
-        const int nlevels = get_bfcontinua(element,ion);
+        const int nlevels = get_bfcontinua(element, ion);
         //nlevels = get_ionisinglevels(element,ion);
         ///// The following line reduces the number of bf-continua per ion
         //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
@@ -1317,7 +1317,7 @@ static void setup_phixs_list(void)
     }
     //nbfcontinua = i;
     //printout("number of bf-continua reduced to %d\n",nbfcontinua);
-    qsort(phixslist[itid].allcont,nbfcontinua,sizeof(fullphixslist_t),compare_phixslistentry_bynuedge);
+    qsort(phixslist[itid].allcont, nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
   }
   //#ifdef _OPENMP
   //  }
