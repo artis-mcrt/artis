@@ -39,9 +39,9 @@ static inline double get_individ_internal_up_same(int element, int ion, int leve
 
 
 static void get_macroatom_transitionrates(
-  const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *restrict processrates)
+  const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *restrict processrates,
+  chlevels_struct *const restrict chlevel)
 {
-  chlevels_struct *const restrict chlevel = &cellhistory[tid].chelements[element].chions[ion].chlevels[level];
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
@@ -561,7 +561,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
     /// If there are no precalculated rates available then calculate them
     if (processrates[MA_ACTION_COLDEEXC] < 0)
-      get_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, processrates);
+      get_macroatom_transitionrates(
+        modelgridindex, element, ion, level, t_mid, processrates,
+        &cellhistory[tid].chelements[element].chions[ion].chlevels[level]);
+
 
     // for debugging the transition rates:
     // {

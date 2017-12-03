@@ -64,7 +64,6 @@ static void calculate_heating_rates(const int modelgridindex)
      for (int level = 0; level < nlevels; level++)
      {
        const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-      //  mastate[tid].statweight = stat_weight(element,ion,level);
 //
 //
 //         /// Collisional heating: deexcitation to same ionization stage
@@ -254,7 +253,6 @@ static void calculate_cooling_rates(const int modelgridindex)
         const double epsilon_current = epsilon(element,ion,level);
         mastate[tid].level = level;
         const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-        // mastate[tid].nnlevel = nnlevel;
 
         /// excitation to same ionization stage
         /// -----------------------------------
@@ -644,8 +642,6 @@ void call_T_e_finder(const int modelgridindex, const double t_current, const dou
 // //         epsilon_current = epsilon(element,ion,level);
 // //         mastate[tid].level = level;
 // //         nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
-// //         mastate[tid].nnlevel = nnlevel;
-// //         mastate[tid].statweight = stat_weight(element,ion,level);
 // //
 // //
 // //         /// Collisional heating: deexcitation to same ionization stage
