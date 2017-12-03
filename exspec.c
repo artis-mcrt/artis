@@ -22,6 +22,8 @@
 #include "spectrum.h"
 #include "vectors.h"
 
+PKT pkt[MPKTS];
+
 
 int main(int argc, char** argv)
 {
@@ -95,7 +97,7 @@ int main(int argc, char** argv)
       //packets_file = fopen_required(filename, "rb");
       FILE *packets_file = fopen_required(filename, "r");
       //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-      read_packets(packets_file);
+      read_packets(packets_file, pkt);
       fclose(packets_file);
 
       for (int ii = 0; ii < npkts; ii++)
