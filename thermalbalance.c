@@ -254,7 +254,7 @@ static void calculate_cooling_rates(const int modelgridindex)
         const double epsilon_current = epsilon(element,ion,level);
         mastate[tid].level = level;
         const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-        mastate[tid].nnlevel = nnlevel;
+        // mastate[tid].nnlevel = nnlevel;
 
         /// excitation to same ionization stage
         /// -----------------------------------
