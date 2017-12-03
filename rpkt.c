@@ -370,9 +370,9 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
     #endif
     pkt_ptr->absorptiontype = mastate[tid].activatingline;
     pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
-    pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];//pkt_ptr->nu_cmf;
-    pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];//pkt_ptr->nu_cmf;
-    pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];//pkt_ptr->nu_cmf;
+    pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
+    pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
+    pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];
     pkt_ptr->type = TYPE_MA;
     #ifndef FORCE_LTE
       //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
@@ -392,10 +392,13 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
     /// else: continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
     double zrand = gsl_rng_uniform(rng);
     #ifdef DEBUG_ON
-      if (debuglevel == 2) printout("[debug] rpkt_event: r-pkt undergoes a continuum transition\n");
-      if (debuglevel == 2) printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand*kappa_cont,sigma,kappa_ff,kappa_bf);
+      if (debuglevel == 2)
+      {
+        printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
+        printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont, sigma, kappa_ff, kappa_bf);
+      }
     #endif
-    if (zrand*kappa_cont < sigma)
+    if (zrand * kappa_cont < sigma)
     {
       /// electron scattering occurs
       /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
@@ -422,7 +425,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
       //pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
                                    ///don't touch the value of next_trans to save transition history
     }
-    else if (zrand*kappa_cont < sigma+kappa_ff)
+    else if (zrand * kappa_cont < sigma + kappa_ff)
     {
       /// ff: transform to k-pkt
       #ifdef DEBUG_ON
@@ -440,7 +443,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
     }
     else
     {
-      /// bf: transform to k-pkt or activate macroatom correspondig to probabilities
+      /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free transition\n");
       #endif
@@ -457,7 +460,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
       for (i = 0; i < nbfcontinua; i++)
       {
         kappa_bf_sum += phixslist[tid].allcont[i].kappa_bf_contr;
-        if (kappa_bf_sum > zrand*kappa_bf_inrest)
+        if (kappa_bf_sum > zrand * kappa_bf_inrest)
         {
           const double nu_edge = phixslist[tid].allcont[i].nu_edge;
           //if (nu < nu_edge) printout("does this ever happen?\n");
@@ -465,14 +468,17 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
           const int ion = phixslist[tid].allcont[i].ion;
           const int level = phixslist[tid].allcont[i].level;
 
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n",element,ion+1,0,ion,level);
-            if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n",nu_edge,nu);
-          #endif
+#ifdef DEBUG_ON
+          if (debuglevel == 2)
+          {
+            printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion + 1, 0, ion, level);
+            printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
+          }
+#endif
 
           /// and decide whether we go to ionisation energy
           zrand = gsl_rng_uniform(rng);
-          if (zrand < nu_edge/nu)
+          if (zrand < nu_edge / nu)
           {
             #ifdef DEBUG_ON
               //if (tid == 0) ma_stat_activation_bf++;
@@ -485,7 +491,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
               //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
             #endif
             mastate[tid].element = element;
-            mastate[tid].ion     = ion+1;
+            mastate[tid].ion     = ion + 1;
             const int upper = 0; //TODO: this should come from phixsupperlevel;
             mastate[tid].level   = upper;
             // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
