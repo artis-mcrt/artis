@@ -67,7 +67,8 @@ void update_estimators(const PKT *restrict pkt_ptr, const double distance)
               #endif
             }
           }
-          else break;
+          else
+            break; // because groundcont is sorted by nu_edge, nu < nu_edge for all remaining items
         }
       #endif
 
