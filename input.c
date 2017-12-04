@@ -603,6 +603,11 @@ static void read_atomicdata_files(void)
 
   /// initialize atomic data structure to number of elements
   fscanf(compositiondata,"%d",&nelements);
+  if (nelements > MELEMENTS)
+  {
+    printout("ERROR: nelements = %d > %d MELEMENTS", nelements, MELEMENTS);
+    abort();
+  }
   if ((elements = calloc(nelements, sizeof(elementlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
