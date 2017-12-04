@@ -813,12 +813,12 @@ static void set_radfield_params_fullspec(const int modelgridindex, const int tim
     float T_J = pow(J[modelgridindex] * PI / STEBO, 1 / 4.);
     if (T_J > MAXTEMP)
     {
-      printout("[warning] temperature estimator T_J = %g exceeds T_max %g in cell %d. Set T_J = T_max!\n", T_J, MAXTEMP, modelgridindex);
+      printout("[warning] temperature estimator T_J = %g exceeds T_max %g in cell %d. Setting T_J = T_max!\n", T_J, MAXTEMP, modelgridindex);
       T_J = MAXTEMP;
     }
     else if (T_J < MINTEMP)
     {
-      printout("[warning] temperature estimator T_J = %g below T_min %g in cell %d. Set T_J = T_min!\n", T_J, MINTEMP, modelgridindex);
+      printout("[warning] temperature estimator T_J = %g below T_min %g in cell %d. Setting T_J = T_min!\n", T_J, MINTEMP, modelgridindex);
       T_J = MINTEMP;
     }
     set_TJ(modelgridindex, T_J);
@@ -826,12 +826,12 @@ static void set_radfield_params_fullspec(const int modelgridindex, const int tim
     float T_R = H * nubar / KB / 3.832229494;
     if (T_R > MAXTEMP)
     {
-      printout("[warning] temperature estimator T_R = %g exceeds T_max %g in cell %d. Set T_R = T_max!\n", T_R, MAXTEMP, modelgridindex);
+      printout("[warning] temperature estimator T_R = %g exceeds T_max %g in cell %d. Setting T_R = T_max!\n", T_R, MAXTEMP, modelgridindex);
       T_R = MAXTEMP;
     }
     else if (T_R < MINTEMP)
     {
-      printout("[warning] temperature estimator T_R = %g below T_min %g in cell %d. Set T_R = T_min!\n", T_R, MINTEMP, modelgridindex);
+      printout("[warning] temperature estimator T_R = %g below T_min %g in cell %d. Setting T_R = T_min!\n", T_R, MINTEMP, modelgridindex);
       T_R = MINTEMP;
     }
     set_TR(modelgridindex, T_R);
