@@ -237,7 +237,7 @@ double phi(const int element, const int ion, const int modelgridindex)
     {
       printout("[fatal] phi: phi %g exceeds numerically possible range for element %d, ion %d, T_e %g ... remove higher or lower ionisation stages\n", phi, element, ion, T_e);
       printout("[fatal] phi: Alpha_sp %g, Alpha_st %g, Gamma %g, partfunct %g, stat_weight %g\n", Alpha_sp, Alpha_st, Gamma, modelgrid[modelgridindex].composition[element].partfunct[ion], stat_weight(element, ion, 0));
-      printout("[fatal] phi: recomb_total %g, upperionpartfunct %g, upperionstatweight %g\n", recomb_total, modelgrid[modelgridindex].composition[element].partfunct[ion + 1], stat_weight(element, ion + 1, 0));
+      printout("[fatal] phi: upperionpartfunct %g, upperionstatweight %g\n", modelgrid[modelgridindex].composition[element].partfunct[ion + 1], stat_weight(element, ion + 1, 0));
       printout("[fatal] phi: Y_nt %g Col_rec %g get_nne(modelgridindex) %g\n", Y_nt, Col_rec, get_nne(modelgridindex));
       //abort();
     }
@@ -719,31 +719,30 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 }*/
 
 
-
-
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
 /// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
+  double sf;
+
   if (use_cellhist)
   {
-    double sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
+    sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
 
     if (sf < 0)
     {
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      sf = stat_weight(element,ion,level) / stat_weight(element, ion + 1, upperionlevel) * SAHACONST * pow(T, -1.5) * exp(E_threshold / KB / T);
-      if (use_cellhist)
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
+      sf = calculate_sahafact(element, ion, level, upperionlevel, T, E_threshold);
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
     }
-    return sf;
   }
   else
   {
     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-    return (stat_weight(element, ion, level) / stat_weight(element, ion + 1, upperionlevel) * SAHACONST * pow(T, -1.5) * exp(E_threshold / KB / T));
+    sf = calculate_sahafact(element, ion, level, upperionlevel, T, E_threshold);
   }
 
   //printout("get_sahafact: sf= %g\n",sf);
+  return sf;
 }
 
 
