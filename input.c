@@ -658,6 +658,7 @@ static void read_atomicdata_files(void)
     elements[element].nions = nions;
     elements[element].abundance = abundance;       /// abundances are expected to be given by mass
     elements[element].mass = mass_amu * MH;
+    elements_uppermost_ion[tid][element] = nions - 1;
     includedions += nions;
 
     /// Initialize the elements ionlist
@@ -1340,7 +1341,7 @@ static void read_atomicdata(void)
   read_atomicdata_files();
   last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
 
-  printout("included ions %d\n",includedions);
+  printout("included ions %d\n", includedions);
 
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   ///======================================================

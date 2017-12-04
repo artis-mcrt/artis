@@ -114,7 +114,7 @@ void calculate_kpkt_rates(int modelgridindex)
             //linecounter++;
           }
 
-          if (ion < nions-1 && level < ionisinglevels) ///check whether further ionisation stage available
+          if (ion < nions - 1 && level < ionisinglevels) ///check whether further ionisation stage available
           //if (ion < get_nions(element)-1) ///check whether further ionisation stage available
           {
             //printout("    ionisation possible\n");
@@ -124,8 +124,8 @@ void calculate_kpkt_rates(int modelgridindex)
             C = 0.0;
             for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
-              const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-              const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
+              const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+              const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
               //printout("cooling list: col_ionization\n");
               C += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
             }
@@ -156,7 +156,7 @@ void calculate_kpkt_rates(int modelgridindex)
             C = 0.0;
             for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
             {
-              C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
+              C += get_bfcooling(element, ion, level, phixstargetindex, modelgridindex);
             }
             //printout("element %d, ion %d, level %d, T_e %g, alpha_E - alpha %g, bfcoolingcoeff %g\n",element,ion,level,T_e,C/E_threshold,C);
             //double interpolate_stimulated_recomb(int element, int ion, int level, double T);
