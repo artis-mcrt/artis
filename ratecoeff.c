@@ -943,7 +943,7 @@ static void read_recombrate_file(void)
   FILE *recombrate_file = fopen("recombrates.txt", "r");
   if (recombrate_file == NULL)
   {
-    printout("Not recombrates.txt file found. Skipping recombination rate scaling...");
+    printout("No recombrates.txt file found. Skipping recombination rate scaling...");
     return;
   }
 
