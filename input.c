@@ -2213,11 +2213,6 @@ void read_parameterfile(int rank)
     printout("bfheating coefficients are calculated from LTE lookup tables (ratecoeff.dat) and bfheatingestimator.\n");
   #endif
 
-  if (MULTIBIN_RADFIELD_MODEL_ON)
-    printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
-  else
-    printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
-
   /// Set up initial grey approximation?
   fscanf(input_file, "%lg %d", &cell_is_optically_thick, &n_grey_timesteps);
   printout("input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",cell_is_optically_thick,n_grey_timesteps);

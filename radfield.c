@@ -12,6 +12,8 @@
 #define RADFIELDBINCOUNT 96
 // static const int RADFIELDBINCOUNT = 96;
 
+static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
+
 extern inline double radfield_dbb(double nu, float T, float W);
 
 static const double nu_lower_first_initial = (CLIGHT / (20000e-8)); // in Angstroms
@@ -152,9 +154,18 @@ setup_bin_boundaries(void)
 void radfield_init(int my_rank)
 {
   if (!MULTIBIN_RADFIELD_MODEL_ON)
+  {
+    printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
     return;
+  }
+
+  printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
+
   if (radfield_initialized)
-    printout("WARNING: Tried to initialize radfield twice!\n");
+  {
+    printout("ERROR: Tried to initialize radfield twice!\n");
+    abort();
+  }
 
   printout("Initialising radiation field with %d bins from (%6.2f eV, %6.1f A) to (%6.2f eV, %6.1f A)\n",
            RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
