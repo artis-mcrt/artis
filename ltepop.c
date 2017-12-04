@@ -18,14 +18,14 @@ double nne_solution_f(double x, void *restrict paras)
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)
 {
-  const int n = ((nne_solution_paras *) paras)->cellnumber;
-  const double rho = modelgrid[n].rho;
+  const int modelgridindex = ((nne_solution_paras *) paras)->cellnumber;
+  const double rho = get_rho(modelgridindex);
 
   double outersum = 0.;
   //printout("debug nelements %d =========================\n",nelements);
   for (int element = 0; element < nelements; element++)
   {
-    const double abundance = modelgrid[n].composition[element].abundance;
+    const double abundance = modelgrid[modelgridindex].composition[element].abundance;
     if (abundance > 0)
     {
       double innersum = 0.;
@@ -44,7 +44,7 @@ double nne_solution_f(double x, void *restrict paras)
       for (ion = 0; ion <= uppermost_ion; ion++)
       {
         //printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfract(element,ion,T,x));
-        innersum += (get_ionstage(element,ion)-1) * ionfract(element,ion,n,x);
+        innersum += (get_ionstage(element, ion) - 1) * ionfract(element, ion, modelgridindex, x);
         if (!isfinite(innersum)) abort();
       }
       outersum += abundance / elements[element].mass * innersum;
@@ -585,7 +585,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   else if (NLTE_POPS_ON && is_nlte(element,ion,level))
   {
     //printout("Using an nlte population!\n");
-    const double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte+level-1];
+    const double nltepop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte + level - 1];
     if (nltepop_over_rho < -0.9)
     {
       // Case for when no NLTE level information is available yet
@@ -599,14 +599,14 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       {
         printout("[fatal] NLTE population failure.\n");
         printout("element %d ion %d level %d\n", element, ion, level);
-        printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, modelgrid[modelgridindex].rho);
-        printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
+        printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, get_rho(modelgridindex));
+        printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
         abort();
       }
       return nn;
     }
   }
-  else if (NLTE_POPS_ON && (nlte_levels = get_nlevels_nlte(element,ion)) > 0)
+  else if (NLTE_POPS_ON && (nlte_levels = get_nlevels_nlte(element, ion)) > 0)
   {
     // Case where this ion HAS nlte levels, but this isn't one of them. Then we want to use the super level to guesstimate it.
     const double superlevelpop_over_rho = modelgrid[modelgridindex].nlte_pops[elements[element].ions[ion].first_nlte + nlte_levels];
@@ -618,13 +618,13 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     else
     {
       //printout("Using a superlevel population!\n");
-      nn = superlevelpop_over_rho * modelgrid[modelgridindex].rho * superlevel_boltzmann(modelgridindex,element,ion,level);
+      nn = superlevelpop_over_rho * get_rho(modelgridindex) * superlevel_boltzmann(modelgridindex, element, ion, level);
       if (!isfinite(nn))
       {
         printout("[fatal] NLTE population failure.\n");
         printout("element %d ion %d level %d\n", element, ion, level);
-        printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho, modelgrid[modelgridindex].rho);
-        printout("ground level %g\n", get_groundlevelpop(modelgridindex,element,ion));
+        printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho, get_rho(modelgridindex));
+        printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
         abort();
       }
       return nn;
@@ -652,8 +652,8 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     if (!isfinite(nn))
     {
       printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
-      printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n",get_groundlevelpop(modelgridindex,element,ion));
-      printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n",ionstagepop(modelgridindex,element,ion));
+      printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n", get_groundlevelpop(modelgridindex, element, ion));
+      printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n", ionstagepop(modelgridindex, element, ion));
       printout("[fatal] calculate_exclevelpop: associated partition function %g\n",modelgrid[modelgridindex].composition[element].partfunct[ion]);
     }
   #endif
@@ -731,8 +731,8 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 
     if (sf < 0)
     {
-      const int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-      sf = stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T);
+      const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+      sf = stat_weight(element,ion,level) / stat_weight(element, ion + 1, upperionlevel) * SAHACONST * pow(T, -1.5) * exp(E_threshold / KB / T);
       if (use_cellhist)
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
     }
@@ -740,8 +740,8 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
   }
   else
   {
-    const int upperionlevel = get_phixsupperlevel(element,ion,level,phixstargetindex);
-    return (stat_weight(element,ion,level) / stat_weight(element,ion+1,upperionlevel) * SAHACONST * pow(T,-1.5) * exp(E_threshold/KB/T));
+    const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+    return (stat_weight(element, ion, level) / stat_weight(element, ion + 1, upperionlevel) * SAHACONST * pow(T, -1.5) * exp(E_threshold / KB / T));
   }
 
   //printout("get_sahafact: sf= %g\n",sf);
