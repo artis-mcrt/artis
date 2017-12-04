@@ -21,7 +21,7 @@ void initialise_photoionestimators(void);
 inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
-  const double sf = SAHACONST * stat_weight(element,ion,level) / (stat_weight(element,ion+1,upperionlevel) * T * sqrt(T)) * exp(E_threshold/(KB*T));
+  const double sf = SAHACONST * stat_weight(element, ion, level) / stat_weight(element, ion + 1, upperionlevel) * pow(T, -1.5) * exp(E_threshold / (KB * T));
   //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0)
   {
