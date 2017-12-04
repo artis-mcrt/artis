@@ -176,7 +176,7 @@ double phi(const int element, const int ion, const int modelgridindex)
     //          calculate_iongamma_per_gspop(modelgridindex, element, ion));
 
     // Gamma is the photoionization rate per ground level pop
-    const double Gamma_ion = (Gamma * stat_weight(element, ion, 0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
+    const double Gamma_ion = Gamma * stat_weight(element, ion, 0) / modelgrid[modelgridindex].composition[element].partfunct[ion];
 
     if (Gamma == 0. && (!NT_ON || (rpkt_emiss[modelgridindex] == 0. && get_f48cr(modelgridindex) == 0. && get_f56ni(modelgridindex) == 0.)))
     {
@@ -193,9 +193,8 @@ double phi(const int element, const int ion, const int modelgridindex)
     else
       Alpha_sp = interpolate_ions_spontrecombcoeff(element, ion, T_e);
 
-    const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false, false);
-
-    const double recomb_total = Alpha_sp + Alpha_st + Col_rec;
+    // const double Col_rec = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, true, false, false, false);
+    const double Col_rec = 0.;
 
     double Y_nt = 0.0;
 
@@ -222,7 +221,7 @@ double phi(const int element, const int ion, const int modelgridindex)
     //printout("[debug-luke] phi for ion %d Gamma-part %g, Y_nt %g\n",ion,(Gamma * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]),Y_nt);
     //Gamma = 0.0; //TODO: testing testing no gamma part
 
-    phi = recomb_total / (Gamma_ion + Y_nt);
+    phi = (Alpha_sp + Alpha_st + Col_rec) / (Gamma_ion + Y_nt);
 
     // Y_nt should generally be higher than the Gamma term for nebular epoch
 
