@@ -626,7 +626,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
     /// Update current mass density of cell
     //n = nonemptycells[my_rank+ncl*nprocs];
     if (log_this_cell)
-      printout("[info] update_grid: working on cell %d ...\n", n);
+      printout("[info] update_grid: working on cell %d before timestep %d ...\n", n);
     //n = nonemptycells[ncl];
     //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
     modelgrid[n].rho = get_rhoinit(n) / pow(tratmid, 3);
@@ -1091,7 +1091,7 @@ double calculate_populations(const int modelgridindex)
   {
     const int nions = get_nions(element);
     //elements[element].uppermost_ion = nions-1;
-    elements_uppermost_ion[tid][element] = nions-1;
+    elements_uppermost_ion[tid][element] = nions - 1;
     const double abundance = get_abundance(modelgridindex,element);
     if (abundance > 0)
     {
@@ -1126,18 +1126,19 @@ double calculate_populations(const int modelgridindex)
       //printout("cell %d, element %d, uppermost_ion by Gamma is %d\n",cellnumber,element,uppermost_ion);
 
       double factor = 1.;
-      int i;
-      for (i = 0; i < uppermost_ion; i++)
+      int ion;
+      for (ion = 0; ion < uppermost_ion; ion++)
       {
-        factor *= nne_hi * phi(element,i,modelgridindex);
+        factor *= nne_hi * phi(element, ion, modelgridindex);
         //printout("element %d, ion %d, factor %g\n",element,i,factor);
         if (!isfinite(factor))
         {
-          printout("[info] calculate_populations: uppermost_ion limited by phi factors for element %d, ion %d in cell %d\n",element,i,modelgridindex);
+          printout("[info] calculate_populations: uppermost_ion limited by phi factors for element Z=%d, ionstage %d in cell %d\n",
+                   get_element(element), get_ionstage(element, ion), modelgridindex);
           break;
         }
       }
-      uppermost_ion = i;
+      uppermost_ion = ion;
       //printout("cell %d, element %d, final uppermost_ion is %d, factor %g\n",modelgridindex,element,uppermost_ion,factor);
       //elements[element].uppermost_ion = uppermost_ion;
       elements_uppermost_ion[tid][element] = uppermost_ion;

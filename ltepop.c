@@ -153,7 +153,7 @@ double phi(const int element, const int ion, const int modelgridindex)
   {
     const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
     //printout("ionpot for element %d, ion %d is %g\n", element, ion, ionpot / EV);
-    const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion]/modelgrid[modelgridindex].composition[element].partfunct[ion+1];
+    const double partfunct_ratio = modelgrid[modelgridindex].composition[element].partfunct[ion] / modelgrid[modelgridindex].composition[element].partfunct[ion + 1];
     phi = partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
   }
   else

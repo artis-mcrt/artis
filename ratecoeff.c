@@ -169,11 +169,17 @@ static bool read_ratecoeff_dat(void)
                 double alpha_sp,bfcooling_coeff,corrphotoioncoeff,bfheating_coeff;
                 fscanf(ratecoeff_file,"%lg %lg %lg %lg\n", &alpha_sp, &bfcooling_coeff, &corrphotoioncoeff, &bfheating_coeff);
 
+                // assert(isfinite(alpha_sp) && alpha_sp >= 0);
                 elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[iter] = alpha_sp;
+
+                // assert(isfinite(bfcooling_coeff) && bfcooling_coeff >= 0);
                 elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] = bfcooling_coeff;
+
                 #if (!NO_LUT_PHOTOION)
                   if (corrphotoioncoeff >= 0)
+                  {
                     elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].corrphotoioncoeff[iter] = corrphotoioncoeff;
+                  }
                   else
                   {
                     printout("ERROR: NO_LUT_PHOTOION is off, but there are no corrphotoioncoeff values in ratecoeff file\n");
@@ -182,7 +188,9 @@ static bool read_ratecoeff_dat(void)
                 #endif
                 #if (!NO_LUT_BFHEATING)
                   if (bfheating_coeff >= 0)
+                  {
                     elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[iter] = bfheating_coeff;
+                  }
                   else
                   {
                     printout("ERROR: NO_LUT_BFHEATING is off, but there are no bfheating_coeff values in the ratecoeff file\n");
@@ -338,12 +346,12 @@ static double gammacorr_integrand_gsl(double nu, void *restrict paras)
   const double T = ((gslintegration_paras *) paras)->T;
   const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
-  const double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
+  const double sigma_bf = photoionization_crosssection_macroatom(nu_edge, nu);
 
   /// Dependence on dilution factor W is linear. This allows to set it here to
   /// 1. and scale to its actual value later on.
   /// Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
-  return sigma_bf * ONEOVERH / nu * radfield_dbb(nu,T,1) * (1 - exp(-HOVERKB*nu/T));
+  return sigma_bf * ONEOVERH / nu * radfield_dbb(nu, T, 1) * (1 - exp(- HOVERKB * nu / T));
 }
 #endif
 
@@ -600,7 +608,7 @@ static void precalculate_rate_coefficient_integrals(void)
             int status = 0;
             const float T_e = MINTEMP * exp(iter * T_step_log);
             //T_e = MINTEMP + iter*T_step;
-            const double sfac = calculate_sahafact(element,ion,level,upperlevel,T_e,E_threshold);
+            const double sfac = calculate_sahafact(element, ion, level, upperlevel, T_e, E_threshold);
             //printout("%d %g\n",iter,T_e);
 
             intparas.T = T_e;
@@ -627,9 +635,10 @@ static void precalculate_rate_coefficient_integrals(void)
                 printout("alpha_sp integrator status %d. Integral value %9.3e +/- %9.3e\n",status,alpha_sp,error);
             }
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
-            if (alpha_sp < 0)
+            if (!isfinite(alpha_sp) || alpha_sp < 0)
             {
-              printout("WARNING: alpha_sp was negative for level %d\n", level);
+              printout("WARNING: alpha_sp was negative or non-finite for level %d. alpha_sp %g sfac %g phixstargetindex %d phixstargetprobability %g\n",
+                       level, alpha_sp, sfac, phixstargetindex, phixstargetprobability);
               alpha_sp = 0;
             }
             // assert(alpha_sp >= 0);
@@ -707,9 +716,10 @@ static void precalculate_rate_coefficient_integrals(void)
               printout("bfcooling_coeff integrator status %d. Integral value %9.3e +/- %9.3e\n",status,bfcooling_coeff,error);
             }
             bfcooling_coeff *= FOURPI * sfac * phixstargetprobability;
-            if (bfcooling_coeff < 0)
+            if (!isfinite(bfcooling_coeff) || bfcooling_coeff < 0)
             {
-              printout("WARNING: bfcooling_coeff was negative for level %d\n", level);
+              printout("WARNING: bfcooling_coeff was negative or non-finite for level %d. bfcooling_coeff %g sfac %g phixstargetindex %d phixstargetprobability %g\n",
+                       level, bfcooling_coeff, sfac, phixstargetindex, phixstargetprobability);
               bfcooling_coeff = 0;
             }
             elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[iter] = bfcooling_coeff;
@@ -735,6 +745,7 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
   int upperindex = lowerindex + 1;
   double T_upper =  MINTEMP + upperindex*T_step;
   double T_lower =  MINTEMP + lowerindex*T_step;*/
+  double Alpha_sp;
   const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1)
   {
@@ -746,11 +757,13 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
     const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[lowerindex];
     // printout("interpolate_spontrecombcoeff element %d, ion %d, level %d, upper %g, lower %g\n",
     //          element,ion,level,f_upper,f_lower);
-
-    return (f_lower + (f_upper-f_lower)/(T_upper-T_lower) * (T-T_lower));
+    Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
   }
   else
-    return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[TABLESIZE-1];
+  {
+    Alpha_sp = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[TABLESIZE-1];
+  }
+  return Alpha_sp;
 }
 
 
@@ -943,7 +956,7 @@ static void read_recombrate_file(void)
   FILE *recombrate_file = fopen("recombrates.txt", "r");
   if (recombrate_file == NULL)
   {
-    printout("No recombrates.txt file found. Skipping recombination rate scaling...");
+    printout("No recombrates.txt file found. Skipping recombination rate scaling...\n");
     return;
   }
 
@@ -1094,7 +1107,8 @@ static void precalculate_ion_alpha_sp()
         {
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            zeta += interpolate_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
+            const double zeta_level = interpolate_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
+            zeta += zeta_level;
           }
         }
         elements[element].ions[ion].Alpha_sp[iter] = zeta;
