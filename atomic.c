@@ -12,6 +12,7 @@ extern inline int get_ionisinglevels(int element, int ion);
 extern inline double epsilon(int element, int ion, int level);
 extern inline double stat_weight(int element, int ion, int level);
 extern inline int get_bfcontinua(int element, int ion);
+extern inline int get_maxrecombininglevel(int element, int ion);
 extern inline bool is_nlte(int element, int ion, int level);
 extern inline int get_continuumindex(int element, int ion, int level);
 extern inline int get_nphixstargets(int element, int ion, int level);

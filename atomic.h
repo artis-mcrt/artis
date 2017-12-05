@@ -105,6 +105,12 @@ inline int get_bfcontinua(int element, int ion)
     return max_bf_continua;
 }
 
+inline int get_maxrecombininglevel(int element, int ion)
+/// Returns the number of bf-continua associated with ion ion of element element.
+{
+  return elements[element].ions[ion].maxrecombininglevel;
+}
+
 
 inline bool is_nlte(int element, int ion, int level)
 // Returns true if (element,ion,level) is to be treated in nlte.
