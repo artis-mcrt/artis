@@ -1682,7 +1682,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridindex, const int element, const int ion, double *E_0)
 {
   // excitation terms
-  gsl_vector *vec_xs_excitation_nnion_deltae = gsl_vector_alloc(SFPTS);
+  gsl_vector *vec_xs_excitation_nnlevel_deltae = gsl_vector_alloc(SFPTS);
 
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
@@ -1700,9 +1700,9 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      if (get_xs_excitation_vector(vec_xs_excitation_nnion_deltae, lineindex, epsilon_trans))
+      if (get_xs_excitation_vector(vec_xs_excitation_nnlevel_deltae, lineindex, epsilon_trans))
       {
-        gsl_blas_dscal(nnlevel * DELTA_E, vec_xs_excitation_nnion_deltae);
+        gsl_blas_dscal(nnlevel * DELTA_E, vec_xs_excitation_nnlevel_deltae);
 
         for (int i = 0; i < SFPTS; i++)
         {
@@ -1711,14 +1711,14 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
           if (stopindex < SFPTS - 1)
           {
             gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i + 1);
-            gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnion_deltae, i, stopindex - i + 1);
+            gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnlevel_deltae, i, stopindex - i + 1);
             gsl_vector_add(&a.vector, &b.vector); // add b to a and put the result in a
           }
         }
       }
     }
   }
-  gsl_vector_free(vec_xs_excitation_nnion_deltae);
+  gsl_vector_free(vec_xs_excitation_nnlevel_deltae);
 }
 
 
