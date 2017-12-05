@@ -435,8 +435,9 @@ typedef struct ionlist_entry
   int ionstage;                              /// Which ionisation stage: XI=0, XII=1, XIII=2, ...
   int nlevels;                               /// Number of levels for this ionisation stage
   int nlevels_nlte;                          /// number of nlte levels for this ion
-  int first_nlte;                            /// reference index for counting of nlte levels
+  int first_nlte;                            /// index into nlte_pops array of a grid cell
   int ionisinglevels;                        /// Number of levels which have a bf-continuum
+  int maxrecombininglevel;                   /// level index of the highest level with a non-zero recombination rate
   int coolingoffset;
   int ncoolingterms;
   float *Alpha_sp;

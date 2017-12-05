@@ -145,8 +145,12 @@ static void read_phixs_data(void)
           //  also need (levelenergy < ionpot && ...)?
           if (lowerion < get_nions(element) - 1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
           {
-            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,lowerion,lowerlevel); phixstargetindex++)
+            for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel); phixstargetindex++)
             {
+              const int upperlevel = get_phixsupperlevel(element, lowerion, lowerlevel, phixstargetindex);
+              if (upperlevel > get_maxrecombininglevel(element, lowerion + 1))
+                elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
+
               if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff = calloc(TABLESIZE, sizeof(double))) == NULL)
               {
                 printout("[fatal] input: not enough memory to initialize spontrecombcoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
@@ -782,6 +786,7 @@ static void read_atomicdata_files(void)
         elements[element].ions[ion].ionstage = ionstage;
         elements[element].ions[ion].nlevels = nlevelsmax;
         elements[element].ions[ion].ionisinglevels = 0;
+        elements[element].ions[ion].maxrecombininglevel = 0;
         elements[element].ions[ion].ionpot = ionpot * EV;
 //           if ((elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
 //           {

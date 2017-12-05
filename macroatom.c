@@ -84,10 +84,10 @@ static void get_macroatom_transitionrates(
   processrates[MA_ACTION_RADRECOMB] = 0.;
   processrates[MA_ACTION_COLRECOMB] = 0.;
   processrates[MA_ACTION_INTERNALDOWNLOWER] = 0.;
-  if (ion > 0) ///checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
+  if (ion > 0 && level <= get_maxrecombininglevel(element, ion)) ///checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
   {
     //nlevels = get_nlevels(element,ion-1);
-    const int nlevels = get_bfcontinua(element,ion-1);
+    const int nlevels = get_bfcontinua(element, ion - 1);
     //nlevels = get_ionisinglevels(element,ion-1);
     for (int lower = 0; lower < nlevels; lower++)
     {
@@ -1153,8 +1153,13 @@ double rad_recombination_ratecoeff(
 ///radiative recombination rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
 {
+  // it's probably faster to only check this condition outside this function
+  // in a case where this wasn't checked, the function will return zero anyway
+  // if (upper > get_maxrecombininglevel(element, upperion))
+  //   return 0.;
+
   double R = 0.0;
-  const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
+  const int nphixstargets = get_nphixstargets(element, upperion - 1,lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
     if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
@@ -1320,10 +1325,15 @@ double col_recombination_ratecoeff(
   const int modelgridindex, const int element, const int upperion, const int upper, const int lower, const double epsilon_trans)
 // multiply by upper level population to get a rate per second
 {
-  const int nphixstargets = get_nphixstargets(element,upperion-1,lower);
+  // it's probably faster to only check this condition outside this function
+  // in a case where this wasn't checked, the function will return zero anyway
+  // if (upper > get_maxrecombininglevel(element, upperion))
+  //   return 0.;
+
+  const int nphixstargets = get_nphixstargets(element, upperion - 1, lower);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
   {
-    if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
+    if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper)
     {
       const float nne = get_nne(modelgridindex);
       const float T_e = get_Te(modelgridindex);
@@ -1340,10 +1350,12 @@ double col_recombination_ratecoeff(
       else
         g = 0.3;
 
-      const double sigma_bf = elements[element].ions[upperion-1].levels[lower].photoion_xs[0] * get_phixsprobability(element,upperion-1,lower,phixstargetindex);
+      const double sigma_bf = (
+        elements[element].ions[upperion - 1].levels[lower].photoion_xs[0] *
+        get_phixsprobability(element, upperion - 1, lower, phixstargetindex));
 
-      double C = nne * nne * get_sahafact(element,upperion-1,lower,phixstargetindex,T_e,epsilon_trans) *
-                       1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1;
+      double C = nne * nne * get_sahafact(element, upperion - 1, lower, phixstargetindex, T_e, epsilon_trans) *
+                       1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
       #ifdef DEBUG_ON
         /*if (debuglevel == 777)

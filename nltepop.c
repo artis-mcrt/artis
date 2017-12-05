@@ -391,6 +391,7 @@ static void nltepop_matrix_add_ionisation(
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const int nionisinglevels = get_bfcontinua(element, ion);
+  const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
   for (int level = 0; level < nionisinglevels; level++)
   {
@@ -422,17 +423,20 @@ static void nltepop_matrix_add_ionisation(
                  get_ionstage(element, ion), level, phixstargetindex);
 
       // recombination
-      const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level);
-      const double C_recomb = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
+      if (upper <= maxrecombininglevel) // we can skip this part if the functions below will return zero anyway
+      {
+        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level);
+        const double C_recomb = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
 
-      *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
-      *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm[upper];
-      *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm[upper];
-      *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm[upper];
+        *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
+        *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm[upper];
+        *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm[upper];
+        *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm[upper];
 
-      if ((R_recomb < 0) || (C_recomb < 0))
-        printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
-                 get_ionstage(element, ion), level, phixstargetindex);
+        if ((R_recomb < 0) || (C_recomb < 0))
+          printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
+                   get_ionstage(element, ion), level, phixstargetindex);
+     }
     }
   }
 }

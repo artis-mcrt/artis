@@ -813,11 +813,14 @@ double calculate_ionrecombcoeff(
     int upper_nlevels;
     if (per_groundmultipletpop)
     {
+      // assume that photoionisation of the ion below is only to the ground multiplet levels of the current ion
       const int nphixstargets = get_nphixstargets(element, lowerion, 0);
       upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets - 1) + 1;
     }
     else
+    {
       upper_nlevels = get_nlevels(element, lowerion + 1);
+    }
 
     for (int upper = 0; upper < upper_nlevels; upper++)
     {
@@ -841,7 +844,8 @@ double calculate_ionrecombcoeff(
     }
 
     double nnupperlevel_so_far = 0.;
-    for (int upper = 0; upper < get_nlevels(element, lowerion + 1); upper++)
+    const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
+    for (int upper = 0; upper <= maxrecombininglevel; upper++)
     {
       if (printdebug && upper >= 5)
         break;
