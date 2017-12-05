@@ -31,7 +31,9 @@ void update_estimators(const PKT *restrict pkt_ptr, const double distance)
       ffheatingestimator[modelgridindex] += distance_e_cmf * kappa_rpkt_cont[tid].ffheating;
 
       #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-        const double helper2 = distance_e_cmf / nu;
+        #if (!NO_LUT_PHOTOION)
+        const double distance_e_cmf_over_nu = distance_e_cmf / nu;
+        #endif
         for (int i = 0; i < nbfcontinua_ground; i++)
         {
           const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
@@ -44,16 +46,17 @@ void update_estimators(const PKT *restrict pkt_ptr, const double distance)
             /// the estimators
             if (get_abundance(modelgridindex,element) > 0)
             {
+              const int ionestimindex = modelgridindex * nelements * maxion + element * maxion + ion;
               #if (!NO_LUT_PHOTOION)
                 #ifdef _OPENMP
                   #pragma omp atomic
                 #endif
-                gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * helper2;
+                gammaestimator[ionestimindex] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf_over_nu;
 
                 #ifdef DEBUG_ON
-                if (!isfinite(gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]))
+                if (!isfinite(gammaestimator[ionestimindex]))
                 {
-                  printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, helper2 %g\n",i,phixslist[tid].groundcont[i].gamma_contr,helper2);
+                  printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, distance_e_cmf_over_nu %g\n", i, phixslist[tid].groundcont[i].gamma_contr, distance_e_cmf_over_nu);
                   abort();
                 }
                 #endif
@@ -62,8 +65,8 @@ void update_estimators(const PKT *restrict pkt_ptr, const double distance)
                 #ifdef _OPENMP
                   #pragma omp atomic
                 #endif
-                bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu);
-                //bfheatingestimator[modelgridindex*nelements*maxion+element*maxion+ion] += phixslist[tid].groundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
+                bfheatingestimator[ionestimindex] += phixslist[tid].groundcont[i].gamma_contr * distance_e_cmf * (1. - nu_edge/nu);
+                //bfheatingestimator[ionestimindex] += phixslist[tid].groundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
               #endif
             }
           }
