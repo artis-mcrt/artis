@@ -1524,6 +1524,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       const int nlevels_all = get_nlevels(element, ion);
       // So limit the lower levels to improve performance
       const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
+#if NT_EXCITATION_ON
+      const bool above_minionfraction = (nnion >= minionfraction * get_tot_nion(modelgridindex));
+#endif
 
       for (int level = 0; level < nlevels; level++)
       {
@@ -1540,7 +1543,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
           frac_excitation_ion += frac_excitation_thistrans;
 
 #if NT_EXCITATION_ON
-          if (nt_frac_excitation_perlevelpop > 0)
+          // the atomic data set was limited for Fe V, which caused the ground multiplet to be massively
+          // depleted, and then almost no recombination happened!
+          if (above_minionfraction && nt_frac_excitation_perlevelpop > 0 && !(Z == 26 && ionstage == 5))
           {
             if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size)
             {
