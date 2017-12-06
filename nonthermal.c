@@ -23,7 +23,7 @@ const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the
 const int MAX_NT_EXCITATIONS = 25000;  // if this is more than SFPTS, then you might as well just store
                                        // the NT spectrum instead (although CPU costs)
 
-#define NT_EXCITATION_ON false // keep a list of non-thermal excitation rates for use
+#define NT_EXCITATION_ON true // keep a list of non-thermal excitation rates for use
                                // in the NLTE pop solver and NTLEPTON packet
                                // even with this off, excitations will be included in the solution
                                // and their deposition fraction is calculated
