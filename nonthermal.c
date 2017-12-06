@@ -1899,8 +1899,8 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 
   const float nne = get_nne(modelgridindex); // electrons per cm^3
 
-  printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d (nne=%g e-/cm^3)\n",
-           SFPTS, EMIN, EMAX, modelgridindex, timestep, nne);
+  printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d iteration %d (nne=%g e-/cm^3)\n",
+           SFPTS, EMIN, EMAX, modelgridindex, timestep, iteration, nne);
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
