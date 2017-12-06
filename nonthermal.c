@@ -434,7 +434,6 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
     // overwrite the non-thermal spectrum of a previous iteration of the same timestep and gridcell
     fseek(nonthermalfile, nonthermalfile_offset_iteration_zero, SEEK_SET);
   }
-  printout("nonthermalfile_offset_iteration_zero %d ts %d\n", nonthermalfile_offset_iteration_zero, timestep);
 
 #ifndef yscalefactoroverride // manual override can be defined
   const double yscalefactor = (get_deposition_rate_density(modelgridindex) / (E_init_ev * EV));
