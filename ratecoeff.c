@@ -54,18 +54,9 @@ static char phixsfile_hash[33];
 
 
 static bool read_ratecoeff_dat(void)
-/// Try to readin the precalculated rate coefficients from file
-/// returns true if successful or false otherwise
+/// Try to read in the precalculated rate coefficients from file
+/// return true if successful or false otherwise
 {
-  md5_file("adata.txt", adatafile_hash);
-  printout("MD5 adata.txt = %s\n", adatafile_hash);
-
-  md5_file("compositiondata.txt", compositionfile_hash);
-  printout("MD5 compositiondata.txt = %s\n", compositionfile_hash);
-
-  md5_file("phixsdata_v2.txt", phixsfile_hash);
-  printout("MD5 phixsdata_v2.txt = %s\n", phixsfile_hash);
-
   FILE *ratecoeff_file = fopen("ratecoeff.dat", "r");
   if (ratecoeff_file != NULL)
   {
@@ -75,7 +66,7 @@ static bool read_ratecoeff_dat(void)
 
     char adatafile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",adatafile_hash_in);
-    printout("ratecoeff.dat: MD5 adata.txt = %s ",adatafile_hash_in);
+    printout("ratecoeff.dat: MD5 adata.txt = %s ", adatafile_hash_in);
     if (strcmp(adatafile_hash, adatafile_hash_in) == 0)
       printout("(pass)\n");
     else
@@ -86,23 +77,23 @@ static bool read_ratecoeff_dat(void)
 
     char compositionfile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",compositionfile_hash_in);
-    printout("ratecoeff.dat: MD5 compositiondata.txt %s ",compositionfile_hash_in);
+    printout("ratecoeff.dat: MD5 compositiondata.txt %s ", compositionfile_hash_in);
     if (strcmp(compositionfile_hash, compositionfile_hash_in) == 0)
       printout("(pass)\n");
     else
     {
-      printout("Hash mismatch: MD5 compositiondata.txt = %s\n",compositionfile_hash);
+      printout("\nMISMATCH: MD5 compositiondata.txt = %s\n", compositionfile_hash);
       fileisamatch = false;
     }
 
     char phixsfile_hash_in[33];
     fscanf(ratecoeff_file,"%32s\n",phixsfile_hash_in);
-    printout("ratecoeff.dat: MD5 phixsdata_v2.txt = %s ",phixsfile_hash_in);
+    printout("ratecoeff.dat: MD5 phixsdata_v2.txt = %s ", phixsfile_hash_in);
     if (strcmp(phixsfile_hash, phixsfile_hash_in) == 0)
       printout("(pass)\n");
     else
     {
-      printout("Hash mismatch: MD5 phixsdata_v2.txt = %s\n",phixsfile_hash);
+      printout("\nMISMATCH: MD5 phixsdata_v2.txt = %s\n", phixsfile_hash);
       fileisamatch = false;
     }
 
@@ -138,7 +129,7 @@ static bool read_ratecoeff_dat(void)
       }
       else
       {
-        printout("FAIL: Tmin %g Tmax %g TABLESIZE %d\n", MINTEMP, MAXTEMP, TABLESIZE);
+        printout("\nMISMATCH: this simulation has MINTEMP %g MAXTEMP %g TABLESIZE %d\n", MINTEMP, MAXTEMP, TABLESIZE);
         fileisamatch = false;
       }
     }
@@ -730,12 +721,6 @@ static void precalculate_rate_coefficient_integrals(void)
       gsl_integration_workspace_free(w);
     }
   }
-
-  /// And the master process writes them to file in a serial operation
-  if (rank_global == 0)
-  {
-    write_ratecoeff_dat();
-  }
 }
 
 
@@ -1134,10 +1119,19 @@ void ratecoefficients_init(void)
   T_step = (1. * MAXTEMP - MINTEMP) / (TABLESIZE - 1.);               /// global variables
   T_step_log = (log(MAXTEMP) - log(MINTEMP)) / (TABLESIZE - 1.);
 
+  md5_file("adata.txt", adatafile_hash);
+  md5_file("compositiondata.txt", compositionfile_hash);
+  md5_file("phixsdata_v2.txt", phixsfile_hash);
+
   /// Check if we need to calculate the ratecoefficients or if we were able to read them from file
   if (!read_ratecoeff_dat())
   {
     precalculate_rate_coefficient_integrals();
+    /// And the master process writes them to file in a serial operation
+    if (rank_global == 0)
+    {
+      write_ratecoeff_dat();
+    }
   }
 
   read_recombrate_file();

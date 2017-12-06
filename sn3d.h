@@ -28,8 +28,13 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;   // if using this, should 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
 #define RECORD_LINESTAT
-static const bool SKIPRATECOEFFVALIDATION = false;
 
+/// Rate coefficients
+///============================================================================
+#define TABLESIZE 100 //200 //100
+#define MINTEMP 2000.
+#define MAXTEMP 140000. //1000000.
+static const bool SKIPRATECOEFFVALIDATION = false;
 
 // Polarisation for real packets
 //#define DIPOLE
@@ -452,12 +457,6 @@ int debuglevel;
 
 //int currentcell; ///was used for an fdf-solver
 
-
-/// Rate coefficients
-///============================================================================
-#define TABLESIZE 100 //200 //100
-#define MINTEMP 1000.
-#define MAXTEMP 50000. //1000000.
 
 bool homogeneous_abundances;
 
