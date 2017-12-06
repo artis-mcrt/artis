@@ -369,10 +369,10 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 }
 
 
-void call_T_e_finder(const int modelgridindex, const double t_current, const double T_min, const double T_max)
+void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min, const double T_max)
 {
   const double T_e_old = get_Te(modelgridindex);
-  printout("Finding T_e in cell %d...", modelgridindex);
+  printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
 
   //double deltat = (T_max - T_min) / 100;
 
