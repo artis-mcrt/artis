@@ -413,7 +413,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
     const time_t sys_time_start_Te = time(NULL);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
-    call_T_e_finder(n, time_step[nts_for_te].mid, MINTEMP, MAXTEMP);
+    call_T_e_finder(n, nts, time_step[nts_for_te].mid, MINTEMP, MAXTEMP);
 
     const int duration_solve_T_e = time(NULL) - sys_time_start_Te;
 
@@ -460,7 +460,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
         nlte_test = fabs((get_nne(n) / nne_prev) - 1);
         printout("NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, NLTE populations %ds\n",
                  n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
-        printout("NLTE (SpencerFano/Te/pops) solver cell %d timestep %d iteration %d: previous nne was %g, new nne is %g, fractional difference is %g\n",
+        printout("NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: previous nne was %g, new nne is %g, fractional difference is %g\n",
                  n, nts, nlte_iter, nne_prev, get_nne(n), nlte_test);
         // damp changes in nne if oscillating to much
         //set_nne(n, (get_nne(n) + nne_prev) / 2.);
