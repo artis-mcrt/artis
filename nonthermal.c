@@ -408,10 +408,10 @@ static double get_y_sample(const int modelgridindex, const int index)
 }
 
 
-static void nt_write_to_file(const int modelgridindex, const int timestep)
+static void nt_write_to_file(const int modelgridindex, const int timestep, const int iteration)
 {
 # ifdef _OPENMP
-# pragma omp critical (nonthermal_out_file)
+# pragma omp critical (nonthermal_out_file) threadprivate(nonthermalfile_offset_iteration_zero)
   {
 # endif
   if (!nonthermal_initialized)
@@ -419,6 +419,19 @@ static void nt_write_to_file(const int modelgridindex, const int timestep)
     printout("Call to nonthermal_write_to_file before nonthermal_init");
     abort();
   }
+
+  static long nonthermalfile_offset_iteration_zero = 0;
+
+  if (iteration == 0)
+  {
+    nonthermalfile_offset_iteration_zero = ftell(nonthermalfile);
+  }
+  else
+  {
+    // overwrite the non-thermal spectrum of a previous iteration of the same timestep and gridcell
+    fseek(nonthermalfile, nonthermalfile_offset_iteration_zero, SEEK_SET);
+  }
+  printout("nonthermalfile_offset_iteration_zero %d ts %d\n", nonthermalfile_offset_iteration_zero, timestep);
 
 #ifndef yscalefactoroverride // manual override can be defined
   const double yscalefactor = (get_deposition_rate_density(modelgridindex) / (E_init_ev * EV));
@@ -428,9 +441,9 @@ static void nt_write_to_file(const int modelgridindex, const int timestep)
 
   for (int s = 0; s < SFPTS; s++)
   {
-    fprintf(nonthermalfile,"%8d %15d %8d %11.5e %11.5e %11.5e\n",
+    fprintf(nonthermalfile, "%8d %15d %8d %11.5e %11.5e %11.5e\n",
             timestep, modelgridindex, s, gsl_vector_get(envec,s),
-            gsl_vector_get(sourcevec,s), yscalefactor * get_y_sample(modelgridindex, s));
+            gsl_vector_get(sourcevec, s), yscalefactor * get_y_sample(modelgridindex, s));
   }
   fflush(nonthermalfile);
 # ifdef _OPENMP
@@ -1837,7 +1850,7 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
 }
 
 
-void nt_solve_spencerfano(const int modelgridindex, const int timestep)
+void nt_solve_spencerfano(const int modelgridindex, const int timestep, const int iteration)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
@@ -1976,9 +1989,8 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep)
   gsl_vector_free(rhsvec);
 
   if (timestep % 10 == 0)
-    nt_write_to_file(modelgridindex, timestep);
+    nt_write_to_file(modelgridindex, timestep, iteration);
 
-  nt_solution[modelgridindex].frac_heating = -1.;
   nt_solution[modelgridindex].E_0 = E_0;
 
   analyse_sf_solution(modelgridindex, timestep);

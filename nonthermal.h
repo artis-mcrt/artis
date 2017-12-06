@@ -7,7 +7,7 @@
 
 void nt_init(int my_rank);
 void nt_close_file(void);
-void nt_solve_spencerfano(int modelgridindex, int timestep);
+void nt_solve_spencerfano(int modelgridindex, int timestep, int iteration);
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
 void calculate_deposition_rate_density(int modelgridindex, int timestep);
 double get_deposition_rate_density(int modelgridindex);
