@@ -383,7 +383,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
     const time_t sys_time_start_spencerfano = time(NULL);
     if (NT_ON && NT_SOLVE_SPENCERFANO)
     {
-      nt_solve_spencerfano(n, nts);  // depends on the ionization balance, and weakly on nne
+      nt_solve_spencerfano(n, nts, nlte_iter);  // depends on the ionization balance, and weakly on nne
     }
     const int duration_solve_spencerfano = time(NULL) - sys_time_start_spencerfano;
 
