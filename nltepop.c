@@ -513,7 +513,6 @@ static void nltepop_matrix_normalise(
 static void set_element_pops_lte(const int modelgridindex, const int element)
 {
   nltepop_reset_element(modelgridindex, element);
-  calculate_populations(modelgridindex);
 
   // const int nions = get_nions(element);
   // for (int ion = 0; ion < nions; ion++)
@@ -913,7 +912,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     {
       printout("  WARNING: The Z=%d element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %.1f%%. Forcing element pops to LTE.\n",
                atomic_number, elem_pop_abundance, elem_pop_matrix, elem_pop_error_percent);
-      // set_element_pops_lte(modelgridindex, element);
+      set_element_pops_lte(modelgridindex, element);
     }
 
     // if (individual_process_matricies && (atomic_number == 26 && timestep % 2 == 0))
