@@ -81,6 +81,7 @@ typedef struct heatingrates_t
   double bf;
   double ff;
   double gamma;
+  double nt_frac_heating; // = heatingrates.gamma / total_gamma_deposition, = get_nt_frac_heating(modelgridindex) when T_e solver runs
 } heatingrates_t;
 
 

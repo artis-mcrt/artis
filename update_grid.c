@@ -292,7 +292,7 @@ static void write_to_estimators_file(const int n, const int timestep)
       #endif
 
       fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e     gamma %11.5e gamma/gamma_dep %.2f\n",
-              heatingrates[tid].ff, heatingrates[tid].bf, heatingrates[tid].collisional, heatingrates[tid].gamma, get_nt_frac_heating(n));
+              heatingrates[tid].ff, heatingrates[tid].bf, heatingrates[tid].collisional, heatingrates[tid].gamma, heatingrates[tid].nt_frac_heating);
       fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
               coolingrates[tid].ff, coolingrates[tid].fb, coolingrates[tid].collisional, coolingrates[tid].adiabatic);
     #endif
