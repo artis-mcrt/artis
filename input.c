@@ -66,7 +66,7 @@ static void read_phixs_data(void)
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       const int lowerlevel = lowerlevel_in - groundstate_index_in;
       assert(upperion >= 0);
-      assert(lowerion >= 0);
+      assert(lowerionstage >= 0);
       assert(lowerlevel >= 0);
       /// store only photoionization crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && lowerlevel < get_nlevels(element, lowerion) && upperion < get_nions(element))
