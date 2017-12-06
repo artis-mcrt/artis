@@ -1616,7 +1616,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
            nt_solution[modelgridindex].frac_excitations_list_size);
   int ntransdisplayed = nt_solution[modelgridindex].frac_excitations_list_size;
-  ntransdisplayed = (ntransdisplayed > 100) ? 100 : ntransdisplayed;
+  ntransdisplayed = (ntransdisplayed > 50) ? 50 : ntransdisplayed;
   for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++)
   {
     const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
