@@ -26,7 +26,7 @@ const int MAX_NT_EXCITATIONS = 25000;  // if this is more than SFPTS, then you m
 #define NT_EXCITATION_ON true // keep a list of non-thermal excitation rates for use
                                // in the NLTE pop solver and NTLEPTON packet
                                // even with this off, excitations will be included in the solution
-                               // and their deposition fraction is calculated
+                               // and their combined deposition fraction is calculated
 
 #define BLOCKSIZEEXCITATION 5096    // Realloc the excitation list increasing by this blocksize
 #define BLOCKSIZEIONIZATION 128     // Realloc the ionization list increasing by this blocksize
@@ -477,10 +477,25 @@ void nt_close_file(void)
 }
 
 
-static int get_energyindex_ev(const double energy_ev)
-// finds the nearest energy point to energy_ev (may be above or below)
+inline
+static int get_energyindex_ev_lteq(const double energy_ev)
+// finds the highest energy point <= energy_ev
 {
-  int index = floor((energy_ev - EMIN) / DELTA_E);
+  const int index = floor((energy_ev - EMIN) / DELTA_E);
+  if (index < 0)
+    return 0;
+  else if (index > SFPTS - 1)
+    return SFPTS - 1;
+  else
+    return index;
+}
+
+
+inline
+static int get_energyindex_ev_gteq(const double energy_ev)
+// finds the highest energy point <= energy_ev
+{
+  const int index = ceil((energy_ev - EMIN) / DELTA_E);
   if (index < 0)
     return 0;
   else if (index > SFPTS - 1)
@@ -565,36 +580,31 @@ static double xs_excitation(const int lineindex, const double epsilon_trans, con
 }
 
 
-static bool get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int lineindex, const double epsilon_trans)
+static bool get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
 // returns true if any vector components are (or might be) non-zero
-// if it returns false, all vector components are definitely zero
+// if it returns false, all vector components are zero, so the contents of xs_excitation_vec should be ignored
 {
   const double coll_str = get_coll_str(lineindex);
-  const int en_startindex = 0; // energy point corresponding to epsilon_trans
-  // const int en_startindex = get_energyindex_ev(epsilon_trans_ev);
 
-  // make sure every value of xs_excitation_vec is set
-  // for (int j = 0; j < en_startindex; j++)
-  //   gsl_vector_set(xs_excitation_vec, j, 0.);
-
-  bool hasnonzerovalue = false;
+  bool hasnonzerovalue;
   if (coll_str >= 0)
   {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
-    const double constantfactor = pow(H_ionpot, 2) / statw_lower(lineindex) * coll_str * PI * A_naught_squared;
+    const double constantfactor = pow(H_ionpot, 2) / statweight_lower * coll_str * PI * A_naught_squared;
+
+    const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
+    hasnonzerovalue = (en_startindex < SFPTS - 1);
+
+    for (int j = 0; j < en_startindex; j++)
+      gsl_vector_set(xs_excitation_vec, j, 0.);
+
     for (int j = en_startindex; j < SFPTS; j++)
     {
       const double energy = gsl_vector_get(envec, j) * EV;
-      if (energy >= epsilon_trans)
-      {
-        gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
-        hasnonzerovalue = true;
-      }
-      else
-        gsl_vector_set(xs_excitation_vec, j, 0.);
+      gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
     }
   }
   else if (!linelist[lineindex].forbidden)
@@ -609,23 +619,25 @@ static bool get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int li
     const double prefactor = 45.585750051; // 8 * pi^2/sqrt(3)
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     const double constantfactor = prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij;
+
+    const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
+    hasnonzerovalue = (en_startindex < SFPTS - 1);
+
+    for (int j = 0; j < en_startindex; j++)
+      gsl_vector_set(xs_excitation_vec, j, 0.);
+
     for (int j = en_startindex; j < SFPTS; j++)
     {
       const double energy = gsl_vector_get(envec, j) * EV;
-      if (energy >= epsilon_trans)
-      {
-        const double U = energy / epsilon_trans;
-        const double g_bar = A * log(U) + B;
-        gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / U);
-        hasnonzerovalue = true;
-      }
-      else
-        gsl_vector_set(xs_excitation_vec, j, 0.);
+      const double U = energy / epsilon_trans;
+      const double g_bar = A * log(U) + B;
+      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / U);
     }
   }
   else
   {
-    gsl_vector_set_zero(xs_excitation_vec);
+    hasnonzerovalue = false;
+    // gsl_vector_set_zero(xs_excitation_vec);
   }
 
   return hasnonzerovalue;
@@ -661,7 +673,7 @@ static void get_xs_ionization_vector(gsl_vector *xs_vec, const int collionindex)
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
-  const int startindex = get_energyindex_ev(ionpot_ev);
+  const int startindex = get_energyindex_ev_lteq(ionpot_ev);
 
   for (int i = 0; i < startindex; i++)
     gsl_vector_set(xs_vec, i, 0.);
@@ -729,13 +741,13 @@ static double N_e(const int modelgridindex, const double energy)
       const int nlevels_all = get_nlevels(element, ion);
       const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
 
-      for (int level = 0; level < nlevels; level++)
+      for (int lower = 0; lower < nlevels; lower++)
       {
-        const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        const int nuptrans = get_nuptrans(element, ion, lower);
         for (int t = 1; t <= nuptrans; t++)
         {
-          const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
-          const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
+          const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
+          const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
           const double epsilon_trans_ev = epsilon_trans / EV;
           N_e_ion += get_y(modelgridindex, energy_ev + epsilon_trans_ev) * xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
         }
@@ -750,9 +762,9 @@ static double N_e(const int modelgridindex, const double energy)
           const double J = get_J(Z, ionstage, ionpot_ev);
           const double lambda = fmin(EMAX - energy_ev, energy_ev + ionpot_ev);
 
-          const int integral1startindex = get_energyindex_ev(ionpot_ev);
-          const int integral1stopindex = get_energyindex_ev(lambda);
-          const int integral2startindex = get_energyindex_ev(2 * energy_ev + ionpot_ev);
+          const int integral1startindex = get_energyindex_ev_lteq(ionpot_ev);
+          const int integral1stopindex = get_energyindex_ev_lteq(lambda);
+          const int integral2startindex = get_energyindex_ev_lteq(2 * energy_ev + ionpot_ev);
 
           for (int i = 0; i < SFPTS; i++)
           {
@@ -777,7 +789,7 @@ static double N_e(const int modelgridindex, const double energy)
   }
 
   // source term
-  N_e += gsl_vector_get(sourcevec, get_energyindex_ev(energy_ev));
+  N_e += gsl_vector_get(sourcevec, get_energyindex_ev_lteq(energy_ev));
 
   return N_e;
 }
@@ -792,7 +804,7 @@ static float calculate_frac_heating(const int modelgridindex)
   const float nne = get_nne(modelgridindex);
   const double E_0 = nt_solution[modelgridindex].E_0;
 
-  const int startindex = get_energyindex_ev(E_0);
+  const int startindex = get_energyindex_ev_lteq(E_0);
   for (int i = startindex; i < SFPTS; i++)
   {
     const double endash = gsl_vector_get(envec, i);
@@ -1238,7 +1250,8 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
 }
 
 
-static double calculate_nt_frac_excitation_perlevelpop(const int modelgridindex, const int lineindex, const double epsilon_trans)
+static double calculate_nt_frac_excitation_perlevelpop(
+  const int modelgridindex, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // Kozma & Fransson equation 9 divided by level population
 {
   if (nt_solution[modelgridindex].yfunc == NULL)
@@ -1249,7 +1262,7 @@ static double calculate_nt_frac_excitation_perlevelpop(const int modelgridindex,
   const double epsilon_trans_ev = epsilon_trans / EV;
 
   gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
-  if (get_xs_excitation_vector(xs_excitation_vec, lineindex, epsilon_trans))
+  if (get_xs_excitation_vector(xs_excitation_vec, lineindex, statweight_lower, epsilon_trans))
   {
     double y_dot_crosssection = 0.;
     gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
@@ -1528,17 +1541,18 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       const bool above_minionfraction = (nnion >= minionfraction * get_tot_nion(modelgridindex));
 #endif
 
-      for (int level = 0; level < nlevels; level++)
+      for (int lower = 0; lower < nlevels; lower++)
       {
-        const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
-        const int nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+        const double statweight_lower = stat_weight(element, ion, lower);
+        const int nuptrans = elements[element].ions[ion].levels[lower].uptrans[0].targetlevel;
+        const int nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
 
         for (int t = 1; t <= nuptrans; t++)
         {
-          const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
-          const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
+          const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
+          const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
 
-          const double nt_frac_excitation_perlevelpop = calculate_nt_frac_excitation_perlevelpop(modelgridindex, lineindex, epsilon_trans);
+          const double nt_frac_excitation_perlevelpop = calculate_nt_frac_excitation_perlevelpop(modelgridindex, lineindex, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
           frac_excitation_ion += frac_excitation_thistrans;
 
@@ -1566,7 +1580,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
           }
 #endif // NT_EXCITATION_ON
         } // for t
-      } // for level
+      } // for lower
 
       frac_excitation_total += frac_excitation_ion;
 
@@ -1707,27 +1721,28 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
 
-  for (int level = 0; level < nlevels; level++)
+  for (int lower = 0; lower < nlevels; lower++)
   {
-    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-    const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    const double statweight_lower = stat_weight(element, ion, lower);
+    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+    const int nuptrans = get_nuptrans(element, ion, lower);
     for (int t = 1; t <= nuptrans; t++)
     {
-      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[t].epsilon_trans;
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans[t].lineindex;
+      const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
+      const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
       const double epsilon_trans_ev = epsilon_trans / EV;
 
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      if (get_xs_excitation_vector(vec_xs_excitation_nnlevel_deltae, lineindex, epsilon_trans))
+      if (get_xs_excitation_vector(vec_xs_excitation_nnlevel_deltae, lineindex, statweight_lower, epsilon_trans))
       {
         gsl_blas_dscal(nnlevel * DELTA_E, vec_xs_excitation_nnlevel_deltae);
 
         for (int i = 0; i < SFPTS; i++)
         {
           const double en = gsl_vector_get(envec, i);
-          const int stopindex = get_energyindex_ev(en + epsilon_trans_ev);
+          const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
           if (stopindex < SFPTS - 1)
           {
             gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i + 1);
@@ -1764,7 +1779,7 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
         // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
         const double en = gsl_vector_get(envec, i);
 
-        const int secondintegralstartindex = get_energyindex_ev(2 * en + ionpot_ev);
+        const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
 
         for (int j = i; j < SFPTS; j++)
         {
