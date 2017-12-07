@@ -989,7 +989,7 @@ static void read_recombrate_file(void)
     if (element >= 0)
     {
       const int ion = upperionstage - get_ionstage(element, 0); // the index of the upper ion
-      if (ion < get_nions(element))
+      if (ion >= 0 && ion < get_nions(element))
       {
         printout("Z=%d ionstage %d->%d\n", atomicnumber, upperionstage, upperionstage - 1);
         assert(T_highestbelow.log_Te > 0);
