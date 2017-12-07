@@ -127,6 +127,20 @@ inline int get_continuumindex(int element, int ion, int level)
 }
 
 
+inline int get_ndowntrans(int element, int ion, int level)
+// the number of downward bound-bound transitions from the specified level
+{
+  return elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+}
+
+
+inline int get_nuptrans(int element, int ion, int level)
+// the number of upward bound-bound transitions from the specified level
+{
+  return elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+}
+
+
 inline int get_nphixstargets(int element, int ion, int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
