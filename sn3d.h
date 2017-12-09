@@ -32,8 +32,8 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;   // if using this, should 
 /// Rate coefficients
 ///============================================================================
 #define TABLESIZE 100 //200 //100
-#define MINTEMP 2000.
-#define MAXTEMP 140000. //1000000.
+#define MINTEMP 1000.
+#define MAXTEMP 50000. //1000000.
 static const bool SKIPRATECOEFFVALIDATION = false;
 
 // Polarisation for real packets
