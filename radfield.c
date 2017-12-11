@@ -9,7 +9,7 @@
 #include "radfield.h"
 #include "sn3d.h"
 
-static const int RADFIELDBINCOUNT = 96;
+#define RADFIELDBINCOUNT 96
 
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 
