@@ -2,6 +2,7 @@
 #define PACKET_INIT_H
 
 #include <stdio.h>
+#include "types.h"
 
 void packet_init(int middle_iteration, int my_rank, PKT *pkt);
 void write_packets(FILE *restrict packets_file, PKT *pkt);
