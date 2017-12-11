@@ -31,6 +31,8 @@
 #include "vpkt.h"
 #include <stdarg.h>  /// MK: needed for printout()
 
+static PKT pkt[MPKTS];
+
 
 static FILE *initialise_linestat_file(void)
 {
@@ -419,8 +421,6 @@ static void write_temp_packetsfile(int timestep, int my_rank, PKT *pkt)
 int main(int argc, char** argv)
 // Main - top level routine.
 {
-  PKT pkt[MPKTS];
-
   FILE *restrict packets_file;
   //FILE *temperature_file;
   char filename[100];

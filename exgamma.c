@@ -22,7 +22,8 @@
 #include "packet_init.h"
 #include "time_init.h"
 
-PKT pkt[MPKTS];
+static PKT pkt[MPKTS];
+
 
 /* Main - top level routine. */
 int main(int argc, char** argv)

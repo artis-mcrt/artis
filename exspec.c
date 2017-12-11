@@ -22,7 +22,7 @@
 #include "spectrum.h"
 #include "vectors.h"
 
-PKT pkt[MPKTS];
+static PKT pkt[MPKTS];
 
 
 int main(int argc, char** argv)
