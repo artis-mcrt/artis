@@ -1477,9 +1477,10 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
     #ifdef DEBUG_ON
       if (!isfinite(bfcooling))
       {
-        printout("[fatal] get_bfcooling: bfcooling infinite (%g) for element Z=%d, ion_stage %d, level %d in modelgridcell %d\n",
+        printout("[warning] get_bfcooling: bfcooling infinite (%g) for element Z=%d, ion_stage %d, level %d in modelgridcell %d. Returning zero\n",
                  bfcooling,get_element(element),get_ionstage(element, ion),level,modelgridindex);
         //printout("[fatal] get_bfcooling: bfcoolingcoeff %g, nnion %g, nne %g, T_e %g\n",interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e),nnion,nne,T_e);
+        bfcooling = 0.;
       }
     #endif
   }
