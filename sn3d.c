@@ -1254,7 +1254,8 @@ int main(int argc, char** argv)
   //fclose(tb_file);
   fclose(estimators_file);
   macroatom_close_file();
-  nltepop_close_file();
+  if (NLTE_POPS_ON)
+    nltepop_close_file();
   radfield_close_file();
   if (NT_ON && NT_SOLVE_SPENCERFANO)
     nt_close_file();
