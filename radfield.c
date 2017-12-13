@@ -15,8 +15,8 @@ static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 
 extern inline double radfield_dbb(double nu, float T, float W);
 
-static const double nu_lower_first_initial = (CLIGHT / (20000e-8)); // in Angstroms
-static const double nu_upper_last_initial = (CLIGHT /  (2000e-8));  // in Angstroms
+static const double nu_lower_first_initial = (CLIGHT / (10000e-8)); // in Angstroms
+static const double nu_upper_last_initial = (CLIGHT /  (500e-8));  // in Angstroms
 
 static const double boost_region_nu_lower = (CLIGHT / (2500e-8)); // in Angstroms
 static const double boost_region_nu_upper = (CLIGHT / (2100e-8));  // in Angstroms
