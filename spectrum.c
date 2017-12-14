@@ -16,10 +16,10 @@
 #define TRACE_EMISSION_REGION_ON
 
 #ifdef TRACE_EMISSION_REGION_ON
-  #define traceemiss_nulower (CLIGHT / (5700e-8))  // in Angstroms
-  #define traceemiss_nuupper (CLIGHT / (4200e-8))  // in Angstroms
-  #define traceemiss_timestepmin 34
-  #define traceemiss_timestepmax 57
+  #define traceemiss_nulower (CLIGHT / (5700e-8))  // in Angstroms before the e-8
+  #define traceemiss_nuupper (CLIGHT / (9000e-8))
+  #define traceemiss_timestepmin 25
+  #define traceemiss_timestepmax 45
 
   typedef struct emissioncontrib
   {
@@ -309,8 +309,8 @@ void gather_spectrum(int depth)
 
   // display the top entries of the sorted list
   const int nlines_limited = nlines;
-  if (nlines > 50)
-    nlines = 50;
+  if (nlines > 500)
+    nlines = 500;
   printout("%17s %5s %9s %5s %5s %8s %8s %6s %6s %7s\n", "flux", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forbid", "lambda", "<v_rad>");
   for (int i = 0; i < nlines_limited; i++)
   {
