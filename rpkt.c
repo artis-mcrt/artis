@@ -1631,17 +1631,13 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
         }
         
         /// Now need to convert between frames.
-        //get_velocity(pkt_ptr->pos, vel_vec, t_current);
-        //sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
-        //kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
-        //kappa_bf = kappa_bf * doppler(pkt_ptr->dir, vel_vec);
-	/// Deactivated these lines with fix from December 2017
-	/// The frame transformation has been moved to the actual packet
-	/// propagation routine to make sure that the direction dependence
-	/// of the opacities is taken into account properly. For multiple
-	/// scatterings this is not the case if the trafo is done here, since
-	/// this routine is only called when a packet changes cell or is
-	/// re-emitted at a different comoving frame frequency.
+        get_velocity(pkt_ptr->pos, vel_vec, t_current);
+        sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
+        kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
+        kappa_bf = kappa_bf * doppler(pkt_ptr->dir, vel_vec);
+	/// For vpkts it is safe to do the frame transformation here.
+	/// vpkts travel along straight lines and and calculate_kappa_vpkt_cont
+	/// is called always before a vpkt is propagated.
     }
     else
     {
