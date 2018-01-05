@@ -130,6 +130,7 @@ int main(int argc, char** argv)
           epkts[j].trueemissiontype = pkt_ptr->trueemissiontype;
           epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
           epkts[j].absorptiontype = pkt_ptr->absorptiontype;
+          epkts[j].trueemissionvelocity = pkt_ptr->trueemissionvelocity;
           j++;
         }
       }

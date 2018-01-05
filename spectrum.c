@@ -13,31 +13,50 @@
   return 0;
 }*/
 
-#define TRACE_EMISSION_REGION_ON
+// would do this in Python artistools except it currently doesn't understand how to match linelindex to a transition
+#define TRACE_EMISSION_ABSORPTION_REGION_ON
 
-#ifdef TRACE_EMISSION_REGION_ON
-  #define traceemiss_nulower (CLIGHT / (5700e-8))  // in Angstroms before the e-8
-  #define traceemiss_nuupper (CLIGHT / (9000e-8))
-  #define traceemiss_timestepmin 25
-  #define traceemiss_timestepmax 45
+#ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
+  #define traceemissabs_lambdamin 4200.  // in Angstroms
+  #define traceemissabs_lambdamax 5700.
+  #define traceemissabs_nulower (1.e8 * CLIGHT / traceemissabs_lambdamax)
+  #define traceemissabs_nuupper (1.e8 * CLIGHT / traceemissabs_lambdamin)
+  #define traceemissabs_timemin 320.
+  #define traceemissabs_timemax 340.
 
-  typedef struct emissioncontrib
+  typedef struct emissionabsorptioncontrib
   {
-    double fluxcontrib;
-    double emiss_velocity_sum;
+    double energyemitted;
+    double emission_weightedvelocity_sum;
+    double energyabsorbed;
+    double absorption_weightedvelocity_sum;
     int lineindex;   // this will be important when the list gets sorted
-  } emissioncontrib;
+  } emissionabsorptioncontrib;
 
-  struct emissioncontrib *traceemisscontributions;
-  double traceemiss_totalflux = 0.;
-  static int compare_emisscontrib(const void *p1, const void *p2)
+  struct emissionabsorptioncontrib *traceemissionabsorption;
+  double traceemission_totalenergy = 0.;
+  double traceabsorption_totalenergy = 0.;
+  static int compare_emission(const void *p1, const void *p2)
   {
-    const struct emissioncontrib *elem1 = p1;
-    const struct emissioncontrib *elem2 = p2;
+    const struct emissionabsorptioncontrib *elem1 = p1;
+    const struct emissionabsorptioncontrib *elem2 = p2;
 
-   if (elem1->fluxcontrib < elem2->fluxcontrib)
+   if (elem1->energyemitted < elem2->energyemitted)
       return 1;
-   else if (elem1->fluxcontrib > elem2->fluxcontrib)
+   else if (elem1->energyemitted > elem2->energyemitted)
+      return -1;
+   else
+      return 0;
+  }
+
+  static int compare_absorption(const void *p1, const void *p2)
+  {
+    const struct emissionabsorptioncontrib *elem1 = p1;
+    const struct emissionabsorptioncontrib *elem2 = p2;
+
+   if (elem1->energyabsorbed < elem2->energyabsorbed)
+      return 1;
+   else if (elem1->energyabsorbed > elem2->energyabsorbed)
       return -1;
    else
       return 0;
@@ -171,23 +190,25 @@ static void add_to_spec(const EPKT *pkt_ptr)
       const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
       spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
 
-      #ifdef TRACE_EMISSION_REGION_ON
+      #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
       const int et = pkt_ptr->trueemissiontype;
       if (et >= 0)
       {
-        if (nt >= traceemiss_timestepmin && nt <= traceemiss_timestepmax)
+        if (nt >= 34 && nt <= 57)
+        // if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
         {
-          if (pkt_ptr->nu_rf >= traceemiss_nulower && pkt_ptr->nu_rf <= traceemiss_nuupper)
+          if (pkt_ptr->nu_rf >= traceemissabs_nulower && pkt_ptr->nu_rf <= traceemissabs_nuupper)
           {
-            traceemisscontributions[et].fluxcontrib += deltaE;
-            traceemiss_totalflux += deltaE;
+            traceemissionabsorption[et].energyemitted += deltaE;
 
-            double vel_vec[3];
-            get_velocity(pkt_ptr->em_pos, vel_vec, pkt_ptr->em_time);
-            traceemisscontributions[et].emiss_velocity_sum += vec_len(vel_vec) * deltaE;
+            traceemissionabsorption[et].emission_weightedvelocity_sum += pkt_ptr->trueemissionvelocity * deltaE;
 
+            traceemission_totalenergy += deltaE;
+
+            // const int element = linelist[et].elementindex;
+            // const int ion = linelist[et].ionindex;
             // printout("packet in range, Z=%d ion_stage %d upperlevel %4d lowerlevel %4d fluxcontrib %g linecontrib %g index %d nlines %d\n",
-                    //  get_element(element), get_ionstage(element, ion), linelist[et].upperlevelindex, linelist[et].lowerlevelindex, deltaE, traceemisscontributions[et].fluxcontrib, et, nlines);
+            //          get_element(element), get_ionstage(element, ion), linelist[et].upperlevelindex, linelist[et].lowerlevelindex, deltaE, traceemissionabsorption[et].energyemitted, et, nlines);
           }
         }
       }
@@ -204,6 +225,19 @@ static void add_to_spec(const EPKT *pkt_ptr)
           const int element = linelist[at].elementindex;
           const int ion = linelist[at].ionindex;
           spectra[nt].stat[nnu].absorption[element * maxion + ion] += deltaE_absorption;
+
+          #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
+          if (pkt_ptr->nu_rf >= traceemissabs_nulower && pkt_ptr->nu_rf <= traceemissabs_nuupper)
+          {
+            traceemissionabsorption[et].energyabsorbed += deltaE_absorption;
+
+            double vel_vec[3];
+            get_velocity(pkt_ptr->em_pos, vel_vec, pkt_ptr->em_time);
+            traceemissionabsorption[et].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
+
+            traceabsorption_totalenergy += deltaE_absorption;
+          }
+          #endif
         }
       }
     }
@@ -257,14 +291,17 @@ void gather_spectrum(int depth)
   /// Set up the spectrum grid and initialise the bins to zero.
   init_spectrum();
 
-  #ifdef TRACE_EMISSION_REGION_ON
-  traceemiss_totalflux = 0.;
-  traceemisscontributions = malloc(nlines*sizeof(emissioncontrib));
+  #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
+  traceemission_totalenergy = 0.;
+  traceemissionabsorption = malloc(nlines * sizeof(emissionabsorptioncontrib));
+  traceabsorption_totalenergy = 0.;
   for (int i = 0; i < nlines; i++)
   {
-    traceemisscontributions[i].fluxcontrib = 0.;
-    traceemisscontributions[i].emiss_velocity_sum = 0.;
-    traceemisscontributions[i].lineindex = i; // this will be important when the list gets sorted
+    traceemissionabsorption[i].energyemitted = 0.;
+    traceemissionabsorption[i].emission_weightedvelocity_sum = 0.;
+    traceemissionabsorption[i].energyabsorbed = 0.;
+    traceemissionabsorption[i].absorption_weightedvelocity_sum = 0.;
+    traceemissionabsorption[i].lineindex = i; // this will be important when the list gets sorted
   }
   #endif
 
@@ -301,39 +338,75 @@ void gather_spectrum(int depth)
     }
   }
 
-  #ifdef TRACE_EMISSION_REGION_ON
-  qsort(traceemisscontributions, nlines, sizeof(emissioncontrib), compare_emisscontrib);
-  printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] timestep [%d, %d] (flux %g)\n",
-           1e8 * CLIGHT / traceemiss_nuupper, 1e8 * CLIGHT / traceemiss_nulower, traceemiss_timestepmin, traceemiss_timestepmax,
-           traceemiss_totalflux);
+  #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
+  const int maxlinesprinted = 500;
 
-  // display the top entries of the sorted list
-  const int nlines_limited = nlines;
-  if (nlines > 500)
-    nlines = 500;
-  printout("%17s %5s %9s %5s %5s %8s %8s %6s %6s %7s\n", "flux", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forbid", "lambda", "<v_rad>");
-  for (int i = 0; i < nlines_limited; i++)
+  for (int mode = 0; mode < 2; mode++) // mode is 0 for emission and 1 for absorption
   {
-    const double fluxcontrib = traceemisscontributions[i].fluxcontrib;
-    if (fluxcontrib / traceemiss_totalflux > 0.01 || i < 5) // lines that contribute at least 5% of the flux, with a minimum of 5 lines and max of 50
+    if (mode == 0)
     {
-      const int lineindex = traceemisscontributions[i].lineindex;
-      const int element = linelist[lineindex].elementindex;
-      const int ion = linelist[lineindex].ionindex;
-      const double linelambda = 1e8 * CLIGHT / linelist[lineindex].nu;
-      // flux-weighted average radial velocity of emission in km/s
-      const double v_rad = traceemisscontributions[i].emiss_velocity_sum / traceemisscontributions[i].fluxcontrib / 1e5;
-      printout("%7.2e (%5.1f%%) %5d %9d %5d %5d %8.1f %8.2e %6d %6.1f %7.1f\n",
-               fluxcontrib, 100 * fluxcontrib / traceemiss_totalflux, get_element(element),
-               get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
-               linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden,
-               linelambda, v_rad);
-     }
-     else
-      break;
+      qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_emission);
+      printout("lambda [%5.1f, %5.1f] nu %g %g or %g %g\n",
+               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper,
+               (CLIGHT / (5700e-8)), (CLIGHT / (9000e-8)));
+
+      printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
+               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin, traceemissabs_timemax,
+               traceemission_totalenergy);
+    }
+    else
+    {
+      qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_absorption);
+      printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
+               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin, traceemissabs_timemax,
+               traceabsorption_totalenergy);
+    }
+
+    // display the top entries of the sorted list
+    const int nlines_limited = nlines;
+    if (nlines > maxlinesprinted)
+      nlines = maxlinesprinted;
+    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>");
+    for (int i = 0; i < nlines_limited; i++)
+    {
+      double encontrib;
+      double totalenergy;
+      if (mode == 0)
+      {
+        encontrib = traceemissionabsorption[i].energyemitted;
+        totalenergy = traceemission_totalenergy;
+      }
+      else
+      {
+        encontrib = traceemissionabsorption[i].energyabsorbed;
+        totalenergy = traceabsorption_totalenergy;
+      }
+      if (encontrib > 0.) // lines that emit/absorb some energy
+      {
+        const int lineindex = traceemissionabsorption[i].lineindex;
+        const int element = linelist[lineindex].elementindex;
+        const int ion = linelist[lineindex].ionindex;
+        const double linelambda = 1e8 * CLIGHT / linelist[lineindex].nu;
+        // flux-weighted average radial velocity of emission in km/s
+        double v_rad;
+        if (mode == 0)
+          v_rad = traceemissionabsorption[i].emission_weightedvelocity_sum / traceemissionabsorption[i].energyemitted / 1e5;
+        else
+          v_rad = traceemissionabsorption[i].absorption_weightedvelocity_sum / traceemissionabsorption[i].energyabsorbed / 1e5;
+
+        printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f\n",
+                 encontrib, 100 * encontrib / totalenergy, get_element(element),
+                 get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
+                 linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden,
+                 linelambda, v_rad);
+       }
+       else
+        break;
+    }
+    printout("\n");
   }
 
-  free(traceemisscontributions);
+  free(traceemissionabsorption);
   #endif
 }
 
