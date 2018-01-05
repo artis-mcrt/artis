@@ -73,6 +73,7 @@ typedef struct
   double em_pos[3]; /// Position of the packet (x,y,z) at last emission process
   int em_time;
   double stokes[3];
+  float trueemissionvelocity;
 } EPKT;
 EPKT *epkts;
 

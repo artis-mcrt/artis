@@ -8,7 +8,7 @@ double calculate_populations(int modelgridindex);
 double calculate_electron_densities(int modelgridindex);
 void write_grid_restart_data(void);
 
-inline double get_abundance(int modelgridindex, int element)
+inline double get_abundance(const int modelgridindex, const int element)
 {
   return modelgrid[modelgridindex].composition[element].abundance;
 }
