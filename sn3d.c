@@ -257,8 +257,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 
 static void mpi_reduce_estimators(int my_rank)
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON)
-    radfield_reduce_estimators();
+  radfield_reduce_estimators();
   #ifndef FORCE_LTE
     MPI_Allreduce(MPI_IN_PLACE, &ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, &colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
