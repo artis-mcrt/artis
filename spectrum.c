@@ -229,11 +229,11 @@ static void add_to_spec(const EPKT *pkt_ptr)
           #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
           if (pkt_ptr->nu_rf >= traceemissabs_nulower && pkt_ptr->nu_rf <= traceemissabs_nuupper)
           {
-            traceemissionabsorption[et].energyabsorbed += deltaE_absorption;
+            traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
             double vel_vec[3];
             get_velocity(pkt_ptr->em_pos, vel_vec, pkt_ptr->em_time);
-            traceemissionabsorption[et].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
+            traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
 
             traceabsorption_totalenergy += deltaE_absorption;
           }
@@ -366,7 +366,7 @@ void gather_spectrum(int depth)
     const int nlines_limited = nlines;
     if (nlines > maxlinesprinted)
       nlines = maxlinesprinted;
-    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>");
+    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
     for (int i = 0; i < nlines_limited; i++)
     {
       double encontrib;
@@ -394,11 +394,26 @@ void gather_spectrum(int depth)
         else
           v_rad = traceemissionabsorption[i].absorption_weightedvelocity_sum / traceemissionabsorption[i].energyabsorbed / 1e5;
 
-        printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f\n",
+        const int lower = linelist[lineindex].lowerlevelindex;
+        const int upper = linelist[lineindex].upperlevelindex;
+
+        const double statweight_target = statw_upper(lineindex);
+        const double statweight_lower = statw_lower(lineindex);
+
+        const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
+        const double A_ul = einstein_spontaneous_emission(lineindex);
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+        const double B_lu = statweight_target / statweight_lower * B_ul;
+
+        // const double n_l = get_levelpop(modelgridindex,element,ion,lower);
+        // const double n_u = get_levelpop(modelgridindex,element,ion,upper);
+        // const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * em_time;
+
+        printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n",
                  encontrib, 100 * encontrib / totalenergy, get_element(element),
                  get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
                  linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden,
-                 linelambda, v_rad);
+                 linelambda, v_rad, B_lu, B_ul);
        }
        else
         break;
