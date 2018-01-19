@@ -153,8 +153,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     int root_ndo = ndo;
     MPI_Bcast(&root_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    if (MULTIBIN_RADFIELD_MODEL_ON)
-      radfield_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
+    radfield_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO)
       nt_MPI_Bcast(my_rank, root, root_nstart, root_ndo);

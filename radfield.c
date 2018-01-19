@@ -355,8 +355,8 @@ int select_bin(double nu)
 
 void radfield_write_to_file(int modelgridindex, int timestep)
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON)
-  {
+  assert(MULTIBIN_RADFIELD_MODEL_ON);
+
 # ifdef _OPENMP
 # pragma omp critical (radfield_out_file)
   {
@@ -409,7 +409,6 @@ void radfield_write_to_file(int modelgridindex, int timestep)
 # ifdef _OPENMP
   }
 # endif
-  }
 }
 
 
@@ -1100,7 +1099,7 @@ void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart
   {
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (MULTIBIN_RADFIELD_MODEL_ON && mg_associated_cells[modelgridindex] > 0)
     {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
