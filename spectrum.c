@@ -339,7 +339,7 @@ void gather_spectrum(int depth)
   }
 
   #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
-  const int maxlinesprinted = 500;
+  const int maxlinesprinted = 100;
 
   for (int mode = 0; mode < 2; mode++) // mode is 0 for emission and 1 for absorption
   {
@@ -363,9 +363,9 @@ void gather_spectrum(int depth)
     }
 
     // display the top entries of the sorted list
-    const int nlines_limited = nlines;
+    int nlines_limited = nlines;
     if (nlines > maxlinesprinted)
-      nlines = maxlinesprinted;
+      nlines_limited = maxlinesprinted;
     printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
     for (int i = 0; i < nlines_limited; i++)
     {
