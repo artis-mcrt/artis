@@ -17,11 +17,11 @@
 #define TRACE_EMISSION_ABSORPTION_REGION_ON
 
 #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
-  #define traceemissabs_lambdamin 4200.  // in Angstroms
-  #define traceemissabs_lambdamax 5700.
+  #define traceemissabs_lambdamin 1000.  // in Angstroms
+  #define traceemissabs_lambdamax 10000.
   #define traceemissabs_nulower (1.e8 * CLIGHT / traceemissabs_lambdamax)
   #define traceemissabs_nuupper (1.e8 * CLIGHT / traceemissabs_lambdamin)
-  #define traceemissabs_timemin 320.
+  #define traceemissabs_timemin 300.
   #define traceemissabs_timemax 340.
 
   typedef struct emissionabsorptioncontrib
@@ -346,9 +346,8 @@ void gather_spectrum(int depth)
     if (mode == 0)
     {
       qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_emission);
-      printout("lambda [%5.1f, %5.1f] nu %g %g or %g %g\n",
-               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper,
-               (CLIGHT / (5700e-8)), (CLIGHT / (9000e-8)));
+      printout("lambda [%5.1f, %5.1f] nu %g %g\n",
+               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper);
 
       printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin, traceemissabs_timemax,
