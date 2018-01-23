@@ -1052,29 +1052,30 @@ void radfield_reduce_estimators(void)
   #endif
 
   if (!MULTIBIN_RADFIELD_MODEL_ON)
-    return;
-  const time_t sys_time_start_reduction = time(NULL);
-  printout("Reducing binned radiation field estimators");
-
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, mg_associated_cells[modelgridindex]);
-    if (mg_associated_cells[modelgridindex] > 0)
-    {
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-      {
-        // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    const time_t sys_time_start_reduction = time(NULL);
+    printout("Reducing binned radiation field estimators");
 
-        // printout("MPI: After MPI_Allreduce: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    {
+      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, mg_associated_cells[modelgridindex]);
+      if (mg_associated_cells[modelgridindex] > 0)
+      {
+        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+        {
+          // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+          MPI_Barrier(MPI_COMM_WORLD);
+          MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+          // printout("MPI: After MPI_Allreduce: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        }
       }
     }
+    const int duration_reduction = time(NULL) - sys_time_start_reduction;
+    printout(" (took %d s)\n", duration_reduction);
   }
-  const int duration_reduction = time(NULL) - sys_time_start_reduction;
-  printout(" (took %d s)\n", duration_reduction);
 }
 
 
