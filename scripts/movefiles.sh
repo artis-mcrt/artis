@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# this script will move the Artis output files from the current run into a subfolder
+# which is the command line argument
+
+#mkdir $1
+
+if [ $# -ne 1 ]; then
+  echo 1>&2 "Usage: $0 JOB_DIRECTORY"
+  exit 3
+fi
+
+# check that the argument is a valid directory or exit
+[ -d "$1" ] || exit
+
 #cp gridsave.dat $1
 mv estimators* $1
 mv linestat.out $1
