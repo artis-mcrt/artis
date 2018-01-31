@@ -1,10 +1,10 @@
 #!/bin/bash
-#
+
 #PBS -P fm5
-#PBS -q normal
-#PBS -l walltime=10:00:00
-#PBS -l mem=1008GB
-#PBS -l ncpus=1008
+#PBS -q express
+#PBS -l walltime=5:00:00
+#PBS -l mem=16GB
+#PBS -l ncpus=16
 #PBS -l wd
 
 # ncpus must be a factor of the cores per node (16)
@@ -20,12 +20,4 @@
 
 ulimit -l 2097152
 
-mpirun ./sn3d > out.txt
-
-mkdir ${PBS_JOBID}
-./movefiles.sh ${PBS_JOBID}
-
-if grep -q "RESTART_NEEDED" "output_0-0.txt"
-then
-    qsub artis-raijin.sh
-fi
+pigz -v packets*.out

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # this script will move the Artis output files from the current run into a subfolder
-# which is the command line argument
+# given by the command line argument
 
 if [ $# -ne 1 ]; then
   echo 1>&2 "Usage: $0 JOB_DIRECTORY"
