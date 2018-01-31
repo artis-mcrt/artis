@@ -1,10 +1,10 @@
 #!/bin/bash
-#
+
 #PBS -P fm5
 #PBS -q normal
-#PBS -l walltime=10:00:00
-#PBS -l mem=1008GB
-#PBS -l ncpus=1008
+#PBS -l walltime=24:00:00
+#PBS -l mem=768GB
+#PBS -l ncpus=496
 #PBS -l wd
 
 # ncpus must be a factor of the cores per node (16)
@@ -27,5 +27,5 @@ mkdir ${PBS_JOBID}
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    qsub artis-raijin.sh
+    qsub $PBS_JOBNAME
 fi
