@@ -15,8 +15,6 @@
   #include "exspec.h"
 #endif
 
-const int nlevels_requiretransitions = 0; // first n levels will be collisionally coupled to all other levels
-
 const bool single_level_top_ion = false;
 
 const int groundstate_index_in = 1; // starting level index in the input files
@@ -311,8 +309,10 @@ static void read_ion_levels(
 
 
 static void read_ion_transitions(
-  FILE *transitiondata, const int nlevelsmax, const int tottransitions_in,
-  int *tottransitions, transitiontable_entry *transitiontable)
+  FILE *transitiondata, const int tottransitions_in,
+  int *tottransitions, transitiontable_entry *transitiontable,
+  const int nlevels_requiretransitions, const int nlevels_requiretransitions_upperlevels,
+  const int Z, const int ionstage)
 {
   if (*tottransitions == 0)
   {
@@ -340,51 +340,45 @@ static void read_ion_transitions(
       const int upper = upper_in - groundstate_index_in;
 
       // this entire block can be removed if we don't want to add in extra collisonal
-      // transitions between the first n levels
-      if (prev_lower < nlevels_requiretransitions && prev_upper < nlevelsmax - 1)
+      // transitions between levels
+      if (prev_lower < nlevels_requiretransitions)
       {
-        if (lower == prev_lower && upper > prev_upper + 1) // same lower level, but skipped some upper levels
+        int stoplevel;
+        if (lower == prev_lower && upper > prev_upper + 1)
         {
-          printout("+adding transitions from lower level %d starting at lineindex %d\n", prev_lower, i);
-          for (int tmplevel = prev_upper + 1; tmplevel < upper; tmplevel++)
-          {
-            if (tmplevel == prev_lower)
-              continue;
-            (*tottransitions)++;
-            transitiontable = realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
-            if (transitiontable == NULL)
-            {
-              printout("Could not reallocate transitiontable\n");
-              abort();
-            }
-            transitiontable[i].lower = prev_lower;
-            transitiontable[i].upper = tmplevel;
-            transitiontable[i].A = 0.;
-            transitiontable[i].coll_str = -2.;
-            transitiontable[i].forbidden = true;
-            // printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
-            i++;
-          }
+          // same lower level, but some upper levels were skipped over
+          stoplevel = upper - 1;
+          if (stoplevel >= nlevels_requiretransitions_upperlevels)
+            stoplevel = nlevels_requiretransitions_upperlevels - 1;
         }
-        else if (lower > prev_lower) // we've moved onto another lower level, but the previous one was missing some required transitions
+        else if (lower > prev_lower && prev_upper < nlevels_requiretransitions_upperlevels - 1)
         {
-          for (int tmplevel = prev_upper + 1; tmplevel < nlevelsmax; tmplevel++)
+          // we've moved onto another lower level, but the previous one was missing some required transitions
+          stoplevel = nlevels_requiretransitions_upperlevels - 1;
+        }
+        else
+        {
+          stoplevel = -1;
+        }
+
+        for (int tmplevel = prev_upper + 1; tmplevel <= stoplevel; tmplevel++)
+        {
+          if (tmplevel == prev_lower)
+            continue;
+          printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower, tmplevel);
+          (*tottransitions)++;
+          transitiontable = realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
+          if (transitiontable == NULL)
           {
-            (*tottransitions)++;
-            transitiontable = realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
-            if (transitiontable == NULL)
-            {
-              printout("Could not reallocate transitiontable\n");
-              abort();
-            }
-            transitiontable[i].lower = prev_lower;
-            transitiontable[i].upper = tmplevel;
-            transitiontable[i].A = 0.;
-            transitiontable[i].coll_str = -2.;
-            transitiontable[i].forbidden = true;
-            printout("+adding transition index %d lower %d upper %d\n", i, prev_lower, tmplevel);
-            i++;
+            printout("Could not reallocate transitiontable\n");
+            abort();
           }
+          transitiontable[i].lower = prev_lower;
+          transitiontable[i].upper = tmplevel;
+          transitiontable[i].A = 0.;
+          transitiontable[i].coll_str = -2.;
+          transitiontable[i].forbidden = true;
+          i++;
         }
       }
 
@@ -779,8 +773,24 @@ static void read_atomicdata_files(void)
             abort();
           }
         }
-
-        read_ion_transitions(transitiondata, nlevelsmax, tottransitions_in, &tottransitions, transitiontable);
+        // first <nlevels_requiretransitions> levels will be collisionally
+        // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
+        // use 0 to disable adding extra transitions
+        int nlevels_requiretransitions;
+        int nlevels_requiretransitions_upperlevels;
+        // if (Z == 26 && ionstage == 1)
+        // {
+        //   nlevels_requiretransitions = 33;
+        //   nlevels_requiretransitions_upperlevels = 33;
+        // }
+        // else
+        {
+          nlevels_requiretransitions = 0;
+          nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
+        }
+        read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
+                             nlevels_requiretransitions, nlevels_requiretransitions_upperlevels,
+                             Z, ionstage);
 
         /// store the ions data to memory and set up the ions zeta and levellist
         elements[element].ions[ion].ionstage = ionstage;
