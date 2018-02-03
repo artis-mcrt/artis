@@ -24,7 +24,7 @@ const int MAX_NT_EXCITATIONS = 25000;  // if this is more than SFPTS, then you m
                                        // the NT spectrum instead (although CPU costs)
 
 #define NT_EXCITATION_ON true // keep a list of non-thermal excitation rates for use
-                               // in the NLTE pop solver and NTLEPTON packet
+                               // in the NLTE pop solver, macroatom, and NTLEPTON packets
                                // even with this off, excitations will be included in the solution
                                // and their combined deposition fraction is calculated
 
