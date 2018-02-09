@@ -277,7 +277,7 @@ void nt_init(const int my_rank)
 
   if (nonthermal_initialized == false)
   {
-    printout("Initializing non-thermal solver\n");
+    printout("Initializing non-thermal solver with NT_EXCITATION %s\n", NT_EXCITATION_ON ? "on" : "off");
     char filename[100];
     sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
     nonthermalfile = fopen_required(filename, "w");
