@@ -692,7 +692,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
         radfield_normalise_J(n, estimator_normfactor_over4pi); // this applies normalisation to the fullspec J
-        radfield_set_J_normfactor(n, estimator_normfactor_over4pi); // this stores the factor to be applied later for the J bins, not fullspec J
+        radfield_set_J_normfactor(n, estimator_normfactor_over4pi); // this stores the factor that will be applied later for the J bins but not fullspec J
 
         #ifdef DO_TITER
           radfield_titer_J(n);

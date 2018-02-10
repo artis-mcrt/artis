@@ -7,22 +7,31 @@
 #define DEBUG_ON
 // #define DO_TITER
 // #define FORCE_LTE
-static const bool NT_ON = true;                      /// Switch on non-thermal ionisation
-static const bool NT_SOLVE_SPENCERFANO = true;       /// Use the Spencer-Fano solver instead of the work function approximation
 
+/// non-thermal ionisation
+static const bool NT_ON = true;
+
+/// use the detailed Spencer-Fano solver instead of the work function approximation
+static const bool NT_SOLVE_SPENCERFANO = true;
+
+// non-LTE population solver
 static const bool NLTE_POPS_ON = true;
-static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;  // solve the population matrix equation
-                                                           // simultaneously for levels in all ions
-#define NLTEITER 30                                        // maximum number of NLTE/Te/Spencer-Fano iterations
 
-static const bool MULTIBIN_RADFIELD_MODEL_ON = true;   // if using this, should avoid look up tables and switch on
-                                                       // direct integration options below
-                                                       // (since they assume J_nu is Planck function)
-#define NO_LUT_PHOTOION true            // dynamically calculate photoionization
-                                        // rates for the current radiation field
-                                        // instead of interpolating values from a
-                                        // lookup table for a blackbody radiation field
+// solve the NLTE population matrix equation simultaneously for levels of all ions of an element
+static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 
+// maximum number of NLTE/Te/Spencer-Fano iterations
+#define NLTEITER 30
+
+// if using this, avoid look up tables and switch on the direct integration options below
+// (since LUTs created with Planck function J_nu)
+static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
+
+// dynamically calculate photoionization rates for the current radiation field
+// instead of interpolating values from a lookup table for a blackbody radiation field
+#define NO_LUT_PHOTOION true
+
+// as above for bound-free heating
 #define NO_LUT_BFHEATING true
 
 #define DIRECT_COL_HEAT
