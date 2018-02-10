@@ -1093,7 +1093,29 @@ double rad_excitation_ratecoeff(
       //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
       //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
       //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
-      R = (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans, modelgridindex);
+
+      const double R_radfield = (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans, modelgridindex);
+      R = R_radfield;
+
+      if (DETAILED_LINE_ESTIMATORS_ON)
+      {
+        const int jblueindex = radfield_get_jblueindex(lineindex);
+        if (jblueindex >= 0)
+        {
+          const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
+          if (contribcount > 0)
+          {
+            const double Jb_lu = radfield_get_Jb_lu(modelgridindex, jblueindex);
+            const double R_Jb = beta * B_lu * Jb_lu;
+            const double linelambda = 1e8 * CLIGHT / nu_trans;
+            printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R/R_Jb %g\n",
+                     linelambda, contribcount, R_Jb, R_radfield, R_radfield / R_Jb);
+            printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
+                     get_element(element), get_ionstage(element, ion), lower, upper);
+            R = R_Jb;
+          }
+        }
+      }
     }
     else
     {
