@@ -10,6 +10,7 @@
 #include "input.h"
 #include "linelist.h"
 #include "nltepop.h"
+#include "radfield.h"
 #include "rpkt.h"
 #ifdef DO_EXSPEC
   #include "exspec.h"
@@ -590,6 +591,7 @@ static void add_transitions_to_linelist(
 
 static void read_atomicdata_files(void)
 {
+  radfield_jblue_init();
   int totaluptrans = 0;
   int totaldowntrans = 0;
   int cont_index = -1;

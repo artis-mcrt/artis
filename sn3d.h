@@ -23,6 +23,9 @@ static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 // maximum number of NLTE/Te/Spencer-Fano iterations
 #define NLTEITER 30
 
+// store Jb_lu estimators for some lines
+static const bool DETAILED_LINE_ESTIMATORS_ON = false;
+
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
 static const bool MULTIBIN_RADFIELD_MODEL_ON = true;

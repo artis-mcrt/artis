@@ -6,6 +6,7 @@
 #include "ltepop.h"
 #include "move.h"
 #include "polarization.h"
+#include "radfield.h"
 #include "rpkt.h"
 #include "update_grid.h"
 #include "vectors.h"
@@ -143,6 +144,8 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
     const int ion = mastate[tid].ion;
     const int upper = mastate[tid].level;
     const int lower = mastate[tid].activatedfromlevel;
+    // const int lineindex = mastate[tid].activatingline;
+    const int lineindex = dummypkt_ptr->next_trans - 1;
     #ifdef DEBUG_ON
       //if (debuglevel == 2) printout("[debug] get_event: propagationcounter %d\n",propagationcounter);
       if (debuglevel == 2)
@@ -167,7 +170,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
         ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
       }
       else
-        ldist = CLIGHT * t_current * (dummypkt_ptr->nu_cmf/nu_trans - 1);
+        ldist = CLIGHT * t_current * (dummypkt_ptr->nu_cmf / nu_trans - 1);
       //fprintf(ldist_file,"%25.16e %25.16e\n",dummypkt_ptr->nu_cmf,ldist);
       if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
 
@@ -175,8 +178,9 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
         if (debuglevel == 2) printout("[debug] get_event:     ldist %g\n",ldist);
       #endif
 
+
       //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
-      const double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans-1);
+      const double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans - 1);
       const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
       const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
@@ -192,6 +196,18 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
         tau_line = 0.;
         //printout("[fatal] get_event: tau_line < 0 ... abort\n");
         //abort();
+      }
+
+      if (DETAILED_LINE_ESTIMATORS_ON)
+      {
+        const int jblueindex = radfield_get_jblueindex(lineindex);
+        if (jblueindex >= 0)
+        {
+          const double t_exp = t_current; // should it be plus (ldist / CLIGHT_PROP) ??
+          const double lambda_trans = CLIGHT / nu_trans;
+          const double increment = t_exp * lambda_trans * nu_trans * dummypkt_ptr->e_cmf / (dummypkt_ptr->nu_cmf);
+          radfield_increment_Jb_lu_estimator(modelgridindex, jblueindex, increment);
+        }
       }
 
       //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
@@ -851,8 +867,8 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
         #endif
         edist = edist / 2.;
         t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,edist,t_current);
-        update_estimators(pkt_ptr,edist*2);
+        move_pkt(pkt_ptr, edist, t_current);
+        update_estimators(pkt_ptr, edist*2);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           edist = edist * 2.;

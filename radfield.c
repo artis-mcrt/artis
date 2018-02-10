@@ -13,8 +13,6 @@
 
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 
-extern inline double radfield_dbb(double nu, float T, float W);
-
 static const double nu_lower_first_initial = (CLIGHT / (10000e-8)); // in Angstroms
 static const double nu_upper_last_initial = (CLIGHT /  (500e-8));  // in Angstroms
 
@@ -57,6 +55,18 @@ static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequenc
 static struct radfieldbin_current *radfieldbin_current[MMODELGRID + 1];
 static struct radfieldbin_previous *radfieldbin_previous[MMODELGRID + 1];
 
+struct Jb_lu_estimator
+{
+  double value;
+  int contribcount;
+};
+
+static const int BLOCKSIZEJBLUE = 128;
+static int detailed_linecount;
+static int *detailed_lineindicies;
+static struct Jb_lu_estimator *prev_Jb_lu_normed[MMODELGRID + 1];  // value from the previous timestep
+static struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised estimator for the current timestep
+
 static double J[MMODELGRID + 1];
 #ifdef DO_TITER
   static double J_reduced_save[MMODELGRID + 1];
@@ -93,11 +103,15 @@ typedef struct
 static FILE *restrict radfieldfile = NULL;
 
 
+extern inline double radfield_dbb(double nu, float T, float W);
+
+
 static inline
 double get_bin_nu_upper(int binindex)
 {
   return radfieldbin_nu_upper[binindex];
 }
+
 
 static void
 setup_bin_boundaries(void)
@@ -150,8 +164,121 @@ setup_bin_boundaries(void)
 }
 
 
-void radfield_init(int my_rank)
+void radfield_jblue_init(void)
+// set up the data structures assocated with the Jb_lu estimators
+// this is called before/during atomic data input, whereas the
+// radfield_init() is called after the atomic data is known
 {
+  detailed_linecount = 0;
+
+  detailed_lineindicies = NULL;
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    prev_Jb_lu_normed[modelgridindex] = NULL;
+    Jb_lu_raw[modelgridindex] = NULL;
+  }
+}
+
+
+
+static void allocate_estimator_for_line(const int lineindex)
+// associate a Jb_lu estimator with a particular lineindex to be used
+// instead of the general radiation field model
+{
+  if (detailed_linecount % BLOCKSIZEJBLUE == 0)
+  {
+    const int newsize = detailed_linecount + BLOCKSIZEJBLUE;
+    detailed_lineindicies = realloc(detailed_lineindicies, newsize * sizeof(int));
+    if (detailed_lineindicies == NULL)
+    {
+      printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
+      abort();
+    }
+
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    {
+      prev_Jb_lu_normed[modelgridindex] = realloc(
+        prev_Jb_lu_normed[modelgridindex], newsize * sizeof(struct Jb_lu_estimator));
+
+      Jb_lu_raw[modelgridindex] = realloc(
+        Jb_lu_raw[modelgridindex], newsize * sizeof(struct Jb_lu_estimator));
+
+      if (prev_Jb_lu_normed[modelgridindex] == NULL || Jb_lu_raw[modelgridindex] == NULL)
+      {
+        printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
+        abort();
+      }
+    }
+  }
+
+  detailed_lineindicies[detailed_linecount] = lineindex;
+  detailed_linecount++;
+  // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
+}
+
+
+static int compare_integers(const void* a, const void* b)
+{
+   int int_a = * ((int*) a);
+   int int_b = * ((int*) b);
+
+  return (int_a > int_b) - (int_a < int_b);
+}
+
+
+void radfield_init(int my_rank)
+// this should be called only after the atomic data is in memory
+{
+  if (radfield_initialized)
+  {
+    printout("ERROR: Tried to initialize radfield twice!\n");
+    abort();
+  }
+
+  if (DETAILED_LINE_ESTIMATORS_ON)
+  {
+    for (int i = 0; i < nlines; i++)
+    {
+      const int element = linelist[i].elementindex;
+      const int Z = get_element(element);
+      if (Z == 26)
+      {
+        const int lowerlevel = linelist[i].lowerlevelindex;
+        const int upperlevel = linelist[i].upperlevelindex;
+        const int ion = linelist[i].ionindex;
+        const int ionstage = get_ionstage(element, ion);
+        const double A_ul = linelist[i].einstein_A;
+
+        bool addline = false;
+        // if (ionstage == 1 && lowerlevel == 6 && upperlevel == 55)
+        //   addline = true;
+        // else if (ionstage == 1 && lowerlevel == 10 && upperlevel == 104)
+        //   addline = true;
+        // else if (ionstage == 1 && lowerlevel == 10 && upperlevel == 112)
+        //   addline = true;
+        // else if (ionstage == 2 && lowerlevel == 9 && upperlevel == 64)
+        //   addline = true;
+
+        if (ionstage <= 3 && A_ul > 1e6 && lowerlevel <= 12)
+          addline = true;
+        // addline = (*lineindex == 222751);
+        if (addline)
+        {
+          printout("Adding Jblue estimator for lineindex %d Z=%02d ionstage %d lower %d upper %d A_ul %g\n",
+                   i, Z, ionstage, lowerlevel, upperlevel, A_ul);
+          allocate_estimator_for_line(i);
+        }
+      }
+    }
+
+    // these are probably sorted anyway because the previous loop goes in ascending
+    // lineindex. But this sorting step is quick and makes sure that the
+    // binary searching later will work correctly
+    qsort(detailed_lineindicies, detailed_linecount, sizeof(int), compare_integers);
+  }
+
+  printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
+
   if (!MULTIBIN_RADFIELD_MODEL_ON)
   {
     printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
@@ -160,13 +287,7 @@ void radfield_init(int my_rank)
 
   printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
 
-  if (radfield_initialized)
-  {
-    printout("ERROR: Tried to initialize radfield twice!\n");
-    abort();
-  }
-
-  printout("Initialising radiation field with %d bins from (%6.2f eV, %6.1f A) to (%6.2f eV, %6.1f A)\n",
+  printout("Initialising multibin radiation field with %d bins from (%6.2f eV, %6.1f A) to (%6.2f eV, %6.1f A)\n",
            RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
            H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
   char filename[100];
@@ -204,6 +325,70 @@ void radfield_init(int my_rank)
     }
   }
   radfield_initialized = true;
+}
+
+
+inline
+int radfield_get_jblueindex(const int lineindex)
+// returns -1 if the line does not have a Jblue estimator
+{
+  // slow linear search
+  // for (int i = 0; i < detailed_linecount; i++)
+  // {
+  //   if (detailed_lineindicies[i] == lineindex)
+  //     return i;
+  // }
+
+  if (!DETAILED_LINE_ESTIMATORS_ON)
+    return -1;
+
+  // use a binary search, assuming the list is sorted
+
+  int low = 0;
+  int high = detailed_linecount;
+  while (low <= high)
+  {
+    int mid = low + ((high - low) / 2);
+    if (detailed_lineindicies[mid] < lineindex)
+    {
+      low = mid + 1;
+    }
+    else if (detailed_lineindicies[mid] > lineindex)
+    {
+      high = mid - 1;
+    }
+    else
+    {
+      return mid;
+    }
+   }
+
+   // const int element = linelist[lineindex].elementindex;
+   // const int ion = linelist[lineindex].ionindex;
+   // const int lower = linelist[lineindex].lowerlevelindex;
+   // const int upper = linelist[lineindex].upperlevelindex;
+   // printout("Could not find lineindex %d among %d items (Z=%02d ionstage %d lower %d upper %d)\n",
+   //          lineindex, detailed_linecount, get_element(element), get_ionstage(element, ion), lower, upper);
+
+  return -1;
+}
+
+
+inline
+double radfield_get_Jb_lu(const int modelgridindex, const int jblueindex)
+{
+  assert(jblueindex >= 0);
+  assert(jblueindex < detailed_linecount);
+  return prev_Jb_lu_normed[modelgridindex][jblueindex].value;
+}
+
+
+inline
+int radfield_get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex)
+{
+  assert(jblueindex >= 0);
+  assert(jblueindex < detailed_linecount);
+  return prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
 }
 
 
@@ -434,6 +619,12 @@ void radfield_zero_estimators(int modelgridindex)
 // set up the new bins and clear the estimators in preparation
 // for a timestep
 {
+  for (int i = 0; i < detailed_linecount; i++)
+  {
+    Jb_lu_raw[modelgridindex][i].value = 0.;
+    Jb_lu_raw[modelgridindex][i].contribcount = 0.;
+  }
+
   J[modelgridindex] = 0.; // this is required even if FORCE_LTE is on
 #ifndef FORCE_LTE
   nuJ[modelgridindex] = 0.;
@@ -536,6 +727,17 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
     // }
   }
 #endif
+}
+
+
+inline
+void radfield_increment_Jb_lu_estimator(const int modelgridindex, const int jblueindex, const double increment)
+{
+  Jb_lu_raw[modelgridindex][jblueindex].value += increment;
+  Jb_lu_raw[modelgridindex][jblueindex].contribcount += 1;
+  // const int lineindex = detailed_lineindicies[jblueindex];
+  // printout(" increment cell %d lineindex %d Jb_lu_raw %g prev_Jb_lu_normed %g radfield(nu_trans) %g\n",
+  //       modelgridindex, lineindex, Jb_lu_raw[modelgridindex][jblueindex], prev_Jb_lu_normed[modelgridindex][jblueindex].value, radfield(linelist[lineindex].nu, modelgridindex));
 }
 
 
@@ -983,6 +1185,11 @@ void radfield_normalise_J(const int modelgridindex, const double estimator_normf
 {
   assert(isfinite(J[modelgridindex]));
   J[modelgridindex] *= estimator_normfactor_over4pi;
+  for (int i = 0; i < detailed_linecount; i++)
+  {
+    prev_Jb_lu_normed[modelgridindex][i].value = Jb_lu_raw[modelgridindex][i].value * estimator_normfactor_over4pi;
+    prev_Jb_lu_normed[modelgridindex][i].contribcount = Jb_lu_raw[modelgridindex][i].contribcount;
+  }
 }
 
 
