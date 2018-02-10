@@ -23,7 +23,7 @@ static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 // maximum number of NLTE/Te/Spencer-Fano iterations
 #define NLTEITER 30
 
-// store Jb_lu estimators for some lines
+// store Jb_lu estimators for certain lines selected in radfield.c:radfield_init()
 static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // if using this, avoid look up tables and switch on the direct integration options below
