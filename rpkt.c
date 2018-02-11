@@ -200,7 +200,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
 
       if (DETAILED_LINE_ESTIMATORS_ON)
       {
-        const int jblueindex = radfield_get_jblueindex(lineindex);
+        const int jblueindex = radfield_get_Jblueindex(lineindex);
         if (jblueindex >= 0)
         {
           const double t_exp = t_current; // should it be plus (ldist / CLIGHT_PROP) ??

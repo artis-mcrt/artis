@@ -16,7 +16,7 @@ void radfield_set_J_normfactor(int modelgridindex, double normfactor);
 void radfield_normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
 void radfield_normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
 double get_T_R_from_J(int modelgridindex);
-int radfield_get_jblueindex(int lineindex);
+int radfield_get_Jblueindex(int lineindex);
 double radfield_get_Jb_lu(int modelgridindex, int jblueindex);
 int radfield_get_Jb_lu_contribcount(int modelgridindex, int jblueindex);
 void radfield_titer_J(int modelgridindex);
