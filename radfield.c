@@ -1395,24 +1395,30 @@ void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart
 
 void radfield_write_restart_data(FILE *gridsave_file)
 {
-  if (!MULTIBIN_RADFIELD_MODEL_ON)
-    return;
-
   printout("data for binned radiation field and detailed lines, ");
 
   fprintf(gridsave_file, "%d\n", 30490824); // special number marking the beginning of radfield data
-  fprintf(gridsave_file, "%d %lg %lg %lg %lg %d\n",
-          RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
-          T_R_min, T_R_max, detailed_linecount);
 
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
-    fprintf(gridsave_file,"%d %lg\n", binindex, radfieldbin_nu_upper[binindex]);
+    fprintf(gridsave_file, "%d %lg %lg %lg %lg\n",
+            RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
+            T_R_min, T_R_max);
+
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    {
+      fprintf(gridsave_file,"%d %lg\n", binindex, radfieldbin_nu_upper[binindex]);
+    }
   }
 
-  for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+  if (DETAILED_LINE_ESTIMATORS_ON)
   {
-    fprintf(gridsave_file, "%d ", detailed_lineindicies[jblueindex]);
+    fprintf(gridsave_file, "%d\n", detailed_linecount);
+
+    for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+    {
+      fprintf(gridsave_file, "%d ", detailed_lineindicies[jblueindex]);
+    }
   }
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
@@ -1421,27 +1427,33 @@ void radfield_write_restart_data(FILE *gridsave_file)
     {
       fprintf(gridsave_file,"%d %lg\n", modelgridindex, J_normfactor[modelgridindex]);
 
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      if (MULTIBIN_RADFIELD_MODEL_ON)
       {
-        fprintf(gridsave_file, "%lg %lg %lg %lg %d %g %g %d\n",
-                radfieldbin_current[modelgridindex][binindex].J_raw,
-                radfieldbin_current[modelgridindex][binindex].nuJ_raw,
-                radfieldbin_previous[modelgridindex][binindex].prev_J_normed,
-                radfieldbin_previous[modelgridindex][binindex].prev_nuJ_normed,
-                radfieldbin_previous[modelgridindex][binindex].prev_contribcount,
-                radfieldbin_current[modelgridindex][binindex].W,
-                radfieldbin_current[modelgridindex][binindex].T_R,
-                radfieldbin_current[modelgridindex][binindex].contribcount);
-                //radfieldbin_current[modelgridindex][binindex].fit_type
+        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+        {
+          fprintf(gridsave_file, "%lg %lg %lg %lg %d %g %g %d\n",
+                  radfieldbin_current[modelgridindex][binindex].J_raw,
+                  radfieldbin_current[modelgridindex][binindex].nuJ_raw,
+                  radfieldbin_previous[modelgridindex][binindex].prev_J_normed,
+                  radfieldbin_previous[modelgridindex][binindex].prev_nuJ_normed,
+                  radfieldbin_previous[modelgridindex][binindex].prev_contribcount,
+                  radfieldbin_current[modelgridindex][binindex].W,
+                  radfieldbin_current[modelgridindex][binindex].T_R,
+                  radfieldbin_current[modelgridindex][binindex].contribcount);
+                  //radfieldbin_current[modelgridindex][binindex].fit_type
+        }
       }
 
-      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+      if (DETAILED_LINE_ESTIMATORS_ON)
       {
-        fprintf(gridsave_file, "%lg %d %lg %d\n",
-                Jb_lu_raw[modelgridindex][jblueindex].value,
-                Jb_lu_raw[modelgridindex][jblueindex].contribcount,
-                prev_Jb_lu_normed[modelgridindex][jblueindex].value,
-                prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount);
+        for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+        {
+          fprintf(gridsave_file, "%lg %d %lg %d\n",
+                  Jb_lu_raw[modelgridindex][jblueindex].value,
+                  Jb_lu_raw[modelgridindex][jblueindex].contribcount,
+                  prev_Jb_lu_normed[modelgridindex][jblueindex].value,
+                  prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount);
+        }
       }
     }
   }
@@ -1450,9 +1462,6 @@ void radfield_write_restart_data(FILE *gridsave_file)
 
 void radfield_read_restart_data(FILE *gridsave_file)
 {
-  if (!MULTIBIN_RADFIELD_MODEL_ON)
-    return;
-
   printout("Reading restart data for radiation field\n");
 
   if (!radfield_initialized)
@@ -1469,45 +1478,53 @@ void radfield_read_restart_data(FILE *gridsave_file)
     abort();
   }
 
-  int bincount_in;
-  int detailed_linecount_in;
-  double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
-  fscanf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
-         &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
-         &T_R_min_in, &T_R_max_in, &detailed_linecount_in);
-
-  double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
-  if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
-  double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
-  if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
-
-  if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
-      nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
-    printout("ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
-             bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
-    printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
-            RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
-    abort();
+    int bincount_in;
+    double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
+    fscanf(gridsave_file,"%d %lg %lg %lg %lg\n",
+           &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
+           &T_R_min_in, &T_R_max_in);
+
+    double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
+    if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+    double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
+    if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
+
+    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != T_R_min || T_R_max_in != T_R_max ||
+        nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999)
+    {
+      printout("ERROR: gridsave file specifies %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
+               bincount_in, nu_lower_first_initial_in, nu_upper_last_initial_in, T_R_min_in, T_R_max_in);
+      printout("require %d bins, nu_lower_first_initial %lg nu_upper_last_initial %lg T_R_min %lg T_R_max %lg\n",
+              RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial, T_R_min, T_R_max);
+      abort();
+    }
+
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    {
+      int binindex_in;
+      fscanf(gridsave_file,"%d %lg\n", &binindex_in, &radfieldbin_nu_upper[binindex]);
+      assert(binindex_in == binindex);
+    }
   }
 
-  if (detailed_linecount_in != detailed_linecount)
+  if (DETAILED_LINE_ESTIMATORS_ON)
   {
-    printout("ERROR: gridsave file specifies %d detailed lines but this simulation has %d.\n",
-             detailed_linecount_in, detailed_linecount);
-    abort();
-  }
+    int detailed_linecount_in;
+    fscanf(gridsave_file,"%d\n", &detailed_linecount_in);
 
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-  {
-    int binindex_in;
-    fscanf(gridsave_file,"%d %lg\n", &binindex_in, &radfieldbin_nu_upper[binindex]);
-    assert(binindex_in == binindex);
-  }
+    if (detailed_linecount_in != detailed_linecount)
+    {
+      printout("ERROR: gridsave file specifies %d detailed lines but this simulation has %d.\n",
+               detailed_linecount_in, detailed_linecount);
+      abort();
+    }
 
-  for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
-  {
-    fscanf(gridsave_file, "%d ", &detailed_lineindicies[jblueindex]);
+    for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+    {
+      fscanf(gridsave_file, "%d ", &detailed_lineindicies[jblueindex]);
+    }
   }
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
@@ -1522,26 +1539,32 @@ void radfield_read_restart_data(FILE *gridsave_file)
         abort();
       }
 
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      if (MULTIBIN_RADFIELD_MODEL_ON)
       {
-        fscanf(gridsave_file, "%lg %lg %lg %lg %d %g %g %d\n",
-               &radfieldbin_current[modelgridindex][binindex].J_raw,
-               &radfieldbin_current[modelgridindex][binindex].nuJ_raw,
-               &radfieldbin_previous[modelgridindex][binindex].prev_J_normed,
-               &radfieldbin_previous[modelgridindex][binindex].prev_nuJ_normed,
-               &radfieldbin_previous[modelgridindex][binindex].prev_contribcount,
-               &radfieldbin_current[modelgridindex][binindex].W,
-               &radfieldbin_current[modelgridindex][binindex].T_R,
-               &radfieldbin_current[modelgridindex][binindex].contribcount);
+        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+        {
+          fscanf(gridsave_file, "%lg %lg %lg %lg %d %g %g %d\n",
+                 &radfieldbin_current[modelgridindex][binindex].J_raw,
+                 &radfieldbin_current[modelgridindex][binindex].nuJ_raw,
+                 &radfieldbin_previous[modelgridindex][binindex].prev_J_normed,
+                 &radfieldbin_previous[modelgridindex][binindex].prev_nuJ_normed,
+                 &radfieldbin_previous[modelgridindex][binindex].prev_contribcount,
+                 &radfieldbin_current[modelgridindex][binindex].W,
+                 &radfieldbin_current[modelgridindex][binindex].T_R,
+                 &radfieldbin_current[modelgridindex][binindex].contribcount);
+        }
       }
 
-      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+      if (DETAILED_LINE_ESTIMATORS_ON)
       {
-        fscanf(gridsave_file, "%lg %d %lg %d\n",
-                &Jb_lu_raw[modelgridindex][jblueindex].value,
-                &Jb_lu_raw[modelgridindex][jblueindex].contribcount,
-                &prev_Jb_lu_normed[modelgridindex][jblueindex].value,
-                &prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount);
+        for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+        {
+          fscanf(gridsave_file, "%lg %d %lg %d\n",
+                  &Jb_lu_raw[modelgridindex][jblueindex].value,
+                  &Jb_lu_raw[modelgridindex][jblueindex].contribcount,
+                  &prev_Jb_lu_normed[modelgridindex][jblueindex].value,
+                  &prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount);
+        }
       }
     }
   }
