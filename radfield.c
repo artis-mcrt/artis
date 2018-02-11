@@ -284,7 +284,7 @@ void radfield_init(int my_rank)
         // else if (ionstage == 2 && lowerlevel == 9 && upperlevel == 64)
         //   addline = true;
 
-        if (ionstage <= 3 && A_ul > 1e6 && lowerlevel <= 12)
+        if (A_ul > 1e6 && lowerlevel <= 15) // ionstage <= 3 && 
           addline = true;
         // addline = (*lineindex == 222751);
         if (addline)
