@@ -46,6 +46,9 @@ struct radfieldbin_current
   double J_raw;           // value needs to be multipled by J_normfactor to get the true value
   double nuJ_raw;
   int contribcount;
+
+  // these two parameters are used in the current timestep, but were calculated
+  // from the values of J and nuJ in the previous timestep
   float W;                // dilution (scaling) factor
   float T_R;              // radiation temperature
   // enum_bin_fit_type fit_type;
@@ -55,17 +58,25 @@ static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequenc
 static struct radfieldbin_current *radfieldbin_current[MMODELGRID + 1];
 static struct radfieldbin_previous *radfieldbin_previous[MMODELGRID + 1];
 
+// ** Detailed lines - Jblue_lu estimators for selected lines
+
 struct Jb_lu_estimator
 {
   double value;
   int contribcount;
 };
 
+// reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
 static const int BLOCKSIZEJBLUE = 128;
 static int detailed_linecount;
+
+// array of indicies into the linelist[] array for selected lines
 static int *detailed_lineindicies;
+
 static struct Jb_lu_estimator *prev_Jb_lu_normed[MMODELGRID + 1];  // value from the previous timestep
 static struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised estimator for the current timestep
+
+// ** end detailed lines
 
 static double J[MMODELGRID + 1];
 #ifdef DO_TITER
@@ -180,37 +191,51 @@ void radfield_jblue_init(void)
 }
 
 
+static void realloc_detailed_lines(const int new_size)
+{
+  detailed_lineindicies = realloc(detailed_lineindicies, new_size * sizeof(int));
+  if (detailed_lineindicies == NULL)
+  {
+    printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
+    abort();
+  }
 
-static void allocate_estimator_for_line(const int lineindex)
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    prev_Jb_lu_normed[modelgridindex] = realloc(
+      prev_Jb_lu_normed[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
+
+    Jb_lu_raw[modelgridindex] = realloc(
+      Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
+
+    if (prev_Jb_lu_normed[modelgridindex] == NULL || Jb_lu_raw[modelgridindex] == NULL)
+    {
+      printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
+      abort();
+    }
+  }
+}
+
+
+static void add_detailed_line(const int lineindex)
 // associate a Jb_lu estimator with a particular lineindex to be used
 // instead of the general radiation field model
 {
   if (detailed_linecount % BLOCKSIZEJBLUE == 0)
   {
-    const int newsize = detailed_linecount + BLOCKSIZEJBLUE;
-    detailed_lineindicies = realloc(detailed_lineindicies, newsize * sizeof(int));
-    if (detailed_lineindicies == NULL)
-    {
-      printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
-      abort();
-    }
-
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
-    {
-      prev_Jb_lu_normed[modelgridindex] = realloc(
-        prev_Jb_lu_normed[modelgridindex], newsize * sizeof(struct Jb_lu_estimator));
-
-      Jb_lu_raw[modelgridindex] = realloc(
-        Jb_lu_raw[modelgridindex], newsize * sizeof(struct Jb_lu_estimator));
-
-      if (prev_Jb_lu_normed[modelgridindex] == NULL || Jb_lu_raw[modelgridindex] == NULL)
-      {
-        printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
-        abort();
-      }
-    }
+    const int new_size = detailed_linecount + BLOCKSIZEJBLUE;
+    realloc_detailed_lines(new_size);
   }
 
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    prev_Jb_lu_normed[modelgridindex][detailed_linecount].value = 0;
+    prev_Jb_lu_normed[modelgridindex][detailed_linecount].contribcount = 0;
+
+    // radfield_zero_estimators should do the next part anyway, but just to be sure:
+    Jb_lu_raw[modelgridindex][detailed_linecount].value = 0;
+    Jb_lu_raw[modelgridindex][detailed_linecount].contribcount = 0;
+  }
   detailed_lineindicies[detailed_linecount] = lineindex;
   detailed_linecount++;
   // printout("Added Jblue estimator for lineindex %d count %d\n", lineindex, detailed_linecount);
@@ -266,10 +291,14 @@ void radfield_init(int my_rank)
         {
           printout("Adding Jblue estimator for lineindex %d Z=%02d ionstage %d lower %d upper %d A_ul %g\n",
                    i, Z, ionstage, lowerlevel, upperlevel, A_ul);
-          allocate_estimator_for_line(i);
+          add_detailed_line(i);
         }
       }
     }
+
+    // shrink the detailed line list in case detailed_linecount isn't a multiple of BLOCKSIZEJBLUE
+    // (important for saving memory if there are a lot of grid cells)
+    realloc_detailed_lines(detailed_linecount);
 
     // these are probably sorted anyway because the previous loop goes in ascending
     // lineindex. But this sorting step is quick and makes sure that the
@@ -329,7 +358,7 @@ void radfield_init(int my_rank)
 
 
 inline
-int radfield_get_jblueindex(const int lineindex)
+int radfield_get_Jblueindex(const int lineindex)
 // returns -1 if the line does not have a Jblue estimator
 {
   // slow linear search
@@ -1268,15 +1297,37 @@ void radfield_reduce_estimators(void)
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, mg_associated_cells[modelgridindex]);
       if (mg_associated_cells[modelgridindex] > 0)
       {
+        MPI_Barrier(MPI_COMM_WORLD);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
           // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
-          MPI_Barrier(MPI_COMM_WORLD);
           MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
           MPI_Allreduce(MPI_IN_PLACE, &radfieldbin_current[modelgridindex][binindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
           // printout("MPI: After MPI_Allreduce: Process %d modelgrid %d binindex %d has a contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
+        }
+      }
+    }
+    const int duration_reduction = time(NULL) - sys_time_start_reduction;
+    printout(" (took %d s)\n", duration_reduction);
+  }
+
+  if (DETAILED_LINE_ESTIMATORS_ON)
+  {
+    const time_t sys_time_start_reduction = time(NULL);
+    printout("Reducing detailed line estimators");
+
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    {
+      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, mg_associated_cells[modelgridindex]);
+      if (mg_associated_cells[modelgridindex] > 0)
+      {
+        MPI_Barrier(MPI_COMM_WORLD);
+        for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+        {
+          MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[modelgridindex][jblueindex].contribcount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
         }
       }
     }
@@ -1307,22 +1358,34 @@ void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart
   {
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    if (MULTIBIN_RADFIELD_MODEL_ON && mg_associated_cells[modelgridindex] > 0)
+    if (mg_associated_cells[modelgridindex] > 0)
     {
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+      if (MULTIBIN_RADFIELD_MODEL_ON)
       {
         MPI_Barrier(MPI_COMM_WORLD);
-        // printout("radfield_MPI_Bcast bin %d T_R before: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
-        MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbin_previous[modelgridindex][binindex].prev_J_normed, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbin_previous[modelgridindex][binindex].prev_nuJ_normed, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-        MPI_Bcast(&radfieldbin_previous[modelgridindex][binindex].prev_contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
-        // printout("radfield_MPI_Bcast MPI_Bcast radfield bin %d for cell %d from process %d to %d\n", binindex, modelgridindex, root, my_rank);
-        // printout("radfield_MPI_Bcast bin %d T_R after: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
+        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+        {
+          // printout("radfield_MPI_Bcast bin %d T_R before: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
+          MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+          MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+          MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(&radfieldbin_current[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+          MPI_Bcast(&radfieldbin_previous[modelgridindex][binindex].prev_J_normed, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(&radfieldbin_previous[modelgridindex][binindex].prev_nuJ_normed, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(&radfieldbin_previous[modelgridindex][binindex].prev_contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+          // printout("radfield_MPI_Bcast MPI_Bcast radfield bin %d for cell %d from process %d to %d\n", binindex, modelgridindex, root, my_rank);
+          // printout("radfield_MPI_Bcast bin %d T_R after: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
+        }
+      }
+
+      if (DETAILED_LINE_ESTIMATORS_ON)
+      {
+        for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+        {
+          MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
+        }
       }
     }
   }
@@ -1335,24 +1398,32 @@ void radfield_write_restart_data(FILE *gridsave_file)
   if (!MULTIBIN_RADFIELD_MODEL_ON)
     return;
 
-  printout("data for binned radiation field, ");
+  printout("data for binned radiation field and detailed lines, ");
 
   fprintf(gridsave_file, "%d\n", 30490824); // special number marking the beginning of radfield data
-  fprintf(gridsave_file,"%d %lg %lg %lg %lg\n",
+  fprintf(gridsave_file, "%d %lg %lg %lg %lg %d\n",
           RADFIELDBINCOUNT, nu_lower_first_initial, nu_upper_last_initial,
-          T_R_min, T_R_max);
+          T_R_min, T_R_max, detailed_linecount);
 
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  {
     fprintf(gridsave_file,"%d %lg\n", binindex, radfieldbin_nu_upper[binindex]);
+  }
+
+  for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+  {
+    fprintf(gridsave_file, "%d ", detailed_lineindicies[jblueindex]);
+  }
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     if (mg_associated_cells[modelgridindex] > 0)
     {
       fprintf(gridsave_file,"%d %lg\n", modelgridindex, J_normfactor[modelgridindex]);
+
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        fprintf(gridsave_file,"%lg %lg %lg %lg %d %g %g %d\n",
+        fprintf(gridsave_file, "%lg %lg %lg %lg %d %g %g %d\n",
                 radfieldbin_current[modelgridindex][binindex].J_raw,
                 radfieldbin_current[modelgridindex][binindex].nuJ_raw,
                 radfieldbin_previous[modelgridindex][binindex].prev_J_normed,
@@ -1362,6 +1433,15 @@ void radfield_write_restart_data(FILE *gridsave_file)
                 radfieldbin_current[modelgridindex][binindex].T_R,
                 radfieldbin_current[modelgridindex][binindex].contribcount);
                 //radfieldbin_current[modelgridindex][binindex].fit_type
+      }
+
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+      {
+        fprintf(gridsave_file, "%lg %d %lg %d\n",
+                Jb_lu_raw[modelgridindex][jblueindex].value,
+                Jb_lu_raw[modelgridindex][jblueindex].contribcount,
+                prev_Jb_lu_normed[modelgridindex][jblueindex].value,
+                prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount);
       }
     }
   }
@@ -1390,10 +1470,11 @@ void radfield_read_restart_data(FILE *gridsave_file)
   }
 
   int bincount_in;
+  int detailed_linecount_in;
   double T_R_min_in, T_R_max_in, nu_lower_first_initial_in, nu_upper_last_initial_in;
-  fscanf(gridsave_file,"%d %lg %lg %lg %lg\n",
+  fscanf(gridsave_file,"%d %lg %lg %lg %lg %d\n",
          &bincount_in, &nu_lower_first_initial_in, &nu_upper_last_initial_in,
-         &T_R_min_in, &T_R_max_in);
+         &T_R_min_in, &T_R_max_in, &detailed_linecount_in);
 
   double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
   if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
@@ -1410,11 +1491,23 @@ void radfield_read_restart_data(FILE *gridsave_file)
     abort();
   }
 
+  if (detailed_linecount_in != detailed_linecount)
+  {
+    printout("ERROR: gridsave file specifies %d detailed lines but this simulation has %d.\n",
+             detailed_linecount_in, detailed_linecount);
+    abort();
+  }
+
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
   {
     int binindex_in;
     fscanf(gridsave_file,"%d %lg\n", &binindex_in, &radfieldbin_nu_upper[binindex]);
     assert(binindex_in == binindex);
+  }
+
+  for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+  {
+    fscanf(gridsave_file, "%d ", &detailed_lineindicies[jblueindex]);
   }
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
@@ -1428,9 +1521,10 @@ void radfield_read_restart_data(FILE *gridsave_file)
         printout("ERROR: expected data for cell %d but found cell %d\n", modelgridindex, mgi_in);
         abort();
       }
+
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        fscanf(gridsave_file,"%lg %lg %lg %lg %d %g %g %d\n",
+        fscanf(gridsave_file, "%lg %lg %lg %lg %d %g %g %d\n",
                &radfieldbin_current[modelgridindex][binindex].J_raw,
                &radfieldbin_current[modelgridindex][binindex].nuJ_raw,
                &radfieldbin_previous[modelgridindex][binindex].prev_J_normed,
@@ -1440,11 +1534,22 @@ void radfield_read_restart_data(FILE *gridsave_file)
                &radfieldbin_current[modelgridindex][binindex].T_R,
                &radfieldbin_current[modelgridindex][binindex].contribcount);
       }
+
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
+      {
+        fscanf(gridsave_file, "%lg %d %lg %d\n",
+                &Jb_lu_raw[modelgridindex][jblueindex].value,
+                &Jb_lu_raw[modelgridindex][jblueindex].contribcount,
+                &prev_Jb_lu_normed[modelgridindex][jblueindex].value,
+                &prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount);
+      }
     }
   }
 }
 
 
+// not in use, but could potential improve speed and accuracy of integrating
+// across the binned radiation field which is discontinuous at the bin boundaries
 inline
 int radfield_integrate(
   const gsl_function *f, double nu_a, double nu_b, double epsabs,

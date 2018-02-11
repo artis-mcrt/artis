@@ -1099,7 +1099,7 @@ double rad_excitation_ratecoeff(
 
       if (DETAILED_LINE_ESTIMATORS_ON)
       {
-        const int jblueindex = radfield_get_jblueindex(lineindex);
+        const int jblueindex = radfield_get_Jblueindex(lineindex);
         if (jblueindex >= 0)
         {
           const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
@@ -1108,8 +1108,8 @@ double rad_excitation_ratecoeff(
             const double Jb_lu = radfield_get_Jb_lu(modelgridindex, jblueindex);
             const double R_Jb = beta * B_lu * Jb_lu;
             const double linelambda = 1e8 * CLIGHT / nu_trans;
-            printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R/R_Jb %g\n",
-                     linelambda, contribcount, R_Jb, R_radfield, R_radfield / R_Jb);
+            printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R %g\n",
+                     linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
             printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
                      get_element(element), get_ionstage(element, ion), lower, upper);
             R = R_Jb;
