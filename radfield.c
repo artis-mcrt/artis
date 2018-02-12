@@ -585,7 +585,7 @@ void radfield_write_to_file(int modelgridindex, int timestep)
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       totalcontribs += get_bin_contribcount(modelgridindex, binindex, false);
 
-    for (int binindex = -1; binindex < RADFIELDBINCOUNT; binindex++)
+    for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++)
     {
       double nu_lower = 0.0;
       double nu_upper = 0.0;
@@ -595,6 +595,8 @@ void radfield_write_to_file(int modelgridindex, int timestep)
       float W = 0.0;
       double J_nu_bar = 0.0;
       int contribcount = 0;
+
+      bool skipoutput = false;
 
       if (binindex >= 0)
       {
@@ -607,7 +609,7 @@ void radfield_write_to_file(int modelgridindex, int timestep)
         J_nu_bar = J_out / (nu_upper - nu_lower);
         contribcount = get_bin_contribcount(modelgridindex, binindex, true);
       }
-      else
+      else if (binindex == -1)
       {
         nuJ_out = nuJ[modelgridindex];
         J_out = J[modelgridindex];
@@ -615,9 +617,32 @@ void radfield_write_to_file(int modelgridindex, int timestep)
         W = get_W(modelgridindex);
         contribcount = totalcontribs;
       }
+      else // use binindex < -1 for detailed line Jb_lu estimators
+      {
+        const int jblueindex = -2 - binindex; // -2 is the first detailed line, -3 is the second, etc
+        const int lineindex = detailed_lineindicies[jblueindex];
+        const double nu_trans = linelist[lineindex].nu;
+        nu_lower = nu_trans;
+        nu_upper = nu_trans;
+        nuJ_out = -1.;
+        J_out = -1.;
+        T_R = -1.;
+        W = -1.;
+        J_nu_bar = prev_Jb_lu_normed[modelgridindex][jblueindex].value,
+        contribcount = prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
 
-      fprintf(radfieldfile,"%8d %15d %8d %11.5e %11.5e %9.3e %9.3e %9.3e %9d %9.1f %12.5e\n",
-              timestep,modelgridindex,binindex,nu_lower,nu_upper,nuJ_out,J_out,J_nu_bar,contribcount,T_R,W);
+        if (J_nu_bar <= 0.)
+        {
+          skipoutput = true;
+        }
+      }
+
+      if (!skipoutput)
+      {
+        fprintf(radfieldfile, "%d %d %d %11.5e %11.5e %9.3e %9.3e %9.3e %d %9.1f %12.5e\n",
+                timestep, modelgridindex, binindex, nu_lower, nu_upper, nuJ_out,
+                J_out, J_nu_bar, contribcount, T_R, W);
+      }
     }
     fflush(radfieldfile);
 # ifdef _OPENMP
@@ -1488,6 +1513,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
 
     double nu_lower_first_ratio = nu_lower_first_initial_in / nu_lower_first_initial;
     if (nu_lower_first_ratio > 1.0) nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+
     double nu_upper_last_ratio = nu_upper_last_initial_in / nu_upper_last_initial;
     if (nu_upper_last_ratio > 1.0) nu_upper_last_ratio = 1 / nu_upper_last_ratio;
 
