@@ -649,7 +649,7 @@ static double closest_transition_empty(PKT *restrict pkt_ptr)
 }
 
 
-double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
+double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
 /** Routine for moving an r-packet. Similar to do_gamma in objective.*/
 {
   const int cellindex = pkt_ptr->where;
@@ -746,12 +746,12 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
       //if (get_nne(cell[pkt_ptr->where].modelgridindex) < 1e-40)
       double edist;
       int rpkt_eventtype;
-      int find_nextline = 0;
+      bool find_nextline = false;
       if (mgi == MMODELGRID)
       {
         /// for empty cells no physical event occurs. The packets just propagate.
         edist = 1e99;
-        find_nextline = 1;
+        find_nextline = true;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
         #endif
@@ -767,7 +767,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
         kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
         const double tau_current = 0.0;
         edist = (tau_next - tau_current) / kappa;
-        find_nextline = 1;
+        find_nextline = true;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
         #endif
@@ -823,7 +823,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
         #endif
         /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
         /// find the next possible line interaction.
-        if (find_nextline == 1)
+        if (find_nextline)
         {
           /// However, this is only required if the new cell is non-empty or non-grey
           if (mgi != MMODELGRID && modelgrid[mgi].thick != 1)
@@ -856,7 +856,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t1, double t2)
         #endif
         /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
         /// find the next possible line interaction.
-        if (find_nextline == 1)
+        if (find_nextline)
           closest_transition_empty(pkt_ptr);
         end_packet = true;
       }
