@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "assert.h"
 #include "atomic.h"
 #include "boundary.h"
 #include "grey_emissivities.h"
@@ -144,12 +145,6 @@ static double get_event(
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
     /// create therefore new variables in packet, which contain next_lowerlevel, ...
     const double nu_trans = closest_transition(dummypkt_ptr);  ///returns negative value if nu_cmf > nu_trans
-    const int element = mastate[tid].element;
-    const int ion = mastate[tid].ion;
-    const int upper = mastate[tid].level;
-    const int lower = mastate[tid].activatedfromlevel;
-    // const int lineindex = mastate[tid].activatingline;
-    const int lineindex = dummypkt_ptr->next_trans - 1;
     #ifdef DEBUG_ON
       //if (debuglevel == 2) printout("[debug] get_event: propagationcounter %d\n",propagationcounter);
       if (debuglevel == 2)
@@ -167,52 +162,29 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:   line interaction possible\n");
       #endif
 
-      double ldist;
+      const int element = mastate[tid].element;
+      const int ion = mastate[tid].ion;
+      const int upper = mastate[tid].level;
+      const int lower = mastate[tid].activatedfromlevel;
+      // const int lineindex = mastate[tid].activatingline;
+      const int lineindex = dummypkt_ptr->next_trans - 1;
+
+      double ldist;  // distance from current position to the line interaction
       if (dummypkt_ptr->nu_cmf < nu_trans)
       {
         //printout("dummypkt_ptr->nu_cmf %g < nu_trans %g, next_trans %d, element %d, ion %d, lower%d, upper %d\n",dummypkt_ptr->nu_cmf,nu_trans,dummypkt_ptr->next_trans,element,ion,lower,upper);
         ldist = 0;  /// photon was propagated too far, make sure that we don't miss a line
       }
       else
+      {
         ldist = CLIGHT * t_current * (dummypkt_ptr->nu_cmf / nu_trans - 1);
+      }
       //fprintf(ldist_file,"%25.16e %25.16e\n",dummypkt_ptr->nu_cmf,ldist);
       if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
 
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     ldist %g\n",ldist);
       #endif
-
-
-      //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
-      const double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans - 1);
-      const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
-      const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
-
-      const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-      const double n_l = get_levelpop(modelgridindex, element, ion, lower);
-
-      double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-      //if (element == 7) fprintf(tau_file,"%g %g %d\n",nu_trans,tau_line,ion);
-      if (tau_line < 0)
-      {
-        //printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(cell[pkt_ptr->where].modelgridindex),get_TR(cell[pkt_ptr->where].modelgridindex),element,ion,upper,lower);
-        //printout("[warning] get_event: set tau_line = 0\n");
-        tau_line = 0.;
-        //printout("[fatal] get_event: tau_line < 0 ... abort\n");
-        //abort();
-      }
-
-      if (DETAILED_LINE_ESTIMATORS_ON)
-      {
-        const int jblueindex = radfield_get_Jblueindex(lineindex);
-        if (jblueindex >= 0)
-        {
-          const double t_exp = t_current; // should it be plus (ldist / CLIGHT_PROP) ??
-          const double lambda_trans = CLIGHT / nu_trans;
-          const double increment = t_exp * lambda_trans * nu_trans * dummypkt_ptr->e_cmf / (dummypkt_ptr->nu_cmf);
-          radfield_increment_Jb_lu_estimator(modelgridindex, jblueindex, increment);
-        }
-      }
 
       //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
       ///restore values which were changed by calculate_kappa_rpkt_cont to those set by closest_transition
@@ -223,24 +195,49 @@ static double get_event(
       const double tau_cont = kap_cont * ldist;
 
       #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g, tau_line %g\n",tau_rnd,tau,tau_cont,tau_line);
+        if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
       #endif
+
       if (tau_rnd - tau > tau_cont)
       {
+        //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
+        const double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans - 1);
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+
+        const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+        const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+
+        double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+        //if (element == 7) fprintf(tau_file,"%g %g %d\n",nu_trans,tau_line,ion);
+        if (tau_line < 0)
+        {
+          //printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(cell[pkt_ptr->where].modelgridindex),get_TR(cell[pkt_ptr->where].modelgridindex),element,ion,upper,lower);
+          //printout("[warning] get_event: set tau_line = 0\n");
+          tau_line = 0.;
+          //printout("[fatal] get_event: tau_line < 0 ... abort\n");
+          //abort();
+        }
+
+        #ifdef DEBUG_ON
+          if (debuglevel == 2) printout("[debug] get_event:     tau_line %g\n", tau_line);
+        #endif
+
+        bool increment_lineestimator = false;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
         #endif
+
         if (tau_rnd - tau > tau_cont + tau_line)
         {
-          /// total optical depth still below tau_rnd: continue
+          // total optical depth still below tau_rnd: propagate to the line and continue
+
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau > tau_cont + tau_line ... proceed this packets propagation\n");
+            if (debuglevel == 2) printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist, dist-abort_dist);
           #endif
 
           dist = dist + ldist;
-          #ifdef DEBUG_ON
-            if (debuglevel == 2) printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist, dist-abort_dist);
-          #endif
           if (dist > abort_dist)
           {
             dummypkt_ptr->next_trans -= 1;
@@ -250,10 +247,12 @@ static double get_event(
             #endif
             return abort_dist + 1e20;
           }
-          tau = tau + tau_cont + tau_line;
+
+          tau += tau_cont + tau_line;
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
           move_pkt(dummypkt_ptr, ldist, t_current);
+          if (DETAILED_LINE_ESTIMATORS_ON) increment_lineestimator = true;
 
           #ifdef DEBUG_ON
             if (debuglevel == 2)
@@ -279,7 +278,15 @@ static double get_event(
           #endif
           edist = dist + ldist;
           if (edist > abort_dist)
+          {
             dummypkt_ptr->next_trans = dummypkt_ptr->next_trans - 1;
+          }
+          else if (DETAILED_LINE_ESTIMATORS_ON)
+          {
+            t_current += ldist / CLIGHT_PROP;
+            move_pkt(dummypkt_ptr, ldist, t_current);
+            increment_lineestimator = true;
+          }
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
           /// the line and its parameters were already selected by closest_transition!
@@ -288,6 +295,19 @@ static double get_event(
             if (debuglevel == 2) printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop   %d\n",edist,abort_dist,edist-abort_dist,endloop);
           #endif
         }
+
+        if (increment_lineestimator)
+        {
+          const int jblueindex = radfield_get_Jblueindex(lineindex);
+          if (jblueindex >= 0)
+          {
+            const double increment = t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf;
+            // printout("get_event: Jb_lu increment: dist %g ldist %g e_cmf %g nu_cmf %g nu_trans %g\n",
+            //          dist, ldist, dummypkt_ptr->e_cmf, dummypkt_ptr->nu_cmf, nu_trans);
+            radfield_increment_Jb_lu_estimator(modelgridindex, jblueindex, increment);
+          }
+        }
+
       }
       else
       {
@@ -310,7 +330,7 @@ static double get_event(
       //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
       ///no need to restore values set by closest_transition, as nothing was set in this case
       const double kap_cont = kappa_rpkt_cont[tid].total;
-      const double tau_cont = kap_cont*(abort_dist-dist);
+      const double tau_cont = kap_cont * (abort_dist - dist);
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
