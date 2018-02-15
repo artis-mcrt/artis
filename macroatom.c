@@ -1075,14 +1075,14 @@ double rad_excitation_ratecoeff(
   const double statweight = statw_lower(lineindex);
   const double statweight_target = statw_upper(lineindex);
 
-  const double n_u = get_levelpop(modelgridindex,element,ion,upper);
-  const double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  const double n_u = get_levelpop(modelgridindex, element, ion, upper);
+  const double n_l = get_levelpop(modelgridindex, element, ion, lower);
   double R = 0.0;
   if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
     const double nu_trans = epsilon_trans / H;
     const double A_ul = einstein_spontaneous_emission(lineindex);
-    const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans,3) * A_ul;
+    const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
     const double B_lu = statweight_target / statweight * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
@@ -1106,7 +1106,7 @@ double rad_excitation_ratecoeff(
           if (contribcount > 0)
           {
             const double Jb_lu = radfield_get_Jb_lu(modelgridindex, jblueindex);
-            const double R_Jb = beta * B_lu * Jb_lu;
+            const double R_Jb = (B_lu - B_ul * n_u / n_l) * beta * Jb_lu;
             const double linelambda = 1e8 * CLIGHT / nu_trans;
             printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R %g\n",
                      linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
@@ -1133,13 +1133,13 @@ double rad_excitation_ratecoeff(
     if (R < 0)
     {
       const double g_u = statw_upper(lineindex);
-      const double g_u2 = stat_weight(element,ion,upper);
+      const double g_u2 = stat_weight(element, ion, upper);
       const double g_l = statw_lower(lineindex);
-      const double g_l2 = stat_weight(element,ion,lower);
-      printout("Negative excitation rate from level %d to %d\n",lower,upper);
-      printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n",n_l,n_u,g_l,g_l2,g_u,g_u2);
-      printout("n_u/n_l %g, g_u/g_l %g\n",n_u/n_l,g_u/g_l);
-      printout("radfield(nutrans=%g) = %g\n",nu_trans,radfield(nu_trans,modelgridindex));
+      const double g_l2 = stat_weight(element, ion, lower);
+      printout("Negative excitation rate from level %d to %d\n", lower, upper);
+      printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n", n_l, n_u, g_l, g_l2, g_u, g_u2);
+      printout("n_u/n_l %g, g_u/g_l %g\n", n_u / n_l, g_u / g_l);
+      printout("radfield(nutrans=%g) = %g\n", nu_trans, radfield(nu_trans, modelgridindex));
       abort();
     }
     if (debuglevel == 2)
@@ -1156,7 +1156,7 @@ double rad_excitation_ratecoeff(
       printout("[fatal] rad_excitation: abort\n");
       printout("[fatal] rad_excitation: R %g, B_lu %g, B_ul %g, n_u %g, n_l %g, radfield %g,tau_sobolev %g, t_current %g\n",
                R,B_lu,B_ul,n_u,n_l,radfield(nu_trans,modelgridindex),tau_sobolev,t_current);
-      printout("[fatal] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
+      printout("[fatal] rad_excitation: %g, %g, %g\n", 1.0 / tau_sobolev, exp(-tau_sobolev), 1.0 / tau_sobolev * (1. - exp(-tau_sobolev)));
       abort();
     }
     #endif
