@@ -269,10 +269,10 @@ void radfield_init(int my_rank)
       if (Z == 26)
       {
         const int lowerlevel = linelist[i].lowerlevelindex;
-        const int upperlevel = linelist[i].upperlevelindex;
-        const int ion = linelist[i].ionindex;
-        const int ionstage = get_ionstage(element, ion);
-        const double A_ul = linelist[i].einstein_A;
+        // const int upperlevel = linelist[i].upperlevelindex;
+        // const int ion = linelist[i].ionindex;
+        // const int ionstage = get_ionstage(element, ion);
+        const double A_ul = einstein_spontaneous_emission(i);
 
         bool addline = false;
         // if (ionstage == 1 && lowerlevel == 6 && upperlevel == 55)
@@ -284,13 +284,13 @@ void radfield_init(int my_rank)
         // else if (ionstage == 2 && lowerlevel == 9 && upperlevel == 64)
         //   addline = true;
 
-        if (A_ul > 1e6 && lowerlevel <= 15) // ionstage <= 3 && 
+        if (lowerlevel <= 15 && A_ul > 0.) // ionstage <= 3 && A_ul > 1e3 &&
           addline = true;
-        // addline = (*lineindex == 222751);
+
         if (addline)
         {
-          printout("Adding Jblue estimator for lineindex %d Z=%02d ionstage %d lower %d upper %d A_ul %g\n",
-                   i, Z, ionstage, lowerlevel, upperlevel, A_ul);
+          // printout("Adding Jblue estimator for lineindex %d Z=%02d ionstage %d lower %d upper %d A_ul %g\n",
+          //          i, Z, ionstage, lowerlevel, upperlevel, A_ul);
           add_detailed_line(i);
         }
       }
@@ -316,7 +316,7 @@ void radfield_init(int my_rank)
 
   printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
 
-  printout("Initialising multibin radiation field with %d bins from (%6.2f eV, %6.1f A) to (%6.2f eV, %6.1f A)\n",
+  printout("Initialising multibin radiation field with %d bins from (%.2f eV, %6.1f A) to (%.2f eV, %6.1f A)\n",
            RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
            H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
   char filename[100];
