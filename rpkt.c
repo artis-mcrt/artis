@@ -105,9 +105,9 @@ double closest_transition(PKT *restrict pkt_ptr)
   mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
   mastate[tid].activatedfromlevel = linelist[match].lowerlevelindex;
   mastate[tid].activatingline = match;
-  pkt_ptr->next_trans   = match+1;  ///helper variable to overcome numerical problems after line scattering
-                                     ///further scattering events should be located at lower frequencies to prevent
-                                     ///multiple scattering events of one pp in a single line
+  pkt_ptr->next_trans   = match + 1;  ///helper variable to overcome numerical problems after line scattering
+                                      ///further scattering events should be located at lower frequencies to prevent
+                                      ///multiple scattering events of one pp in a single line
   //printout("[debug] closest_transition: next_trans %d\n",pkt_ptr->next_trans);
   //printout("[debug] closest_transition: linelistindex %d corresponds to transition from level %d to level %d of ion %d of element %d\n",match,mastate[tid].level,pkt_ptr->nextrans_lower,mastate[tid].ion,mastate[tid].element);
   //printout("[debug] closest_transition:   frequency of this transiton %g\n",nu_trans);
@@ -117,12 +117,16 @@ double closest_transition(PKT *restrict pkt_ptr)
 }
 
 
-static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau_rnd, double abort_dist)
-///     PKT *pkt_ptr;      //pointer to packet object
-///     double t_current;  //current time
-///     double tau_rnd;    //random optical depth until which the packet travels
-///     double abort_dist;      //maximal travel distance before packet leaves cell or time step ends
-/// BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!!
+static double get_event(
+  const int modelgridindex,
+  PKT *pkt_ptr,             // pointer to packet object
+  int *rpkt_eventtype,
+  double t_current,         // current time
+  const double tau_rnd,     // random optical depth until which the packet travels
+  const double abort_dist   // maximal travel distance before packet leaves cell or time step ends
+)
+// returns edist, the distance to the next physical event (continuum or bound-bound)
+// BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
   /// initialize loop variables
   double tau = 0.;        ///initial optical depth along path
@@ -242,9 +246,9 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
             dummypkt_ptr->next_trans -= 1;
             pkt_ptr->next_trans = dummypkt_ptr->next_trans;
             #ifdef DEBUG_ON
-              if (debuglevel == 2) printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ... dummypkt_ptr->next_trans %d\n", dist,abort_dist,dummypkt_ptr->next_trans);
+              if (debuglevel == 2) printout("[debug] get_event:         leave propagation loop (dist %g > abort_dist %g) ... dummypkt_ptr->next_trans %d\n", dist, abort_dist, dummypkt_ptr->next_trans);
             #endif
-            return abort_dist+1e20;
+            return abort_dist + 1e20;
           }
           tau = tau + tau_cont + tau_line;
           //dummypkt_ptr->next_trans += 1;
@@ -288,10 +292,10 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
       else
       {
         /// continuum process occurs
-        edist = dist + (tau_rnd-tau)/kap_cont;
+        edist = dist + (tau_rnd - tau) / kap_cont;
         dummypkt_ptr->next_trans -= 1;
         #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n",edist, abort_dist);
+          if (debuglevel == 2) printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n", edist, abort_dist);
         #endif
         *rpkt_eventtype = RPKT_EVENTTYPE_CONT;
         endloop = true;
@@ -309,7 +313,7 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
       const double tau_cont = kap_cont*(abort_dist-dist);
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
       #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n",tau_rnd,tau,tau_cont);
+        if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
       #endif
 
       if (tau_rnd - tau > tau_cont)
@@ -318,13 +322,13 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] get_event:       travel out of cell or time step\n");
         #endif
-        edist = abort_dist+1e20;
+        edist = abort_dist + 1e20;
         endloop = true;
       }
       else
       {
         /// continuum process occurs at edist
-        edist = dist + (tau_rnd-tau)/kap_cont;
+        edist = dist + (tau_rnd - tau) / kap_cont;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] get_event:       continuum process occurs at edist %g\n",edist);
         #endif
@@ -337,20 +341,19 @@ static double get_event(int modelgridindex, PKT *pkt_ptr, int *rpkt_eventtype, d
 
   pkt_ptr->next_trans = dummypkt_ptr->next_trans;
   #ifdef DEBUG_ON
-    if (isfinite(edist))
-      return edist;
-    else
+    if (!isfinite(edist))
     {
       printout("edist NaN %g... abort\n",edist);
       abort();
     }
-  #else
-    return edist;
   #endif
+
+  return edist;
 }
 
 
-static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_current) //, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
+static void rpkt_event(PKT *restrict pkt_ptr, const int rpkt_eventtype, double t_current)
+//, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
 {
   //double nnionlevel,nnlevel,nne;
   //double ma_prob,p_maactivate,p_bf,prob;
@@ -384,6 +387,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, int rpkt_eventtype, double t_curre
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 1;
     #endif
+
     pkt_ptr->absorptiontype = mastate[tid].activatingline;
     pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
     pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
@@ -774,8 +778,8 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
       }
       else
       {
-        /// get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi,pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        // get distance to the next physical event (continuum or bound-bound)
+        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         const int next_trans = pkt_ptr->next_trans;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
@@ -797,8 +801,8 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         /** Move it into the new cell. */
         sdist = sdist / 2.;
         t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,sdist,t_current);
-        update_estimators(pkt_ptr,sdist*2);
+        move_pkt(pkt_ptr, sdist, t_current);
+        update_estimators(pkt_ptr, sdist * 2);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           sdist = sdist * 2.;
@@ -806,7 +810,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
           sdist = sdist / 2.;
         }
         t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,sdist,t_current);
+        move_pkt(pkt_ptr, sdist, t_current);
         sdist = sdist * 2.;
 
         if (snext != pkt_ptr->where)
@@ -837,11 +841,11 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
         #endif
-        /** Doesn't reach boundary. */
+        // Doesn't reach boundary
         tdist = tdist / 2.;
         t_current += tdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,tdist,t_current);
-        update_estimators(pkt_ptr,tdist*2);
+        move_pkt(pkt_ptr, tdist, t_current);
+        update_estimators(pkt_ptr, tdist * 2);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           tdist = tdist * 2.;
@@ -849,7 +853,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
           tdist = tdist / 2.;
         }
         t_current = t2;
-        move_pkt(pkt_ptr,tdist,t_current);
+        move_pkt(pkt_ptr, tdist, t_current);
         tdist = tdist * 2.;
         #ifdef DEBUG_ON
           pkt_ptr->last_event = pkt_ptr->last_event + 1000;
@@ -862,13 +866,14 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
       }
       else if ((edist < sdist) && (edist < tdist))
       {
+        // bound-bound or continuum event
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
         #endif
         edist = edist / 2.;
         t_current += edist / CLIGHT_PROP;
         move_pkt(pkt_ptr, edist, t_current);
-        update_estimators(pkt_ptr, edist*2);
+        update_estimators(pkt_ptr, edist * 2);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           edist = edist * 2.;
@@ -876,19 +881,19 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
           edist = edist / 2.;
         }
         t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr,edist,t_current);
+        move_pkt(pkt_ptr, edist, t_current);
         edist = edist * 2.;
 
         /** The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event*/
         if (modelgrid[mgi].thick == 1)
-          rpkt_event_thickcell(pkt_ptr,t_current);
+          rpkt_event_thickcell(pkt_ptr, t_current);
         else
-          rpkt_event(pkt_ptr,rpkt_eventtype,t_current);
+          rpkt_event(pkt_ptr, rpkt_eventtype, t_current);
 
         if (pkt_ptr->type != TYPE_RPKT)
         {
           /** It's not an r-packet any more - return.*/
-          return(t_current);
+          return t_current;
         }
       }
       else
