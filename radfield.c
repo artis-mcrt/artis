@@ -260,6 +260,8 @@ void radfield_init(int my_rank)
     abort();
   }
 
+  radfield_initialized = true;
+
   if (DETAILED_LINE_ESTIMATORS_ON)
   {
     for (int i = 0; i < nlines; i++)
@@ -353,7 +355,6 @@ void radfield_init(int my_rank)
 
     }
   }
-  radfield_initialized = true;
 }
 
 
