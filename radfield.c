@@ -1313,7 +1313,7 @@ void radfield_reduce_estimators(void)
     MPI_Allreduce(MPI_IN_PLACE, &nuJ, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
-  if (!MULTIBIN_RADFIELD_MODEL_ON)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing binned radiation field estimators");
