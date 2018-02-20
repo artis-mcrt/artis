@@ -23,7 +23,7 @@ double closest_transition(PKT *restrict pkt_ptr)
   //int left = 0;
   int left = pkt_ptr->next_trans;
   //printout("[debug] closest_transition: initial left %d\n",left);
-  int right = nlines-1;
+  int right = nlines - 1;
   int middle = 1;
 
   //printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,pkt_ptr->nu_cmf);
@@ -32,13 +32,13 @@ double closest_transition(PKT *restrict pkt_ptr)
   /// no line interaction is possible: return negative value as a flag
   if (pkt_ptr->nu_cmf < linelist[right].nu)
   {
-    pkt_ptr->next_trans   = nlines+1;  ///helper variable to overcome numerical problems after line scattering
+    pkt_ptr->next_trans   = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
     return -1;
   }
   if (left > right)
   {
     //printout("[debug] pp should have no line interaction anymore\n");
-    pkt_ptr->next_trans   = nlines+1;  ///helper variable to overcome numerical problems after line scattering
+    pkt_ptr->next_trans   = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
     return -1;
   }
 
@@ -82,11 +82,11 @@ double closest_transition(PKT *restrict pkt_ptr)
     while (left <= right)  ///must be a "<=" to obtain proper search results!!!
                           ///access to negative array indices is prevented by the upper check
     {
-      middle = left + ((right-left) / 2);
+      middle = left + ((right - left) / 2);
 
       //printout("[debug] middle %d, left %d, right %d, nlines %d\n",middle,left,right,nlines);
       //printout("[debug] linelist[middle].nu %g, linelist[middle-1].nu %g\n",linelist[middle].nu,linelist[middle-1].nu);
-      if (pkt_ptr->nu_cmf >= linelist[middle].nu && pkt_ptr->nu_cmf < linelist[middle-1].nu) break;
+      if (pkt_ptr->nu_cmf >= linelist[middle].nu && pkt_ptr->nu_cmf < linelist[middle - 1].nu) break;
 
       if (pkt_ptr->nu_cmf >= linelist[middle].nu)
         right = middle - 1;
@@ -307,7 +307,6 @@ static double get_event(
             radfield_increment_Jb_lu_estimator(modelgridindex, jblueindex, increment);
           }
         }
-
       }
       else
       {
@@ -582,7 +581,7 @@ static void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
   #endif
 
   //pkt_ptr->nu_cmf = 3.7474058e+14;
-  emitt_rpkt(pkt_ptr,t_current);
+  emitt_rpkt(pkt_ptr, t_current);
   /// Electron scattering does not modify the last emission flag
   //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
   /// but it updates the last emission position
