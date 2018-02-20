@@ -5,7 +5,7 @@
 #include "update_packets.h"
 
 
-double boundary_cross(PKT *restrict const pkt_ptr, double tstart, int *snext)
+double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a call boundary.
 {
   //double close, close_try;
