@@ -632,10 +632,10 @@ void radfield_write_to_file(int modelgridindex, int timestep)
         J_nu_bar = prev_Jb_lu_normed[modelgridindex][jblueindex].value,
         contribcount = prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount;
 
-        if (J_nu_bar <= 0.)
-        {
-          skipoutput = true;
-        }
+        // if (J_nu_bar <= 0.)
+        // {
+        //   skipoutput = true;
+        // }
       }
 
       if (!skipoutput)

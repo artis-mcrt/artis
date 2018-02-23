@@ -1094,26 +1094,24 @@ double rad_excitation_ratecoeff(
       //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
       //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
 
-      const double R_radfield = (B_lu - B_ul * n_u / n_l) * beta * radfield(nu_trans, modelgridindex);
-      R = R_radfield;
+      const double R_over_J_nu = (B_lu - B_ul * n_u / n_l) * beta;
 
-      if (DETAILED_LINE_ESTIMATORS_ON)
+      R = R_over_J_nu * radfield(nu_trans, modelgridindex);
+      if (!initial_iteration)
       {
         const int jblueindex = radfield_get_Jblueindex(lineindex);
         if (jblueindex >= 0)
         {
           const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
-          if (contribcount > 0)
-          {
-            const double Jb_lu = radfield_get_Jb_lu(modelgridindex, jblueindex);
-            const double R_Jb = (B_lu - B_ul * n_u / n_l) * beta * Jb_lu;
-            const double linelambda = 1e8 * CLIGHT / nu_trans;
-            printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R %g\n",
-                     linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
-            printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
-                     get_element(element), get_ionstage(element, ion), lower, upper);
-            R = R_Jb;
-          }
+          const double Jb_lu = radfield_get_Jb_lu(modelgridindex, jblueindex);
+          const double R_radfield = R;
+          const double R_Jb = R_over_J_nu * Jb_lu;
+          const double linelambda = 1e8 * CLIGHT / nu_trans;
+          printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R %g\n",
+                   linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
+          printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
+                   get_element(element), get_ionstage(element, ion), lower, upper);
+          R = R_Jb;
         }
       }
     }
