@@ -654,6 +654,7 @@ static void read_atomicdata_files(void)
     assert(mass_amu >= 0);
 
     /// write this element's data to memory
+    assert(nions <= maxion);
     elements[element].anumber = Z;
     elements[element].nions = nions;
     elements[element].abundance = abundance;       /// abundances are expected to be given by mass
