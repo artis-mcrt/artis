@@ -12,8 +12,6 @@ double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
 void calculate_deposition_rate_density(int modelgridindex, int timestep);
 double get_deposition_rate_density(int modelgridindex);
 float get_nt_frac_heating(int modelgridindex);
-float get_nt_frac_excitation(int modelgridindex);
-float get_nt_frac_ionization(int modelgridindex);
 double nt_excitation_ratecoeff(int modelgridindex, int lineindex);
 void do_ntlepton(PKT *pkt_ptr);
 void nt_write_restart_data(FILE *gridsave_file);
