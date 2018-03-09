@@ -566,7 +566,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, const int rpkt_eventtype, double t
 }
 
 
-static void rpkt_event_thickcell(PKT *pkt_ptr, double t_current)
+static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
