@@ -856,7 +856,7 @@ float get_nt_frac_heating(const int modelgridindex)
 }
 
 
-float get_nt_frac_ionization(const int modelgridindex)
+static float get_nt_frac_ionization(const int modelgridindex)
 {
   if (!NT_ON)
     return 0.;
@@ -876,7 +876,7 @@ float get_nt_frac_ionization(const int modelgridindex)
 }
 
 
-float get_nt_frac_excitation(const int modelgridindex)
+static float get_nt_frac_excitation(const int modelgridindex)
 {
   if (!NT_ON || !NT_SOLVE_SPENCERFANO)
     return 0.;
