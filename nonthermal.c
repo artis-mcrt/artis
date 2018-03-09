@@ -861,7 +861,7 @@ float get_nt_frac_ionization(const int modelgridindex)
   if (!NT_ON)
     return 0.;
   if (!NT_SOLVE_SPENCERFANO)
-    return 0.02;
+    return 0.03;
 
   const float frac_ionization = nt_solution[modelgridindex].frac_ionization;
 
@@ -1899,8 +1899,8 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
       // nt_write_to_file(modelgridindex, timestep);
 
       nt_solution[modelgridindex].timestep = timestep;
-      nt_solution[modelgridindex].frac_heating = 0.98;
-      nt_solution[modelgridindex].frac_ionization = 0.02;
+      nt_solution[modelgridindex].frac_heating = 0.97;
+      nt_solution[modelgridindex].frac_ionization = 0.03;
       nt_solution[modelgridindex].frac_excitation = 0.;
       nt_solution[modelgridindex].E_0 = 0.;
 
