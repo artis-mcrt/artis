@@ -16,7 +16,7 @@
   #include "exspec.h"
 #endif
 
-const bool single_level_top_ion = false;
+const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
 
 const int groundstate_index_in = 1; // starting level index in the input files
 
@@ -1534,7 +1534,7 @@ static void read_1d_model(void)
   /* Now do the rest. */
   for (int n = 1; n < npts_model; n++)
   {
-    mass_in_shell = rho_model[n] * (pow(vout_model[n], 3) - pow(vout_model[n - 1], 3)) * 4 * PI * pow(t_model, 3) / 3;
+    mass_in_shell = rho_model[n] * (pow(vout_model[n], 3) - pow(vout_model[n - 1], 3)) * 4 * PI * pow(t_model, 3) / 3.;
     mtot += mass_in_shell;
     mni56 += mass_in_shell * fni_model[n];
     mfe52 += mass_in_shell * f52fe_model[n];
