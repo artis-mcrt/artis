@@ -246,7 +246,7 @@ void update_packets(const int nts, PKT *pkt)
       if ((n % 10000 == 0) || n == npkts - 1)
       {
         // time_of_last_packet_printout = time(NULL);
-        printout("[debug] update_packets: updating packet %d for timestep %d...\n",n,nts);
+        printout("[debug] update_packets: updating packet %d for timestep %d at time %d...\n",n,nts, time(NULL));
       }
 
       PKT *restrict pkt_ptr = &pkt[n];

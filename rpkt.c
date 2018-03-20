@@ -1137,7 +1137,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
               //phixslist[tid].allcont[i].photoion_contr = 0.;
               //phixslist[tid].allcont[i].stimrecomb_contr = 0.;
             }
-/*
+            /*
             else
             {
               phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
@@ -1150,7 +1150,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             #ifdef DEBUG_ON
               if (!isfinite(kappa_bf_contr))
               {
-                printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf %g ... abort\n",kappa_bf_contr);
+                printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",kappa_bf_contr);
                 printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
                 printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
                 printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));

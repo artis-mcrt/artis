@@ -626,7 +626,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
     /// Update current mass density of cell
     //n = nonemptycells[my_rank+ncl*nprocs];
     if (log_this_cell)
-      printout("[info] update_grid: working on cell %d before timestep %d ...\n", n);
+      printout("[info] update_grid: working on cell %d before timestep %d ...\n", n, nts);
     //n = nonemptycells[ncl];
     //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
     modelgrid[n].rho = get_rhoinit(n) / pow(tratmid, 3);
