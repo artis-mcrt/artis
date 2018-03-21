@@ -653,7 +653,15 @@ int main(int argc, char** argv)
         nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
       }
 
-      printout("process rank %d (of %d) doing %d cell numbers %d to %d\n", my_rank, nprocs, ndo, nstart, nstart + ndo - 1);
+      printout("process rank %d (of %d) doing %d cells", my_rank, nprocs, ndo);
+      if (ndo > 0)
+      {
+        printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
+      }
+      else
+      {
+        printout("\n");
+      }
 
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
