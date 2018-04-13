@@ -304,6 +304,11 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
   double get_levelpop(int element, int ion, int level);
   //double boltzmann(PKT *pkt_ptr, int targetlevel);
   //double vec_len();
+  double doppler();
+  double vel_vec[3];
+  int get_velocity();
+
+  
   
   int element,ion,upper,lower;
   double nu_trans;
@@ -388,7 +393,12 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
       //mastate[tid].element = element;
       //mastate[tid].ion = ion;
       //mastate[tid].level = upper;
+
+      /// Get stored continuum opacity (cmf) and convert to rf
+      /// to calculate optical depth
       kap_cont = kappa_rpkt_cont[tid].total;
+      get_velocity(pkt_ptr->pos, vel_vec, t_current);
+      kap_cont = kap_cont * doppler(pkt_ptr->dir, vel_vec);
       tau_cont = kap_cont*ldist;
       
       #ifdef DEBUG_ON
@@ -475,8 +485,14 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
       #endif
       //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
       ///no need to restore values set by closest_transition, as nothing was set in this case
+
+      /// Get stored continuum opacity (cmf) and convert to rf
+      /// to calculate optical depth
       kap_cont = kappa_rpkt_cont[tid].total;
+      get_velocity(pkt_ptr->pos, vel_vec, t_current);
+      kap_cont = kap_cont * doppler(pkt_ptr->dir, vel_vec);
       tau_cont = kap_cont*(abort_dist-dist);
+
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n",tau_rnd,tau,tau_cont);
@@ -1306,10 +1322,17 @@ void calculate_kappa_rpkt_cont(PKT *pkt_ptr, double t_current)
     }
     
     /// Now need to convert between frames.
-    get_velocity(pkt_ptr->pos, vel_vec, t_current);
-    sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
-    kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
-    kappa_bf = kappa_bf * doppler(pkt_ptr->dir, vel_vec);
+    //get_velocity(pkt_ptr->pos, vel_vec, t_current);
+    //sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
+    //kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
+    //kappa_bf = kappa_bf * doppler(pkt_ptr->dir, vel_vec);
+    /// Deactivated these lines with fix from December 2017
+    /// The frame transformation has been moved to the actual packet
+    /// propagation routine to make sure that the direction dependence
+    /// of the opacities is taken into account properly. For multiple
+    /// scatterings this is not the case if the trafo is done here, since
+    /// this routine is only called when a packet changes cell or is
+    /// re-emitted at a different comoving frame frequency.
   }
   else
   {
@@ -1612,6 +1635,9 @@ void calculate_kappa_vpkt_cont(PKT *pkt_ptr, double t_current)
         sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
         kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
         kappa_bf = kappa_bf * doppler(pkt_ptr->dir, vel_vec);
+	/// For vpkts it is safe to do the frame transformation here.
+	/// vpkts travel along straight lines and and calculate_kappa_vpkt_cont
+	/// is called always before a vpkt is propagated.
     }
     else
     {
