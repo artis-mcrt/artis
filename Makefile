@@ -1,4 +1,16 @@
 SHELL = /bin/sh
+GIT_HASH = $(shell git rev-parse HEAD)
+GIT_BRANCH = $(shell git branch | sed -n '/\* /s///p')
+
+### Settings for the miner
+ifeq ($(SYSTYPE),Haswell)
+  CC = mpicc
+  CFLAGS = -O3 -DMPI_ON
+  LDFLAGS= -lm -L /hits/sw/tap/libs/gsl-2.1/lib -lgsl -lgslcblas
+  exspec: override CFLAGS = -O3 -DDO_EXSPEC
+  exspec_dd: override CFLAGS = -O3 -DDO_EXSPEC
+  exgamma: override CFLAGS = -O3 -DDO_EXSPEC
+endif
 
 
 ### Settings for the miner
@@ -291,7 +303,7 @@ sn3dlcsyn: version $(sn3dlcsyn_objects)
 	$(CC) $(CFLAGS) $(sn3dlcsyn_objects) $(LDFLAGS) -o sn3dlcsyn.exe
 
 version:
-	@echo "#define GIT_HASH \"`cat .git/refs/heads/polarization`\"" > version.h
+	@echo "#define GIT_HASH \"$(GIT_BRANCH)$(GIT_HASH)\"" > version.h
 	@echo "#define COMPILETIME \"`date`\"" >> version.h
 
 

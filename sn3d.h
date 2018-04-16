@@ -166,6 +166,7 @@ double xmax, ymax, zmax;
 double mtot, vmax, rmax; /* Total mass and outer velocity/radius. */
 double fe_sum, rho_sum; //MK: could now be declared locally
 double mni56; /*Total mass of Ni56 in the ejecta. */
+double mco56; /*Total mass of Co56 in the ejecta. */
 double mfe52; /*Total mass of Fe52 in the ejecta. */
 double mcr48; /*Total mass of Cr48 in the ejecta. */
 double mfeg; /*Total mass of Fe group elements in ejecta. */
