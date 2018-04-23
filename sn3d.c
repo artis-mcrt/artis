@@ -571,7 +571,13 @@ int main(int argc, char** argv)
   printout("time before tabulation of rate coefficients %d\n",time(NULL));
   ratecoefficients_init();
   printout("time after tabulation of rate coefficients %d\n",time(NULL));
-  //abort();
+//  abort();
+//  #ifdef MPI_ON
+//    const time_t time_before_barrier = time(NULL);
+//    MPI_Barrier(MPI_COMM_WORLD);
+//    const time_t time_after_barrier = time(NULL);
+//    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
+//  #endif
 
   /// As a precaution, explicitly zero all the estimators here
   zero_estimators();
@@ -745,7 +751,10 @@ int main(int argc, char** argv)
     {
       nts_global = nts;
       #ifdef MPI_ON
+//        const time_t time_before_barrier = time(NULL);
         MPI_Barrier(MPI_COMM_WORLD);
+//        const time_t time_after_barrier = time(NULL);
+//        printout("timestep %d: time before barrier %d, time after barrier %d\n", nts, time_before_barrier, time_after_barrier);
       #endif
 
       #ifdef WALLTIMELIMITSECONDS

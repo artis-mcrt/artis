@@ -1168,13 +1168,15 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
           T_R_bin = find_T_R(modelgridindex, binindex);
 
           double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
+//          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower, nu_upper, planck_integral_result);
 
           W_bin = J_bin / planck_integral_result;
 
           if (W_bin > 1e4)
           {
+//            printout("T_R_bin %g, nu_lower %g, nu_upper %g\n", T_R_bin, nu_lower, nu_upper);
             printout("W %g too high, trying setting T_R of bin %d to %g. J_bin %g planck_integral %g\n",
-                     W_bin, binindex, T_R_max, planck_integral_result);
+                     W_bin, binindex, T_R_max, J_bin, planck_integral_result);
             planck_integral_result = planck_integral(T_R_max, nu_lower, nu_upper, ONE);
             W_bin = J_bin / planck_integral_result;
             if (W_bin > 1e4)

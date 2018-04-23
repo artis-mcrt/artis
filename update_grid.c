@@ -210,16 +210,16 @@ static void write_to_estimators_file(const int n, const int timestep)
       }
       fprintf(estimators_file, "\n");
 
-      // fprintf(estimators_file, "Alpha_C*nne    Z=%2d", get_element(element));
-      // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-      //   fprintf(estimators_file, "              ");
-      // for (int ion = 0; ion < nions; ion++)
-      // {
-      //   fprintf(estimators_file, "  %d: %9.3e",
-      //           get_ionstage(element, ion),
-      //           calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, true, printdebug, lower_superlevel_only, per_gmpop) * nne);
-      // }
-      // fprintf(estimators_file, "\n");
+       fprintf(estimators_file, "Alpha_C*nne    Z=%2d", get_element(element));
+       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+         fprintf(estimators_file, "              ");
+       for (int ion = 0; ion < nions; ion++)
+       {
+         fprintf(estimators_file, "  %d: %9.3e",
+                 get_ionstage(element, ion),
+                 calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, true, printdebug, lower_superlevel_only, per_gmpop) * nne);
+       }
+       fprintf(estimators_file, "\n");
 
       fprintf(estimators_file, "gamma_R        Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -234,16 +234,16 @@ static void write_to_estimators_file(const int n, const int timestep)
       }
       fprintf(estimators_file, "\n");
 
-      // fprintf(estimators_file, "gamma_C        Z=%2d", get_element(element));
-      // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-      //   fprintf(estimators_file, "              ");
-      // for (int ion = 0; ion < nions - 1; ion++)
-      // {
-      //   fprintf(estimators_file, "  %d: %9.3e",
-      //           get_ionstage(element, ion),
-      //           calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, true, printdebug));
-      // }
-      // fprintf(estimators_file, "\n");
+       fprintf(estimators_file, "gamma_C        Z=%2d", get_element(element));
+       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+         fprintf(estimators_file, "              ");
+       for (int ion = 0; ion < nions - 1; ion++)
+       {
+         fprintf(estimators_file, "  %d: %9.3e",
+                 get_ionstage(element, ion),
+                 calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, true, printdebug));
+       }
+       fprintf(estimators_file, "\n");
       if (NT_ON)
       {
         fprintf(estimators_file, "gamma_NT       Z=%2d", get_element(element));
@@ -639,7 +639,9 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
     {
       /// Update abundances of radioactive isotopes
       //printout("call update abundances for timestep %d in model cell %d\n",m,n);
+      const time_t sys_time_start_update_abundances = time(NULL);
       update_abundances(n, nts, time_step[nts].mid);
+      printout("update_abundances for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_update_abundances);
 
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
@@ -690,6 +692,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
 
         const double estimator_normfactor = 1 / (deltaV * deltat) / nprocs / assoc_cells;
         const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
+        const time_t sys_time_start_temperature_corrections = time(NULL);
 
         radfield_normalise_J(n, estimator_normfactor_over4pi); // this applies normalisation to the fullspec J
         radfield_set_J_normfactor(n, estimator_normfactor_over4pi); // this stores the factor that will be applied later for the J bins but not fullspec J
@@ -742,6 +745,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
           grid_cell_solve_Te_nltepops(n, nts, titer);
         }
         #endif
+        printout("temperature corrections for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_temperature_corrections);
       }
 
       const float nne = get_nne(n);
@@ -785,7 +789,10 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
 
       /// Cooling rates depend only on cell properties, precalculate total cooling
       /// and ion contributions inside update grid and communicate between MPI tasks
+      const time_t sys_time_start_calc_kpkt_rates = time(NULL);
+
       calculate_kpkt_rates(n);
+      printout("calculate_kpkt_rates for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_calc_kpkt_rates);
     }
     else if (opacity_case == 3)
     {
