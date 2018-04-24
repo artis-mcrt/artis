@@ -1157,7 +1157,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       }
       const double J_bin = get_bin_J(modelgridindex, binindex, true);
       float T_R_bin = -1.0;
-      float W_bin = -1.0;
+      double W_bin = -1.0;
       const int contribcount = get_bin_contribcount(modelgridindex, binindex, true);
 
       if (contribcount > 10)
