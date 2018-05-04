@@ -305,6 +305,10 @@ static void read_ion_levels(
       /// initialize number of upward transitions to zero
       elements[element].ions[ion].levels[level].uptrans[0].targetlevel = 0;
     }
+    else
+    {
+      elements[element].ions[ion].levels[nlevelsmax - 1].stat_weight += statweight;
+    }
   }
 }
 
