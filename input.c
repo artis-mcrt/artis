@@ -16,7 +16,7 @@
   #include "exspec.h"
 #endif
 
-const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
+const bool single_level_top_ion = true; // Only include a single level for the highest ion stage
 
 const int groundstate_index_in = 1; // starting level index in the input files
 
