@@ -23,13 +23,18 @@ const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the
 const int MAX_NT_EXCITATIONS = 25000;  // if this is more than SFPTS, then you might as well just store
                                        // the NT spectrum instead (although CPU costs)
 
-#define NT_EXCITATION_ON true // keep a list of non-thermal excitation rates for use
+#define NT_EXCITATION_ON false // keep a list of non-thermal excitation rates for use
                                // in the NLTE pop solver, macroatom, and NTLEPTON packets
                                // even with this off, excitations will be included in the solution
                                // and their combined deposition fraction is calculated
 
 #define BLOCKSIZEEXCITATION 5096    // Realloc the excitation list increasing by this blocksize
 #define BLOCKSIZEIONIZATION 128     // Realloc the ionization list increasing by this blocksize
+
+// Calculate eff_ionpot and ionisation rates by dividing by the valence shell potential for the ion
+// instead of the actuall shell potentials
+#define USE_VALENCE_IONPOTENTIAL true
+
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
@@ -1138,7 +1143,8 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
 }
 
 
-static float calculate_eff_ionpot(const int modelgridindex, const int element, const int ion)
+static float calculate_eff_ionpot(
+  const int modelgridindex, const int element, const int ion, const bool use_valence_ionpotential)
 // Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
 // the result is in ergs
 {
@@ -1163,11 +1169,20 @@ static float calculate_eff_ionpot(const int modelgridindex, const int element, c
     {
       const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionindex);
       const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
-      if (ionpot_valence < 0)
-        ionpot_valence = ionpot_shell;
-      assert(ionpot_shell >= ionpot_valence);
 
-      eta_over_ionpot_sum += frac_ionization_shell / ionpot_valence;
+      if (use_valence_ionpotential)
+      {
+        if (ionpot_valence < 0)
+          ionpot_valence = ionpot_shell;
+
+        assert(ionpot_shell >= ionpot_valence);  // to ensure that the first shell really was the valence shell
+        eta_over_ionpot_sum += frac_ionization_shell / ionpot_valence;
+      }
+      else
+      {
+        eta_over_ionpot_sum += frac_ionization_shell / ionpot_shell;
+      }
+
     }
   }
 
@@ -1485,7 +1500,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
     const int nions = get_nions(element);
     for (int ion = 0; ion < get_nions(element); ion++)
     {
-      float eff_ionpot = calculate_eff_ionpot(modelgridindex, element, ion);
+      float eff_ionpot = calculate_eff_ionpot(modelgridindex, element, ion, USE_VALENCE_IONPOTENTIAL);
       if (!isfinite(eff_ionpot))
         eff_ionpot = 0.;
       nt_solution[modelgridindex].eff_ionpot[element][ion] = eff_ionpot;
@@ -1587,12 +1602,13 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       printout("    frac_excitation: %g\n", frac_excitation_ion);
       printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
       printout("    eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
-      printout("    workfn approx Gamma: %9.3e\n",
+      printout("    workfn approx Gamma:    %9.3e\n",
                nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
-      printout("    Spencer-Fano Gamma:  %9.3e\n",
+      printout("    test SF integral Gamma: %9.3e\n",
+              calculate_nt_ionization_ratecoeff(modelgridindex, element, ion));
+      printout("    use valence potential:  %s\n", USE_VALENCE_IONPOTENTIAL ? "true" : "false");
+      printout("    Spencer-Fano Gamma:     %9.3e\n",
                nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
-      printout("    SF integral Gamma:   %9.3e\n",
-               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion));
     }
   }
 
