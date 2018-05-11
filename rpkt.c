@@ -312,6 +312,7 @@ static double get_event(
       {
         /// continuum process occurs
         edist = dist + (tau_rnd - tau) / kap_cont;
+        // assert((tau_rnd - tau) / kap_cont < ldist);
         dummypkt_ptr->next_trans -= 1;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] get_event:        distance to the occuring continuum event %g, abort_dist %g\n", edist, abort_dist);
