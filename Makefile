@@ -14,7 +14,7 @@ ifneq (,$(RAIJINDIRAC))
 
   CC = mpicc
   CFLAGS = -DWALLTIMELIMITSECONDS=\(10\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
-  LDFLAGS= -lgsl -lgslcblas -lm
+  LDFLAGS= -lgsl -lm
 
   ifeq (,$(findstring raijin,$(HOSTNAME)))
     LDFLAGS += -lgslcblas
