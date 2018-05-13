@@ -1778,7 +1778,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       if (ion < nions - 1)
       {
         printout("    probability to ionstage: ");
-        for (int upperion = ion + 1; (upperion < nions) & (upperion < ion + 3); upperion++)
+        for (int upperion = ion + 1; (upperion < nions) && (upperion < ion + 3); upperion++)
         {
           const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion);
           if (probability > 0.)
