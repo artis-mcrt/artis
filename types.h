@@ -19,7 +19,7 @@
 
 // Maximum number of energy packets in calculation.
 //25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625
-#define MPKTS 2000000
+#define MPKTS 400000
 
 //26 //27 //9
 #define MELEMENTS 17
