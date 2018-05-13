@@ -1155,7 +1155,8 @@ static double nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const i
 }
 
 
-static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion)
+static double calculate_nt_ionization_ratecoeff(
+  const int modelgridindex, const int element, const int ion, const bool assumeshellpotentialisvalence)
 // Integrate the ionization cross section over the electron degradation function to get the ionization rate coefficient
 // i.e. multiply this by ion population to get a rate of ionizations per second
 // Do not call during packet propagation, as the y vector may not be in memory!
@@ -1167,12 +1168,27 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
 
   const int Z = get_element(element);
   const int ionstage = get_ionstage(element, ion);
+  double ionpot_valence = -1;
 
   for (int collionindex = 0; collionindex < colliondatacount; collionindex++)
   {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1)
     {
       get_xs_ionization_vector(cross_section_vec, collionindex);
+
+      if (assumeshellpotentialisvalence)
+      {
+        const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
+        if (ionpot_valence < 0)
+          ionpot_valence = ionpot_shell;
+
+        // ensure that the first shell really was the valence shell (we assumed ascending energy order)
+        assert(ionpot_shell >= ionpot_valence);
+
+        // boost the ionization rate by assuming shell vacancy energy is used to eject valence electrons
+        gsl_vector_scale(cross_section_vec, ionpot_shell / ionpot_valence);
+      }
+
       gsl_vector_add(cross_section_vec_allshells, cross_section_vec);
     }
   }
@@ -1230,12 +1246,12 @@ static void calculate_eff_ionpot_auger_rates(
       assert(ionpot_shell >= ionpot_valence);
 
       const double ionpot = USE_VALENCE_IONPOTENTIAL ? ionpot_valence : ionpot_shell;
-      const double eta_over_ionput = frac_ionization_shell / ionpot;
+      const double eta_over_ionpot = frac_ionization_shell / ionpot;
 
-      eta_over_ionpot_sum += eta_over_ionput;
+      eta_over_ionpot_sum += eta_over_ionpot;
 
-      eta_double_ionize_over_ionpot_sum += eta_over_ionput * prob_doubleionize_shell;
-      eta_triple_ionize_over_ionpot_sum += eta_over_ionput * prob_tripleionize_shell;
+      eta_double_ionize_over_ionpot_sum += eta_over_ionpot * prob_doubleionize_shell;
+      eta_triple_ionize_over_ionpot_sum += eta_over_ionpot * prob_tripleionize_shell;
     }
   }
 
@@ -1665,7 +1681,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
           const double prob_singleionize = 1. - colliondata[n].prob_doubleionize - colliondata[n].prob_tripleionize;
-          printout("      frac_ionization_shell(n=%d l=%d I=%5.1f eV): %10.4e prob(n Auger elec): 0: %.2f 1: %.2f 2: %.2f\n",
+          printout("      shell n %d, l %d, I %5.1f eV: frac_ionization %10.4e  prob(n Auger electrons): 0: %.2f 1: %.2f 2: %.2f\n",
                    colliondata[n].n, colliondata[n].l, colliondata[n].ionpot_ev, frac_ionization_ion_shell,
                    prob_singleionize, colliondata[n].prob_doubleionize, colliondata[n].prob_tripleionize);
         }
@@ -1742,19 +1758,26 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
       printout("    frac_excitation: %g\n", frac_excitation_ion);
       printout("    workfn:       %9.2f eV\n", (1. / get_oneoverw(element, ion, modelgridindex)) / EV);
-      printout("    eff_ionpot:   %9.2f eV\n", get_eff_ionpot(modelgridindex, element, ion) / EV);
-      printout("    workfn approx Gamma:    %9.3e\n",
+      printout("    eff_ionpot:   %9.2f eV  (use valence potential: %s)\n",
+               get_eff_ionpot(modelgridindex, element, ion) / EV, (USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
+
+      printout("    workfn approx Gamma:     %9.3e\n",
                nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
-      printout("    test SF integral Gamma: %9.3e\n",
-              calculate_nt_ionization_ratecoeff(modelgridindex, element, ion));
-      printout("    Spencer-Fano Gamma:     %9.3e  (always use valence potential: %s)\n",
+
+      printout("    SF integral Gamma:       %9.3e\n",
+              calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, false));
+
+      printout("    SF integral(I=Iv) Gamma: %9.3e  (use valence potential as shell potential: true)\n",
+              calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, true));
+
+      printout("    ARTIS using Gamma:       %9.3e  (use valence potential as shell potential: %s)\n",
                nt_ionization_ratecoeff_sf(modelgridindex, element, ion),
                (USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
       // the ion values (unlike shell ones) have been collapsed down to ensure that upperion < nions
       if (ion < nions - 1)
       {
-        printout("    prob(upperionstage):    ");
+        printout("    probability to ionstage: ");
         for (int upperion = ion + 1; (upperion < nions) & (upperion < ion + 3); upperion++)
         {
           const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion);
