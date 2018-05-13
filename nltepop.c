@@ -229,7 +229,7 @@ static void print_level_rates_summary(
     printout("rates out: ");
   }
 
-  printout("rad_bb %7.1e coll_bb %7.1e ntcoll_bb %7.1e rad_bf %7.1e coll_bf %7.1e ntcoll_bf %7.1e\n",
+  printout("rad_bb %8.1e coll_bb %8.1e ntcoll_bb %8.1e rad_bf %8.1e coll_bf %8.1e ntcoll_bf %8.1e\n",
            rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total);
 }
 
