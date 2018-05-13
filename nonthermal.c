@@ -15,9 +15,14 @@
 #include "update_grid.h"
 #include "sn3d.h"
 
-#define SFPTS 8192  // number of energy points in the Spencer-Fano solution vector
-#define EMAX 16000. // eV
-#define EMIN 0.1 // eV
+// number of energy points in the Spencer-Fano solution vector
+#define SFPTS 8192
+
+// eV
+#define EMAX 16000.
+
+// eV
+#define EMIN 0.1
 
 // just consider excitation from the first N levels, because this really slows down the solver
 const int MAX_NLEVELS_LOWER_EXCITATION = 5;
@@ -83,15 +88,20 @@ const int MAX_NT_EXCITATIONS = 25000;
 
 static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
 
-static const double minionfraction = 1.e-8;  // minimum number fraction of the total population to include in SF solution
-static const double MINDEPRATE = 0.; // minimum deposition rate density (eV/s/cm^3) to solve SF equation
+// minimum number fraction of the total population to include in SF solution
+static const double minionfraction = 1.e-8;
 
-static const double A_naught_squared = 2.800285203e-17; // Bohr radius squared in cm^2
+// minimum deposition rate density (eV/s/cm^3) to solve SF equation
+static const double MINDEPRATE = 0.;
 
+// Bohr radius squared in cm^2
+static const double A_naught_squared = 2.800285203e-17;
+
+// specifies max number of shells for which data is known for computing mean binding energies
 #define M_NT_SHELLS 10
-//specifies max number of shells for which data is known for computing mean binding energies
+
+// maximum number of elements for which binding energy tables are to be used
 #define MAX_Z_BINDING 30
-//maximum number of elements for which binding energy tables are to be used
 
 static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 
