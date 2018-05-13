@@ -23,7 +23,7 @@ int get_nlte_vector_index(const int element, const int ion, const int level)
 // This is NOT an index into modelgrid[modelgridindex].nlte_pops that contains all elements
 {
   // have to convert from nlte_pops index to nlte_vector index
-  // the difference is that nlte vectors are apply to a single element, and include ground states
+  // the difference is that nlte vectors apply to a single element and include ground states
   const int gs_index = elements[element].ions[ion].first_nlte - elements[element].ions[0].first_nlte + ion;
 
   // add in level or superlevel number
@@ -180,6 +180,85 @@ static double get_total_rate_out(
   const int index_from, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec)
 {
   return get_total_rate(index_from, rate_matrix, popvec, false);
+}
+
+
+static void print_level_rates_summary(
+  const int element, const int selected_ion, const int selected_level,
+  const gsl_vector *restrict popvec,
+  const gsl_matrix *rate_matrix_rad_bb,
+  const gsl_matrix *rate_matrix_coll_bb,
+  const gsl_matrix *rate_matrix_ntcoll_bb,
+  const gsl_matrix *rate_matrix_rad_bf,
+  const gsl_matrix *rate_matrix_coll_bf,
+  const gsl_matrix *rate_matrix_ntcoll_bf)
+{
+  const int atomic_number = get_element(element);
+  const int selected_ionstage = get_ionstage(element, selected_ion);
+  const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
+
+  const int nlevels_nlte = get_nlevels_nlte(element, selected_ion);
+  const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, selected_ion) - 1));
+  if ((selected_level == nlevels_nlte + 1) && has_superlevel)
+  {
+    printout("  Z=%d ion_stage %d superlevel (vector_index %d):\n",
+             atomic_number, selected_ionstage, selected_index);
+  }
+  else
+  {
+    printout("  Z=%d ion_stage %d level %d (vector_index %d):\n",
+             atomic_number, selected_ionstage, selected_level, selected_index);
+  }
+
+  const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bb, popvec);
+  const double coll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bb, popvec);
+  const double ntcoll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_ntcoll_bb, popvec);
+  const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bf, popvec);
+  const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bf, popvec);
+  const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_ntcoll_bf, popvec);
+
+  printout("    total rates in:  rad_bb %7.1e coll_bb %7.1e ntcoll_bb %7.1e rad_bf %7.1e coll_bf %7.1e ntcoll_bf %7.1e\n",
+           rad_bb_in_total, coll_bb_in_total, ntcoll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total);
+
+  const double rad_bb_out_total = get_total_rate_out(selected_index, rate_matrix_rad_bb, popvec);
+  const double coll_bb_out_total = get_total_rate_out(selected_index, rate_matrix_coll_bb, popvec);
+  const double ntcoll_bb_out_total = get_total_rate_out(selected_index, rate_matrix_ntcoll_bb, popvec);
+  const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrix_rad_bf, popvec);
+  const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_coll_bf, popvec);
+  const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_ntcoll_bf, popvec);
+
+  printout("    total rates out: rad_bb %7.1e coll_bb %7.1e ntcoll_bb %7.1e rad_bf %7.1e coll_bf %7.1e ntcoll_bf %7.1e\n",
+          rad_bb_out_total, coll_bb_out_total, ntcoll_bb_out_total, rad_bf_out_total, coll_bf_out_total, ntcoll_bf_out_total);
+}
+
+
+static void print_element_rates_summary(
+  const int element,
+  const gsl_vector *restrict popvec,
+  const gsl_matrix *rate_matrix_rad_bb,
+  const gsl_matrix *rate_matrix_coll_bb,
+  const gsl_matrix *rate_matrix_ntcoll_bb,
+  const gsl_matrix *rate_matrix_rad_bf,
+  const gsl_matrix *rate_matrix_coll_bf,
+  const gsl_matrix *rate_matrix_ntcoll_bf)
+{
+  const int nions = get_nions(element);
+  for (int ion = 0; ion < nions; ion++)
+  {
+    const int nlevels_nlte = get_nlevels_nlte(element, ion);
+    const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, ion) - 1));
+
+    const int nlevels = get_nlevels(element, ion);
+    for (int level = 0; (level < 5) & (level < nlevels); level++)
+    {
+      print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+    }
+    if (has_superlevel)
+    {
+      const int level_superlevel = nlevels_nlte + 1;
+      print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+    }
+  }
 }
 
 
@@ -948,6 +1027,11 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       printout("  WARNING: The Z=%d element population is: %g (from abundance) and %g (from matrix solution sum of level pops), error: %.1f%%. Forcing element pops to LTE.\n",
                atomic_number, elem_pop_abundance, elem_pop_matrix, elem_pop_error_percent);
       set_element_pops_lte(modelgridindex, element);
+    }
+
+    if (individual_process_matricies)
+    {
+      print_element_rates_summary(element, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     // if (individual_process_matricies && (atomic_number == 26 && timestep % 2 == 0))
