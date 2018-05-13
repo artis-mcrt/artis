@@ -680,7 +680,7 @@ static bool nltepop_matrix_solve(
 }
 
 
-void solve_nlte_pops_element(const int element, const int modelgridindex, const int timestep)
+void solve_nlte_pops_element(const int element, const int modelgridindex, const int timestep, const int nlte_iter)
 // solves the statistical balance equations to find NLTE level populations for all ions of an element
 // (ionisation balance follows from this too)
 {
@@ -702,8 +702,8 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   const double t_mid = time_step[timestep].mid;
   const int nions = get_nions(element);
 
-  printout("Solving for NLTE populations in cell %d at timestep %d for element Z=%d (mass fraction %.2e)\n",
-           modelgridindex, timestep, atomic_number, get_abundance(modelgridindex, element));
+  printout("Solving for NLTE populations in cell %d at timestep %d iteration %d for element Z=%d (mass fraction %.2e)\n",
+           modelgridindex, timestep, nlte_iter, atomic_number, get_abundance(modelgridindex, element));
 
   // LTE test, make sure binned radfield is off
   //set_TR(modelgridindex,3000);
@@ -1483,12 +1483,12 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
           for (int level_sl = nlevels_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++)
           {
             nnlevellte += calculate_levelpop_lte(modelgridindex, element, ion, level_sl);
-            nnlevelnlte += slpopfactor * superlevel_boltzmann(modelgridindex,element,ion,level);
+            nnlevelnlte += slpopfactor * superlevel_boltzmann(modelgridindex, element, ion, level);
           }
         }
 
         const double ion_popfrac = nnlevelnlte / ionstagepop(modelgridindex, element, ion);
-        fprintf(nlte_file,"%11.5e %11.5e %11.5e\n", nnlevellte, nnlevelnlte, ion_popfrac);
+        fprintf(nlte_file, "%11.5e %11.5e %11.5e\n", nnlevellte, nnlevelnlte, ion_popfrac);
       }
     }
   }

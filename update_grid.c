@@ -437,7 +437,7 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
       for (int element = 0; element < nelements; element++)
       {
         if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
-          solve_nlte_pops_element(element, n, nts);
+          solve_nlte_pops_element(element, n, nts, nlte_iter);
         else
         {
           const int nions = get_nions(element);
