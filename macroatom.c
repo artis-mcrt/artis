@@ -141,12 +141,13 @@ static void get_macroatom_transitionrates(
   {
     if (NT_ON)
       processrates[MA_ACTION_INTERNALUPHIGHERNT] = nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
+
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
     {
-      const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-      const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
+      const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+      const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
 
-      const double R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
+      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
       processrates[MA_ACTION_INTERNALUPHIGHER] += (R + C) * epsilon_current;
@@ -931,7 +932,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
       case MA_ACTION_INTERNALUPHIGHERNT:
         pkt_ptr->interactions += 1;
-        ion += 1;
+        // ion += 1;
+        ion = nt_random_upperion(modelgridindex, element, ion);
         level = 0;
         ma_stat_internaluphighernt++;
         // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion, level);
