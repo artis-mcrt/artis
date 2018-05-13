@@ -19,21 +19,32 @@
 #define EMAX 16000. // eV
 #define EMIN 0.1 // eV
 
-const int MAX_NLEVELS_LOWER_EXCITATION = 5; // just consider excitation from the first few levels
-const int MAX_NT_EXCITATIONS = 25000;  // if this is more than SFPTS, then you might as well just store
-                                       // the NT spectrum instead (although CPU costs)
+// just consider excitation from the first N levels, because this really slows down the solver
+const int MAX_NLEVELS_LOWER_EXCITATION = 5;
 
-#define NT_EXCITATION_ON false // keep a list of non-thermal excitation rates for use
-                               // in the NLTE pop solver, macroatom, and NTLEPTON packets
-                               // even with this off, excitations will be included in the solution
-                               // and their combined deposition fraction is calculated
+// limit the number of stored non-thermal excitation transition rates to reduce memory cost.
+// if this is higher than SFPTS, then you might as well just store
+// the full NT degradation spectrum and calculate the rates as needed (although CPU costs)
+const int MAX_NT_EXCITATIONS = 25000;
 
-#define BLOCKSIZEEXCITATION 5096    // Realloc the excitation list increasing by this blocksize
-#define BLOCKSIZEIONIZATION 128     // Realloc the ionization list increasing by this blocksize
+// keep a list of non-thermal excitation rates for use
+// in the NLTE pop solver, macroatom, and NTLEPTON packets
+// even with this off, excitations will be included in the solution
+// and their combined deposition fraction is calculated
+#define NT_EXCITATION_ON true
 
-// Calculate eff_ionpot and ionisation rates by dividing by the valence shell potential for the ion
-// instead of the actuall shell potentials
-#define USE_VALENCE_IONPOTENTIAL true
+// increase the excitation and ionization lists by this blocksize when reallocating
+#define BLOCKSIZEEXCITATION 5096
+#define BLOCKSIZEIONIZATION 128
+
+// calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
+// instead of the specific shell potentials
+#define USE_VALENCE_IONPOTENTIAL false
+
+// allow ions to lose more than one electron per impact ionisation using Auger effect probabilities
+// associate with electron shells
+// if this is true, make sure USE_VALENCE_IONPOTENTIAL is false!
+#define AUGER_MULTI_IONIZATION_ON true
 
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
@@ -60,6 +71,7 @@ const int MAX_NT_EXCITATIONS = 25000;  // if this is more than SFPTS, then you m
 //   }
 //   return 0.;
 // }
+
 
 #define STORE_NT_SPECTRUM false // if this is on, the non-thermal energy spectrum will be kept in memory
                                 // for every grid cell during packet propagation, which
@@ -93,6 +105,8 @@ struct collionrow {
   double B;
   double C;
   double D;
+  double prob_doubleionize;
+  double prob_tripleionize;
 };
 
 static struct collionrow *colliondata = NULL;
@@ -127,10 +141,12 @@ struct nt_solution_struct {
   double deposition_rate_density;
 
   float frac_heating;              // energy fractions should add up to 1.0 if the solution is good
-  float frac_ionization;           // fraction of deposition energy going to ionization
+  float frac_ionization;           // fracprob_tripleionizetion of deposition energy going to ionization
   float frac_excitation;           // fraction of deposition energy going to excitation
 
   float eff_ionpot[MELEMENTS][MIONS]; // these are used to calculate the non-thermal ionization rate
+  float prob_doubleionize[MELEMENTS][MIONS];
+  float prob_tripleionize[MELEMENTS][MIONS];
 
   int frac_ionizations_list_size;
   struct nt_ionization_struct *frac_ionizations_list;
@@ -242,19 +258,40 @@ static void read_collion_data(void)
 {
   printout("Reading collisional ionization data...\n");
 
-  FILE *cifile = fopen_required("collion.txt", "r");
+  FILE *cifile = NULL;
+  if (AUGER_MULTI_IONIZATION_ON)
+  {
+    cifile = fopen_required("collion-auger.txt", "r");
+  }
+  else
+  {
+    cifile = fopen_required("collion.txt", "r");
+  }
 
   fscanf(cifile, "%d", &colliondatacount);
   printout("Reading %d collisional transition rows\n", colliondatacount);
   colliondata = calloc(colliondatacount, sizeof(struct collionrow));
   for (int n = 0; n < colliondatacount; n++)
   {
-    fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg",
-           &colliondata[n].Z, &colliondata[n].nelec, &colliondata[n].n, &colliondata[n].l,
-           &colliondata[n].ionpot_ev, &colliondata[n].A, &colliondata[n].B, &colliondata[n].C, &colliondata[n].D);
-    // printout("ci row: %2d %2d %1d %1d %lg %lg %lg %lg %lg\n",
-    //          colliondata[n].Z, colliondata[n].nelec, colliondata[n].n, colliondata[n].l, colliondata[n].ionpot_ev,
-    //          colliondata[n].A, colliondata[n].B, colliondata[n].C, colliondata[n].D);
+    if (AUGER_MULTI_IONIZATION_ON)
+    {
+      fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg %lg %lg",
+             &colliondata[n].Z, &colliondata[n].nelec, &colliondata[n].n, &colliondata[n].l,
+             &colliondata[n].ionpot_ev, &colliondata[n].A, &colliondata[n].B, &colliondata[n].C, &colliondata[n].D,
+             &colliondata[n].prob_doubleionize, &colliondata[n].prob_tripleionize);
+    }
+    else
+    {
+      fscanf(cifile, "%2d %2d %1d %1d %lg %lg %lg %lg %lg",
+             &colliondata[n].Z, &colliondata[n].nelec, &colliondata[n].n, &colliondata[n].l,
+             &colliondata[n].ionpot_ev, &colliondata[n].A, &colliondata[n].B, &colliondata[n].C, &colliondata[n].D);
+      colliondata[n].prob_doubleionize = 0.;
+      colliondata[n].prob_tripleionize = 0.;
+    }
+
+    // printout("ci row: %2d %2d %1d %1d %lg %lg %lg %lg %lg %lg %lg\n",
+    //        colliondata[n].Z, colliondata[n].nelec, colliondata[n].n, colliondata[n].l, colliondata[n].ionpot_ev,
+    //        colliondata[n].A, colliondata[n].B, colliondata[n].C, colliondata[n].D, colliondata[n].prob_doubleionize, colliondata[n].prob_tripleionize);
   }
 
   fclose(cifile);
@@ -268,6 +305,8 @@ static void zero_all_effionpot(const int modelgridindex)
     for (int ion = 0; ion < get_nions(element); ion++)
     {
       nt_solution[modelgridindex].eff_ionpot[element][ion] = 0.;
+      nt_solution[modelgridindex].prob_doubleionize[element][ion] = 0.;
+      nt_solution[modelgridindex].prob_tripleionize[element][ion] = 0.;
     }
   }
 }
@@ -1143,8 +1182,8 @@ static double calculate_nt_ionization_ratecoeff(const int modelgridindex, const 
 }
 
 
-static float calculate_eff_ionpot(
-  const int modelgridindex, const int element, const int ion, const bool use_valence_ionpotential)
+static void calculate_eff_ionpot_auger_rates(
+  const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion
 // the result is in ergs
 {
@@ -1162,6 +1201,8 @@ static float calculate_eff_ionpot(
   // where eta is the fraction of the deposition energy going into ionization of the ion or shell
 
   double eta_over_ionpot_sum = 0.;
+  double eta_double_ionize_over_ionpot_sum = 0.;
+  double eta_triple_ionize_over_ionpot_sum = 0.;
   double ionpot_valence = -1;
   for (int collionindex = 0; collionindex < colliondatacount; collionindex++)
   {
@@ -1169,24 +1210,52 @@ static float calculate_eff_ionpot(
     {
       const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionindex);
       const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
+      const float prob_doubleionize_shell = colliondata[collionindex].prob_doubleionize;
+      const float prob_tripleionize_shell = colliondata[collionindex].prob_tripleionize;
 
-      if (use_valence_ionpotential)
-      {
-        if (ionpot_valence < 0)
-          ionpot_valence = ionpot_shell;
+      if (ionpot_valence < 0)
+        ionpot_valence = ionpot_shell;
 
-        assert(ionpot_shell >= ionpot_valence);  // to ensure that the first shell really was the valence shell
-        eta_over_ionpot_sum += frac_ionization_shell / ionpot_valence;
-      }
-      else
-      {
-        eta_over_ionpot_sum += frac_ionization_shell / ionpot_shell;
-      }
+      // ensure that the first shell really was the valence shell (we assumed ascending energy order)
+      assert(ionpot_shell >= ionpot_valence);
 
+      const double ionpot = USE_VALENCE_IONPOTENTIAL ? ionpot_valence : ionpot_shell;
+      const double eta_over_ionput = frac_ionization_shell / ionpot;
+
+      eta_over_ionpot_sum += eta_over_ionput;
+
+      eta_double_ionize_over_ionpot_sum += eta_over_ionput * prob_doubleionize_shell;
+      eta_triple_ionize_over_ionpot_sum += eta_over_ionput * prob_tripleionize_shell;
     }
   }
 
-  return X_ion / eta_over_ionpot_sum;
+  if (AUGER_MULTI_IONIZATION_ON)
+  {
+    nt_solution[modelgridindex].prob_doubleionize[element][ion] = eta_double_ionize_over_ionpot_sum / eta_over_ionpot_sum;
+    nt_solution[modelgridindex].prob_tripleionize[element][ion] = eta_triple_ionize_over_ionpot_sum / eta_over_ionpot_sum;
+
+    const int nions = get_nions(element);
+    // the following ensures that multiple ionisations can't send you to an ion stage that is not in the model
+    if ((ion + 3) >= nions)
+    {
+      nt_solution[modelgridindex].prob_doubleionize[element][ion] += nt_solution[modelgridindex].prob_tripleionize[element][ion];
+      nt_solution[modelgridindex].prob_tripleionize[element][ion] = 0.;
+    }
+    if ((ion + 2) >= nions)
+    {
+      nt_solution[modelgridindex].prob_doubleionize[element][ion] = 0.;
+    }
+  }
+  else
+  {
+    nt_solution[modelgridindex].prob_doubleionize[element][ion] = 0.;
+    nt_solution[modelgridindex].prob_tripleionize[element][ion] = 0.;
+  }
+
+  double eff_ionpot = X_ion / eta_over_ionpot_sum;
+  if (!isfinite(eff_ionpot))
+    eff_ionpot = 0.;
+  nt_solution[modelgridindex].eff_ionpot[element][ion] = eff_ionpot;
 }
 
 
@@ -1221,7 +1290,68 @@ static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int ele
 }
 
 
-double nt_ionization_ratecoeff(int modelgridindex, int element, int ion)
+double nt_ionization_upperion_probability(const int modelgridindex, const int element, const int lowerion, const int upperion)
+{
+  assert(upperion > lowerion);
+  assert(upperion < get_nions(element));
+
+  if (AUGER_MULTI_IONIZATION_ON)
+  {
+    const int nelec_ejected = upperion - lowerion;
+
+    switch (nelec_ejected)
+    {
+      case 1:
+        return (1. - nt_solution[modelgridindex].prob_doubleionize[element][lowerion] - nt_solution[modelgridindex].prob_tripleionize[element][lowerion]);
+
+      case 2:
+        return nt_solution[modelgridindex].prob_doubleionize[element][lowerion];
+
+      case 3:
+        return nt_solution[modelgridindex].prob_tripleionize[element][lowerion];
+
+      default:
+        printout("WARNING: tried to ionise from Z=%02d ionstage %d to %d\n",
+          get_element(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
+        return 0.;
+    }
+  }
+  else
+  {
+    return (upperion == lowerion + 1) ? 1.0 : 0.;
+  }
+}
+
+
+int nt_random_upperion(const int modelgridindex, const int element, const int lowerion)
+{
+  const int nions = get_nions(element);
+  assert(lowerion < nions - 1);
+  if (AUGER_MULTI_IONIZATION_ON)
+  {
+    const double zrand = gsl_rng_uniform(rng);
+    double prob_sum = 0.;
+    for (int upperion = lowerion + 1; upperion < nions && upperion <= lowerion + 3; upperion++)
+    {
+      prob_sum += nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion);
+      if (zrand <= prob_sum)
+      {
+        return upperion;
+      }
+    }
+    printout("ERROR: nt_ionization_upperion_probability did not sum to more than zrand = %lg, prob_sum = %lg\n",
+             zrand, prob_sum);
+    abort();
+  }
+  else
+  {
+    return lowerion + 1;
+  }
+}
+
+
+
+double nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion)
 {
   if (!NT_ON)
   {
@@ -1379,9 +1509,10 @@ void do_ntlepton(PKT *pkt_ptr)
       {
         const int element = nt_solution[modelgridindex].frac_ionizations_list[allionindex].element;
         const int lowerion = nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion;
+        const int upperion = nt_random_upperion(modelgridindex, element, lowerion);
 
         mastate[tid].element = element;
-        mastate[tid].ion = lowerion + 1;
+        mastate[tid].ion = upperion;
         mastate[tid].level = 0;
         mastate[tid].activatingline = -99;
         pkt_ptr->type = TYPE_MA;
@@ -1391,7 +1522,8 @@ void do_ntlepton(PKT *pkt_ptr)
         pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
         pkt_ptr->trueemissionvelocity = -1;
 
-        printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d\n", modelgridindex, get_element(element), get_ionstage(element, lowerion));
+        printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
+                 modelgridindex, get_element(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
 
         return;
       }
@@ -1500,10 +1632,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
     const int nions = get_nions(element);
     for (int ion = 0; ion < get_nions(element); ion++)
     {
-      float eff_ionpot = calculate_eff_ionpot(modelgridindex, element, ion, USE_VALENCE_IONPOTENTIAL);
-      if (!isfinite(eff_ionpot))
-        eff_ionpot = 0.;
-      nt_solution[modelgridindex].eff_ionpot[element][ion] = eff_ionpot;
+      calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
 
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
@@ -1525,8 +1654,10 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
           const double frac_ionization_ion_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, n);
           frac_ionization_ion += frac_ionization_ion_shell;
           matching_nlsubshell_count++;
-          printout("      frac_ionization_shell(n %d l %d): %g (ionpot %.2f eV)\n",
-                   colliondata[n].n, colliondata[n].l, frac_ionization_ion_shell, colliondata[n].ionpot_ev);
+          const double prob_singleionize = 1. - colliondata[n].prob_doubleionize - colliondata[n].prob_tripleionize;
+          printout("      frac_ionization_shell(n=%d l=%d I=%5.1f eV): %10.4e prob(n Auger elec): 0: %.2f 1: %.2f 2: %.2f\n",
+                   colliondata[n].n, colliondata[n].l, colliondata[n].ionpot_ev, frac_ionization_ion_shell,
+                   prob_singleionize, colliondata[n].prob_doubleionize, colliondata[n].prob_tripleionize);
         }
       }
 
@@ -1606,9 +1737,22 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
                nt_ionization_ratecoeff_wfapprox(modelgridindex, element, ion));
       printout("    test SF integral Gamma: %9.3e\n",
               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion));
-      printout("    use valence potential:  %s\n", USE_VALENCE_IONPOTENTIAL ? "true" : "false");
-      printout("    Spencer-Fano Gamma:     %9.3e\n",
-               nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
+      printout("    Spencer-Fano Gamma:     %9.3e  (always use valence potential: %s)\n",
+               nt_ionization_ratecoeff_sf(modelgridindex, element, ion),
+               (USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
+
+      // the ion values (unlike shell ones) have been collapsed down to ensure that upperion < nions
+      if (ion < nions - 1)
+      {
+        printout("    prob(upperionstage):    ");
+        for (int upperion = ion + 1; (upperion < nions) & (upperion < ion + 3); upperion++)
+        {
+          const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion);
+          if (probability > 0.)
+            printout(" %d: %.2f", get_ionstage(element, upperion), probability);
+        }
+        printout("\n");
+      }
     }
   }
 

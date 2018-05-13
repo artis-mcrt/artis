@@ -454,15 +454,25 @@ static void nltepop_matrix_add_nt_ionisation(
   {
     printout("  WARNING: Negative NT_ionization rate from ion_stage %d\n", get_ionstage(element, ion));
   }
-  const int upper_groundstate_index = get_nlte_vector_index(element, ion + 1, 0);
 
-  const int nlevels = get_nlevels(element, ion);
-  for (int level = 0; level < nlevels; level++)
+  const int nions = get_nions(element);
+  for (int upperion = ion + 1; (upperion < nions) && (upperion <= ion + 3); upperion++)
   {
-    const int lower_index = get_nlte_vector_index(element, ion, level);
 
-    *gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index) -= Y_nt * s_renorm[level];
-    *gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_groundstate_index, lower_index) += Y_nt * s_renorm[level];
+    const double Y_nt_thisupperion = Y_nt * nt_ionization_upperion_probability(modelgridindex, element, ion, upperion);
+
+    if (Y_nt_thisupperion > 0.)
+    {
+      const int upper_groundstate_index = get_nlte_vector_index(element, upperion, 0);
+      const int nlevels = get_nlevels(element, ion);
+      for (int level = 0; level < nlevels; level++)
+      {
+        const int lower_index = get_nlte_vector_index(element, ion, level);
+
+        *gsl_matrix_ptr(rate_matrix_ntcoll_bf, lower_index, lower_index) -= Y_nt_thisupperion * s_renorm[level];
+        *gsl_matrix_ptr(rate_matrix_ntcoll_bf, upper_groundstate_index, lower_index) += Y_nt_thisupperion * s_renorm[level];
+      }
+    }
   }
 }
 
