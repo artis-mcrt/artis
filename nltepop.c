@@ -127,33 +127,59 @@ static void filter_nlte_matrix(
 }
 
 
+static double get_total_rate(
+  const int index_selected, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec,
+  const bool into_level)
+{
+  gsl_vector *rates_vec;
+  if (into_level)
+  {
+    // find rate into selected level
+    gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, index_selected);
+    rates_vec = gsl_vector_alloc(rate_matrix->size1);
+
+    // copy the rate coefficients
+    gsl_vector_memcpy(rates_vec, &row_view.vector);
+
+    // multiply incoming rate coefficients by their corresponding populations to get rates
+    gsl_vector_mul(rates_vec, popvec);
+  }
+  else
+  {
+    // find rate out of selected level
+    gsl_vector_const_view col_view = gsl_matrix_const_column(rate_matrix, index_selected);
+    rates_vec = gsl_vector_alloc(rate_matrix->size2);
+
+    // copy the rate coefficients
+    gsl_vector_memcpy(rates_vec, &col_view.vector);
+
+    // multiply outgoing rate coefficients by the population of the selected level to get rates
+    gsl_vector_scale(rates_vec, gsl_vector_get(popvec, index_selected));
+  }
+
+  // set rate to/from self to zero
+  gsl_vector_set(rates_vec, index_selected, 0.);
+
+  // add up the rates to/from individual levels
+  const double total_rate = gsl_blas_dasum(rates_vec);
+
+  gsl_vector_free(rates_vec);
+
+  return total_rate;
+}
+
+
 static double get_total_rate_in(
   const int index_to, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec)
 {
-  const gsl_matrix rate_matrix_var = *rate_matrix;
-  gsl_vector *rates_in_vec = gsl_vector_alloc(rate_matrix_var.size1);
-  gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, index_to);
-  gsl_vector_memcpy(rates_in_vec, &row_view.vector);
-  gsl_vector_set(rates_in_vec, index_to, 0.);
-  gsl_vector_mul(rates_in_vec, popvec);
-  const double total_rate_in = gsl_blas_dasum(rates_in_vec);
-  gsl_vector_free(rates_in_vec);
-  return total_rate_in;
+  return get_total_rate(index_to, rate_matrix, popvec, true);
 }
 
 
 static double get_total_rate_out(
   const int index_from, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec)
 {
-  const gsl_matrix rate_matrix_var = *rate_matrix;
-  gsl_vector *rates_out_vec = gsl_vector_alloc(rate_matrix_var.size2);
-  gsl_vector_const_view col_view = gsl_matrix_const_column(rate_matrix, index_from);
-  gsl_vector_memcpy(rates_out_vec, &col_view.vector);
-  gsl_vector_set(rates_out_vec, index_from, 0.);
-  gsl_vector_scale(rates_out_vec, gsl_vector_get(popvec, index_from));
-  const double total_rate_out = gsl_blas_dasum(rates_out_vec);
-  gsl_vector_free(rates_out_vec);
-  return total_rate_out;
+  return get_total_rate(index_from, rate_matrix, popvec, false);
 }
 
 
@@ -456,15 +482,14 @@ static void nltepop_matrix_add_nt_ionisation(
   }
 
   const int nions = get_nions(element);
+  const int nlevels = get_nlevels(element, ion);
   for (int upperion = ion + 1; (upperion < nions) && (upperion <= ion + 3); upperion++)
   {
-
     const double Y_nt_thisupperion = Y_nt * nt_ionization_upperion_probability(modelgridindex, element, ion, upperion);
 
     if (Y_nt_thisupperion > 0.)
     {
       const int upper_groundstate_index = get_nlte_vector_index(element, upperion, 0);
-      const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++)
       {
         const int lower_index = get_nlte_vector_index(element, ion, level);
