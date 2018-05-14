@@ -195,12 +195,7 @@ static void print_level_rates_summary(
   const gsl_matrix *rate_matrix_ntcoll_bf,
   const bool into_level)
 {
-  const int atomic_number = get_element(element);
-  const int selected_ionstage = get_ionstage(element, selected_ion);
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
-
-  const int nlevels_nlte = get_nlevels_nlte(element, selected_ion);
-  const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, selected_ion) - 1));
 
   const double rad_bb_total = get_total_rate(selected_index, rate_matrix_rad_bb, popvec, into_level);
   const double coll_bb_total = get_total_rate(selected_index, rate_matrix_coll_bb, popvec, into_level);
@@ -209,27 +204,17 @@ static void print_level_rates_summary(
   const double coll_bf_total = get_total_rate(selected_index, rate_matrix_coll_bf, popvec, into_level);
   const double ntcoll_bf_total = get_total_rate(selected_index, rate_matrix_ntcoll_bf, popvec, into_level);
 
-  if ((selected_level == nlevels_nlte + 1) && has_superlevel)
-  {
-    printout("  Z=%d ion_stage %d superlevel ",
-             atomic_number, selected_ionstage);
-  }
-  else
-  {
-    printout("  Z=%d ion_stage %d level %4d ",
-             atomic_number, selected_ionstage, selected_level);
-  }
 
   if (into_level)
   {
-    printout("rates in:  ");
+    printout(" in: ");
   }
   else
   {
-    printout("rates out: ");
+    printout("out: ");
   }
 
-  printout("rad_bb %8.1e coll_bb %8.1e ntcoll_bb %8.1e rad_bf %8.1e coll_bf %8.1e ntcoll_bf %8.1e\n",
+  printout("%8.1e %8.1e %8.1e %8.1e %8.1e %8.1e\n",
            rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total);
 }
 
@@ -247,19 +232,40 @@ static void print_element_rates_summary(
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++)
   {
-    const int nlevels_nlte = get_nlevels_nlte(element, ion);
-    const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, ion) - 1));
-
     const int nlevels = get_nlevels(element, ion);
-    for (int level = 0; (level < 5) & (level < nlevels); level++)
+    const int nlevels_nlte = get_nlevels_nlte(element, ion);
+
+    const int atomic_number = get_element(element);
+    const int ionstage = get_ionstage(element, ion);
+
+    for (int level = 0; (level < 5) && (level < nlevels) && (level < nlevels_nlte); level++)
     {
+      if (level == 0)
+      {
+        printout("  Z=%2d ion_stage %2d: level        rad_bb  coll_bb ntcol_bb   rad_bf  coll_bf ntcol_bf\n",
+                 atomic_number, ionstage);
+      }
+
+      // rates in
+      printout("                %10d ", level);
       print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf, true);
+
+      // rates out
+      printout("                %10s ", " ");
       print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf, false);
     }
+
+    const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, ion) - 1));
     if (has_superlevel)
     {
       const int level_superlevel = nlevels_nlte + 1;
+      printout("                %10s ", "superlevel");
+
+      // rates in
       print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf, true);
+
+      // rates out
+      printout("                %10s ", " ");
       print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf, false);
     }
   }
