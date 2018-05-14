@@ -18,10 +18,10 @@
 
 #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
   #define traceemissabs_lambdamin 1000.  // in Angstroms
-  #define traceemissabs_lambdamax 10000.
+  #define traceemissabs_lambdamax 25000.
   #define traceemissabs_nulower (1.e8 * CLIGHT / traceemissabs_lambdamax)
   #define traceemissabs_nuupper (1.e8 * CLIGHT / traceemissabs_lambdamin)
-  #define traceemissabs_timemin 300.
+  #define traceemissabs_timemin 310.
   #define traceemissabs_timemax 340.
 
   typedef struct emissionabsorptioncontrib
@@ -339,7 +339,7 @@ void gather_spectrum(int depth)
   }
 
   #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
-  const int maxlinesprinted = 100;
+  const int maxlinesprinted = 500;
 
   for (int mode = 0; mode < 2; mode++) // mode is 0 for emission and 1 for absorption
   {
