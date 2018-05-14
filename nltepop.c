@@ -238,7 +238,7 @@ static void print_element_rates_summary(
     const int atomic_number = get_element(element);
     const int ionstage = get_ionstage(element, ion);
 
-    for (int level = 0; (level < 5) && (level < nlevels) && (level < nlevels_nlte); level++)
+    for (int level = 0; (level < 16) && (level < nlevels) && (level < nlevels_nlte); level++)
     {
       if (level == 0)
       {
