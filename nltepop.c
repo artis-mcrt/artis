@@ -129,7 +129,7 @@ static void filter_nlte_matrix(
 
 static double get_total_rate(
   const int index_selected, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec,
-  const bool into_level)
+  const bool into_level, const bool only_levels_below, const bool only_levels_above)
 {
   gsl_vector *rates_vec;
   if (into_level)
@@ -157,6 +157,23 @@ static double get_total_rate(
     gsl_vector_scale(rates_vec, gsl_vector_get(popvec, index_selected));
   }
 
+  assert(!only_levels_below || !only_levels_above);
+  if (only_levels_above)
+  {
+    for (int index = 0; index < index_selected; index++)
+    {
+      gsl_vector_set(rates_vec, index, 0.);
+    }
+  }
+
+  if (only_levels_below)
+  {
+    for (unsigned int index = index_selected; index < rates_vec->size; index++)
+    {
+      gsl_vector_set(rates_vec, index, 0.);
+    }
+  }
+
   // set rate to/from self to zero
   gsl_vector_set(rates_vec, index_selected, 0.);
 
@@ -172,14 +189,14 @@ static double get_total_rate(
 static double get_total_rate_in(
   const int index_to, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec)
 {
-  return get_total_rate(index_to, rate_matrix, popvec, true);
+  return get_total_rate(index_to, rate_matrix, popvec, true, false, false);
 }
 
 
 static double get_total_rate_out(
   const int index_from, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec)
 {
-  return get_total_rate(index_from, rate_matrix, popvec, false);
+  return get_total_rate(index_from, rate_matrix, popvec, false, false, false);
 }
 
 
@@ -192,30 +209,69 @@ static void print_level_rates_summary(
   const gsl_matrix *rate_matrix_ntcoll_bb,
   const gsl_matrix *rate_matrix_rad_bf,
   const gsl_matrix *rate_matrix_coll_bf,
-  const gsl_matrix *rate_matrix_ntcoll_bf,
-  const bool into_level)
+  const gsl_matrix *rate_matrix_ntcoll_bf)
 {
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
 
-  const double rad_bb_total = get_total_rate(selected_index, rate_matrix_rad_bb, popvec, into_level);
-  const double coll_bb_total = get_total_rate(selected_index, rate_matrix_coll_bb, popvec, into_level);
-  const double ntcoll_bb_total = get_total_rate(selected_index, rate_matrix_ntcoll_bb, popvec, into_level);
-  const double rad_bf_total = get_total_rate(selected_index, rate_matrix_rad_bf, popvec, into_level);
-  const double coll_bf_total = get_total_rate(selected_index, rate_matrix_coll_bf, popvec, into_level);
-  const double ntcoll_bf_total = get_total_rate(selected_index, rate_matrix_ntcoll_bf, popvec, into_level);
-
-
-  if (into_level)
+  for (int i = 0; i <= 3; i++)
   {
-    printout(" in: ");
-  }
-  else
-  {
-    printout("out: ");
-  }
+    // rates in from below, in from above, out to below, out to above
+    if (i == 0)
+    {
+      const int nlevels_nlte = get_nlevels_nlte(element, selected_ion);
+      const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, selected_ion) - 1));
+      if (has_superlevel && (selected_level == nlevels_nlte + 1))
+      {
+        printout("        superlevel  ");
+      }
+      else
+      {
+        printout("        level%5d  ", selected_level);
+      }
+    }
+    else
+    {
+      printout("                    ");
+    }
 
-  printout("%8.1e %8.1e %8.1e %8.1e %8.1e %8.1e\n",
-           rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total);
+    const bool into_level = (i <= 1);
+    const bool only_levels_below = i % 2;
+
+    const double rad_bb_total = get_total_rate(selected_index, rate_matrix_rad_bb, popvec, into_level, only_levels_below, !only_levels_below);
+    const double coll_bb_total = get_total_rate(selected_index, rate_matrix_coll_bb, popvec, into_level, only_levels_below, !only_levels_below);
+    const double ntcoll_bb_total = get_total_rate(selected_index, rate_matrix_ntcoll_bb, popvec, into_level, only_levels_below, !only_levels_below);
+    const double rad_bf_total = get_total_rate(selected_index, rate_matrix_rad_bf, popvec, into_level, only_levels_below, !only_levels_below);
+    const double coll_bf_total = get_total_rate(selected_index, rate_matrix_coll_bf, popvec, into_level, only_levels_below, !only_levels_below);
+    const double ntcoll_bf_total = get_total_rate(selected_index, rate_matrix_ntcoll_bf, popvec, into_level, only_levels_below, !only_levels_below);
+
+    if (into_level)
+    {
+      // into this level
+      if (only_levels_below)
+      {
+        printout("from below ");
+      }
+      else
+      {
+        printout("from above ");
+      }
+    }
+    else
+    {
+      // out of this level
+      if (only_levels_below)
+      {
+        printout("  to below ");
+      }
+      else
+      {
+        printout("  to above ");
+      }
+    }
+
+    printout("%9.1e %9.1e %9.1e %9.1e %9.1e %9.1e\n",
+             rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total);
+  }
 }
 
 
@@ -242,31 +298,19 @@ static void print_element_rates_summary(
     {
       if (level == 0)
       {
-        printout("  Z=%2d ion_stage %2d: level        rad_bb  coll_bb ntcol_bb   rad_bf  coll_bf ntcol_bf\n",
+        printout("  Z=%2d ion_stage %2d      rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n",
                  atomic_number, ionstage);
       }
 
-      // rates in
-      printout("                %10d ", level);
-      print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf, true);
-
-      // rates out
-      printout("                %10s ", " ");
-      print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf, false);
+      print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, ion) - 1));
     if (has_superlevel)
     {
       const int level_superlevel = nlevels_nlte + 1;
-      printout("                %10s ", "superlevel");
 
-      // rates in
-      print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf, true);
-
-      // rates out
-      printout("                %10s ", " ");
-      print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf, false);
+      print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
   }
 }
@@ -282,6 +326,8 @@ static void print_level_rates(
   const gsl_matrix *rate_matrix_coll_bf,
   const gsl_matrix *rate_matrix_ntcoll_bf)
 {
+  // very detailed output of the NLTE processes for a particular levels
+
   if (element > nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > get_nlevels_nlte(element, selected_ion) + 1)
   {
     printout("print_level_rates: invalid element/ion/level arguments\n");
