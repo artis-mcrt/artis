@@ -865,8 +865,9 @@ int main(int argc, char** argv)
 
         update_grid(nts, my_rank, nstart, ndo, titer);
 
+        const time_t sys_time_finish_update_grid = time(NULL);
         printout("timestep %d: update_grid: process %d finished update_grid at %d (took %d seconds)\n",
-                 nts, my_rank, time(NULL), time(NULL) - sys_time_start_update_grid);
+                 nts, my_rank, sys_time_finish_update_grid, sys_time_finish_update_grid - sys_time_start_update_grid);
 
         #ifdef DO_TITER
           /// No iterations over the zeroth timestep, set titer > n_titer
@@ -876,8 +877,11 @@ int main(int argc, char** argv)
         #ifdef MPI_ON
           MPI_Barrier(MPI_COMM_WORLD);
         #endif
-        printout("timestep %d: time after update grid %d (took %d seconds)\n",
-                 nts, time(NULL), time(NULL) - sys_time_start_update_grid);
+        const time_t sys_time_finish_update_grid_all_processes = time(NULL);
+        printout("timestep %d: waiting for update grid to finish on other processes took %d seconds\n",
+                 nts, sys_time_finish_update_grid_all_processes - sys_time_finish_update_grid);
+        printout("timestep %d: time after update grid for all processes %d (took %d seconds)\n",
+                 nts, sys_time_finish_update_grid_all_processes, sys_time_finish_update_grid_all_processes - sys_time_start_update_grid);
         //printout("histindex %d\n",histindex);
 
         const time_t sys_time_start_communicate_grid = time(NULL);
