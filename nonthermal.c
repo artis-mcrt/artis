@@ -151,7 +151,7 @@ struct nt_solution_struct {
   double deposition_rate_density;
 
   float frac_heating;              // energy fractions should add up to 1.0 if the solution is good
-  float frac_ionization;           // fracprob_tripleionizetion of deposition energy going to ionization
+  float frac_ionization;           // fraction of deposition energy going to ionization
   float frac_excitation;           // fraction of deposition energy going to excitation
 
   float eff_ionpot[MELEMENTS][MIONS]; // these are used to calculate the non-thermal ionization rate
