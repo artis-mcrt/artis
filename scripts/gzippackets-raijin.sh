@@ -2,9 +2,9 @@
 
 #PBS -P fm5
 #PBS -q express
-#PBS -l walltime=5:00:00
-#PBS -l mem=16GB
-#PBS -l ncpus=16
+#PBS -l walltime=2:00:00
+#PBS -l mem=8GB
+#PBS -l ncpus=8
 #PBS -l wd
 
 # ncpus must be a factor of the cores per node (16)
