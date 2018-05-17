@@ -1,3 +1,4 @@
+WALLTIMEHOURS := 24
 GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
@@ -13,7 +14,7 @@ ifneq (,$(RAIJINDIRAC))
 	# module load gsl
 
   CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\(10\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
+  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
   LDFLAGS= -lgsl -lm
 
   ifeq (,$(findstring raijin,$(HOSTNAME)))
@@ -31,7 +32,7 @@ else ifneq (,$(KELVIN))
  #  libs/gsl/1.16/gcc-4.4.7
 
   CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\(10\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -I$(GSLINCLUDE) #-fopenmp=libomp
+  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -I$(GSLINCLUDE) #-fopenmp=libomp
   LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
 
   sn3d: CFLAGS += -DMPI_ON
