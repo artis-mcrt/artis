@@ -2,7 +2,7 @@
 
 #PBS -P fm5
 #PBS -q express
-#PBS -l walltime=1:00:00
+#PBS -l walltime=3:00:00
 #PBS -l mem=4GB
 #PBS -l ncpus=1
 #PBS -l wd
