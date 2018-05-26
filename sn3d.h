@@ -20,7 +20,7 @@
 #define POL_ON
 
 // Virtual packets
-#define VPKT_ON
+//#define VPKT_ON
 
 
 //#define HUGEE 2000018
