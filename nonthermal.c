@@ -24,22 +24,24 @@
 // eV
 #define EMIN 0.1
 
-// just consider excitation from the first N levels, because this really slows down the solver
-const int MAX_NLEVELS_LOWER_EXCITATION = 5;
+// just consider excitation from the first N levels and to the first M upper levels,
+// because these transitions really slow down the solver
+const int NTEXCITATION_MAXNLEVELS_LOWER = 5;  // set to zero for none
+const int NTEXCITATION_MAXNLEVELS_UPPER = 300; // maximum number of upper levels included
 
 // limit the number of stored non-thermal excitation transition rates to reduce memory cost.
 // if this is higher than SFPTS, then you might as well just store
 // the full NT degradation spectrum and calculate the rates as needed (although CPU costs)
 const int MAX_NT_EXCITATIONS = 25000;
 
-// keep a list of non-thermal excitation rates for use
-// in the NLTE pop solver, macroatom, and NTLEPTON packets
-// even with this off, excitations will be included in the solution
+// set to true to keep a list of non-thermal excitation rates for use
+// in the NLTE pop solver, macroatom, and NTLEPTON packets.
+// Even with this off, excitations will be included in the solution
 // and their combined deposition fraction is calculated
-#define NT_EXCITATION_ON true
+#define NT_EXCITATION_ON false
 
 // increase the excitation and ionization lists by this blocksize when reallocating
-#define BLOCKSIZEEXCITATION 5096
+#define BLOCKSIZEEXCITATION 2048
 #define BLOCKSIZEIONIZATION 128
 
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
@@ -793,7 +795,7 @@ static double N_e(const int modelgridindex, const double energy)
       // excitation terms
 
       const int nlevels_all = get_nlevels(element, ion);
-      const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
+      const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 
       for (int lower = 0; lower < nlevels; lower++)
       {
@@ -1458,7 +1460,8 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
 #endif
 
   // these transitions won't be in the list, so don't waste time searching
-  if (linelist[lineindex].lowerlevelindex > MAX_NLEVELS_LOWER_EXCITATION)
+  if ((linelist[lineindex].lowerlevelindex >= NTEXCITATION_MAXNLEVELS_LOWER) ||
+      (linelist[lineindex].upperlevelindex >= NTEXCITATION_MAXNLEVELS_UPPER))
     return 0.;
 
   if (mg_associated_cells[modelgridindex] <= 0)
@@ -1713,7 +1716,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       // excitation from all levels is very SLOW
       const int nlevels_all = get_nlevels(element, ion);
       // So limit the lower levels to improve performance
-      const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
+      const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 #if NT_EXCITATION_ON
       const bool above_minionfraction = (nnion >= minionfraction * get_tot_nion(modelgridindex));
 #endif
@@ -1726,8 +1729,14 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
         for (int t = 1; t <= nuptrans; t++)
         {
-          const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
           const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
+          const int upper = linelist[lineindex].upperlevelindex;
+          if (upper >= NTEXCITATION_MAXNLEVELS_UPPER)
+          {
+            continue;
+          }
+
+          const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
 
           const double nt_frac_excitation_perlevelpop = calculate_nt_frac_excitation_perlevelpop(modelgridindex, lineindex, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
@@ -1916,7 +1925,7 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
   gsl_vector *vec_xs_excitation_nnlevel_deltae = gsl_vector_alloc(SFPTS);
 
   const int nlevels_all = get_nlevels(element, ion);
-  const int nlevels = (nlevels_all > MAX_NLEVELS_LOWER_EXCITATION) ? MAX_NLEVELS_LOWER_EXCITATION : nlevels_all;
+  const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 
   for (int lower = 0; lower < nlevels; lower++)
   {
