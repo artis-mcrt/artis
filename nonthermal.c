@@ -1626,7 +1626,7 @@ static void realloc_frac_ionizations_list(const int modelgridindex)
 }
 
 
-static void realloc_frac_excitations_list(const int modelgridindex, const int newsize)
+static bool realloc_frac_excitations_list(const int modelgridindex, const int newsize)
 {
   struct nt_excitation_struct *newptr = realloc(
     nt_solution[modelgridindex].frac_excitations_list,
@@ -1637,11 +1637,13 @@ static void realloc_frac_excitations_list(const int modelgridindex, const int ne
     printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d from size %d to %d.\n",
              modelgridindex, nt_solution[modelgridindex].frac_excitations_list, newsize);
     // abort();
+    return false;
   }
   else
   {
     nt_solution[modelgridindex].frac_excitations_list = newptr;
     nt_solution[modelgridindex].frac_excitations_list_size = newsize;
+    return true;
   }
 }
 
@@ -2478,7 +2480,10 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
 
       if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_old)
       {
-        realloc_frac_excitations_list(modelgridindex);
+        if (!realloc_frac_excitations_list(modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size))
+        {
+          nt_solution[modelgridindex].frac_excitations_list_size = frac_excitations_list_size_old;
+        }
       }
 
       const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
