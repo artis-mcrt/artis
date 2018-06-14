@@ -27,7 +27,7 @@
 // just consider excitation from the first N levels and to the first M upper levels,
 // because these transitions really slow down the solver
 const int NTEXCITATION_MAXNLEVELS_LOWER = 5;  // set to zero for none
-const int NTEXCITATION_MAXNLEVELS_UPPER = 300; // maximum number of upper levels included
+const int NTEXCITATION_MAXNLEVELS_UPPER = 250; // maximum number of upper levels included
 
 // limit the number of stored non-thermal excitation transition rates to reduce memory cost.
 // if this is higher than SFPTS, then you might as well just store
@@ -38,10 +38,10 @@ const int MAX_NT_EXCITATIONS = 25000;
 // in the NLTE pop solver, macroatom, and NTLEPTON packets.
 // Even with this off, excitations will be included in the solution
 // and their combined deposition fraction is calculated
-#define NT_EXCITATION_ON false
+#define NT_EXCITATION_ON true
 
 // increase the excitation and ionization lists by this blocksize when reallocating
-#define BLOCKSIZEEXCITATION 2048
+#define BLOCKSIZEEXCITATION 5192
 #define BLOCKSIZEIONIZATION 128
 
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
@@ -1626,16 +1626,22 @@ static void realloc_frac_ionizations_list(const int modelgridindex)
 }
 
 
-static void realloc_frac_excitations_list(const int modelgridindex)
+static void realloc_frac_excitations_list(const int modelgridindex, const int newsize)
 {
-  nt_solution[modelgridindex].frac_excitations_list = realloc(
+  struct nt_excitation_struct *newptr = realloc(
     nt_solution[modelgridindex].frac_excitations_list,
-    nt_solution[modelgridindex].frac_excitations_list_size * sizeof(struct nt_excitation_struct));
+    newsize * sizeof(struct nt_excitation_struct));
 
   if (nt_solution[modelgridindex].frac_excitations_list == NULL)
   {
-    printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d.\n", modelgridindex);
-    abort();
+    printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d from size %d to %d.\n",
+             modelgridindex, nt_solution[modelgridindex].frac_excitations_list, newsize);
+    // abort();
+  }
+  else
+  {
+    nt_solution[modelgridindex].frac_excitations_list = newptr;
+    nt_solution[modelgridindex].frac_excitations_list_size = newsize;
   }
 }
 
@@ -1749,9 +1755,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
           {
             if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size)
             {
-              nt_solution[modelgridindex].frac_excitations_list_size += BLOCKSIZEEXCITATION;
+              const int newsize = nt_solution[modelgridindex].frac_excitations_list_size + BLOCKSIZEEXCITATION;
 
-              realloc_frac_excitations_list(modelgridindex);
+              realloc_frac_excitations_list(modelgridindex, newsize);
             }
 
             double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
@@ -1817,8 +1823,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size)
   {
     // shrink the list to match the data
-    nt_solution[modelgridindex].frac_excitations_list_size = excitationindex;
-    realloc_frac_excitations_list(modelgridindex);
+    realloc_frac_excitations_list(modelgridindex, excitationindex);
   }
 
   qsort(nt_solution[modelgridindex].frac_excitations_list,
@@ -1833,8 +1838,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
     // truncate the sorted list to save memory
     printout("  Truncating non-thermal excitation list from %d to %d transitions.\n",
              nt_solution[modelgridindex].frac_excitations_list_size, MAX_NT_EXCITATIONS);
-    nt_solution[modelgridindex].frac_excitations_list_size = MAX_NT_EXCITATIONS;
-    realloc_frac_excitations_list(modelgridindex);
+    realloc_frac_excitations_list(modelgridindex, MAX_NT_EXCITATIONS);
   }
 
   const float T_e = get_Te(modelgridindex);
@@ -2378,12 +2382,12 @@ void nt_read_restart_data(FILE *gridsave_file)
       }
 
       // read NT excitations
-      const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list_size;
-      fscanf(gridsave_file, "%d ", &nt_solution[modelgridindex].frac_excitations_list_size);
+      int frac_excitations_list_size_in;
+      fscanf(gridsave_file, "%d ", &frac_excitations_list_size_in);
 
-      if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_old)
+      if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_in)
       {
-        realloc_frac_excitations_list(modelgridindex);
+        realloc_frac_excitations_list(modelgridindex, frac_excitations_list_size_in);
       }
 
       const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
