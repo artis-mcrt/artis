@@ -1632,7 +1632,7 @@ static bool realloc_frac_excitations_list(const int modelgridindex, const int ne
     nt_solution[modelgridindex].frac_excitations_list,
     newsize * sizeof(struct nt_excitation_struct));
 
-  if (nt_solution[modelgridindex].frac_excitations_list == NULL)
+  if (newptr == NULL)
   {
     printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d from size %d to %d.\n",
              modelgridindex, nt_solution[modelgridindex].frac_excitations_list, newsize);
@@ -1762,15 +1762,18 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
               realloc_frac_excitations_list(modelgridindex, newsize);
             }
 
-            double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
+            if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size)
+            {
+              double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
 
-            // if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is unreliable
-            //   ratecoeffperdeposition = 0.;
+              // if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is unreliable
+              //   ratecoeffperdeposition = 0.;
 
-            nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = frac_excitation_thistrans;
-            nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = ratecoeffperdeposition;
-            nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = lineindex;
-            (excitationindex)++;
+              nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition = frac_excitation_thistrans;
+              nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition = ratecoeffperdeposition;
+              nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex = lineindex;
+              (excitationindex)++;
+            }
           }
 #endif // NT_EXCITATION_ON
         } // for t
