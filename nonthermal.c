@@ -1635,7 +1635,7 @@ static bool realloc_frac_excitations_list(const int modelgridindex, const int ne
   if (newptr == NULL)
   {
     printout("ERROR: Not enough memory to reallocate NT excitation list for cell %d from size %d to %d.\n",
-             modelgridindex, nt_solution[modelgridindex].frac_excitations_list, newsize);
+             modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size, newsize);
     // abort();
     return false;
   }
