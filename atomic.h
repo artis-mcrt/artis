@@ -116,7 +116,11 @@ inline bool is_nlte(int element, int ion, int level)
 // Returns true if (element,ion,level) is to be treated in nlte.
 // (note this function returns true for the ground state)
 {
-  return (level <= 80);
+  if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
+    return (level <= 197);
+  else
+    return (level <= 80);
+  // return (level <= 80);
 }
 
 
