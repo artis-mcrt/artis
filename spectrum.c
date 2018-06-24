@@ -13,7 +13,6 @@
   return 0;
 }*/
 
-// would do this in Python artistools except it currently doesn't understand how to match linelindex to a transition
 #define TRACE_EMISSION_ABSORPTION_REGION_ON
 
 #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
@@ -341,7 +340,8 @@ void gather_spectrum(int depth)
   #ifdef TRACE_EMISSION_ABSORPTION_REGION_ON
   const int maxlinesprinted = 500;
 
-  for (int mode = 0; mode < 2; mode++) // mode is 0 for emission and 1 for absorption
+  // mode is 0 for emission and 1 for absorption
+  for (int mode = 0; mode < 2; mode++)
   {
     if (mode == 0)
     {
