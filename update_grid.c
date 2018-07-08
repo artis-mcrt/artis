@@ -209,7 +209,7 @@ static void write_to_estimators_file(const int n, const int timestep)
                 calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop) * nne);
       }
       fprintf(estimators_file, "\n");
-      
+
       // fprintf(estimators_file, "Alpha_C*nne    Z=%2d", get_element(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
@@ -746,7 +746,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
           grid_cell_solve_Te_nltepops(n, nts, titer);
         }
         #endif
-        printout("temperature corrections for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_temperature_corrections);
+        printout("Temperature/NLTE solution for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_temperature_corrections);
       }
 
       const float nne = get_nne(n);
