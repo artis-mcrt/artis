@@ -1188,6 +1188,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
             else
             {
               printout("new W is %g. Continuing with this value\n", W_bin);
+              T_R_bin = T_R_max;
             }
           }
 
