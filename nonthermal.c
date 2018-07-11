@@ -83,7 +83,7 @@ const int MAX_NT_EXCITATIONS = 25000;
 // }
 
 
-#define STORE_NT_SPECTRUM false // if this is on, the non-thermal energy spectrum will be kept in memory fpr
+#define STORE_NT_SPECTRUM false // if this is on, the non-thermal energy spectrum will be kept in memory for
                                 // every grid cell during packet propagation, which
                                 // can take up a lot of memory for large grid sizes
                                 // alternatively, just the non-thermal ionization rates can be stored
@@ -2223,7 +2223,7 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
 
           if (SF_AUGER_CONTRIBUTION_ON && en < en_auger_ev)
           {
-            printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
+            // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
             ij_contribution -= nnion * xs; // * n_auger_elec_avg;
           }
 
