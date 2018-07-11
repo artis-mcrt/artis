@@ -620,7 +620,7 @@ static void nltepop_matrix_add_nt_ionisation(
   const int nlevels = get_nlevels(element, ion);
   for (int upperion = ion + 1; (upperion < nions) && (upperion <= ion + 3); upperion++)
   {
-    const double Y_nt_thisupperion = Y_nt * nt_ionization_upperion_probability(modelgridindex, element, ion, upperion);
+    const double Y_nt_thisupperion = Y_nt * nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
 
     if (Y_nt_thisupperion > 0.)
     {
