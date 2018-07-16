@@ -53,9 +53,10 @@ const int MAX_NT_EXCITATIONS = 25000;
 // if this is greater than zero, make sure USE_VALENCE_IONPOTENTIAL is false!
 #define MAX_AUGER_ELECTRONS 2
 
-
 // add the Auger electron term to the Spencer-Fano equation
 #define SF_AUGER_CONTRIBUTION_ON true
+
+#define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN true
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
@@ -485,7 +486,16 @@ void nt_init(const int my_rank)
 
   if (nonthermal_initialized == false)
   {
-    printout("Initializing non-thermal solver with NT_EXCITATION %s\n", NT_EXCITATION_ON ? "on" : "off");
+    printout("Initializing non-thermal solver with:\n");
+    printout("  NT_EXCITATION %s\n", NT_EXCITATION_ON ? "on" : "off");
+    printout("  MAX_NT_EXCITATIONS %d\n", MAX_NT_EXCITATIONS);
+    printout("  NTEXCITATION_MAXNLEVELS_LOWER %d\n", NTEXCITATION_MAXNLEVELS_LOWER);
+    printout("  NTEXCITATION_MAXNLEVELS_UPPER %d\n", NTEXCITATION_MAXNLEVELS_UPPER);
+    printout("  USE_VALENCE_IONPOTENTIAL %s\n", USE_VALENCE_IONPOTENTIAL ? "on" : "off");
+    printout("  MAX_AUGER_ELECTRONS %d\n", MAX_AUGER_ELECTRONS);
+    printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
+    printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
+
     char filename[100];
     sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
     nonthermalfile = fopen_required(filename, "w");
@@ -2221,11 +2231,23 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
             ij_contribution -= prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
           }
 
-          if (SF_AUGER_CONTRIBUTION_ON && en < en_auger_ev)
+          if (SF_AUGER_CONTRIBUTION_ON && !SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN && en < en_auger_ev)
           {
             // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
-            ij_contribution -= nnion * xs; // * n_auger_elec_avg;
+            ij_contribution -= nnion * xs; // * n_auger_elec_avg; // * en_auger_ev???
           }
+
+          if (SF_AUGER_CONTRIBUTION_ON && SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
+          {
+            for (int a = 1; a <= MAX_AUGER_ELECTRONS; a++)
+            {
+              if (en < en_auger_ev / a)
+              {
+                ij_contribution -= nnion * xs * colliondata[n].prob_num_auger[a] * a;
+              }
+            }
+          }
+
 
           *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
         }
