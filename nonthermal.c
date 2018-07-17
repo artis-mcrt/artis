@@ -56,7 +56,7 @@ const int MAX_NT_EXCITATIONS = 25000;
 // add the Auger electron term to the Spencer-Fano equation
 #define SF_AUGER_CONTRIBUTION_ON true
 
-#define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN true
+#define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
@@ -385,14 +385,14 @@ static void read_auger_data(void)
 
           if (found_existing_data)
           {
-            printout("  (same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)",
+            printout("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)",
                      Z, ionstage, shellnum, n, l, ionpot_ev, en_auger_ev_total_nocorrection, en_auger_ev, epsilon_e3, n_auger_elec_avg);
 
             for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
             {
               printout(" %d: %4.2f", a, colliondata[i].prob_num_auger[a]);
             }
-            printout(")\n");
+            printout("\n");
           }
         }
       }
@@ -432,12 +432,12 @@ static void read_collion_data(void)
     const int element = get_elementindex(colliondata[n].Z);
     if (element >= 0 && get_ionstage(element, 0) <= ionstage && ionstage < (get_ionstage(element, 0) + get_nions(element)))
     {
-      // printout("Including Z=%d ionstage %d\n", colliondata[n].Z, ionstage);
+      // printout("Including ionisation data for Z=%d ionstage %d\n", colliondata[n].Z, ionstage);
       n++;
     }
     else
     {
-      // printout("Excluding Z=%d ionstage %d\n", colliondata[n].Z, ionstage);
+      // printout("Excluding ionisation data for Z=%d ionstage %d\n", colliondata[n].Z, ionstage);
     }
 
     // printout("ci row: %2d %2d %1d %1d %lg %lg %lg %lg %lg\n",
@@ -632,7 +632,7 @@ static double get_y_sample(const int modelgridindex, const int index)
 static void nt_write_to_file(const int modelgridindex, const int timestep, const int iteration)
 {
 # ifdef _OPENMP
-# pragma omp critical (nonthermal_out_file) threadprivate(nonthermalfile_offset_iteration_zero)
+# pragma omp critical (nonthermal_out_file)
   {
 # endif
   if (!nonthermal_initialized)
@@ -642,15 +642,18 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
   }
 
   static long nonthermalfile_offset_iteration_zero = 0;
+  # pragma omp threadprivate(nonthermalfile_offset_iteration_zero)
 
-  if (iteration == 0)
   {
-    nonthermalfile_offset_iteration_zero = ftell(nonthermalfile);
-  }
-  else
-  {
-    // overwrite the non-thermal spectrum of a previous iteration of the same timestep and gridcell
-    fseek(nonthermalfile, nonthermalfile_offset_iteration_zero, SEEK_SET);
+    if (iteration == 0)
+    {
+      nonthermalfile_offset_iteration_zero = ftell(nonthermalfile);
+    }
+    else
+    {
+      // overwrite the non-thermal spectrum of a previous iteration of the same timestep and gridcell
+      fseek(nonthermalfile, nonthermalfile_offset_iteration_zero, SEEK_SET);
+    }
   }
 
 #ifndef yscalefactoroverride // manual override can be defined
@@ -934,7 +937,7 @@ static double get_J(const int Z, const int ionstage, const double ionpot_ev)
 static double N_e(const int modelgridindex, const double energy)
 // Kozma & Fransson equation 6.
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
-// possibly not valid for energy > E_0
+// not valid for energy > E_0
 {
   const double energy_ev = energy / EV;
   const double tot_nion = get_tot_nion(modelgridindex);
@@ -1516,7 +1519,7 @@ static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int ele
 
 
 double nt_ionization_upperion_probability(
-  const int modelgridindex, const int element, const int lowerion, const int upperion, bool energyweighted)
+  const int modelgridindex, const int element, const int lowerion, const int upperion, const bool energyweighted)
 {
   assert(upperion > lowerion);
   assert(upperion < get_nions(element));
@@ -1525,7 +1528,7 @@ double nt_ionization_upperion_probability(
   {
     const int numaugerelec = upperion - lowerion - 1;
 
-    if (numaugerelec <= MAX_AUGER_ELECTRONS)
+    if (numaugerelec < MAX_AUGER_ELECTRONS)
     {
       if (energyweighted)
       {
@@ -1535,6 +1538,30 @@ double nt_ionization_upperion_probability(
       {
         return nt_solution[modelgridindex].prob_num_auger[element][lowerion][numaugerelec];
       }
+    }
+    else if (numaugerelec == MAX_AUGER_ELECTRONS)
+    {
+      double prob_remaining = 1.;
+      for (int a = 0; a < MAX_AUGER_ELECTRONS; a++)
+      {
+        if (energyweighted)
+        {
+          prob_remaining -= nt_solution[modelgridindex].ionenfrac_num_auger[element][lowerion][a];
+        }
+        else
+        {
+          prob_remaining -= nt_solution[modelgridindex].prob_num_auger[element][lowerion][a];
+        }
+      }
+      if (energyweighted)
+      {
+        assert(fabs(prob_remaining - nt_solution[modelgridindex].ionenfrac_num_auger[element][lowerion][numaugerelec]) < 0.001);
+      }
+      else
+      {
+        assert(fabs(prob_remaining - nt_solution[modelgridindex].prob_num_auger[element][lowerion][numaugerelec]) < 0.001);
+      }
+      return prob_remaining;
     }
     else
     {
@@ -2454,9 +2481,10 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
   gsl_vector *yvec = &yvecview.vector;
+
   sfmatrix_solve(sfmatrix, rhsvec, yvec);
 
-  // gsl_matrix_free(sfmatrix_LU); // if this matrix is different to sfmatrix
+  // gsl_matrix_free(sfmatrix_LU); // if sfmatrix_LU is different to sfmatrix
 
   gsl_matrix_free(sfmatrix);
   gsl_vector_free(rhsvec);
