@@ -45,12 +45,15 @@ else
   CC = clang
  # CC = clang-3.8
  # CC = clang-omp
- # CC = gcc-6
+ # CC = gcc-8
  # CC = mpicc
  # CC = icc
-  INCLUDE = -I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
+  INCLUDE = #-I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
   LIB = #-L/usr/local/lib/gsl #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE #-fopenmp=libomp
+  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE # -fopenmp-simd
+
+	# enable OpenMP (for Clang)
+	# CFLAGS += -Xpreprocessor -fopenmp -lomp
 
 # in GCC6, -Wmisleading-indentation will be useful
 # also -fopenmp after -I$(INCLUDE)
