@@ -2273,7 +2273,7 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
             {
               if (en < (en_auger_ev * en_boost))
               {
-                ij_contribution -= nnion * xs * (colliondata[n].prob_num_auger[a] * a;
+                ij_contribution -= nnion * xs * colliondata[n].prob_num_auger[a] * a;
               }
             }
           }
