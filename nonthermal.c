@@ -2266,11 +2266,14 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
 
           if (SF_AUGER_CONTRIBUTION_ON && SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
           {
+            // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger electrons
+            // so we need a boost to get the average energy of Auger electrons given that there are one or more
+            const double en_boost = 1 / (1. - colliondata[n].prob_num_auger[0]);
             for (int a = 1; a <= MAX_AUGER_ELECTRONS; a++)
             {
-              if (en < en_auger_ev / a)
+              if (en < (en_auger_ev * en_boost))
               {
-                ij_contribution -= nnion * xs * colliondata[n].prob_num_auger[a] * a;
+                ij_contribution -= nnion * xs * (colliondata[n].prob_num_auger[a] * a;
               }
             }
           }
