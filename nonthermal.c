@@ -1994,7 +1994,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
               realloc_frac_excitations_list(modelgridindex, newsize);
             }
 
-            if (excitationindex >= nt_solution[modelgridindex].frac_excitations_list_size)
+            if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size)
             {
               double ratecoeffperdeposition = nt_frac_excitation_perlevelpop / epsilon_trans;
 
