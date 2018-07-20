@@ -2543,6 +2543,7 @@ void nt_write_restart_data(FILE *gridsave_file)
           for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
           {
             fprintf(gridsave_file, "%g ", nt_solution[modelgridindex].prob_num_auger[element][ion][a]);
+            fprintf(gridsave_file, "%g ", nt_solution[modelgridindex].ionenfrac_num_auger[element][ion][a]);
           }
         }
       }
@@ -2639,6 +2640,7 @@ void nt_read_restart_data(FILE *gridsave_file)
           for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
           {
             fscanf(gridsave_file, "%g ", &nt_solution[modelgridindex].prob_num_auger[element][ion][a]);
+            fscanf(gridsave_file, "%g ", &nt_solution[modelgridindex].ionenfrac_num_auger[element][ion][a]);
           }
         }
       }
