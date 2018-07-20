@@ -24,6 +24,9 @@
 // eV
 #define EMIN 0.1
 
+// use a grid of energy points with constant spacing in log energy
+#define USE_LOG_E_INCREMENT true
+
 // just consider excitation from the first N levels and to the first M upper levels,
 // because these transitions really slow down the solver
 const int NTEXCITATION_MAXNLEVELS_LOWER = 5;  // set to zero for none
@@ -56,6 +59,7 @@ const int MAX_NT_EXCITATIONS = 25000;
 // add the Auger electron term to the Spencer-Fano equation
 #define SF_AUGER_CONTRIBUTION_ON true
 
+// set true to divide up the mean Auger energy by the number of electrons that come out
 #define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
@@ -92,7 +96,9 @@ const int MAX_NT_EXCITATIONS = 25000;
                                 // non-thermal excitation rates if there are
                                 // many more transitions to store than there are NT spectrum samples
 
-static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
+#if (!USE_LOG_E_INCREMENT)
+  static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
+#endif
 
 // minimum number fraction of the total population to include in SF solution
 static const double minionfraction = 1.e-8;
@@ -137,6 +143,11 @@ static gsl_vector *envec;            // energy grid on which solution is sampled
 static gsl_vector *sourcevec;        // samples of the source function (energy distribution of deposited energy)
 static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
+#if (USE_LOG_E_INCREMENT)
+static gsl_vector *delta_envec;
+static double delta_log_e = 0.;
+#endif
+
 struct nt_ionization_struct
 {
   double frac_deposition;  // the fraction of the non-thermal deposition energy going to ionizing this ion
@@ -173,7 +184,8 @@ struct nt_solution_struct {
   int frac_excitations_list_size;
   struct nt_excitation_struct *frac_excitations_list;
 
-  int timestep;                 // the quantities above were calculated for this timestep
+  int deposition_at_timestep;                 // the quantities above were calculated for this timestep
+  float nne_when_solved;                    // the nne when the solver was last run
 };
 
 static struct nt_solution_struct nt_solution[MMODELGRID+1];
@@ -510,7 +522,7 @@ void nt_init(const int my_rank)
       nt_solution[modelgridindex].frac_ionization = 0.02;
       nt_solution[modelgridindex].frac_excitation = 0.0;
 
-      nt_solution[modelgridindex].timestep = -1;
+      nt_solution[modelgridindex].deposition_at_timestep = -1;
       nt_solution[modelgridindex].E_0 = 0.;
       nt_solution[modelgridindex].deposition_rate_density = -1.;
 
@@ -535,33 +547,65 @@ void nt_init(const int my_rank)
     envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
     sourcevec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
 
-    // const int source_spread_pts = ceil(SFPTS / 20);
-    const int source_spread_pts = ceil(SFPTS * 0.03333); // KF92 OXYGEN TEST
+    #if (USE_LOG_E_INCREMENT)
+    {
+      delta_envec = gsl_vector_calloc(SFPTS);
+      delta_log_e = log(EMAX / EMIN) / (SFPTS - 1);
+    }
+    #endif
+
+    #if (USE_LOG_E_INCREMENT)
+      const double source_spread_en_target = ceil(SFPTS * 0.03333) * (EMAX - EMIN) / (SFPTS - 1);
+      const int sourcelowerindex = round(log((EMAX - source_spread_en_target) / EMIN) / delta_log_e);
+      // source_spread_en will be close to source_spread_en_target but lie exactly on an energy grid point
+      const double source_spread_en = EMAX - EMIN * exp(sourcelowerindex * delta_log_e);
+    #else
+      // const int source_spread_pts = ceil(SFPTS / 20);
+      const int source_spread_pts = ceil(SFPTS * 0.03333); // KF92 OXYGEN TEST
+      const double source_spread_en = source_spread_pts * DELTA_E;
+      const int sourcelowerindex = SFPTS - source_spread_pts;
+    #endif
+
     for (int s = 0; s < SFPTS; s++)
     {
-      const double energy_ev = EMIN + s * DELTA_E;
+      #if (USE_LOG_E_INCREMENT)
+        const double energy_ev = EMIN * exp(delta_log_e * s);
+        const double energy_ev_next = EMIN * exp(delta_log_e * (s + 1));
+
+        gsl_vector_set(delta_envec, s, energy_ev_next - energy_ev);
+      #else
+        const double energy_ev = EMIN + s * DELTA_E;
+      #endif
 
       gsl_vector_set(envec, s, energy_ev);
 
       // spread the source over some energy width
-      if (s < SFPTS - source_spread_pts)
+      if (s < sourcelowerindex)
         gsl_vector_set(sourcevec, s, 0.);
-      else if (s < SFPTS)
-        gsl_vector_set(sourcevec, s, 1. / (DELTA_E * source_spread_pts));
+      else
+        gsl_vector_set(sourcevec, s, 1. / source_spread_en);
     }
 
-    double envec_dot_sourcevec;
-    gsl_blas_ddot(envec, sourcevec, &envec_dot_sourcevec);
-    E_init_ev = envec_dot_sourcevec * DELTA_E;
+    gsl_vector *integralvec = gsl_vector_alloc(SFPTS);
+    gsl_vector_memcpy(integralvec, sourcevec);
+    #if (USE_LOG_E_INCREMENT)
+      gsl_vector_mul(integralvec, delta_envec);
+    #else
+      gsl_vector_scale(integralvec, DELTA_E);
+    #endif
+    const double sourceintegral = gsl_blas_dasum(integralvec); // integral of S(e) dE
+
+    gsl_vector_mul(integralvec, envec);
+    E_init_ev = gsl_blas_dasum(integralvec); // integral of E * S(e) dE
+    gsl_vector_free(integralvec);
 
     // or put all of the source into one point at EMAX
     // gsl_vector_set_zero(sourcevec);
-    // gsl_vector_set(sourcevec, SFPTS-1, 1 / DELTA_E);
+    // gsl_vector_set(sourcevec, SFPTS - 1, 1 / DELTA_E);
     // E_init_ev = EMAX;
 
     printout("E_init: %14.7e eV\n", E_init_ev);
-    double sourceintegral = gsl_blas_dasum(sourcevec) * DELTA_E;
-    printout("source vector integral: %14.7e\n", sourceintegral);
+    printout("source function integral: %14.7e\n", sourceintegral);
 
     read_collion_data();
 
@@ -595,7 +639,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   //         gamma_deposition,co56_positron_dep,v48_positron_dep);
 
   nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + co56_positron_dep + v48_positron_dep;
-  nt_solution[modelgridindex].timestep = timestep;
+  nt_solution[modelgridindex].deposition_at_timestep = timestep;
 }
 
 
@@ -608,7 +652,7 @@ double get_deposition_rate_density(const int modelgridindex)
   //   printout("No deposition_rate_density for cell %d. Calculated value of %g has been stored.\n",
   //            modelgridindex, nt_solution[modelgridindex].deposition_rate_density);
   // }
-  assert(nt_solution[modelgridindex].timestep == nts_global);
+  assert(nt_solution[modelgridindex].deposition_at_timestep == nts_global);
   assert(nt_solution[modelgridindex].deposition_rate_density >= 0);
   return nt_solution[modelgridindex].deposition_rate_density;
 }
@@ -702,7 +746,12 @@ inline
 static int get_energyindex_ev_lteq(const double energy_ev)
 // finds the highest energy point <= energy_ev
 {
+  #if (USE_LOG_E_INCREMENT)
+  const int index = floor(log(energy_ev / EMIN) / delta_log_e);
+  #else
   const int index = floor((energy_ev - EMIN) / DELTA_E);
+  #endif
+
   if (index < 0)
     return 0;
   else if (index > SFPTS - 1)
@@ -716,7 +765,12 @@ inline
 static int get_energyindex_ev_gteq(const double energy_ev)
 // finds the highest energy point <= energy_ev
 {
+  #if (USE_LOG_E_INCREMENT)
+  const int index = ceil(log(energy_ev / EMIN) / delta_log_e);
+  #else
   const int index = ceil((energy_ev - EMIN) / DELTA_E);
+  #endif
+
   if (index < 0)
     return 0;
   else if (index > SFPTS - 1)
@@ -728,21 +782,31 @@ static int get_energyindex_ev_gteq(const double energy_ev)
 
 static int get_y(const int modelgridindex, const double energy_ev)
 {
-  const int index = (energy_ev - EMIN) / DELTA_E;
+  #if (USE_LOG_E_INCREMENT)
+    const int index = log(energy_ev / EMIN) / delta_log_e;
+  #else
+    const int index = (energy_ev - EMIN) / DELTA_E;
+  #endif
+
   // assert(index > 0);
   if (index < 0)
   {
-    return 0.;
+    // return 0.;
+    return get_y_sample(modelgridindex, 0);
   }
   else if (index > SFPTS - 1)
     return 0.;
   else
   {
     const double enbelow = gsl_vector_get(envec, index);
+    const double enabove = gsl_vector_get(envec, index + 1);
     const double ybelow = get_y_sample(modelgridindex, index);
     const double yabove = get_y_sample(modelgridindex, index + 1);
-    const double x = (energy_ev - enbelow) / DELTA_E;
+    const double x = (energy_ev - enbelow) / (enabove - enbelow);
     return (1 - x) * ybelow + x * yabove;
+
+    // or return the nearest neighbour
+    // return get_y_sample(modelgridindex, index);
   }
 }
 
@@ -965,12 +1029,13 @@ static double N_e(const int modelgridindex, const double energy)
       for (int lower = 0; lower < nlevels; lower++)
       {
         const int nuptrans = get_nuptrans(element, ion, lower);
+        const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
         for (int t = 1; t <= nuptrans; t++)
         {
           const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
           const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
           const double epsilon_trans_ev = epsilon_trans / EV;
-          N_e_ion += get_y(modelgridindex, energy_ev + epsilon_trans_ev) * xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
+          N_e_ion += (nnlevel / nnion) * get_y(modelgridindex, energy_ev + epsilon_trans_ev) * xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
         }
       }
 
@@ -987,18 +1052,25 @@ static double N_e(const int modelgridindex, const double energy)
           const int integral1stopindex = get_energyindex_ev_lteq(lambda);
           const int integral2startindex = get_energyindex_ev_lteq(2 * energy_ev + ionpot_ev);
 
-          for (int i = 0; i < SFPTS; i++)
+          // start from integral1startindex because it is <= integral2startindex
+          for (int i = integral1startindex; i < SFPTS; i++)
           {
             double endash = gsl_vector_get(envec, i);
+            #if (USE_LOG_E_INCREMENT)
+            const double delta_endash = gsl_vector_get(delta_envec, i);
+            #else
+            const double delta_endash = DELTA_E;
+            #endif
 
-            if (i >= integral1startindex && i <= integral1stopindex) // integral from ionpot up to lambda
+            // i >= integral1startindex will be true always in this loop
+            if (i <= integral1stopindex) // integral from ionpot up to lambda
             {
-              N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, n) * Psecondary(energy_ev + endash, endash, ionpot_ev, J) * DELTA_E;
+              N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, n) * Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
             }
 
             if (i >= integral2startindex) // integral from 2E + I up to E_max
             {
-              N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, n) * Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * DELTA_E;
+              N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, n) * Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * delta_endash;
             }
           }
 
@@ -1009,7 +1081,7 @@ static double N_e(const int modelgridindex, const double energy)
     }
   }
 
-  // source term
+  // source term, should be zero at the low end anyway
   N_e += gsl_vector_get(sourcevec, get_energyindex_ev_lteq(energy_ev));
 
   return N_e;
@@ -1023,17 +1095,23 @@ static float calculate_frac_heating(const int modelgridindex)
   double frac_heating_Einit = 0.;
 
   const float nne = get_nne(modelgridindex);
-  const double E_0 = nt_solution[modelgridindex].E_0;
+  // const double E_0 = nt_solution[modelgridindex].E_0;
+  const double E_0 = EMIN;
 
   const int startindex = get_energyindex_ev_lteq(E_0);
   for (int i = startindex; i < SFPTS; i++)
   {
     const double endash = gsl_vector_get(envec, i);
-    double deltaendash;
-    if (i == startindex)
-      deltaendash = endash + DELTA_E - E_0;
-    else
-      deltaendash = DELTA_E;
+    #if (USE_LOG_E_INCREMENT)
+    double deltaendash = gsl_vector_get(delta_envec, i);
+    #else
+    double deltaendash = DELTA_E;
+    #endif
+
+    if (i == startindex && endash < E_0)
+    {
+      deltaendash = endash + deltaendash - E_0;
+    }
     // first term
     frac_heating_Einit += get_y_sample(modelgridindex, i) * (electron_loss_rate(endash * EV, nne) / EV) * deltaendash;
   }
@@ -1301,13 +1379,23 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
   get_xs_ionization_vector(cross_section_vec, collionindex);
 
+  // either multiply by the variable delta_e for LOG_E spacing...
+  #if (USE_LOG_E_INCREMENT)
+  gsl_vector_mul(cross_section_vec, delta_envec);
+  #endif
+
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
 
-  double y_dot_crosssection = 0.;
-  gsl_blas_ddot(&yvecview.vector, cross_section_vec, &y_dot_crosssection);
+  double y_dot_crosssection_de = 0.;
+  gsl_blas_ddot(&yvecview.vector, cross_section_vec, &y_dot_crosssection_de);
   gsl_vector_free(cross_section_vec);
 
-  return nnion * ionpot_ev * y_dot_crosssection * DELTA_E / E_init_ev;
+  // or multiply the scalar result by the constant DELTA_E
+  #if (!USE_LOG_E_INCREMENT)
+  y_dot_crosssection_de *= DELTA_E;
+  #endif
+
+  return nnion * ionpot_ev * y_dot_crosssection_de / E_init_ev;
 }
 
 
@@ -1362,16 +1450,23 @@ static double calculate_nt_ionization_ratecoeff(
 
   gsl_vector_free(cross_section_vec);
 
-  double y_dot_crosssection = 0.;
-  gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
-  gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec_allshells, &y_dot_crosssection);
+  #if (USE_LOG_E_INCREMENT)
+  gsl_vector_mul(cross_section_vec_allshells, delta_envec);
+  #endif
 
+  double y_dot_crosssection_de = 0.;
+  gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
+  gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec_allshells, &y_dot_crosssection_de);
   gsl_vector_free(cross_section_vec_allshells);
+
+  #if (!USE_LOG_E_INCREMENT)
+  y_dot_crosssection_de *= DELTA_E;
+  #endif
 
   const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
 
-  return yscalefactor * y_dot_crosssection * DELTA_E;
+  return yscalefactor * y_dot_crosssection_de;
 }
 
 
@@ -1666,12 +1761,20 @@ static double calculate_nt_frac_excitation_perlevelpop(
   gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
   if (get_xs_excitation_vector(xs_excitation_vec, lineindex, statweight_lower, epsilon_trans))
   {
+    #if (USE_LOG_E_INCREMENT)
+    gsl_vector_mul(xs_excitation_vec, delta_envec);
+    #endif
+
     double y_dot_crosssection = 0.;
     gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
     gsl_blas_ddot(xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
     gsl_vector_free(xs_excitation_vec);
 
-    return epsilon_trans_ev * y_dot_crosssection * DELTA_E / E_init_ev;
+    #if (!USE_LOG_E_INCREMENT)
+    y_dot_crosssection *= DELTA_E;
+    #endif
+
+    return epsilon_trans_ev * y_dot_crosssection / E_init_ev;
   }
   else
   {
@@ -2137,8 +2240,13 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   for (int i = 0; i < SFPTS; i++)
   {
     const double endash = gsl_vector_get(envec, i);
+    #if (USE_LOG_E_INCREMENT)
+    const double delta_endash = endash * expm1(delta_log_e); //gsl_vector_get(delta_envec, i);
+    #else
+    const double delta_endash = DELTA_E;
+    #endif
     const double oneovervelocity = sqrt(9.10938e-31 / 2 / endash / 1.60218e-19) / 100; // in sec/cm
-    nne_nt_max += yscalefactor * get_y_sample(modelgridindex, i) * oneovervelocity * DELTA_E;
+    nne_nt_max += yscalefactor * get_y_sample(modelgridindex, i) * oneovervelocity * delta_endash;
   }
 
   nt_solution[modelgridindex].frac_excitation = frac_excitation_total;
@@ -2193,7 +2301,12 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
 
       if (get_xs_excitation_vector(vec_xs_excitation_nnlevel_deltae, lineindex, statweight_lower, epsilon_trans))
       {
+        #if (USE_LOG_E_INCREMENT)
+        gsl_blas_dscal(nnlevel, vec_xs_excitation_nnlevel_deltae);
+        gsl_vector_mul(vec_xs_excitation_nnlevel_deltae, delta_envec);
+        #else
         gsl_blas_dscal(nnlevel * DELTA_E, vec_xs_excitation_nnlevel_deltae);
+        #endif
 
         for (int i = 0; i < SFPTS; i++)
         {
@@ -2201,9 +2314,24 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
           const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
           if (stopindex < SFPTS - 1)
           {
-            gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i + 1);
-            gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnlevel_deltae, i, stopindex - i + 1);
-            gsl_vector_add(&a.vector, &b.vector); // add b to a and put the result in a
+            if (stopindex > i)
+            {
+              gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnlevel_deltae, i, stopindex - i );
+
+              gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i);
+              gsl_vector_add(&a.vector, &b.vector); // add b to a and put the result in a
+            }
+
+            // do the last bit separately because we're not using the full delta_e interval
+            #if (USE_LOG_E_INCREMENT)
+            const double delta_en = en * expm1(delta_log_e); // gsl_vector_get(delta_envec, stopindex);
+            #else
+            const double delta_en = DELTA_E;
+            #endif
+
+            const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
+
+            *gsl_matrix_ptr(sfmatrix, i, stopindex) += gsl_vector_get(vec_xs_excitation_nnlevel_deltae, stopindex) *  delta_en_actual / delta_en;
           }
         }
       }
@@ -2243,6 +2371,11 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
         {
           // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E' = envec(j)
           const double endash = gsl_vector_get(envec, j);
+          #if (USE_LOG_E_INCREMENT)
+          const double deltaendash = gsl_vector_get(delta_envec, j);
+          #else
+          const double deltaendash = DELTA_E;
+          #endif
           const double xs = xs_impactionization(endash, n);
 
           const double prefactor = nnion * xs / atan((endash - ionpot_ev) / 2 / J);
@@ -2250,12 +2383,12 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
           const double epsilon_upper = (endash + ionpot_ev) / 2;
           double epsilon_lower = endash - en;
           // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
-          double ij_contribution = prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
+          double ij_contribution = prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
 
           if (j >= secondintegralstartindex)
           {
             epsilon_lower = en + ionpot_ev;
-            ij_contribution -= prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * DELTA_E;
+            ij_contribution -= prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
           }
 
           if (SF_AUGER_CONTRIBUTION_ON && !SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN && en < en_auger_ev)
@@ -2357,8 +2490,6 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
-  // timestep now records when the deposition rate density was set
-  // nt_solution[modelgridindex].timestep = timestep;
   if (mg_associated_cells[modelgridindex] < 1)
   {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
@@ -2379,7 +2510,6 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 
       // nt_write_to_file(modelgridindex, timestep);
 
-      nt_solution[modelgridindex].timestep = timestep;
       nt_solution[modelgridindex].frac_heating = 0.97;
       nt_solution[modelgridindex].frac_ionization = 0.03;
       nt_solution[modelgridindex].frac_excitation = 0.;
@@ -2398,6 +2528,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
   }
 
   const float nne = get_nne(modelgridindex); // electrons per cm^3
+  nt_solution[modelgridindex].nne_when_solved = nne;
 
   printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d iteration %d (nne=%g e-/cm^3)\n",
            SFPTS, EMIN, EMAX, modelgridindex, timestep, iteration, nne);
@@ -2415,8 +2546,17 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
     double source_integral_to_emax;
     if (i < SFPTS - 1)
     {
+      #if (USE_LOG_E_INCREMENT)
+      gsl_vector *sourcevec_de = gsl_vector_alloc(SFPTS);
+      gsl_vector_memcpy(sourcevec_de, sourcevec);
+      gsl_vector_mul(sourcevec_de, delta_envec);
+      gsl_vector_const_view source_de_e_to_emax = gsl_vector_const_subvector(sourcevec_de, i + 1, SFPTS - i - 1);
+      source_integral_to_emax = gsl_blas_dasum(&source_de_e_to_emax.vector);
+      gsl_vector_free(sourcevec_de);
+      #else
       gsl_vector_const_view source_e_to_emax = gsl_vector_const_subvector(sourcevec, i + 1, SFPTS - i - 1);
       source_integral_to_emax = gsl_blas_dasum(&source_e_to_emax.vector) * DELTA_E;
+      #endif
     }
     else
       source_integral_to_emax = 0;
@@ -2525,9 +2665,10 @@ void nt_write_restart_data(FILE *gridsave_file)
   {
     if (mg_associated_cells[modelgridindex] > 0)
     {
-      fprintf(gridsave_file, "%d %d %lg %g %g %g %lg ",
+      fprintf(gridsave_file, "%d %d %g %lg %g %g %g %lg ",
               modelgridindex,
-              nt_solution[modelgridindex].timestep,
+              nt_solution[modelgridindex].deposition_at_timestep,
+              nt_solution[modelgridindex].nne_when_solved,
               nt_solution[modelgridindex].E_0,
               nt_solution[modelgridindex].frac_heating,
               nt_solution[modelgridindex].frac_ionization,
@@ -2616,9 +2757,10 @@ void nt_read_restart_data(FILE *gridsave_file)
     if (mg_associated_cells[modelgridindex] > 0)
     {
       int mgi_in;
-      fscanf(gridsave_file, "%d %d %lg %g %g %g %lg ",
+      fscanf(gridsave_file, "%d %d %g %lg %g %g %g %lg ",
              &mgi_in,
-             &nt_solution[modelgridindex].timestep,
+             &nt_solution[modelgridindex].deposition_at_timestep,
+             &nt_solution[modelgridindex].nne_when_solved,
              &nt_solution[modelgridindex].E_0,
              &nt_solution[modelgridindex].frac_heating,
              &nt_solution[modelgridindex].frac_ionization,
@@ -2724,7 +2866,8 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
         MPI_Bcast(&nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
         // printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
       }
-      MPI_Bcast(&nt_solution[modelgridindex].timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].deposition_at_timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].nne_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
