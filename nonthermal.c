@@ -2805,15 +2805,14 @@ void nt_read_restart_data(FILE *gridsave_file)
 
       // read NT excitations
       int frac_excitations_list_size_in;
-      fscanf(gridsave_file, "%\n", &frac_excitations_list_size_in);
+      fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in);
 
       if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_in)
       {
         realloc_frac_excitations_list(modelgridindex, frac_excitations_list_size_in);
       }
 
-      const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
-      for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
+      for (int excitationindex = 0; excitationindex < frac_excitations_list_size_in; excitationindex++)
       {
         fscanf(gridsave_file, "%lg %lg %d\n",
                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
@@ -2923,7 +2922,6 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
         MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root, MPI_COMM_WORLD);
       }
-
 
       // printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
       //          modelgridindex, logged_element_z, logged_ion_stage,
