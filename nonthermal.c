@@ -684,8 +684,9 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
   }
 
   static long nonthermalfile_offset_iteration_zero = 0;
+  # ifdef _OPENMP
   # pragma omp threadprivate(nonthermalfile_offset_iteration_zero)
-
+  # endif
   {
     if (iteration == 0)
     {
