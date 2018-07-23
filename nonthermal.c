@@ -96,10 +96,6 @@ const int MAX_NT_EXCITATIONS = 25000;
                                 // non-thermal excitation rates if there are
                                 // many more transitions to store than there are NT spectrum samples
 
-#if (!USE_LOG_E_INCREMENT)
-  static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
-#endif
-
 // minimum number fraction of the total population to include in SF solution
 static const double minionfraction = 1.e-8;
 
@@ -144,8 +140,10 @@ static gsl_vector *sourcevec;        // samples of the source function (energy d
 static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
 #if (USE_LOG_E_INCREMENT)
-static gsl_vector *delta_envec;
-static double delta_log_e = 0.;
+  static gsl_vector *delta_envec;
+  static double delta_log_e = 0.;
+#else
+  static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
 #endif
 
 struct nt_ionization_struct
@@ -2665,7 +2663,7 @@ void nt_write_restart_data(FILE *gridsave_file)
   {
     if (mg_associated_cells[modelgridindex] > 0)
     {
-      fprintf(gridsave_file, "%d %d %g %lg %g %g %g %lg ",
+      fprintf(gridsave_file, "%d %d %g %lg %g %g %g %lg\n",
               modelgridindex,
               nt_solution[modelgridindex].deposition_at_timestep,
               nt_solution[modelgridindex].nne_when_solved,
@@ -2690,24 +2688,24 @@ void nt_write_restart_data(FILE *gridsave_file)
       }
 
       // write NT ionisations
-      fprintf(gridsave_file, "%d ", nt_solution[modelgridindex].frac_ionizations_list_size);
+      fprintf(gridsave_file, "%d\n", nt_solution[modelgridindex].frac_ionizations_list_size);
 
       const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
       for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
       {
-        fprintf(gridsave_file, "%lg %d %d ",
+        fprintf(gridsave_file, "%lg %d %d\n",
                 nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition,
                 nt_solution[modelgridindex].frac_ionizations_list[allionindex].element,
                 nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion);
       }
 
       // write NT excitations
-      fprintf(gridsave_file, "%d ", nt_solution[modelgridindex].frac_excitations_list_size);
+      fprintf(gridsave_file, "%d\n", nt_solution[modelgridindex].frac_excitations_list_size);
 
       const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
       for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
       {
-        fprintf(gridsave_file, "%lg %lg %d ",
+        fprintf(gridsave_file, "%lg %lg %d\n",
                 nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
                 nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
                 nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
@@ -2757,7 +2755,7 @@ void nt_read_restart_data(FILE *gridsave_file)
     if (mg_associated_cells[modelgridindex] > 0)
     {
       int mgi_in;
-      fscanf(gridsave_file, "%d %d %g %lg %g %g %g %lg ",
+      fscanf(gridsave_file, "%d %d %g %lg %g %g %g %lg\n",
              &mgi_in,
              &nt_solution[modelgridindex].deposition_at_timestep,
              &nt_solution[modelgridindex].nne_when_solved,
@@ -2789,7 +2787,7 @@ void nt_read_restart_data(FILE *gridsave_file)
 
       // read NT ionisations
       const int frac_ionizations_list_size_old = nt_solution[modelgridindex].frac_ionizations_list_size;
-      fscanf(gridsave_file, "%d ", &nt_solution[modelgridindex].frac_ionizations_list_size);
+      fscanf(gridsave_file, "%d\n", &nt_solution[modelgridindex].frac_ionizations_list_size);
 
       if (nt_solution[modelgridindex].frac_ionizations_list_size != frac_ionizations_list_size_old)
       {
@@ -2799,7 +2797,7 @@ void nt_read_restart_data(FILE *gridsave_file)
       const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
       for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
       {
-        fscanf(gridsave_file, "%lg %d %d ",
+        fscanf(gridsave_file, "%lg %d %d\n",
                 &nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition,
                 &nt_solution[modelgridindex].frac_ionizations_list[allionindex].element,
                 &nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion);
@@ -2807,7 +2805,7 @@ void nt_read_restart_data(FILE *gridsave_file)
 
       // read NT excitations
       int frac_excitations_list_size_in;
-      fscanf(gridsave_file, "%d ", &frac_excitations_list_size_in);
+      fscanf(gridsave_file, "%\n", &frac_excitations_list_size_in);
 
       if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_in)
       {
@@ -2817,7 +2815,7 @@ void nt_read_restart_data(FILE *gridsave_file)
       const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
       for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
       {
-        fscanf(gridsave_file, "%lg %lg %d ",
+        fscanf(gridsave_file, "%lg %lg %d\n",
                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
