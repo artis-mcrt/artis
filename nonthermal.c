@@ -2728,7 +2728,7 @@ void nt_read_restart_data(FILE *gridsave_file)
   fscanf(gridsave_file, "%d\n", &code_check);
   if (code_check != 24724518)
   {
-    printout("ERROR: Beginning of non-thermal restart data not found!");
+    printout("ERROR: Beginning of non-thermal restart data not found! Found %d instead of 24724518\n", code_check);
     abort();
   }
 
