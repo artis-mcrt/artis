@@ -1486,6 +1486,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
       }
     }
   }
+  fprintf(gridsave_file, "\n%d\n", 42809403); // special number marking the end of radfield data
 }
 
 
@@ -1503,7 +1504,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
   fscanf(gridsave_file, "%d\n", &code_check);
   if (code_check != 30490824)
   {
-    printout("ERROR: Beginning of radfield restart data not found!");
+    printout("ERROR: Beginning of radfield restart data not found! Found %d instead of 30490824\n", code_check);
     abort();
   }
 
@@ -1597,6 +1598,12 @@ void radfield_read_restart_data(FILE *gridsave_file)
         }
       }
     }
+  }
+  fscanf(gridsave_file, "%d\n", &code_check);
+  if (code_check != 42809403)
+  {
+    printout("ERROR: End of radfield restart data not found! Found %d instead of 42809403\n", code_check);
+    abort();
   }
 }
 
