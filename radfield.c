@@ -1486,7 +1486,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
       }
     }
   }
-  fprintf(gridsave_file, "\n%d\n", 42809403); // special number marking the end of radfield data
+  fprintf(gridsave_file, "%d\n", 42809403); // special number marking the end of radfield data
 }
 
 
@@ -1603,6 +1603,13 @@ void radfield_read_restart_data(FILE *gridsave_file)
   if (code_check != 42809403)
   {
     printout("ERROR: End of radfield restart data not found! Found %d instead of 42809403\n", code_check);
+    char line[1025];
+    fgets(line, 1024, gridsave_file);
+    printout("%s\n", line);
+    fgets(line, 1024, gridsave_file);
+    printout("%s\n", line);
+    fgets(line, 1024, gridsave_file);
+    printout("%s\n", line);
     abort();
   }
 }
