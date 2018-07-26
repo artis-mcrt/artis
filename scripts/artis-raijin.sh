@@ -7,16 +7,25 @@
 #PBS -l ncpus=496
 #PBS -l wd
 
-# ncpus must be a factor of the cores per node (16)
+# ncpus must be a factor of the cores per node
 # mem is total memory (all cores combined)
-# on raijin, max 128GB/node = 8GB per core and MPI task (2% of nodes)
-# max 64GB/node = 4GB per core (31% of nodes)
-# max 32GB/node = 2GB per core (66% of nodes)
-# normal queue walltime limits
-# 48 hrs for 1-255 cores
-# 24 hrs for 256-511 cores
-# 10 hrs for 512-1023 cores
-# 5 hours for 1024-56960 cores
+
+# on raijin normal queue Sandy Bridge:
+#   16 cores per node
+#     66% of nodes  32GB = 2GB per core
+#     31% of nodes  64GB = 4GB per core
+#      2% of nodes 128GB = 8GB per core
+# raijin normalbw queue Broadwell:
+#   28 cores per node
+#     536 nodes 128GB = 4.57 GB per core
+#     268 nodes 256GB = 9.14 GB per core
+#      10 nodes   1TB = 36.57 GB per core
+#
+#   raijin normal/normlbw walltime limits:
+#    48 hours for 1-255 cores
+#    24 hours for 256-511 cores
+#    10 hours for 512-1023 cores
+#     5 hours for >=1024 cores
 
 ulimit -l 2097152
 
