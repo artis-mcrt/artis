@@ -8,14 +8,14 @@ KELVIN := $(findstring kelvin,$(HOSTNAME))
 
 ifneq (,$(RAIJINDIRAC))
 	# NCI Raijin cluster
-	# needs:
-	# module load intel-cc/
-	# module load openmpi
+	# recommended:
+	# module load intel-cc
+	# module load intel-mpi
 	# module load gsl
 
   CC = mpicc
   CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
-  LDFLAGS= -lgsl -lm
+  LDFLAGS= -lgsl -lgslcblas -lm
 
   ifeq (,$(findstring raijin,$(HOSTNAME)))
     LDFLAGS += -lgslcblas
