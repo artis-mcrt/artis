@@ -44,8 +44,8 @@ static void update_abundances(const int modelgridindex, const int timestep, doub
 ///             - t_current: current time (here mid of current timestep)
 {
   t_current -= t_model;
-  const double lambdani = 1./TNICKEL;
-  const double lambdaco = 1./TCOBALT;
+  const double lambdani = 1./T56NI;
+  const double lambdaco = 1./T56CO;
   const double lambdafe = 1./T52FE;
   const double lambdamn = 1./T52MN;
   const double lambdacr = 1./T48CR;
@@ -79,27 +79,27 @@ static void update_abundances(const int modelgridindex, const int timestep, doub
   }
   else
   {
-    const double ni_in = get_f56ni(modelgridindex);
-    const double co_in = get_fco(modelgridindex);
+    const double ni56_in = get_f56ni(modelgridindex);
+    const double co56_in = get_f56co(modelgridindex);
     const double fe52_in = get_f52fe(modelgridindex);
     const double cr48_in = get_f48cr(modelgridindex);
-    // printout("model cell %d, has input radioactive ni_in %g, co_in %g, fe_in %g\n",modelgridindex,ni_in,co_in,fe52_in);
+    // printout("model cell %d, has input radioactive ni56_in %g, co56_in %g, fe52_in %g\n",modelgridindex,ni56_in,co56_in,fe52_in);
     for (int element = nelements-1; element >= 0; element--)
     {
       const int atomic_number = get_element(element);
       if (atomic_number == 28)
       {
-        const double nifrac = ni_in * exp(-lambdani*t_current) + get_fnistable(modelgridindex);
+        const double nifrac = ni56_in * exp(-lambdani*t_current) + get_fnistable(modelgridindex);
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
       else if (atomic_number == 27)
       {
-        const double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + get_fcostable(modelgridindex);
+        const double cofrac = co56_in*exp(-lambdaco*t_current) + lambdani*ni56_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + get_fcostable(modelgridindex);
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
       else if (atomic_number == 26)
       {
-        const double fefrac = ((co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + get_ffestable(modelgridindex) + (fe52_in* exp(-lambdafe*t_current));
+        const double fefrac = ((co56_in*lambdani - co56_in*lambdaco + ni56_in*lambdani - ni56_in*lambdaco - co56_in*lambdani*exp(-lambdaco*t_current) + co56_in*lambdaco*exp(-lambdaco*t_current) - ni56_in*lambdani*exp(-lambdaco*t_current) + ni56_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + get_ffestable(modelgridindex) + (fe52_in* exp(-lambdafe*t_current));
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
       else if (atomic_number == 25)

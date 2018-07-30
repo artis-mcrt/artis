@@ -17,7 +17,7 @@ extern inline float get_rho(int modelgridindex);
 extern inline float get_nne(int modelgridindex);
 extern inline float get_nnetot(int modelgridindex);
 extern inline float get_f56ni(int modelgridindex);
-extern inline float get_fco(int modelgridindex);
+extern inline float get_f56co(int modelgridindex);
 extern inline float get_f52fe(int modelgridindex);
 extern inline float get_f48cr(int modelgridindex);
 extern inline float get_ffe(int modelgridindex);
@@ -38,7 +38,7 @@ extern inline void set_rho(int modelgridindex, float x);
 extern inline void set_nne(int modelgridindex, float x);
 extern inline void set_nnetot(int modelgridindex, float x);
 extern inline void set_f56ni(int modelgridindex, float x);
-extern inline void set_fco(int modelgridindex, float x);
+extern inline void set_f56co(int modelgridindex, float x);
 extern inline void set_f48cr(int modelgridindex, float x);
 extern inline void set_f52fe(int modelgridindex, float x);
 extern inline void set_ffe(int modelgridindex, float x);
@@ -225,8 +225,8 @@ static void density_1d_read(void)
       set_rhoinit(0,helper);
       set_rho(0,helper);
       set_ffe(0,ffegrp_model[0]);
-      set_f56ni(0,fni_model[0]);
-      set_fco(0,fco_model[0]);
+      set_f56ni(0,f56ni_model[0]);
+      set_f56co(0,f56co_model[0]);
       //allocate_compositiondata(0);
       for (element = 0; element < nelements; element++)
       {
@@ -246,7 +246,7 @@ static void density_1d_read(void)
         if (anumber == 28)
           set_fnistable(0,abundance - get_f56ni(n));
         if (anumber == 27)
-          set_fcostable(0,abundance - get_fco(n));
+          set_fcostable(0,abundance - get_f56co(n));
         if (anumber == 26)
           set_ffeinit(0,abundance);
       }
@@ -262,8 +262,8 @@ static void density_1d_read(void)
           set_rhoinit(m+1,helper);
           set_rho(m+1,helper);
           set_ffe(m+1,ffegrp_model[m+1]);
-          set_f56ni(m+1,fni_model[m+1]);
-          set_fco(m+1,fco_model[m+1]);
+          set_f56ni(m+1,f56ni_model[m+1]);
+          set_f56co(m+1,f56co_model[m+1]);
           //allocate_compositiondata(m+1);
           for (element = 0; element < nelements; element++)
           {
@@ -281,7 +281,7 @@ static void density_1d_read(void)
             if (anumber == 28)
               set_fnistable(m+1,abundance - get_f56ni(n));
             if (anumber == 27)
-              set_fcostable(m+1,abundance - get_fco(n));
+              set_fcostable(m+1,abundance - get_f56co(n));
             if (anumber == 26)
               set_ffeinit(m+1,abundance);
           }
@@ -298,7 +298,7 @@ static void density_1d_read(void)
       set_rho(MMODELGRID,0.);
       set_nne(MMODELGRID,0.);
       set_ffe(MMODELGRID,0.);
-      set_fco(MMODELGRID,0.);
+      set_f56co(MMODELGRID,0.);
       set_f56ni(MMODELGRID,0.);
       set_Te(MMODELGRID,MINTEMP);
       set_TJ(MMODELGRID,MINTEMP);
@@ -378,8 +378,8 @@ static void density_1d_read(void)
       set_rhoinit(mgi, helper);
       set_rho(mgi, helper);
       set_ffe(mgi, ffegrp_model[mgi]);
-      set_f56ni(mgi, fni_model[mgi]);
-      set_fco(mgi, fco_model[mgi]);
+      set_f56ni(mgi, f56ni_model[mgi]);
+      set_f56co(mgi, f56co_model[mgi]);
       set_f52fe(mgi, f52fe_model[mgi]);
       set_f48cr(mgi, f48cr_model[mgi]);
       allocate_compositiondata(mgi);
@@ -405,7 +405,7 @@ static void density_1d_read(void)
           //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
         }
         else if (anumber == 27)
-          set_fcostable(mgi, abundance - get_fco(mgi));
+          set_fcostable(mgi, abundance - get_f56co(mgi));
         else if (anumber == 26)
           set_ffestable(mgi, abundance - get_f52fe(mgi));
         else if (anumber == 25)
@@ -432,7 +432,7 @@ static void density_1d_read(void)
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
   set_ffe(MMODELGRID, 0.);
-  set_fco(MMODELGRID, 0.);
+  set_f56co(MMODELGRID, 0.);
   set_f56ni(MMODELGRID, 0.);
   set_f48cr(MMODELGRID, 0.);
   set_f52fe(MMODELGRID, 0.);
@@ -788,8 +788,8 @@ static void density_2d_read(void)
       set_rhoinit(mgi, helper);
       set_rho(mgi, helper);
       set_ffe(mgi, ffegrp_model[mgi]);
-      set_f56ni(mgi, fni_model[mgi]);
-      set_fco(mgi, fco_model[mgi]);
+      set_f56ni(mgi, f56ni_model[mgi]);
+      set_f56co(mgi, f56co_model[mgi]);
       set_f52fe(mgi, f52fe_model[mgi]);
       set_f48cr(mgi, f48cr_model[mgi]);
       allocate_compositiondata(mgi);
@@ -812,7 +812,7 @@ static void density_2d_read(void)
         if (anumber == 28)
           set_fnistable(mgi, abundance - get_f56ni(mgi));
         else if (anumber == 27)
-          set_fcostable(mgi, abundance - get_fco(mgi));
+          set_fcostable(mgi, abundance - get_f56co(mgi));
         else if (anumber == 26)
           set_ffestable(mgi, abundance - get_f52fe(mgi));
         else if (anumber == 25)
@@ -839,7 +839,7 @@ static void density_2d_read(void)
   set_rho(MMODELGRID,0.);
   set_nne(MMODELGRID,0.);
   set_ffe(MMODELGRID,0.);
-  set_fco(MMODELGRID,0.);
+  set_f56co(MMODELGRID,0.);
   set_f56ni(MMODELGRID,0.);
   set_f48cr(MMODELGRID,0.);
   set_f52fe(MMODELGRID,0.);
@@ -1384,7 +1384,7 @@ static void abundances_3d_read(void)
         //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
       }
       else if (anumber == 27)
-        set_fcostable(mgi, abundance - get_fco(mgi));
+        set_fcostable(mgi, abundance - get_f56co(mgi));
       else if (anumber == 26)
         set_ffestable(mgi, abundance - get_f52fe(mgi));
       else if (anumber == 25)
@@ -1524,12 +1524,12 @@ static void assign_temperature(void)
     const double tstart = time_step[0].mid;
 
     const double factor56ni = CLIGHT / 4 / STEBO * 1. / 56 / MH * pow(tmin / tstart, 3)
-      * (-1. / (tstart * (- TCOBALT + TNICKEL)))
-      * (- ENICKEL * exp(- tstart / TNICKEL) * tstart * TCOBALT - ENICKEL * exp(- tstart / TNICKEL) * TNICKEL * TCOBALT
-         + ENICKEL * exp(- tstart / TNICKEL) * tstart * TNICKEL + pow(TNICKEL, 2) * ENICKEL * exp(- tstart / TNICKEL)
-         - TCOBALT * tstart * ECOBALT * exp(- tstart / TCOBALT) - pow(TCOBALT, 2) * ECOBALT * exp(- tstart / TCOBALT)
-         + ECOBALT * tstart * TNICKEL * exp(- tstart / TNICKEL) + pow(TNICKEL, 2) * ECOBALT * exp(- tstart / TNICKEL)
-         + ENICKEL * TCOBALT * TNICKEL - ENICKEL * pow(TNICKEL, 2) - pow(TNICKEL, 2) * ECOBALT + ECOBALT * pow(TCOBALT, 2));
+      * (-1. / (tstart * (- T56CO + T56NI)))
+      * (- ENICKEL * exp(- tstart / T56NI) * tstart * T56CO - ENICKEL * exp(- tstart / T56NI) * T56NI * T56CO
+         + ENICKEL * exp(- tstart / T56NI) * tstart * T56NI + pow(T56NI, 2) * ENICKEL * exp(- tstart / T56NI)
+         - T56CO * tstart * ECOBALT * exp(- tstart / T56CO) - pow(T56CO, 2) * ECOBALT * exp(- tstart / T56CO)
+         + ECOBALT * tstart * T56NI * exp(- tstart / T56NI) + pow(T56NI, 2) * ECOBALT * exp(- tstart / T56NI)
+         + ENICKEL * T56CO * T56NI - ENICKEL * pow(T56NI, 2) - pow(T56NI, 2) * ECOBALT + ECOBALT * pow(T56CO, 2));
 
     const double factor52fe = CLIGHT / 4 / STEBO * 1. / 52 / MH * pow(tmin / tstart, 3)
       * (-1. / (tstart * (- T52MN + T52FE)))
@@ -1557,8 +1557,8 @@ static void assign_temperature(void)
       double T_initial = pow(((factor56ni * get_f56ni(n) * get_rhoinit(n))
            + (factor52fe * get_f52fe(n) * get_rhoinit(n))
            + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1. / 4.);
-      //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
-      //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/TNICKEL))/pow(tmin,3), 1./4.);
+      //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/T56NI)), 1./4.);
+      //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/T56NI))/pow(tmin,3), 1./4.);
       //T_initial = 30615.5;
       if (T_initial < MINTEMP)
       {

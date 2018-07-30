@@ -1511,8 +1511,8 @@ static void read_1d_model(void)
     vout_model[n] = dum2 * 1.e5;
     rho_model[n] = pow(10., dum3);
     ffegrp_model[n] = dum4;
-    fni_model[n] = dum5;
-    fco_model[n] = dum6;
+    f56ni_model[n] = dum5;
+    f56co_model[n] = dum6;
     f52fe_model[n] = dum7;
     f48cr_model[n] = dum8;
   }
@@ -1530,7 +1530,7 @@ static void read_1d_model(void)
   /* do inner most cell 1st */
   double mass_in_shell = rho_model[0] * (pow(vout_model[0],3.)) * 4. * PI * pow(t_model,3.) / 3.;
   mtot += mass_in_shell;
-  mni56 += mass_in_shell * fni_model[0];
+  mni56 += mass_in_shell * f56ni_model[0];
   mfe52 += mass_in_shell * f52fe_model[0];
   mcr48 += mass_in_shell * f48cr_model[0];
   mfeg += mass_in_shell * ffegrp_model[0];
@@ -1540,7 +1540,7 @@ static void read_1d_model(void)
   {
     mass_in_shell = rho_model[n] * (pow(vout_model[n], 3) - pow(vout_model[n - 1], 3)) * 4 * PI * pow(t_model, 3) / 3.;
     mtot += mass_in_shell;
-    mni56 += mass_in_shell * fni_model[n];
+    mni56 += mass_in_shell * f56ni_model[n];
     mfe52 += mass_in_shell * f52fe_model[n];
     mcr48 += mass_in_shell * f48cr_model[n];
     mfeg += mass_in_shell * ffegrp_model[n];
@@ -1595,8 +1595,8 @@ static void read_2d_model(void)
     fscanf(model_input, "%g %g %g %g %g",&dum5, &dum6, &dum7, &dum8, &dum9);
     rho_model[n] = dum4;
     ffegrp_model[n] = dum5;
-    fni_model[n] = dum6;
-    fco_model[n] = dum7;
+    f56ni_model[n] = dum6;
+    f56co_model[n] = dum7;
     f52fe_model[n] = dum8;
     f48cr_model[n] = dum9;
   }
@@ -1617,7 +1617,7 @@ static void read_2d_model(void)
   {
     double mass_in_shell = rho_model[n] * ((2*n1) + 1) * PI * dcoord2 * pow(dcoord1,2.);
     mtot += mass_in_shell;
-    mni56 += mass_in_shell * fni_model[n];
+    mni56 += mass_in_shell * f56ni_model[n];
     mfe52 += mass_in_shell * f52fe_model[n];
     mcr48 += mass_in_shell * f48cr_model[n];
     mfeg += mass_in_shell * ffegrp_model[n];
@@ -1717,7 +1717,7 @@ static void read_3d_model(void)
     {
       set_ffe(mgi,dum2);
       set_f56ni(mgi,dum3);
-      set_fco(mgi,dum4);
+      set_f56co(mgi,dum4);
       set_f52fe(mgi,dum5);
       set_f48cr(mgi,dum6);
       allocate_compositiondata(mgi);
@@ -1742,7 +1742,7 @@ static void read_3d_model(void)
   set_rho(MMODELGRID,0.);
   set_nne(MMODELGRID,0.);
   set_ffe(MMODELGRID,0.);
-  set_fco(MMODELGRID,0.);
+  set_f56co(MMODELGRID,0.);
   set_f56ni(MMODELGRID,0.);
   set_f52fe(MMODELGRID,0.);
   set_f48cr(MMODELGRID,0.);

@@ -35,12 +35,12 @@ static double f56ni(const CELL *restrict grid_ptr)
     double radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
-      fraction = fni_model[0];
+      fraction = f56ni_model[0];
       for (m = 0; m < (npts_model-1); m++)
       {
         if (radial_pos > (vout_model[m] * tmin))
         {
-          fraction = fni_model[m+1];
+          fraction = f56ni_model[m+1];
         }
       }
     }
@@ -131,7 +131,7 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
     {
       pkt[n].type = TYPE_NICKEL_PELLET;
       zrand = gsl_rng_uniform(rng);
-      pkt[n].tdecay = -TNICKEL * log(zrand);
+      pkt[n].tdecay = -T56NI * log(zrand);
     }
     else
     {
@@ -149,7 +149,7 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
 
       zrand = gsl_rng_uniform(rng);
       const double zrand2 = gsl_rng_uniform(rng);
-      pkt[n].tdecay = (-TNICKEL * log(zrand)) + (-TCOBALT * log(zrand2));
+      pkt[n].tdecay = (-T56NI * log(zrand)) + (-T56CO * log(zrand2));
     }
   }
   else if (zrand3 <= (prob_chain[0] + prob_chain[1]))
