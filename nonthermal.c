@@ -297,7 +297,7 @@ static void read_auger_data(void)
 
   while (!feof(augerfile))
   {
-    if (line != fgets(line, 1024, augerfile))
+    if (line != fgets(line, 151, augerfile))
       break;
 
     int Z;
