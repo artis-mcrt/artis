@@ -141,8 +141,8 @@ double E48V;
 #define E52MN (3.415*MEV)
 
 /* mean lifetimes */
-#define TNICKEL (8.80*DAY)      // nickel-56
-#define TCOBALT (113.7*DAY)     // cobalt-56
+#define T56NI   (8.80*DAY)
+#define T56CO   (113.7*DAY)
 #define T48CR   (1.29602*DAY)
 #define T48V    (23.0442*DAY)
 #define T52FE   (0.497429*DAY)
@@ -352,8 +352,8 @@ int n_out_it; // # of sets of 1,000,000 photons to run.
 int npts_model; // number of points in 1-D input model
 double vout_model[MMODELGRID];
 double rho_model[MMODELGRID];
-double fni_model[MMODELGRID];
-double fco_model[MMODELGRID];
+double f56ni_model[MMODELGRID];
+double f56co_model[MMODELGRID];
 double ffegrp_model[MMODELGRID];
 double f48cr_model[MMODELGRID];
 double f52fe_model[MMODELGRID];

@@ -416,7 +416,7 @@ bool estim_switch(int nts)
 //   if (gam_line_list.type[lindex] == NI_GAM_LINE_ID)
 //   {
 //     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
-//         * exp(-single_t/TNICKEL) / TNICKEL *
+//         * exp(-single_t/T56NI) / T56NI *
 //         nickel_spec.probability[gam_line_list.index[lindex]]
 //         * nickel_spec.energy[gam_line_list.index[lindex]]
 //          * f56ni(grid_ptr)*tfact;
@@ -424,8 +424,8 @@ bool estim_switch(int nts)
 //   else if (gam_line_list.type[lindex] == CO_GAM_LINE_ID)
 //   {
 //     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
-//       * (exp(-single_t/TNICKEL) - exp(-single_t/TCOBALT))
-//       / (TNICKEL - TCOBALT)
+//       * (exp(-single_t/T56NI) - exp(-single_t/T56CO))
+//       / (T56NI - T56CO)
 //       * cobalt_spec.probability[gam_line_list.index[lindex]]
 //       * cobalt_spec.energy[gam_line_list.index[lindex]]
 //       * f56ni(grid_ptr) * tfact;

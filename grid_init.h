@@ -38,7 +38,7 @@ inline float get_f56ni(int modelgridindex)
   return modelgrid[modelgridindex].fni;
 }
 
-inline float get_fco(int modelgridindex)
+inline float get_f56co(int modelgridindex)
 {
   return modelgrid[modelgridindex].fco;
 }
@@ -143,7 +143,7 @@ inline void set_f56ni(int modelgridindex, float x)
   modelgrid[modelgridindex].fni = x;
 }
 
-inline void set_fco(int modelgridindex, float x)
+inline void set_f56co(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].fco = x;
 }
