@@ -431,10 +431,10 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
   prob_chain[0]=fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56;
   prob_chain[1]=f52fe(grid_ptr)*(E52FE + E52MN)/MFE52;
   prob_chain[2]=f48cr(grid_ptr)*(E48V + E48CR)/MCR48;
-  prob_chain[3]=fco(grid_ptr)*ECOBALT/MNI56;
+  prob_chain[3]=fco(grid_ptr)*ECOBALT/MCO56;
   
 
-  zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]);
+  zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]+prob_chain[3]);
   if (zrand3 <= prob_chain[0])
     {
       

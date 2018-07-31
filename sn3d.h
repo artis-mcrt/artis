@@ -40,6 +40,7 @@
 #define ME 9.1093897e-28 /* Mass of free electron. */
 #define QE 4.80325E-10 /* //MK: Elementary charge in cgs units*/
 #define MNI56 (56*MH) /*Mass of ni56*/
+#define MCO56 (56*MH) /*Mass of co56*/
 #define MFE52 (52*MH) /*Mass of fe52*/
 #define MCR48 (48*MH) /*Mass of cr48*/
 #define PI   3.141592654 /* PI - obviously. */
