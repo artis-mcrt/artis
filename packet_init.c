@@ -8,12 +8,12 @@ int packet_init(int middle_iteration, int my_rank)
   FILE *packets_file;
   int pktnumberoffset;
   char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
-
+  
   if (!continue_simulation)
   {
     pktnumberoffset = middle_iteration*npkts;
     setup_packets(pktnumberoffset);
-    sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank);
+    sprintf(filename,"packets%d_%d_odd.tmp",middle_iteration,my_rank); 
     if ((packets_file = fopen(filename, "wb")) == NULL)
     {
       printf("[fatal]: packet_init: Cannot open packets file\n");
@@ -22,13 +22,13 @@ int packet_init(int middle_iteration, int my_rank)
     fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
     //write_packets(packets_file);
     fclose(packets_file);
-
+        
     /* Consistency check to debug read/write
     PKT testpkt[MPKTS];
     int n;
     if (i > 0)
     {
-    sprintf(filename,"packets%d_%d.tmp",i-1,my_rank);
+    sprintf(filename,"packets%d_%d.tmp",i-1,my_rank); 
     if ((packets_file = fopen(filename, "rb")) == NULL)
     {
     printf("Cannot open packets file\n");
@@ -36,7 +36,7 @@ int packet_init(int middle_iteration, int my_rank)
   }
     fread(&testpkt, sizeof(PKT), npkts, packets_file);
     fclose(packets_file);
-
+          
     for (n=0; n<npkts; n++)
     {
     if (testpkt[n].number-pkt[n].number != 0) printout("fatal 1!!! %d, %d\n",testpkt[n].number,pkt[n].number);
@@ -57,14 +57,14 @@ int packet_init(int middle_iteration, int my_rank)
     if (testpkt[n].escape_type-pkt[n].escape_type != 0) printout("fatal 16!!!\n"); /// Flag to tell us in which form it escaped from the grid.
     if (testpkt[n].escape_time-pkt[n].escape_time != 0) printout("fatal 17!!!\n");
     if (testpkt[n].scat_count-pkt[n].scat_count != 0) printout("fatal 18!!!\n");  /// WHAT'S THAT???
-    if (testpkt[n].next_trans-pkt[n].next_trans != 0) printout("fatal 19!!!\n");
+    if (testpkt[n].next_trans-pkt[n].next_trans != 0) printout("fatal 19!!!\n");  
     if (testpkt[n].interactions-pkt[n].interactions != 0) printout("fatal 20!!!\n");/// debug: number of interactions the packet undergone
     if (testpkt[n].last_event-pkt[n].last_event != 0) printout("fatal 21!!!\n");  /// debug: stores information about the packets history
   }
   }
     */
   }
-
+  
   return 0;
 }
 
@@ -78,7 +78,7 @@ int setup_packets (int pktnumberoffset)
   int n,m;
   double zrand,runtot;
   CELL *grid_ptr;
-  double fni(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
+  double fni(CELL *grid_ptr),fco(CELL *grid_ptr),f48cr(CELL *grid_ptr),f52fe(CELL *grid_ptr);
   double vol_init(CELL *grid_ptr);
   float norm;
   // float cont[MGRID+1];
@@ -88,6 +88,7 @@ int setup_packets (int pktnumberoffset)
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
   etot = (ENICKEL + ECOBALT) * mni56 / MNI56;
+  etot += ECOBALT * mco56 / MNI56;
   etot += (E48V + E48CR) * mcr48 / MCR48;
   etot += (E52FE + E52MN) * mfe52 / MFE52;
   printout("etot %g\n", etot);
@@ -101,7 +102,7 @@ int setup_packets (int pktnumberoffset)
 
   /* Now place the pellets in the ejecta and decide at what time
   they will decay. */
-
+ 
   /* Need to get a normalisation factor. */
   norm = 0.0;
   for (m=0; m<ngrid; m++)
@@ -111,6 +112,7 @@ int setup_packets (int pktnumberoffset)
     //printf("%g %g %g\n", (fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     norm += get_rhoinit(grid_ptr->modelgridindex) * vol_init(grid_ptr) *
       ((fni(grid_ptr)*(ENICKEL + ECOBALT)/56.)
+       +(fco(grid_ptr)*(ECOBALT)/56.)
        +(f52fe(grid_ptr)*(E52FE + E52MN)/52.)
        +(f48cr(grid_ptr)*(E48V + E48CR)/48.));
 
@@ -134,7 +136,7 @@ int setup_packets (int pktnumberoffset)
     mabove=ngrid;
     mbelow = 0;
     zrand = gsl_rng_uniform(rng);
-
+      
     while (mabove != (mbelow+1))
     {
       if (mabove == (mbelow + 2))
@@ -154,7 +156,7 @@ int setup_packets (int pktnumberoffset)
         mbelow = m;
       }
     }
-
+    
     if (cont[mbelow] > (zrand*norm))
     {
       printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand*norm);
@@ -165,7 +167,7 @@ int setup_packets (int pktnumberoffset)
       printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand*norm);
       exit(0);
     }
-
+    
     m = mbelow;
     //printout("chosen cell %d (%d, %g, %g)\n", m, ngrid, zrand, norm);
     //exit(0);
@@ -179,7 +181,7 @@ int setup_packets (int pktnumberoffset)
     }
     m = m - 1;
     */
-
+    
     grid_ptr = &cell[m];
     if (m >= ngrid)
     {
@@ -200,10 +202,10 @@ int setup_packets (int pktnumberoffset)
       packet_reset++;
     }
   }
-
-
-  /// Some fraction of the packets we reasigned because they were not going
-  /// to activate in the time of interest so need to renormalise energies
+  
+  
+  /// Some fraction of the packets we reasigned because they were not going 
+  /// to activate in the time of interest so need to renormalise energies 
   /// to account for this.
   for (n = 0; n < npkts; n++)
   {
@@ -234,7 +236,7 @@ double fni(CELL *grid_ptr)
     dcen[0]=grid_ptr->pos_init[0] + (0.5*wid_init);
     dcen[1]=grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2]=grid_ptr->pos_init[2] + (0.5*wid_init);
-
+      
 
     m_r = vec_len(dcen) / rmax;
     m_r = pow(m_r,3) * mtot / MSUN;
@@ -258,7 +260,7 @@ double fni(CELL *grid_ptr)
     dcen[0] = grid_ptr->pos_init[0] + (0.5*wid_init);
     dcen[1] = grid_ptr->pos_init[1] + (0.5*wid_init);
     dcen[2] = grid_ptr->pos_init[2] + (0.5*wid_init);
-
+      
     /*radial_pos = vec_len(dcen);
     if (radial_pos < rmax)
     {
@@ -276,7 +278,7 @@ double fni(CELL *grid_ptr)
       fraction = 0.0;
     }*/
     fraction = get_fni(grid_ptr->modelgridindex);
-
+   
     return(fraction);
   }
   else if (model_type == RHO_3D_READ)
@@ -284,6 +286,40 @@ double fni(CELL *grid_ptr)
     /* This is a 3-D model read in. Just return input value. */
     //fraction = grid_ptr->f_ni;
     fraction = get_fni(grid_ptr->modelgridindex);
+    return(fraction);
+  }
+
+  else
+  {
+    printout("Unknown model_type (packet_init). Abort.\n");
+    exit(0);
+  }
+
+  return(-99);
+}
+
+
+///***************************************************************************/
+double fco(CELL *grid_ptr)
+/// Subroutine that gives the Co56 mass fraction.
+{
+  double fraction;
+  fraction = 0.0;
+
+  if (model_type == RHO_UNIFORM)
+  {
+    return(0.0);
+  }
+  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
+  {
+    fraction = get_fco(grid_ptr->modelgridindex);
+    return(fraction);
+  }
+  else if (model_type == RHO_3D_READ)
+  {
+    /* This is a 3-D model read in. Just return input value. */
+    //fraction = grid_ptr->f_ni;
+    fraction = get_fco(grid_ptr->modelgridindex);
     return(fraction);
   }
 
@@ -330,6 +366,8 @@ double f52fe(CELL *grid_ptr)
   return(-99);
 }
 
+
+
 ///***************************************************************************/
 double f48cr(CELL *grid_ptr)
 /// Subroutine that gives the Cr48 mass fraction.
@@ -373,8 +411,8 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
   double zrand;
   double zrand2;
   double zrand3;
-  double prob_chain[3];
-  double fni(CELL *grid_ptr), f48cr(CELL *grid_ptr), f52fe(CELL *grid_ptr);
+  double prob_chain[4];
+  double fni(CELL *grid_ptr), fco(CELL *grid_ptr), f48cr(CELL *grid_ptr), f52fe(CELL *grid_ptr);
 
   /// First choose a position for the pellet. In the cell.
   /// n is the index of the packet. m is the index for the grid cell.
@@ -393,11 +431,13 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
   prob_chain[0]=fni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56;
   prob_chain[1]=f52fe(grid_ptr)*(E52FE + E52MN)/MFE52;
   prob_chain[2]=f48cr(grid_ptr)*(E48V + E48CR)/MCR48;
+  prob_chain[3]=fco(grid_ptr)*ECOBALT/MCO56;
+  
 
-  zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]);
+  zrand3=gsl_rng_uniform(rng)*(prob_chain[0]+prob_chain[1]+prob_chain[2]+prob_chain[3]);
   if (zrand3 <= prob_chain[0])
     {
-
+      
       /// Now choose whether it's going to be a nickel or cobalt pellet and
       /// mark it as such.
       zrand = gsl_rng_uniform(rng);
@@ -408,7 +448,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
       else
 	{
 	  zrand = gsl_rng_uniform(rng);
-
+	  
 	  if (zrand < ECOBALT_GAMMA/ECOBALT)
 	    {
 	      pkt[n].type = TYPE_COBALT_PELLET;
@@ -418,7 +458,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	      pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
 	    }
 	}
-
+      
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_NICKEL_PELLET)
 	{
@@ -445,7 +485,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	{
 	  pkt[n].type = TYPE_52MN_PELLET;
 	}
-
+      
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_52FE_PELLET)
 	{
@@ -459,8 +499,8 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	  pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
 	}
     }
-  else
-    {
+  else if (zrand3 <= (prob_chain[0]+prob_chain[1]+prob_chain[2]))
+    {  
       /// Now choose whether it's going to be a 48Cr or 48V pellet and
       /// mark it as such.
       zrand = gsl_rng_uniform(rng);
@@ -472,7 +512,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	{
 	  pkt[n].type = TYPE_48V_PELLET;
 	}
-
+      
       /// Now choose the decay time.
       if (pkt[n].type == TYPE_48CR_PELLET)
 	{
@@ -485,6 +525,24 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 	  zrand2 = gsl_rng_uniform(rng);
 	  pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
 	}
+    }
+  else
+    {
+      /// Now it is a 56Co pellet, choose whether it becomes a positron
+      zrand = gsl_rng_uniform(rng);
+	  
+      if (zrand < ECOBALT_GAMMA/ECOBALT)
+	{
+	  pkt[n].type = TYPE_COBALT_PELLET;
+	}
+      else
+	{
+	  pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
+	}
+      
+      /// Now choose the decay time.
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -TCOBALT * log(zrand);
     }
 
 
@@ -500,7 +558,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
 void write_packets(FILE *packets_file)
 {
   int i;
-
+  
   for (i = 0; i < npkts; i++)
   {
    fprintf(packets_file,"%d ",pkt[i].number);
@@ -538,7 +596,7 @@ void write_packets(FILE *packets_file)
 void read_packets(FILE *packets_file)
 {
   int i;
-
+  
   for (i = 0; i < npkts; i++)
   {
    fscanf(packets_file,"%d ",&pkt[i].number);

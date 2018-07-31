@@ -20,7 +20,7 @@
 #define POL_ON
 
 // Virtual packets
-#define VPKT_ON
+//#define VPKT_ON
 
 
 //#define HUGEE 2000018
@@ -40,6 +40,7 @@
 #define ME 9.1093897e-28 /* Mass of free electron. */
 #define QE 4.80325E-10 /* //MK: Elementary charge in cgs units*/
 #define MNI56 (56*MH) /*Mass of ni56*/
+#define MCO56 (56*MH) /*Mass of co56*/
 #define MFE52 (52*MH) /*Mass of fe52*/
 #define MCR48 (48*MH) /*Mass of cr48*/
 #define PI   3.141592654 /* PI - obviously. */
@@ -166,6 +167,7 @@ double xmax, ymax, zmax;
 double mtot, vmax, rmax; /* Total mass and outer velocity/radius. */
 double fe_sum, rho_sum; //MK: could now be declared locally
 double mni56; /*Total mass of Ni56 in the ejecta. */
+double mco56; /*Total mass of Co56 in the ejecta. */
 double mfe52; /*Total mass of Fe52 in the ejecta. */
 double mcr48; /*Total mass of Cr48 in the ejecta. */
 double mfeg; /*Total mass of Fe group elements in ejecta. */

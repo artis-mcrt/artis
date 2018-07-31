@@ -46,9 +46,9 @@ int input(rank)
 
   maxion = MIONS;
   /// Set grid size
-  nxgrid = 50; //pow(MGRID,1./3.); //10;
-  nygrid = 50; //pow(MGRID,1./3.); //10;
-  nzgrid = 50; //pow(MGRID,1./3.); //10;
+  nxgrid = 100; //pow(MGRID,1./3.); //10;
+  nygrid = 100; //pow(MGRID,1./3.); //10;
+  nzgrid = 100; //pow(MGRID,1./3.); //10;
   printout("nxgrid %d\n",nxgrid);
   /*nxgrid = 4;
   nygrid = 4;
@@ -1985,6 +1985,7 @@ int read_1d_model()
 
   mtot = 0.0;
   mni56 = 0.0;
+  mco56 = 0.0;
   mfe52 = 0.0;
   mcr48 = 0.0;
   mfeg = 0.0;
@@ -1994,6 +1995,7 @@ int read_1d_model()
   mass_in_shell = rho_model[0] * (pow(vout_model[0],3.)) * 4. * PI * pow(t_model,3.) / 3.;
   mtot += mass_in_shell;
   mni56 += mass_in_shell * fni_model[0];
+  mco56 += mass_in_shell * fco_model[0];
   mfe52 += mass_in_shell * f52fe_model[0];
   mcr48 += mass_in_shell * f48cr_model[0];
   mfeg += mass_in_shell * ffegrp_model[0];
@@ -2006,12 +2008,13 @@ int read_1d_model()
     mass_in_shell = rho_model[n] * (pow(vout_model[n],3.) - pow(vout_model[n-1],3.)) * 4. * PI * pow(t_model,3.) / 3.;
     mtot += mass_in_shell;
     mni56 += mass_in_shell * fni_model[n];
+    mco56 += mass_in_shell * fco_model[n];
     mfe52 += mass_in_shell * f52fe_model[n];
     mcr48 += mass_in_shell * f48cr_model[n];
     mfeg += mass_in_shell * ffegrp_model[n];
   }
 
-  printout("Total mass: %g. Ni mass: %g.  52Fe mass: %g.  48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
+  printout("Total mass: %g. Ni mass: %g. 56Co mass: %g. 52Fe mass: %g.  48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mco56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
 
   vmax = vout_model[npts_model-1];
   rmax = vmax * tmin;
@@ -2083,6 +2086,7 @@ int read_2d_model()
 
   mtot = 0.0;
   mni56 = 0.0;
+  mco56 = 0.0;
   mfe52 = 0.0;
   mcr48 = 0.0;
   mfeg = 0.0;
@@ -2094,6 +2098,7 @@ int read_2d_model()
     mass_in_shell = rho_model[n] * ((2*n1) + 1) * PI * dcoord2 * pow(dcoord1,2.);
     mtot += mass_in_shell;
     mni56 += mass_in_shell * fni_model[n];
+    mco56 += mass_in_shell * fco_model[n];
     mfe52 += mass_in_shell * f52fe_model[n];
     mcr48 += mass_in_shell * f48cr_model[n];
     mfeg += mass_in_shell * ffegrp_model[n];
@@ -2104,7 +2109,7 @@ int read_2d_model()
       }
   }
 
-  printout("Total mass: %g. Ni mass: %g.  52Fe mass: %g.  48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
+  printout("Total mass: %g. Ni mass: %g. 56Co mass: %g. 52Fe mass: %g.  48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mco56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
 
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
@@ -2246,6 +2251,7 @@ int read_3d_model()
 
   mtot = 0.0;
   mni56 = 0.0;
+  mco56 = 0.0;
   mfe52 = 0.0;
   mcr48 = 0.0;
   mfeg = 0.0;
@@ -2258,6 +2264,7 @@ int read_3d_model()
     //printout("n %d, mgi %d, rho_init %g\n",n,mgi,mass_in_shell);
     mtot += mass_in_shell;
     mni56 += mass_in_shell * get_fni(mgi);
+    mco56 += mass_in_shell * get_fco(mgi);
     mfe52 += mass_in_shell * get_f52fe(mgi);
     mcr48 += mass_in_shell * get_f48cr(mgi);
     mfeg += mass_in_shell * get_ffe(mgi);
@@ -2266,11 +2273,12 @@ int read_3d_model()
   double cellvolume = pow((2 * vmax * tmin),3.) / (nxgrid*nygrid*nzgrid);
   mtot = mtot * cellvolume;
   mni56 = mni56 * cellvolume;
+  mco56 = mco56 * cellvolume;
   mfe52 = mfe52 * cellvolume;
   mcr48 = mcr48 * cellvolume;
   mfeg = mfeg  * cellvolume;
 
-  printout("Total mass: %g. Ni mass: %g.  52Fe mass: %g.  48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
+  printout("Total mass: %g. Ni mass: %g. 56Co mass: %g. 52Fe mass: %g.  48Cr mass: %g. Fe-grp mass: %g.\n", mtot/MSUN, mni56/MSUN, mco56/MSUN, mfe52/MSUN, mcr48/MSUN, mfeg/MSUN);
 
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
