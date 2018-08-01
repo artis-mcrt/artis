@@ -292,7 +292,7 @@ enum radionuclides {
 
 typedef struct gamma_ll
 {
-  enum radionuclides *type; // is it a Ni56, Co56, a fake line, etc
+  enum radionuclides *nuclidetype; // is it a Ni56, Co56, a fake line, etc
   int *index;               // which of the lines of that element is it */
   int total;                // the total number of lines in the list */
 } LIST;
