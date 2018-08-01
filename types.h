@@ -278,6 +278,24 @@ typedef struct mgicooling_t
   double *contrib;
 } mgicooling_t;
 
+enum radionuclides {
+  NUCLIDE_NI57 = 0,
+  NUCLIDE_NI56 = 1,
+  NUCLIDE_CO56 = 2,
+  FAKE_GAM_LINE_ID = 3,
+  NUCLIDE_CR48 = 4,
+  NUCLIDE_V48 = 5,
+  NUCLIDE_CO57 = 6,
+  NUCLIDE_FE52 = 7,
+  RADIONUCLIDE_COUNT = 8,
+};
+
+typedef struct gamma_ll
+{
+  enum radionuclides *type; // is it a Ni56, Co56, a fake line, etc
+  int *index;               // which of the lines of that element is it */
+  int total;                // the total number of lines in the list */
+} LIST;
 
 typedef struct modelgrid_t
 {
@@ -291,12 +309,7 @@ typedef struct modelgrid_t
   float rho;
   //modelgrid nn_tot
   float nnetot;           // total electron density (free + bound). this is not actually used anywhere. keep?
-  float f56ni;
-  float f56co;
-  float f57ni;
-  float f57co;
-  float f52fe;
-  float f48cr;
+  float fradionuclides[RADIONUCLIDE_COUNT];
   float ffegrp;
   float fnistable;
   float fcostable;
@@ -310,12 +323,10 @@ typedef struct modelgrid_t
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
                                          /// so there is no need to communicate it via MPI so far!
 
-  compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundance of all included elements
-                                         /// and all the groundlevel
-                                         /// populations and partition
-                                         /// functions for their ions
-  double *nlte_pops;                     /// Pointer to an array that
-                                         /// contains the nlte-level
+  compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundances
+                                        /// of all included elements and all the groundlevel
+                                         /// populations and partition functions for their ions
+  double *nlte_pops;                     /// Pointer to an array that contains the nlte-level
                                          /// populations for this cell
 
   double totalcooling;
@@ -340,23 +351,6 @@ typedef struct
 } samplegrid_t;
 */
 
-enum radionuclides {
-  NUCLIDE_NI57 = 0,
-  NUCLIDE_NI56 = 1,
-  NUCLIDE_CO56 = 2,
-  FAKE_GAM_LINE_ID = 3,
-  NUCLIDE_CR48 = 4,
-  NUCLIDE_V48 = 5,
-  NUCLIDE_CO57 = 6,
-  RADIONUCLIDE_COUNT = 7,
-};
-
-typedef struct gamma_ll
-{
-  enum radionuclides *type; /* is it a Ni, Co or fake line */
-  int *index; /* which of the lines of that element is it */
-  int total;         /* the total number of lines in the list */
-} LIST;
 
 #define NSYN 1 /* number of frequency points in syn calculation */
 

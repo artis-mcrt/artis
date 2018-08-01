@@ -22,7 +22,7 @@ void get_gam_ll(void)
   /* Now do the sorting. */
 
   int total_lines = 0;
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     total_lines += gamma_spectra[iso].nlines;
   }
@@ -40,7 +40,7 @@ void get_gam_ll(void)
   {
     double energy_try = 1.e50;
 
-    for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
     {
       // printout("iso %d nlines %d\n", iso, gamma_spectra[iso].nlines);
       for (int j = 0; j < gamma_spectra[iso].nlines; j++)

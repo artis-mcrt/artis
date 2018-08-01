@@ -16,12 +16,6 @@ extern inline float get_rhoinit(int modelgridindex);
 extern inline float get_rho(int modelgridindex);
 extern inline float get_nne(int modelgridindex);
 extern inline float get_nnetot(int modelgridindex);
-extern inline float get_f56ni(int modelgridindex);
-extern inline float get_f56co(int modelgridindex);
-extern inline float get_f57ni(int modelgridindex);
-extern inline float get_f57co(int modelgridindex);
-extern inline float get_f52fe(int modelgridindex);
-extern inline float get_f48cr(int modelgridindex);
 extern inline float get_ffegrp(int modelgridindex);
 extern inline float get_fnistable(int modelgridindex);
 extern inline float get_fcostable(int modelgridindex);
@@ -39,20 +33,7 @@ extern inline void set_rhoinit(int modelgridindex, float x);
 extern inline void set_rho(int modelgridindex, float x);
 extern inline void set_nne(int modelgridindex, float x);
 extern inline void set_nnetot(int modelgridindex, float x);
-extern inline void set_f56ni(int modelgridindex, float x);
-extern inline void set_f56co(int modelgridindex, float x);
-extern inline void set_f57ni(int modelgridindex, float x);
-extern inline void set_f57co(int modelgridindex, float x);
-extern inline void set_f48cr(int modelgridindex, float x);
-extern inline void set_f52fe(int modelgridindex, float x);
 extern inline void set_ffegrp(int modelgridindex, float x);
-extern inline void set_fnistable(int modelgridindex, float x);
-extern inline void set_fcostable(int modelgridindex, float x);
-extern inline void set_ffestable(int modelgridindex, float x);
-extern inline void set_fmnstable(int modelgridindex, float x);
-extern inline void set_fcrstable(int modelgridindex, float x);
-extern inline void set_fvstable(int modelgridindex, float x);
-extern inline void set_ftistable(int modelgridindex, float x);
 extern inline void set_kappagrey(int modelgridindex, float x);
 extern inline void set_Te(int modelgridindex, float x);
 extern inline void set_TR(int modelgridindex, float x);
@@ -60,35 +41,37 @@ extern inline void set_TJ(int modelgridindex, float x);
 extern inline void set_W(int modelgridindex, float x);
 
 
-float get_initmassfracnuclide(const int modelgridindex, const enum radionuclides nuclide_type)
+float get_modelfnuclide(const int modelgridindex, const enum radionuclides nuclide_type)
 {
-  switch (nuclide_type)
+  // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
+  if (model_type == RHO_UNIFORM)
   {
-    case (NUCLIDE_NI56):
-      return modelgrid[modelgridindex].f56ni;
-
-    case (NUCLIDE_CO56):
-      return modelgrid[modelgridindex].f56co;
-
-    case (NUCLIDE_NI57):
-      return modelgrid[modelgridindex].f57ni;
-
-    case (FAKE_GAM_LINE_ID):
-      abort();
-
-    case (NUCLIDE_CR48):
-      return modelgrid[modelgridindex].f48cr;
-
-    case (NUCLIDE_V48):
-      return 0.;
-
-    case (NUCLIDE_CO57):
-      return modelgrid[modelgridindex].f57co;
-
-    default:
-      printout("get_initmassfracnuclide called with unknown nuclide_type %d\n", nuclide_type);
-      abort();
+    // Ni 56 must be handled separate based on a grid pointer instead of a modelgridindex
+    assert(nuclide_type != NUCLIDE_NI56);
+    return 0.;
   }
+
+  if (nuclide_type == FAKE_GAM_LINE_ID || nuclide_type >= RADIONUCLIDE_COUNT)
+  {
+    printout("set_initfracradio called with invalid nuclide_type type %d\n", nuclide_type);
+    abort();
+  }
+
+  return modelgrid[modelgridindex].fradionuclides[nuclide_type];
+}
+
+
+void set_modelfnuclide(const int modelgridindex, const enum radionuclides nuclide_type, const float abund)
+{
+  // this function replaces set_f56ni(mgi), set_fco56(mgi), etc.
+
+  if ((nuclide_type == FAKE_GAM_LINE_ID && abund > 0) || nuclide_type >= RADIONUCLIDE_COUNT)
+  {
+    printout("set_initfracradio called with invalid nuclide_type type %d\n", nuclide_type);
+    abort();
+  }
+
+  modelgrid[modelgridindex].fradionuclides[nuclide_type] = abund;
 }
 
 /// Routine for doing a uniform density grid.
@@ -225,6 +208,71 @@ float get_initmassfracnuclide(const int modelgridindex, const enum radionuclides
 
   return 0;
 }*/
+
+
+static void set_fvstable(int modelgridindex, float x)
+{
+  if (x >= 0)
+  {
+    modelgrid[modelgridindex].fvstable = x;
+  }
+  else
+  {
+    //printout("Setting fcrstable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].fvstable = 0.0;
+  }
+}
+
+static void set_ftistable(int modelgridindex, float x)
+{
+  if (x >= 0)
+  {
+    modelgrid[modelgridindex].ftistable = x;
+  }
+  else
+  {
+    //printout("Setting fcrstable to 0.0 to avoid negative.\n");
+    modelgrid[modelgridindex].ftistable = 0.0;
+  }
+}
+
+static void set_stable_abund(const int mgi, const int anumber, const float elemabundance)
+{
+  // store the stable mass fraction of an element given the total element mass fraction
+  // by subtracting the abundances of radioactive isotopes
+  switch (anumber)
+  {
+    case 28:
+      modelgrid[mgi].fnistable = fmax(0.,
+        elemabundance - get_modelfnuclide(mgi, NUCLIDE_NI56) - get_modelfnuclide(mgi, NUCLIDE_NI57));
+      break;
+
+    case 27:
+      modelgrid[mgi].fcostable = fmax(0.,
+        elemabundance - get_modelfnuclide(mgi, NUCLIDE_CO56) - get_modelfnuclide(mgi, NUCLIDE_CO57));
+      break;
+
+    case 26:
+      modelgrid[mgi].ffestable = fmax(0., elemabundance - get_modelfnuclide(mgi, NUCLIDE_FE52));
+      break;
+
+    case 25:
+      modelgrid[mgi].fmnstable = fmax(0., elemabundance);
+      break;
+
+    case 24:
+      modelgrid[mgi].fcrstable = fmax(0., elemabundance - get_modelfnuclide(mgi, NUCLIDE_CR48));
+      break;
+
+    case 23:
+      modelgrid[mgi].fvstable = fmax(0., elemabundance);
+      break;
+
+    case 22:
+      modelgrid[mgi].ftistable = fmax(0., elemabundance);
+      break;
+  }
+}
 
 
 static void density_1d_read(void)
@@ -403,9 +451,6 @@ static void density_1d_read(void)
   }
 
 
-//  for (n=0;n < ngrid; n++)
-//  {
-//    mgi = cell[n].modelgridindex;
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
     if (mg_associated_cells[mgi] > 0)
@@ -413,13 +458,6 @@ static void density_1d_read(void)
       const double helper = rho_model[mgi] * pow(t_model / tmin, 3);
       set_rhoinit(mgi, helper);
       set_rho(mgi, helper);
-      set_ffegrp(mgi, ffegrp_model[mgi]);
-      set_f56ni(mgi, f56ni_model[mgi]);
-      set_f56co(mgi, f56co_model[mgi]);
-      set_f57ni(mgi, f57ni_model[mgi]);
-      set_f57co(mgi, f57co_model[mgi]);
-      set_f52fe(mgi, f52fe_model[mgi]);
-      set_f48cr(mgi, f48cr_model[mgi]);
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
       for (int element = 0; element < nelements; element++)
@@ -437,29 +475,20 @@ static void density_1d_read(void)
 
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
 
-        if (anumber == 28)
-        {
-          set_fnistable(mgi, abundance - get_f56ni(mgi) - get_f57ni(mgi));
-          //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
-        }
-        else if (anumber == 27)
-          set_fcostable(mgi, abundance - get_f56co(mgi) - get_f57co(mgi));
-        else if (anumber == 26)
-          set_ffestable(mgi, abundance - get_f52fe(mgi));
-        else if (anumber == 25)
-          set_fmnstable(mgi, abundance);
-        else if (anumber == 24)
-          set_fcrstable(mgi, abundance - get_f48cr(mgi));
-        else if (anumber == 23)
-          set_fvstable(mgi, abundance);
-        else if (anumber == 22)
-          set_ftistable(mgi, abundance);
+        set_stable_abund(mgi, anumber, abundance);
       }
 
       if (get_rhoinit(mgi) < 0)
       {
         printout("Error: negative density. Abort.\n");
         abort();
+      }
+    }
+    else
+    {
+      for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+      {
+        set_modelfnuclide(mgi, iso, 0.);
       }
     }
   }
@@ -470,12 +499,10 @@ static void density_1d_read(void)
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
   set_ffegrp(MMODELGRID, 0.);
-  set_f56co(MMODELGRID, 0.);
-  set_f56ni(MMODELGRID, 0.);
-  set_f57co(MMODELGRID, 0.);
-  set_f57ni(MMODELGRID, 0.);
-  set_f48cr(MMODELGRID, 0.);
-  set_f52fe(MMODELGRID, 0.);
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  {
+    set_modelfnuclide(MMODELGRID, iso, 0.);
+  }
   set_Te(MMODELGRID, MINTEMP);
   set_TJ(MMODELGRID, MINTEMP);
   set_TR(MMODELGRID, MINTEMP);
@@ -484,7 +511,7 @@ static void density_1d_read(void)
   /// First pass through to get normalisation coefficients
   for (int n = 0; n < ngrid; n++)
   {
-    int mgi = cell[n].modelgridindex;
+    const int mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffegrp(mgi);
 
@@ -827,13 +854,6 @@ static void density_2d_read(void)
       const double helper = rho_model[mgi] * pow( (t_model / tmin), 3.);
       set_rhoinit(mgi, helper);
       set_rho(mgi, helper);
-      set_ffegrp(mgi, ffegrp_model[mgi]);
-      set_f56ni(mgi, f56ni_model[mgi]);
-      set_f56co(mgi, f56co_model[mgi]);
-      set_f57ni(mgi, f57ni_model[mgi]);
-      set_f57co(mgi, f57co_model[mgi]);
-      set_f52fe(mgi, f52fe_model[mgi]);
-      set_f48cr(mgi, f48cr_model[mgi]);
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
       for (int element = 0; element < nelements; element++)
@@ -841,30 +861,16 @@ static void density_2d_read(void)
         ///now set the abundances (by mass) of included elements, i.e.
         ///read out the abundances specified in the atomic data file
         const int anumber = get_element(element);
-        const float abundance = abund_model[mgi][anumber-1];
+        const float elemabundance = abund_model[mgi][anumber-1];
         //cell[n].composition[element].abundance = abundance;
-        modelgrid[mgi].composition[element].abundance = abundance;
+        modelgrid[mgi].composition[element].abundance = elemabundance;
         //if (anumber == 8)
         //  cell[n].composition[element].abundance = 1-cell[n].f_ni;
         //if (anumber == 20)
         //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
 
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
-
-        if (anumber == 28)
-          set_fnistable(mgi, abundance - get_f56ni(mgi) - get_f57ni(mgi));
-        else if (anumber == 27)
-          set_fcostable(mgi, abundance - get_f56co(mgi) - get_f57co(mgi));
-        else if (anumber == 26)
-          set_ffestable(mgi, abundance - get_f52fe(mgi));
-        else if (anumber == 25)
-          set_fmnstable(mgi, abundance);
-        else if (anumber == 24)
-          set_fcrstable(mgi, abundance - get_f48cr(mgi));
-        else if (anumber == 23)
-          set_fvstable(mgi, abundance);
-        else if (anumber == 22)
-          set_ftistable(mgi, abundance);
+        set_stable_abund(mgi, anumber, elemabundance);
       }
 
       if (get_rhoinit(mgi) < 0)
@@ -873,21 +879,28 @@ static void density_2d_read(void)
         abort();
       }
     }
+    else
+    {
+      for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+      {
+        set_modelfnuclide(mgi, iso, 0.);
+      }
+    }
   }
 
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
-  set_rhoinit(MMODELGRID,0.);
-  set_rho(MMODELGRID,0.);
-  set_nne(MMODELGRID,0.);
-  set_ffegrp(MMODELGRID,0.);
-  set_f56co(MMODELGRID,0.);
-  set_f56ni(MMODELGRID,0.);
-  set_f48cr(MMODELGRID,0.);
-  set_f52fe(MMODELGRID,0.);
-  set_Te(MMODELGRID,MINTEMP);
-  set_TJ(MMODELGRID,MINTEMP);
-  set_TR(MMODELGRID,MINTEMP);
+  set_rhoinit(MMODELGRID, 0.);
+  set_rho(MMODELGRID, 0.);
+  set_nne(MMODELGRID, 0.);
+  set_ffegrp(MMODELGRID, 0.);
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  {
+    set_modelfnuclide(MMODELGRID, iso, 0.);
+  }
+  set_Te(MMODELGRID, MINTEMP);
+  set_TJ(MMODELGRID, MINTEMP);
+  set_TR(MMODELGRID, MINTEMP);
   allocate_compositiondata(MMODELGRID);
 
   /// First pass through to get normalisation coefficients
@@ -1416,27 +1429,11 @@ static void abundances_3d_read(void)
       ///now set the abundances (by mass) of included elements, i.e.
       ///read out the abundances specified in the atomic data file
       const int anumber = get_element(element);
-      const float abundance = abundances_in[anumber - 1];
-      assert(abundance >= 0);
-      modelgrid[mgi].composition[element].abundance = abundance;
+      const float elemabundance = abundances_in[anumber - 1];
+      assert(elemabundance >= 0);
+      modelgrid[mgi].composition[element].abundance = elemabundance;
 
-      if (anumber == 28)
-      {
-        set_fnistable(mgi, abundance - get_f56ni(mgi) - get_f57ni(mgi));
-        //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
-      }
-      else if (anumber == 27)
-        set_fcostable(mgi, abundance - get_f56co(mgi) - get_f57co(mgi));
-      else if (anumber == 26)
-        set_ffestable(mgi, abundance - get_f52fe(mgi));
-      else if (anumber == 25)
-        set_fmnstable(mgi, abundance);
-      else if (anumber == 24)
-        set_fcrstable(mgi, abundance - get_f48cr(mgi));
-      else if (anumber == 23)
-        set_fvstable(mgi, abundance);
-      else if (anumber == 22)
-        set_ftistable(mgi, abundance);
+      set_stable_abund(mgi, anumber, elemabundance);
     }
   }
 
@@ -1596,9 +1593,9 @@ static void assign_temperature(void)
          + E48V * tstart * T48CR * exp(- tstart / T48CR) + pow(T48CR, 2) * E48V * exp(- tstart / T48CR)
          + E48CR * T48V * T48CR - E48CR * pow(T48CR, 2) - pow(T48CR, 2) * E48V + E48V * pow(T48V, 2));
 
-    printout("factor56ni %g\n", factor56ni);
-    printout("factor56co %g\n", factor56co);
-    printout("factor57ni %g\n", factor57ni);
+    // printout("factor56ni %g\n", factor56ni);
+    // printout("factor56co %g\n", factor56co);
+    // printout("factor57ni %g\n", factor57ni);
     //factor56ni = CLIGHT/4/STEBO * E56NI/56/MH;
     /// This works only for the inbuilt Lucy model
     //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * E56NI/56/MH  / pow(vmax,3);
@@ -1607,10 +1604,12 @@ static void assign_temperature(void)
     {
       //mgi = cell[n].modelgridindex;
       double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(n) * (
-          (factor56ni * get_f56ni(n))
-           + (factor57ni * get_f57ni(n))
-           + (factor52fe * get_f52fe(n))
-           + (factor48cr * get_f48cr(n))), 1. / 4.);
+           (factor56ni * get_modelfnuclide(n, NUCLIDE_NI56)) +
+           (factor56co * get_modelfnuclide(n, NUCLIDE_CO56)) +
+           (factor57ni * get_modelfnuclide(n, NUCLIDE_NI57)) +
+           // (factor57co * get_modelfnuclide(n, NUCLIDE_CO57)) +
+           (factor52fe * get_modelfnuclide(n, NUCLIDE_FE52)) +
+           (factor48cr * get_modelfnuclide(n, NUCLIDE_CR48))), 1. / 4.);
 
       //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/T56NI)), 1./4.);
       //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/T56NI))/pow(tmin,3), 1./4.);
