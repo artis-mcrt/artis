@@ -1822,8 +1822,8 @@ static void read_3d_model(void)
         f57co_model = 0.;
       }
 
-      if (f56ni_model > 0.)
-        printout("mgi %d ni56 %g co56 %g fe52 %g cr48 %g\n", mgi, f56ni_model, f56co_model, f52fe_model, f48cr_model);
+      // printout("mgi %d ni56 %g co56 %g fe52 %g cr48 %g ni57 %g co57 %g\n",
+      //          mgi, f56ni_model, f56co_model, f52fe_model, f48cr_model, f57ni_model, f57co_model);
 
       if (rho_model > 0)
       {
