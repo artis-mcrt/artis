@@ -1558,11 +1558,10 @@ static void read_1d_model(void)
      in the cell (float). For now, the last number is recorded but never
      used. */
 
-  char line[1024] = "";
-
   int mgi = 0;
   while (!feof(model_input))
   {
+    char line[1024] = "";
     if (line != fgets(line, 1024, model_input))
     {
       // no more lines to read in
@@ -1589,7 +1588,6 @@ static void read_1d_model(void)
     }
     else if (items_read == 8 || items_read == 10)
     {
-
       assert(mgi_in == mgi + 1);
 
       vout_model[mgi] = vout_kmps * 1.e5;
@@ -1712,7 +1710,7 @@ static void read_2d_model(void)
 static void read_3d_model(void)
 /// Subroutine to read in a 3-D model.
 {
-  float dum2, dum3, dum4, dum5, dum6;
+  float dum2, dum3, dum4, dum5;
   float rho_model;
   double helper;
 
@@ -1737,19 +1735,27 @@ static void read_3d_model(void)
   t_model = dum2 * DAY;
 
   /// Now read in vmax for the model (in cm s^-1).
-  fscanf(model_input, "%g", &dum2);
+  fscanf(model_input, "%g\n", &dum2);
   vmax = dum2;
 
   /// Now read in the lines of the model.
-  min_den=1.e99;
+  min_den = 1.e99;
 
   /*mgi is the index to the model grid - empty cells are sent to MMODELGRID, otherwise each input cell is one modelgrid cell */
 
   int mgi = 0;
-  for (int n = 0; n < npts_model; n++)
+  int n = 0;
+  while (!feof(model_input))
   {
+    char line[1024] = "";
+    if (line != fgets(line, 1024, model_input))
+    {
+      // no more lines to read in
+      break;
+    }
+
     int mgi_in;
-    fscanf(model_input, "%d %g %g %g %g", &mgi_in, &dum3, &dum4, &dum5, &rho_model);
+    sscanf(line, "%d %g %g %g %g", &mgi_in, &dum3, &dum4, &dum5, &rho_model);
     //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/tmin), 3.));
     if (rho_model < 0)
     {
@@ -1783,27 +1789,72 @@ static void read_3d_model(void)
       cell[n].modelgridindex = MMODELGRID;
     }
 
-    fscanf(model_input, "%g %g %g %g %g", &dum2, &dum3, &dum4, &dum5, &dum6);
-    //printout("ffe %g, f56ni %g, f56co %g, ffe52 %g, fcr48 %g\n",dum2,dum3,dum4,dum5,dum6);
-    if (rho_model > 0)
+    if (line != fgets(line, 1024, model_input))
     {
-      set_ffegrp(mgi, dum2);
-      set_modelradioabund(mgi, NUCLIDE_NI56, dum3);
-      set_modelradioabund(mgi, NUCLIDE_CO56, dum4);
-
-      // TODO:
-      set_modelradioabund(mgi, NUCLIDE_NI57, 0.);
-      set_modelradioabund(mgi, NUCLIDE_CO57, 0.);
-
-      set_modelradioabund(mgi, NUCLIDE_FE52, dum5);
-      set_modelradioabund(mgi, NUCLIDE_CR48, dum6);
-      set_modelradioabund(mgi, NUCLIDE_V48, 0);
-
-      allocate_compositiondata(mgi);
-      allocate_cooling(mgi);
-      //printout("mgi %d, control rho_init %g\n",mgi,get_rhoinit(mgi));
-      mgi++;
+      printout("Read failed on second line for cell %d\n", mgi);
+      abort();
     }
+
+    double f56ni_model;
+    double f56co_model;
+    double ffegrp_model;
+    double f48cr_model;
+    double f52fe_model;
+    double f57ni_model;
+    double f57co_model;
+    const int items_read = sscanf(line, "%lg %lg %lg %lg %lg %lg %lg",
+      &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
+
+    if (items_read == 0)
+    {
+      // probably found a blank line, so skip it and keep reading
+      continue;
+    }
+    else if (items_read == 5 || items_read == 7)
+    {
+      if (items_read == 10 && mgi == 0)
+      {
+        printout("Found Ni57 and Co57 abundance columns in model.txt\n");
+      }
+      else if (items_read == 5)
+      {
+        f57ni_model = 0.;
+        f57co_model = 0.;
+      }
+
+      if (f56ni_model > 0.)
+        printout("mgi %d ni56 %g co56 %g fe52 %g cr48 %g\n", mgi, f56ni_model, f56co_model, f52fe_model, f48cr_model);
+
+      if (rho_model > 0)
+      {
+        set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
+        set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
+        set_modelradioabund(mgi, NUCLIDE_NI57, f57ni_model);
+        set_modelradioabund(mgi, NUCLIDE_CO57, f57co_model);
+        set_modelradioabund(mgi, NUCLIDE_FE52, f52fe_model);
+        set_modelradioabund(mgi, NUCLIDE_CR48, f48cr_model);
+        set_modelradioabund(mgi, NUCLIDE_V48, 0.);
+
+        set_ffegrp(mgi, ffegrp_model);
+
+        allocate_compositiondata(mgi);
+        allocate_cooling(mgi);
+        //printout("mgi %d, control rho_init %g\n",mgi,get_rhoinit(mgi));
+        mgi++;
+      }
+    }
+    else
+    {
+      printout("Unexpected number of values in model.txt. items_read = %d\n", items_read);
+      printout("line: %s\n", line);
+      abort();
+    }
+    n++;
+  }
+  if (n != npts_model)
+  {
+    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", n - 1, npts_model);
+    abort();
   }
 
   printout("min_den %g\n", min_den);
