@@ -41,7 +41,7 @@ extern inline void set_TJ(int modelgridindex, float x);
 extern inline void set_W(int modelgridindex, float x);
 
 
-float get_modelfnuclide(const int modelgridindex, const enum radionuclides nuclide_type)
+float get_modelradioabund(const int modelgridindex, const enum radionuclides nuclide_type)
 {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
   if (model_type == RHO_UNIFORM)
@@ -61,7 +61,7 @@ float get_modelfnuclide(const int modelgridindex, const enum radionuclides nucli
 }
 
 
-void set_modelfnuclide(const int modelgridindex, const enum radionuclides nuclide_type, const float abund)
+void set_modelradioabund(const int modelgridindex, const enum radionuclides nuclide_type, const float abund)
 {
   // this function replaces set_f56ni(mgi), set_fco56(mgi), etc.
 
@@ -244,16 +244,16 @@ static void set_stable_abund(const int mgi, const int anumber, const float elema
   {
     case 28:
       modelgrid[mgi].fnistable = fmax(0.,
-        elemabundance - get_modelfnuclide(mgi, NUCLIDE_NI56) - get_modelfnuclide(mgi, NUCLIDE_NI57));
+        elemabundance - get_modelradioabund(mgi, NUCLIDE_NI56) - get_modelradioabund(mgi, NUCLIDE_NI57));
       break;
 
     case 27:
       modelgrid[mgi].fcostable = fmax(0.,
-        elemabundance - get_modelfnuclide(mgi, NUCLIDE_CO56) - get_modelfnuclide(mgi, NUCLIDE_CO57));
+        elemabundance - get_modelradioabund(mgi, NUCLIDE_CO56) - get_modelradioabund(mgi, NUCLIDE_CO57));
       break;
 
     case 26:
-      modelgrid[mgi].ffestable = fmax(0., elemabundance - get_modelfnuclide(mgi, NUCLIDE_FE52));
+      modelgrid[mgi].ffestable = fmax(0., elemabundance - get_modelradioabund(mgi, NUCLIDE_FE52));
       break;
 
     case 25:
@@ -261,7 +261,7 @@ static void set_stable_abund(const int mgi, const int anumber, const float elema
       break;
 
     case 24:
-      modelgrid[mgi].fcrstable = fmax(0., elemabundance - get_modelfnuclide(mgi, NUCLIDE_CR48));
+      modelgrid[mgi].fcrstable = fmax(0., elemabundance - get_modelradioabund(mgi, NUCLIDE_CR48));
       break;
 
     case 23:
@@ -488,7 +488,7 @@ static void density_1d_read(void)
     {
       for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
       {
-        set_modelfnuclide(mgi, iso, 0.);
+        set_modelradioabund(mgi, iso, 0.);
       }
     }
   }
@@ -501,7 +501,7 @@ static void density_1d_read(void)
   set_ffegrp(MMODELGRID, 0.);
   for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
-    set_modelfnuclide(MMODELGRID, iso, 0.);
+    set_modelradioabund(MMODELGRID, iso, 0.);
   }
   set_Te(MMODELGRID, MINTEMP);
   set_TJ(MMODELGRID, MINTEMP);
@@ -883,7 +883,7 @@ static void density_2d_read(void)
     {
       for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
       {
-        set_modelfnuclide(mgi, iso, 0.);
+        set_modelradioabund(mgi, iso, 0.);
       }
     }
   }
@@ -896,7 +896,7 @@ static void density_2d_read(void)
   set_ffegrp(MMODELGRID, 0.);
   for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
-    set_modelfnuclide(MMODELGRID, iso, 0.);
+    set_modelradioabund(MMODELGRID, iso, 0.);
   }
   set_Te(MMODELGRID, MINTEMP);
   set_TJ(MMODELGRID, MINTEMP);
@@ -1604,12 +1604,12 @@ static void assign_temperature(void)
     {
       //mgi = cell[n].modelgridindex;
       double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(n) * (
-           (factor56ni * get_modelfnuclide(n, NUCLIDE_NI56)) +
-           (factor56co * get_modelfnuclide(n, NUCLIDE_CO56)) +
-           (factor57ni * get_modelfnuclide(n, NUCLIDE_NI57)) +
-           // (factor57co * get_modelfnuclide(n, NUCLIDE_CO57)) +
-           (factor52fe * get_modelfnuclide(n, NUCLIDE_FE52)) +
-           (factor48cr * get_modelfnuclide(n, NUCLIDE_CR48))), 1. / 4.);
+           (factor56ni * get_modelradioabund(n, NUCLIDE_NI56)) +
+           (factor56co * get_modelradioabund(n, NUCLIDE_CO56)) +
+           (factor57ni * get_modelradioabund(n, NUCLIDE_NI57)) +
+           // (factor57co * get_modelradioabund(n, NUCLIDE_CO57)) +
+           (factor52fe * get_modelradioabund(n, NUCLIDE_FE52)) +
+           (factor48cr * get_modelradioabund(n, NUCLIDE_CR48))), 1. / 4.);
 
       //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/T56NI)), 1./4.);
       //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/T56NI))/pow(tmin,3), 1./4.);

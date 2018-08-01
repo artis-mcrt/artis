@@ -29,7 +29,7 @@ void get_gam_ll(void)
   printout("total gamma-ray lines %d\n", total_lines);
 
   gam_line_list.total = total_lines;
-  gam_line_list.type = (enum radionuclides *) malloc(total_lines * sizeof(enum radionuclides));
+  gam_line_list.nuclidetype = (enum radionuclides *) malloc(total_lines * sizeof(enum radionuclides));
   gam_line_list.index = (int *) malloc(total_lines * sizeof(int));
 
   double energy_last = 0.0;
@@ -55,7 +55,7 @@ void get_gam_ll(void)
       }
     }
 
-    gam_line_list.type[i] = next_type;
+    gam_line_list.nuclidetype[i] = next_type;
     gam_line_list.index[i] = next;
     energy_last = energy_try;
   }
@@ -64,10 +64,10 @@ void get_gam_ll(void)
 
   for (int i = 0; i < total_lines; i++)
   {
-    const enum radionuclides iso = gam_line_list.type[i];
+    const enum radionuclides iso = gam_line_list.nuclidetype[i];
     const int index = gam_line_list.index[i];
     fprintf(line_list, "%d %d %d %g %g \n",
-            i, gam_line_list.type[i], gam_line_list.index[i],
+            i, gam_line_list.nuclidetype[i], gam_line_list.index[i],
             gamma_spectra[iso].energy[index] / MEV, gamma_spectra[iso].probability[index]);
   }
   fclose(line_list);

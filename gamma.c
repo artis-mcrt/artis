@@ -400,14 +400,14 @@ double get_gam_freq(const LIST *restrict line_list, int n)
   }
 
   // returns the frequency of line n
-  enum radionuclides iso = line_list->type[n];
+  enum radionuclides iso = line_list->nuclidetype[n];
   const int lineid = line_list->index[n];
 
   if (iso >= RADIONUCLIDE_COUNT || lineid >= gamma_spectra[iso].nlines)
   {
     printout("Unknown line. %d Abort.\n", n);
-    printout("line_list->type[n] %d line_list->index[n] %d\n", line_list->type[n], line_list->index[n]);
-    // printout(" %d %d \n", gam_line_list.type[n], gam_line_list.index[n]);
+    printout("line_list->nuclidetype[n] %d line_list->index[n] %d\n", line_list->nuclidetype[n], line_list->index[n]);
+    // printout(" %d %d \n", gam_line_list.nuclidetype[n], gam_line_list.index[n]);
     abort();
   }
 
