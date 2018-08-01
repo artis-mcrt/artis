@@ -114,11 +114,17 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 #define HCLIGHTOVERFOURPI     1.580764662876770e-17
 #define OSCSTRENGTHCONVERSION 1.3473837e+21
 
-#define H_ionpot (13.5979996*EV)
+#define H_ionpot (13.5979996 * EV)
 
-#define MNI56 (56*MH)                            /// Mass of Ni56
-#define MFE52 (52*MH)                            /// Mass of Fe52
-#define MCR48 (48*MH)                            /// Mass of Cr48
+
+// warning! when these are lower case, the variables represent total masses in the ejecta
+// in upper case, these constants are the masses of each nucleus
+#define MNI57 (57 * MH)                            /// Mass of Ni57
+#define MCO57 (57 * MH)                            /// Mass of Co57
+#define MNI56 (56 * MH)                            /// Mass of Ni56
+#define MCO56 (56 * MH)                            /// Mass of Co56
+#define MFE52 (52 * MH)                            /// Mass of Fe52
+#define MCR48 (48 * MH)                            /// Mass of Cr48
 
 //#define MPTS_MODEL 10000
 
@@ -132,9 +138,12 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
 
-double ENICKEL;
-double ECOBALT;
-double ECOBALT_GAMMA;
+double E56NI;
+double E56CO;
+double E56CO_GAMMA;
+double E57NI;
+double E57NI_GAMMA;
+double E57CO;
 double E48CR;
 double E48V;
 #define E52FE (0.86*MEV)
@@ -143,6 +152,8 @@ double E48V;
 /* mean lifetimes */
 #define T56NI   (8.80*DAY)
 #define T56CO   (113.7*DAY)
+#define T57NI   (51.36*60)
+#define T57CO   (392.03*DAY)
 #define T48CR   (1.29602*DAY)
 #define T48V    (23.0442*DAY)
 #define T52FE   (0.497429*DAY)
@@ -157,12 +168,6 @@ double E48V;
 #define RPKT_EVENTTYPE_CONT 551
 
 #define PACKET_SAME -929 //MUST be negative
-
-#define NI_GAM_LINE_ID   1
-#define CO_GAM_LINE_ID   2
-#define FAKE_GAM_LINE_ID 3
-#define CR48_GAM_LINE_ID 4
-#define V48_GAM_LINE_ID  5
 
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40
@@ -192,6 +197,9 @@ double xmax, ymax, zmax;
 double mtot, vmax, rmax;  /// Total mass and outer velocity/radius
 double fe_sum, rho_sum;   /// MK: could now be declared locally
 double mni56;             /// Total mass of Ni56 in the ejecta
+double mco56;             /// Total mass of Co56 in the ejecta
+double mni57;             /// Total mass of Ni57 in the ejecta
+double mco57;             /// Total mass of Co57 in the ejecta
 double mfe52;             /// Total mass of Fe52 in the ejecta
 double mcr48;             /// Total mass of Cr48 in the ejecta
 double mfeg;              /// Total mass of Fe group elements in ejecta
@@ -271,11 +279,12 @@ struct time
 
 struct gamma_spec
 {
-  double energy[MGAM_LINES];
-  double probability[MGAM_LINES];
+  double *energy;
+  double *probability;
   int nlines;
-  char filename[50];
-} cobalt_spec, nickel_spec, fakeg_spec, cr48_spec, v48_spec;
+};
+
+struct gamma_spec gamma_spectra[RADIONUCLIDE_COUNT];
 
 LIST gam_line_list;
 
@@ -354,6 +363,8 @@ double vout_model[MMODELGRID];
 double rho_model[MMODELGRID];
 double f56ni_model[MMODELGRID];
 double f56co_model[MMODELGRID];
+double f57ni_model[MMODELGRID];
+double f57co_model[MMODELGRID];
 double ffegrp_model[MMODELGRID];
 double f48cr_model[MMODELGRID];
 double f52fe_model[MMODELGRID];

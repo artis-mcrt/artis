@@ -18,9 +18,11 @@ extern inline float get_nne(int modelgridindex);
 extern inline float get_nnetot(int modelgridindex);
 extern inline float get_f56ni(int modelgridindex);
 extern inline float get_f56co(int modelgridindex);
+extern inline float get_f57ni(int modelgridindex);
+extern inline float get_f57co(int modelgridindex);
 extern inline float get_f52fe(int modelgridindex);
 extern inline float get_f48cr(int modelgridindex);
-extern inline float get_ffe(int modelgridindex);
+extern inline float get_ffegrp(int modelgridindex);
 extern inline float get_fnistable(int modelgridindex);
 extern inline float get_fcostable(int modelgridindex);
 extern inline float get_ffestable(int modelgridindex);
@@ -39,9 +41,11 @@ extern inline void set_nne(int modelgridindex, float x);
 extern inline void set_nnetot(int modelgridindex, float x);
 extern inline void set_f56ni(int modelgridindex, float x);
 extern inline void set_f56co(int modelgridindex, float x);
+extern inline void set_f57ni(int modelgridindex, float x);
+extern inline void set_f57co(int modelgridindex, float x);
 extern inline void set_f48cr(int modelgridindex, float x);
 extern inline void set_f52fe(int modelgridindex, float x);
-extern inline void set_ffe(int modelgridindex, float x);
+extern inline void set_ffegrp(int modelgridindex, float x);
 extern inline void set_fnistable(int modelgridindex, float x);
 extern inline void set_fcostable(int modelgridindex, float x);
 extern inline void set_ffestable(int modelgridindex, float x);
@@ -54,6 +58,38 @@ extern inline void set_Te(int modelgridindex, float x);
 extern inline void set_TR(int modelgridindex, float x);
 extern inline void set_TJ(int modelgridindex, float x);
 extern inline void set_W(int modelgridindex, float x);
+
+
+float get_initmassfracnuclide(const int modelgridindex, const enum radionuclides nuclide_type)
+{
+  switch (nuclide_type)
+  {
+    case (NUCLIDE_NI56):
+      return modelgrid[modelgridindex].f56ni;
+
+    case (NUCLIDE_CO56):
+      return modelgrid[modelgridindex].f56co;
+
+    case (NUCLIDE_NI57):
+      return modelgrid[modelgridindex].f57ni;
+
+    case (FAKE_GAM_LINE_ID):
+      abort();
+
+    case (NUCLIDE_CR48):
+      return modelgrid[modelgridindex].f48cr;
+
+    case (NUCLIDE_V48):
+      return 0.;
+
+    case (NUCLIDE_CO57):
+      return modelgrid[modelgridindex].f57co;
+
+    default:
+      printout("get_initmassfracnuclide called with unknown nuclide_type %d\n", nuclide_type);
+      abort();
+  }
+}
 
 /// Routine for doing a uniform density grid.
 /*int uniform_density_setup ()
@@ -224,7 +260,7 @@ static void density_1d_read(void)
       helper = rho_model[0] * pow( (t_model/tmin), 3);
       set_rhoinit(0,helper);
       set_rho(0,helper);
-      set_ffe(0,ffegrp_model[0]);
+      set_ffegrp(0,ffegrp_model[0]);
       set_f56ni(0,f56ni_model[0]);
       set_f56co(0,f56co_model[0]);
       //allocate_compositiondata(0);
@@ -261,7 +297,7 @@ static void density_1d_read(void)
           helper = rho_model[m+1] * pow( (t_model/tmin), 3);
           set_rhoinit(m+1,helper);
           set_rho(m+1,helper);
-          set_ffe(m+1,ffegrp_model[m+1]);
+          set_ffegrp(m+1,ffegrp_model[m+1]);
           set_f56ni(m+1,f56ni_model[m+1]);
           set_f56co(m+1,f56co_model[m+1]);
           //allocate_compositiondata(m+1);
@@ -297,7 +333,7 @@ static void density_1d_read(void)
       set_rhoinit(MMODELGRID,0.);
       set_rho(MMODELGRID,0.);
       set_nne(MMODELGRID,0.);
-      set_ffe(MMODELGRID,0.);
+      set_ffegrp(MMODELGRID,0.);
       set_f56co(MMODELGRID,0.);
       set_f56ni(MMODELGRID,0.);
       set_Te(MMODELGRID,MINTEMP);
@@ -314,7 +350,7 @@ static void density_1d_read(void)
       abort();
     }
     rho_sum += get_rhoinit(mgi);
-    fe_sum += get_ffe(mgi);
+    fe_sum += get_ffegrp(mgi);
   }
   */
 
@@ -377,9 +413,11 @@ static void density_1d_read(void)
       const double helper = rho_model[mgi] * pow(t_model / tmin, 3);
       set_rhoinit(mgi, helper);
       set_rho(mgi, helper);
-      set_ffe(mgi, ffegrp_model[mgi]);
+      set_ffegrp(mgi, ffegrp_model[mgi]);
       set_f56ni(mgi, f56ni_model[mgi]);
       set_f56co(mgi, f56co_model[mgi]);
+      set_f57ni(mgi, f57ni_model[mgi]);
+      set_f57co(mgi, f57co_model[mgi]);
       set_f52fe(mgi, f52fe_model[mgi]);
       set_f48cr(mgi, f48cr_model[mgi]);
       allocate_compositiondata(mgi);
@@ -401,11 +439,11 @@ static void density_1d_read(void)
 
         if (anumber == 28)
         {
-          set_fnistable(mgi, abundance - get_f56ni(mgi));
+          set_fnistable(mgi, abundance - get_f56ni(mgi) - get_f57ni(mgi));
           //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
         }
         else if (anumber == 27)
-          set_fcostable(mgi, abundance - get_f56co(mgi));
+          set_fcostable(mgi, abundance - get_f56co(mgi) - get_f57co(mgi));
         else if (anumber == 26)
           set_ffestable(mgi, abundance - get_f52fe(mgi));
         else if (anumber == 25)
@@ -431,9 +469,11 @@ static void density_1d_read(void)
   set_rhoinit(MMODELGRID, 0.);
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
-  set_ffe(MMODELGRID, 0.);
+  set_ffegrp(MMODELGRID, 0.);
   set_f56co(MMODELGRID, 0.);
   set_f56ni(MMODELGRID, 0.);
+  set_f57co(MMODELGRID, 0.);
+  set_f57ni(MMODELGRID, 0.);
   set_f48cr(MMODELGRID, 0.);
   set_f52fe(MMODELGRID, 0.);
   set_Te(MMODELGRID, MINTEMP);
@@ -446,13 +486,13 @@ static void density_1d_read(void)
   {
     int mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
-    fe_sum += get_ffe(mgi);
+    fe_sum += get_ffegrp(mgi);
 
     if (opacity_case == 3)
     {
       if (get_rhoinit(mgi) > 0.)
       {
-        double kappagrey = (0.9 * get_ffe(mgi) + 0.1);
+        double kappagrey = (0.9 * get_ffegrp(mgi) + 0.1);
 
         if (get_rhoinit(mgi) > rho_crit)
           kappagrey *= rho_crit / get_rhoinit(mgi);
@@ -495,12 +535,12 @@ static void density_1d_read(void)
       }
       else if (opacity_case == 1)
       {
-        set_kappagrey(mgi, ((0.9 * get_ffe(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
       }
       else if (opacity_case == 2)
       {
         const double opcase2_normal = GREY_OP * rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-        set_kappagrey(mgi, opcase2_normal / get_rhoinit(mgi) * ((0.9 * get_ffe(mgi)) + 0.1));
+        set_kappagrey(mgi, opcase2_normal / get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1));
       }
       else if (opacity_case == 3)
       {
@@ -510,7 +550,7 @@ static void density_1d_read(void)
       else if (opacity_case == 4)
       {
         ///kappagrey used for initial grey approximation in this case
-        set_kappagrey(mgi, ((0.9 * get_ffe(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
         //set_kappagrey(mgi, SIGMA_T);
       }
       else
@@ -787,9 +827,11 @@ static void density_2d_read(void)
       const double helper = rho_model[mgi] * pow( (t_model / tmin), 3.);
       set_rhoinit(mgi, helper);
       set_rho(mgi, helper);
-      set_ffe(mgi, ffegrp_model[mgi]);
+      set_ffegrp(mgi, ffegrp_model[mgi]);
       set_f56ni(mgi, f56ni_model[mgi]);
       set_f56co(mgi, f56co_model[mgi]);
+      set_f57ni(mgi, f57ni_model[mgi]);
+      set_f57co(mgi, f57co_model[mgi]);
       set_f52fe(mgi, f52fe_model[mgi]);
       set_f48cr(mgi, f48cr_model[mgi]);
       allocate_compositiondata(mgi);
@@ -810,9 +852,9 @@ static void density_2d_read(void)
         //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
 
         if (anumber == 28)
-          set_fnistable(mgi, abundance - get_f56ni(mgi));
+          set_fnistable(mgi, abundance - get_f56ni(mgi) - get_f57ni(mgi));
         else if (anumber == 27)
-          set_fcostable(mgi, abundance - get_f56co(mgi));
+          set_fcostable(mgi, abundance - get_f56co(mgi) - get_f57co(mgi));
         else if (anumber == 26)
           set_ffestable(mgi, abundance - get_f52fe(mgi));
         else if (anumber == 25)
@@ -838,7 +880,7 @@ static void density_2d_read(void)
   set_rhoinit(MMODELGRID,0.);
   set_rho(MMODELGRID,0.);
   set_nne(MMODELGRID,0.);
-  set_ffe(MMODELGRID,0.);
+  set_ffegrp(MMODELGRID,0.);
   set_f56co(MMODELGRID,0.);
   set_f56ni(MMODELGRID,0.);
   set_f48cr(MMODELGRID,0.);
@@ -853,7 +895,7 @@ static void density_2d_read(void)
   {
     int mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
-    fe_sum += get_ffe(mgi);
+    fe_sum += get_ffegrp(mgi);
 
     if (opacity_case == 3)
     {
@@ -861,11 +903,11 @@ static void density_2d_read(void)
       {
         if (get_rhoinit(mgi) > rho_crit)
         {
-          set_kappagrey(mgi, (0.9 * get_ffe(mgi) + 0.1) * rho_crit / get_rhoinit(mgi));
+          set_kappagrey(mgi, (0.9 * get_ffegrp(mgi) + 0.1) * rho_crit / get_rhoinit(mgi));
         }
         else
         {
-          set_kappagrey(mgi, (0.9 * get_ffe(mgi) + 0.1));;
+          set_kappagrey(mgi, (0.9 * get_ffegrp(mgi) + 0.1));;
         }
       }
       else if (get_rhoinit(mgi) == 0.)
@@ -902,12 +944,12 @@ static void density_2d_read(void)
       }
       else if (opacity_case == 1)
       {
-        set_kappagrey(mgi, ((0.9 * get_ffe(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
       }
       else if (opacity_case == 2)
       {
         const double opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-        set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffe(mgi)) + 0.1));
+        set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1));
       }
       else if (opacity_case == 3)
       {
@@ -917,7 +959,7 @@ static void density_2d_read(void)
       else if (opacity_case == 4)
       {
         ///kappagrey used for initial grey approximation in this case
-        set_kappagrey(mgi, ((0.9 * get_ffe(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
         //set_kappagrey(mgi, SIGMA_T);
       }
       else
@@ -1000,13 +1042,13 @@ static void density_3d_read(void)
   {
     int mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
-    fe_sum += get_ffe(mgi);
+    fe_sum += get_ffegrp(mgi);
 
     if (opacity_case == 3)
     {
       if (get_rhoinit(mgi) > 0.)
       {
-        double kappagrey = (0.9 * get_ffe(mgi) + 0.1);
+        double kappagrey = (0.9 * get_ffegrp(mgi) + 0.1);
 
         if (get_rhoinit(mgi) > rho_crit)
           kappagrey *= rho_crit / get_rhoinit(mgi);
@@ -1049,12 +1091,12 @@ static void density_3d_read(void)
       }
       else if (opacity_case == 1)
       {
-        set_kappagrey(mgi, ((0.9 * get_ffe(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
       }
       else if (opacity_case == 2)
       {
         const double opcase2_normal = GREY_OP * rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-        set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffe(mgi)) + 0.1));
+        set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1));
       }
       else if (opacity_case == 3)
       {
@@ -1064,7 +1106,7 @@ static void density_3d_read(void)
       else if (opacity_case == 4)
       {
         ///kappagrey used for initial grey approximation in this case
-        set_kappagrey(mgi, ((0.9 * get_ffe(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
         //set_kappagrey(mgi, SIGMA_T);
       }
       else
@@ -1083,7 +1125,7 @@ static void density_3d_read(void)
       abort();
     }
 
-    check1 = check1 + (get_kappagrey(mgi)  * get_rhoinit(mgi));
+    check1 = check1 + (get_kappagrey(mgi) * get_rhoinit(mgi));
     check2 = check2 + get_rhoinit(mgi);
   }
   if (rank_global == 0)
@@ -1380,11 +1422,11 @@ static void abundances_3d_read(void)
 
       if (anumber == 28)
       {
-        set_fnistable(mgi, abundance - get_f56ni(mgi));
+        set_fnistable(mgi, abundance - get_f56ni(mgi) - get_f57ni(mgi));
         //printout("mgi %d, ni_abund %g, fni %g, fnistable %g\n",mgi,abundance,get_f56ni(mgi),abundance - get_f56ni(mgi));
       }
       else if (anumber == 27)
-        set_fcostable(mgi, abundance - get_f56co(mgi));
+        set_fcostable(mgi, abundance - get_f56co(mgi) - get_f57co(mgi));
       else if (anumber == 26)
         set_ffestable(mgi, abundance - get_f52fe(mgi));
       else if (anumber == 25)
@@ -1523,40 +1565,53 @@ static void assign_temperature(void)
 
     const double tstart = time_step[0].mid;
 
-    const double factor56ni = CLIGHT / 4 / STEBO * 1. / 56 / MH * pow(tmin / tstart, 3)
-      * (-1. / (tstart * (- T56CO + T56NI)))
-      * (- ENICKEL * exp(- tstart / T56NI) * tstart * T56CO - ENICKEL * exp(- tstart / T56NI) * T56NI * T56CO
-         + ENICKEL * exp(- tstart / T56NI) * tstart * T56NI + pow(T56NI, 2) * ENICKEL * exp(- tstart / T56NI)
-         - T56CO * tstart * ECOBALT * exp(- tstart / T56CO) - pow(T56CO, 2) * ECOBALT * exp(- tstart / T56CO)
-         + ECOBALT * tstart * T56NI * exp(- tstart / T56NI) + pow(T56NI, 2) * ECOBALT * exp(- tstart / T56NI)
-         + ENICKEL * T56CO * T56NI - ENICKEL * pow(T56NI, 2) - pow(T56NI, 2) * ECOBALT + ECOBALT * pow(T56CO, 2));
+    const double factor56ni = 1. / 56 / MH * (-1. / (tstart * (- T56CO + T56NI)))
+      * (- E56NI * exp(- tstart / T56NI) * tstart * T56CO - E56NI * exp(- tstart / T56NI) * T56NI * T56CO
+         + E56NI * exp(- tstart / T56NI) * tstart * T56NI + pow(T56NI, 2) * E56NI * exp(- tstart / T56NI)
+         - T56CO * tstart * E56CO * exp(- tstart / T56CO) - pow(T56CO, 2) * E56CO * exp(- tstart / T56CO)
+         + E56CO * tstart * T56NI * exp(- tstart / T56NI) + pow(T56NI, 2) * E56CO * exp(- tstart / T56NI)
+         + E56NI * T56CO * T56NI - E56NI * pow(T56NI, 2) - pow(T56NI, 2) * E56CO + E56CO * pow(T56CO, 2));
 
-    const double factor52fe = CLIGHT / 4 / STEBO * 1. / 52 / MH * pow(tmin / tstart, 3)
-      * (-1. / (tstart * (- T52MN + T52FE)))
+    const double factor56co = 1. / 56 / MH * (1. / (tstart * T56CO))
+      * (T56CO * tstart * E56CO * exp(- tstart / T56CO) + pow(T56CO, 2) * E56CO * exp(- tstart / T56CO));
+
+    const double factor57ni = 1. / 57 / MH * (-1. / (tstart * (- T57CO + T57NI)))
+      * (- E57NI * exp(- tstart / T57NI) * tstart * T57CO - E57NI * exp(- tstart / T57NI) * T57NI * T57CO
+         + E57NI * exp(- tstart / T57NI) * tstart * T57NI + pow(T57NI, 2) * E57NI * exp(- tstart / T57NI)
+         - T57CO * tstart * E57CO * exp(- tstart / T57CO) - pow(T57CO, 2) * E57CO * exp(- tstart / T57CO)
+         + E57CO * tstart * T57NI * exp(- tstart / T57NI) + pow(T57NI, 2) * E57CO * exp(- tstart / T57NI)
+         + E57NI * T57CO * T57NI - E57NI * pow(T57NI, 2) - pow(T57NI, 2) * E57CO + E57CO * pow(T57CO, 2));
+
+    const double factor52fe = 1. / 52 / MH * (-1. / (tstart * (- T52MN + T52FE)))
       * (- E52FE * exp(- tstart / T52FE) * tstart * T52MN - E52FE * exp(- tstart / T52FE) * T52FE * T52MN
          + E52FE * exp(- tstart / T52FE) * tstart * T52FE + pow(T52FE, 2) * E52FE * exp(- tstart / T52FE)
          - T52MN * tstart * E52MN * exp(- tstart / T52MN) - pow(T52MN, 2) * E52MN * exp(- tstart / T52MN)
          + E52MN * tstart * T52FE * exp(- tstart / T52FE) + pow(T52FE, 2) * E52MN * exp(- tstart / T52FE)
          + E52FE * T52MN * T52FE - E52FE * pow(T52FE, 2) - pow(T52FE, 2) * E52MN + E52MN * pow(T52MN, 2));
 
-    const double factor48cr = CLIGHT / 4 / STEBO * 1. / 48 / MH * pow(tmin / tstart, 3)
-      * (-1. / (tstart * (- T48V + T48CR)))
+    const double factor48cr = 1. / 48 / MH * (-1. / (tstart * (- T48V + T48CR)))
       * (- E48CR * exp(- tstart / T48CR) * tstart * T48V - E48CR * exp(- tstart / T48CR) * T48CR * T48V
          + E48CR * exp(- tstart / T48CR) * tstart * T48CR + pow(T48CR, 2) * E48CR * exp(- tstart / T48CR)
          - T48V * tstart * E48V * exp(- tstart / T48V) - pow(T48V, 2) * E48V * exp(- tstart / T48V)
          + E48V * tstart * T48CR * exp(- tstart / T48CR) + pow(T48CR, 2) * E48V * exp(- tstart / T48CR)
          + E48CR * T48V * T48CR - E48CR * pow(T48CR, 2) - pow(T48CR, 2) * E48V + E48V * pow(T48V, 2));
 
-    //factor56ni = CLIGHT/4/STEBO * ENICKEL/56/MH;
+    printout("factor56ni %g\n", factor56ni);
+    printout("factor56co %g\n", factor56co);
+    printout("factor57ni %g\n", factor57ni);
+    //factor56ni = CLIGHT/4/STEBO * E56NI/56/MH;
     /// This works only for the inbuilt Lucy model
-    //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * ENICKEL/56/MH  / pow(vmax,3);
+    //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * E56NI/56/MH  / pow(vmax,3);
     //for (n = 0; n < ngrid; n++)
     for (int n = 0; n < npts_model; n++)
     {
       //mgi = cell[n].modelgridindex;
-      double T_initial = pow(((factor56ni * get_f56ni(n) * get_rhoinit(n))
-           + (factor52fe * get_f52fe(n) * get_rhoinit(n))
-           + (factor48cr * get_f48cr(n) * get_rhoinit(n))), 1. / 4.);
+      double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(n) * (
+          (factor56ni * get_f56ni(n))
+           + (factor57ni * get_f57ni(n))
+           + (factor52fe * get_f52fe(n))
+           + (factor48cr * get_f48cr(n))), 1. / 4.);
+
       //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/T56NI)), 1./4.);
       //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/T56NI))/pow(tmin,3), 1./4.);
       //T_initial = 30615.5;

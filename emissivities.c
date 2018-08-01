@@ -413,21 +413,21 @@ bool estim_switch(int nts)
 //   grid_ptr = &cell[ray_ptr->where];
 //   double tfact = pow((tmin/single_t), 3);
 //
-//   if (gam_line_list.type[lindex] == NI_GAM_LINE_ID)
+//   if (gam_line_list.type[lindex] == NUCLIDE_NI56)
 //   {
 //     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
 //         * exp(-single_t/T56NI) / T56NI *
-//         nickel_spec.probability[gam_line_list.index[lindex]]
-//         * nickel_spec.energy[gam_line_list.index[lindex]]
+//         ni56_spec.probability[gam_line_list.index[lindex]]
+//         * ni56_spec.energy[gam_line_list.index[lindex]]
 //          * f56ni(grid_ptr)*tfact;
 //   }
-//   else if (gam_line_list.type[lindex] == CO_GAM_LINE_ID)
+//   else if (gam_line_list.type[lindex] == NUCLIDE_CO56)
 //   {
 //     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
 //       * (exp(-single_t/T56NI) - exp(-single_t/T56CO))
 //       / (T56NI - T56CO)
-//       * cobalt_spec.probability[gam_line_list.index[lindex]]
-//       * cobalt_spec.energy[gam_line_list.index[lindex]]
+//       * co56_spec.probability[gam_line_list.index[lindex]]
+//       * co56_spec.energy[gam_line_list.index[lindex]]
 //       * f56ni(grid_ptr) * tfact;
 //
 //     if (gam_line_list.index[lindex] == 0)
@@ -435,7 +435,7 @@ bool estim_switch(int nts)
 //       emitt_energy += (compton_emiss[grid_ptr->modelgridindex][emiss_max - 1] * 1.e20 / 4. / PI);
 //     }
 //   }
-//   else if (gam_line_list.type[lindex] == CR48_GAM_LINE_ID)
+//   else if (gam_line_list.type[lindex] == NUCLIDE_CR48)
 //   {
 //     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
 //         * exp(-single_t/T48CR) / T48CR
@@ -443,7 +443,7 @@ bool estim_switch(int nts)
 //         * cr48_spec.energy[gam_line_list.index[lindex]]
 //         * f48cr(grid_ptr)*tfact;
 //   }
-//   else if (gam_line_list.type[lindex] == V48_GAM_LINE_ID)
+//   else if (gam_line_list.type[lindex] == NUCLIDE_V48)
 //   {
 //
 //       emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI

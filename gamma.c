@@ -14,28 +14,37 @@
 static void choose_gamma_ray(PKT *pkt_ptr)
 {
   /* Routine to choose which gamma ray line it'll be. */
-
-  struct gamma_spec *gammaspec;
+  enum radionuclides iso;
   double E_gamma;  // Average energy per gamma line of a decay
   switch (pkt_ptr->type)
   {
-    case TYPE_NICKEL_PELLET:
-      gammaspec = &nickel_spec;
-      E_gamma = ENICKEL;
+    case TYPE_56NI_PELLET:
+      iso = NUCLIDE_NI56;
+      E_gamma = E56NI;
       break;
 
-    case TYPE_COBALT_PELLET:
-      gammaspec = &cobalt_spec;
-      E_gamma = ECOBALT_GAMMA;
+    case TYPE_56CO_PELLET:
+      iso = NUCLIDE_CO56;
+      E_gamma = E56CO_GAMMA;
+      break;
+
+    case TYPE_57NI_PELLET:
+      iso = NUCLIDE_NI57;
+      E_gamma = E57NI_GAMMA;
+      break;
+
+    case TYPE_57CO_PELLET:
+      iso = NUCLIDE_CO57;
+      E_gamma = E57CO;
       break;
 
     case TYPE_48CR_PELLET:
-      gammaspec = &cr48_spec;
+      iso = NUCLIDE_CR48;
       E_gamma = E48CR;
       break;
 
     case TYPE_48V_PELLET:
-      gammaspec = &v48_spec;
+      iso = NUCLIDE_V48;
       E_gamma = E48V;
       break;
 
@@ -47,9 +56,9 @@ static void choose_gamma_ray(PKT *pkt_ptr)
   const double zrand = gsl_rng_uniform(rng);
   int nselected = -1;
   double runtot = 0.;
-  for (int n = 0; n < gammaspec->nlines; n++)
+  for (int n = 0; n < gamma_spectra[iso].nlines; n++)
   {
-    runtot += gammaspec->probability[n] * gammaspec->energy[n] / E_gamma;
+    runtot += gamma_spectra[iso].probability[n] * gamma_spectra[iso].energy[n] / E_gamma;
     if (zrand <= runtot)
     {
       nselected = n;
@@ -59,11 +68,11 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 
   if (nselected < 0)
   {
-    printout("Failure to choose line (%s). Abort. zrand %g runtot %g\n", gammaspec->filename, zrand, runtot);
+    printout("Failure to choose line (packet type %d). Abort. zrand %g runtot %g\n", pkt_ptr->type, zrand, runtot);
     abort();
   }
 
-  pkt_ptr->nu_cmf = gammaspec->energy[nselected] / H;
+  pkt_ptr->nu_cmf = gamma_spectra[iso].energy[nselected] / H;
   // printout("%s PELLET %g\n", gammaspec->filename, gammaspec->energy[nselected]);
 }
 
@@ -385,40 +394,24 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
 
 double get_gam_freq(const LIST *restrict line_list, int n)
 {
-  double freq;
-
   if (n == RED_OF_LIST)
   {
     return 0.0;
   }
+
   // returns the frequency of line n
-  switch (line_list->type[n])
+  enum radionuclides iso = line_list->type[n];
+  const int lineid = line_list->index[n];
+
+  if (iso >= RADIONUCLIDE_COUNT || lineid >= gamma_spectra[iso].nlines)
   {
-    case NI_GAM_LINE_ID:
-      freq = nickel_spec.energy[line_list->index[n]] / H;
-      break;
-    case CO_GAM_LINE_ID:
-      freq = cobalt_spec.energy[line_list->index[n]] / H;
-      break;
-    case FAKE_GAM_LINE_ID:
-      freq = fakeg_spec.energy[line_list->index[n]] / H;
-      break;
-    case CR48_GAM_LINE_ID:
-      freq = cr48_spec.energy[line_list->index[n]] / H;
-      break;
-    case V48_GAM_LINE_ID:
-      freq = v48_spec.energy[line_list->index[n]] / H;
-      break;
-    default:
-    {
-      printout("Unknown line. %d Abort.\n", n);
-      printout("line_list->type[n] %d line_list->index[n] %d\n", line_list->type[n], line_list->index[n]);
-      printout(" %d %d \n", gam_line_list.type[n], gam_line_list.index[n]);
-      abort();
-    }
+    printout("Unknown line. %d Abort.\n", n);
+    printout("line_list->type[n] %d line_list->index[n] %d\n", line_list->type[n], line_list->index[n]);
+    // printout(" %d %d \n", gam_line_list.type[n], gam_line_list.index[n]);
+    abort();
   }
 
-  return freq;
+  return gamma_spectra[iso].energy[lineid] / H;
 }
 
 

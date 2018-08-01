@@ -349,11 +349,11 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
     heatingrates[tid].gamma = 0.;
   }
 
-  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (ENICKEL/T56NI*exp(-t_current/T56NI) + ECOBALT/(T56CO-T56NI)*(exp(-t_current/T56CO)-exp(-t_current/T56NI)));
+  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (E56NI/T56NI*exp(-t_current/T56NI) + E56CO/(T56CO-T56NI)*(exp(-t_current/T56CO)-exp(-t_current/T56NI)));
   //heatingrates[tid].gamma *= 0.01;
   //double factor = -1./(t_current*(-T56CO+T56NI));
-  //factor *= (-ENICKEL*exp(-t_current/T56NI)*t_current*T56CO - ENICKEL*exp(-t_current/T56NI)*T56NI*T56CO + ENICKEL*exp(-t_current/T56NI)*t_current*T56NI + pow(T56NI,2)*ENICKEL*exp(-t_current/T56NI) - T56CO*t_current*ECOBALT*exp(-t_current/T56CO) - pow(T56CO,2)*ECOBALT*exp(-t_current/T56CO) + ECOBALT*t_current*T56NI*exp(-t_current/T56NI) + pow(T56NI,2)*ECOBALT*exp(-t_current/T56NI) + ENICKEL*T56CO*T56NI - ENICKEL*pow(T56NI,2) - pow(T56NI,2)*ECOBALT + ECOBALT*pow(T56CO,2));
-  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((ENICKEL/T56NI*exp(-t_current/T56NI) + ECOBALT/(T56CO-T56NI)*(exp(-t_current/T56CO)-exp(-t_current/T56NI))) - factor/t_current);
+  //factor *= (-E56NI*exp(-t_current/T56NI)*t_current*T56CO - E56NI*exp(-t_current/T56NI)*T56NI*T56CO + E56NI*exp(-t_current/T56NI)*t_current*T56NI + pow(T56NI,2)*E56NI*exp(-t_current/T56NI) - T56CO*t_current*E56CO*exp(-t_current/T56CO) - pow(T56CO,2)*E56CO*exp(-t_current/T56CO) + E56CO*t_current*T56NI*exp(-t_current/T56NI) + pow(T56NI,2)*E56CO*exp(-t_current/T56NI) + E56NI*T56CO*T56NI - E56NI*pow(T56NI,2) - pow(T56NI,2)*E56CO + E56CO*pow(T56CO,2));
+  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((E56NI/T56NI*exp(-t_current/T56NI) + E56CO/(T56CO-T56NI)*(exp(-t_current/T56CO)-exp(-t_current/T56NI))) - factor/t_current);
 
   /// Adiabatic cooling term
   const double p = nntot * KB * T_e;
