@@ -490,6 +490,10 @@ static void density_1d_read(void)
       {
         set_modelradioabund(mgi, iso, 0.);
       }
+      // for (int element = 0; element < nelements; element++)
+      // {
+      //   modelgrid[mgi].composition[element].abundance = 0.;
+      // }
     }
   }
 
@@ -788,9 +792,9 @@ static void density_2d_read(void)
   for (int n = 0; n < ngrid; n++)
   {
     double dcen[3];
-    dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
-    dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
-    dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
+    dcen[0] = cell[n].pos_init[0] + (0.5 * wid_init);
+    dcen[1] = cell[n].pos_init[1] + (0.5 * wid_init);
+    dcen[2] = cell[n].pos_init[2] + (0.5 * wid_init);
 
     double radial_pos = vec_len(dcen);
 
@@ -1391,57 +1395,7 @@ void allocate_cooling(int modelgridindex)
 }*/
 
 
-static void abundances_3d_read(void)
-{
-  FILE *abundance_file = fopen_required("abundances.txt", "r");
-
-  /// and process through the grid to read in the abundances per cell
-  /// The abundance file should only contain information for non-empty
-  /// cells. Its format must be cellnumber (integer), abundance for
-  /// element Z=1 (float) up to abundance for element Z=30 (float)
-  /// i.e. in total one integer and 30 floats.
-  for (int n = 0; n < ngrid; n++)
-  {
-    const int mgi = cell[n].modelgridindex;
-
-    float abundances_in[30];
-    int cellnumber;
-    fscanf(
-      abundance_file,
-      "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g",
-      &cellnumber, &abundances_in[0], &abundances_in[1], &abundances_in[2], &abundances_in[3],
-      &abundances_in[4], &abundances_in[5], &abundances_in[6], &abundances_in[7], &abundances_in[8],
-      &abundances_in[9], &abundances_in[10], &abundances_in[11], &abundances_in[12], &abundances_in[13],
-      &abundances_in[14], &abundances_in[15], &abundances_in[16], &abundances_in[17], &abundances_in[18],
-      &abundances_in[19], &abundances_in[20], &abundances_in[21], &abundances_in[22], &abundances_in[23],
-      &abundances_in[24], &abundances_in[25], &abundances_in[26], &abundances_in[27], &abundances_in[28],
-      &abundances_in[29]);
-
-    if (n != cellnumber - 1)
-    {
-      printout("[fatal] abundances_3d_read: grid cell mismatch ... abort\n");
-      printout("[fatal] n %d, cellnumber %d\n",n,cellnumber);
-      abort();
-    }
-
-    for (int element = 0; element < nelements; element++)
-    {
-      ///now set the abundances (by mass) of included elements, i.e.
-      ///read out the abundances specified in the atomic data file
-      const int anumber = get_element(element);
-      const float elemabundance = abundances_in[anumber - 1];
-      assert(elemabundance >= 0);
-      modelgrid[mgi].composition[element].abundance = elemabundance;
-
-      set_stable_abund(mgi, anumber, elemabundance);
-    }
-  }
-
-  fclose(abundance_file);
-}
-
-
-static void abundances_1d_read(void)
+static void abundances_read(const bool threedimensional)
 {
   /// Open the abundances file
   FILE *abundance_file = fopen_required("abundances.txt", "r");
@@ -1451,31 +1405,57 @@ static void abundances_1d_read(void)
   /// cells. Its format must be cellnumber (integer), abundance for
   /// element Z=1 (float) up to abundance for element Z=30 (float)
   /// i.e. in total one integer and 30 floats.
-  for (int n = 0; n < npts_model; n++)
+  const int ncells = threedimensional ? ngrid : npts_model;
+  for (int n = 0; n < ncells; n++)
   {
-    int cellnumber;
-    float abundances_in[30];
-    fscanf(abundance_file,
-           "%d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g",
-           &cellnumber, &abundances_in[0], &abundances_in[1], &abundances_in[2], &abundances_in[3],
-           &abundances_in[4], &abundances_in[5], &abundances_in[6], &abundances_in[7], &abundances_in[8],
-           &abundances_in[9], &abundances_in[10], &abundances_in[11], &abundances_in[12], &abundances_in[13],
-           &abundances_in[14], &abundances_in[15], &abundances_in[16], &abundances_in[17], &abundances_in[18],
-           &abundances_in[19], &abundances_in[20], &abundances_in[21], &abundances_in[22], &abundances_in[23], &abundances_in[24], &abundances_in[25], &abundances_in[26], &abundances_in[27], &abundances_in[28], &abundances_in[29]);
+    const int mgi = threedimensional ? cell[n].modelgridindex : n;
 
-    float norm = 0.;
-    for (int nn = 0; nn < 30; nn++)
+    int cellnumber;
+    fscanf(abundance_file, "%d", &cellnumber);
+
+    if (cellnumber != n + 1)
     {
-      assert(abundances_in[nn] >= 0);
-      abund_model[n][nn] = abundances_in[nn];
-      norm += abundances_in[nn];
+      printout("[fatal] abundances_read: grid cell mismatch ... abort\n");
+      printout("[fatal] n %d, cellnumber %d\n", n, cellnumber);
+      abort();
     }
 
-    if (norm > 0)
+    double norm = 0.;
+    float abundances_in[30];
+    for (int anumber = 1; anumber <= 30; anumber++)
     {
-      for (int nn = 0; nn < 30; nn++)
+      fscanf(abundance_file, "%g", &abundances_in[anumber - 1]);
+
+      assert(abundances_in[anumber - 1] >= 0);
+      if (!threedimensional)
       {
-        abund_model[n][nn] *= 1. / norm;
+        abund_model[n][anumber - 1] = abundances_in[anumber - 1];
+        norm += abundances_in[anumber - 1];
+      }
+    }
+
+    if (threedimensional)
+    {
+      for (int element = 0; element < nelements; element++)
+      {
+        ///now set the abundances (by mass) of included elements, i.e.
+        ///read out the abundances specified in the atomic data file
+        const int anumber = get_element(element);
+        const float elemabundance = abundances_in[anumber - 1];
+        assert(elemabundance >= 0);
+        modelgrid[mgi].composition[element].abundance = elemabundance;
+
+        set_stable_abund(mgi, anumber, elemabundance);
+      }
+    }
+    else
+    {
+      if (norm > 0)
+      {
+        for (int anumber = 1; anumber <= 30; anumber++)
+        {
+          abund_model[n][anumber - 1] *= 1. / norm;
+        }
       }
     }
   }
@@ -1754,18 +1734,18 @@ void grid_init(int my_rank)
 
     if (model_type == RHO_1D_READ)
     {
-      abundances_1d_read();
+      abundances_read(false);
       density_1d_read();
     }
     else if (model_type == RHO_2D_READ)
     {
-      abundances_1d_read(); // for 2D can handle abundances exactly as for 1D
+      abundances_read(false); // for 2D can handle abundances exactly as for 1D
       density_2d_read();
     }
     else if (model_type == RHO_3D_READ)
     {
       density_3d_read();
-      abundances_3d_read();
+      abundances_read(true);
     }
     else
     {
