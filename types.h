@@ -148,13 +148,16 @@ typedef struct phixslist_t
 
 enum packet_type {
   TYPE_ESCAPE = 32,
-  TYPE_NICKEL_PELLET = 100,
-  TYPE_COBALT_PELLET = 101,
+  TYPE_56NI_PELLET = 100,
+  TYPE_56CO_PELLET = 101,
   TYPE_48CR_PELLET = 102,
   TYPE_48V_PELLET = 103,
   TYPE_52FE_PELLET = 104,
   TYPE_52MN_PELLET = 105,
-  TYPE_COBALT_POSITRON_PELLET = 106,
+  TYPE_56CO_POSITRON_PELLET = 106,
+  TYPE_57NI_PELLET = 107,
+  TYPE_57NI_POSITRON_PELLET = 108,
+  TYPE_57CO_PELLET = 109,
   TYPE_GAMMA = 10,
   TYPE_RPKT = 11,
   TYPE_KPKT = 12,
@@ -288,11 +291,13 @@ typedef struct modelgrid_t
   float rho;
   //modelgrid nn_tot
   float nnetot;           // total electron density (free + bound). this is not actually used anywhere. keep?
-  float fni;
-  float fco;
+  float f56ni;
+  float f56co;
+  float f57ni;
+  float f57co;
   float f52fe;
   float f48cr;
-  float ffe;
+  float ffegrp;
   float fnistable;
   float fcostable;
   float ffestable;
@@ -335,12 +340,21 @@ typedef struct
 } samplegrid_t;
 */
 
+enum radionuclides {
+  NUCLIDE_NI57 = 0,
+  NUCLIDE_NI56 = 1,
+  NUCLIDE_CO56 = 2,
+  FAKE_GAM_LINE_ID = 3,
+  NUCLIDE_CR48 = 4,
+  NUCLIDE_V48 = 5,
+  NUCLIDE_CO57 = 6,
+  RADIONUCLIDE_COUNT = 7,
+};
 
-#define MGAM_LINES 30 /* Max gamma ray lines per nucleus.*/
 typedef struct gamma_ll
 {
-  int type[3 * MGAM_LINES]; /* is it a Ni, Co or fake line */
-  int index[3 * MGAM_LINES]; /* which of the lines of that element is it */
+  enum radionuclides *type; /* is it a Ni, Co or fake line */
+  int *index; /* which of the lines of that element is it */
   int total;         /* the total number of lines in the list */
 } LIST;
 

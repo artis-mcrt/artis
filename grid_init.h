@@ -4,6 +4,7 @@
 void grid_init(int my_rank);
 void allocate_compositiondata(int cellnumber);
 void allocate_cooling(int modelgridindex);
+float get_initmassfracnuclide(int modelgridindex, enum radionuclides nuclide_type);
 
 /// Routine for getting the initial cell volume.
 inline double vol_init(void)//(const CELL *restrict const grid_ptr)
@@ -35,12 +36,22 @@ inline float get_nnetot(int modelgridindex)
 
 inline float get_f56ni(int modelgridindex)
 {
-  return modelgrid[modelgridindex].fni;
+  return modelgrid[modelgridindex].f56ni;
 }
 
 inline float get_f56co(int modelgridindex)
 {
-  return modelgrid[modelgridindex].fco;
+  return modelgrid[modelgridindex].f56co;
+}
+
+inline float get_f57ni(int modelgridindex)
+{
+  return modelgrid[modelgridindex].f57ni;
+}
+
+inline float get_f57co(int modelgridindex)
+{
+  return modelgrid[modelgridindex].f57co;
 }
 
 inline float get_f52fe(int modelgridindex)
@@ -53,9 +64,9 @@ inline float get_f48cr(int modelgridindex)
   return modelgrid[modelgridindex].f48cr;
 }
 
-inline float get_ffe(int modelgridindex)
+inline float get_ffegrp(int modelgridindex)
 {
-  return modelgrid[modelgridindex].ffe;
+  return modelgrid[modelgridindex].ffegrp;
 }
 
 inline float get_fnistable(int modelgridindex)
@@ -140,12 +151,22 @@ inline void set_nnetot(int modelgridindex, float x)
 
 inline void set_f56ni(int modelgridindex, float x)
 {
-  modelgrid[modelgridindex].fni = x;
+  modelgrid[modelgridindex].f56ni = x;
 }
 
 inline void set_f56co(int modelgridindex, float x)
 {
-  modelgrid[modelgridindex].fco = x;
+  modelgrid[modelgridindex].f56co = x;
+}
+
+inline void set_f57ni(int modelgridindex, float x)
+{
+  modelgrid[modelgridindex].f57ni = x;
+}
+
+inline void set_f57co(int modelgridindex, float x)
+{
+  modelgrid[modelgridindex].f57co = x;
 }
 
 inline void set_f48cr(int modelgridindex, float x)
@@ -158,9 +179,9 @@ inline void set_f52fe(int modelgridindex, float x)
   modelgrid[modelgridindex].f52fe = x;
 }
 
-inline void set_ffe(int modelgridindex, float x)
+inline void set_ffegrp(int modelgridindex, float x)
 {
-  modelgrid[modelgridindex].ffe = x;
+  modelgrid[modelgridindex].ffegrp = x;
 }
 
 inline void set_fnistable(int modelgridindex, float x)

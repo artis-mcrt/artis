@@ -1,6 +1,7 @@
 #include <gsl/gsl_roots.h>
 #include "sn3d.h"
 #include "atomic.h"
+#include "assert.h"
 #include "grid_init.h"
 #include "kpkt.h"
 #include "ltepop.h"
@@ -36,6 +37,37 @@ void precalculate_partfuncts(int modelgridindex)
   }
 }
 
+static void calculate_double_decay_chain(
+  double initabund1, double meanlife1,
+  double initabund2, double meanlife2,
+  double t_current,
+  double *abund1, double *abund2, double *abund3)
+{
+  // calculate abundances from double decay, e.g., Ni56 -> Co56 -> Fe56
+  // initabund3 is assumed to be zero, so the abundance of species 3 is only from decays of species 2
+  const double lambda1 = 1 / meanlife1;
+  const double lambda2 = 1 / meanlife2;
+
+  *abund1 = initabund1 * exp(-lambda1 * t_current);
+
+  *abund2 = (
+    initabund2 * exp(-lambda2 * t_current) +
+    initabund1 * lambda1 / (lambda1 - lambda2) * (exp(-lambda2 * t_current) - exp(-lambda1 * t_current)));
+
+  *abund3 = (
+    (initabund2 + initabund1) * (lambda1 - lambda2) -
+    initabund2 * lambda1 * exp(-lambda2 * t_current) +
+    initabund2 * lambda2 * exp(-lambda2 * t_current) -
+    initabund1 * lambda1 * exp(-lambda2 * t_current) +
+    initabund1 * lambda2 * exp(-lambda1 * t_current)) / (lambda1 - lambda2);
+
+  // printout("calculate_double_decay_chain: initabund1 %g, initabund2 %g\n", initabund1, initabund2);
+  // printout("calculate_double_decay_chain: abund1 %g, abund2 %g abund3 %g\n", abund1, abund2, abund3);
+
+  // ensure that the decays haven't altered the total abundance of all three species
+  assert(fabs((initabund1 + initabund2) - (*abund1 + *abund2 + *abund3)) < 0.001);
+}
+
 
 static void update_abundances(const int modelgridindex, const int timestep, double t_current)
 /// Updates the mass fractions of elements associated with the decay sequence
@@ -44,82 +76,109 @@ static void update_abundances(const int modelgridindex, const int timestep, doub
 ///             - t_current: current time (here mid of current timestep)
 {
   t_current -= t_model;
-  const double lambdani = 1./T56NI;
-  const double lambdaco = 1./T56CO;
-  const double lambdafe = 1./T52FE;
-  const double lambdamn = 1./T52MN;
-  const double lambdacr = 1./T48CR;
-  const double lambdav = 1./T48V;
-
   if (homogeneous_abundances)
   {
-    const double ni_in = elements[get_elementindex(28)].abundance;
-    const double co_in = elements[get_elementindex(27)].abundance;
+    const double ni56_in = elements[get_elementindex(28)].abundance; // assume all ni56
+    const double co56_in = elements[get_elementindex(27)].abundance; // assume all co56
     const double fe_in = elements[get_elementindex(26)].abundance;
+
+    double ni56frac = 0.;
+    double co56frac = 0.;
+    double fe56frac_fromdecay = 0.;
+    calculate_double_decay_chain(ni56_in, T56NI, co56_in, T56CO, t_current, &ni56frac, &co56frac, &fe56frac_fromdecay);
+
     //fe_in = cell[modelgridindex].f_fe_init;
     for (int element = nelements - 1; element >= 0; element--)
     {
       const int atomic_number = get_element(element);
       if (atomic_number == 28)
       {
-        const double nifrac = ni_in * exp(-lambdani*t_current) + get_fnistable(modelgridindex);
+        const double nifrac = get_fnistable(modelgridindex) + ni56frac;
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
       else if (atomic_number == 27)
       {
-        const double cofrac = co_in*exp(-lambdaco*t_current) + lambdani*ni_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + get_fcostable(modelgridindex);
+        const double cofrac = get_fcostable(modelgridindex) + co56frac;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
       else if (atomic_number == 26)
       {
-        const double fefrac = fe_in + (co_in*lambdani - co_in*lambdaco + ni_in*lambdani - ni_in*lambdaco - co_in*lambdani*exp(-lambdaco*t_current) + co_in*lambdaco*exp(-lambdaco*t_current) - ni_in*lambdani*exp(-lambdaco*t_current) + ni_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco);
+        const double fefrac = fe_in + fe56frac_fromdecay;
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
     }
   }
   else
   {
-    const double ni56_in = get_f56ni(modelgridindex);
-    const double co56_in = get_f56co(modelgridindex);
+    // Ni56 -> Co56 -> Fe56
+    // abundances from the input model
+    const double ni56_in = get_initmassfracnuclide(modelgridindex, NUCLIDE_NI56);
+    const double co56_in = get_initmassfracnuclide(modelgridindex, NUCLIDE_CO56);
+    double ni56frac = 0.;
+    double co56frac = 0.;
+    double fe56frac_fromdecay = 0.;
+    calculate_double_decay_chain(ni56_in, T56NI, co56_in, T56CO, t_current, &ni56frac, &co56frac, &fe56frac_fromdecay);
+
+    // Ni57 -> Co57 -> Fe57
+    const double ni57_in = get_initmassfracnuclide(modelgridindex, NUCLIDE_NI57);
+    const double co57_in = get_initmassfracnuclide(modelgridindex, NUCLIDE_CO57);
+    double ni57frac = 0.;
+    double co57frac = 0.;
+    double fe57frac_fromdecay = 0.;
+    calculate_double_decay_chain(ni57_in, T57NI, co57_in, T57CO, t_current, &ni57frac, &co57frac, &fe57frac_fromdecay);
+
+    // Fe52 -> Mn52 -> Cr52
     const double fe52_in = get_f52fe(modelgridindex);
-    const double cr48_in = get_f48cr(modelgridindex);
+    double fe52frac = 0.;
+    double mn52frac = 0.;
+    double cr52frac_fromdecay = 0.;
+    calculate_double_decay_chain(fe52_in, T52FE, 0., T52MN, t_current, &fe52frac, &mn52frac, &cr52frac_fromdecay);
+
+    // Cr48 -> V48 -> Ti48
+    const double cr48_in = get_initmassfracnuclide(modelgridindex, NUCLIDE_CR48);
+    double cr48frac = 0.;
+    double v48frac = 0.;
+    double ti48frac_fromdecay = 0.;
+    calculate_double_decay_chain(cr48_in, T48CR, 0., T48V, t_current, &cr48frac, &v48frac, &ti48frac_fromdecay);
+
     // printout("model cell %d, has input radioactive ni56_in %g, co56_in %g, fe52_in %g\n",modelgridindex,ni56_in,co56_in,fe52_in);
+
     for (int element = nelements-1; element >= 0; element--)
     {
       const int atomic_number = get_element(element);
       if (atomic_number == 28)
       {
-        const double nifrac = ni56_in * exp(-lambdani*t_current) + get_fnistable(modelgridindex);
+        const double nifrac = get_fnistable(modelgridindex) + ni56frac + ni57frac;
         modelgrid[modelgridindex].composition[element].abundance = nifrac;
       }
       else if (atomic_number == 27)
       {
-        const double cofrac = co56_in*exp(-lambdaco*t_current) + lambdani*ni56_in/(lambdani-lambdaco)*(exp(-lambdaco*t_current)-exp(-lambdani*t_current)) + get_fcostable(modelgridindex);
+        const double cofrac = get_fcostable(modelgridindex) + co56frac + co57frac;
         modelgrid[modelgridindex].composition[element].abundance = cofrac;
       }
       else if (atomic_number == 26)
       {
-        const double fefrac = ((co56_in*lambdani - co56_in*lambdaco + ni56_in*lambdani - ni56_in*lambdaco - co56_in*lambdani*exp(-lambdaco*t_current) + co56_in*lambdaco*exp(-lambdaco*t_current) - ni56_in*lambdani*exp(-lambdaco*t_current) + ni56_in*lambdaco*exp(-lambdani*t_current)) / (lambdani-lambdaco)) + get_ffestable(modelgridindex) + (fe52_in* exp(-lambdafe*t_current));
+        const double fefrac = get_ffestable(modelgridindex) + fe52frac + fe56frac_fromdecay + fe57frac_fromdecay;
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
       else if (atomic_number == 25)
       {
-        const double mnfrac = lambdafe*fe52_in/(lambdafe-lambdamn)*(exp(-lambdamn*t_current)-exp(-lambdafe*t_current)) + get_fmnstable(modelgridindex);
+        const double mnfrac = get_fmnstable(modelgridindex) + mn52frac;
         modelgrid[modelgridindex].composition[element].abundance = mnfrac;
       }
       else if (atomic_number == 24)
       {
-        const double crfrac = ((fe52_in*lambdafe - fe52_in*lambdamn - fe52_in*lambdafe*exp(-lambdamn*t_current) + fe52_in*lambdamn*exp(-lambdafe*t_current)) / (lambdafe-lambdamn)) + get_fcrstable(modelgridindex) + (cr48_in * exp(-lambdacr*t_current));
+        const double crfrac = get_fcrstable(modelgridindex) + cr48frac + cr52frac_fromdecay;
         modelgrid[modelgridindex].composition[element].abundance = crfrac;
       }
       else if (atomic_number == 23)
       {
-        const double vfrac = lambdacr*cr48_in/(lambdacr-lambdav)*(exp(-lambdav*t_current)-exp(-lambdacr*t_current)) + get_fvstable(modelgridindex);
+        const double vfrac = get_fvstable(modelgridindex) + v48frac;
         modelgrid[modelgridindex].composition[element].abundance = vfrac;
       }
       else if (atomic_number == 22)
       {
-        const double tifrac = ((cr48_in*lambdacr - cr48_in*lambdav - cr48_in*lambdacr*exp(-lambdav*t_current) + cr48_in*lambdav*exp(-lambdacr*t_current)) / (lambdacr-lambdav)) + get_ftistable(modelgridindex);
+        const double tifrac = get_ftistable(modelgridindex) + ti48frac_fromdecay;
         modelgrid[modelgridindex].composition[element].abundance = tifrac;
       }
     }
@@ -801,11 +860,11 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
       //printout("update_grid: opacity_case 3 ... updating cell[n].kappa_grey"); //MK
       if (get_rho(n) > rho_crit)
       {
-        set_kappagrey(n, opcase3_normal * (0.9 * get_ffe(n) + 0.1) * rho_crit/get_rho(n));
+        set_kappagrey(n, opcase3_normal * (0.9 * get_ffegrp(n) + 0.1) * rho_crit/get_rho(n));
       }
       else
       {
-        set_kappagrey(n, opcase3_normal * (0.9 * get_ffe(n) + 0.1));
+        set_kappagrey(n, opcase3_normal * (0.9 * get_ffegrp(n) + 0.1));
       }
       /// MK End
     }

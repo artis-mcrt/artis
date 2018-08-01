@@ -59,6 +59,26 @@ static double f56ni(const CELL *restrict grid_ptr)
 }
 
 
+static double f56co(const CELL *grid_ptr)
+/// Subroutine that gives the Co56 mass fraction.
+{
+  if (model_type == RHO_UNIFORM)
+  {
+    return 0.;
+  }
+  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
+  {
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f56co(mgi);
+  }
+  else
+  {
+    printout("Unknown model_type (packet_init). Abort.\n");
+    abort();
+  }
+}
+
+
 static double f52fe(const CELL *restrict grid_ptr)
 /// Subroutine that gives the Fe52 mass fraction.
 {
@@ -99,6 +119,46 @@ static double f48cr(const CELL *restrict grid_ptr)
 }
 
 
+static double f57ni(const CELL *restrict grid_ptr)
+/// Subroutine that gives the Ni57 mass fraction.
+{
+  if (model_type == RHO_UNIFORM)
+  {
+    return 0.0;
+  }
+  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
+  {
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f57ni(mgi);
+  }
+  else
+  {
+    printout("Unknown model_type (packet_init). Abort.\n");
+    abort();
+  }
+}
+
+
+static double f57co(const CELL *restrict grid_ptr)
+/// Subroutine that gives the Co57 mass fraction.
+{
+  if (model_type == RHO_UNIFORM)
+  {
+    return 0.0;
+  }
+  else if (model_type == RHO_1D_READ || model_type == RHO_2D_READ || model_type == RHO_3D_READ)
+  {
+    const int mgi = grid_ptr->modelgridindex;
+    return get_f57co(mgi);
+  }
+  else
+  {
+    printout("Unknown model_type (packet_init). Abort.\n");
+    abort();
+  }
+}
+
+
 static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset, PKT *pkt)
 /// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
 {
@@ -108,87 +168,135 @@ static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n,
   pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
   pkt[n].originated_from_positron = false;
 
-  double zrand = gsl_rng_uniform_pos(rng);
-  pkt[n].pos[0] = grid_ptr->pos_init[0] + (zrand * wid_init);
-  zrand = gsl_rng_uniform_pos(rng);
-  pkt[n].pos[1] = grid_ptr->pos_init[1] + (zrand * wid_init);
-  zrand = gsl_rng_uniform_pos(rng);
-  pkt[n].pos[2] = grid_ptr->pos_init[2] + (zrand * wid_init);
+  for (int axis = 0; axis < 3; axis++)
+  {
+    const double zrand = gsl_rng_uniform_pos(rng);
+    pkt[n].pos[axis] = grid_ptr->pos_init[axis] + (zrand * wid_init);
+  }
 
   // first choose which of the decay chains to sample
-  double prob_chain[3];
-  prob_chain[0] = f56ni(grid_ptr) * (ENICKEL + ECOBALT) / MNI56;
-  prob_chain[1] = f52fe(grid_ptr) * (E52FE + E52MN) / MFE52;
-  prob_chain[2] = f48cr(grid_ptr) * (E48V + E48CR) / MCR48;
+  const int nchains = 10;
+  double prob_chain[nchains];
+  prob_chain[0] = f56ni(grid_ptr) / MNI56 * E56NI;
+  prob_chain[1] = f56ni(grid_ptr) / MNI56 * E56CO;
+  prob_chain[2] = f52fe(grid_ptr) / MFE52 * E52FE;
+  prob_chain[3] = f52fe(grid_ptr) / MFE52 * E52MN;
+  prob_chain[4] = f48cr(grid_ptr) / MCR48 * E48CR;
+  prob_chain[5] = f48cr(grid_ptr) / MCR48 * E48V;
+  prob_chain[6] = f56co(grid_ptr) / MCO56 * E56CO;
+  prob_chain[7] = f57ni(grid_ptr) / MNI57 * E57NI;
+  prob_chain[8] = f57ni(grid_ptr) / MNI57 * E57CO;
+  prob_chain[9] = f57co(grid_ptr) / MCO57 * E57CO;
 
-  double zrand3 = gsl_rng_uniform(rng) * (prob_chain[0] + prob_chain[1] + prob_chain[2]);
-  zrand = gsl_rng_uniform(rng);
-  if (zrand3 <= prob_chain[0])
+  double prob_sum = 0.;
+  for (int i = 0; i < nchains; i++)
+    prob_sum += prob_chain[i];
+
+  const double zrand_chain = gsl_rng_uniform(rng) * prob_sum;
+  double prob_accumulated = 0.;
+  int selected_chain = -1;
+  for (int i = 0; i < nchains; i++)
   {
-    /// Now choose whether it's going to be a nickel or cobalt pellet and
-    /// mark it as such.
-    if (zrand < (ENICKEL / (ENICKEL + ECOBALT)))
+    prob_accumulated += prob_chain[i];
+    if (zrand_chain <= prob_accumulated)
     {
-      pkt[n].type = TYPE_NICKEL_PELLET;
-      zrand = gsl_rng_uniform(rng);
-      pkt[n].tdecay = -T56NI * log(zrand);
+      selected_chain = i;
+      break;
+    }
+  }
+  if (selected_chain < 0)
+  {
+    printout("Failed to select pellet\n");
+    abort();
+  }
+
+  double zrand = gsl_rng_uniform(rng);
+  if (selected_chain == 0)  // Ni56 pellet
+  {
+    pkt[n].type = TYPE_56NI_PELLET;
+    pkt[n].tdecay = -T56NI * log(zrand);
+  }
+  else if (selected_chain == 1) // Ni56 -> Co56 pellet
+  {
+    if (zrand < E56CO_GAMMA / E56CO)
+    {
+      pkt[n].type = TYPE_56CO_PELLET;
     }
     else
     {
-      zrand = gsl_rng_uniform(rng);
+      pkt[n].type = TYPE_56CO_POSITRON_PELLET;
+      pkt[n].originated_from_positron = true;
+    }
 
-      if (zrand < ECOBALT_GAMMA / ECOBALT)
-      {
-        pkt[n].type = TYPE_COBALT_PELLET;
-      }
-      else
-      {
-        pkt[n].type = TYPE_COBALT_POSITRON_PELLET;
-        pkt[n].originated_from_positron = true;
-      }
-
-      zrand = gsl_rng_uniform(rng);
-      const double zrand2 = gsl_rng_uniform(rng);
-      pkt[n].tdecay = (-T56NI * log(zrand)) + (-T56CO * log(zrand2));
-    }
-  }
-  else if (zrand3 <= (prob_chain[0] + prob_chain[1]))
-  {
-    /// Now choose whether it's going to be a 52Fe or 52Mn pellet and
-    /// mark it as such.
-    if (zrand < (E52FE / (E52FE + E52MN)))
-    {
-      pkt[n].type = TYPE_52FE_PELLET;
-      zrand = gsl_rng_uniform(rng);
-      pkt[n].tdecay = -T52FE * log(zrand);
-    }
-    else
-    {
-      pkt[n].type = TYPE_52MN_PELLET;
-      zrand = gsl_rng_uniform(rng);
-      const double zrand2 = gsl_rng_uniform(rng);
-      pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
-    }
-  }
-  else
-  {
-    /// Now choose whether it's going to be a 48Cr or 48V pellet and
-    /// mark it as such.
     zrand = gsl_rng_uniform(rng);
-    if (zrand < (E48CR / (E48CR + E48V)))
+    const double zrand2 = gsl_rng_uniform(rng);
+    pkt[n].tdecay = (-T56NI * log(zrand)) + (-T56CO * log(zrand2));
+  }
+  else if (selected_chain == 2) // Fe52 pellet
+  {
+    pkt[n].type = TYPE_52FE_PELLET;
+    pkt[n].tdecay = -T52FE * log(zrand);
+  }
+  else if (selected_chain == 3) // Fe52 -> Mn52 pellet
+  {
+    pkt[n].type = TYPE_52MN_PELLET;
+    const double zrand2 = gsl_rng_uniform(rng);
+    pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
+  }
+  else if (selected_chain == 4) // Cr48 pellet
+  {
+    pkt[n].type = TYPE_48CR_PELLET;
+    pkt[n].tdecay = -T48CR * log(zrand);
+  }
+  else if (selected_chain == 5) // Cr48 -> V48 pellet
+  {
+    pkt[n].type = TYPE_48V_PELLET;
+    const double zrand2 = gsl_rng_uniform(rng);
+    pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
+  }
+  else if (selected_chain == 6) // Co56 pellet
+  {
+    /// Now it is a 56Co pellet, choose whether it becomes a positron
+    if (zrand < E56CO_GAMMA / E56CO)
     {
-      pkt[n].type = TYPE_48CR_PELLET;
-      zrand = gsl_rng_uniform(rng);
-      pkt[n].tdecay = -T48CR * log(zrand);
+      pkt[n].type = TYPE_56CO_PELLET;
     }
     else
     {
-      pkt[n].type = TYPE_48V_PELLET;
-      zrand = gsl_rng_uniform(rng);
-      const double zrand2 = gsl_rng_uniform(rng);
-      pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
+      pkt[n].type = TYPE_56CO_POSITRON_PELLET;
+      pkt[n].originated_from_positron = true;
     }
+
+    zrand = gsl_rng_uniform(rng);
+    pkt[n].tdecay = -T56CO * log(zrand);
   }
+  else if (selected_chain == 7) // Ni57 pellet
+  {
+    if (zrand < E57NI_GAMMA / E57NI)
+    {
+      pkt[n].type = TYPE_57NI_PELLET;
+    }
+    else
+    {
+      pkt[n].type = TYPE_57NI_POSITRON_PELLET;
+      pkt[n].originated_from_positron = true;
+    }
+
+    zrand = gsl_rng_uniform(rng);
+    pkt[n].tdecay = -T57NI * log(zrand);
+  }
+  else if (selected_chain == 8) // Ni57 -> Co57 pellet
+  {
+    pkt[n].type = TYPE_57CO_PELLET;
+    const double zrand2 = gsl_rng_uniform(rng);
+    pkt[n].tdecay = (-T57NI * log(zrand)) + (-T57CO * log(zrand2));
+  }
+  else if (selected_chain == 9) // Co57 pellet
+  {
+    pkt[n].type = TYPE_57CO_PELLET;
+    pkt[n].tdecay = -T57CO * log(zrand);
+  }
+
   /// Now assign the energy to the pellet.
   pkt[n].e_cmf = e0;
 }
@@ -201,11 +309,11 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
-  double etot = (ENICKEL + ECOBALT) * mni56 / MNI56;
+  double etot = (E56NI + E56CO) * mni56 / MNI56;
   etot += (E48V + E48CR) * mcr48 / MCR48;
   etot += (E52FE + E52MN) * mfe52 / MFE52;
   printout("etot %g\n", etot);
-  printout("ENICKEL, ECOBALT, ECOBALT_GAMMA: %g, %g, %g\n", ENICKEL / MEV, ECOBALT / MEV, ECOBALT_GAMMA / MEV);
+  printout("E56NI, E56CO, E56CO_GAMMA: %g, %g, %g\n", E56NI / MEV, E56CO / MEV, E56CO_GAMMA / MEV);
   printout("E48CR, E48V: %g %g\n", E48CR / MEV, E48V / MEV);
   printout("E52FE, E52MN: %g %g\n", E52FE / MEV, E52MN / MEV);
 
@@ -222,10 +330,11 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   {
     const CELL *grid_ptr = &cell[m];
     cont[m] = norm;
-    //printf("%g %g %g\n", (f56ni(grid_ptr)*(ENICKEL + ECOBALT)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
+    //printf("%g %g %g\n", (f56ni(grid_ptr)*(E56NI + E56CO)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     const int mgi = grid_ptr->modelgridindex;
     norm += get_rhoinit(mgi) * vol_init() * //vol_init(grid_ptr)
-              ((f56ni(grid_ptr) * (ENICKEL + ECOBALT) / 56.)
+              ((f56ni(grid_ptr) * (E56NI + E56CO) / 56.)
+               + (f56co(grid_ptr) * (E56CO) / 56.)
                + (f52fe(grid_ptr) * (E52FE + E52MN) / 52.)
                + (f48cr(grid_ptr) * (E48V + E48CR) / 48.));
   }

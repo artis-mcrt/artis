@@ -35,7 +35,7 @@ double sig_photo_electric(const PKT *pkt_ptr, double t_current)
     sigma_cmf_fe *= rho / MH / 56;
     /* Assumes Z = 28. So mass = 56. */
 
-    const double f_fe = get_ffe(mgi);
+    const double f_fe = get_ffegrp(mgi);
 
     sigma_cmf = (sigma_cmf_fe * f_fe) + (sigma_cmf_si * (1. - f_fe));
   }
@@ -74,7 +74,7 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
       double sigma_cmf_si;
       double sigma_cmf_cno;
       double sigma_cmf_fe;
-      const double f_fe = get_ffe(mgi);
+      const double f_fe = get_ffegrp(mgi);
       if (pkt_ptr->nu_cmf > 3.61990e+20)
       {
         sigma_cmf_cno = (0.0481 + (0.301 * ((pkt_ptr->nu_cmf/2.41326e+20) - 1.5))) * 49.e-27;
@@ -117,7 +117,7 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
     sigma_cmf = 0.0;
   }
 
-  /* Now need to convert between frames. */
+  // Now need to convert between frames.
 
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t_current);

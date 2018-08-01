@@ -16,7 +16,7 @@
 #include "sn3d.h"
 
 // number of energy points in the Spencer-Fano solution vector
-#define SFPTS 8192
+#define SFPTS 4096
 
 // eV
 #define EMAX 16000.
@@ -619,18 +619,20 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 // should be in erg / s / cm^3
 {
   const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
+
   // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
 
   const double t = time_step[timestep].mid;
   const double rho = get_rho(modelgridindex);
 
+  // Co56 from Ni56 decays plus what remains of the initial Co56
   const double co56_positron_dep = (0.610 * 0.19 * MEV) *
-        (exp(-t / T56CO) - exp(-t / T56NI)) /
-        (T56CO - T56NI) * get_f56ni(modelgridindex) * rho / MNI56;
+        (((exp(-t / T56CO) - exp(-t / T56NI)) / (T56CO - T56NI) * get_initmassfracnuclide(modelgridindex, NUCLIDE_NI56) / MNI56) +
+         (exp(-t / T56CO) / T56CO * get_initmassfracnuclide(modelgridindex, NUCLIDE_CO56) / MCO56)) * rho;
 
   const double v48_positron_dep = (0.290 * 0.499 * MEV) *
         (exp(-t / T48V) - exp(-t / T48CR)) /
-        (T48V - T48CR) * get_f48cr(modelgridindex) * rho / MCR48;
+        (T48V - T48CR) * get_initmassfracnuclide(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
 
   //printout("nt_deposition_rate: element: %d, ion %d\n",element,ion);
   //printout("nt_deposition_rate: gammadep: %g, poscobalt %g pos48v %g\n",
@@ -1094,6 +1096,8 @@ static float calculate_frac_heating(const int modelgridindex)
   double frac_heating_Einit = 0.;
 
   const float nne = get_nne(modelgridindex);
+
+  // TODO: which is correct here?
   // const double E_0 = nt_solution[modelgridindex].E_0;
   const double E_0 = EMIN;
 
