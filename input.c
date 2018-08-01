@@ -1515,26 +1515,13 @@ static void calculate_masses(void)
 
     mtot += mass_in_shell;
 
-    if (model_type == RHO_1D_READ || model_type == RHO_2D_READ)
-    {
-      mni56 += mass_in_shell * f56ni_model[mgi];
-      mco56 += mass_in_shell * f56co_model[mgi];
-      mni57 += mass_in_shell * f57ni_model[mgi];
-      mco57 += mass_in_shell * f57co_model[mgi];
-      mfe52 += mass_in_shell * f52fe_model[mgi];
-      mcr48 += mass_in_shell * f48cr_model[mgi];
-      mfeg += mass_in_shell * ffegrp_model[mgi];
-    }
-    else if (model_type == RHO_3D_READ)
-    {
-      mni56 += mass_in_shell * get_initmassfracnuclide(mgi, NUCLIDE_NI56);
-      mco56 += mass_in_shell * get_f56co(mgi);
-      mni57 += mass_in_shell * get_f57ni(mgi);
-      mco57 += mass_in_shell * get_f57co(mgi);
-      mfe52 += mass_in_shell * get_f52fe(mgi);
-      mcr48 += mass_in_shell * get_f48cr(mgi);
-      mfeg += mass_in_shell * get_ffegrp(mgi);
-    }
+    mni56 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_NI56);
+    mco56 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_CO56);
+    mni57 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_NI57);
+    mco57 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_CO57);
+    mfe52 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_FE52);
+    mcr48 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_CR48);
+    mfeg += mass_in_shell * get_ffegrp(mgi);
   }
 
 
@@ -1573,7 +1560,7 @@ static void read_1d_model(void)
 
   char line[1024] = "";
 
-  int n = 0;
+  int mgi = 0;
   while (!feof(model_input))
   {
     if (line != fgets(line, 1024, model_input))
@@ -1585,9 +1572,16 @@ static void read_1d_model(void)
     int mgi_in;
     double vout_kmps;
     double log_rho;
+    double f56ni_model;
+    double f56co_model;
+    double f57ni_model;
+    double f57co_model;
+    double ffegrp_model;
+    double f48cr_model;
+    double f52fe_model;
     const int items_read = sscanf(line, "%d %lg %lg %lg %lg %lg %lg %lg %lg %lg",
-                                   &mgi_in, &vout_kmps, &log_rho, &ffegrp_model[n], &f56ni_model[n],
-                                   &f56co_model[n], &f52fe_model[n], &f48cr_model[n], &f57ni_model[n], &f57co_model[n]);
+                                   &mgi_in, &vout_kmps, &log_rho, &ffegrp_model, &f56ni_model,
+                                   &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
     if (items_read == 0)
     {
       // probably found a blank line, so skip it and keep reading
@@ -1596,19 +1590,19 @@ static void read_1d_model(void)
     else if (items_read == 8 || items_read == 10)
     {
 
-      assert(mgi_in == n + 1);
+      assert(mgi_in == mgi + 1);
 
-      vout_model[n] = vout_kmps * 1.e5;
-      rho_model[n] = pow(10., log_rho);
+      vout_model[mgi] = vout_kmps * 1.e5;
+      rho_model[mgi] = pow(10., log_rho);
 
-      if (items_read == 10 && n == 0)
+      if (items_read == 10 && mgi == 0)
       {
         printout("Found Ni57 and Co57 abundance columns in model.txt\n");
       }
       else if (items_read == 8)
       {
-        f57ni_model[n] = 0.;
-        f57co_model[n] = 0.;
+        f57ni_model = 0.;
+        f57co_model = 0.;
       }
     }
     else
@@ -1622,13 +1616,21 @@ static void read_1d_model(void)
     //          mgi_in, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
     //          f56co_model[n], f52fe_model[n], f48cr_model[n]);
     // printout("   %lg %lg\n", f57ni_model[n], f57co_model[n]);
+    set_modelfnuclide(mgi, NUCLIDE_NI56, f56ni_model);
+    set_modelfnuclide(mgi, NUCLIDE_CO56, f56co_model);
+    set_modelfnuclide(mgi, NUCLIDE_NI57, f57ni_model);
+    set_modelfnuclide(mgi, NUCLIDE_CO57, f57co_model);
+    set_modelfnuclide(mgi, NUCLIDE_FE52, f52fe_model);
+    set_modelfnuclide(mgi, NUCLIDE_CR48, f48cr_model);
+    set_modelfnuclide(mgi, NUCLIDE_V48, 0.);
+    set_ffegrp(mgi, ffegrp_model);
 
-    n += 1;
+    mgi += 1;
   }
 
-  if (n != npts_model)
+  if (mgi != npts_model)
   {
-    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", n - 1, npts_model);
+    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi - 1, npts_model);
     abort();
   }
 
@@ -1661,7 +1663,7 @@ static void read_2d_model(void)
     abort();
   }
   /* Now read the time (in days) at which the model is specified. */
-  float dum2, dum3, dum4, dum5, dum6, dum7, dum8, dum9;
+  float dum2, dum3;
   fscanf(model_input, "%g", &dum2);
   t_model = dum2 * DAY;
 
@@ -1671,22 +1673,30 @@ static void read_2d_model(void)
   dcoord1 = dum2 * t_model / ncoord1_model; //dr for input model
   dcoord2 = 2. * dum2 * t_model / ncoord2_model;//dz for input model
 
-
   /* Now read in the model. Each point in the model has two lines of input.
      First is an index for the cell then its r-mid point then its z-mid point
      then its total mass density.
      Second is the total FeG mass, initial 56Ni mass, initial 56Co mass */
 
-  for (int n = 0; n < npts_model; n++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    fscanf(model_input, "%d %g %g %g", &dum1, &dum2,  &dum3, &dum4);
-    fscanf(model_input, "%g %g %g %g %g",&dum5, &dum6, &dum7, &dum8, &dum9);
-    rho_model[n] = dum4;
-    ffegrp_model[n] = dum5;
-    f56ni_model[n] = dum6;
-    f56co_model[n] = dum7;
-    f52fe_model[n] = dum8;
-    f48cr_model[n] = dum9;
+    float f56ni_model;
+    float f56co_model;
+    float ffegrp_model;
+    float f48cr_model;
+    float f52fe_model;
+
+    fscanf(model_input, "%d %g %g %lg", &dum1, &dum2, &dum3, &rho_model[mgi]);
+    fscanf(model_input, "%g %g %g %g %g", &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model);
+
+    set_modelfnuclide(mgi, NUCLIDE_NI56, f56ni_model);
+    set_modelfnuclide(mgi, NUCLIDE_CO56, f56co_model);
+    set_modelfnuclide(mgi, NUCLIDE_NI57, 0.);
+    set_modelfnuclide(mgi, NUCLIDE_CO57, 0.);
+    set_modelfnuclide(mgi, NUCLIDE_FE52, f52fe_model);
+    set_modelfnuclide(mgi, NUCLIDE_CR48, f48cr_model);
+    set_modelfnuclide(mgi, NUCLIDE_V48, 0.);
+    set_ffegrp(mgi, ffegrp_model);
   }
 
   fclose(model_input);
@@ -1710,9 +1720,7 @@ static void read_3d_model(void)
 
   /// 1st read the number of data points in the table of input model.
   /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
-  int dum1;
-  fscanf(model_input, "%d", &dum1);
-  npts_model = dum1;
+  fscanf(model_input, "%d", &npts_model);
   if (npts_model > MMODELGRID)
   {
     printout("Too many points in input model. Abort. (%d > %d)\n", npts_model, MMODELGRID);
@@ -1740,7 +1748,8 @@ static void read_3d_model(void)
   int mgi = 0;
   for (int n = 0; n < npts_model; n++)
   {
-    fscanf(model_input, "%d %g %g %g %g", &dum1, &dum3, &dum4, &dum5, &rho_model);
+    int mgi_in;
+    fscanf(model_input, "%d %g %g %g %g", &mgi_in, &dum3, &dum4, &dum5, &rho_model);
     //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/tmin), 3.));
     if (rho_model < 0)
     {
@@ -1779,15 +1788,16 @@ static void read_3d_model(void)
     if (rho_model > 0)
     {
       set_ffegrp(mgi, dum2);
-      set_f56ni(mgi, dum3);
-      set_f56co(mgi, dum4);
+      set_modelfnuclide(mgi, NUCLIDE_NI56, dum3);
+      set_modelfnuclide(mgi, NUCLIDE_CO56, dum4);
 
       // TODO:
-      set_f57ni(mgi, 0.);
-      set_f57co(mgi, 0.);
+      set_modelfnuclide(mgi, NUCLIDE_NI57, 0.);
+      set_modelfnuclide(mgi, NUCLIDE_CO57, 0.);
 
-      set_f52fe(mgi, dum5);
-      set_f48cr(mgi, dum6);
+      set_modelfnuclide(mgi, NUCLIDE_FE52, dum5);
+      set_modelfnuclide(mgi, NUCLIDE_CR48, dum6);
+      set_modelfnuclide(mgi, NUCLIDE_V48, 0);
 
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
@@ -1811,12 +1821,11 @@ static void read_3d_model(void)
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
   set_ffegrp(MMODELGRID, 0.);
-  set_f56co(MMODELGRID, 0.);
-  set_f56ni(MMODELGRID, 0.);
-  set_f57co(MMODELGRID, 0.);
-  set_f57ni(MMODELGRID, 0.);
-  set_f52fe(MMODELGRID, 0.);
-  set_f48cr(MMODELGRID, 0.);
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  {
+    set_modelfnuclide(MMODELGRID, iso, 0.);
+  }
+
   set_Te(MMODELGRID, MINTEMP);
   set_TJ(MMODELGRID, MINTEMP);
   set_TR(MMODELGRID, MINTEMP);
@@ -1862,8 +1871,8 @@ static void read_3d_model(void)
 
 
 static double read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
+// reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
-
   assert(isotope < RADIONUCLIDE_COUNT);
 
   FILE *filein = fopen_required(filename, "r");
@@ -1893,7 +1902,7 @@ static double read_gamma_spectrum(enum radionuclides isotope, const char filenam
 
 static void read_decaydata(void)
 {
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     gamma_spectra[iso].nlines = 0;
     gamma_spectra[iso].energy = NULL;
