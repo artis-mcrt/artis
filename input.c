@@ -1515,12 +1515,12 @@ static void calculate_masses(void)
 
     mtot += mass_in_shell;
 
-    mni56 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_NI56);
-    mco56 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_CO56);
-    mni57 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_NI57);
-    mco57 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_CO57);
-    mfe52 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_FE52);
-    mcr48 += mass_in_shell * get_modelfnuclide(mgi, NUCLIDE_CR48);
+    mni56 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_NI56);
+    mco56 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_CO56);
+    mni57 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_NI57);
+    mco57 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_CO57);
+    mfe52 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_FE52);
+    mcr48 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_CR48);
     mfeg += mass_in_shell * get_ffegrp(mgi);
   }
 
@@ -1616,13 +1616,13 @@ static void read_1d_model(void)
     //          mgi_in, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
     //          f56co_model[n], f52fe_model[n], f48cr_model[n]);
     // printout("   %lg %lg\n", f57ni_model[n], f57co_model[n]);
-    set_modelfnuclide(mgi, NUCLIDE_NI56, f56ni_model);
-    set_modelfnuclide(mgi, NUCLIDE_CO56, f56co_model);
-    set_modelfnuclide(mgi, NUCLIDE_NI57, f57ni_model);
-    set_modelfnuclide(mgi, NUCLIDE_CO57, f57co_model);
-    set_modelfnuclide(mgi, NUCLIDE_FE52, f52fe_model);
-    set_modelfnuclide(mgi, NUCLIDE_CR48, f48cr_model);
-    set_modelfnuclide(mgi, NUCLIDE_V48, 0.);
+    set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
+    set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
+    set_modelradioabund(mgi, NUCLIDE_NI57, f57ni_model);
+    set_modelradioabund(mgi, NUCLIDE_CO57, f57co_model);
+    set_modelradioabund(mgi, NUCLIDE_FE52, f52fe_model);
+    set_modelradioabund(mgi, NUCLIDE_CR48, f48cr_model);
+    set_modelradioabund(mgi, NUCLIDE_V48, 0.);
     set_ffegrp(mgi, ffegrp_model);
 
     mgi += 1;
@@ -1689,13 +1689,13 @@ static void read_2d_model(void)
     fscanf(model_input, "%d %g %g %lg", &dum1, &dum2, &dum3, &rho_model[mgi]);
     fscanf(model_input, "%g %g %g %g %g", &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model);
 
-    set_modelfnuclide(mgi, NUCLIDE_NI56, f56ni_model);
-    set_modelfnuclide(mgi, NUCLIDE_CO56, f56co_model);
-    set_modelfnuclide(mgi, NUCLIDE_NI57, 0.);
-    set_modelfnuclide(mgi, NUCLIDE_CO57, 0.);
-    set_modelfnuclide(mgi, NUCLIDE_FE52, f52fe_model);
-    set_modelfnuclide(mgi, NUCLIDE_CR48, f48cr_model);
-    set_modelfnuclide(mgi, NUCLIDE_V48, 0.);
+    set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
+    set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
+    set_modelradioabund(mgi, NUCLIDE_NI57, 0.);
+    set_modelradioabund(mgi, NUCLIDE_CO57, 0.);
+    set_modelradioabund(mgi, NUCLIDE_FE52, f52fe_model);
+    set_modelradioabund(mgi, NUCLIDE_CR48, f48cr_model);
+    set_modelradioabund(mgi, NUCLIDE_V48, 0.);
     set_ffegrp(mgi, ffegrp_model);
   }
 
@@ -1788,16 +1788,16 @@ static void read_3d_model(void)
     if (rho_model > 0)
     {
       set_ffegrp(mgi, dum2);
-      set_modelfnuclide(mgi, NUCLIDE_NI56, dum3);
-      set_modelfnuclide(mgi, NUCLIDE_CO56, dum4);
+      set_modelradioabund(mgi, NUCLIDE_NI56, dum3);
+      set_modelradioabund(mgi, NUCLIDE_CO56, dum4);
 
       // TODO:
-      set_modelfnuclide(mgi, NUCLIDE_NI57, 0.);
-      set_modelfnuclide(mgi, NUCLIDE_CO57, 0.);
+      set_modelradioabund(mgi, NUCLIDE_NI57, 0.);
+      set_modelradioabund(mgi, NUCLIDE_CO57, 0.);
 
-      set_modelfnuclide(mgi, NUCLIDE_FE52, dum5);
-      set_modelfnuclide(mgi, NUCLIDE_CR48, dum6);
-      set_modelfnuclide(mgi, NUCLIDE_V48, 0);
+      set_modelradioabund(mgi, NUCLIDE_FE52, dum5);
+      set_modelradioabund(mgi, NUCLIDE_CR48, dum6);
+      set_modelradioabund(mgi, NUCLIDE_V48, 0);
 
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
@@ -1823,7 +1823,7 @@ static void read_3d_model(void)
   set_ffegrp(MMODELGRID, 0.);
   for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
-    set_modelfnuclide(MMODELGRID, iso, 0.);
+    set_modelradioabund(MMODELGRID, iso, 0.);
   }
 
   set_Te(MMODELGRID, MINTEMP);

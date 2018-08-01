@@ -4,8 +4,8 @@
 void grid_init(int my_rank);
 void allocate_compositiondata(int cellnumber);
 void allocate_cooling(int modelgridindex);
-float get_modelfnuclide(int modelgridindex, enum radionuclides nuclide_type);
-void set_modelfnuclide(int modelgridindex, enum radionuclides nuclide_type, float abund);
+float get_modelradioabund(int modelgridindex, enum radionuclides nuclide_type);
+void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
 
 /// Routine for getting the initial cell volume.
 inline double vol_init(void)//(const CELL *restrict const grid_ptr)
