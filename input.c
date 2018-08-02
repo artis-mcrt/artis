@@ -1521,11 +1521,11 @@ static void calculate_masses(void)
   }
 
 
-  printout("Masses in [Msun]:    Total:%8.4f  56Ni:%8.4f  56Co:%8.4f  52Fe:%8.4f  48Cr:%8.4f\n",
+  printout("Masses / Msun:    Total: %9.3e  56Ni: %9.2e  56Co: %9.2e  52Fe: %9.2e  48Cr: %9.2e\n",
            mtot / MSUN, totmassradionuclide[NUCLIDE_NI56] / MSUN,
            totmassradionuclide[NUCLIDE_CO56] / MSUN, totmassradionuclide[NUCLIDE_FE52] / MSUN,
            totmassradionuclide[NUCLIDE_CR48] / MSUN);
-  printout("Masses in [Msun]: Fe-group:%8.4f  57Ni:%8.4f  57Co:%8.4f\n",
+  printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.2e  57Co: %9.2e\n",
            mfeg / MSUN, totmassradionuclide[NUCLIDE_NI57] / MSUN, totmassradionuclide[NUCLIDE_CO57] / MSUN);
 }
 
@@ -1579,12 +1579,8 @@ static void read_1d_model(void)
     const int items_read = sscanf(line, "%d %lg %lg %lg %lg %lg %lg %lg %lg %lg",
                                    &mgi_in, &vout_kmps, &log_rho, &ffegrp_model, &f56ni_model,
                                    &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
-    if (items_read == 0)
-    {
-      // probably found a blank line, so skip it and keep reading
-      continue;
-    }
-    else if (items_read == 8 || items_read == 10)
+
+    if (items_read == 8 || items_read == 10)
     {
       assert(mgi_in == mgi + 1);
 
@@ -1620,11 +1616,15 @@ static void read_1d_model(void)
     set_ffegrp(mgi, ffegrp_model);
 
     mgi += 1;
+    if (mgi = npts_model)
+    {
+      break;
+    }
   }
 
   if (mgi != npts_model)
   {
-    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", mgi - 1, npts_model);
+    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, npts_model);
     abort();
   }
 
