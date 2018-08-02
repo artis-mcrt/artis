@@ -302,6 +302,8 @@ void update_packets(const int nts, PKT *pkt)
       {
         case TYPE_56NI_PELLET:
         case TYPE_56CO_PELLET:
+        case TYPE_57NI_PELLET:
+        case TYPE_57CO_PELLET:
         case TYPE_48CR_PELLET:
         case TYPE_48V_PELLET:
           update_pellet(pkt_ptr, false, false, nts, ts, tw);
@@ -313,6 +315,7 @@ void update_packets(const int nts, PKT *pkt)
           update_pellet(pkt_ptr, true, false, nts, ts, tw);
           break;
 
+        case TYPE_57NI_POSITRON_PELLET:
         case TYPE_56CO_POSITRON_PELLET:
           // covert to to non-thermal leptons
           update_pellet(pkt_ptr, false, true, nts, ts, tw);
