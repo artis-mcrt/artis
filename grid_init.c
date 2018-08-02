@@ -297,6 +297,111 @@ double get_radialpos(const int cellindex)
 }
 
 
+static void calculate_kappagrey(void)
+{
+  double rho_sum = 0.0;
+  double fe_sum = 0.0;
+  double opcase3_sum = 0.0;
+  int empty_cells = 0;
+
+  for (int n = 0; n < ngrid; n++)
+  {
+    int mgi = cell[n].modelgridindex;
+    rho_sum += get_rhoinit(mgi);
+    fe_sum += get_ffegrp(mgi);
+
+    if (opacity_case == 3)
+    {
+      if (get_rhoinit(mgi) > 0.)
+      {
+        double kappagrey = (0.9 * get_ffegrp(mgi) + 0.1);
+
+        if (get_rhoinit(mgi) > rho_crit)
+          kappagrey *= rho_crit / get_rhoinit(mgi);
+
+        set_kappagrey(mgi, kappagrey);
+      }
+      else if (get_rhoinit(mgi) == 0.)
+      {
+        set_kappagrey(mgi,0.);
+      }
+      else if (get_rhoinit(mgi) < 0.)
+      {
+        printout("Error: negative density. Abort.\n");
+        abort();
+      }
+      opcase3_sum += get_kappagrey(mgi) * get_rhoinit(mgi);
+    }
+  }
+
+  FILE *grid_file;
+  if (rank_global == 0)
+  {
+    grid_file = fopen_required("grid.out", "w");
+  }
+
+  /// Second pass through allows calculation of normalized kappa_grey
+  double check1 = 0.0;
+  double check2 = 0.0;
+  for (int n = 0; n < ngrid; n++)
+  {
+    int mgi = cell[n].modelgridindex;
+    if (rank_global == 0 && mgi != MMODELGRID)
+      fprintf(grid_file,"%d %d\n", n, mgi); ///write only non-empty cells to grid file
+
+    if (get_rhoinit(mgi) > 0)
+    {
+      if (opacity_case == 0)
+      {
+        set_kappagrey(mgi, GREY_OP);
+      }
+      else if (opacity_case == 1)
+      {
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+      }
+      else if (opacity_case == 2)
+      {
+        const double opcase2_normal = GREY_OP * rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
+        set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1));
+      }
+      else if (opacity_case == 3)
+      {
+        opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
+        set_kappagrey(mgi, get_kappagrey(mgi) * opcase3_normal);
+      }
+      else if (opacity_case == 4)
+      {
+        ///kappagrey used for initial grey approximation in this case
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+        //set_kappagrey(mgi, SIGMA_T);
+      }
+      else
+      {
+        printout("Unknown opacity case. Abort.\n");
+        abort();
+      }
+    }
+    else if (get_rhoinit(mgi) == 0.)
+    {
+      set_kappagrey(mgi, 0.);
+    }
+    else if (get_rhoinit(mgi) < 0.)
+    {
+      printout("Error: negative density. Abort.\n");
+      abort();
+    }
+
+    check1 = check1 + (get_kappagrey(mgi) * get_rhoinit(mgi));
+    check2 = check2 + get_rhoinit(mgi);
+  }
+  if (rank_global == 0)
+    fclose(grid_file);
+
+  printout("Initial densities taken from readin.\n");
+  printout("Grey normalisation check: %g\n", check1/check2);
+}
+
+
 static void density_1d_read(void)
 /// Routine for doing a density grid read from a 1-D model.
 {
@@ -308,11 +413,6 @@ static void density_1d_read(void)
   //   renorm[n]=0;
   //   den_norm[n]=0.0;
   // }
-
-  double rho_sum = 0.0;
-  double fe_sum = 0.0;
-  double opcase3_sum = 0.0;
-  int empty_cells = 0;
 
   /*
   for (n=0;n < ngrid; n++)
@@ -528,99 +628,6 @@ static void density_1d_read(void)
   set_TR(MMODELGRID, MINTEMP);
   allocate_compositiondata(MMODELGRID);
 
-  /// First pass through to get normalisation coefficients
-  for (int n = 0; n < ngrid; n++)
-  {
-    const int mgi = cell[n].modelgridindex;
-    rho_sum += get_rhoinit(mgi);
-    fe_sum += get_ffegrp(mgi);
-
-    if (opacity_case == 3)
-    {
-      if (get_rhoinit(mgi) > 0.)
-      {
-        double kappagrey = (0.9 * get_ffegrp(mgi) + 0.1);
-
-        if (get_rhoinit(mgi) > rho_crit)
-          kappagrey *= rho_crit / get_rhoinit(mgi);
-
-        set_kappagrey(mgi, kappagrey);
-      }
-      else if (get_rhoinit(mgi) == 0.)
-      {
-        set_kappagrey(mgi,0.);
-      }
-      else if (get_rhoinit(mgi) < 0.)
-      {
-        printout("Error: negative density. Abort.\n");
-        abort();
-      }
-      opcase3_sum += get_kappagrey(mgi) * get_rhoinit(mgi);
-    }
-  }
-
-  FILE *grid_file;
-  if (rank_global == 0)
-  {
-    grid_file = fopen_required("grid.out", "w");
-  }
-
-  double check1 = 0.0;
-  double check2 = 0.0;
-  /// Second pass through allows calculation of normalized kappa_grey
-  for (int n = 0; n < ngrid; n++)
-  {
-    int mgi = cell[n].modelgridindex;
-    if (rank_global == 0 && mgi != MMODELGRID)
-      fprintf(grid_file,"%d %d\n",n,mgi); ///write only non empty cells to grid file
-
-    if (get_rhoinit(mgi) > 0)
-    {
-      if (opacity_case == 0)
-      {
-        set_kappagrey(mgi, GREY_OP);
-      }
-      else if (opacity_case == 1)
-      {
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
-      }
-      else if (opacity_case == 2)
-      {
-        const double opcase2_normal = GREY_OP * rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-        set_kappagrey(mgi, opcase2_normal / get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1));
-      }
-      else if (opacity_case == 3)
-      {
-        opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
-        set_kappagrey(mgi, get_kappagrey(mgi) * opcase3_normal);
-      }
-      else if (opacity_case == 4)
-      {
-        ///kappagrey used for initial grey approximation in this case
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
-        //set_kappagrey(mgi, SIGMA_T);
-      }
-      else
-      {
-        printout("Unknown opacity case. Abort.\n");
-        abort();
-      }
-    }
-    else if (get_rhoinit(mgi) == 0.)
-    {
-      set_kappagrey(mgi, 0.);
-    }
-    else if (get_rhoinit(mgi) < 0.)
-    {
-      printout("Error: negative density. Abort.\n");
-      abort();
-    }
-
-    check1 = check1 + (get_kappagrey(mgi)  * get_rhoinit(mgi));
-    check2 = check2 + get_rhoinit(mgi);
-  }
-  if (rank_global == 0)
-    fclose(grid_file);
 
 
 /*backup copy of old version
@@ -783,9 +790,7 @@ static void density_1d_read(void)
 
 
   ******************************************************************************************************** */
-
-  printout("Grey normalisation check: %g\n", check1/check2);
-  printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN);
+  calculate_kappagrey();
 }
 
 
@@ -796,14 +801,6 @@ static void density_2d_read(void)
   // int renorm[MMODELGRID];
   // double den_norm[MMODELGRID];
   double zcylindrical, rcylindrical;
-
-  double check1 = 0.0;
-  double check2 = 0.0;
-
-  double rho_sum = 0.0;
-  double fe_sum = 0.0;
-  double opcase3_sum = 0.0;
-  int empty_cells = 0;
 
   for (int n = 0; n < ngrid; n++)
   {
@@ -929,114 +926,13 @@ static void density_2d_read(void)
   set_TR(MMODELGRID, MINTEMP);
   allocate_compositiondata(MMODELGRID);
 
-  /// First pass through to get normalisation coefficients
-  for (int n = 0; n < ngrid; n++)
-  {
-    int mgi = cell[n].modelgridindex;
-    rho_sum += get_rhoinit(mgi);
-    fe_sum += get_ffegrp(mgi);
-
-    if (opacity_case == 3)
-    {
-      if (get_rhoinit(mgi) > 0.)
-      {
-        if (get_rhoinit(mgi) > rho_crit)
-        {
-          set_kappagrey(mgi, (0.9 * get_ffegrp(mgi) + 0.1) * rho_crit / get_rhoinit(mgi));
-        }
-        else
-        {
-          set_kappagrey(mgi, (0.9 * get_ffegrp(mgi) + 0.1));;
-        }
-      }
-      else if (get_rhoinit(mgi) == 0.)
-      {
-        set_kappagrey(mgi,0.);
-      }
-      else if (get_rhoinit(mgi) < 0.)
-      {
-        printout("Error: negative density. Abort.\n");
-        abort();
-      }
-      opcase3_sum += get_kappagrey(mgi)*get_rhoinit(mgi);
-    }
-  }
-
-
-  FILE *grid_file;
-  if (rank_global == 0)
-  {
-    grid_file = fopen_required("grid.out", "w");
-  }
-
-  /// Second pass through allows calculation of normalized kappa_grey
-  for (int n = 0; n < ngrid; n++)
-  {
-    int mgi = cell[n].modelgridindex;
-    if (rank_global == 0 && mgi != MMODELGRID)
-      fprintf(grid_file,"%d %d\n",n,mgi); ///write only non emtpy cells to grid file
-    if (get_rhoinit(mgi) > 0)
-    {
-      if (opacity_case == 0)
-      {
-        set_kappagrey(mgi, GREY_OP);
-      }
-      else if (opacity_case == 1)
-      {
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
-      }
-      else if (opacity_case == 2)
-      {
-        const double opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-        set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1));
-      }
-      else if (opacity_case == 3)
-      {
-        opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
-        set_kappagrey(mgi, get_kappagrey(mgi) * opcase3_normal);
-      }
-      else if (opacity_case == 4)
-      {
-        ///kappagrey used for initial grey approximation in this case
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
-        //set_kappagrey(mgi, SIGMA_T);
-      }
-      else
-      {
-        printout("Unknown opacity case. Abort.\n");
-        abort();
-      }
-    }
-    else if (get_rhoinit(mgi) == 0.)
-    {
-      set_kappagrey(mgi, 0.);
-    }
-    else if (get_rhoinit(mgi) < 0.)
-    {
-      printout("Error: negative density. Abort.\n");
-      abort();
-    }
-
-    check1 = check1 + (get_kappagrey(mgi)  * get_rhoinit(mgi));
-    check2 = check2 + get_rhoinit(mgi);
-  }
-  if (rank_global == 0)
-    fclose(grid_file);
-
-
-  printout("Grey normalisation check: %g\n", check1/check2);
-  printout("Total mass check: %g\n", check2 * wid_init * wid_init * wid_init / MSUN);
+  calculate_kappagrey();
 }
 
 
 static void density_3d_read(void)
 /// Routine for doing a density grid read from a 3-D model.
 {
-  double rho_sum = 0.0;
-  double fe_sum = 0.0;
-  int empty_cells = 0;
-  double opcase3_sum = 0;
-
   for (int n = 0; n < ngrid; n++)
   {
     //printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d\n", n,grid_type,cell[n].modelgridindex,ngrid);
@@ -1069,100 +965,6 @@ static void density_3d_read(void)
     */
   }
 
-  /*Remainder of routine copied from the 1D case. Previous version removed (but still given below */
-
-  for (int n = 0; n < ngrid; n++)
-  {
-    int mgi = cell[n].modelgridindex;
-    rho_sum += get_rhoinit(mgi);
-    fe_sum += get_ffegrp(mgi);
-
-    if (opacity_case == 3)
-    {
-      if (get_rhoinit(mgi) > 0.)
-      {
-        double kappagrey = (0.9 * get_ffegrp(mgi) + 0.1);
-
-        if (get_rhoinit(mgi) > rho_crit)
-          kappagrey *= rho_crit / get_rhoinit(mgi);
-
-        set_kappagrey(mgi, kappagrey);
-      }
-      else if (get_rhoinit(mgi) == 0.)
-      {
-        set_kappagrey(mgi,0.);
-      }
-      else if (get_rhoinit(mgi) < 0.)
-      {
-        printout("Error: negative density. Abort.\n");
-        abort();
-      }
-      opcase3_sum += get_kappagrey(mgi) * get_rhoinit(mgi);
-    }
-  }
-
-  FILE *grid_file;
-  if (rank_global == 0)
-  {
-    grid_file = fopen_required("grid.out", "w");
-  }
-
-  /// Second pass through allows calculation of normalized kappa_grey
-  double check1 = 0.0;
-  double check2 = 0.0;
-  for (int n = 0; n < ngrid; n++)
-  {
-    int mgi = cell[n].modelgridindex;
-    if (rank_global == 0 && mgi != MMODELGRID)
-      fprintf(grid_file,"%d %d\n", n, mgi); ///write only non-empty cells to grid file
-
-    if (get_rhoinit(mgi) > 0)
-    {
-      if (opacity_case == 0)
-      {
-        set_kappagrey(mgi, GREY_OP);
-      }
-      else if (opacity_case == 1)
-      {
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
-      }
-      else if (opacity_case == 2)
-      {
-        const double opcase2_normal = GREY_OP * rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-        set_kappagrey(mgi, opcase2_normal/get_rhoinit(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1));
-      }
-      else if (opacity_case == 3)
-      {
-        opcase3_normal = GREY_OP * rho_sum / opcase3_sum;
-        set_kappagrey(mgi, get_kappagrey(mgi) * opcase3_normal);
-      }
-      else if (opacity_case == 4)
-      {
-        ///kappagrey used for initial grey approximation in this case
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
-        //set_kappagrey(mgi, SIGMA_T);
-      }
-      else
-      {
-        printout("Unknown opacity case. Abort.\n");
-        abort();
-      }
-    }
-    else if (get_rhoinit(mgi) == 0.)
-    {
-      set_kappagrey(mgi, 0.);
-    }
-    else if (get_rhoinit(mgi) < 0.)
-    {
-      printout("Error: negative density. Abort.\n");
-      abort();
-    }
-
-    check1 = check1 + (get_kappagrey(mgi) * get_rhoinit(mgi));
-    check2 = check2 + get_rhoinit(mgi);
-  }
-  if (rank_global == 0)
-    fclose(grid_file);
 
 
   /*
@@ -1253,8 +1055,7 @@ static void density_3d_read(void)
 
   */
 
-  printout("Initial densities taken from readin.\n");
-  printout("Grey normalisation check: %g\n", check1/check2);
+  calculate_kappagrey();
 }
 
 
