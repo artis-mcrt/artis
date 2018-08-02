@@ -1521,11 +1521,11 @@ static void calculate_masses(void)
   }
 
 
-  printout("Masses / Msun:    Total: %9.3e  56Ni: %9.2e  56Co: %9.2e  52Fe: %9.2e  48Cr: %9.2e\n",
+  printout("Masses / Msun:    Total: %9.3e  56Ni: %9.3e  56Co: %9.3e  52Fe: %9.3e  48Cr: %9.3e\n",
            mtot / MSUN, totmassradionuclide[NUCLIDE_NI56] / MSUN,
            totmassradionuclide[NUCLIDE_CO56] / MSUN, totmassradionuclide[NUCLIDE_FE52] / MSUN,
            totmassradionuclide[NUCLIDE_CR48] / MSUN);
-  printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.2e  57Co: %9.2e\n",
+  printout("Masses / Msun: Fe-group: %9.3e  57Ni: %9.3e  57Co: %9.3e\n",
            mfeg / MSUN, totmassradionuclide[NUCLIDE_NI57] / MSUN, totmassradionuclide[NUCLIDE_CO57] / MSUN);
 }
 
@@ -1616,7 +1616,7 @@ static void read_1d_model(void)
     set_ffegrp(mgi, ffegrp_model);
 
     mgi += 1;
-    if (mgi = npts_model)
+    if (mgi == npts_model)
     {
       break;
     }
