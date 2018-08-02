@@ -1714,7 +1714,6 @@ static void read_3d_model(void)
 {
   float dum2, dum3, dum4, dum5;
   float rho_model;
-  double helper;
 
   FILE *model_input = fopen_required("model.txt", "r");
 
@@ -1773,14 +1772,14 @@ static void read_3d_model(void)
 
     if (rho_model > 0)
     {
-      assert(mg_associated_cells[mgi] == 0);
+      assert(mg_associated_cells[mgi] == 0);  // this mgi should correspond to one cellindex only
       mg_associated_cells[mgi] = 1;
       cell[n].modelgridindex = mgi;
-      helper = rho_model * pow( (t_model/tmin), 3.);
+      const double rho_tmin = rho_model * pow( (t_model/tmin), 3.);
       //printout("mgi %d, helper %g\n",mgi,helper);
-      set_rhoinit(mgi,helper);
+      set_rhoinit(mgi, rho_tmin);
       //printout("mgi %d, rho_init %g\n",mgi,get_rhoinit(mgi));
-      set_rho(mgi,helper);
+      set_rho(mgi, rho_tmin);
 
       if (min_den > rho_model)
       {

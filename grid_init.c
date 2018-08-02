@@ -491,7 +491,7 @@ static void allocate_nonemptycells(void)
   allocate_cooling(MMODELGRID);
 
   const bool threedimensional = (model_type == RHO_3D_READ);
-  // three dimensional models already have mg_associated_cells[mgi] set to 1 if rho[mgi] > 0
+
   if (!threedimensional)
   {
     // Determine the number of simulation cells associated with the model cells
@@ -504,6 +504,7 @@ static void allocate_nonemptycells(void)
       mg_associated_cells[mgi] += 1;
     }
   }
+  // three dimensional models already have mg_associated_cells[mgi] set to 1 if rho[mgi] > 0 and 0 otherwise
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
@@ -1013,7 +1014,7 @@ static void abundances_read(void)
 
     if (cellnumber != n + 1)
     {
-      printout("[fatal] abundances_read: grid cell mismatch ... abort\n");
+      printout("[fatal] %s: grid cell mismatch ... abort\n", __func__);
       printout("[fatal] n %d, cellnumber %d\n", n, cellnumber);
       abort();
     }
@@ -1028,11 +1029,11 @@ static void abundances_read(void)
       normfactor += abundances_in[anumber - 1];
     }
 
-    if (threedimensional || normfactor <= 0.)
-      normfactor = 1.;
-
-    if (threedimensional || mg_associated_cells[mgi] >= 1)
+    if (mg_associated_cells[mgi] > 0)
     {
+      if (threedimensional || normfactor <= 0.)
+        normfactor = 1.;
+
       for (int element = 0; element < nelements; element++)
       {
         ///now set the abundances (by mass) of included elements, i.e.
