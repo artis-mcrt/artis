@@ -275,6 +275,28 @@ static void set_stable_abund(const int mgi, const int anumber, const float elema
 }
 
 
+double get_radialpos(const int cellindex)
+{
+  // const int nx = cellindex % nxgrid;
+  // const int ny = (cellindex / nxgrid) % nygrid;
+  // const int nz = (cellindex / (nxgrid * nygrid)) % nzgrid;
+  // const double cellxmin = - xmax + (2 * nx * xmax / nxgrid);
+  // const double cellymin = - ymax + (2 * ny * ymax / nygrid);
+  // const double cellzmin = - zmax + (2 * nz * zmax / nzgrid);
+
+  const double cellxmin = cell[cellindex].pos_init[0];
+  const double cellymin = cell[cellindex].pos_init[1];
+  const double cellzmin = cell[cellindex].pos_init[2];
+
+  double dcen[3];
+  dcen[0] = cellxmin + (0.5 * wid_init);
+  dcen[1] = cellymin + (0.5 * wid_init);
+  dcen[2] = cellzmin + (0.5 * wid_init);
+
+  return vec_len(dcen);
+}
+
+
 static void density_1d_read(void)
 /// Routine for doing a density grid read from a 1-D model.
 {
@@ -405,12 +427,7 @@ static void density_1d_read(void)
 
   for (int n = 0; n < ngrid; n++)
   {
-    double dcen[3];
-    dcen[0] = cell[n].pos_init[0] + (0.5 * wid_init);
-    dcen[1] = cell[n].pos_init[1] + (0.5 * wid_init);
-    dcen[2] = cell[n].pos_init[2] + (0.5 * wid_init);
-
-    const double radial_pos = vec_len(dcen);
+    const double radial_pos = get_radialpos(n);
     const double vmin = 0.;
     if (radial_pos < rmax)
     {
@@ -790,15 +807,22 @@ static void density_2d_read(void)
 
   for (int n = 0; n < ngrid; n++)
   {
-    double dcen[3];
-    dcen[0] = cell[n].pos_init[0] + (0.5 * wid_init);
-    dcen[1] = cell[n].pos_init[1] + (0.5 * wid_init);
-    dcen[2] = cell[n].pos_init[2] + (0.5 * wid_init);
-
-    double radial_pos = vec_len(dcen);
+    double radial_pos = get_radialpos(n);
 
     if (radial_pos < rmax)
     {
+      const int nx = n % nxgrid;
+      const int ny = (n / nxgrid) % nygrid;
+      const int nz = (n / (nxgrid * nygrid)) % nzgrid;
+      const double cellxmin = - xmax + (2 * nx * xmax / nxgrid);
+      const double cellymin = - ymax + (2 * ny * ymax / nygrid);
+      const double cellzmin = - zmax + (2 * nz * zmax / nzgrid);
+
+      double dcen[3];
+      dcen[0] = cellxmin + (0.5 * wid_init);
+      dcen[1] = cellymin + (0.5 * wid_init);
+      dcen[2] = cellzmin + (0.5 * wid_init);
+
       mkeep1 = mkeep2 = 0;
       cell[n].modelgridindex = 0;
       zcylindrical = dcen[2];
@@ -1016,13 +1040,7 @@ static void density_3d_read(void)
   for (int n = 0; n < ngrid; n++)
   {
     //printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d\n", n,grid_type,cell[n].modelgridindex,ngrid);
-    double dcen[3];
-    dcen[0] = cell[n].pos_init[0] + (0.5 * wid_init);
-    dcen[1] = cell[n].pos_init[1] + (0.5 * wid_init);
-    dcen[2] = cell[n].pos_init[2] + (0.5 * wid_init);
-    //printout("grid_init2: n = %d\n", n);
-
-    double radial_pos = vec_len(dcen);
+    const double radial_pos = get_radialpos(n);
     modelgrid[cell[n].modelgridindex].initial_radial_pos = radial_pos;
 //     printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d, r %g, sum %g\n", n,grid_type,cell[n].modelgridindex,ngrid,radial_pos,modelgrid[cell[n].modelgridindex].initial_radial_pos);
 //     modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
@@ -1619,6 +1637,9 @@ static void uniform_grid_setup(void)
   int nz = 0;
   for (int n = 0; n < ngrid; n++)
   {
+    assert(nx == n % nxgrid);
+    assert(ny == (n / nxgrid) % nygrid);
+    assert(nz == (n / (nxgrid * nygrid)) % nzgrid);
     cell[n].pos_init[0] = - xmax + (2 * nx * xmax / nxgrid);
     cell[n].pos_init[1] = - ymax + (2 * ny * ymax / nygrid);
     cell[n].pos_init[2] = - zmax + (2 * nz * zmax / nzgrid);
@@ -1634,6 +1655,8 @@ static void uniform_grid_setup(void)
     // cell[n].xyz[0] = nx;
     // cell[n].xyz[1] = ny;
     // cell[n].xyz[2] = nz;
+
+    assert(n == nz * nygrid * nxgrid + ny * nxgrid + nx);
 
     nx++;
     if (nx == nxgrid)
