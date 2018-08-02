@@ -3,8 +3,6 @@
 
 void grid_init(int my_rank);
 double get_radialpos(int cellindex);
-void allocate_compositiondata(int modelgridindex);
-void allocate_cooling(int modelgridindex);
 float get_modelradioabund(int modelgridindex, enum radionuclides nuclide_type);
 void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
 
