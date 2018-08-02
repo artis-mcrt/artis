@@ -1,4 +1,5 @@
 #include "sn3d.h"
+#include "assert.h"
 #include "boundary.h"
 #include "grid_init.h"
 #include "rpkt.h"
@@ -195,7 +196,9 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   {
     choice = 1;
     time = tx_plus;
-    if (cell[cellindex].xyz[0] == (nxgrid - 1))
+    // assert((cell[cellindex].xyz[0] == (nxgrid - 1)) == (cell[cellindex].pos_init[0] + 1.5 * wid_init > xmax))
+    // if (cell[cellindex].xyz[0] == (nxgrid - 1))
+    if (cell[cellindex].pos_init[0] + 1.5 * wid_init > xmax)
     {
       *snext = -99;
     }
@@ -216,7 +219,9 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   {
     choice = 2;
     time = tx_minus;
-    if (cell[cellindex].xyz[0] == 0)
+    // assert((cell[cellindex].xyz[0] == 0) == (cell[cellindex].pos_init[0] < - xmax + 0.5 * wid_init))
+    // if (cell[cellindex].xyz[0] == 0)
+    if (cell[cellindex].pos_init[0] < - xmax + 0.5 * wid_init)
     {
       *snext = -99;
     }
@@ -237,7 +242,9 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   {
     choice = 3;
     time = ty_plus;
-    if (cell[cellindex].xyz[1] == (nygrid - 1))
+    // assert((cell[cellindex].xyz[1] == (nygrid - 1)) == (cell[cellindex].pos_init[1] + 1.5 * wid_init > ymax))
+    // if (cell[cellindex].xyz[1] == (nygrid - 1))
+    if (cell[cellindex].pos_init[1] + 1.5 * wid_init > ymax)
     {
       *snext = -99;
     }
@@ -258,7 +265,9 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   {
     choice = 4;
     time = ty_minus;
-    if (cell[cellindex].xyz[1] == 0)
+    // assert((cell[cellindex].xyz[1] == 0) == (cell[cellindex].pos_init[1] < - ymax + 0.5 * wid_init))
+    // if (cell[cellindex].xyz[1] == 0)
+    if (cell[cellindex].pos_init[1] < - ymax + 0.5 * wid_init)
     {
       *snext = -99;
     }
@@ -279,7 +288,9 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   {
     choice = 5;
     time = tz_plus;
-    if (cell[cellindex].xyz[2] == (nzgrid - 1))
+    // assert((cell[cellindex].xyz[2] == (nzgrid - 1)) == (cell[cellindex].pos_init[2] + 1.5 * wid_init > zmax))
+    // if (cell[cellindex].xyz[2] == (nzgrid - 1))
+    if (cell[cellindex].pos_init[2] + 1.5 * wid_init > zmax)
     {
       *snext = -99;
     }
@@ -300,7 +311,9 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   {
     choice = 6;
     time = tz_minus;
-    if (cell[cellindex].xyz[2] == 0)
+    // assert((cell[cellindex].xyz[2] == 0) == (cell[cellindex].pos_init[2] < - zmax + 0.5 * wid_init))
+    // if (cell[cellindex].xyz[2] == 0)
+    if (cell[cellindex].pos_init[2] < - zmax + 0.5 * wid_init)
     {
       *snext = -99;
     }
