@@ -9,8 +9,6 @@
 #include "vectors.h"
 
 
-static double abund_model[MMODELGRID][30];
-
 extern inline double vol_init(void);
 extern inline float get_rhoinit(int modelgridindex);
 extern inline float get_rho(int modelgridindex);
@@ -402,6 +400,61 @@ static void calculate_kappagrey(void)
 }
 
 
+static void allocate_nonemptycells1d2d(void)
+{
+  // Determine the number of simulation cells associated with the model cells
+  for (int mgi = 0; mgi < npts_model; mgi++)
+  {
+    int count = 0;
+    for (int cellindex = 0; cellindex < ngrid; cellindex++)
+    {
+      if (cell[cellindex].modelgridindex == mgi)
+        count++;
+    }
+    mg_associated_cells[mgi] = count;
+  }
+
+  for (int mgi = 0; mgi < npts_model; mgi++)
+  {
+    if (mg_associated_cells[mgi] > 0)
+    {
+      allocate_compositiondata(mgi);
+      allocate_cooling(mgi);
+
+      if (get_rhoinit(mgi) < 0)
+      {
+        printout("Error: negative density. Abort.\n");
+        abort();
+      }
+    }
+    else
+    {
+      set_rhoinit(mgi, 0.);
+      set_rho(mgi, 0.);
+      for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+      {
+        set_modelradioabund(mgi, iso, 0.);
+      }
+    }
+  }
+
+  /// This is the placeholder for empty cells. Temperatures must be positive
+  /// as long as ff opacities are calculated.
+  set_rhoinit(MMODELGRID, 0.);
+  set_rho(MMODELGRID, 0.);
+  set_nne(MMODELGRID, 0.);
+  set_ffegrp(MMODELGRID, 0.);
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  {
+    set_modelradioabund(MMODELGRID, iso, 0.);
+  }
+  set_Te(MMODELGRID, MINTEMP);
+  set_TJ(MMODELGRID, MINTEMP);
+  set_TR(MMODELGRID, MINTEMP);
+  allocate_compositiondata(MMODELGRID);
+}
+
+
 static void density_1d_read(void)
 /// Routine for doing a density grid read from a 1-D model.
 {
@@ -553,81 +606,6 @@ static void density_1d_read(void)
       cell[n].modelgridindex = MMODELGRID;
     }
   }
-
-
-  /// Determine the number of simulation cells associated with the model cells
-  for (int mgi = 0; mgi < npts_model; mgi++)
-  {
-    int count = 0;
-    for (int ii = 0; ii < ngrid; ii++)
-    {
-      if (cell[ii].modelgridindex == mgi)
-        count++;
-    }
-    mg_associated_cells[mgi] = count;
-  }
-
-
-  for (int mgi = 0; mgi < npts_model; mgi++)
-  {
-    if (mg_associated_cells[mgi] > 0)
-    {
-      allocate_compositiondata(mgi);
-      allocate_cooling(mgi);
-      for (int element = 0; element < nelements; element++)
-      {
-        ///now set the abundances (by mass) of included elements, i.e.
-        ///read out the abundances specified in the atomic data file
-        const int anumber = get_element(element);
-        const float abundance = abund_model[mgi][anumber - 1];
-        //cell[n].composition[element].abundance = abundance;
-        modelgrid[mgi].composition[element].abundance = abundance;
-        //if (anumber == 8)
-        //  cell[n].composition[element].abundance = 1-cell[n].f_ni;
-        //if (anumber == 20)
-        //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
-
-        //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
-
-        set_stable_abund(mgi, anumber, abundance);
-      }
-
-      if (get_rhoinit(mgi) < 0)
-      {
-        printout("Error: negative density. Abort.\n");
-        abort();
-      }
-    }
-    else
-    {
-      set_rhoinit(mgi, 0.);
-      set_rho(mgi, 0.);
-      for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-      {
-        set_modelradioabund(mgi, iso, 0.);
-      }
-      // for (int element = 0; element < nelements; element++)
-      // {
-      //   modelgrid[mgi].composition[element].abundance = 0.;
-      // }
-    }
-  }
-
-  /// This is the placeholder for empty cells. Temperatures must be positive
-  /// as long as ff opacities are calculated.
-  set_rhoinit(MMODELGRID, 0.);
-  set_rho(MMODELGRID, 0.);
-  set_nne(MMODELGRID, 0.);
-  set_ffegrp(MMODELGRID, 0.);
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-  {
-    set_modelradioabund(MMODELGRID, iso, 0.);
-  }
-  set_Te(MMODELGRID, MINTEMP);
-  set_TJ(MMODELGRID, MINTEMP);
-  set_TR(MMODELGRID, MINTEMP);
-  allocate_compositiondata(MMODELGRID);
-
 
 
 /*backup copy of old version
@@ -787,10 +765,7 @@ static void density_1d_read(void)
 }
 
 }
-
-
-  ******************************************************************************************************** */
-  calculate_kappagrey();
+*/
 }
 
 
@@ -854,208 +829,6 @@ static void density_2d_read(void)
       cell[n].modelgridindex = MMODELGRID;
     }
   }
-
-
-  // Determine the number of simulation cells associated with the model cells
-  for (int i = 0; i < npts_model; i++)
-  {
-    int count = 0;
-    for (int ii = 0; ii < ngrid; ii++)
-    {
-      if (cell[ii].modelgridindex == i) count++;
-    }
-    mg_associated_cells[i] = count;
-  }
-
-
-//  for (n=0;n < ngrid; n++)
-//  {
-//    mgi = cell[n].modelgridindex;
-  for (int mgi = 0; mgi < npts_model; mgi++)
-  {
-    if (mg_associated_cells[mgi] > 0)
-    {
-      allocate_compositiondata(mgi);
-      allocate_cooling(mgi);
-      for (int element = 0; element < nelements; element++)
-      {
-        ///now set the abundances (by mass) of included elements, i.e.
-        ///read out the abundances specified in the atomic data file
-        const int anumber = get_element(element);
-        const float elemabundance = abund_model[mgi][anumber-1];
-        //cell[n].composition[element].abundance = abundance;
-        modelgrid[mgi].composition[element].abundance = elemabundance;
-        //if (anumber == 8)
-        //  cell[n].composition[element].abundance = 1-cell[n].f_ni;
-        //if (anumber == 20)
-        //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
-
-        //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
-        set_stable_abund(mgi, anumber, elemabundance);
-      }
-
-      if (get_rhoinit(mgi) < 0)
-      {
-        printout("Error: negative density. Abort.\n");
-        abort();
-      }
-    }
-    else
-    {
-      set_rhoinit(mgi, 0.);
-      set_rho(mgi, 0.);
-      for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-      {
-        set_modelradioabund(mgi, iso, 0.);
-      }
-    }
-  }
-
-  /// This is the placeholder for empty cells. Temperatures must be positive
-  /// as long as ff opacities are calculated.
-  set_rhoinit(MMODELGRID, 0.);
-  set_rho(MMODELGRID, 0.);
-  set_nne(MMODELGRID, 0.);
-  set_ffegrp(MMODELGRID, 0.);
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-  {
-    set_modelradioabund(MMODELGRID, iso, 0.);
-  }
-  set_Te(MMODELGRID, MINTEMP);
-  set_TJ(MMODELGRID, MINTEMP);
-  set_TR(MMODELGRID, MINTEMP);
-  allocate_compositiondata(MMODELGRID);
-
-  calculate_kappagrey();
-}
-
-
-static void density_3d_read(void)
-/// Routine for doing a density grid read from a 3-D model.
-{
-  for (int n = 0; n < ngrid; n++)
-  {
-    //printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d\n", n,grid_type,cell[n].modelgridindex,ngrid);
-    const double radial_pos = get_radialpos(n);
-    modelgrid[cell[n].modelgridindex].initial_radial_pos = radial_pos;
-//     printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d, r %g, sum %g\n", n,grid_type,cell[n].modelgridindex,ngrid,radial_pos,modelgrid[cell[n].modelgridindex].initial_radial_pos);
-//     modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
-//     printout("grid_init: n = %d, grid_type %d, mgi %d, ngrid %d, r %g, sum %g\n", n,grid_type,cell[n].modelgridindex,ngrid,radial_pos,modelgrid[cell[n].modelgridindex].initial_radial_pos);
-
-    /*
-    radial_pos = vec_len(dcen);
-    if (radial_pos > rmax)
-    {
-      cell[n].rho_init = cell[n].rho = 0.0;
-      cell[n].f_ni = 0.0;
-      cell[n].f_fe = 0.0;
-      empty_cells++;
-    }
-    else if (cell[n].rho_init < min_den)
-    {
-      printout("test\n");
-      cell[n].rho_init = cell[n].rho = min_den/100.;
-      allocate_compositiondata(n);
-    }
-    else
-    {
-      allocate_compositiondata(n);
-    }
-
-    */
-  }
-
-
-
-  /*
-  if (opacity_case == 3)
-  {
-    for (n = 0; n < ngrid; n++)
-    {
-      if (cell[n].rho_init > 0)
-      {
-        if (cell[n].rho_init > rho_crit)
-        {
-          cell[n].kappa_grey = (0.9 * cell[n].f_fe + 0.1) * rho_crit/cell[n].rho_init;
-        }
-        else
-        {
-          cell[n].kappa_grey = (0.9 * cell[n].f_fe + 0.1);
-        }
-      }
-      else if (cell[n].rho_init == 0)
-      {
-        cell[n].kappa_grey = 0;
-      }
-      else if (cell[n].rho_init < 0)
-      {
-        printout("Error: negative density. Abort.\n");
-        abort();
-      }
-      opcase3_sum += cell[n].kappa_grey*cell[n].rho_init;
-    }
-  }
-  */
-
-
-//  printout("grid_init: opcase3_sum, rho_sum %g %g\n",opcase3_sum, rho_sum);
-
-
-  //MK: second loop to set up opacities which need integrated basic quantities for normalisation
-
-  /*
-    for (n=0;n < ngrid; n++)
-    {
-      if (cell[n].rho_init > 0)
-      {
-        if (opacity_case == 0)
-        {
-          cell[n].kappa_grey = GREY_OP;
-        }
-        else if (opacity_case == 1)
-        {
-          cell[n].kappa_grey = ((0.9 * cell[n].f_fe) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1);
-        }
-        else if (opacity_case == 2)
-        {
-          opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-          cell[n].kappa_grey = opcase2_normal/cell[n].rho_init * ((0.9 * cell[n].f_fe) + 0.1);
-        }
-        else if (opacity_case == 3)
-        {
-          opcase3_normal = GREY_OP*rho_sum / opcase3_sum;
-          cell[n].kappa_grey = cell[n].kappa_grey * opcase3_normal;
-        }
-        else if (opacity_case == 4)
-        {
-          cell[n].kappa_grey = SIGMA_T;
-        }
-        else
-        {
-          printout("Unknown opacity case. Abort.\n");
-          abort();
-        }
-      }
-      else if (cell[n].rho_init == 0)
-      {
-        cell[n].kappa_grey = 0;
-      }
-      else if (cell[n].rho_init < 0)
-      {
-        printout("Error: negative density. Abort.\n");
-        abort();
-      }
-
-      check1 = check1 + (cell[n].kappa_grey  * cell[n].rho_init);
-      check2 = check2 + cell[n].rho_init;
-    }
-
-
-  printout("grid_init: opcase3_normal %g\n", opcase3_normal);
-
-  */
-
-  calculate_kappagrey();
 }
 
 
@@ -1212,8 +985,10 @@ void allocate_cooling(int modelgridindex)
 }*/
 
 
-static void abundances_read(const bool threedimensional)
+static void abundances_read(void)
 {
+  const bool threedimensional = (model_type == RHO_3D_READ);
+
   /// Open the abundances file
   FILE *abundance_file = fopen_required("abundances.txt", "r");
 
@@ -1222,8 +997,10 @@ static void abundances_read(const bool threedimensional)
   /// cells. Its format must be cellnumber (integer), abundance for
   /// element Z=1 (float) up to abundance for element Z=30 (float)
   /// i.e. in total one integer and 30 floats.
-  const int ncells = threedimensional ? ngrid : npts_model;
-  for (int n = 0; n < ncells; n++)
+
+  // loop over propagation cells for 3D models, or modelgrid cells
+  const int ncount = threedimensional ? ngrid : npts_model;
+  for (int n = 0; n < ncount; n++)
   {
     const int mgi = threedimensional ? cell[n].modelgridindex : n;
 
@@ -1237,42 +1014,32 @@ static void abundances_read(const bool threedimensional)
       abort();
     }
 
-    double norm = 0.;
+    double normfactor = 0.;
     float abundances_in[30];
     for (int anumber = 1; anumber <= 30; anumber++)
     {
       fscanf(abundance_file, "%g", &abundances_in[anumber - 1]);
 
       assert(abundances_in[anumber - 1] >= 0);
-      if (!threedimensional)
-      {
-        abund_model[n][anumber - 1] = abundances_in[anumber - 1];
-        norm += abundances_in[anumber - 1];
-      }
+      normfactor += abundances_in[anumber - 1];
     }
 
-    if (threedimensional)
+    if (threedimensional || normfactor <= 0.)
+      normfactor = 1.;
+
+    if (threedimensional || mg_associated_cells[mgi] >= 1)
     {
       for (int element = 0; element < nelements; element++)
       {
         ///now set the abundances (by mass) of included elements, i.e.
         ///read out the abundances specified in the atomic data file
         const int anumber = get_element(element);
-        const float elemabundance = abundances_in[anumber - 1];
-        assert(elemabundance >= 0);
+        const float elemabundance = abundances_in[anumber - 1] / normfactor;
+        assert(elemabundance >= 0.);
         modelgrid[mgi].composition[element].abundance = elemabundance;
 
+        // radioactive nuclide abundances should have already been set by read_model
         set_stable_abund(mgi, anumber, elemabundance);
-      }
-    }
-    else
-    {
-      if (norm > 0)
-      {
-        for (int anumber = 1; anumber <= 30; anumber++)
-        {
-          abund_model[n][anumber - 1] *= 1. / norm;
-        }
       }
     }
   }
@@ -1556,24 +1323,30 @@ void grid_init(int my_rank)
 
     if (model_type == RHO_1D_READ)
     {
-      abundances_read(false);
       density_1d_read();
+      allocate_nonemptycells1d2d();
     }
     else if (model_type == RHO_2D_READ)
     {
-      abundances_read(false); // for 2D can handle abundances exactly as for 1D
       density_2d_read();
+      allocate_nonemptycells1d2d();
     }
     else if (model_type == RHO_3D_READ)
     {
-      density_3d_read();
-      abundances_read(true);
+      for (int n = 0; n < ngrid; n++)
+      {
+        const double radial_pos = get_radialpos(n);
+        modelgrid[cell[n].modelgridindex].initial_radial_pos = radial_pos;
+      }
+      // cells with rho > 0 are allocated by the above function
     }
     else
     {
       printout("[fatal] grid_init: Error: Unknown density type. Abort.");
       abort();
     }
+    calculate_kappagrey();
+    abundances_read();
   }
 
   radfield_init(my_rank);
