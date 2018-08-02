@@ -4,14 +4,9 @@
 #include "vectors.h"
 
 
-static double uniform_ni56(const CELL *restrict grid_ptr)
+static double uniform_ni56(const int cellindex)
 {
-  double dcen[3];
-  dcen[0] = grid_ptr->pos_init[0] + (0.5 * wid_init);
-  dcen[1] = grid_ptr->pos_init[1] + (0.5 * wid_init);
-  dcen[2] = grid_ptr->pos_init[2] + (0.5 * wid_init);
-
-  const double r_on_rmax = vec_len(dcen) / rmax;
+  const double r_on_rmax = get_radialpos(cellindex) / rmax;
   const double m_r = pow(r_on_rmax, 3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
 
   if (m_r < 0.5)
@@ -23,23 +18,32 @@ static double uniform_ni56(const CELL *restrict grid_ptr)
 }
 
 
-static void place_pellet(const CELL *restrict grid_ptr, double e0, int m, int n, int pktnumberoffset, PKT *pkt)
-/// This subroutine places pellet n with energy e0 in cell m pointed to by grid_ptr.
+static void place_pellet(double e0, int cellindex, int n, int pktnumberoffset, PKT *pkt)
+/// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
   /// n is the index of the packet. m is the index for the grid cell.
-  pkt[n].where = m;
+  pkt[n].where = cellindex;
   pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
   pkt[n].originated_from_positron = false;
+
+  // const int nx = m % nxgrid;
+  // const int ny = (m / nxgrid) % nygrid;
+  // const int nz = (m / (nxgrid * nygrid)) % nzgrid;
+  // double cellmin[3];
+  // cellmin[0] = - xmax + (2 * nx * xmax / nxgrid);
+  // cellmin[1] = - ymax + (2 * ny * ymax / nxgrid);
+  // cellmin[2] = - zmax + (2 * nz * zmax / nxgrid);
 
   for (int axis = 0; axis < 3; axis++)
   {
     const double zrand = gsl_rng_uniform_pos(rng);
-    pkt[n].pos[axis] = grid_ptr->pos_init[axis] + (zrand * wid_init);
+    // pkt[n].pos[axis] = cellmin[axis] + (zrand * wid_init);
+    pkt[n].pos[axis] = cell[cellindex].pos_init[axis] + (zrand * wid_init);
   }
 
-  const int mgi = grid_ptr->modelgridindex;
-  const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(grid_ptr) : get_modelradioabund(mgi, NUCLIDE_NI56);
+  const int mgi = cell[cellindex].modelgridindex;
+  const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(cellindex) : get_modelradioabund(mgi, NUCLIDE_NI56);
 
   // first choose which of the decay chains to sample
   const int nchains = 10;
@@ -176,9 +180,11 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
-  double etot = (
+  const double etot = (
     (E56NI + E56CO) * totmassradionuclide[NUCLIDE_NI56] / MNI56 +
+    E56CO * totmassradionuclide[NUCLIDE_CO56] / MCO56 +
     (E57NI + E57CO) * totmassradionuclide[NUCLIDE_NI57] / MNI57 +
+    E57CO * totmassradionuclide[NUCLIDE_CO57] / MCO57 +
     (E48V + E48CR) * totmassradionuclide[NUCLIDE_CR48] / MCR48 +
     (E52FE + E52MN) * totmassradionuclide[NUCLIDE_FE52] / MFE52);
   printout("etot %g\n", etot);
@@ -202,11 +208,13 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     cont[m] = norm;
     //printf("%g %g %g\n", (f56ni(grid_ptr)*(E56NI + E56CO)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     const int mgi = grid_ptr->modelgridindex;
-    const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(grid_ptr) : get_modelradioabund(mgi, NUCLIDE_NI56);
+    const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(m) : get_modelradioabund(mgi, NUCLIDE_NI56);
 
     norm += get_rhoinit(mgi) * vol_init() * //vol_init(grid_ptr)
               ((f56ni * (E56NI + E56CO) / 56.)
                + (get_modelradioabund(mgi, NUCLIDE_CO56) * (E56CO) / 56.)
+               + (get_modelradioabund(mgi, NUCLIDE_NI57) * (E57NI + E57CO) / 57.)
+               + (get_modelradioabund(mgi, NUCLIDE_CO57) * (E57CO) / 57.)
                + (get_modelradioabund(mgi, NUCLIDE_FE52) * (E52FE + E52MN) / 52.)
                + (get_modelradioabund(mgi, NUCLIDE_CR48) * (E48V + E48CR) / 48.));
   }
@@ -254,7 +262,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
       abort();
     }
 
-    int m = mbelow;
+    const int cellindex = mbelow;
     //printout("chosen cell %d (%d, %g, %g)\n", m, ngrid, zrand, norm);
     //abort();
     /*
@@ -269,8 +277,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     m = m - 1;
     */
 
-    CELL *grid_ptr = &cell[m];
-    if (m >= ngrid)
+    if (cellindex >= ngrid)
     {
       printout("Failed to place pellet. Abort.\n");
       abort();
@@ -278,7 +285,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
 
     /// Pellet is in cell m, pointer is grid_ptr.
     //  printout("Pellet in cell %d\n",m);
-    place_pellet(grid_ptr, e0, m, n, pktnumberoffset, pkt);
+    place_pellet(e0, cellindex, n, pktnumberoffset, pkt);
 
     #ifdef NO_INITIAL_PACKETS
     if (pkt[n].tdecay < tmax && pkt[n].tdecay > tmin)
