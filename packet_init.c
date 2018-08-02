@@ -18,7 +18,7 @@ static double uniform_ni56(const int cellindex)
 }
 
 
-static void place_pellet(double e0, int cellindex, int n, int pktnumberoffset, PKT *pkt)
+static void place_pellet(const double e0, const int cellindex, const int n, const int pktnumberoffset, PKT *pkt)
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
@@ -82,90 +82,97 @@ static void place_pellet(double e0, int cellindex, int n, int pktnumberoffset, P
   }
 
   double zrand = gsl_rng_uniform(rng);
-  if (selected_chain == 0)  // Ni56 pellet
+  double zrand2;
+  switch (selected_chain)
   {
-    pkt[n].type = TYPE_56NI_PELLET;
-    pkt[n].tdecay = -T56NI * log(zrand);
-  }
-  else if (selected_chain == 1) // Ni56 -> Co56 pellet
-  {
-    if (zrand < E56CO_GAMMA / E56CO)
-    {
-      pkt[n].type = TYPE_56CO_PELLET;
-    }
-    else
-    {
-      pkt[n].type = TYPE_56CO_POSITRON_PELLET;
-      pkt[n].originated_from_positron = true;
-    }
+    case 0:  // Ni56 pellet
+      pkt[n].type = TYPE_56NI_PELLET;
+      pkt[n].tdecay = -T56NI * log(zrand);
+      break;
 
-    zrand = gsl_rng_uniform(rng);
-    const double zrand2 = gsl_rng_uniform(rng);
-    pkt[n].tdecay = (-T56NI * log(zrand)) + (-T56CO * log(zrand2));
-  }
-  else if (selected_chain == 2) // Fe52 pellet
-  {
-    pkt[n].type = TYPE_52FE_PELLET;
-    pkt[n].tdecay = -T52FE * log(zrand);
-  }
-  else if (selected_chain == 3) // Fe52 -> Mn52 pellet
-  {
-    pkt[n].type = TYPE_52MN_PELLET;
-    const double zrand2 = gsl_rng_uniform(rng);
-    pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
-  }
-  else if (selected_chain == 4) // Cr48 pellet
-  {
-    pkt[n].type = TYPE_48CR_PELLET;
-    pkt[n].tdecay = -T48CR * log(zrand);
-  }
-  else if (selected_chain == 5) // Cr48 -> V48 pellet
-  {
-    pkt[n].type = TYPE_48V_PELLET;
-    const double zrand2 = gsl_rng_uniform(rng);
-    pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
-  }
-  else if (selected_chain == 6) // Co56 pellet
-  {
-    /// Now it is a 56Co pellet, choose whether it becomes a positron
-    if (zrand < E56CO_GAMMA / E56CO)
-    {
-      pkt[n].type = TYPE_56CO_PELLET;
-    }
-    else
-    {
-      pkt[n].type = TYPE_56CO_POSITRON_PELLET;
-      pkt[n].originated_from_positron = true;
-    }
+    case 1: // Ni56 -> Co56 pellet
+      if (zrand < E56CO_GAMMA / E56CO)
+      {
+        pkt[n].type = TYPE_56CO_PELLET;
+      }
+      else
+      {
+        pkt[n].type = TYPE_56CO_POSITRON_PELLET;
+        pkt[n].originated_from_positron = true;
+      }
 
-    zrand = gsl_rng_uniform(rng);
-    pkt[n].tdecay = -T56CO * log(zrand);
-  }
-  else if (selected_chain == 7) // Ni57 pellet
-  {
-    if (zrand < E57NI_GAMMA / E57NI)
-    {
-      pkt[n].type = TYPE_57NI_PELLET;
-    }
-    else
-    {
-      pkt[n].type = TYPE_57NI_POSITRON_PELLET;
-      pkt[n].originated_from_positron = true;
-    }
+      zrand = gsl_rng_uniform(rng);
+      zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-T56NI * log(zrand)) + (-T56CO * log(zrand2));
+      break;
 
-    zrand = gsl_rng_uniform(rng);
-    pkt[n].tdecay = -T57NI * log(zrand);
-  }
-  else if (selected_chain == 8) // Ni57 -> Co57 pellet
-  {
-    pkt[n].type = TYPE_57CO_PELLET;
-    const double zrand2 = gsl_rng_uniform(rng);
-    pkt[n].tdecay = (-T57NI * log(zrand)) + (-T57CO * log(zrand2));
-  }
-  else if (selected_chain == 9) // Co57 pellet
-  {
-    pkt[n].type = TYPE_57CO_PELLET;
-    pkt[n].tdecay = -T57CO * log(zrand);
+    case 2: // Fe52 pellet
+      pkt[n].type = TYPE_52FE_PELLET;
+      pkt[n].tdecay = -T52FE * log(zrand);
+      break;
+
+    case 3: // Fe52 -> Mn52 pellet
+      pkt[n].type = TYPE_52MN_PELLET;
+      zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
+      break;
+
+    case 4: // Cr48 pellet
+      pkt[n].type = TYPE_48CR_PELLET;
+      pkt[n].tdecay = -T48CR * log(zrand);
+      break;
+
+    case 5: // Cr48 -> V48 pellet
+      pkt[n].type = TYPE_48V_PELLET;
+      zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
+      break;
+
+    case 6: // Co56 pellet
+      /// Now it is a 56Co pellet, choose whether it becomes a positron
+      if (zrand < E56CO_GAMMA / E56CO)
+      {
+        pkt[n].type = TYPE_56CO_PELLET;
+      }
+      else
+      {
+        pkt[n].type = TYPE_56CO_POSITRON_PELLET;
+        pkt[n].originated_from_positron = true;
+      }
+
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -T56CO * log(zrand);
+      break;
+
+    case 7: // Ni57 pellet
+      if (zrand < E57NI_GAMMA / E57NI)
+      {
+        pkt[n].type = TYPE_57NI_PELLET;
+      }
+      else
+      {
+        pkt[n].type = TYPE_57NI_POSITRON_PELLET;
+        pkt[n].originated_from_positron = true;
+      }
+
+      zrand = gsl_rng_uniform(rng);
+      pkt[n].tdecay = -T57NI * log(zrand);
+      break;
+
+    case 8: // Ni57 -> Co57 pellet
+      pkt[n].type = TYPE_57CO_PELLET;
+      const double zrand2 = gsl_rng_uniform(rng);
+      pkt[n].tdecay = (-T57NI * log(zrand)) + (-T57CO * log(zrand2));
+      break;
+
+    case 9: // Co57 pellet
+      pkt[n].type = TYPE_57CO_PELLET;
+      pkt[n].tdecay = -T57CO * log(zrand);
+      break;
+
+    default:
+      printout("Problem selecting pellet type\n");
+      abort();
   }
 
   /// Now assign the energy to the pellet.
