@@ -1631,9 +1631,9 @@ static void uniform_grid_setup(void)
     //cell[n].cen_init[1] = cell[n].pos_init[1] + (0.5 * wid_init);
     //cell[n].cen_init[2] = cell[n].pos_init[2] + (0.5 * wid_init);
 
-    cell[n].xyz[0] = nx;
-    cell[n].xyz[1] = ny;
-    cell[n].xyz[2] = nz;
+    // cell[n].xyz[0] = nx;
+    // cell[n].xyz[1] = ny;
+    // cell[n].xyz[2] = nz;
 
     nx++;
     if (nx == nxgrid)
