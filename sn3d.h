@@ -195,13 +195,7 @@ int nesc; //number of packets that escape during current timestep  ///ATOMIC
 
 double xmax, ymax, zmax;
 double mtot, vmax, rmax;  /// Total mass and outer velocity/radius
-double fe_sum, rho_sum;   /// MK: could now be declared locally
-double mni56;             /// Total mass of Ni56 in the ejecta
-double mco56;             /// Total mass of Co56 in the ejecta
-double mni57;             /// Total mass of Ni57 in the ejecta
-double mco57;             /// Total mass of Co57 in the ejecta
-double mfe52;             /// Total mass of Fe52 in the ejecta
-double mcr48;             /// Total mass of Cr48 in the ejecta
+double totmassradionuclide[RADIONUCLIDE_COUNT]; /// total mass of each radionuclide in the ejecta
 double mfeg;              /// Total mass of Fe group elements in ejecta
 double tmax;              /// End time of current simulation
 double tmin;              /// Start time of current simulation
@@ -360,7 +354,6 @@ int n_out_it; // # of sets of 1,000,000 photons to run.
 
 int npts_model; // number of points in 1-D input model
 double vout_model[MMODELGRID];
-double rho_model[MMODELGRID];
 double t_model; // time at which densities in input model are correct.
 int ncoord1_model, ncoord2_model; // For 2D model, the input grid dimensions
 double dcoord1, dcoord2; // spacings of a 2D model grid - must be uniform grid
@@ -508,7 +501,7 @@ extern bool neutral_flag;
 
 short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid
-                                                   /// routine and their doughters.
+                                                   /// routine and their daughters.
 
 extern bool use_cellhist;
 

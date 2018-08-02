@@ -1480,26 +1480,24 @@ static void read_atomicdata(void)
 static void calculate_masses(void)
 {
   mtot = 0.;
-  mni56 = 0.;
-  mco56 = 0.;
-  mni57 = 0.;
-  mco57 = 0.;
-  mfe52 = 0.;
-  mcr48 = 0.;
   mfeg = 0.;
+
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    totmassradionuclide[iso] = 0.;
 
   int n1 = 0;
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    double mass_in_shell = 0.;
+    double cellvolume = 0.;
     if (model_type == RHO_1D_READ)
     {
       const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
-      mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
+      // mass_in_shell = rho_model[mgi] * (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
+      cellvolume = (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(tmin, 3) / 3.;
     }
     else if (model_type == RHO_2D_READ)
     {
-      mass_in_shell = rho_model[mgi] * ((2 * n1) + 1) * PI * dcoord2 * pow(dcoord1, 2.);
+      cellvolume = pow(tmin / t_model, 3) * ((2 * n1) + 1) * PI * dcoord2 * pow(dcoord1, 2.);
       n1++;
       if (n1 == ncoord1_model)
       {
@@ -1509,26 +1507,26 @@ static void calculate_masses(void)
     else if (model_type == RHO_3D_READ)
     {
       /// Assumes cells are cubes here - all same volume.
-      const double cellvolume = pow((2 * vmax * tmin), 3.) / (nxgrid * nygrid * nzgrid);
-      mass_in_shell = get_rhoinit(mgi) * cellvolume;
+      cellvolume = pow((2 * vmax * tmin), 3.) / (nxgrid * nygrid * nzgrid);
     }
+
+    const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
 
     mtot += mass_in_shell;
 
-    mni56 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_NI56);
-    mco56 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_CO56);
-    mni57 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_NI57);
-    mco57 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_CO57);
-    mfe52 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_FE52);
-    mcr48 += mass_in_shell * get_modelradioabund(mgi, NUCLIDE_CR48);
+    for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+      totmassradionuclide[iso] += mass_in_shell * get_modelradioabund(mgi, iso);
+
     mfeg += mass_in_shell * get_ffegrp(mgi);
   }
 
 
   printout("Masses in [Msun]:    Total:%8.4f  56Ni:%8.4f  56Co:%8.4f  52Fe:%8.4f  48Cr:%8.4f\n",
-           mtot / MSUN, mni56 / MSUN, mco56 / MSUN, mfe52 / MSUN, mcr48 / MSUN);
+           mtot / MSUN, totmassradionuclide[NUCLIDE_NI56] / MSUN,
+           totmassradionuclide[NUCLIDE_CO56] / MSUN, totmassradionuclide[NUCLIDE_FE52] / MSUN,
+           totmassradionuclide[NUCLIDE_CR48] / MSUN);
   printout("Masses in [Msun]: Fe-group:%8.4f  57Ni:%8.4f  57Co:%8.4f\n",
-           mfeg / MSUN, mni57 / MSUN, mco57 / MSUN);
+           mfeg / MSUN, totmassradionuclide[NUCLIDE_NI57] / MSUN, totmassradionuclide[NUCLIDE_CO57] / MSUN);
 }
 
 
@@ -1571,13 +1569,13 @@ static void read_1d_model(void)
     int mgi_in;
     double vout_kmps;
     double log_rho;
-    double f56ni_model;
-    double f56co_model;
-    double f57ni_model;
-    double f57co_model;
-    double ffegrp_model;
-    double f48cr_model;
-    double f52fe_model;
+    double f56ni_model = 0.;
+    double f56co_model = 0.;
+    double ffegrp_model = 0.;
+    double f48cr_model = 0.;
+    double f52fe_model = 0.;
+    double f57ni_model = 0.;
+    double f57co_model = 0.;
     const int items_read = sscanf(line, "%d %lg %lg %lg %lg %lg %lg %lg %lg %lg",
                                    &mgi_in, &vout_kmps, &log_rho, &ffegrp_model, &f56ni_model,
                                    &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
@@ -1591,16 +1589,14 @@ static void read_1d_model(void)
       assert(mgi_in == mgi + 1);
 
       vout_model[mgi] = vout_kmps * 1.e5;
-      rho_model[mgi] = pow(10., log_rho);
+
+      const double rho_tmin = pow(10., log_rho) * pow(t_model / tmin, 3);
+      set_rhoinit(mgi, rho_tmin);
+      set_rho(mgi, rho_tmin);
 
       if (items_read == 10 && mgi == 0)
       {
         printout("Found Ni57 and Co57 abundance columns in model.txt\n");
-      }
-      else if (items_read == 8)
-      {
-        f57ni_model = 0.;
-        f57co_model = 0.;
       }
     }
     else
@@ -1683,9 +1679,14 @@ static void read_2d_model(void)
     float ffegrp_model;
     float f48cr_model;
     float f52fe_model;
+    double rho_tmodel;
 
-    fscanf(model_input, "%d %g %g %lg", &dum1, &dum2, &dum3, &rho_model[mgi]);
+    fscanf(model_input, "%d %g %g %lg", &dum1, &dum2, &dum3, &rho_tmodel);
     fscanf(model_input, "%g %g %g %g %g", &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model);
+
+    const double rho_tmin = rho_tmodel * pow(t_model / tmin, 3);
+    set_rhoinit(mgi, rho_tmin);
+    set_rho(mgi, rho_tmin);
 
     set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
     set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
@@ -1795,13 +1796,13 @@ static void read_3d_model(void)
       abort();
     }
 
-    double f56ni_model;
-    double f56co_model;
-    double ffegrp_model;
-    double f48cr_model;
-    double f52fe_model;
-    double f57ni_model;
-    double f57co_model;
+    double f56ni_model = 0.;
+    double f56co_model = 0.;
+    double ffegrp_model = 0.;
+    double f48cr_model = 0.;
+    double f52fe_model = 0.;
+    double f57ni_model = 0.;
+    double f57co_model = 0.;
     const int items_read = sscanf(line, "%lg %lg %lg %lg %lg %lg %lg",
       &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
 
@@ -1815,11 +1816,6 @@ static void read_3d_model(void)
       if (items_read == 10 && mgi == 0)
       {
         printout("Found Ni57 and Co57 abundance columns in model.txt\n");
-      }
-      else if (items_read == 5)
-      {
-        f57ni_model = 0.;
-        f57co_model = 0.;
       }
 
       // printout("mgi %d ni56 %g co56 %g fe52 %g cr48 %g ni57 %g co57 %g\n",
@@ -2068,7 +2064,7 @@ void input(int rank)
     if (model_type == RHO_UNIFORM)
     {
       mtot = 1.39 * MSUN;
-      mni56 = 0.625 * MSUN;
+      totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
       vmax = 1.e9;
       rmax = vmax * tmin;
   //  rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK

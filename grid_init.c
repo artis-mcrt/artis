@@ -51,9 +51,9 @@ float get_modelradioabund(const int modelgridindex, const enum radionuclides nuc
     return 0.;
   }
 
-  if (nuclide_type == FAKE_GAM_LINE_ID || nuclide_type >= RADIONUCLIDE_COUNT)
+  if (nuclide_type >= RADIONUCLIDE_COUNT)
   {
-    printout("set_initfracradio called with invalid nuclide_type type %d\n", nuclide_type);
+    printout("get_initfracradio called with invalid nuclide_type type %d\n", nuclide_type);
     abort();
   }
 
@@ -287,8 +287,8 @@ static void density_1d_read(void)
   //   den_norm[n]=0.0;
   // }
 
-  rho_sum = 0.0;
-  fe_sum = 0.0;
+  double rho_sum = 0.0;
+  double fe_sum = 0.0;
   double opcase3_sum = 0.0;
   int empty_cells = 0;
 
@@ -455,9 +455,6 @@ static void density_1d_read(void)
   {
     if (mg_associated_cells[mgi] > 0)
     {
-      const double helper = rho_model[mgi] * pow(t_model / tmin, 3);
-      set_rhoinit(mgi, helper);
-      set_rho(mgi, helper);
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
       for (int element = 0; element < nelements; element++)
@@ -486,6 +483,8 @@ static void density_1d_read(void)
     }
     else
     {
+      set_rhoinit(mgi, 0.);
+      set_rho(mgi, 0.);
       for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
       {
         set_modelradioabund(mgi, iso, 0.);
@@ -784,8 +783,8 @@ static void density_2d_read(void)
   double check1 = 0.0;
   double check2 = 0.0;
 
-  rho_sum = 0.0;
-  fe_sum = 0.0;
+  double rho_sum = 0.0;
+  double fe_sum = 0.0;
   double opcase3_sum = 0.0;
   int empty_cells = 0;
 
@@ -855,9 +854,6 @@ static void density_2d_read(void)
   {
     if (mg_associated_cells[mgi] > 0)
     {
-      const double helper = rho_model[mgi] * pow( (t_model / tmin), 3.);
-      set_rhoinit(mgi, helper);
-      set_rho(mgi, helper);
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
       for (int element = 0; element < nelements; element++)
@@ -885,6 +881,8 @@ static void density_2d_read(void)
     }
     else
     {
+      set_rhoinit(mgi, 0.);
+      set_rho(mgi, 0.);
       for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
       {
         set_modelradioabund(mgi, iso, 0.);
@@ -1010,8 +1008,8 @@ static void density_2d_read(void)
 static void density_3d_read(void)
 /// Routine for doing a density grid read from a 3-D model.
 {
-  rho_sum = 0.0;
-  fe_sum = 0.0;
+  double rho_sum = 0.0;
+  double fe_sum = 0.0;
   int empty_cells = 0;
   double opcase3_sum = 0;
 

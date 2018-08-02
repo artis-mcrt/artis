@@ -177,10 +177,10 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
   double etot = (
-    (E56NI + E56CO) * mni56 / MNI56 +
-    (E57NI + E57CO) * mni57 / MNI57 +
-    (E48V + E48CR) * mcr48 / MCR48 +
-    (E52FE + E52MN) * mfe52 / MFE52);
+    (E56NI + E56CO) * totmassradionuclide[NUCLIDE_NI56] / MNI56 +
+    (E57NI + E57CO) * totmassradionuclide[NUCLIDE_NI57] / MNI57 +
+    (E48V + E48CR) * totmassradionuclide[NUCLIDE_CR48] / MCR48 +
+    (E52FE + E52MN) * totmassradionuclide[NUCLIDE_FE52] / MFE52);
   printout("etot %g\n", etot);
   printout("E56NI, E56CO, E56CO_GAMMA: %g, %g, %g\n", E56NI / MEV, E56CO / MEV, E56CO_GAMMA / MEV);
   printout("E57NI, E57NI_GAMMA, E57CO: %g, %g, %g\n", E57NI / MEV, E57NI_GAMMA / MEV, E57CO / MEV);
