@@ -6,6 +6,7 @@
 #PBS -l mem=6GB
 #PBS -l ncpus=1
 #PBS -l wd
+#PBS -m abe
 
 # ncpus must be a factor of the cores per node (16)
 # mem is total memory (all cores combined)
@@ -21,10 +22,5 @@
 ulimit -l 2097152
 
 ./exspec
-
-
-
-
-
 
 

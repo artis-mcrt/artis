@@ -21,3 +21,4 @@
 ulimit -l 2097152
 
 pigz -v packets*.out
+find -name "*.out" -size +5M -exec gzip -v {} \;

@@ -6,6 +6,8 @@
 #PBS -l mem=768GB
 #PBS -l ncpus=496
 #PBS -l wd
+#PBS -m abe
+#PBS -M luke.shingles@gmail.com
 
 # ncpus must be a factor of the cores per node
 # mem is total memory (all cores combined)
@@ -15,13 +17,14 @@
 #     66% of nodes  32GB = 2GB per core
 #     31% of nodes  64GB = 4GB per core
 #      2% of nodes 128GB = 8GB per core
+
 # raijin normalbw queue Broadwell:
 #   28 cores per node
 #     536 nodes 128GB = 4.57 GB per core
 #     268 nodes 256GB = 9.14 GB per core
 #      10 nodes   1TB = 36.57 GB per core
 #
-#   raijin normal/normlbw walltime limits:
+# raijin normal/normlbw walltime limits:
 #    48 hours for 1-255 cores
 #    24 hours for 256-511 cores
 #    10 hours for 512-1023 cores
