@@ -304,7 +304,7 @@ static void calculate_kappagrey(void)
 
   for (int n = 0; n < ngrid; n++)
   {
-    int mgi = cell[n].modelgridindex;
+    const int mgi = cell[n].modelgridindex;
     rho_sum += get_rhoinit(mgi);
     fe_sum += get_ffegrp(mgi);
 
@@ -343,7 +343,7 @@ static void calculate_kappagrey(void)
   double check2 = 0.0;
   for (int n = 0; n < ngrid; n++)
   {
-    int mgi = cell[n].modelgridindex;
+    const int mgi = cell[n].modelgridindex;
     if (rank_global == 0 && mgi != MMODELGRID)
       fprintf(grid_file,"%d %d\n", n, mgi); ///write only non-empty cells to grid file
 
@@ -400,18 +400,109 @@ static void calculate_kappagrey(void)
 }
 
 
-static void allocate_nonemptycells1d2d(void)
+static void allocate_compositiondata(const int modelgridindex)
+/// Initialise composition dependent cell data for the given cell
 {
-  // Determine the number of simulation cells associated with the model cells
-  for (int mgi = 0; mgi < npts_model; mgi++)
+  if ((modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements*sizeof(compositionlist_entry))) == NULL)
   {
-    int count = 0;
+    printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
+    abort();
+  }
+
+  if ((modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels*sizeof(double))) == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
+    abort();
+  }
+
+  for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
+  {
+    modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0; ///flag to indicate that there is
+                                                           /// currently no information on the nlte populations
+  }
+
+  //printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
+
+  for (int element = 0; element < nelements; element++)
+  {
+    /// Set initial abundances to zero
+    modelgrid[modelgridindex].composition[element].abundance = 0.;
+
+    /// and allocate memory to store the ground level populations for each ionisation stage
+    if ((modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) calloc(get_nions(element), sizeof(float))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
+      abort();
+    }
+
+    if ((modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element)*sizeof(float))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
+      abort();
+    }
+    /*
+    if ((modelgrid[n].composition[element].ltepartfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize lte partfunctlist for element %d in cell %d... abort\n",element,n);
+      abort();
+    }
+    */
+  }
+}
+
+
+static void allocate_cooling(const int modelgridindex)
+/// Initialise composition dependent cell data for the given cell
+{
+  if ((modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(nelements*sizeof(mgicooling_t))) == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
+    abort();
+  }
+
+  for (int element = 0; element < nelements; element++)
+  {
+    /// and allocate memory to store the ground level populations for each ionisation stage
+    if ((modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element)*sizeof(double))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize coolinglist for element %d in cell %d... abort\n",element,modelgridindex);
+      abort();
+    }
+  }
+}
+
+
+static void allocate_nonemptycells(void)
+{
+  /// This is the placeholder for empty cells. Temperatures must be positive
+  /// as long as ff opacities are calculated.
+  set_rhoinit(MMODELGRID, 0.);
+  set_rho(MMODELGRID, 0.);
+  set_nne(MMODELGRID, 0.);
+  set_ffegrp(MMODELGRID, 0.);
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  {
+    set_modelradioabund(MMODELGRID, iso, 0.);
+  }
+  set_Te(MMODELGRID, MINTEMP);
+  set_TJ(MMODELGRID, MINTEMP);
+  set_TR(MMODELGRID, MINTEMP);
+  allocate_compositiondata(MMODELGRID);
+  allocate_cooling(MMODELGRID);
+
+  const bool threedimensional = (model_type == RHO_3D_READ);
+  // three dimensional models already have mg_associated_cells[mgi] set to 1 if rho[mgi] > 0
+  if (!threedimensional)
+  {
+    // Determine the number of simulation cells associated with the model cells
+    for (int mgi = 0; mgi < npts_model; mgi++)
+      mg_associated_cells[mgi] = 0;
+
     for (int cellindex = 0; cellindex < ngrid; cellindex++)
     {
-      if (cell[cellindex].modelgridindex == mgi)
-        count++;
+      const int mgi = cell[cellindex].modelgridindex;
+      mg_associated_cells[mgi] += 1;
     }
-    mg_associated_cells[mgi] = count;
   }
 
   for (int mgi = 0; mgi < npts_model; mgi++)
@@ -437,21 +528,6 @@ static void allocate_nonemptycells1d2d(void)
       }
     }
   }
-
-  /// This is the placeholder for empty cells. Temperatures must be positive
-  /// as long as ff opacities are calculated.
-  set_rhoinit(MMODELGRID, 0.);
-  set_rho(MMODELGRID, 0.);
-  set_nne(MMODELGRID, 0.);
-  set_ffegrp(MMODELGRID, 0.);
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-  {
-    set_modelradioabund(MMODELGRID, iso, 0.);
-  }
-  set_Te(MMODELGRID, MINTEMP);
-  set_TJ(MMODELGRID, MINTEMP);
-  set_TR(MMODELGRID, MINTEMP);
-  allocate_compositiondata(MMODELGRID);
 }
 
 
@@ -827,78 +903,6 @@ static void density_2d_read(void)
     else
     {
       cell[n].modelgridindex = MMODELGRID;
-    }
-  }
-}
-
-
-void allocate_compositiondata(int modelgridindex)
-/// Initialise composition dependent cell data for the given cell
-{
-  if ((modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements*sizeof(compositionlist_entry))) == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
-    abort();
-  }
-
-  if ((modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels*sizeof(double))) == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
-    abort();
-  }
-
-  for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
-  {
-    modelgrid[modelgridindex].nlte_pops[nlteindex] = -1.0; ///flag to indicate that there is
-                                                           /// currently no information on the nlte populations
-  }
-
-  //printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
-
-  for (int element = 0; element < nelements; element++)
-  {
-    /// Set initial abundances to zero
-    modelgrid[modelgridindex].composition[element].abundance = 0.;
-
-    /// and allocate memory to store the ground level populations for each ionisation stage
-    if ((modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) calloc(get_nions(element), sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
-      abort();
-    }
-
-    if ((modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element)*sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
-      abort();
-    }
-    /*
-    if ((modelgrid[n].composition[element].ltepartfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize lte partfunctlist for element %d in cell %d... abort\n",element,n);
-      abort();
-    }
-    */
-  }
-}
-
-
-void allocate_cooling(int modelgridindex)
-/// Initialise composition dependent cell data for the given cell
-{
-  if ((modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(nelements*sizeof(mgicooling_t))) == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
-    abort();
-  }
-
-  for (int element = 0; element < nelements; element++)
-  {
-    /// and allocate memory to store the ground level populations for each ionisation stage
-    if ((modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element)*sizeof(double))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize coolinglist for element %d in cell %d... abort\n",element,modelgridindex);
-      abort();
     }
   }
 }
@@ -1324,12 +1328,10 @@ void grid_init(int my_rank)
     if (model_type == RHO_1D_READ)
     {
       density_1d_read();
-      allocate_nonemptycells1d2d();
     }
     else if (model_type == RHO_2D_READ)
     {
       density_2d_read();
-      allocate_nonemptycells1d2d();
     }
     else if (model_type == RHO_3D_READ)
     {
@@ -1345,6 +1347,7 @@ void grid_init(int my_rank)
       printout("[fatal] grid_init: Error: Unknown density type. Abort.");
       abort();
     }
+    allocate_nonemptycells();
     calculate_kappagrey();
     abundances_read();
   }

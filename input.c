@@ -1477,7 +1477,7 @@ static void read_atomicdata(void)
 }
 
 
-static void calculate_masses(void)
+static void show_totmassradionuclides(void)
 {
   mtot = 0.;
   mfeg = 0.;
@@ -1508,6 +1508,11 @@ static void calculate_masses(void)
     {
       /// Assumes cells are cubes here - all same volume.
       cellvolume = pow((2 * vmax * tmin), 3.) / (nxgrid * nygrid * nzgrid);
+    }
+    else
+    {
+      printout("Unknown model type %d in function %s\n", model_type, __func__);
+      abort();
     }
 
     const double mass_in_shell = get_rhoinit(mgi) * cellvolume;
@@ -1630,8 +1635,6 @@ static void read_1d_model(void)
 
   fclose(model_input);
 
-  calculate_masses();
-
   vmax = vout_model[npts_model - 1];
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
@@ -1699,8 +1702,6 @@ static void read_2d_model(void)
   }
 
   fclose(model_input);
-
-  calculate_masses();
 
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
@@ -1772,6 +1773,7 @@ static void read_3d_model(void)
 
     if (rho_model > 0)
     {
+      assert(mg_associated_cells[mgi] == 0);
       mg_associated_cells[mgi] = 1;
       cell[n].modelgridindex = mgi;
       helper = rho_model * pow( (t_model/tmin), 3.);
@@ -1832,9 +1834,6 @@ static void read_3d_model(void)
         set_modelradioabund(mgi, NUCLIDE_V48, 0.);
 
         set_ffegrp(mgi, ffegrp_model);
-
-        allocate_compositiondata(mgi);
-        allocate_cooling(mgi);
         //printout("mgi %d, control rho_init %g\n",mgi,get_rhoinit(mgi));
         mgi++;
       }
@@ -1863,22 +1862,6 @@ static void read_3d_model(void)
   npts_model = mgi;
 
   fclose(model_input);
-
-  set_rhoinit(MMODELGRID, 0.);
-  set_rho(MMODELGRID, 0.);
-  set_nne(MMODELGRID, 0.);
-  set_ffegrp(MMODELGRID, 0.);
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-  {
-    set_modelradioabund(MMODELGRID, iso, 0.);
-  }
-
-  set_Te(MMODELGRID, MINTEMP);
-  set_TJ(MMODELGRID, MINTEMP);
-  set_TR(MMODELGRID, MINTEMP);
-  allocate_compositiondata(MMODELGRID);
-
-  calculate_masses();
 
   rmax = vmax * tmin;
   xmax = ymax = zmax = rmax;
@@ -2090,14 +2073,16 @@ void input(int rank)
       printout("Unknown model. Abort.\n");
       abort();
     }
+
+    show_totmassradionuclides();
+
   //#endif
 
 
   /// Read in data for gamma ray lines.
-  ///======================================================
   read_decaydata();
 
-  /// With the lines all ready in, now make a list of them in energy order.
+  /// With the lines already in, now make a list of them in energy order.
   get_gam_ll();
 
   /// Now that the list exists use it to find values for spectral synthesis
