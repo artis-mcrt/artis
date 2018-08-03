@@ -553,7 +553,7 @@ static void add_transitions_to_linelist(
         /// This is not a metastable level.
         elements[element].ions[ion].levels[level].metastable = false;
 
-        elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndownarr[level];
+        set_ndowntrans(element, ion, level, ndownarr[level]);
         if ((elements[element].ions[ion].levels[level].downtrans
             = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level] + 1) * sizeof(transitionlist_entry))) == NULL)
         {
@@ -566,7 +566,7 @@ static void add_transitions_to_linelist(
         //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
         ndownarr[level]++;
 
-        elements[element].ions[ion].levels[targetlevel].uptrans[0].targetlevel = nuparr[targetlevel];
+        set_nuptrans(element, ion, targetlevel, nuparr[targetlevel]);
         if ((elements[element].ions[ion].levels[targetlevel].uptrans
             = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel] + 1) * sizeof(transitionlist_entry))) == NULL)
         {
@@ -902,6 +902,7 @@ static void read_atomicdata_files(void)
       printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
       abort();
     }
+    printout("mem_usage: linelist occupies %.1f MB\n", nlines * (sizeof(linelist[0]) + sizeof(&linelist[0])) / 1024. / 1024);
   }
 
   if (T_preset > 0)
@@ -913,7 +914,7 @@ static void read_atomicdata_files(void)
   printout("total downtrans %d\n", totaldowntrans);
   printout("coolingcheck %d\n", coolingcheck);
 
-
+  printout("mem_usage: transitions occupy %.1f MB\n", (totaluptrans + totaldowntrans) * (sizeof(transitionlist_entry *) + sizeof(transitionlist_entry)) / 1024. / 1024.);
   ///debug output
   /*
   FILE *linelist_file = fopen_required("linelist_unsorted.out", "w");
@@ -959,7 +960,7 @@ static void read_atomicdata_files(void)
       if (elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevel == lowerlevel)
       {
         elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = lineindex;
-        break; // should be safe to end here if there is max. one transition per pair of levels
+        // break; // should be safe to end here if there is max. one transition per pair of levels
       }
     }
 
@@ -969,7 +970,7 @@ static void read_atomicdata_files(void)
       if (elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevel == upperlevel)
       {
         elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = lineindex;
-        break; // should be safe to end here if there is max. one transition per pair of levels
+        // break; // should be safe to end here if there is max. one transition per pair of levels
       }
     }
   }
