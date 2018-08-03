@@ -68,7 +68,7 @@ static void calculate_heating_rates(const int modelgridindex)
 //
 //         /// Collisional heating: deexcitation to same ionization stage
 //         /// ----------------------------------------------------------
-       const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+       const int ndowntrans = get_ndowntrans(element, ion, level);
        for (int ii = 1; ii <= ndowntrans; ii++)
        {
          const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[ii].epsilon_trans;
@@ -256,7 +256,7 @@ static void calculate_cooling_rates(const int modelgridindex)
 
         /// excitation to same ionization stage
         /// -----------------------------------
-        const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        const int nuptrans = get_nuptrans(element, ion, level);
         for (int ii = 1; ii <= nuptrans; ii++)
         {
           const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
@@ -647,7 +647,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 // //
 // //         /// Collisional heating: deexcitation to same ionization stage
 // //         /// ----------------------------------------------------------
-// //         ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+// //         ndowntrans = get_ndowntrans(element, ion, level);
 // //         for (ii = 1; ii <= ndowntrans; ii++)
 // //         {
 // //           lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;

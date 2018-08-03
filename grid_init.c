@@ -39,6 +39,9 @@ extern inline void set_TJ(int modelgridindex, float x);
 extern inline void set_W(int modelgridindex, float x);
 
 
+static long mem_usage_nltepops = 0;
+
+
 float get_modelradioabund(const int modelgridindex, const enum radionuclides nuclide_type)
 {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
@@ -403,13 +406,15 @@ static void calculate_kappagrey(void)
 static void allocate_compositiondata(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
-  if ((modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements*sizeof(compositionlist_entry))) == NULL)
+  if ((modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements * sizeof(compositionlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
     abort();
   }
 
-  if ((modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels*sizeof(double))) == NULL)
+  mem_usage_nltepops += total_nlte_levels * sizeof(double);
+
+  if ((modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels * sizeof(double))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
     abort();
@@ -435,7 +440,7 @@ static void allocate_compositiondata(const int modelgridindex)
       abort();
     }
 
-    if ((modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element)*sizeof(float))) == NULL)
+    if ((modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element) * sizeof(float))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
       abort();
@@ -454,7 +459,7 @@ static void allocate_compositiondata(const int modelgridindex)
 static void allocate_cooling(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
-  if ((modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(nelements*sizeof(mgicooling_t))) == NULL)
+  if ((modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(nelements * sizeof(mgicooling_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
     abort();
@@ -463,7 +468,7 @@ static void allocate_cooling(const int modelgridindex)
   for (int element = 0; element < nelements; element++)
   {
     /// and allocate memory to store the ground level populations for each ionisation stage
-    if ((modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element)*sizeof(double))) == NULL)
+    if ((modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element) * sizeof(double))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize coolinglist for element %d in cell %d... abort\n",element,modelgridindex);
       abort();
@@ -474,6 +479,7 @@ static void allocate_cooling(const int modelgridindex)
 
 static void allocate_nonemptycells(void)
 {
+  printout("mem_usage: the modelgrid array occupies %.1f MB\n", sizeof(modelgrid) / 1024. / 1024.);
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
   set_rhoinit(MMODELGRID, 0.);
@@ -529,6 +535,8 @@ static void allocate_nonemptycells(void)
       }
     }
   }
+
+  printout("mem_usage: NLTE populations for all allocated cells occupies a total of %.1f MB\n", mem_usage_nltepops / 1024. / 1024.);
 }
 
 

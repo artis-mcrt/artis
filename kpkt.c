@@ -89,7 +89,7 @@ void calculate_kpkt_rates(int modelgridindex)
 
           /// excitation to same ionization stage
           /// -----------------------------------
-          const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+          const int nuptrans = get_nuptrans(element, ion, level);
           for (int ii = 1; ii <= nuptrans; ii++)
           {
             // const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
@@ -299,7 +299,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
 
     /// excitation to same ionization stage
     /// -----------------------------------
-    int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    int nuptrans = get_nuptrans(element, ion, level);
     for (int ii = 1; ii <= nuptrans; ii++)
     {
       const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;

@@ -485,7 +485,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     const int level_index = get_nlte_vector_index(element, ion, level);
 
     // de-excitation
-    const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+    const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 1; i <= ndowntrans; i++)
     {
       const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
@@ -507,7 +507,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     }
 
     // excitation
-    const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    const int nuptrans = get_nuptrans(element, ion, level);
     for (int i = 1; i <= nuptrans; i++)
     {
       const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
@@ -1228,8 +1228,8 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
       for (int level = 0; level < get_nlevels(element,ion); level++)
       {
         epsilon_current = epsilon(element,ion,level);
-        ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-        nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        ndowntrans = get_ndowntrans(element, ion, level);
+        nuptrans = get_nuptrans(element, ion, level);
 
         double s_renorm;
 

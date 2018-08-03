@@ -114,7 +114,8 @@ inline int get_maxrecombininglevel(int element, int ion)
 
 inline bool is_nlte(int element, int ion, int level)
 // Returns true if (element,ion,level) is to be treated in nlte.
-// (note this function returns true for the ground state)
+// (note this function returns true for the ground state,
+//  although it is stored separately from the excited NLTE states)
 {
   if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
     return (level <= 197);
@@ -145,7 +146,21 @@ inline int get_nuptrans(int element, int ion, int level)
 }
 
 
-inline int get_nphixstargets(int element, int ion, int level)
+inline void set_ndowntrans(const int element, const int ion, const int level, const int ndowntrans)
+// the number of downward bound-bound transitions from the specified level
+{
+  elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndowntrans;
+}
+
+
+inline void set_nuptrans(const int element, const int ion, const int level, const int nuptrans)
+// the number of upward bound-bound transitions from the specified level
+{
+  elements[element].ions[ion].levels[level].uptrans[0].targetlevel = nuptrans;
+}
+
+
+inline int get_nphixstargets(const int element, const int ion, const int level)
 /// Returns the number of target states for photoionization of (element,ion,level).
 {
   const int nions = get_nions(element);
@@ -159,7 +174,7 @@ inline int get_nphixstargets(int element, int ion, int level)
 }
 
 
-inline int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex)
+inline int get_phixsupperlevel(const int element, const int ion, const int level, const int phixstargetindex)
 /// Returns the level index of a target state for photoionization of (element,ion,level).
 {
   #ifdef DEBUG_ON
