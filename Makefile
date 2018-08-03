@@ -244,6 +244,9 @@ sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_
 sn3d: clean version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
+sn3dopenmp: clean version
+	$(CC) $(CFLAGS) -Xpreprocessor -fopenmp -lomp $(sn3d_files) $(LDFLAGS) -o sn3d
+
 sn3dmpi: clean version
 	mpicc $(CFLAGS) -DMPI_ON $(sn3d_files) $(LDFLAGS) -o sn3d
 
