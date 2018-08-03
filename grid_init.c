@@ -480,6 +480,7 @@ static void allocate_cooling(const int modelgridindex)
 static void allocate_nonemptycells(void)
 {
   printout("mem_usage: the modelgrid array occupies %.1f MB\n", sizeof(modelgrid) / 1024. / 1024.);
+  mem_usage_nltepops = 0;
   /// This is the placeholder for empty cells. Temperatures must be positive
   /// as long as ff opacities are calculated.
   set_rhoinit(MMODELGRID, 0.);

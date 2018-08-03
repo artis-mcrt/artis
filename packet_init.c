@@ -318,6 +318,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
 
 void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 {
+  printout("mem_usage: packets occupy %.1f MB\n", MPKTS * (sizeof(PKT *) + sizeof(PKT)) / 1024. / 1024.);
   if (simulation_continued_from_saved)
     return;
 

@@ -2194,7 +2194,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   }
 
   printout("mem_usage: non-thermal excitations for cell %d at this timestep occupy %.1f MB\n",
-           modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size * sizeof(struct nt_excitation_struct) / 1024. / 1024.);
+           modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size *
+           (sizeof(nt_solution[modelgridindex].frac_excitations_list) + sizeof(nt_solution[modelgridindex].frac_excitations_list[0])) / 1024. / 1024.);
 
   const float T_e = get_Te(modelgridindex);
   printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
