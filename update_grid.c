@@ -415,8 +415,8 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower = -99.;
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = -99.;
 
-        ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-        nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        ndowntrans = get_ndowntrans(element, ion, level);
+        nuptrans = get_nuptrans(element, ion, level);
         for (i = 0; i < ndowntrans; i++)
         {
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = -99.;

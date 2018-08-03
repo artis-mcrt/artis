@@ -352,9 +352,9 @@ void radfield_init(int my_rank)
         radfieldbin_current[modelgridindex][binindex].T_R = -1.;
         // radfieldbin_current[modelgridindex][binindex].fit_type = FIT_DILUTED_BLACKBODY;
       }
-
     }
   }
+  printout("mem_usage: radiation field bins for nonempty cells occupy %.1f MB\n", 2 * RADFIELDBINCOUNT * sizeof(struct radfieldbin_previous) / 1024. / 1024.);
 }
 
 

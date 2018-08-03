@@ -51,7 +51,7 @@ static void get_macroatom_transitionrates(
   processrates[MA_ACTION_RADDEEXC] = 0.;
   processrates[MA_ACTION_COLDEEXC] = 0.;
   processrates[MA_ACTION_INTERNALDOWNSAME] = 0.;
-  const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+  const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 1; i <= ndowntrans; i++)
   {
     const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
@@ -108,7 +108,7 @@ static void get_macroatom_transitionrates(
   /// Calculate sum for upward internal transitions
   /// transitions within the current ionisation stage
   processrates[MA_ACTION_INTERNALUPSAME] = 0.;
-  const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+  const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 1; i <= nuptrans; i++)
   {
     const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
@@ -167,7 +167,7 @@ static void do_macroatom_raddeexcitation(
   int linelistindex = -99;
   int i;
   int lower = -1;
-  const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+  const int ndowntrans = get_ndowntrans(element, ion, level);
   double epsilon_trans = -100;
   for (i = 1; i <= ndowntrans; i++)
   {
@@ -549,8 +549,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     #endif
 
     const double epsilon_current = epsilon(element, ion, level);
-    const int ndowntrans = elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
-    const int nuptrans = elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+    const int ndowntrans = get_ndowntrans(element, ion, level);
+    const int nuptrans = get_nuptrans(element, ion, level);
     //nlevels_nextion  ///not needed as long we only ionise to the ground state
     //nlevels_lowerion ///only needed if level = 0, this won't happen too often
 

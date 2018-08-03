@@ -12,6 +12,7 @@
 
 #include "sn3d.h"
 #include "threadprivate.h"
+#include "assert.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
@@ -200,7 +201,8 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
           }
         }
       }
-      printout("MPI_BUFFER: used %d of %d bytes of mpi_grid_buffer\n", position, mpi_grid_buffer_size);
+      printout("mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position, mpi_grid_buffer_size);
+      assert(position <= mpi_grid_buffer_size);
     }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
