@@ -8,9 +8,8 @@ void get_gam_ll(void)
 {
   /* Start by setting up the grid of fake lines and their energies. */
   gamma_spectra[FAKE_GAM_LINE_ID].nlines = nfake_gam;
-
-  gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *) malloc(nlines * sizeof(double));
-  gamma_spectra[FAKE_GAM_LINE_ID].probability = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *) malloc(nfake_gam * sizeof(double));
+  gamma_spectra[FAKE_GAM_LINE_ID].probability = (double *) malloc(nfake_gam * sizeof(double));
 
   const double deltanu = (nusyn_max - nusyn_min) / (gamma_spectra[FAKE_GAM_LINE_ID].nlines - 3);
   for (int i = 0; i < gamma_spectra[FAKE_GAM_LINE_ID].nlines; i++)
