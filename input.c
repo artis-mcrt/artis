@@ -1671,9 +1671,6 @@ static void read_1d_model(void)
   fclose(model_input);
 
   vmax = vout_model[npts_model - 1];
-  rmax = vmax * tmin;
-  xmax = ymax = zmax = rmax;
-  printout("rmax %g\n", rmax);
 }
 
 
@@ -1737,10 +1734,6 @@ static void read_2d_model(void)
   }
 
   fclose(model_input);
-
-  rmax = vmax * tmin;
-  xmax = ymax = zmax = rmax;
-  printout("rmax %g\n", rmax);
 }
 
 
@@ -1897,10 +1890,6 @@ static void read_3d_model(void)
   npts_model = mgi;
 
   fclose(model_input);
-
-  rmax = vmax * tmin;
-  xmax = ymax = zmax = rmax;
-  printout("rmax %g\n", rmax);
 
 
   ///Opacity treatment moved to grid_init & update_grid
@@ -2084,9 +2073,7 @@ void input(int rank)
       mtot = 1.39 * MSUN;
       totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
       vmax = 1.e9;
-      rmax = vmax * tmin;
   //  rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
-      xmax = ymax = zmax = rmax;
     }
     else if (model_type == RHO_1D_READ)
     {
@@ -2108,6 +2095,10 @@ void input(int rank)
       printout("Unknown model. Abort.\n");
       abort();
     }
+
+    rmax = vmax * tmin;
+    xyzmax[0] = xyzmax[1] = xyzmax[2] = rmax;
+    printout("rmax %g\n", rmax);
 
     show_totmassradionuclides();
 
