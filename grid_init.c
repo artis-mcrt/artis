@@ -301,9 +301,9 @@ extern inline double get_cellxyzmin(int cellindex, int axis);
 double get_cellradialpos(const int cellindex)
 {
   double dcen[3];
-  for (int d = 0; d < 3; d++)
+  for (int axis = 0; axis < 3; axis++)
   {
-    dcen[d] = get_cellxyzmin(cellindex, d) + (0.5 * wid_init);
+    dcen[axis] = get_cellxyzmin(cellindex, axis) + (0.5 * wid_init);
   }
 
   return vec_len(dcen);
@@ -676,32 +676,35 @@ static void density_1d_read(void)
   */
 
 
-  for (int n = 0; n < ngrid; n++)
+  for (int cellindex = 0; cellindex < ngrid; cellindex++)
   {
-    const double radial_pos = get_cellradialpos(n);
+    const double radial_pos = get_cellradialpos(cellindex);
     const double vmin = 0.;
     if (radial_pos < rmax)
     {
-      //int mkeep = 0;
-      cell[n].modelgridindex = 0;
+      cell[cellindex].modelgridindex = 0;
+      const double vcell = radial_pos / tmin;
 
-      for (int m = 0; m < (npts_model - 1); m++)
+      for (int mgi = 0; mgi < (npts_model - 1); mgi++)
       {
-        if (radial_pos > (vout_model[m] * tmin))
+        if (vout_model[mgi] < vcell)
         {
-          //mkeep = m + 1;
-          cell[n].modelgridindex = m + 1;
+          cell[cellindex].modelgridindex = mgi + 1;
         }
       }
-      if (vout_model[cell[n].modelgridindex] >= vmin)
-        modelgrid[cell[n].modelgridindex].initial_radial_pos += radial_pos;
+
+      if (vout_model[cell[cellindex].modelgridindex] >= vmin)
+      {
+        modelgrid[cell[cellindex].modelgridindex].initial_radial_pos += radial_pos;
+      }
       else
-        cell[n].modelgridindex = MMODELGRID;
-      //renorm[mkeep]++;
+      {
+        cell[cellindex].modelgridindex = MMODELGRID;
+      }
     }
     else
     {
-      cell[n].modelgridindex = MMODELGRID;
+      cell[cellindex].modelgridindex = MMODELGRID;
     }
   }
 
@@ -1224,11 +1227,11 @@ static void uniform_grid_setup(void)
   int nxyz[3] = {0, 0, 0};
   for (int n = 0; n < ngrid; n++)
   {
-    for (int d = 0; d < 3; d++)
+    for (int axis = 0; axis < 3; axis++)
     {
-      assert(nxyz[d] == get_cellnxyz(n, d));
-      cell[n].pos_init[d] = - xyzmax[d] + (2 * nxyz[d] * xyzmax[d] / nxyzgrid[d]);
-      wid_init = 2 * xyzmax[d] / nxyzgrid[d];
+      assert(nxyz[axis] == get_cellnxyz(n, axis));
+      cell[n].pos_init[axis] = - xyzmax[axis] + (2 * nxyz[axis] * xyzmax[axis] / nxyzgrid[axis]);
+      wid_init = 2 * xyzmax[axis] / nxyzgrid[axis];
     }
 
     // require cubic cells

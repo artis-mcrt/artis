@@ -7,7 +7,7 @@
 
 
 double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *snext)
-/// Basic routine to compute distance to a call boundary.
+/// Basic routine to compute distance to a cell boundary.
 {
   //double close, close_try;
 
@@ -58,7 +58,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 
   for (int d = 0; d < 3; d++)
   {
-    // flip is either zero or one to indicate one of the two boundaries along the d axis
+    // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
     for (int flip = 0; flip < 2; flip++)
     {
       enum cell_boundary direction = flip ? posdirections[d] : negdirections[d];
@@ -210,9 +210,9 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
     /** Just need to update "where".*/
     //int oldpos = pkt_ptr->where;
     const int cellnum = pkt_ptr->where;
-    int old_mgi = cell[cellnum].modelgridindex;
+    const int old_mgi = cell[cellnum].modelgridindex;
     pkt_ptr->where = snext;
-    int mgi = cell[snext].modelgridindex;
+    const int mgi = cell[snext].modelgridindex;
     /*
     double cellwidth = t_current/tmin * wid_init;
     if (pkt_ptr->last_cross == POS_X)
@@ -292,7 +292,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+          calculate_kappa_rpkt_cont(pkt_ptr, t_current);
         }
       }
     }
