@@ -7,6 +7,9 @@ extern inline void vec_norm(const double vec_in[3], double vec_out[3]);
 extern inline double dot(const double *const restrict x, const double *const restrict y);
 extern inline void get_velocity(const double *const restrict x, double *restrict y, const double t);
 extern inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
+extern inline void vec_scale(double vec[3], const double scalefactor);
+extern inline void vec_copy(double dest[3], const double source[3]);
+extern inline double doppler_packetpos(const PKT *restrict pkt_ptr, const double t);
 
 
 void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
@@ -20,9 +23,10 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  dir2[0] = (dir1[0] - (vel[0] * fact2)) / fact1;
-  dir2[1] = (dir1[1] - (vel[1] * fact2)) / fact1;
-  dir2[2] = (dir1[2] - (vel[2] * fact2)) / fact1;
+  for (int d = 0; d < 3; d++)
+  {
+    dir2[d] = (dir1[d] - (vel[d] * fact2)) / fact1;
+  }
 }
 
 
@@ -66,8 +70,8 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / (sqrt( (dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1])));
-  const double norm2 = 1. / (sqrt( (dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2])));
+  const double norm1 = 1. / (sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1])));
+  const double norm2 = 1. / (sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2])));
 
   const double r11 = dir_in[1] * norm1;
   const double r12 = -1 * dir_in[0] * norm1;

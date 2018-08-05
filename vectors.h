@@ -2,6 +2,8 @@
 #define VECTORS_H
 
 #include <math.h>
+// #include <string.h>
+#include "types.h"
 
 void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
 double doppler(const double dir1[3], const double vel[3]);
@@ -46,6 +48,34 @@ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout
   vecout[0] = (vec1[1] * vec2[2]) - (vec2[1] * vec1[2]);
   vecout[1] = (vec1[2] * vec2[0]) - (vec2[2] * vec1[0]);
   vecout[2] = (vec1[0] * vec2[1]) - (vec2[0] * vec1[1]);
+}
+
+
+inline void
+vec_scale(double vec[3], const double scalefactor)
+{
+  for (int d = 0; d < 3; d++)
+  {
+    vec[d] *= scalefactor;
+  }
+}
+
+inline void
+vec_copy(double destination[3], const double source[3])
+{
+  // memcpy(destination, source, sizeof(double) * 3);
+  for (int d = 0; d < 3; d++)
+  {
+    destination[d] = source[d];
+  }
+}
+
+inline double
+doppler_packetpos(const PKT *restrict pkt_ptr, const double t)
+{
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, t);
+  return doppler(pkt_ptr->dir, vel_vec);
 }
 
 #endif //VECTORS_H

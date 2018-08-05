@@ -7,7 +7,7 @@
 #include "macroatom.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
-
+#include "vectors.h"
 
 extern inline int get_coolinglistoffset(int element, int ion);
 
@@ -409,7 +409,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
 }
 
 
-static double planck(double nu, double T)
+static double planck(const double nu, const double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
 {
@@ -417,7 +417,7 @@ static double planck(double nu, double T)
 }
 
 
-static double sample_planck(double T)
+static double sample_planck(const double T)
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
 {
@@ -884,14 +884,12 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
     }
 
     gsl_integration_workspace_free(wsp);
-    return(t_current);
+    return t_current;
   }
   else
   {
-    pkt_ptr->pos[0] *= t2 / t1;
-    pkt_ptr->pos[1] *= t2 / t1;
-    pkt_ptr->pos[2] *= t2 / t1;
-    return(PACKET_SAME);
+    vec_scale(pkt_ptr->pos, t2 / t1);
+    return PACKET_SAME;
   }
 }
 
