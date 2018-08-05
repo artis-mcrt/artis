@@ -1604,7 +1604,7 @@ void write_grid_restart_data(void)
   int ny = (y - (cell[0].pos_init[1] * trat))/(wid_init * trat);
   int nz = (z - (cell[0].pos_init[2] * trat))/(wid_init * trat);
 
-  int n = nx + (nxgrid * ny) + (nxgrid * nygrid * nz);
+  int n = nx + (nxyzgrid[0] * ny) + (nxyzgrid[0] * nxyzgrid[1] * nz);
 
   // do a check
 

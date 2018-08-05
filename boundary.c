@@ -35,14 +35,13 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   for (int d = 0; d < 3; d++)
   {
     initpos[d] = pkt_ptr->pos[d];
-    cellxyzmin[d] = cell[cellindex].pos_init[d];
+    cellxyzmin[d] = get_cellxyzmin(cellindex, d);
     cellxyzmax[d] = cellxyzmin[d] + wid_init;
     vel[d] = pkt_ptr->dir[d] * CLIGHT_PROP;
   }
 
   // how much do we change the cellindex to move in the the x, y, z directions
-  const int cellindexdiffxyz[3] = {1, nxgrid, nxgrid * nygrid};
-  const double xyzmax[3] = {xmax, ymax, zmax};
+  const int cellindexdiffxyz[3] = {1, nxyzgrid[0], nxyzgrid[0] * nxyzgrid[1]};
 
   //printout("boundary.c: x0 %g, y0 %g, z0 %g\n", initpos[0] initpos[1] initpos[2]);
 
@@ -129,7 +128,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
     {
       choice = d * 2 + 1;
       time = t_plusxyz[d];
-      // equivalently if (nxyz == (nxgrid - 1))
+      // equivalently if (nxyz == (nxyzgrid[0] - 1))
       if (cellxyzmin[d] + 1.5 * wid_init > xyzmax[d])
       {
         *snext = -99;
@@ -177,8 +176,8 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   //*closest = close;
 
   /** Also we've identified the cell we'll go into. The cells are ordered in x then y then z.
-  So if we go up in x we go to cell + 1, up in y we go to cell + nxgrid, up in z
-  we go to cell + (nxgrid * nygrid).
+  So if we go up in x we go to cell + 1, up in y we go to cell + nxyzgrid[0], up in z
+  we go to cell + (nxyzgrid[0] * nxyzgrid[1]).
   If's going to escape the grid this is flagged with snext = -99. */
   return distance;
 }
@@ -404,5 +403,5 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
 //   int yy = (pkt_ptr->pos[1] - (cell[0].pos_init[1]*t_current/tmin)) / (wid_init*t_current/tmin);
 //   int zz = (pkt_ptr->pos[2] - (cell[0].pos_init[2]*t_current/tmin)) / (wid_init*t_current/tmin);
 //
-//   return xx + (nxgrid * yy) + (nxgrid * nygrid * zz);
+//   return xx + (nxyzgrid[0] * yy) + (nxyzgrid[0] * nxyzgrid[1] * zz);
 // }

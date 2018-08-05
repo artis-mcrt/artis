@@ -731,7 +731,10 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         printout("[warning] r_pkt: cell %d snext %d\n", cellindex, snext);
         printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
         printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-        printout("[warning] r_pkt: cell corner %g %g %g\n",cell[cellindex].pos_init[0]*t_current/tmin, cell[cellindex].pos_init[1]*t_current/tmin,  cell[cellindex].pos_init[2]*t_current/tmin);
+        printout("[warning] r_pkt: cell corner %g %g %g\n",
+                 get_cellxyzmin(cellindex, 0) * t_current / tmin,
+                 get_cellxyzmin(cellindex, 1) * t_current / tmin,
+                 get_cellxyzmin(cellindex, 2) * t_current / tmin);
         printout("[warning] r_pkt: cell width %g %g %g\n",wid_init*t_current/tmin, wid_init*t_current/tmin, wid_init*t_current/tmin);
         //abort();
       }

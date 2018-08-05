@@ -2,7 +2,8 @@
 #define GRIDINIT_H
 
 void grid_init(int my_rank);
-double get_radialpos(int cellindex);
+
+double get_cellradialpos(int cellindex);
 float get_modelradioabund(int modelgridindex, enum radionuclides nuclide_type);
 void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
 
@@ -10,6 +11,13 @@ void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, fl
 inline double vol_init(void)//(const CELL *restrict const grid_ptr)
 {
   return (wid_init * wid_init * wid_init);
+}
+
+inline double get_cellxyzmin(const int cellindex, const int axis)
+// get the minimum position along the x, y, or z axis at tmin
+{
+  return cell[cellindex].pos_init[axis];
+  // return - xyzmax[axis] + (2 * get_cellnxyz(cellindex, axis) * xyzmax[axis] / nxyzgrid[axis]);
 }
 
 inline float get_rhoinit(int modelgridindex)
