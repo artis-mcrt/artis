@@ -456,9 +456,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, const int rpkt_eventtype, double t
       /// Electron scattering does not modify the last emission flag
       //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
       /// but it updates the last emission position
-      pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-      pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-      pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+      vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = t_current;
 
       /// Set some flags
@@ -586,9 +584,7 @@ static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
   /// Electron scattering does not modify the last emission flag
   //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
   /// but it updates the last emission position
-  pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-  pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-  pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = t_current;
 }
 

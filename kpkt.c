@@ -472,9 +472,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
   pkt_ptr->interactions++;
   pkt_ptr->last_event = 6;
   pkt_ptr->emissiontype = -9999999;
-  pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-  pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-  pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = t_current;
   pkt_ptr->nscatterings = 0;
 
@@ -549,9 +547,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
     gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1024);
     double nu_lower,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
 
-    pkt_ptr->pos[0] = pkt_ptr->pos[0] * t_current / t1;
-    pkt_ptr->pos[1] = pkt_ptr->pos[1] * t_current / t1;
-    pkt_ptr->pos[2] = pkt_ptr->pos[2] * t_current / t1;
+    vec_scale(pkt_ptr->pos, t_current / t1);
 
     /// Randomly select the occuring cooling process out of the important ones
     double coolingsum = 0.;
@@ -692,9 +688,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 6;
       pkt_ptr->emissiontype = -9999999;
-      pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-      pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-      pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+      vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
       #ifndef FORCE_LTE
@@ -817,9 +811,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
       pkt_ptr->emissiontype = get_continuumindex(element,ion,level);
-      pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-      pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-      pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+      vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
     }
