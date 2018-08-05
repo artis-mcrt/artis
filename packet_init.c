@@ -27,13 +27,6 @@ static void place_pellet(const double e0, const int cellindex, const int n, cons
   pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
   pkt[n].originated_from_positron = false;
 
-  // const int nx = m % nxyzgrid[0];
-  // const int ny = (m / nxyzgrid[0]) % nxyzgrid[1];
-  // const int nz = (m / (nxyzgrid[0] * nxyzgrid[1])) % nxyzgrid[2];
-  // double cellmin[3];
-  // cellmin[1] = - xyzmax[1] + (2 * ny * xyzmax[1] / nxyzgrid[0]);
-  // cellmin[2] = - xyzmax[2] + (2 * nz * xyzmax[2] / nxyzgrid[0]);
-
   for (int axis = 0; axis < 3; axis++)
   {
     const double zrand = gsl_rng_uniform_pos(rng);
