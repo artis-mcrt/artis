@@ -9,7 +9,7 @@ extern inline void get_velocity(const double *const restrict x, double *restrict
 extern inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
 
 
-void angle_ab(const double *restrict const dir1, const double *restrict vel, double *dir2)
+void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
 // Routine for aberation of angles in SR. Takes one direction and velocity
 // as input and gives back another direction.
 {
@@ -26,7 +26,7 @@ void angle_ab(const double *restrict const dir1, const double *restrict vel, dou
 }
 
 
-double doppler(const double *restrict dir1, const double *restrict vel)
+double doppler(const double dir1[3], const double vel[3])
 // Routine for Doppler shift in SR. Takes one direction and velocity
 //  as input and gives back double.
 {
@@ -48,7 +48,7 @@ double doppler(const double *restrict dir1, const double *restrict vel)
 }
 
 
-void scatter_dir(const double *restrict dir_in, const double cos_theta, double *dir_out)
+void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
 // Routine for scattering a direction through angle theta.
 {
   // begin with setting the direction in coordinates where original direction
@@ -66,8 +66,8 @@ void scatter_dir(const double *restrict dir_in, const double cos_theta, double *
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1./( sqrt( (dir_in[0]*dir_in[0]) + (dir_in[1]*dir_in[1]))) ;
-  const double norm2 = 1./( sqrt( (dir_in[0]*dir_in[0]) + (dir_in[1]*dir_in[1]) + (dir_in[2]*dir_in[2])) );
+  const double norm1 = 1. / (sqrt( (dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1])));
+  const double norm2 = 1. / (sqrt( (dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]) + (dir_in[2] * dir_in[2])));
 
   const double r11 = dir_in[1] * norm1;
   const double r12 = -1 * dir_in[0] * norm1;
