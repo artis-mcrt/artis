@@ -6,7 +6,7 @@
 
 static double uniform_ni56(const int cellindex)
 {
-  const double r_on_rmax = get_radialpos(cellindex) / rmax;
+  const double r_on_rmax = get_cellradialpos(cellindex) / rmax;
   const double m_r = pow(r_on_rmax, 3) * mtot / MSUN; //this is the mass enclosed up to radius r in units of the total eject mass
 
   if (m_r < 0.5)
@@ -27,19 +27,17 @@ static void place_pellet(const double e0, const int cellindex, const int n, cons
   pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
   pkt[n].originated_from_positron = false;
 
-  // const int nx = m % nxgrid;
-  // const int ny = (m / nxgrid) % nygrid;
-  // const int nz = (m / (nxgrid * nygrid)) % nzgrid;
+  // const int nx = m % nxyzgrid[0];
+  // const int ny = (m / nxyzgrid[0]) % nxyzgrid[1];
+  // const int nz = (m / (nxyzgrid[0] * nxyzgrid[1])) % nxyzgrid[2];
   // double cellmin[3];
-  // cellmin[0] = - xmax + (2 * nx * xmax / nxgrid);
-  // cellmin[1] = - ymax + (2 * ny * ymax / nxgrid);
-  // cellmin[2] = - zmax + (2 * nz * zmax / nxgrid);
+  // cellmin[1] = - xyzmax[1] + (2 * ny * xyzmax[1] / nxyzgrid[0]);
+  // cellmin[2] = - xyzmax[2] + (2 * nz * xyzmax[2] / nxyzgrid[0]);
 
   for (int axis = 0; axis < 3; axis++)
   {
     const double zrand = gsl_rng_uniform_pos(rng);
-    // pkt[n].pos[axis] = cellmin[axis] + (zrand * wid_init);
-    pkt[n].pos[axis] = cell[cellindex].pos_init[axis] + (zrand * wid_init);
+    pkt[n].pos[axis] = get_cellxyzmin(cellindex, axis) + (zrand * wid_init);
   }
 
   const int mgi = cell[cellindex].modelgridindex;

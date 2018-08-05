@@ -1542,7 +1542,7 @@ static void show_totmassradionuclides(void)
     else if (model_type == RHO_3D_READ)
     {
       /// Assumes cells are cubes here - all same volume.
-      cellvolume = pow((2 * vmax * tmin), 3.) / (nxgrid * nygrid * nzgrid);
+      cellvolume = pow((2 * vmax * tmin), 3.) / (nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2]);
     }
     else
     {
@@ -1750,9 +1750,9 @@ static void read_3d_model(void)
     printout("Too many points in input model. Abort. (%d > %d)\n", npts_model, MMODELGRID);
     abort();
   }
-  if (npts_model != nxgrid * nygrid * nzgrid)
+  if (npts_model != nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2])
   {
-    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model, nxgrid * nygrid * nzgrid);
+    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model, nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2]);
     abort();
   }
 
@@ -1993,17 +1993,17 @@ void input(int rank)
 
   maxion = MIONS;
   /// Set grid size
-  //nxgrid = 4; //pow(MGRID,1./3.); //10;
-  //nygrid = 4; //pow(MGRID,1./3.); //10;
-  //nzgrid = 4; //pow(MGRID,1./3.); //10;
-  nxgrid = 50;
-  nygrid = 50;
-  nzgrid = 50;
-  printout("nxgrid %d\n", nxgrid);
-  ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
+  //nxyzgrid[0] = 4; //pow(MGRID,1./3.); //10;
+  //nxyzgrid[1] = 4; //pow(MGRID,1./3.); //10;
+  //nxyzgrid[2] = 4; //pow(MGRID,1./3.); //10;
+  nxyzgrid[0] = 50;
+  nxyzgrid[1] = 50;
+  nxyzgrid[2] = 50;
+  printout("nxyzgrid: %d * %d * %d\n", nxyzgrid[0], nxyzgrid[1], nxyzgrid[2]);
+  ngrid = nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2]; ///Moved to input.c
   if (ngrid > MGRID)
   {
-    printout("[fatal] input: Error: too many grid cells. Abort. %d>%d",ngrid,MGRID);
+    printout("[fatal] input: Error: too many grid cells. Abort. %d>%d", ngrid, MGRID);
     abort();
   }
 
@@ -2019,7 +2019,7 @@ void input(int rank)
   n_titer = 1;
   initial_iteration = false;
 
-  printout("[info] input: do n_titer %d iterations per timestep\n",n_titer);
+  printout("[info] input: do n_titer %d iterations per timestep\n", n_titer);
   if (n_titer > 1)
   {
     #ifndef DO_TITER

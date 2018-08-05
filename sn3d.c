@@ -562,7 +562,7 @@ int main(int argc, char** argv)
 
   printout("time after input %d\n",time(NULL));
   printout("simulation propagates %d packets through a %d x %d x %d grid\n",
-           npkts, nxgrid, nygrid, nzgrid);
+           npkts, nxyzgrid[0], nxyzgrid[1], nxyzgrid[2]);
   printout("timesteps %d\n", ntstep);
 
   /// Precalculate the rate coefficients for spontaneous and stimulated recombination

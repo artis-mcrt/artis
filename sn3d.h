@@ -174,7 +174,7 @@ double E48V;
 
 extern gsl_rng *rng; /// pointer for random number generator
 
-int nxgrid, nygrid, nzgrid; /// actual grid dimensions to use
+int nxyzgrid[3]; /// actual grid dimensions to use
 int ngrid;
 int grid_type;
 
@@ -193,7 +193,7 @@ int rank_global; /// Global variable which holds the rank of the active MPI proc
 int npkts;
 int nesc; //number of packets that escape during current timestep  ///ATOMIC
 
-double xmax, ymax, zmax;
+double xyzmax[3];
 double mtot, vmax, rmax;  /// Total mass and outer velocity/radius
 double totmassradionuclide[RADIONUCLIDE_COUNT]; /// total mass of each radionuclide in the ejecta
 double mfeg;              /// Total mass of Fe group elements in ejecta

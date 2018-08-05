@@ -276,23 +276,35 @@ static void set_stable_abund(const int mgi, const int anumber, const float elema
 }
 
 
-double get_radialpos(const int cellindex)
+static int get_cellnxyz(const int cellindex, const int axis)
+// convert a cell index number into an integer x, y, or z index
 {
-  // const int nx = cellindex % nxgrid;
-  // const int ny = (cellindex / nxgrid) % nygrid;
-  // const int nz = (cellindex / (nxgrid * nygrid)) % nzgrid;
-  // const double cellxmin = - xmax + (2 * nx * xmax / nxgrid);
-  // const double cellymin = - ymax + (2 * ny * ymax / nygrid);
-  // const double cellzmin = - zmax + (2 * nz * zmax / nzgrid);
+  // return cell[cellindex].nxyz[axis];
+  switch (axis)
+  {
+    case 0:
+      return cellindex % nxyzgrid[0];
+    case 1:
+      return (cellindex / nxyzgrid[0]) % nxyzgrid[1];
+    case 2:
+      return (cellindex / (nxyzgrid[0] * nxyzgrid[1])) % nxyzgrid[2];
+    default:
+      printout("invalid coordinate index %d", axis);
+      abort();
+  }
+}
 
-  const double cellxmin = cell[cellindex].pos_init[0];
-  const double cellymin = cell[cellindex].pos_init[1];
-  const double cellzmin = cell[cellindex].pos_init[2];
 
+extern inline double get_cellxyzmin(int cellindex, int axis);
+
+
+double get_cellradialpos(const int cellindex)
+{
   double dcen[3];
-  dcen[0] = cellxmin + (0.5 * wid_init);
-  dcen[1] = cellymin + (0.5 * wid_init);
-  dcen[2] = cellzmin + (0.5 * wid_init);
+  for (int d = 0; d < 3; d++)
+  {
+    dcen[d] = get_cellxyzmin(cellindex, d) + (0.5 * wid_init);
+  }
 
   return vec_len(dcen);
 }
@@ -666,7 +678,7 @@ static void density_1d_read(void)
 
   for (int n = 0; n < ngrid; n++)
   {
-    const double radial_pos = get_radialpos(n);
+    const double radial_pos = get_cellradialpos(n);
     const double vmin = 0.;
     if (radial_pos < rmax)
     {
@@ -865,21 +877,16 @@ static void density_2d_read(void)
 
   for (int n = 0; n < ngrid; n++)
   {
-    double radial_pos = get_radialpos(n);
+    double radial_pos = get_cellradialpos(n);
 
     if (radial_pos < rmax)
     {
-      const int nx = n % nxgrid;
-      const int ny = (n / nxgrid) % nygrid;
-      const int nz = (n / (nxgrid * nygrid)) % nzgrid;
-      const double cellxmin = - xmax + (2 * nx * xmax / nxgrid);
-      const double cellymin = - ymax + (2 * ny * ymax / nygrid);
-      const double cellzmin = - zmax + (2 * nz * zmax / nzgrid);
-
       double dcen[3];
-      dcen[0] = cellxmin + (0.5 * wid_init);
-      dcen[1] = cellymin + (0.5 * wid_init);
-      dcen[2] = cellzmin + (0.5 * wid_init);
+      for (int d = 0; d < 3; d++)
+      {
+        const double cellxyzmin = - xyzmax[d] + (2 * get_cellnxyz(n, d) * xyzmax[d] / nxyzgrid[0]);
+        dcen[d] = cellxyzmin + (0.5 * wid_init);
+      }
 
       mkeep1 = mkeep2 = 0;
       cell[n].modelgridindex = 0;
@@ -1214,21 +1221,19 @@ static void assign_temperature(void)
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
-  int nx = 0;
-  int ny = 0;
-  int nz = 0;
+  int nxyz[3] = {0, 0, 0};
   for (int n = 0; n < ngrid; n++)
   {
-    assert(nx == n % nxgrid);
-    assert(ny == (n / nxgrid) % nygrid);
-    assert(nz == (n / (nxgrid * nygrid)) % nzgrid);
-    cell[n].pos_init[0] = - xmax + (2 * nx * xmax / nxgrid);
-    cell[n].pos_init[1] = - ymax + (2 * ny * ymax / nygrid);
-    cell[n].pos_init[2] = - zmax + (2 * nz * zmax / nzgrid);
+    for (int d = 0; d < 3; d++)
+    {
+      assert(nxyz[d] == get_cellnxyz(n, d));
+      cell[n].pos_init[d] = - xyzmax[d] + (2 * nxyz[d] * xyzmax[d] / nxyzgrid[d]);
+      wid_init = 2 * xyzmax[d] / nxyzgrid[d];
+    }
 
-    wid_init = 2 * xmax / nxgrid;
-    wid_init = 2 * ymax / nygrid;
-    wid_init = 2 * zmax / nzgrid;
+    // require cubic cells
+    assert(wid_init == 2 * xyzmax[1] / nxyzgrid[1]);
+    assert(wid_init == 2 * xyzmax[2] / nxyzgrid[2]);
 
     //cell[n].cen_init[0] = cell[n].pos_init[0] + (0.5 * wid_init);
     //cell[n].cen_init[1] = cell[n].pos_init[1] + (0.5 * wid_init);
@@ -1238,18 +1243,18 @@ static void uniform_grid_setup(void)
     // cell[n].xyz[1] = ny;
     // cell[n].xyz[2] = nz;
 
-    assert(n == nz * nygrid * nxgrid + ny * nxgrid + nx);
+    assert(n == nxyz[2] * nxyzgrid[1] * nxyzgrid[0] + nxyz[1] * nxyzgrid[0] + nxyz[0]);
 
-    nx++;
-    if (nx == nxgrid)
+    nxyz[0]++;
+    if (nxyz[0] == nxyzgrid[0])
     {
-      nx = 0;
-      ny++;
+      nxyz[0] = 0;
+      nxyz[1]++;
     }
-    if (ny == nygrid)
+    if (nxyz[1] == nxyzgrid[1])
     {
-      ny = 0;
-      nz++;
+      nxyz[1] = 0;
+      nxyz[2]++;
     }
 
     ///Do we need this initialisation anywhere else (after modelgridindex was initialised) ???????????????????????????????????
@@ -1297,7 +1302,7 @@ void grid_init(int my_rank)
 /// don't need to be uniform but for the moment they are.
 {
   /// Start by checking that the number of grid cells is okay */
-  //ngrid = nxgrid * nygrid * nzgrid; ///Moved to input.c
+  //ngrid = nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2]; ///Moved to input.c
   //if (ngrid > MGRID)
   //{
   //  printout("[fatal] grid_init: Error: too many grid cells. Abort.");
@@ -1347,7 +1352,7 @@ void grid_init(int my_rank)
     {
       for (int n = 0; n < ngrid; n++)
       {
-        const double radial_pos = get_radialpos(n);
+        const double radial_pos = get_cellradialpos(n);
         modelgrid[cell[n].modelgridindex].initial_radial_pos = radial_pos;
       }
       // cells with rho > 0 are allocated by the above function
