@@ -44,9 +44,7 @@ double sig_comp(const PKT *pkt_ptr, double t_current)
 
   // Now need to convert between frames.
 
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
+  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, t_current);
 
   return sigma_rf;
 }
@@ -218,23 +216,20 @@ void compton_scatter(PKT *pkt_ptr, double t_current)
 
     // Now convert back again.
 
-    get_velocity(pkt_ptr->pos, vel_vec, (-1 * t_current));
+    // get_velocity(pkt_ptr->pos, vel_vec, (-1 * t_current));
+    vec_scale(vel_vec, -1.);
+
     double final_dir[3];
     angle_ab(new_dir, vel_vec, final_dir);
 
-    pkt_ptr->dir[0] = final_dir[0];
-    pkt_ptr->dir[1] = final_dir[1];
-    pkt_ptr->dir[2] = final_dir[2];
+    vec_copy(pkt_ptr->dir, final_dir);
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
 
-    get_velocity(pkt_ptr->pos, vel_vec, t_current);
-
-    const double dopplerfactor = 1 / doppler(pkt_ptr->dir, vel_vec);
-
-    pkt_ptr->nu_rf = pkt_ptr->nu_cmf * dopplerfactor;
-    pkt_ptr->e_rf = pkt_ptr->e_cmf * dopplerfactor;
+    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+    pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
+    pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
     pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
   }

@@ -8,6 +8,7 @@
 #include "nonthermal.h"
 #include "update_packets.h"
 #include "rpkt.h"
+#include "vectors.h"
 
 
 extern void update_cell(const int mgi);
@@ -23,6 +24,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
   /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
 
+  // t_current == PACKET_SAME which is < 0 after t2 has been reached;
   while (t_current >= 0)
   {
     /* Start by sorting out what sort of packet it is.*/
@@ -119,10 +121,7 @@ static void update_pellet(
   if (tdecay > (ts + tw))
   {
     // It won't decay in this timestep, so just need to move it on with the flow.
-
-    pkt_ptr->pos[0] *= (ts + tw) / ts;
-    pkt_ptr->pos[1] *= (ts + tw) / ts;
-    pkt_ptr->pos[2] *= (ts + tw) / ts;
+    vec_scale(pkt_ptr->pos, (ts + tw) / ts);
 
     // That's all that needs to be done for the inactive pellet.
   }
@@ -131,9 +130,7 @@ static void update_pellet(
     // The packet decays in the current timestep.
     if (decay_to_kpkt)
     {
-      pkt_ptr->pos[0] *= tdecay / ts;
-      pkt_ptr->pos[1] *= tdecay / ts;
-      pkt_ptr->pos[2] *= tdecay / ts;
+      vec_scale(pkt_ptr->pos, tdecay / ts);
 
       pkt_ptr->type = TYPE_KPKT;
       pkt_ptr->absorptiontype = -6;
@@ -141,9 +138,7 @@ static void update_pellet(
     }
     else if (decay_to_ntlepton)
     {
-      pkt_ptr->pos[0] *= tdecay / ts;
-      pkt_ptr->pos[1] *= tdecay / ts;
-      pkt_ptr->pos[2] *= tdecay / ts;
+      vec_scale(pkt_ptr->pos, tdecay / ts);
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;

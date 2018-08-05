@@ -100,8 +100,8 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
      ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
      scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540) */
   i1 = rot_angle(old_dir_cmf,new_dir_cmf,ref1,ref2);
-  cos2i1 = cos(2 * i1) ;
-  sin2i1 = sin(2 * i1) ;
+  cos2i1 = cos(2 * i1);
+  sin2i1 = sin(2 * i1);
 
   Qold = Qi * cos2i1 - Ui * sin2i1;
   Uold = Qi * sin2i1 + Ui * cos2i1;
@@ -111,8 +111,8 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
 
   mu = dot(old_dir_cmf,new_dir_cmf);
 
-  Inew = 0.75 * ( (mu * mu + 1.0) + Qold * (mu * mu - 1.0) ) ;
-  Qnew = 0.75 * ( (mu * mu - 1.0) + Qold * (mu * mu + 1.0) ) ;
+  Inew = 0.75 * ( (mu * mu + 1.0) + Qold * (mu * mu - 1.0) );
+  Qnew = 0.75 * ( (mu * mu - 1.0) + Qold * (mu * mu + 1.0) );
   Unew = 1.5 * mu * Uold ;
 
   Qnew = Qnew / Inew;
@@ -128,8 +128,8 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
      reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
      meridian frame. NB: we need to add PI to transform THETA to i2 */
   i2 = PI + rot_angle(new_dir_cmf,old_dir_cmf,ref1,ref2);
-  cos2i2 = cos(2 * i2) ;
-  sin2i2 = sin(2 * i2) ;
+  cos2i2 = cos(2 * i2);
+  sin2i2 = sin(2 * i2);
 
   Q = Qnew * cos2i2 + Unew * sin2i2;
   U = - Qnew * sin2i2 + Unew * cos2i2;
@@ -137,9 +137,9 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
 
   // Transform Stokes Parameters from the CMF to the RF
 
-  vel_rev[0] = - vel_vec[0] ;
-  vel_rev[1] = - vel_vec[1] ;
-  vel_rev[2] = - vel_vec[2] ;
+  vel_rev[0] = - vel_vec[0];
+  vel_rev[1] = - vel_vec[1];
+  vel_rev[2] = - vel_vec[2];
 
   frame_transform(new_dir_cmf,&Q,&U,vel_rev,dummy_dir);
 
@@ -168,9 +168,6 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   // Finally we want to put in the rest frame energy and frequency.
   // And record that it's now a r-pkt.
 
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
-
   #ifdef DEBUG_ON
     if (pkt_ptr->e_cmf >1e50)
     {
@@ -179,7 +176,9 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
     }
   #endif
 
-  pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+  pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
+  pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
  }
 

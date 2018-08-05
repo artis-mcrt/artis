@@ -77,11 +77,8 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 }
 
 
-void pellet_decay(int nts, PKT *pkt_ptr)
+void pellet_decay(const int nts, PKT *pkt_ptr)
 {
-  double dummy_dir[3];
-  double vel_vec[3];
-
   // Subroutine to convert a pellet to a gamma ray.
   // nts defines the time step we are in. pkt_ptr is a pointer to the packet
   // that is decaying.
@@ -94,9 +91,7 @@ void pellet_decay(int nts, PKT *pkt_ptr)
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 
-  pkt_ptr->pos[0] = pkt_ptr->pos[0] * pkt_ptr->tdecay / time_step[nts].start;
-  pkt_ptr->pos[1] = pkt_ptr->pos[1] * pkt_ptr->tdecay / time_step[nts].start;
-  pkt_ptr->pos[2] = pkt_ptr->pos[2] * pkt_ptr->tdecay / time_step[nts].start;
+  vec_scale(pkt_ptr->pos, pkt_ptr->tdecay / time_step[nts].start);
 
   // Now let's give the gamma ray a direction.
 
@@ -118,14 +113,14 @@ void pellet_decay(int nts, PKT *pkt_ptr)
   frame - use aberation of angles. We want to convert from cmf to
   rest so need -ve velocity. */
 
-  get_velocity(pkt_ptr->pos, vel_vec, (-1*(pkt_ptr->tdecay)));
+  double vel_vec[3];
+  get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->tdecay);
   //negative time since we want the backwards transformation here
 
+  double dummy_dir[3];
   angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
 
-  pkt_ptr->dir[0] = dummy_dir[0];
-  pkt_ptr->dir[1] = dummy_dir[1];
-  pkt_ptr->dir[2] = dummy_dir[2];
+  vec_copy(pkt_ptr->dir, dummy_dir);
 
   /*Check unit vector.*/
   if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
@@ -141,25 +136,24 @@ void pellet_decay(int nts, PKT *pkt_ptr)
   /* Finally we want to put in the rest frame energy and frequency. And record
   that it's now a gamma ray.*/
 
-  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
-
-  pkt_ptr->nu_rf = pkt_ptr->nu_cmf / doppler(pkt_ptr->dir, vel_vec);
-  pkt_ptr->e_rf = pkt_ptr->e_cmf * pkt_ptr->nu_rf /pkt_ptr->nu_cmf;
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->tdecay);
+  pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
+  pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
   pkt_ptr->type = TYPE_GAMMA;
   pkt_ptr->last_cross = NONE;
 
   /* initialise polarisation information */
-  pkt_ptr->stokes[0]=1.0;
-  pkt_ptr->stokes[1]=pkt_ptr->stokes[2]=0.0;
-  dummy_dir[0]=dummy_dir[1]=0.0;
-  dummy_dir[2]=1.0;
-  cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
-  if ((dot(pkt_ptr->pol_dir,pkt_ptr->pol_dir)) < 1.e-8)
+  pkt_ptr->stokes[0] = 1.0;
+  pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
+  dummy_dir[0] = dummy_dir[1] = 0.0;
+  dummy_dir[2] = 1.0;
+  cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
+  if ((dot(pkt_ptr->pol_dir, pkt_ptr->pol_dir)) < 1.e-8)
   {
-    dummy_dir[0]=dummy_dir[2]=0.0;
-    dummy_dir[1]=1.0;
-    cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
+    dummy_dir[0] = dummy_dir[2] = 0.0;
+    dummy_dir[1] = 1.0;
+    cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);
   }
 
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
@@ -191,7 +185,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     int snext;
     double sdist = boundary_cross(pkt_ptr, t_current, &snext);
 
-    if (sdist > (rmax * t_current/tmin))
+    if (sdist > (rmax * t_current / tmin))
     {
       printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
       abort();
@@ -223,7 +217,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     double kap_compton = 0.0;
     if (gamma_grey < 0)
     {
-      kap_compton = sig_comp(pkt_ptr,t_current);
+      kap_compton = sig_comp(pkt_ptr, t_current);
     }
 
     const double kap_photo_electric = sig_photo_electric(pkt_ptr, t_current);
@@ -256,7 +250,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     {
       sdist = sdist / 2.;
       t_current += sdist / CLIGHT_PROP;
-      move_pkt(pkt_ptr,sdist,t_current);
+      move_pkt(pkt_ptr, sdist, t_current);
 
       // Move it into the new cell.
       if (kap_tot > 0)
@@ -277,7 +271,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       }
 
       t_current += sdist / CLIGHT_PROP;
-      move_pkt(pkt_ptr,sdist,t_current);
+      move_pkt(pkt_ptr, sdist, t_current);
       sdist = sdist * 2.;
       if (snext != pkt_ptr->where)
       {
@@ -289,7 +283,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       // Doesn't reach boundary.
       tdist = tdist / 2.;
       t_current += tdist  / CLIGHT_PROP;
-      move_pkt(pkt_ptr,tdist,t_current);
+      move_pkt(pkt_ptr, tdist, t_current);
 
       if (kap_tot > 0)
       {
@@ -308,7 +302,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
         }
       }
       t_current = t2;
-      move_pkt(pkt_ptr,tdist,t_current);
+      move_pkt(pkt_ptr, tdist, t_current);
       tdist = tdist * 2.;
       end_packet = true;
     }
@@ -316,7 +310,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     {
       edist = edist / 2.;
       t_current += edist / CLIGHT_PROP;
-      move_pkt(pkt_ptr,edist,t_current);
+      move_pkt(pkt_ptr, edist, t_current);
       if (kap_tot > 0)
       {
         if (do_comp_est)
@@ -334,7 +328,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
         }
       }
       t_current += edist / CLIGHT_PROP;
-      move_pkt(pkt_ptr,edist,t_current);
+      move_pkt(pkt_ptr, edist, t_current);
       edist = edist * 2.;
 
       // event occurs. Choose which event and call the appropriate subroutine.
@@ -366,7 +360,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand*kap_tot))
       {
         // It's a pair production
-        pair_prod(pkt_ptr,t_current);
+        pair_prod(pkt_ptr, t_current);
         if (pkt_ptr->type != TYPE_GAMMA)
         {
           // It's not a gamma ray any more - return.

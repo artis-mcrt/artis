@@ -46,9 +46,7 @@ double sig_photo_electric(const PKT *pkt_ptr, double t_current)
 
   /* Now need to convert between frames. */
 
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  const double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
+  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, t_current);
   return sigma_rf;
 }
 
@@ -119,9 +117,7 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 
   // Now need to convert between frames.
 
-  double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  double sigma_rf = sigma_cmf * doppler(pkt_ptr->dir, vel_vec);
+  double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, t_current);
 
   if (sigma_rf < 0)
   {
@@ -188,9 +184,7 @@ void pair_prod(PKT *restrict pkt_ptr, double t_current)
     double dummy_dir[3];
     angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
 
-    pkt_ptr->dir[0] = dummy_dir[0];
-    pkt_ptr->dir[1] = dummy_dir[1];
-    pkt_ptr->dir[2] = dummy_dir[2];
+    vec_copy(pkt_ptr->dir, dummy_dir);
 
     // Check unit vector.
     if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
@@ -199,10 +193,9 @@ void pair_prod(PKT *restrict pkt_ptr, double t_current)
       abort();
     }
 
-    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->tdecay);
-    const double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
-    pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfac;
-    pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfac;
+    const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->tdecay);
+    pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
+    pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
     pkt_ptr->type = TYPE_GAMMA;
     pkt_ptr->last_cross = NONE;

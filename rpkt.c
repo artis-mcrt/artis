@@ -786,9 +786,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         /// Get distance to the next physical event in this case only electron scattering
         //kappa = SIGMA_T*get_nne(mgi);
         double kappa = get_kappagrey(mgi) * get_rho(mgi);
-        double vel_vec[3];
-        get_velocity(pkt_ptr->pos, vel_vec, t_current);
-        kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
+        kappa *= doppler_packetpos(pkt_ptr, t_current);
         const double tau_current = 0.0;
         edist = (tau_next - tau_current) / kappa;
         find_nextline = true;
@@ -972,9 +970,6 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
 
   /// Finally we want to put in the rest frame energy and frequency. And record
   /// that it's now a r-pkt.
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
-  const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
-  pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
 
   #ifdef DEBUG_ON
     if (pkt_ptr->e_cmf >1e50)
@@ -983,6 +978,9 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
       abort();
     }
   #endif
+
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+  pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
   // Reset polarization information
@@ -1224,12 +1222,10 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
     }
 
     /// Now need to convert between frames.
-    double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, t_current);
-    const double dopplerfac = doppler(pkt_ptr->dir, vel_vec);
-    sigma *= dopplerfac;
-    kappa_ff *= dopplerfac;
-    kappa_bf *= dopplerfac;
+    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+    sigma *= dopplerfactor;
+    kappa_ff *= dopplerfactor;
+    kappa_bf *= dopplerfactor;
   }
   else
   {
@@ -1508,11 +1504,10 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
         }
 
         /// Now need to convert between frames.
-        double vel_vec[3];
-        get_velocity(pkt_ptr->pos, vel_vec, t_current);
-        sigma = sigma * doppler(pkt_ptr->dir, vel_vec);
-        kappa_ff = kappa_ff * doppler(pkt_ptr->dir, vel_vec);
-        kappa_bf = kappa_bf * doppler(pkt_ptr->dir, vel_vec);
+        const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+        sigma = sigma * dopplerfactor;
+        kappa_ff = kappa_ff * dopplerfactor;
+        kappa_bf = kappa_bf * dopplerfactor;
     }
     else
     {
