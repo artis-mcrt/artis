@@ -238,9 +238,7 @@ static void do_macroatom_raddeexcitation(
   /// NB: the r-pkt can only interact with lines redder than the current one
   pkt_ptr->next_trans = linelistindex + 1;
   pkt_ptr->emissiontype = linelistindex;
-  pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-  pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-  pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = t_current;
   pkt_ptr->nscatterings = 0;
   //printout("next possible line encounter %d\n",pkt_ptr->next_trans);
@@ -443,9 +441,7 @@ static void do_macroatom_radrecomb(
   calculate_kappa_rpkt_cont(pkt_ptr, t_current);
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower);
-  pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-  pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-  pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
+  vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = t_current;
   pkt_ptr->nscatterings = 0;
 }

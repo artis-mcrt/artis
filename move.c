@@ -86,7 +86,7 @@ void update_estimators(const PKT *restrict pkt_ptr, const double distance)
 }
 
 
-void move_pkt(PKT *restrict pkt_ptr, double distance, double time)
+void move_pkt(PKT *restrict pkt_ptr, const double distance, const double time)
 /// Subroutine to move a packet along a straight line (specified by currect
 /// dir vector). The distance moved is in the rest frame. Time must be the
 /// time at the end of distance travelled.
