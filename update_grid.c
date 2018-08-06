@@ -816,8 +816,8 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
       const double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
       if (log_this_cell)
       {
-        printout("cell %d, compton optical depth %g, grey optical depth %g\n",n,compton_optical_depth,grey_optical_deptha);
-        printout("pos %g, distance %g, tau_dist %g\n",radial_pos,rmax*tratmid-radial_pos,grey_optical_depth);
+        printout("modelgridcell %d, compton optical depth %g, grey optical depth (cell) %g\n", n, compton_optical_depth, grey_optical_deptha);
+        printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, rmax * tratmid - radial_pos, grey_optical_depth);
         //printout("rmax %g, tratmid %g\n",rmax,tratmid);
       }
       modelgrid[n].grey_depth = grey_optical_depth;
