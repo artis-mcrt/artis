@@ -103,18 +103,20 @@ int main(int argc, char** argv)
       for (int ii = 0; ii < npkts; ii++)
       {
         PKT *pkt_ptr = &pkt[ii];
+        // printout("packet %d escape_type %d type %d", ii, pkt_ptr->escape_type, pkt_ptr->type);
         if (pkt_ptr->escape_type == TYPE_RPKT && pkt_ptr->type == TYPE_ESCAPE)
         {
-          //printout("add packet %d\n",j);
           /// We know that a packet escaped at "escape_time". However, we have
           /// to allow for travel time. Use the formula in Leon's paper. The extra
           /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-          const double t_arrive = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
-          epkts[j].arrive_time = t_arrive;
+          const double arrive_time = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+          epkts[j].arrive_time = arrive_time;
 
           /// Now do the cmf time.
-          const double t_arrive_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
-          epkts[j].arrive_time_cmf = t_arrive_cmf;
+          const double arrive_time_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
+          epkts[j].arrive_time_cmf = arrive_time_cmf;
+          // printout("add packet %d. arrive_time %g arrive_time_cmf %g nu_rf %g e_rf %g e_cmf %g \n",
+          //          j, arrive_time, arrive_time_cmf, pkt_ptr->nu_rf, pkt_ptr->e_rf, pkt_ptr->nu_cmf);
 
           epkts[j].dir[0] = pkt_ptr->dir[0];
           epkts[j].dir[1] = pkt_ptr->dir[1];
