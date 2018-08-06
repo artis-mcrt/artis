@@ -718,7 +718,8 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
     }
     else
     {
-      if (sdist > (rmax * t_current/tmin))
+      const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * t_current / tmin : rmax * t_current / tmin;
+      if (sdist > maxsdist)
       {
         printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
         abort();
@@ -732,10 +733,10 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
         printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
         printout("[warning] r_pkt: cell corner %g %g %g\n",
-                 get_cellxyzmin(cellindex, 0) * t_current / tmin,
-                 get_cellxyzmin(cellindex, 1) * t_current / tmin,
-                 get_cellxyzmin(cellindex, 2) * t_current / tmin);
-        printout("[warning] r_pkt: cell width %g %g %g\n",wid_init*t_current/tmin, wid_init*t_current/tmin, wid_init*t_current/tmin);
+                 get_cellcoordmin(cellindex, 0) * t_current / tmin,
+                 get_cellcoordmin(cellindex, 1) * t_current / tmin,
+                 get_cellcoordmin(cellindex, 2) * t_current / tmin);
+        printout("[warning] r_pkt: cell width %g\n",wid_init(0)*t_current/tmin);
         //abort();
       }
       if (((snext != -99) && (snext < 0)) || (snext >= ngrid))

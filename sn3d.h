@@ -137,6 +137,7 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 #define MLINES 500000    // Increase linelist by this blocksize
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
+#define GRID_SPHERICAL1D 2 // radial shells
 
 double E56NI;
 double E56CO;
@@ -174,9 +175,10 @@ double E48V;
 
 extern gsl_rng *rng; /// pointer for random number generator
 
-int nxyzgrid[3]; /// actual grid dimensions to use
+int ncoordgrid[3]; /// actual grid dimensions to use
 int ngrid;
 int grid_type;
+char coordlabel[3];
 
 enum model_types {
   RHO_UNIFORM = 1,  // Constant density.
@@ -193,7 +195,7 @@ int rank_global; /// Global variable which holds the rank of the active MPI proc
 int npkts;
 int nesc; //number of packets that escape during current timestep  ///ATOMIC
 
-double xyzmax[3];
+double coordmax[3];
 double mtot, vmax, rmax;  /// Total mass and outer velocity/radius
 double totmassradionuclide[RADIONUCLIDE_COUNT]; /// total mass of each radionuclide in the ejecta
 double mfeg;              /// Total mass of Fe group elements in ejecta
@@ -234,8 +236,6 @@ int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;
 
 mastate_t *restrict mastate;
-
-double wid_init;
 
 
 CELL cell[MGRID+1];

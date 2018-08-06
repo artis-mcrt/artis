@@ -3,6 +3,7 @@
 
 #include <math.h>
 // #include <string.h>
+#include "assert.h"
 #include "types.h"
 
 void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
@@ -75,7 +76,10 @@ doppler_packetpos(const PKT *restrict pkt_ptr, const double t)
 {
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t);
-  return doppler(pkt_ptr->dir, vel_vec);
+  const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
+  assert(dopplerfactor > 0);
+  assert(isfinite(dopplerfactor));
+  return dopplerfactor;
 }
 
 #endif //VECTORS_H
