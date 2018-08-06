@@ -300,7 +300,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   /// to account for this.
   for (int n = 0; n < npkts; n++)
   {
-    pkt[n].e_cmf *= npkts / (npkts + packet_reset);
+    pkt[n].e_cmf = pkt[n].e_cmf * npkts / (npkts + packet_reset);
     pkt[n].interactions = 0;
   }
   printout("radioactive energy which will be freed during simulation time %g\n", etot * npkts / (npkts + packet_reset));
