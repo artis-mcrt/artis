@@ -809,14 +809,20 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
       }
 
       const float nne = get_nne(n);
-      const double compton_optical_depth = SIGMA_T * nne * wid_init * tratmid;
+      const double compton_optical_depth = SIGMA_T * nne * wid_init(n) * tratmid;
 
-      const double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
-      const double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init * tratmid;
+      double radial_pos = modelgrid[n].initial_radial_pos * tratmid / assoc_cells;
+      if (grid_type == GRID_SPHERICAL1D)
+      {
+        const double r_inner = get_cellcoordmin(n, 0) * tratmid / assoc_cells;
+        const double r_outer = r_inner + wid_init(n) * tratmid;
+        radial_pos = 3./4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) / pow(r_outer - r_inner, 3.); // volume averaged mean radius
+      }
+      const double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init(n) * tratmid;
       const double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
       if (log_this_cell)
       {
-        printout("modelgridcell %d, compton optical depth %g, grey optical depth (cell) %g\n", n, compton_optical_depth, grey_optical_deptha);
+        printout("modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth (/propgridcell) %g\n", n, compton_optical_depth, grey_optical_deptha);
         printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, rmax * tratmid - radial_pos, grey_optical_depth);
         //printout("rmax %g, tratmid %g\n",rmax,tratmid);
       }
@@ -972,10 +978,9 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
   // nts_prev is the previous timestep, unless this is timestep zero
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   const double deltat = time_step[nts_prev].width;
-  const double deltaV = pow(wid_init * time_step[nts_prev].mid / tmin, 3);
 
   printout("timestep %d, titer %d\n", nts, titer);
-  printout("deltaV %g, deltat %g\n", deltaV, deltat);
+  printout("deltat %g\n", deltat);
 
   /*
   FILE *photoion_file;
@@ -1044,20 +1049,21 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
     //for (ncl = 0; ncl < nblock; ncl++)
     //for (ncl = nstart; ncl < nstart+nblock; ncl++)
     //for (n = nstart; n < nstart+nblock; n++)
-    for (int n = 0; n < npts_model; n++)
+    for (int mgi = 0; mgi < npts_model; mgi++)
     {
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
-      if (n >= nstart && n < nstart + ndo)
+      if (mgi >= nstart && mgi < nstart + ndo)
       {
-        update_grid_cell(n, nts, titer, tratmid, deltaV, deltat, mps);
+        const double deltaV = vol_init(mgi) * pow(time_step[nts_prev].mid / tmin, 3);
+        update_grid_cell(mgi, nts, titer, tratmid, deltaV, deltat, mps);
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
         #ifdef _OPENMP
         #pragma omp critical(estimators_file)
         #endif
         {
-          write_to_estimators_file(n, nts);
+          write_to_estimators_file(mgi, nts);
         }
       }
       else
@@ -1066,7 +1072,7 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
         /// communication after update_grid to synchronize gammaestimator
         /// and write a contiguous restart file with grid properties
         #if (!NO_LUT_PHOTOION)
-          zero_gammaestimator(n);
+          zero_gammaestimator(mgi);
         #endif
       }
     } /// end parallel for loop over all modelgrid cells
@@ -1113,9 +1119,9 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
 
   if (do_rlc_est == 2)
   {
-    if (max_path_step < (wid_init * trat / 10.))
+    if (max_path_step < (wid_init(0) * trat / 10.))
     {
-      max_path_step = wid_init / 10. * trat;
+      max_path_step = wid_init(0) / 10. * trat;
     }
   }
   //printout("max_path_step %g\n", max_path_step);
@@ -1604,7 +1610,7 @@ void write_grid_restart_data(void)
   int ny = (y - (cell[0].pos_init[1] * trat))/(wid_init * trat);
   int nz = (z - (cell[0].pos_init[2] * trat))/(wid_init * trat);
 
-  int n = nx + (nxyzgrid[0] * ny) + (nxyzgrid[0] * nxyzgrid[1] * nz);
+  int n = nx + (ncoordgrid[0] * ny) + (ncoordgrid[0] * ncoordgrid[1] * nz);
 
   // do a check
 

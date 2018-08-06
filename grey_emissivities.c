@@ -141,7 +141,7 @@ void normalise_grey(int nts)
   for (int n = 0; n < npts_model; n++)
   {
     const int assoc_cells = mg_associated_cells[n];
-    const double dV = vol_init() * helper; //vol_init(&cell[n]) in future coordinate systems
+    const double dV = vol_init(n) * helper; //vol_init(&cell[n]) in future coordinate systems
 
     rpkt_emiss[n] = rpkt_emiss[n] * ONEOVER4PI / dV / dt / nprocs / assoc_cells;
   }

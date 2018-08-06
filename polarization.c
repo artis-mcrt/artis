@@ -179,6 +179,5 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
-
  }
 

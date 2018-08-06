@@ -1,23 +1,47 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-void grid_init(int my_rank);
+#include "sn3d.h"
 
+void grid_init(int my_rank);
+int get_cellcoordpointnum(int cellindex, int axis);
 double get_cellradialpos(int cellindex);
 float get_modelradioabund(int modelgridindex, enum radionuclides nuclide_type);
 void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
 
-/// Routine for getting the initial cell volume.
-inline double vol_init(void)//(const CELL *restrict const grid_ptr)
+
+inline double wid_init(const int cellindex)
 {
-  return (wid_init * wid_init * wid_init);
+  if (grid_type == GRID_SPHERICAL1D)
+  {
+    const double v_inner = cellindex > 0 ? vout_model[cellindex - 1] : 0.;
+    return (vout_model[cellindex] - v_inner) * tmin;
+  }
+  else
+  {
+    return 2 * coordmax[0] / ncoordgrid[0];
+  }
 }
 
-inline double get_cellxyzmin(const int cellindex, const int axis)
-// get the minimum position along the x, y, or z axis at tmin
+/// Routine for getting the initial cell volume.
+inline double vol_init(const int cellindex)//(const CELL *restrict const grid_ptr)
+{
+  switch (grid_type)
+  {
+    case GRID_UNIFORM:
+      return (wid_init(0) * wid_init(0) * wid_init(0));
+
+    case GRID_SPHERICAL1D:
+      return 4./3. * PI * (pow(tmin * vout_model[cellindex], 3) - pow(tmin * (cellindex > 0 ? vout_model[cellindex - 1] : 0.), 3));
+  }
+  abort();
+}
+
+inline double get_cellcoordmin(const int cellindex, const int axis)
+// get the minimum position along each axis at tmin (xyz or radial coords)
 {
   return cell[cellindex].pos_init[axis];
-  // return - xyzmax[axis] + (2 * get_cellnxyz(cellindex, axis) * xyzmax[axis] / nxyzgrid[axis]);
+  // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
 inline float get_rhoinit(int modelgridindex)

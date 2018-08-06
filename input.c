@@ -1542,7 +1542,7 @@ static void show_totmassradionuclides(void)
     else if (model_type == RHO_3D_READ)
     {
       /// Assumes cells are cubes here - all same volume.
-      cellvolume = pow((2 * vmax * tmin), 3.) / (nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2]);
+      cellvolume = pow((2 * vmax * tmin), 3.) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
     }
     else
     {
@@ -1750,9 +1750,9 @@ static void read_3d_model(void)
     printout("Too many points in input model. Abort. (%d > %d)\n", npts_model, MMODELGRID);
     abort();
   }
-  if (npts_model != nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2])
+  if (npts_model != ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2])
   {
-    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model, nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2]);
+    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model, ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
     abort();
   }
 
@@ -1989,18 +1989,21 @@ void input(int rank)
 
   /// Select grid type
   grid_type = GRID_UNIFORM;
-  model_type = RHO_UNIFORM;
+  // grid_type = GRID_SPHERICAL1D;
+
+  // this gets overwritten by the input file
+  // model_type = RHO_UNIFORM;
 
   maxion = MIONS;
   /// Set grid size
-  //nxyzgrid[0] = 4; //pow(MGRID,1./3.); //10;
-  //nxyzgrid[1] = 4; //pow(MGRID,1./3.); //10;
-  //nxyzgrid[2] = 4; //pow(MGRID,1./3.); //10;
-  nxyzgrid[0] = 50;
-  nxyzgrid[1] = 50;
-  nxyzgrid[2] = 50;
-  printout("nxyzgrid: %d * %d * %d\n", nxyzgrid[0], nxyzgrid[1], nxyzgrid[2]);
-  ngrid = nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2]; ///Moved to input.c
+  //ncoordgrid[0] = 4; //pow(MGRID,1./3.); //10;
+  //ncoordgrid[1] = 4; //pow(MGRID,1./3.); //10;
+  //ncoordgrid[2] = 4; //pow(MGRID,1./3.); //10;
+  ncoordgrid[0] = 50;
+  ncoordgrid[1] = 50;
+  ncoordgrid[2] = 50;
+  printout("ncoordgrid: %d * %d * %d\n", ncoordgrid[0], ncoordgrid[1], ncoordgrid[2]);
+  ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]; ///Moved to input.c
   if (ngrid > MGRID)
   {
     printout("[fatal] input: Error: too many grid cells. Abort. %d>%d", ngrid, MGRID);
@@ -2097,8 +2100,9 @@ void input(int rank)
     }
 
     rmax = vmax * tmin;
-    xyzmax[0] = xyzmax[1] = xyzmax[2] = rmax;
     printout("rmax %g\n", rmax);
+
+    coordmax[0] = coordmax[1] = coordmax[2] = rmax;
 
     show_totmassradionuclides();
 

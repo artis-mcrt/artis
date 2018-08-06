@@ -108,7 +108,6 @@ void move_pkt(PKT *restrict pkt_ptr, const double distance, const double time)
   const double dopplerfactor = doppler_packetpos(pkt_ptr, time);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
-
   /*
   if (pkt_ptr->e_rf * pkt_ptr->nu_cmf /pkt_ptr->nu_rf > 1e46)
     {

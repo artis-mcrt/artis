@@ -28,10 +28,29 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->number = pktnumber;  ///record the packets number for debugging
   pkt_ptr->originated_from_positron = false;
 
-  for (int axis = 0; axis < 3; axis++)
+  if (grid_type == GRID_SPHERICAL1D)
   {
-    const double zrand = gsl_rng_uniform_pos(rng);
-    pkt[n].pos[axis] = get_cellxyzmin(cellindex, axis) + (zrand * wid_init);
+    const double zrand3 = gsl_rng_uniform_pos(rng);
+    const double radius = get_cellcoordmin(cellindex, 0) + zrand3 * wid_init(cellindex);
+
+    const double zrand = gsl_rng_uniform(rng);
+    const double zrand2 = gsl_rng_uniform(rng);
+
+    const double mu = -1 + (2. * zrand);
+    const double phi = zrand2 * 2 * PI;
+    const double sintheta = sqrt(1. - (mu * mu));
+
+    pkt_ptr->pos[0] = radius * sintheta * cos(phi);
+    pkt_ptr->pos[1] = radius * sintheta * sin(phi);
+    pkt_ptr->pos[2] = radius * mu;
+  }
+  else
+  {
+    for (int axis = 0; axis < 3; axis++)
+    {
+      const double zrand = gsl_rng_uniform_pos(rng);
+      pkt_ptr->pos[axis] = get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0));
+    }
   }
 
   const int mgi = cell[cellindex].modelgridindex;
@@ -203,13 +222,12 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   float norm = 0.0;
   for (int m = 0; m < ngrid; m++)
   {
-    const CELL *grid_ptr = &cell[m];
     cont[m] = norm;
     //printf("%g %g %g\n", (f56ni(grid_ptr)*(E56NI + E56CO)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
-    const int mgi = grid_ptr->modelgridindex;
+    const int mgi = cell[m].modelgridindex;
     const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(m) : get_modelradioabund(mgi, NUCLIDE_NI56);
 
-    norm += get_rhoinit(mgi) * vol_init() * //vol_init(grid_ptr)
+    norm += get_rhoinit(mgi) * vol_init(m) * //vol_init(grid_ptr)
               ((f56ni * (E56NI + E56CO) / 56.)
                + (get_modelradioabund(mgi, NUCLIDE_CO56) * (E56CO) / 56.)
                + (get_modelradioabund(mgi, NUCLIDE_NI57) * (E57NI + E57CO) / 57.)

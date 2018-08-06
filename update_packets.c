@@ -104,6 +104,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
         abort();
     }
   }
+  assert(t_current == PACKET_SAME);
 }
 
 

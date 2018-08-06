@@ -357,8 +357,8 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 
   /// Adiabatic cooling term
   const double p = nntot * KB * T_e;
-  const double dV = 3 * pow(wid_init / tmin, 3) * pow(t_current, 2);
-  const double V = pow(wid_init * t_current / tmin, 3);
+  const double dV = 3 * vol_init(modelgridindex) / pow(tmin, 3) * pow(t_current, 2);
+  const double V = vol_init(modelgridindex) * pow(t_current / tmin, 3);
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   coolingrates[tid].adiabatic = p * dV / V;
 

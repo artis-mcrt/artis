@@ -4,7 +4,62 @@
 #include "grid_init.h"
 #include "rpkt.h"
 #include "update_packets.h"
+#include "vectors.h"
 
+
+static double get_shellcrossdist(
+  const double pos[3], const double dir[3], const double shellradius)
+// find the closest forward distance to the intersection of a ray with a spherical shell
+// return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
+{
+  if (shellradius == vec_len(pos))
+  {
+    return -1.;
+  }
+
+  const double dirdotpos = dot(dir, pos);
+  const double discriminant = pow(dirdotpos, 2.) - pow(vec_len(pos), 2.) + pow(shellradius, 2.);
+
+  if (discriminant < 0)
+  {
+    // no intersection
+    assert(shellradius < vec_len(pos));
+    return -1;
+  }
+  else if (discriminant > 0)
+  {
+    // two intersections
+    const double d1 = -dirdotpos + sqrt(discriminant);
+    const double d2 = -dirdotpos - sqrt(discriminant);
+
+    // negative d means in the reverse direction along the ray
+    // ignore negative d values, and if two are positive then return the smaller one
+    if (d1 < 0 && d2 < 0)
+    {
+      return -1;
+    }
+    else if (d2 < 0)
+    {
+      return d1;
+    }
+    else if (d1 < 0)
+    {
+      return d2;
+    }
+    else
+    {
+      return fmin(d1, d2);
+    }
+  }
+  else
+  {
+    // exactly one intersection
+    // ignore this and don't change which cell the packet is in
+    assert(shellradius <= vec_len(pos));
+    return -1.;
+  }
+
+}
 
 double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
@@ -26,61 +81,79 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
+  const int ndim = (grid_type == GRID_SPHERICAL1D) ? 1 : 3;
+
   const int cellindex = pkt_ptr->where;
 
-  double initpos[3];  // [x0, y0, z0]
-  double cellxyzmin[3];
-  double cellxyzmax[3];
-  double vel[3];
-  for (int d = 0; d < 3; d++)
+  double initpos[ndim];  // [x0, y0, z0]
+  double cellcoordmin[ndim];
+  double cellcoordmax[ndim];
+  double vel[ndim];
+
+  if (grid_type == GRID_UNIFORM)
   {
-    initpos[d] = pkt_ptr->pos[d];
-    cellxyzmin[d] = get_cellxyzmin(cellindex, d);
-    cellxyzmax[d] = cellxyzmin[d] + wid_init;
-    vel[d] = pkt_ptr->dir[d] * CLIGHT_PROP;
+    // XYZ coordinates
+    for (int d = 0; d < ndim; d++)
+    {
+      initpos[d] = pkt_ptr->pos[d];
+      cellcoordmin[d] = get_cellcoordmin(cellindex, d);
+      cellcoordmax[d] = cellcoordmin[d] + wid_init(0);
+      vel[d] = pkt_ptr->dir[d] * CLIGHT_PROP;
+    }
+  }
+  else if (grid_type == GRID_SPHERICAL1D)
+  {
+    // the only coordinate is radius from the origin
+    initpos[0] = vec_len(pkt_ptr->pos);
+    cellcoordmin[0] = get_cellcoordmin(cellindex, 0);
+    cellcoordmax[0] = cellcoordmin[0] + wid_init(cellindex);
+    vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * CLIGHT_PROP;
   }
 
   // how much do we change the cellindex to move in the the x, y, z directions
-  const int cellindexdiffxyz[3] = {1, nxyzgrid[0], nxyzgrid[0] * nxyzgrid[1]};
+  const int cellindexincrement[3] = {1, ncoordgrid[0], ncoordgrid[0] * ncoordgrid[1]};
 
   //printout("boundary.c: x0 %g, y0 %g, z0 %g\n", initpos[0] initpos[1] initpos[2]);
 
   //printout("boundary.c: vx %g, vy %g, vz %g\n",vel[0],vel[1],vel[2]);
 
-  //printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",cellxyzmin[0],cellxyzmin[1],cellxyzmin[2]);
+  //printout("boundary.c: cellxmin %g, cellymin %g, cellzmin %g\n",cellcoordmin[0],cellcoordmin[1],cellcoordmin[2]);
 
-  //printout("boundary.c: cellxmax %g, cellymax %g, cellzmax %g\n",cellxyzmax[0],cellxyzmax[1],cellxyzmax[2]);
+  //printout("boundary.c: cellxmax %g, cellymax %g, cellzmax %g\n",cellcoordmax[0],cellcoordmax[1],cellcoordmax[2]);
 
   // enum cell_boundary not_allowed = pkt_ptr->last_cross;
   enum cell_boundary not_allowed = pkt_ptr->last_cross;
-  enum cell_boundary negdirections[3] = {NEG_X, NEG_Y, NEG_Z};
+  enum cell_boundary negdirections[3] = {NEG_X, NEG_Y, NEG_Z}; // 'X' might actually be radial coordinate
   enum cell_boundary posdirections[3] = {POS_X, POS_Y, POS_Z};
 
-  for (int d = 0; d < 3; d++)
+  // printout("checking inside cell boundary\n");
+  for (int d = 0; d < ndim; d++)
   {
     // flip is either zero or one to indicate +ve and -ve boundaries along the selected axis
     for (int flip = 0; flip < 2; flip++)
     {
       enum cell_boundary direction = flip ? posdirections[d] : negdirections[d];
       enum cell_boundary invdirection = !flip ? posdirections[d] : negdirections[d];
-      const int cellindexdiff = flip ? - cellindexdiffxyz[d] : cellindexdiffxyz[d];
+      const int cellindexdiff = flip ? - cellindexincrement[d] : cellindexincrement[d];
 
       bool isoutside;
       if (flip)
-        isoutside = (initpos[d] * tmin) - (tstart * cellxyzmin[d]) < (-10. * tmin);
+        isoutside = (initpos[d] * tmin) - (tstart * cellcoordmin[d]) < (-10. * tmin);
       else
-        isoutside = (initpos[d] * tmin) - (tstart * cellxyzmax[d]) > (-10. * tmin);
+        isoutside = (initpos[d] * tmin) - (tstart * cellcoordmax[d]) > (-10. * tmin);
 
       if (isoutside && (not_allowed != direction))
       {
-        char dimstr[3] = {'X', 'Y', 'Z'};
-        for (int d2 = 0; d2 < 3; d2++)
-          printout("[warning] outside %s boundary of cell %d. x0 %g, cellxmin %g, cellxmax %g. Abort?\n", dimstr[d], pkt_ptr->where, initpos[d2] * tmin/tstart, cellxyzmin[d2], cellxyzmax[d2]);
+        for (int d2 = 0; d2 < ndim; d2++)
+        {
+          printout("[warning] outside coord %d boundary of cell %d. initpos %g, vel %g, cellxmin %g, cellxmax %g. Abort?\n",
+                   d, cellindex, initpos[d2] * tmin/tstart, vel[d2], cellcoordmin[d2], cellcoordmax[d2]);
+        }
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
         if (flip == 0)
-          printout("[warning] delta %g\n", cellxyzmax[d] - (initpos[d] * tmin / tstart));
+          printout("[warning] delta %g\n", cellcoordmax[d] - (initpos[d] * tmin / tstart));
         else
-          printout("[warning] delta %g\n",  (initpos[d] * tmin / tstart) - cellxyzmin[d]);
+          printout("[warning] delta %g\n",  (initpos[d] * tmin / tstart) - cellcoordmin[d]);
 
         printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
         if (((pkt_ptr->dir[d] * CLIGHT) - (initpos[d] / tstart)) > 0) //TODO: should this be CLIGHT OR CLIGHT_PROP?
@@ -102,56 +175,89 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
     if (debuglevel == 2)
     {
       printout("pkt_ptr->number %d\n", pkt_ptr->number);
-      printout("delta1x %g delta2x %g\n",  (initpos[0] * tmin/tstart)-cellxyzmin[0], cellxyzmax[0] - (initpos[0] * tmin/tstart));
-      printout("delta1y %g delta2y %g\n",  (initpos[1] * tmin/tstart)-cellxyzmin[1], cellxyzmax[1] - (initpos[1] * tmin/tstart));
-      printout("delta1z %g delta2z %g\n",  (initpos[2] * tmin/tstart)-cellxyzmin[2], cellxyzmax[2] - (initpos[2] * tmin/tstart));
+      printout("delta1x %g delta2x %g\n",  (initpos[0] * tmin/tstart)-cellcoordmin[0], cellcoordmax[0] - (initpos[0] * tmin/tstart));
+      printout("delta1y %g delta2y %g\n",  (initpos[1] * tmin/tstart)-cellcoordmin[1], cellcoordmax[1] - (initpos[1] * tmin/tstart));
+      printout("delta1z %g delta2z %g\n",  (initpos[2] * tmin/tstart)-cellcoordmin[2], cellcoordmax[2] - (initpos[2] * tmin/tstart));
       printout("dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
     }
   #endif
 
-  double t_plusxyz[3];
-  double t_minusxyz[3];
-  for (int d = 0; d < 3; d++)
+  double t_plus_coordboundary[ndim];  // time to reach the cell's upper boundary on each coordinate
+  double t_minus_coordboundary[ndim];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
+  if (grid_type == GRID_SPHERICAL1D)
   {
-    t_plusxyz[d] = ((initpos[d] - (vel[d] * tstart)) / (cellxyzmax[d] - (vel[d] * tmin)) * tmin) - tstart;
-    t_minusxyz[d] = ((initpos[d] - (vel[d] * tstart)) / (cellxyzmin[d] - (vel[d] * tmin)) * tmin) - tstart;
+    not_allowed = NONE;
+    const double r_inner = cellcoordmin[0] / tmin * tstart;
+    const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner) : -1.;
+    t_minus_coordboundary[0] = d_minus / CLIGHT_PROP;
+    if (vec_len(pkt_ptr->pos) < r_inner) // we're slightly below the inner boundary maybe due to roundoff
+    {
+      not_allowed = POS_X;
+    }
+
+    const double r_outer = cellcoordmax[0] / tmin * tstart;
+    const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer);
+    t_plus_coordboundary[0] = d_plus / CLIGHT_PROP;
+    if (vec_len(pkt_ptr->pos) > r_outer)
+    {
+      not_allowed = NEG_X;
+    }
+
+    // printout("cell %d\n", pkt_ptr->where);
+    // printout("initradius %g: velrad %g\n", initpos[0], vel[0]);
+    // printout("d_plus %g d_minus %g \n", d_plus, d_minus);
+    // printout("t_plus %g t_minus %g \n", t_plus_coordboundary[0], t_minus_coordboundary[0]);
+    // printout("cellrmin %g cellrmax %g\n",
+    //          cellcoordmin[0] * tstart / tmin, cellcoordmax[0] * tstart / tmin);
+    // printout("tstart %g\n", tstart);
+  }
+  else
+  {
+    for (int d = 0; d < 3; d++)
+    {
+      t_plus_coordboundary[d] = ((initpos[d] - (vel[d] * tstart)) / (cellcoordmax[d] - (vel[d] * tmin)) * tmin) - tstart;
+      t_minus_coordboundary[d] = ((initpos[d] - (vel[d] * tstart)) / (cellcoordmin[d] - (vel[d] * tmin)) * tmin) - tstart;
+    }
   }
 
+  // printout("comparing distances. not_allowed = %d\n", not_allowed);
   /** We now need to identify the shortest +ve time - that's the one we want. */
   int choice = 0;         ///just a control variable to
   double time = 1.e99;
   //close = 1.e99;
   //printout("bondary.c check value of not_allowed = %d\n",not_allowed);
-  for (int d = 0; d < 3; d++)
+  for (int d = 0; d < ndim; d++)
   {
-    if ((t_plusxyz[d] > 0) && (t_plusxyz[d] < time) && (not_allowed != negdirections[d]))
+    if ((t_plus_coordboundary[d] > 0) && (t_plus_coordboundary[d] < time) && (not_allowed != negdirections[d]))
     {
       choice = d * 2 + 1;
-      time = t_plusxyz[d];
-      // equivalently if (nxyz == (nxyzgrid[0] - 1))
-      if (cellxyzmin[d] + 1.5 * wid_init > xyzmax[d])
+      time = t_plus_coordboundary[d];
+      // equivalently if (nxyz[d] == (ncoordgrid[d] - 1))
+      // if (cellcoordmin[d] + 1.5 * wid_init > coordmax[d])
+      if (get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1))
       {
         *snext = -99;
       }
       else
       {
-        *snext = pkt_ptr->where + cellindexdiffxyz[d];
+        *snext = pkt_ptr->where + cellindexincrement[d];
         pkt_ptr->last_cross = posdirections[d];
       }
     }
 
-    if ((t_minusxyz[d] > 0) && (t_minusxyz[d] < time) && (not_allowed != posdirections[d]))
+    if ((t_minus_coordboundary[d] > 0) && (t_minus_coordboundary[d] < time) && (not_allowed != posdirections[d]))
     {
       choice = d * 2 + 2;
-      time = t_minusxyz[d];
-      // equivalently if (nxyz == 0)
-      if (cellxyzmin[d] < - xyzmax[d] + 0.5 * wid_init)
+      time = t_minus_coordboundary[d];
+      // equivalently if (nxyz[d] == 0)
+      // if (cellcoordmin[d] < - coordmax[d] + 0.5 * wid_init)
+      if (get_cellcoordpointnum(cellindex, d) == 0)
       {
         *snext = -99;
       }
       else
       {
-        *snext = pkt_ptr->where - cellindexdiffxyz[d];
+        *snext = pkt_ptr->where - cellindexincrement[d];
         pkt_ptr->last_cross = negdirections[d];
       }
     }
@@ -160,11 +266,18 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   if (choice == 0)
   {
     printout("Something wrong in boundary crossing - didn't find anything.\n");
-    printout("tx_plus %g tx_minus %g \n", t_plusxyz[0], t_minusxyz[0]);
-    printout("ty_plus %g ty_minus %g \n", t_plusxyz[1], t_minusxyz[1]);
-    printout("tz_plus %g tz_minus %g \n", t_plusxyz[2], t_minusxyz[2]);
-    printout("x0 %g y0 %g z0 %g \n", initpos[0], initpos[1], initpos[2]);
-    printout("vx %g vy %g vz %g \n", vel[0], vel[1], vel[2]);
+    printout("cell %d\n", pkt_ptr->where);
+    for (int d2 = 0; d2 < 3; d2++)
+    {
+      printout("coord %d: initpos %g dir %g\n",
+               d2, pkt_ptr->pos[d2], pkt_ptr->dir[d2]);
+    }
+    for (int d2 = 0; d2 < ndim; d2++)
+    {
+      printout("coord %d: txyz_plus %g txyz_minus %g \n", d2, t_plus_coordboundary[d2], t_minus_coordboundary[d2]);
+      printout("coord %d: cellcoordmin %g cellcoordmax %g\n",
+               d2, cellcoordmin[d2], cellcoordmax[d2]);
+    }
     printout("tstart %g\n", tstart);
 
     abort();
@@ -173,11 +286,12 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 
   /** Now we know what happens. The distance to crossing is....*/
   double distance = CLIGHT_PROP * time;
+  // printout("boundary_cross: time %g distance %g\n", time, distance);
   //*closest = close;
 
   /** Also we've identified the cell we'll go into. The cells are ordered in x then y then z.
-  So if we go up in x we go to cell + 1, up in y we go to cell + nxyzgrid[0], up in z
-  we go to cell + (nxyzgrid[0] * nxyzgrid[1]).
+  So if we go up in x we go to cell + 1, up in y we go to cell + ncoordgrid[0], up in z
+  we go to cell + (ncoordgrid[0] * ncoordgrid[1]).
   If's going to escape the grid this is flagged with snext = -99. */
   return distance;
 }
@@ -208,44 +322,11 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
   else
   {
     /** Just need to update "where".*/
-    //int oldpos = pkt_ptr->where;
     const int cellnum = pkt_ptr->where;
     const int old_mgi = cell[cellnum].modelgridindex;
     pkt_ptr->where = snext;
     const int mgi = cell[snext].modelgridindex;
-    /*
-    double cellwidth = t_current/tmin * wid_init;
-    if (pkt_ptr->last_cross == POS_X)
-    {
-      pkt_ptr->pos[0] -= cellwidth;
-      pkt_ptr->last_cross = NEG_X;
-    }
-    else if (pkt_ptr->last_cross == NEG_X)
-    {
-      pkt_ptr->pos[0] += cellwidth;
-      pkt_ptr->last_cross = POS_X;
-    }
-    else if (pkt_ptr->last_cross == POS_Y)
-    {
-      pkt_ptr->pos[1] -= cellwidth;
-      pkt_ptr->last_cross = NEG_Y;
-    }
-    else if (pkt_ptr->last_cross == NEG_Y)
-    {
-      pkt_ptr->pos[1] += cellwidth;
-      pkt_ptr->last_cross = POS_Y;
-    }
-    else if (pkt_ptr->last_cross == POS_Z)
-    {
-      pkt_ptr->pos[2] -= cellwidth;
-      pkt_ptr->last_cross = NEG_Z;
-    }
-    else if (pkt_ptr->last_cross == NEG_Z)
-    {
-      pkt_ptr->pos[2] += cellwidth;
-      pkt_ptr->last_cross = POS_Z;
-    }
-    */
+
     cellcrossings++;
 
     /// and calculate the continuums opacity in the new cell if the packet is a rpkt
@@ -296,64 +377,6 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
         }
       }
     }
-    /*
-    if (pkt_ptr->last_cross == POS_X)
-    {
-    pkt_ptr->pos[0] = (cell[snext].pos_init[0])*t_current/tmin;
-  }
-    else if (pkt_ptr->last_cross == NEG_X)
-    {
-    pkt_ptr->pos[0] = (cell[snext].pos_init[0]+(wid_init))*t_current/tmin;
-  }
-    else if (pkt_ptr->last_cross == POS_Y)
-    {
-    pkt_ptr->pos[1] = (cell[snext].pos_init[1])*t_current/tmin;
-  }
-    else if (pkt_ptr->last_cross == NEG_Y)
-    {
-    pkt_ptr->pos[1] = (cell[snext].pos_init[1]+wid_init)*t_current/tmin;
-  }
-    else if (pkt_ptr->last_cross == POS_Z)
-    {
-    pkt_ptr->pos[2] = (cell[snext].pos_init[2])*t_current/tmin;
-  }
-    else if (pkt_ptr->last_cross == NEG_Z)
-    {
-    pkt_ptr->pos[2] = (cell[snext].pos_init[2]+wid_init)*t_current/tmin;
-  }
-    else
-    {
-    printout("Updating cell when it didn't cross a boundary. Abort?\n");
-  }
-    */
-
-    /*
-    if (pkt_ptr->pos[0] < (cell[snext].pos_init[0]*t_current/tmin))
-    {
-    pkt_ptr->pos[0] = (cell[snext].pos_init[0]+(1.e-6 *wid_init)*t_current/tmin;
-  }
-    if (pkt_ptr->pos[0] > ((cell[snext].pos_init[0]+wid_init)*t_current/tmin))
-    {
-    pkt_ptr->pos[0] = (cell[snext].pos_init[0]+(0.999999*wid_init))*t_current/tmin;
-  }
-    if (pkt_ptr->pos[1] < (cell[snext].pos_init[1]*t_current/tmin))
-    {
-    pkt_ptr->pos[1] = (cell[snext].pos_init[1]+(1.e-6 *wid_init))*t_current/tmin;
-  }
-    if (pkt_ptr->pos[1] > ((cell[snext].pos_init[1]+wid_init)*t_current/tmin))
-    {
-    pkt_ptr->pos[1] = (cell[snext].pos_init[1]+(0.999999*wid_init))*t_current/tmin;
-  }
-    if (pkt_ptr->pos[2] < (cell[snext].pos_init[2]*t_current/tmin))
-    {
-    pkt_ptr->pos[2] = (cell[snext].pos_init[2]+(1.e-6 *wid_init))*t_current/tmin;
-  }
-    if (pkt_ptr->pos[2] > ((cell[snext].pos_init[2]+wid_init2])*t_current/tmin))
-    {
-    pkt_ptr->pos[2] = (cell[snext].pos_init[2]+(0.999999*wid_init))*t_current/tmin;
-  }
-    */
-
   }
 }
 
@@ -403,5 +426,5 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
 //   int yy = (pkt_ptr->pos[1] - (cell[0].pos_init[1]*t_current/tmin)) / (wid_init*t_current/tmin);
 //   int zz = (pkt_ptr->pos[2] - (cell[0].pos_init[2]*t_current/tmin)) / (wid_init*t_current/tmin);
 //
-//   return xx + (nxyzgrid[0] * yy) + (nxyzgrid[0] * nxyzgrid[1] * zz);
+//   return xx + (ncoordgrid[0] * yy) + (ncoordgrid[0] * ncoordgrid[1] * zz);
 // }

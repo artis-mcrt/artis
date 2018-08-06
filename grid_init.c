@@ -9,7 +9,8 @@
 #include "vectors.h"
 
 
-extern inline double vol_init(void);
+extern inline double vol_init(int cellindex);
+extern inline double wid_init(const int cellindex);
 extern inline float get_rhoinit(int modelgridindex);
 extern inline float get_rho(int modelgridindex);
 extern inline float get_nne(int modelgridindex);
@@ -276,18 +277,18 @@ static void set_stable_abund(const int mgi, const int anumber, const float elema
 }
 
 
-static int get_cellnxyz(const int cellindex, const int axis)
+int get_cellcoordpointnum(const int cellindex, const int axis)
 // convert a cell index number into an integer x, y, or z index
 {
   // return cell[cellindex].nxyz[axis];
   switch (axis)
   {
     case 0:
-      return cellindex % nxyzgrid[0];
+      return cellindex % ncoordgrid[0];
     case 1:
-      return (cellindex / nxyzgrid[0]) % nxyzgrid[1];
+      return (cellindex / ncoordgrid[0]) % ncoordgrid[1];
     case 2:
-      return (cellindex / (nxyzgrid[0] * nxyzgrid[1])) % nxyzgrid[2];
+      return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
     default:
       printout("invalid coordinate index %d", axis);
       abort();
@@ -295,15 +296,20 @@ static int get_cellnxyz(const int cellindex, const int axis)
 }
 
 
-extern inline double get_cellxyzmin(int cellindex, int axis);
+extern inline double get_cellcoordmin(int cellindex, int axis);
 
 
 double get_cellradialpos(const int cellindex)
 {
+  if (grid_type == GRID_SPHERICAL1D)
+  {
+    return get_cellcoordmin(cellindex, 0) + (0.5 * wid_init(cellindex));
+  }
+
   double dcen[3];
   for (int axis = 0; axis < 3; axis++)
   {
-    dcen[axis] = get_cellxyzmin(cellindex, axis) + (0.5 * wid_init);
+    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * wid_init(0));
   }
 
   return vec_len(dcen);
@@ -556,140 +562,27 @@ static void allocate_nonemptycells(void)
 static void density_1d_read(void)
 /// Routine for doing a density grid read from a 1-D model.
 {
-  //int renorm[MMODELGRID];
-  //double den_norm[MMODELGRID];
-
-  // for (n=0;n<MMODELGRID;n++)
-  // {
-  //   renorm[n]=0;
-  //   den_norm[n]=0.0;
-  // }
-
-  /*
-  for (n=0;n < ngrid; n++)
-  {
-    dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
-    dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
-    dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
-
-    radial_pos = vec_len(dcen);
-    if (radial_pos < rmax)
-    {
-      mkeep =0;
-      cell[n].modelgridindex = 0;
-
-      helper = rho_model[0] * pow( (t_model/tmin), 3);
-      set_rhoinit(0,helper);
-      set_rho(0,helper);
-      set_ffegrp(0,ffegrp_model[0]);
-      set_f56ni(0,f56ni_model[0]);
-      set_f56co(0,f56co_model[0]);
-      //allocate_compositiondata(0);
-      for (element = 0; element < nelements; element++)
-      {
-        ///now set the abundances (by mass) of included elements, i.e.
-        ///read out the abundances specified in the atomic data file
-        anumber = get_element(element);
-        abundance = abund_model[0][anumber-1];
-        //cell[n].composition[element].abundance = abundance;
-        modelgrid[0].composition[element].abundance = abundance;
-        //if (anumber == 8)
-        //  cell[n].composition[element].abundance = 1-cell[n].f_ni;
-        //if (anumber == 20)
-        //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
-
-        //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
-
-        if (anumber == 28)
-          set_fnistable(0,abundance - get_f56ni(n));
-        if (anumber == 27)
-          set_fcostable(0,abundance - get_f56co(n));
-        if (anumber == 26)
-          set_ffeinit(0,abundance);
-      }
-
-      for (m = 0; m < (npts_model-1); m++)
-      {
-        if (radial_pos > (vout_model[m] * tmin))
-        {
-          mkeep = m+1;
-          cell[n].modelgridindex = m+1;
-
-          helper = rho_model[m+1] * pow( (t_model/tmin), 3);
-          set_rhoinit(m+1,helper);
-          set_rho(m+1,helper);
-          set_ffegrp(m+1,ffegrp_model[m+1]);
-          set_f56ni(m+1,f56ni_model[m+1]);
-          set_f56co(m+1,f56co_model[m+1]);
-          //allocate_compositiondata(m+1);
-          for (element = 0; element < nelements; element++)
-          {
-            ///now set the abundances (by mass) of included elements, i.e.
-            ///read out the abundances specified in the atomic data file
-            anumber = get_element(element);
-            abundance = abund_model[m+1][anumber-1];
-            modelgrid[m+1].composition[element].abundance = abundance;
-            //if (anumber == 8)
-            //  cell[n].composition[element].abundance = 1-cell[n].f_ni;
-            //printout("element %d has abundance %g in cell %d\n",element,cell[n].composition[element].abundance,n);
-            //if (anumber == 20)
-            //  cell[n].composition[element].abundance = 0.1039; ///force Ca to have higher abundance (equal to O abundance) in a pure Ca run
-
-            if (anumber == 28)
-              set_fnistable(m+1,abundance - get_f56ni(n));
-            if (anumber == 27)
-              set_fcostable(m+1,abundance - get_f56co(n));
-            if (anumber == 26)
-              set_ffeinit(m+1,abundance);
-          }
-        }
-      }
-      renorm[mkeep]++;
-    }
-    else
-    {
-      cell[n].modelgridindex = MMODELGRID;
-      /// This initialisation is not needed if the cell MMODELGRID (which is a representation
-      /// of empty cells) is once initialised to zero values
-      set_rhoinit(MMODELGRID,0.);
-      set_rho(MMODELGRID,0.);
-      set_nne(MMODELGRID,0.);
-      set_ffegrp(MMODELGRID,0.);
-      set_f56co(MMODELGRID,0.);
-      set_f56ni(MMODELGRID,0.);
-      set_Te(MMODELGRID,MINTEMP);
-      set_TJ(MMODELGRID,MINTEMP);
-      set_TR(MMODELGRID,MINTEMP);
-      allocate_compositiondata(MMODELGRID);
-      empty_cells++;
-    }
-
-    mgi = cell[n].modelgridindex;
-    if (get_rhoinit(mgi) < 0)
-    {
-      printout("Error: negative density. Abort.\n");
-      abort();
-    }
-    rho_sum += get_rhoinit(mgi);
-    fe_sum += get_ffegrp(mgi);
-  }
-  */
-
-
   for (int cellindex = 0; cellindex < ngrid; cellindex++)
   {
     const double radial_pos = get_cellradialpos(cellindex);
+    const double vcell = radial_pos / tmin;
     const double vmin = 0.;
     if (radial_pos < rmax)
     {
-      cell[cellindex].modelgridindex = 0;
-      const double vcell = radial_pos / tmin;
-
-      for (int mgi = 0; mgi < (npts_model - 1); mgi++)
+      if (grid_type == GRID_SPHERICAL1D)
       {
-        if (vout_model[mgi] < vcell)
+        cell[cellindex].modelgridindex = cellindex;
+      }
+      else
+      {
+        cell[cellindex].modelgridindex = 0;
+
+        for (int mgi = 0; mgi < (npts_model - 1); mgi++)
         {
-          cell[cellindex].modelgridindex = mgi + 1;
+          if (vout_model[mgi] < vcell)
+          {
+            cell[cellindex].modelgridindex = mgi + 1;
+          }
         }
       }
 
@@ -880,15 +773,15 @@ static void density_2d_read(void)
 
   for (int n = 0; n < ngrid; n++)
   {
-    double radial_pos = get_cellradialpos(n);
+    const double radial_pos = get_cellradialpos(n);
 
     if (radial_pos < rmax)
     {
       double dcen[3];
       for (int d = 0; d < 3; d++)
       {
-        const double cellxyzmin = - xyzmax[d] + (2 * get_cellnxyz(n, d) * xyzmax[d] / nxyzgrid[0]);
-        dcen[d] = cellxyzmin + (0.5 * wid_init);
+        const double cellcoordmin = - coordmax[d] + (2 * get_cellcoordpointnum(n, d) * coordmax[d] / ncoordgrid[0]);
+        dcen[d] = cellcoordmin + (0.5 * wid_init(0));
       }
 
       mkeep1 = mkeep2 = 0;
@@ -1224,19 +1117,17 @@ static void assign_temperature(void)
 static void uniform_grid_setup(void)
 /// Routine for doing a uniform cuboidal grid.
 {
+  coordlabel[0] = 'X';
+  coordlabel[1] = 'Y';
+  coordlabel[2] = 'Z';
   int nxyz[3] = {0, 0, 0};
   for (int n = 0; n < ngrid; n++)
   {
     for (int axis = 0; axis < 3; axis++)
     {
-      assert(nxyz[axis] == get_cellnxyz(n, axis));
-      cell[n].pos_init[axis] = - xyzmax[axis] + (2 * nxyz[axis] * xyzmax[axis] / nxyzgrid[axis]);
-      wid_init = 2 * xyzmax[axis] / nxyzgrid[axis];
+      assert(nxyz[axis] == get_cellcoordpointnum(n, axis));
+      cell[n].pos_init[axis] = - coordmax[axis] + (2 * nxyz[axis] * coordmax[axis] / ncoordgrid[axis]);
     }
-
-    // require cubic cells
-    assert(wid_init == 2 * xyzmax[1] / nxyzgrid[1]);
-    assert(wid_init == 2 * xyzmax[2] / nxyzgrid[2]);
 
     //cell[n].cen_init[0] = cell[n].pos_init[0] + (0.5 * wid_init);
     //cell[n].cen_init[1] = cell[n].pos_init[1] + (0.5 * wid_init);
@@ -1246,15 +1137,15 @@ static void uniform_grid_setup(void)
     // cell[n].xyz[1] = ny;
     // cell[n].xyz[2] = nz;
 
-    assert(n == nxyz[2] * nxyzgrid[1] * nxyzgrid[0] + nxyz[1] * nxyzgrid[0] + nxyz[0]);
+    assert(n == nxyz[2] * ncoordgrid[1] * ncoordgrid[0] + nxyz[1] * ncoordgrid[0] + nxyz[0]);
 
     nxyz[0]++;
-    if (nxyz[0] == nxyzgrid[0])
+    if (nxyz[0] == ncoordgrid[0])
     {
       nxyz[0] = 0;
       nxyz[1]++;
     }
-    if (nxyz[1] == nxyzgrid[1])
+    if (nxyz[1] == ncoordgrid[1])
     {
       nxyz[1] = 0;
       nxyz[2]++;
@@ -1299,13 +1190,38 @@ static void uniform_grid_setup(void)
   */
 }
 
+static void spherical1d_grid_setup(void)
+{
+  coordlabel[0] = 'r';
+  coordlabel[1] = '?';
+  coordlabel[2] = '?';
+
+  ncoordgrid[0] = npts_model;
+  ncoordgrid[1] = 1;
+  ncoordgrid[2] = 1;
+  ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
+  coordmax[0] = rmax;
+  coordmax[1] = 0.;
+  coordmax[2] = 0.;
+
+  // in this mode, cellindex and modelgridindex are the same thing
+  for (int cellindex = 0; cellindex < npts_model; cellindex++)
+  {
+    const double v_inner = cellindex > 0 ? vout_model[cellindex - 1] : 0.;
+    cell[cellindex].modelgridindex = cellindex;
+    cell[cellindex].pos_init[0] = v_inner * tmin;
+    cell[cellindex].pos_init[1] = 0.;
+    cell[cellindex].pos_init[2] = 0.;
+  }
+}
+
 
 void grid_init(int my_rank)
 /// Subroutine that initialises the grid cells. Designed so that grid cells
 /// don't need to be uniform but for the moment they are.
 {
   /// Start by checking that the number of grid cells is okay */
-  //ngrid = nxyzgrid[0] * nxyzgrid[1] * nxyzgrid[2]; ///Moved to input.c
+  //ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]; ///Moved to input.c
   //if (ngrid > MGRID)
   //{
   //  printout("[fatal] grid_init: Error: too many grid cells. Abort.");
@@ -1321,6 +1237,10 @@ void grid_init(int my_rank)
   if (grid_type == GRID_UNIFORM)
   {
     uniform_grid_setup();
+  }
+  else if (grid_type == GRID_SPHERICAL1D)
+  {
+    spherical1d_grid_setup();
   }
   else
   {
