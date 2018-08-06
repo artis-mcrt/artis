@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "grid_init.h"
+#include "assert.h"
 #include "packet_init.h"
 #include "vectors.h"
 
@@ -18,14 +19,14 @@ static double uniform_ni56(const int cellindex)
 }
 
 
-static void place_pellet(const double e0, const int cellindex, const int n, const int pktnumberoffset, PKT *pkt)
+static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
 {
   /// First choose a position for the pellet. In the cell.
   /// n is the index of the packet. m is the index for the grid cell.
-  pkt[n].where = cellindex;
-  pkt[n].number = n + pktnumberoffset;  ///record the packets number for debugging
-  pkt[n].originated_from_positron = false;
+  pkt_ptr->where = cellindex;
+  pkt_ptr->number = pktnumber;  ///record the packets number for debugging
+  pkt_ptr->originated_from_positron = false;
 
   for (int axis = 0; axis < 3; axis++)
   {
@@ -77,88 +78,88 @@ static void place_pellet(const double e0, const int cellindex, const int n, cons
   switch (selected_chain)
   {
     case 0:  // Ni56 pellet
-      pkt[n].type = TYPE_56NI_PELLET;
-      pkt[n].tdecay = -T56NI * log(zrand);
+      pkt_ptr->type = TYPE_56NI_PELLET;
+      pkt_ptr->tdecay = -T56NI * log(zrand);
       break;
 
     case 1: // Ni56 -> Co56 pellet
       if (zrand < E56CO_GAMMA / E56CO)
       {
-        pkt[n].type = TYPE_56CO_PELLET;
+        pkt_ptr->type = TYPE_56CO_PELLET;
       }
       else
       {
-        pkt[n].type = TYPE_56CO_POSITRON_PELLET;
-        pkt[n].originated_from_positron = true;
+        pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
+        pkt_ptr->originated_from_positron = true;
       }
 
       zrand = gsl_rng_uniform(rng);
       zrand2 = gsl_rng_uniform(rng);
-      pkt[n].tdecay = (-T56NI * log(zrand)) + (-T56CO * log(zrand2));
+      pkt_ptr->tdecay = (-T56NI * log(zrand)) + (-T56CO * log(zrand2));
       break;
 
     case 2: // Fe52 pellet
-      pkt[n].type = TYPE_52FE_PELLET;
-      pkt[n].tdecay = -T52FE * log(zrand);
+      pkt_ptr->type = TYPE_52FE_PELLET;
+      pkt_ptr->tdecay = -T52FE * log(zrand);
       break;
 
     case 3: // Fe52 -> Mn52 pellet
-      pkt[n].type = TYPE_52MN_PELLET;
+      pkt_ptr->type = TYPE_52MN_PELLET;
       zrand2 = gsl_rng_uniform(rng);
-      pkt[n].tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
+      pkt_ptr->tdecay = (-T52FE * log(zrand)) + (-T52MN * log(zrand2));
       break;
 
     case 4: // Cr48 pellet
-      pkt[n].type = TYPE_48CR_PELLET;
-      pkt[n].tdecay = -T48CR * log(zrand);
+      pkt_ptr->type = TYPE_48CR_PELLET;
+      pkt_ptr->tdecay = -T48CR * log(zrand);
       break;
 
     case 5: // Cr48 -> V48 pellet
-      pkt[n].type = TYPE_48V_PELLET;
+      pkt_ptr->type = TYPE_48V_PELLET;
       zrand2 = gsl_rng_uniform(rng);
-      pkt[n].tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
+      pkt_ptr->tdecay = (-T48CR * log(zrand)) + (-T48V * log(zrand2));
       break;
 
     case 6: // Co56 pellet
       /// Now it is a 56Co pellet, choose whether it becomes a positron
       if (zrand < E56CO_GAMMA / E56CO)
       {
-        pkt[n].type = TYPE_56CO_PELLET;
+        pkt_ptr->type = TYPE_56CO_PELLET;
       }
       else
       {
-        pkt[n].type = TYPE_56CO_POSITRON_PELLET;
-        pkt[n].originated_from_positron = true;
+        pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
+        pkt_ptr->originated_from_positron = true;
       }
 
       zrand = gsl_rng_uniform(rng);
-      pkt[n].tdecay = -T56CO * log(zrand);
+      pkt_ptr->tdecay = -T56CO * log(zrand);
       break;
 
     case 7: // Ni57 pellet
       if (zrand < E57NI_GAMMA / E57NI)
       {
-        pkt[n].type = TYPE_57NI_PELLET;
+        pkt_ptr->type = TYPE_57NI_PELLET;
       }
       else
       {
-        pkt[n].type = TYPE_57NI_POSITRON_PELLET;
-        pkt[n].originated_from_positron = true;
+        pkt_ptr->type = TYPE_57NI_POSITRON_PELLET;
+        pkt_ptr->originated_from_positron = true;
       }
 
       zrand = gsl_rng_uniform(rng);
-      pkt[n].tdecay = -T57NI * log(zrand);
+      pkt_ptr->tdecay = -T57NI * log(zrand);
       break;
 
     case 8: // Ni57 -> Co57 pellet
-      pkt[n].type = TYPE_57CO_PELLET;
+      pkt_ptr->type = TYPE_57CO_PELLET;
       const double zrand2 = gsl_rng_uniform(rng);
-      pkt[n].tdecay = (-T57NI * log(zrand)) + (-T57CO * log(zrand2));
+      pkt_ptr->tdecay = (-T57NI * log(zrand)) + (-T57CO * log(zrand2));
       break;
 
     case 9: // Co57 pellet
-      pkt[n].type = TYPE_57CO_PELLET;
-      pkt[n].tdecay = -T57CO * log(zrand);
+      pkt_ptr->type = TYPE_57CO_PELLET;
+      pkt_ptr->tdecay = -T57CO * log(zrand);
       break;
 
     default:
@@ -167,7 +168,7 @@ static void place_pellet(const double e0, const int cellindex, const int n, cons
   }
 
   /// Now assign the energy to the pellet.
-  pkt[n].e_cmf = e0;
+  pkt_ptr->e_cmf = e0;
 }
 
 
@@ -283,7 +284,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
 
     /// Pellet is in cell m, pointer is grid_ptr.
     //  printout("Pellet in cell %d\n",m);
-    place_pellet(e0, cellindex, n, pktnumberoffset, pkt);
+    place_pellet(e0, cellindex, n + pktnumberoffset, &pkt[n]);
 
     #ifdef NO_INITIAL_PACKETS
     if (pkt[n].tdecay < tmax && pkt[n].tdecay > tmin)
