@@ -11,6 +11,9 @@ void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, fl
 
 
 inline double wid_init(const int cellindex)
+// for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
+// for spherical grid this is the radial extent (r_outer - r_inner)
+// these values are for time tmin
 {
   if (grid_type == GRID_SPHERICAL1D)
   {
@@ -23,8 +26,10 @@ inline double wid_init(const int cellindex)
   }
 }
 
-/// Routine for getting the initial cell volume.
-inline double vol_init(const int cellindex)//(const CELL *restrict const grid_ptr)
+inline double vol_init(const int cellindex)
+// return the cell volume at tmin
+// for a uniform cubic grid this is constant
+// for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
   switch (grid_type)
   {
