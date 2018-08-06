@@ -220,7 +220,7 @@ void normalise_estimators(int nts)
   for (int n = 0; n < npts_model; n++)
   {
     const int assoc_cells = mg_associated_cells[n];
-    const double volume = 1. / vol_init(n);  // That's not going to work if the cell number matters! i.e. vol_init(&cell[n])
+    const double volume = 1. / vol_init(n);
     for (int m = 0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = compton_emiss[n][m] * time_factor * volume / nprocs / assoc_cells;
