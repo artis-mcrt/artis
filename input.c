@@ -1876,7 +1876,7 @@ static void read_3d_model(void)
   }
   if (n != npts_model)
   {
-    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", n - 1, npts_model);
+    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", n, npts_model);
     abort();
   }
 
