@@ -349,16 +349,14 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
     heatingrates[tid].gamma = 0.;
   }
 
-  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * (E56NI/T56NI*exp(-t_current/T56NI) + E56CO/(T56CO-T56NI)*(exp(-t_current/T56CO)-exp(-t_current/T56NI)));
-  //heatingrates[tid].gamma *= 0.01;
-  //double factor = -1./(t_current*(-T56CO+T56NI));
-  //factor *= (-E56NI*exp(-t_current/T56NI)*t_current*T56CO - E56NI*exp(-t_current/T56NI)*T56NI*T56CO + E56NI*exp(-t_current/T56NI)*t_current*T56NI + pow(T56NI,2)*E56NI*exp(-t_current/T56NI) - T56CO*t_current*E56CO*exp(-t_current/T56CO) - pow(T56CO,2)*E56CO*exp(-t_current/T56CO) + E56CO*t_current*T56NI*exp(-t_current/T56NI) + pow(T56NI,2)*E56CO*exp(-t_current/T56NI) + E56NI*T56CO*T56NI - E56NI*pow(T56NI,2) - pow(T56NI,2)*E56CO + E56CO*pow(T56CO,2));
-  //heatingrates[tid].gamma = cell[cellnumber].f_ni*cell[cellnumber].rho_init/MNI56 * pow(tmin/t_current,3) * ((E56NI/T56NI*exp(-t_current/T56NI) + E56CO/(T56CO-T56NI)*(exp(-t_current/T56CO)-exp(-t_current/T56NI))) - factor/t_current);
 
   /// Adiabatic cooling term
   const double p = nntot * KB * T_e;
-  const double dV = 3 * vol_init(modelgridindex) / pow(tmin, 3) * pow(t_current, 2);
-  const double V = vol_init(modelgridindex) * pow(t_current / tmin, 3);
+  // vol_init should a take a cellindex rather than a modelgridindex
+  // but in spherical 1D mode these are the same, and in uniform 3D grid, the parameter is ignored
+  const double volumetmin = vol_init(modelgridindex);
+  const double dV = 3 * volumetmin / pow(tmin, 3) * pow(t_current, 2);
+  const double V = volumetmin * pow(t_current / tmin, 3);
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   coolingrates[tid].adiabatic = p * dV / V;
 
