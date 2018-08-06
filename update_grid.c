@@ -816,7 +816,8 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
       {
         const double r_inner = get_cellcoordmin(n, 0) * tratmid / assoc_cells;
         const double r_outer = r_inner + wid_init(n) * tratmid;
-        radial_pos = 3./4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) / pow(r_outer - r_inner, 3.); // volume averaged mean radius
+        radial_pos = 3./4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) / (pow(r_outer, 3) - pow(r_inner, 3.)); // volume averaged mean radius
+        // printout("r_inner %g r_outer %g tratmid %g assoc_cells %d\n", r_inner, r_outer, tratmid, assoc_cells);
       }
       const double grey_optical_deptha = get_kappagrey(n) * get_rho(n) * wid_init(n) * tratmid;
       const double grey_optical_depth = get_kappagrey(n) * get_rho(n) * (rmax * tratmid - radial_pos);
