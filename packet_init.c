@@ -30,8 +30,12 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
   if (grid_type == GRID_SPHERICAL1D)
   {
-    const double zrand3 = gsl_rng_uniform_pos(rng);
-    const double radius = get_cellcoordmin(cellindex, 0) + zrand3 * wid_init(cellindex);
+    const double zrand3 = gsl_rng_uniform(rng);
+    const double r_inner = get_cellcoordmin(cellindex, 0);
+    const double r_outer = get_cellcoordmin(cellindex, 0) + wid_init(cellindex);
+    const double radius = pow(zrand3 * pow(r_inner, 3) + (1. - zrand3) * pow(r_inner + wid_init(cellindex), 3), 1/3.);
+    assert(radius >= r_inner);
+    assert(radius <= r_outer);
 
     const double zrand = gsl_rng_uniform(rng);
     const double zrand2 = gsl_rng_uniform(rng);
