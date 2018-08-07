@@ -8,15 +8,15 @@
 
 
 static double get_shellcrossdist(
-  const double pos[3], const double dir[3], const double shellradius)
+  const double pos[3], const double dir[3], const double shellradius, const bool isinnerboundary, bool debug)
 // find the closest forward distance to the intersection of a ray with a spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
-  if (shellradius == vec_len(pos))
+  if (debug)
   {
-    return -1.;
+    printout("get_shellcrossdist isinnerboundary %d\n", isinnerboundary);
+    printout("shellradius %g len(pos) %g\n", shellradius, vec_len(pos));
   }
-
   const double dirdotpos = dot(dir, pos);
   const double discriminant = pow(dirdotpos, 2.) - pow(vec_len(pos), 2.) + pow(shellradius, 2.);
 
@@ -24,13 +24,52 @@ static double get_shellcrossdist(
   {
     // no intersection
     assert(shellradius < vec_len(pos));
+    if (debug)
+      printout("no intersection\n");
     return -1;
   }
   else if (discriminant > 0)
   {
     // two intersections
-    const double d1 = -dirdotpos + sqrt(discriminant);
-    const double d2 = -dirdotpos - sqrt(discriminant);
+    double d1 = -dirdotpos + sqrt(discriminant);
+    double d2 = -dirdotpos - sqrt(discriminant);
+
+    double posfinal1[3];
+    double posfinal2[3];
+    for (int i = 0; i < 3; i++)
+    {
+      posfinal1[i] = pos[i] + d1 * dir[i];
+      posfinal2[i] = pos[i] + d2 * dir[i];
+    }
+    assert(fabs(vec_len(posfinal1) / shellradius - 1.) < 1e-3);
+    assert(fabs(vec_len(posfinal2) / shellradius - 1.) < 1e-3);
+
+    if (debug)
+      printout("d1 %g d2 %g\n", d1, d2);
+
+    // invalidate any solutions that require entering the boundary from the wrong radial direction
+    if (isinnerboundary)
+    {
+      if (dot(posfinal1, dir) > 0.)
+      {
+        d1 = -1;
+      }
+      if (dot(posfinal2, dir) > 0.)
+      {
+        d2 = -1;
+      }
+    }
+    else
+    {
+      if (dot(posfinal1, dir) < 0.)
+      {
+        d1 = -1;
+      }
+      if (dot(posfinal2, dir) < 0.)
+      {
+        d2 = -1;
+      }
+    }
 
     // negative d means in the reverse direction along the ray
     // ignore negative d values, and if two are positive then return the smaller one
@@ -56,6 +95,7 @@ static double get_shellcrossdist(
     // exactly one intersection
     // ignore this and don't change which cell the packet is in
     assert(shellradius <= vec_len(pos));
+    printout("single intersection\n");
     return -1.;
   }
 
@@ -107,7 +147,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
     initpos[0] = vec_len(pkt_ptr->pos);
     cellcoordmin[0] = get_cellcoordmin(cellindex, 0);
     cellcoordmax[0] = cellcoordmin[0] + wid_init(cellindex);
-    vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * CLIGHT_PROP;
+    vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * CLIGHT_PROP; // radial velocity
   }
 
   // how much do we change the cellindex to move in the the x, y, z directions
@@ -138,17 +178,18 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 
       bool isoutside;
       if (flip)
-        isoutside = (initpos[d] * tmin) - (tstart * cellcoordmin[d]) < (-10. * tmin);
+        isoutside = initpos[d] - (cellcoordmin[d] / tmin * tstart) < -10.;
       else
-        isoutside = (initpos[d] * tmin) - (tstart * cellcoordmax[d]) > (-10. * tmin);
+        isoutside = initpos[d] - (cellcoordmax[d] / tmin * tstart) > -10.;
 
       if (isoutside && (not_allowed != direction))
       {
         for (int d2 = 0; d2 < ndim; d2++)
         {
-          printout("[warning] outside coord %d boundary of cell %d. initpos %g, vel %g, cellxmin %g, cellxmax %g. Abort?\n",
-                   d, cellindex, initpos[d2] * tmin/tstart, vel[d2], cellcoordmin[d2], cellcoordmax[d2]);
+          printout("[warning] outside coord %d boundary of cell %d. type %d initpos %g, vel %g, cellxmin %g, cellxmax %g. Abort?\n",
+                   d, cellindex, pkt_ptr->type, initpos[d2] * tmin/tstart, vel[d2], cellcoordmin[d2], cellcoordmax[d2]);
         }
+        printout("tmin %g tstart %g tstart/tmin %g tdecay %g\n", tmin, tstart, tstart/tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
         if (flip == 0)
           printout("[warning] delta %g\n", cellcoordmax[d] - (initpos[d] * tmin / tstart));
@@ -156,7 +197,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
           printout("[warning] delta %g\n",  (initpos[d] * tmin / tstart) - cellcoordmin[d]);
 
         printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-        if (((pkt_ptr->dir[d] * CLIGHT) - (initpos[d] / tstart)) > 0) //TODO: should this be CLIGHT OR CLIGHT_PROP?
+        if ((vel[d] - (initpos[d] / tstart)) > 0) //TODO: should this be CLIGHT OR CLIGHT_PROP?
         {
           *snext = pkt_ptr->where + cellindexdiff;
           pkt_ptr->last_cross = invdirection;
@@ -186,22 +227,15 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   double t_minus_coordboundary[ndim];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
   if (grid_type == GRID_SPHERICAL1D)
   {
-    not_allowed = NONE;
-    const double r_inner = cellcoordmin[0] / tmin * tstart;
-    const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner) : -1.;
-    t_minus_coordboundary[0] = d_minus / CLIGHT_PROP;
-    if (vec_len(pkt_ptr->pos) < r_inner) // we're slightly below the inner boundary maybe due to roundoff
-    {
-      not_allowed = POS_X;
-    }
+    not_allowed = NONE; // we will handle this separately
+    const double r_inner = cellcoordmin[0] * tstart / tmin;
 
-    const double r_outer = cellcoordmax[0] / tmin * tstart;
-    const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer);
+    const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, false) : -1.;
+    t_minus_coordboundary[0] = d_minus / CLIGHT_PROP;
+
+    const double r_outer = cellcoordmax[0] * tstart / tmin;
+    const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, false);
     t_plus_coordboundary[0] = d_plus / CLIGHT_PROP;
-    if (vec_len(pkt_ptr->pos) > r_outer)
-    {
-      not_allowed = NEG_X;
-    }
 
     // printout("cell %d\n", pkt_ptr->where);
     // printout("initradius %g: velrad %g\n", initpos[0], vel[0]);
@@ -230,7 +264,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   {
     if ((t_plus_coordboundary[d] > 0) && (t_plus_coordboundary[d] < time) && (not_allowed != negdirections[d]))
     {
-      choice = d * 2 + 1;
+      choice = posdirections[d];
       time = t_plus_coordboundary[d];
       // equivalently if (nxyz[d] == (ncoordgrid[d] - 1))
       // if (cellcoordmin[d] + 1.5 * wid_init > coordmax[d])
@@ -247,7 +281,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 
     if ((t_minus_coordboundary[d] > 0) && (t_minus_coordboundary[d] < time) && (not_allowed != posdirections[d]))
     {
-      choice = d * 2 + 2;
+      choice = negdirections[d];
       time = t_minus_coordboundary[d];
       // equivalently if (nxyz[d] == 0)
       // if (cellcoordmin[d] < - coordmax[d] + 0.5 * wid_init)
@@ -264,23 +298,29 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   }
 
   if (choice == 0)
+  // if (pkt_ptr->number == 10043)
   {
     printout("Something wrong in boundary crossing - didn't find anything.\n");
-    printout("cell %d\n", pkt_ptr->where);
+    printout("packet %d cell %d or %d\n", pkt_ptr->number, cellindex, pkt_ptr->where);
+    printout("choice %d\n", choice);
+    printout("tmin %g tstart %g\n", tmin, tstart);
+    printout("not_allowed %d or %d, type %d\n", not_allowed, pkt_ptr->type);
     for (int d2 = 0; d2 < 3; d2++)
     {
       printout("coord %d: initpos %g dir %g\n",
                d2, pkt_ptr->pos[d2], pkt_ptr->dir[d2]);
     }
+    printout("|initpos| %g |dir| %g |pos.dir| %g\n",
+             vec_len(pkt_ptr->pos), vec_len(pkt_ptr->dir), dot(pkt_ptr->pos, pkt_ptr->dir));
     for (int d2 = 0; d2 < ndim; d2++)
     {
       printout("coord %d: txyz_plus %g txyz_minus %g \n", d2, t_plus_coordboundary[d2], t_minus_coordboundary[d2]);
       printout("coord %d: cellcoordmin %g cellcoordmax %g\n",
-               d2, cellcoordmin[d2], cellcoordmax[d2]);
+               d2, cellcoordmin[d2] * tstart / tmin, cellcoordmax[d2] * tstart / tmin);
     }
     printout("tstart %g\n", tstart);
 
-    abort();
+    // abort();
   }
 
 
