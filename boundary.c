@@ -34,6 +34,9 @@ static double get_shellcrossdist(
     double d1 = -dirdotpos + sqrt(discriminant);
     double d2 = -dirdotpos - sqrt(discriminant);
 
+    // d1 += 1e-20 * d1;
+    // d2 += 1e-20 * d2;
+
     double posfinal1[3];
     double posfinal2[3];
     for (int i = 0; i < 3; i++)
@@ -186,7 +189,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
       {
         for (int d2 = 0; d2 < ndim; d2++)
         {
-          printout("[warning] outside coord %d boundary of cell %d. type %d initpos %g, vel %g, cellxmin %g, cellxmax %g. Abort?\n",
+          printout("[warning] outside coord %d boundary of cell %d. type %d initpos %g, vel %g, cellcoordmin %g, cellcoordmin %g. Abort?\n",
                    d, cellindex, pkt_ptr->type, initpos[d2] * tmin/tstart, vel[d2], cellcoordmin[d2], cellcoordmax[d2]);
         }
         printout("tmin %g tstart %g tstart/tmin %g tdecay %g\n", tmin, tstart, tstart/tmin, pkt_ptr->tdecay);
@@ -197,11 +200,20 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
           printout("[warning] delta %g\n",  (initpos[d] * tmin / tstart) - cellcoordmin[d]);
 
         printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-        if ((vel[d] - (initpos[d] / tstart)) > 0) //TODO: should this be CLIGHT OR CLIGHT_PROP?
+        if ((vel[d] - (initpos[d] / tstart)) > 0)
         {
-          *snext = pkt_ptr->where + cellindexdiff;
-          pkt_ptr->last_cross = invdirection;
-          return 0;
+          if ((get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1) && cellindexdiff > 0) ||
+              (get_cellcoordpointnum(cellindex, d) == 0 && cellindexdiff < 0))
+          {
+            *snext = -99;
+            return 0;
+          }
+          else
+          {
+            *snext = pkt_ptr->where + cellindexdiff;
+            pkt_ptr->last_cross = invdirection;
+            return 0;
+          }
         }
         else
         {
