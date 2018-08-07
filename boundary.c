@@ -5,20 +5,27 @@
 #include "rpkt.h"
 #include "update_packets.h"
 #include "vectors.h"
+// #include <gsl/gsl_poly.h>
+
 
 
 static double get_shellcrossdist(
-  const double pos[3], const double dir[3], const double shellradius, const bool isinnerboundary, bool debug)
-// find the closest forward distance to the intersection of a ray with a spherical shell
+  const double pos[3], const double dir[3], const double shellradius, const bool isinnerboundary, const double tstart, bool debug)
+// find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
+  assert(shellradius > 0);
   if (debug)
   {
     printout("get_shellcrossdist isinnerboundary %d\n", isinnerboundary);
-    printout("shellradius %g len(pos) %g\n", shellradius, vec_len(pos));
+    printout("shellradius %g tstart %g len(pos) %g\n", shellradius, tstart, vec_len(pos));
   }
-  const double dirdotpos = dot(dir, pos);
-  const double discriminant = pow(dirdotpos, 2.) - pow(vec_len(pos), 2.) + pow(shellradius, 2.);
+  const double speed = vec_len(dir) * CLIGHT_PROP;
+  const double a = dot(dir, dir) - pow(shellradius / tstart / speed, 2);
+  const double b = 2 * (dot(dir, pos) - pow(shellradius, 2) / tstart / speed);
+  const double c = dot(pos, pos) - pow(shellradius, 2);
+
+  const double discriminant = pow(b, 2) - 4 * a * c;
 
   if (discriminant < 0)
   {
@@ -31,11 +38,8 @@ static double get_shellcrossdist(
   else if (discriminant > 0)
   {
     // two intersections
-    double d1 = -dirdotpos + sqrt(discriminant);
-    double d2 = -dirdotpos - sqrt(discriminant);
-
-    // d1 += 1e-20 * d1;
-    // d2 += 1e-20 * d2;
+    double d1 = (-b + sqrt(discriminant)) / 2 / a;
+    double d2 = (-b - sqrt(discriminant)) / 2 / a;
 
     double posfinal1[3];
     double posfinal2[3];
@@ -44,11 +48,12 @@ static double get_shellcrossdist(
       posfinal1[i] = pos[i] + d1 * dir[i];
       posfinal2[i] = pos[i] + d2 * dir[i];
     }
-    assert(fabs(vec_len(posfinal1) / shellradius - 1.) < 1e-3);
-    assert(fabs(vec_len(posfinal2) / shellradius - 1.) < 1e-3);
-
-    if (debug)
-      printout("d1 %g d2 %g\n", d1, d2);
+    const double shellradiusfinal1 = shellradius / tstart * (tstart + d1 / speed);
+    const double shellradiusfinal2 = shellradius / tstart * (tstart + d2 / speed);
+    // printout("solution1 d1 %g radiusfinal1 %g shellradiusfinal1 %g\n", d1, vec_len(posfinal1), shellradiusfinal1);
+    // printout("solution2 d2 %g radiusfinal2 %g shellradiusfinal2 %g\n", d2, vec_len(posfinal2), shellradiusfinal2);
+    assert(fabs(vec_len(posfinal1) / shellradiusfinal1 - 1.) < 1e-3);
+    assert(fabs(vec_len(posfinal2) / shellradiusfinal2 - 1.) < 1e-3);
 
     // invalidate any solutions that require entering the boundary from the wrong radial direction
     if (isinnerboundary)
@@ -103,6 +108,7 @@ static double get_shellcrossdist(
   }
 
 }
+
 
 double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
@@ -181,7 +187,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 
       bool isoutside;
       if (flip)
-        isoutside = initpos[d] - (cellcoordmin[d] / tmin * tstart) < -10.;
+        isoutside = initpos[d] - (cellcoordmin[d] / tmin * tstart) < -10.; // 10 cm accuracy tolerance
       else
         isoutside = initpos[d] - (cellcoordmax[d] / tmin * tstart) > -10.;
 
@@ -189,7 +195,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
       {
         for (int d2 = 0; d2 < ndim; d2++)
         {
-          printout("[warning] outside coord %d boundary of cell %d. type %d initpos %g, vel %g, cellcoordmin %g, cellcoordmin %g. Abort?\n",
+          printout("[warning] outside coord %d boundary of cell %d. type %d initpos %g, vel %g, cellcoordmin %g, cellcoordmax %g. Abort?\n",
                    d, cellindex, pkt_ptr->type, initpos[d2] * tmin/tstart, vel[d2], cellcoordmin[d2], cellcoordmax[d2]);
         }
         printout("tmin %g tstart %g tstart/tmin %g tdecay %g\n", tmin, tstart, tstart/tmin, pkt_ptr->tdecay);
@@ -240,13 +246,16 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   if (grid_type == GRID_SPHERICAL1D)
   {
     not_allowed = NONE; // we will handle this separately
-    const double r_inner = cellcoordmin[0] * tstart / tmin;
+    // go a little below the inner boundary or a bit above the upper boundary
+    // to make sure we end up inside the cell
+    const double boost = 1e-6;
+    const double r_inner = cellcoordmin[0] * tstart / tmin * (1. - boost);
 
-    const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, false) : -1.;
+    const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart, false) : -1.;
     t_minus_coordboundary[0] = d_minus / CLIGHT_PROP;
 
-    const double r_outer = cellcoordmax[0] * tstart / tmin;
-    const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, false);
+    const double r_outer = cellcoordmax[0] * tstart / tmin * (1 + boost);
+    const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart, false);
     t_plus_coordboundary[0] = d_plus / CLIGHT_PROP;
 
     // printout("cell %d\n", pkt_ptr->where);
