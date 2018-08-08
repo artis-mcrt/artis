@@ -8,7 +8,6 @@
 #include "gamma.h"
 #include "grid_init.h"
 #include "input.h"
-#include "linelist.h"
 #include "nltepop.h"
 #include "radfield.h"
 #include "rpkt.h"
