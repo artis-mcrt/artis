@@ -1570,24 +1570,74 @@ static void show_totmassradionuclides(void)
 }
 
 
+static void read_2d3d_modelabundanceline(FILE * model_input, const int mgi, const bool keep)
+{
+  char line[1024] = "";
+  if (line != fgets(line, 1024, model_input))
+  {
+    printout("Read failed on second line for cell %d\n", mgi);
+    abort();
+  }
+
+  double f56ni_model = 0.;
+  double f56co_model = 0.;
+  double ffegrp_model = 0.;
+  double f48cr_model = 0.;
+  double f52fe_model = 0.;
+  double f57ni_model = 0.;
+  double f57co_model = 0.;
+  const int items_read = sscanf(line, "%lg %lg %lg %lg %lg %lg %lg",
+    &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
+
+  if (items_read == 5 || items_read == 7)
+  {
+    if (items_read == 10 && mgi == 0)
+    {
+      printout("Found Ni57 and Co57 abundance columns in model.txt\n");
+    }
+
+    // printout("mgi %d ni56 %g co56 %g fe52 %g cr48 %g ni57 %g co57 %g\n",
+    //          mgi, f56ni_model, f56co_model, f52fe_model, f48cr_model, f57ni_model, f57co_model);
+
+    if (keep)
+    {
+      set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
+      set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
+      set_modelradioabund(mgi, NUCLIDE_NI57, f57ni_model);
+      set_modelradioabund(mgi, NUCLIDE_CO57, f57co_model);
+      set_modelradioabund(mgi, NUCLIDE_FE52, f52fe_model);
+      set_modelradioabund(mgi, NUCLIDE_CR48, f48cr_model);
+      set_modelradioabund(mgi, NUCLIDE_V48, 0.);
+
+      set_ffegrp(mgi, ffegrp_model);
+      //printout("mgi %d, control rho_init %g\n",mgi,get_rhoinit(mgi));
+    }
+  }
+  else
+  {
+    printout("Unexpected number of values in model.txt. items_read = %d\n", items_read);
+    printout("line: %s\n", line);
+    abort();
+  }
+}
+
+
 static void read_1d_model(void)
 /// Subroutine to read in a 1-D model.
 {
   FILE *model_input = fopen_required("model.txt", "r");
 
   /* 1st read the number of data points in the table of input model. */
-  int dum1;
-  fscanf(model_input, "%d", &dum1);
-  npts_model = dum1;
+  fscanf(model_input, "%d", &npts_model);
   if (npts_model > MMODELGRID)
   {
     printout("Too many points in input model. Abort.\n");
     abort();
   }
   /* Now read the time (in days) at which the model is specified. */
-  float dum2;
-  fscanf(model_input, "%g\n", &dum2);
-  t_model = dum2 * DAY;
+  double t_model_days;
+  fscanf(model_input, "%lg\n", &t_model_days);
+  t_model = t_model_days * DAY;
 
   /* Now read in the lines of the model. Each line has 5 entries: the
      cell number (integer) the velocity at outer boundary of cell (float),
@@ -1606,7 +1656,7 @@ static void read_1d_model(void)
       break;
     }
 
-    int mgi_in;
+    int cellnumberin;
     double vout_kmps;
     double log_rho;
     double f56ni_model = 0.;
@@ -1617,12 +1667,12 @@ static void read_1d_model(void)
     double f57ni_model = 0.;
     double f57co_model = 0.;
     const int items_read = sscanf(line, "%d %lg %lg %lg %lg %lg %lg %lg %lg %lg",
-                                   &mgi_in, &vout_kmps, &log_rho, &ffegrp_model, &f56ni_model,
+                                   &cellnumberin, &vout_kmps, &log_rho, &ffegrp_model, &f56ni_model,
                                    &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
 
     if (items_read == 8 || items_read == 10)
     {
-      assert(mgi_in == mgi + 1);
+      assert(cellnumberin == mgi + 1);
 
       vout_model[mgi] = vout_kmps * 1.e5;
 
@@ -1643,7 +1693,7 @@ static void read_1d_model(void)
     }
 
     // printout("%d %g %g %g %g %g %g %g\n",
-    //          mgi_in, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
+    //          cellnumin, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
     //          f56co_model[n], f52fe_model[n], f48cr_model[n]);
     // printout("   %lg %lg\n", f57ni_model[n], f57co_model[n]);
     set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
@@ -1680,57 +1730,62 @@ static void read_2d_model(void)
   FILE *model_input = fopen_required("model.txt", "r");
 
   /* 1st read the number of data points in the table of input model. */
-  int dum1, dum12;
-  fscanf(model_input, "%d %d", &dum1, &dum12);
-  ncoord1_model = dum1; //r (cylindrical polar)
-  ncoord2_model = dum12;//z (cylindrical polar)
+  fscanf(model_input, "%d %d", &ncoord1_model, &ncoord2_model);  // r and z (cylindrical polar)
 
-  npts_model = dum1 * dum12;
+  npts_model = ncoord1_model * ncoord2_model;
   if (npts_model > MMODELGRID)
   {
     printout("Too many points in input model. Abort.\n");
     abort();
   }
   /* Now read the time (in days) at which the model is specified. */
-  float dum2, dum3;
-  fscanf(model_input, "%g", &dum2);
-  t_model = dum2 * DAY;
+  double t_model_days;
+  fscanf(model_input, "%lg", &t_model_days);
+  t_model = t_model_days * DAY;
 
   /* Now read in vmax (in cm/s) */
-  fscanf(model_input, "%g", &dum2);
-  vmax = dum2;
-  dcoord1 = dum2 * t_model / ncoord1_model; //dr for input model
-  dcoord2 = 2. * dum2 * t_model / ncoord2_model;//dz for input model
+  fscanf(model_input, "%lg\n", &vmax);
+  dcoord1 = vmax * t_model / ncoord1_model; //dr for input model
+  dcoord2 = 2. * vmax * t_model / ncoord2_model; //dz for input model
 
   /* Now read in the model. Each point in the model has two lines of input.
      First is an index for the cell then its r-mid point then its z-mid point
      then its total mass density.
      Second is the total FeG mass, initial 56Ni mass, initial 56Co mass */
 
-  for (int mgi = 0; mgi < npts_model; mgi++)
+  int mgi = 0;
+  while (!feof(model_input))
   {
-    float f56ni_model;
-    float f56co_model;
-    float ffegrp_model;
-    float f48cr_model;
-    float f52fe_model;
+    char line[1024] = "";
+    if (line != fgets(line, 1024, model_input))
+    {
+      // no more lines to read in
+      break;
+    }
+
+    int cellnumin;
+    float cell_r;
+    float cell_z;
     double rho_tmodel;
 
-    fscanf(model_input, "%d %g %g %lg", &dum1, &dum2, &dum3, &rho_tmodel);
-    fscanf(model_input, "%g %g %g %g %g", &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model);
+    int items_read = sscanf(line, "%d %g %g %lg", &cellnumin, &cell_r, &cell_z, &rho_tmodel);
+    assert(items_read == 4);
+
+    assert(cellnumin == mgi + 1);
 
     const double rho_tmin = rho_tmodel * pow(t_model / tmin, 3);
     set_rhoinit(mgi, rho_tmin);
     set_rho(mgi, rho_tmin);
 
-    set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
-    set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
-    set_modelradioabund(mgi, NUCLIDE_NI57, 0.);
-    set_modelradioabund(mgi, NUCLIDE_CO57, 0.);
-    set_modelradioabund(mgi, NUCLIDE_FE52, f52fe_model);
-    set_modelradioabund(mgi, NUCLIDE_CR48, f48cr_model);
-    set_modelradioabund(mgi, NUCLIDE_V48, 0.);
-    set_ffegrp(mgi, ffegrp_model);
+    read_2d3d_modelabundanceline(model_input, mgi, true);
+
+    mgi++;
+  }
+
+  if (mgi != npts_model)
+  {
+    printout("ERROR in model.txt. Found %d only cells instead of %d expected.\n", mgi - 1, npts_model);
+    abort();
   }
 
   fclose(model_input);
@@ -1786,7 +1841,8 @@ static void read_3d_model(void)
     float posy;
     float posz;
     float rho_model;
-    sscanf(line, "%d %g %g %g %g", &mgi_in, &posx, &posy, &posz, &rho_model);
+    int items_read = sscanf(line, "%d %g %g %g %g", &mgi_in, &posx, &posy, &posz, &rho_model);
+    assert(items_read = 5);
     //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/tmin), 3.));
     if (rho_model < 0)
     {
@@ -1794,7 +1850,7 @@ static void read_3d_model(void)
       abort();
     }
 
-    if (mgi > MMODELGRID-1)
+    if (mgi > MMODELGRID - 1)
     {
       printout("3D model wants more modelgrid cells than MMODELGRID. Abort.\n");
       abort();
@@ -1805,7 +1861,7 @@ static void read_3d_model(void)
       assert(mg_associated_cells[mgi] == 0);  // this mgi should correspond to one cellindex only
       mg_associated_cells[mgi] = 1;
       cell[n].modelgridindex = mgi;
-      const double rho_tmin = rho_model * pow( (t_model/tmin), 3.);
+      const double rho_tmin = rho_model * pow((t_model / tmin), 3.);
       //printout("mgi %d, helper %g\n",mgi,helper);
       set_rhoinit(mgi, rho_tmin);
       //printout("mgi %d, rho_init %g\n",mgi,get_rhoinit(mgi));
@@ -1821,58 +1877,13 @@ static void read_3d_model(void)
       cell[n].modelgridindex = MMODELGRID;
     }
 
-    if (line != fgets(line, 1024, model_input))
+    const bool keepcell = (rho_model > 0);
+    read_2d3d_modelabundanceline(model_input, mgi, keepcell);
+    if (keepcell)
     {
-      printout("Read failed on second line for cell %d\n", mgi);
-      abort();
+      mgi++;
     }
 
-    double f56ni_model = 0.;
-    double f56co_model = 0.;
-    double ffegrp_model = 0.;
-    double f48cr_model = 0.;
-    double f52fe_model = 0.;
-    double f57ni_model = 0.;
-    double f57co_model = 0.;
-    const int items_read = sscanf(line, "%lg %lg %lg %lg %lg %lg %lg",
-      &ffegrp_model, &f56ni_model, &f56co_model, &f52fe_model, &f48cr_model, &f57ni_model, &f57co_model);
-
-    if (items_read == 0)
-    {
-      // probably found a blank line, so skip it and keep reading
-      continue;
-    }
-    else if (items_read == 5 || items_read == 7)
-    {
-      if (items_read == 10 && mgi == 0)
-      {
-        printout("Found Ni57 and Co57 abundance columns in model.txt\n");
-      }
-
-      // printout("mgi %d ni56 %g co56 %g fe52 %g cr48 %g ni57 %g co57 %g\n",
-      //          mgi, f56ni_model, f56co_model, f52fe_model, f48cr_model, f57ni_model, f57co_model);
-
-      if (rho_model > 0)
-      {
-        set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
-        set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
-        set_modelradioabund(mgi, NUCLIDE_NI57, f57ni_model);
-        set_modelradioabund(mgi, NUCLIDE_CO57, f57co_model);
-        set_modelradioabund(mgi, NUCLIDE_FE52, f52fe_model);
-        set_modelradioabund(mgi, NUCLIDE_CR48, f48cr_model);
-        set_modelradioabund(mgi, NUCLIDE_V48, 0.);
-
-        set_ffegrp(mgi, ffegrp_model);
-        //printout("mgi %d, control rho_init %g\n",mgi,get_rhoinit(mgi));
-        mgi++;
-      }
-    }
-    else
-    {
-      printout("Unexpected number of values in model.txt. items_read = %d\n", items_read);
-      printout("line: %s\n", line);
-      abort();
-    }
     n++;
   }
   if (n != npts_model_in)
@@ -2101,6 +2112,7 @@ void input(int rank)
       abort();
     }
 
+    printout("npts_model: %d\n", npts_model);
     rmax = vmax * tmin;
     printout("rmax %g\n", rmax);
 
