@@ -1750,9 +1750,9 @@ static void read_3d_model(void)
     printout("Too many points in input model. Abort. (%d > %d)\n", npts_model, MMODELGRID);
     abort();
   }
-  if (npts_model != ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2])
+  if (npts_model != ngrid)
   {
-    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model, ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
+    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model, ngrid);
     abort();
   }
 
@@ -1995,7 +1995,8 @@ void input(int rank)
   // model_type = RHO_UNIFORM;
 
   maxion = MIONS;
-  /// Set grid size
+
+  /// Set grid size for uniform xyz grid (will be overwritten for a spherical grid)
   //ncoordgrid[0] = 4; //pow(MGRID,1./3.); //10;
   //ncoordgrid[1] = 4; //pow(MGRID,1./3.); //10;
   //ncoordgrid[2] = 4; //pow(MGRID,1./3.); //10;
