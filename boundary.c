@@ -465,13 +465,13 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
   }
   else
   {
-      /** Just need to update "where".*/
-      //int oldpos = pkt_ptr->where;
-      //int old_mgi = cell[pkt_ptr->where].modelgridindex;
-      pkt_ptr->where = snext;
-      // mgi = cell[pkt_ptr->where].modelgridindex;
+    /** Just need to update "where".*/
+    //int oldpos = pkt_ptr->where;
+    //int old_mgi = cell[pkt_ptr->where].modelgridindex;
+    pkt_ptr->where = snext;
+    // mgi = cell[pkt_ptr->where].modelgridindex;
 
-      cellcrossings++;
+    cellcrossings++;
   }
 }
 
