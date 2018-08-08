@@ -6,6 +6,7 @@
 #include "update_packets.h"
 #include "vectors.h"
 // #include <gsl/gsl_poly.h>
+#include <gsl/gsl_blas.h>
 
 
 
@@ -42,12 +43,13 @@ static double get_shellcrossdist(
     double d2 = (-b - sqrt(discriminant)) / 2 / a;
 
     double posfinal1[3];
+    cblas_dcopy(3, pos, 1, posfinal1, 1);     // posfinal1 = pos
+    cblas_daxpy(3, d1, dir, 1, posfinal1, 1); // posfinal1 += d1 * dir;
+
     double posfinal2[3];
-    for (int i = 0; i < 3; i++)
-    {
-      posfinal1[i] = pos[i] + d1 * dir[i];
-      posfinal2[i] = pos[i] + d2 * dir[i];
-    }
+    cblas_dcopy(3, pos, 1, posfinal2, 1);
+    cblas_daxpy(3, d2, dir, 1, posfinal2, 1);
+
     const double shellradiusfinal1 = shellradius / tstart * (tstart + d1 / speed);
     const double shellradiusfinal2 = shellradius / tstart * (tstart + d2 / speed);
     // printout("solution1 d1 %g radiusfinal1 %g shellradiusfinal1 %g\n", d1, vec_len(posfinal1), shellradiusfinal1);
@@ -456,12 +458,12 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
 
   if (snext == -99)
   {
-      /* Then the packet is exiting the grid. We need to record
-       where and at what time it leaves the grid. */
-      pkt_ptr->escape_type = pkt_ptr->type;
-      pkt_ptr->escape_time = t_current;
-      pkt_ptr->type = TYPE_ESCAPE;
-      *end_packet = true;
+    /* Then the packet is exiting the grid. We need to record
+     where and at what time it leaves the grid. */
+    pkt_ptr->escape_type = pkt_ptr->type;
+    pkt_ptr->escape_time = t_current;
+    pkt_ptr->type = TYPE_ESCAPE;
+    *end_packet = true;
   }
   else
   {

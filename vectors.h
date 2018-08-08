@@ -3,6 +3,7 @@
 
 #include <math.h>
 // #include <string.h>
+#include <gsl/gsl_blas.h>
 #include "assert.h"
 #include "types.h"
 
@@ -10,10 +11,12 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
 double doppler(const double dir1[3], const double vel[3]);
 void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
 
+// #define vec_len(x)   (cblas_dnrm2(3, x, 1))
 inline double vec_len(const double x[3])
-// Routine for getting the magnitude of a vector.
+// return the the magnitude of a vector
 {
-  return sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
+  // return sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
+  return cblas_dnrm2(3, x, 1);
 }
 
 
@@ -25,13 +28,17 @@ inline void vec_norm(const double vec_in[3], double vec_out[3])
   vec_out[0] = vec_in[0] / magnitude;
   vec_out[1] = vec_in[1] / magnitude;
   vec_out[2] = vec_in[2] / magnitude;
+
+  // vec_copy(vec_out, vec_in);
+  // cblas_dscal(3, 1 / magnitude, vec_out, 1)
 }
 
 
 inline double dot(const double x[3], const double y[3])
 // Routine for taking dot product.
 {
-  return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
+  // return (x[0] * y[0]) + (x[1] * y[1]) + (x[2] * y[2]);
+  return cblas_ddot(3, x, 1, y, 1);
 }
 
 
@@ -55,20 +62,21 @@ inline void cross_prod(const double vec1[3], const double vec2[3], double vecout
 inline void
 vec_scale(double vec[3], const double scalefactor)
 {
-  for (int d = 0; d < 3; d++)
-  {
-    vec[d] *= scalefactor;
-  }
+  // for (int d = 0; d < 3; d++)
+  // {
+  //   vec[d] *= scalefactor;
+  // }
+  cblas_dscal(3, scalefactor, vec, 1);
 }
 
 inline void
 vec_copy(double destination[3], const double source[3])
 {
-  // memcpy(destination, source, sizeof(double) * 3);
-  for (int d = 0; d < 3; d++)
-  {
-    destination[d] = source[d];
-  }
+  // for (int d = 0; d < 3; d++)
+  // {
+  //   destination[d] = source[d];
+  // }
+  cblas_dcopy(3, source, 1, destination, 1);
 }
 
 inline double
