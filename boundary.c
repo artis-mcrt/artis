@@ -245,16 +245,13 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   double t_minus_coordboundary[ndim];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
   if (grid_type == GRID_SPHERICAL1D)
   {
-    not_allowed = NONE; // we will handle this separately
-    // go a little below the inner boundary or a bit above the upper boundary
-    // to make sure we end up inside the cell
-    const double boost = 1e-6;
-    const double r_inner = cellcoordmin[0] * tstart / tmin * (1. - boost);
+    not_allowed = NONE; // we will handle this separately by setting d_minus and d_plus negative for invalid directions
+    const double r_inner = cellcoordmin[0] * tstart / tmin;
 
     const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart, false) : -1.;
     t_minus_coordboundary[0] = d_minus / CLIGHT_PROP;
 
-    const double r_outer = cellcoordmax[0] * tstart / tmin * (1 + boost);
+    const double r_outer = cellcoordmax[0] * tstart / tmin;
     const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart, false);
     t_plus_coordboundary[0] = d_plus / CLIGHT_PROP;
 
