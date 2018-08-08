@@ -1744,15 +1744,16 @@ static void read_3d_model(void)
 
   /// 1st read the number of data points in the table of input model.
   /// This MUST be the same number as the maximum number of points used in the grid - if not, abort.
-  fscanf(model_input, "%d", &npts_model);
-  if (npts_model > MMODELGRID)
+  int npts_model_in = 0;
+  fscanf(model_input, "%d", &npts_model_in);
+  if (npts_model_in > MMODELGRID)
   {
-    printout("Too many points in input model. Abort. (%d > %d)\n", npts_model, MMODELGRID);
+    printout("Too many points in input model. Abort. (%d > %d)\n", npts_model_in, MMODELGRID);
     abort();
   }
-  if (npts_model != ngrid)
+  if (npts_model_in != ngrid)
   {
-    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model, ngrid);
+    printout("3D model/grid mismatch. Abort. %d != %d\n", npts_model_in, ngrid);
     abort();
   }
 
@@ -1874,16 +1875,16 @@ static void read_3d_model(void)
     }
     n++;
   }
-  if (n != npts_model)
+  if (n != npts_model_in)
   {
-    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", n, npts_model);
+    printout("ERROR in model.txt. Found %d cells instead of %d expected.\n", n, npts_model_in);
     abort();
   }
 
   printout("min_den %g\n", min_den);
   printout("Effectively used model grid cells %d\n", mgi);
 
-  /// Now, reduce the actual size of the modelgrid to the number of non-empty cells.
+  /// Now, set actual size of the modelgrid to the number of non-empty cells.
   /// Actually this doesn't reduce the memory consumption since all the related
   /// arrays are allocated statically at compile time with size MMODELGRID+1.
   /// However, it ensures that update_grid causes no idle tasks due to empty cells!

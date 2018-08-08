@@ -515,9 +515,8 @@ static void allocate_nonemptycells(void)
   allocate_compositiondata(MMODELGRID);
   allocate_cooling(MMODELGRID);
 
-  const bool threedimensional = (model_type == RHO_3D_READ);
-
-  if (!threedimensional)
+  // three dimensional models already have mg_associated_cells[mgi] set to 1 if rho[mgi] > 0 and 0 otherwise
+  if (!(model_type == RHO_3D_READ))
   {
     // Determine the number of simulation cells associated with the model cells
     for (int mgi = 0; mgi < npts_model; mgi++)
@@ -529,7 +528,6 @@ static void allocate_nonemptycells(void)
       mg_associated_cells[mgi] += 1;
     }
   }
-  // three dimensional models already have mg_associated_cells[mgi] set to 1 if rho[mgi] > 0 and 0 otherwise
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
@@ -555,7 +553,7 @@ static void allocate_nonemptycells(void)
     }
   }
 
-  printout("mem_usage: NLTE populations for all allocated cells occupies a total of %.1f MB\n", mem_usage_nltepops / 1024. / 1024.);
+  printout("mem_usage: NLTE populations for all allocated cells occupy a total of %.1f MB\n", mem_usage_nltepops / 1024. / 1024.);
 }
 
 
@@ -1218,8 +1216,7 @@ static void spherical1d_grid_setup(void)
 
 
 void grid_init(int my_rank)
-/// Subroutine that initialises the grid cells. Designed so that grid cells
-/// don't need to be uniform but for the moment they are.
+/// Initialises the propagation grid cells and associates them with modelgrid cells
 {
   /// Start by checking that the number of grid cells is okay */
   //ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]; ///Moved to input.c
