@@ -1192,6 +1192,7 @@ static void uniform_grid_setup(void)
 
 static void spherical1d_grid_setup(void)
 {
+  assert(model_type == RHO_1D_READ);
   coordlabel[0] = 'r';
   coordlabel[1] = '?';
   coordlabel[2] = '?';

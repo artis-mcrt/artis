@@ -21,7 +21,7 @@ static const bool NLTE_POPS_ON = true;
 static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 
 // maximum number of NLTE/Te/Spencer-Fano iterations
-#define NLTEITER 30
+static const int NLTEITER = 30;
 
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
