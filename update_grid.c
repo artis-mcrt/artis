@@ -672,13 +672,14 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
 #endif
 
 
-static void update_grid_cell(const int n, const int nts, const int titer, const double tratmid,
-                             const double deltaV, const double deltat, double *mps)
+static void update_grid_cell(const int n, const int nts, const int nts_prev, const int titer, const double tratmid,
+                             const double deltat, double *mps)
 // n is the modelgrid index
 {
   const int assoc_cells = mg_associated_cells[n];
   if (assoc_cells > 0)
   {
+    const double deltaV = vol_init_model(n) * pow(time_step[nts_prev].mid / tmin, 3);
     const time_t sys_time_start_update_cell = time(NULL);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
     const bool log_this_cell = true;
@@ -750,7 +751,7 @@ static void update_grid_cell(const int n, const int nts, const int titer, const 
         /// Then update T_R and W using the estimators.
         /// (This could in principle also be done for empty cells)
 
-        const double estimator_normfactor = 1 / (deltaV * deltat) / nprocs / assoc_cells;
+        const double estimator_normfactor = 1 / deltaV / deltat / nprocs;
         const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
         const time_t sys_time_start_temperature_corrections = time(NULL);
 
@@ -1056,10 +1057,7 @@ void update_grid(const int nts, const int my_rank, const int nstart, const int n
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo)
       {
-        // vol_init should a take a cellindex rather than a modelgridindex
-        // but in spherical 1D mode these are the same, and in uniform 3D grid, the parameter is ignored
-        const double deltaV = vol_init(mgi) * pow(time_step[nts_prev].mid / tmin, 3);
-        update_grid_cell(mgi, nts, titer, tratmid, deltaV, deltat, mps);
+        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps);
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
         #ifdef _OPENMP

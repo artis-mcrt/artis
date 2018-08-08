@@ -231,7 +231,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     const int mgi = cell[m].modelgridindex;
     const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(m) : get_modelradioabund(mgi, NUCLIDE_NI56);
 
-    norm += get_rhoinit(mgi) * vol_init(m) * //vol_init(grid_ptr)
+    norm += get_rhoinit(mgi) * vol_init_grid(m) *
               ((f56ni * (E56NI + E56CO) / 56.)
                + (get_modelradioabund(mgi, NUCLIDE_CO56) * (E56CO) / 56.)
                + (get_modelradioabund(mgi, NUCLIDE_NI57) * (E57NI + E57CO) / 57.)
