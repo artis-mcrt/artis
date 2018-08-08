@@ -3,6 +3,7 @@
 
 #include "types.h"
 
+void get_gam_ll(void);
 void pellet_decay(int nts, PKT *pkt_ptr);
 double do_gamma(PKT *pkt_ptr, double t1, double t2);
 double get_gam_freq(const LIST *line_list, int n);
