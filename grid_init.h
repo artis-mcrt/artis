@@ -17,8 +17,9 @@ inline double wid_init(const int cellindex)
 {
   if (grid_type == GRID_SPHERICAL1D)
   {
-    const double v_inner = cellindex > 0 ? vout_model[cellindex - 1] : 0.;
-    return (vout_model[cellindex] - v_inner) * tmin;
+    const int modelgridindex = cell[cellindex].modelgridindex;
+    const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
+    return (vout_model[modelgridindex] - v_inner) * tmin;
   }
   else
   {
@@ -26,24 +27,41 @@ inline double wid_init(const int cellindex)
   }
 }
 
-inline double vol_init(const int cellindex)
-// return the cell volume at tmin
-// for a uniform cubic grid this is constant
-// for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
-{
-  switch (grid_type)
-  {
-    case GRID_UNIFORM:
-      return (wid_init(0) * wid_init(0) * wid_init(0));
 
-    case GRID_SPHERICAL1D:
-      return 4./3. * PI * (pow(tmin * vout_model[cellindex], 3) - pow(tmin * (cellindex > 0 ? vout_model[cellindex - 1] : 0.), 3));
+inline double vol_init_model(const int modelgridindex)
+// return the model cell volume at tmin
+// for a uniform cubic grid this is constant
+{
+  if (grid_type == GRID_SPHERICAL1D)
+  {
+    return 4./3. * PI * (pow(tmin * vout_model[modelgridindex], 3) - pow(tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
   }
-  abort();
+  else
+  {
+    const int assoc_cells = mg_associated_cells[modelgridindex];
+    return (wid_init(0) * wid_init(0) * wid_init(0)) * assoc_cells;
+  }
 }
 
+
+inline double vol_init_grid(const int cellindex)
+// return the propagation cell volume at tmin
+// for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
+{
+  if (grid_type == GRID_SPHERICAL1D)
+  {
+    const int mgi = cell[cellindex].modelgridindex;
+    return vol_init_model(mgi);
+  }
+  else
+  {
+    return (wid_init(0) * wid_init(0) * wid_init(0));
+  }
+}
+
+
 inline double get_cellcoordmin(const int cellindex, const int axis)
-// get the minimum position along each axis at tmin (xyz or radial coords)
+// get the minimum position along each axis at tmin (xyz or radial coords) of a propagation cell
 {
   return cell[cellindex].pos_init[axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);

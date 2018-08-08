@@ -9,8 +9,9 @@
 #include "vectors.h"
 
 
-extern inline double vol_init(int cellindex);
-extern inline double wid_init(const int cellindex);
+extern inline double wid_init(int cellindex);
+extern inline double vol_init_model(int modelgridindex);
+extern inline double vol_init_grid(int cellindex);
 extern inline float get_rhoinit(int modelgridindex);
 extern inline float get_rho(int modelgridindex);
 extern inline float get_nne(int modelgridindex);

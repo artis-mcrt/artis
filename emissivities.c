@@ -219,11 +219,10 @@ void normalise_estimators(int nts)
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
-    const int assoc_cells = mg_associated_cells[n];
-    const double volume = 1. / vol_init(n);
+    const double volume = vol_init_model(n);
     for (int m = 0; m < emiss_max; m++)
     {
-      compton_emiss[n][m] = compton_emiss[n][m] * time_factor * volume / nprocs / assoc_cells;
+      compton_emiss[n][m] = compton_emiss[n][m] * time_factor / volume / nprocs;
 
       if (m < emiss_max - 1)
       // (emiss_max - 1) contains the pair production case so it doesn't need the nne nor the dfreq
