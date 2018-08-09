@@ -293,12 +293,13 @@ int get_cellcoordpointnum(const int cellindex, const int axis)
   // return cell[cellindex].nxyz[axis];
   switch (axis)
   {
+    // TODO: is it really z, y, x or is there an error in the coordinate layout?
     case 0:
-      return cellindex % ncoordgrid[0];
+      return (cellindex / (ncoordgrid[2] * ncoordgrid[1])) % ncoordgrid[2];
     case 1:
-      return (cellindex / ncoordgrid[0]) % ncoordgrid[1];
+      return (cellindex / ncoordgrid[2]) % ncoordgrid[1];
     case 2:
-      return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
+      return cellindex % ncoordgrid[2];
     default:
       printout("invalid coordinate index %d", axis);
       abort();

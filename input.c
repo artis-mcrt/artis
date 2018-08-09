@@ -1763,12 +1763,19 @@ static void read_2d_model(void)
     }
 
     int cellnumin;
-    float cell_r;
-    float cell_z;
+    float cell_r_in;
+    float cell_z_in;
     double rho_tmodel;
 
-    int items_read = sscanf(line, "%d %g %g %lg", &cellnumin, &cell_r, &cell_z, &rho_tmodel);
+    int items_read = sscanf(line, "%d %g %g %lg", &cellnumin, &cell_r_in, &cell_z_in, &rho_tmodel);
     assert(items_read == 4);
+
+    const int ncoord1 = ((cellnumin - 1) % ncoord1_model);
+    const double r_cylindrical = (ncoord1 + 0.5) * dcoord1;
+    assert(fabs(cell_r_in / r_cylindrical - 1) < 1e-3);
+    const int ncoord2 = ((cellnumin - 1) / ncoord1_model);
+    const double z = -vmax * t_model + ((ncoord2 + 0.5) * dcoord2);
+    assert(fabs(cell_z_in / z - 1) < 1e-3);
 
     assert(cellnumin == mgi + 1);
 
@@ -1819,11 +1826,12 @@ static void read_3d_model(void)
   /// Now read in vmax for the model (in cm s^-1).
   fscanf(model_input, "%lg\n", &vmax);
 
+  double rmax_tmodel = vmax * t_model;
+
   /// Now read in the lines of the model.
   min_den = 1.e99;
 
   /*mgi is the index to the model grid - empty cells are sent to MMODELGRID, otherwise each input cell is one modelgrid cell */
-
   int mgi = 0;
   int n = 0;
   while (!feof(model_input))
@@ -1836,13 +1844,21 @@ static void read_3d_model(void)
     }
 
     int mgi_in;
-    float posx;
-    float posy;
-    float posz;
+    float cellpos_in[3];
     float rho_model;
-    int items_read = sscanf(line, "%d %g %g %g %g", &mgi_in, &posx, &posy, &posz, &rho_model);
+    int items_read = sscanf(line, "%d %g %g %g %g", &mgi_in, &cellpos_in[0], &cellpos_in[1], &cellpos_in[2], &rho_model);
     assert(items_read = 5);
     //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/tmin), 3.));
+
+    assert(mgi_in == n + 1);
+    for (int axis = 0; axis < 3; axis++)
+    {
+      const double cellpos_expected = - rmax_tmodel + (2 * get_cellcoordpointnum(n, axis) * rmax_tmodel / ncoordgrid[axis]);
+      // printout("n %d axis %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d ncoordgrid %d\n",
+      // n, axis, cellpos_expected, cellpos_in[axis], rmax_model, get_cellcoordpointnum(n, axis), ncoordgrid);
+      assert((fabs(cellpos_in[axis] / cellpos_expected - 1) < 1e-3) || ((cellpos_in[axis] == 0) && (cellpos_expected == 0)));
+    }
+
     if (rho_model < 0)
     {
       printout("negative input density %g %d\n", rho_model, n);
