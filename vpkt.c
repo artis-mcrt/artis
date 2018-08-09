@@ -1,6 +1,11 @@
 #include "sn3d.h"
 #include "vpkt.h"
+#include "rpkt.h"
+#include "boundary.h"
+#include "move.h"
+#include "ltepop.h"
 #include "vectors.h"
+#include "atomic.h"
 #include <string.h>
 
 
@@ -12,7 +17,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   double sdist,s_cont;
   double kap_cont,kap_cont_nobf,kap_cont_noff,kap_cont_noes;
   int snext;
-  int end_packet;
+  bool end_packet;
   double t_future,t_arrive;
   double ldist;
   double nutrans;
@@ -23,7 +28,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   double Qi,Ui,Qold,Uold,Inew,Qnew,Unew,Itmp,Qtmp,Utmp,I,Q,U,pn,prob;
   double mu,i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
   double ref1[3],ref2[3];
-  int ind,anumber,get_element(),tau_flag=0;
+  int ind,anumber,tau_flag=0;
 
   int bin_range;
 
@@ -33,7 +38,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   dummy_ptr = &dummy;
 
 
-  end_packet = 0 ;
+  end_packet = false ;
   sdist = 0;
   ldist = 0;
   nutrans = 0;
@@ -141,7 +146,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
   mgi = cell[dummy_ptr->where].modelgridindex;
 
-  while (end_packet == 0) {
+  while (end_packet == false) {
 
       ldist = 0 ;
 
@@ -166,7 +171,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
       /* kill vpkt with high optical depth */
       tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
-      if (tau_flag == 0 ) return(0) ;
+      if (tau_flag == 0 ) return ;
 
       while ( ldist < sdist ) {
 
@@ -217,7 +222,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
               /* kill vpkt with high optical depth */
               tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
-              if (tau_flag == 0 ) return(0) ;
+              if (tau_flag == 0 ) return ;
 
 
           }
@@ -242,7 +247,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
       if (mgi == MMODELGRID) break;
 
       /* kill vpkt with pass through a thick cell */
-      if (modelgrid[mgi].thick == 1) return(0);
+      if (modelgrid[mgi].thick == 1) return;
 
 
   }
@@ -309,6 +314,8 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
           }
       }
   }
+
+  return;
 }
 
 
@@ -338,7 +345,6 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   {
       /* Need to decide in which (1) time and (2) frequency bin the vpkt is escaping */
 
-      double dot();
       double deltai,deltaq,deltau;
       int nt, nnu;
       int ind_comb;
