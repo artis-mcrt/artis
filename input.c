@@ -2097,32 +2097,34 @@ void input(int rank)
   //#ifndef DO_EXSPEC
     /// Read in input model
     ///======================================================
-    if (model_type == RHO_UNIFORM)
+    switch (model_type)
     {
-      mtot = 1.39 * MSUN;
-      totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
-      vmax = 1.e9;
-  //  rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
-    }
-    else if (model_type == RHO_1D_READ)
-    {
-      printout("Read 1D model!\n");
-      read_1d_model();
-    }
-    else if (model_type == RHO_2D_READ)
-    {
-      printout("Read 2D model!\n");
-      read_2d_model();
-    }
-    else if (model_type == RHO_3D_READ)
-    {
-      printout("Read 3D model!\n");
-      read_3d_model();
-    }
-    else
-    {
-      printout("Unknown model. Abort.\n");
-      abort();
+      case RHO_UNIFORM:
+      {
+        mtot = 1.39 * MSUN;
+        totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
+        vmax = 1.e9;
+        // rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
+        break;
+      }
+      case RHO_1D_READ:
+        printout("Read 1D model!\n");
+        read_1d_model();
+        break;
+
+      case RHO_2D_READ:
+        printout("Read 2D model!\n");
+        read_2d_model();
+        break;
+
+      case RHO_3D_READ:
+        printout("Read 3D model!\n");
+        read_3d_model();
+        break;
+
+      default:
+        printout("Unknown model. Abort.\n");
+        abort();
     }
 
     printout("npts_model: %d\n", npts_model);
