@@ -46,7 +46,7 @@ else
  # CC = clang-3.8
  # CC = clang-omp
  # CC = gcc-8
-  CC = mpicc
+ # CC = mpicc
  # CC = icc
   INCLUDE = #-I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
   LIB = #-L/usr/local/lib/gsl #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
