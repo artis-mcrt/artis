@@ -43,6 +43,15 @@ extern inline void set_W(int modelgridindex, float x);
 
 static long mem_usage_nltepops = 0;
 
+static int mg_associated_cells[MMODELGRID + 1];
+
+
+int get_numassociatedcells(const int modelgridindex)
+// number of propagation cells associated with each modelgrid cell
+{
+  return mg_associated_cells[modelgridindex];
+}
+
 
 float get_modelradioabund(const int modelgridindex, const enum radionuclides nuclide_type)
 {
@@ -418,7 +427,7 @@ static void calculate_kappagrey(void)
     fclose(grid_file);
 
   printout("Initial densities taken from readin.\n");
-  printout("Grey normalisation check: %g\n", check1/check2);
+  printout("Grey normalisation check: %g\n", check1 / check2);
 }
 
 
@@ -516,23 +525,21 @@ static void allocate_nonemptycells(void)
   allocate_compositiondata(MMODELGRID);
   allocate_cooling(MMODELGRID);
 
-  // three dimensional models already have mg_associated_cells[mgi] set to 1 if rho[mgi] > 0 and 0 otherwise
-  if (!(model_type == RHO_3D_READ))
-  {
-    // Determine the number of simulation cells associated with the model cells
-    for (int mgi = 0; mgi < npts_model; mgi++)
-      mg_associated_cells[mgi] = 0;
+  // Determine the number of simulation cells associated with the model cells
+  for (int mgi = 0; mgi < npts_model; mgi++)
+    mg_associated_cells[mgi] = 0;
 
-    for (int cellindex = 0; cellindex < ngrid; cellindex++)
-    {
-      const int mgi = cell[cellindex].modelgridindex;
-      mg_associated_cells[mgi] += 1;
-    }
+  for (int cellindex = 0; cellindex < ngrid; cellindex++)
+  {
+    const int mgi = cell[cellindex].modelgridindex;
+    assert(!(model_type == RHO_3D_READ) || (get_rhoinit(mgi) > 0));
+    mg_associated_cells[mgi] += 1;
+    assert(!(model_type == RHO_3D_READ) || (mg_associated_cells[mgi] == 1));
   }
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    if (mg_associated_cells[mgi] > 0)
+    if (get_numassociatedcells(mgi) > 0)
     {
       allocate_compositiondata(mgi);
       allocate_cooling(mgi);
@@ -599,6 +606,7 @@ static void density_1d_read(void)
       cell[cellindex].modelgridindex = MMODELGRID;
     }
   }
+}
 
 
 /*backup copy of old version
@@ -759,7 +767,6 @@ static void density_1d_read(void)
 
 }
 */
-}
 
 
 static void density_2d_read(void)
@@ -940,7 +947,7 @@ static void abundances_read(void)
       normfactor += abundances_in[anumber - 1];
     }
 
-    if (mg_associated_cells[mgi] > 0)
+    if (get_numassociatedcells(mgi) > 0)
     {
       if (threedimensional || normfactor <= 0.)
         normfactor = 1.;

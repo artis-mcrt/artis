@@ -8,6 +8,7 @@ int get_cellcoordpointnum(int cellindex, int axis);
 double get_cellradialpos(int cellindex);
 float get_modelradioabund(int modelgridindex, enum radionuclides nuclide_type);
 void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
+int get_numassociatedcells(int modelgridindex);
 
 
 inline double wid_init(const int cellindex)
@@ -38,7 +39,7 @@ inline double vol_init_model(const int modelgridindex)
   }
   else
   {
-    const int assoc_cells = mg_associated_cells[modelgridindex];
+    const int assoc_cells = get_numassociatedcells(modelgridindex);
     return (wid_init(0) * wid_init(0) * wid_init(0)) * assoc_cells;
   }
 }

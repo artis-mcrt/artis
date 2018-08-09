@@ -524,7 +524,7 @@ void nt_init(const int my_rank)
       nt_solution[modelgridindex].E_0 = 0.;
       nt_solution[modelgridindex].deposition_rate_density = -1.;
 
-      if (STORE_NT_SPECTRUM && mg_associated_cells[modelgridindex] > 0)
+      if (STORE_NT_SPECTRUM && get_numassociatedcells(modelgridindex) > 0)
       {
         nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
       }
@@ -729,7 +729,7 @@ void nt_close_file(void)
   {
     for (int modelgridindex = 0; modelgridindex < MMODELGRID + 1; modelgridindex++)
     {
-      if (mg_associated_cells[modelgridindex] > 0)
+      if (get_numassociatedcells(modelgridindex) > 0)
       {
         free(nt_solution[modelgridindex].yfunc);
         free(nt_solution[modelgridindex].frac_ionizations_list);
@@ -1598,7 +1598,7 @@ static float get_eff_ionpot(const int modelgridindex, const int element, int con
 static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson 1992 equation 13
 {
-  if (mg_associated_cells[modelgridindex] <= 0)
+  if (get_numassociatedcells(modelgridindex) <= 0)
   {
     printout("ERROR: nt_ionization_ratecoeff_sf called on empty cell %d\n", modelgridindex);
     abort();
@@ -1713,7 +1713,7 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
     printout("ERROR: NT_ON is false, but nt_ionization_ratecoeff has been called.\n");
     abort();
   }
-  if (mg_associated_cells[modelgridindex] <= 0)
+  if (get_numassociatedcells(modelgridindex) <= 0)
   {
     printout("ERROR: nt_ionization_ratecoeff called on empty cell %d\n", modelgridindex);
     abort();
@@ -1799,7 +1799,7 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
       (linelist[lineindex].upperlevelindex >= NTEXCITATION_MAXNLEVELS_UPPER))
     return 0.;
 
-  if (mg_associated_cells[modelgridindex] <= 0)
+  if (get_numassociatedcells(modelgridindex) <= 0)
   {
     printout("ERROR: nt_excitation_ratecoeff called on empty cell %d\n", modelgridindex);
     abort();
@@ -2497,7 +2497,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
-  if (mg_associated_cells[modelgridindex] < 1)
+  if (get_numassociatedcells(modelgridindex) < 1)
   {
     printout("Associated_cells < 1 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", modelgridindex, timestep);
 
@@ -2670,7 +2670,7 @@ void nt_write_restart_data(FILE *gridsave_file)
   }
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       fprintf(gridsave_file, "%d %d %g %lg %g %g %g %lg\n",
               modelgridindex,
@@ -2761,7 +2761,7 @@ void nt_read_restart_data(FILE *gridsave_file)
   }
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       int mgi_in;
       fscanf(gridsave_file, "%d %d %g %lg %g %g %g %lg\n",
@@ -2860,7 +2860,7 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
 
   for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
   {
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
       //          modelgridindex, logged_element_z, logged_ion_stage,

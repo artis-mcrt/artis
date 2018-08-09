@@ -334,8 +334,8 @@ void radfield_init(int my_rank)
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     radfield_set_J_normfactor(modelgridindex, -1.0);
-    // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, mg_associated_cells[modelgridindex]);
-    if (mg_associated_cells[modelgridindex] > 0)
+    // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       radfieldbin_previous[modelgridindex] = (struct radfieldbin_previous *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin_previous));
       radfieldbin_current[modelgridindex] = (struct radfieldbin_current *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin_current));
@@ -660,7 +660,7 @@ void radfield_close_file(void)
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
-      if (mg_associated_cells[modelgridindex] > 0)
+      if (get_numassociatedcells(modelgridindex) > 0)
       {
         free(radfieldbin_current[modelgridindex]);
         free(radfieldbin_previous[modelgridindex]);
@@ -684,7 +684,7 @@ void radfield_zero_estimators(int modelgridindex)
 #ifndef FORCE_LTE
   nuJ[modelgridindex] = 0.;
 
-  if (MULTIBIN_RADFIELD_MODEL_ON && radfield_initialized && mg_associated_cells[modelgridindex] > 0)
+  if (MULTIBIN_RADFIELD_MODEL_ON && radfield_initialized && get_numassociatedcells(modelgridindex) > 0)
   {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 
@@ -1323,8 +1323,8 @@ void radfield_reduce_estimators(void)
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
-      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, mg_associated_cells[modelgridindex]);
-      if (mg_associated_cells[modelgridindex] > 0)
+      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
+      if (get_numassociatedcells(modelgridindex) > 0)
       {
         MPI_Barrier(MPI_COMM_WORLD);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -1349,8 +1349,8 @@ void radfield_reduce_estimators(void)
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
-      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, mg_associated_cells[modelgridindex]);
-      if (mg_associated_cells[modelgridindex] > 0)
+      // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
+      if (get_numassociatedcells(modelgridindex) > 0)
       {
         MPI_Barrier(MPI_COMM_WORLD);
         for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
@@ -1387,7 +1387,7 @@ void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart
   {
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
@@ -1452,7 +1452,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       fprintf(gridsave_file,"%d %lg\n", modelgridindex, J_normfactor[modelgridindex]);
 
@@ -1560,7 +1560,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       int mgi_in;
       fscanf(gridsave_file,"%d %lg\n", &mgi_in, &J_normfactor[modelgridindex]);

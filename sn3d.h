@@ -302,7 +302,6 @@ int emiss_max;      // actual number of frequency points in emissivity grid
 
 
 modelgrid_t modelgrid[MMODELGRID + 1];
-int mg_associated_cells[MMODELGRID + 1];    // separate array for faster looping over non-empty cells
 
 /// THESE ARE THE GRID BASED ESTIMATORS
 float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity                     ///ATOMIC
