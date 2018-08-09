@@ -476,7 +476,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
   pkt_ptr->em_time = t_current;
   pkt_ptr->nscatterings = 0;
 
-  return(t_current);
+  return t_current;
 }
 
 

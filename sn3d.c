@@ -163,7 +163,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     {
       for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
       {
-        if (mg_associated_cells[modelgridindex] > 0)
+        if (get_numassociatedcells(modelgridindex) > 0)
         {
           MPI_Bcast(modelgrid[modelgridindex].nlte_pops, total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
         }
@@ -180,7 +180,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         //nn = nonemptycells[my_rank+nncl*nprocs];
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
         //if (cell[nn].rho > MINDENSITY)
-        if (mg_associated_cells[mgi] > 0)
+        if (get_numassociatedcells(mgi) > 0)
         {
           MPI_Pack(&modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           MPI_Pack(&modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
@@ -215,7 +215,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       int mgi;
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
       //if (cell[ncl].rho > MINDENSITY)
-      if (mg_associated_cells[mgi] > 0)
+      if (get_numassociatedcells(mgi) > 0)
       {
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
@@ -1166,7 +1166,7 @@ int main(int argc, char** argv)
           for (mgi = nstart; mgi < (nstart+ndo); mgi++)
           {
             MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            if (mg_associated_cells[mgi] > 0)
+            if (get_numassociatedcells(mgi) > 0)
             {
               MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
               MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
@@ -1183,7 +1183,7 @@ int main(int argc, char** argv)
         for (int nn = 0; nn < nlp; nn++)
         {
           MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
-          if (mg_associated_cells[mgi] > 0)
+          if (get_numassociatedcells(mgi) > 0)
           {
             MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
             MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);

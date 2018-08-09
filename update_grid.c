@@ -196,7 +196,7 @@ static void update_abundances(const int modelgridindex, const int timestep, cons
 
 static void write_to_estimators_file(const int n, const int timestep)
 {
-  if (mg_associated_cells[n] > 0)
+  if (get_numassociatedcells(n) > 0)
   {
     //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
     //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
@@ -676,7 +676,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
                              const double deltat, double *mps)
 // n is the modelgrid index
 {
-  const int assoc_cells = mg_associated_cells[n];
+  const int assoc_cells = get_numassociatedcells(n);
   if (assoc_cells > 0)
   {
     const double deltaV = vol_init_model(n) * pow(time_step[nts_prev].mid / tmin, 3);
@@ -1561,7 +1561,7 @@ void write_grid_restart_data(void)
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    const bool nonemptycell = (mg_associated_cells[mgi] > 0);
+    const bool nonemptycell = (get_numassociatedcells(mgi) > 0);
 
     if (nonemptycell)
     {

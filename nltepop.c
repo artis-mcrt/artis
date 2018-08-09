@@ -1675,7 +1675,7 @@ void nltepop_write_restart_data(FILE *restart_file)
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       fprintf(restart_file, "%d\n", modelgridindex);
       for (int element = 0; element < nelements; element++)
@@ -1724,7 +1724,7 @@ void nltepop_read_restart_data(FILE *restart_file)
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    if (mg_associated_cells[modelgridindex] > 0)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
       int mgi_in;
       fscanf(restart_file, "%d\n", &mgi_in);
