@@ -138,7 +138,7 @@ void normalise_grey(int nts)
   const double dt = time_step[nts].width;
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    const double dV = vol_init_model(mgi) * pow(time_step[nts].mid / tmin, 3);
+    const double dV = vol_init_modelcell(mgi) * pow(time_step[nts].mid / tmin, 3);
 
     rpkt_emiss[mgi] = rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / nprocs;
   }

@@ -2107,6 +2107,7 @@ void input(int rank)
         // rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
         break;
       }
+
       case RHO_1D_READ:
         printout("Read 1D model!\n");
         read_1d_model();

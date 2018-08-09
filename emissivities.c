@@ -219,7 +219,7 @@ void normalise_estimators(int nts)
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
-    const double volume = vol_init_model(n);
+    const double volume = vol_init_modelcell(n);
     for (int m = 0; m < emiss_max; m++)
     {
       compton_emiss[n][m] = compton_emiss[n][m] * time_factor / volume / nprocs;
