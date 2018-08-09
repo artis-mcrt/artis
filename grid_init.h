@@ -4,7 +4,6 @@
 #include "sn3d.h"
 
 void grid_init(int my_rank);
-int get_cellcoordpointnum(int cellindex, int axis);
 double get_cellradialpos(int cellindex);
 float get_modelradioabund(int modelgridindex, enum radionuclides nuclide_type);
 void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
@@ -31,7 +30,7 @@ inline double wid_init(const int cellindex)
 }
 
 
-inline double vol_init_model(const int modelgridindex)
+inline double vol_init_modelcell(const int modelgridindex)
 // return the model cell volume at tmin
 // for a uniform cubic grid this is constant
 {
@@ -49,7 +48,7 @@ inline double vol_init_model(const int modelgridindex)
 }
 
 
-inline double vol_init_grid(const int cellindex)
+inline double vol_init_gridcell(const int cellindex)
 // return the propagation cell volume at tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
@@ -58,7 +57,7 @@ inline double vol_init_grid(const int cellindex)
     case GRID_SPHERICAL1D:
     {
       const int mgi = cell[cellindex].modelgridindex;
-      return vol_init_model(mgi);
+      return vol_init_modelcell(mgi);
     }
 
     default:
@@ -73,6 +72,71 @@ inline double get_cellcoordmin(const int cellindex, const int axis)
   return cell[cellindex].pos_init[axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
+
+
+inline int get_coordcellindexincrement(const int axis)
+// how much do we change the cellindex to move in the the x, y, z directions (or r direction)
+{
+  switch (grid_type)
+  {
+    case GRID_SPHERICAL1D:
+      return 1;
+
+    default:
+      switch (axis)
+      {
+        case 0:
+          return ncoordgrid[2] * ncoordgrid[1];
+
+        case 1:
+          return ncoordgrid[2];
+
+        case 2:
+          return 1;
+
+        default:
+          printout("invalid coordinate index %d", axis);
+          abort();
+      }
+  }
+}
+
+inline int get_cellcoordpointnum(const int cellindex, const int axis)
+// convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
+{
+  // return cell[cellindex].nxyz[axis];
+
+  switch (grid_type)
+  {
+    case GRID_SPHERICAL1D:
+      return cellindex;
+
+    default:
+      switch (axis)
+      {
+        // increment z first, then y, then x
+        case 0:
+          return (cellindex / (ncoordgrid[2] * ncoordgrid[1])) % ncoordgrid[0];
+
+        case 1:
+          return (cellindex / ncoordgrid[2]) % ncoordgrid[1];
+
+        case 2:
+          return cellindex % ncoordgrid[2];
+
+        default:
+          printout("invalid coordinate index %d", axis);
+          abort();
+      }
+  }
+}
+
+
+inline int get_ngriddimensions(void)
+{
+  return (grid_type == GRID_SPHERICAL1D) ? 1 : 3;
+}
+
 
 inline float get_rhoinit(int modelgridindex)
 {

@@ -10,8 +10,12 @@
 
 
 extern inline double wid_init(int cellindex);
-extern inline double vol_init_model(int modelgridindex);
-extern inline double vol_init_grid(int cellindex);
+extern inline double vol_init_modelcell(int modelgridindex);
+extern inline double vol_init_gridcell(int cellindex);
+extern inline double get_cellcoordmin(int cellindex, int axis);
+extern inline int get_cellcoordpointnum(const int cellindex, const int axis);
+extern inline int get_coordcellindexincrement(int axis);
+extern inline int get_ngriddimensions(void);
 extern inline float get_rhoinit(int modelgridindex);
 extern inline float get_rho(int modelgridindex);
 extern inline float get_nne(int modelgridindex);
@@ -285,29 +289,6 @@ static void set_stable_abund(const int mgi, const int anumber, const float elema
       break;
   }
 }
-
-
-int get_cellcoordpointnum(const int cellindex, const int axis)
-// convert a cell index number into an integer x, y, or z index
-{
-  // return cell[cellindex].nxyz[axis];
-  switch (axis)
-  {
-    // TODO: is it really z, y, x or is there an error in the coordinate layout?
-    case 0:
-      return (cellindex / (ncoordgrid[2] * ncoordgrid[1])) % ncoordgrid[2];
-    case 1:
-      return (cellindex / ncoordgrid[2]) % ncoordgrid[1];
-    case 2:
-      return cellindex % ncoordgrid[2];
-    default:
-      printout("invalid coordinate index %d", axis);
-      abort();
-  }
-}
-
-
-extern inline double get_cellcoordmin(int cellindex, int axis);
 
 
 double get_cellradialpos(const int cellindex)
