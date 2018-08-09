@@ -563,7 +563,7 @@ static void allocate_nonemptycells(void)
     }
   }
 
-  printout("There are %d modelgrid cells with associated propagation cells\n");
+  printout("There are %d modelgrid cells with associated propagation cells\n", numnonemptycells);
 
   printout("mem_usage: NLTE populations for all allocated cells occupy a total of %.1f MB\n", mem_usage_nltepops / 1024. / 1024.);
 }
