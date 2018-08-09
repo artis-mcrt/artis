@@ -49,11 +49,11 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 static const bool SKIPRATECOEFFVALIDATION = false;
 
 // Polarisation for real packets
-//#define DIPOLE
-//#define POL_ON
+#define DIPOLE
+#define POL_ON
 
 // Polarisation for virtual packets
-// #define VPKT_ON
+#define VPKT_ON
 
 #include "types.h"
 
