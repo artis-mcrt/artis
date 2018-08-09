@@ -532,9 +532,9 @@ static void allocate_nonemptycells(void)
   for (int cellindex = 0; cellindex < ngrid; cellindex++)
   {
     const int mgi = cell[cellindex].modelgridindex;
-    assert(!(model_type == RHO_3D_READ) || (get_rhoinit(mgi) > 0));
+    assert(!(model_type == RHO_3D_READ) || (get_rhoinit(mgi) > 0) || (mgi == MMODELGRID));
     mg_associated_cells[mgi] += 1;
-    assert(!(model_type == RHO_3D_READ) || (mg_associated_cells[mgi] == 1));
+    assert(!(model_type == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == MMODELGRID);
   }
 
   int numnonemptycells = 0;

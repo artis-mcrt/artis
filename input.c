@@ -1855,7 +1855,8 @@ static void read_3d_model(void)
       abort();
     }
 
-    if (rho_model > 0)
+    const bool keepcell = (rho_model > 0);
+    if (keepcell)
     {
       cell[n].modelgridindex = mgi;
       const double rho_tmin = rho_model * pow((t_model / tmin), 3.);
@@ -1874,7 +1875,6 @@ static void read_3d_model(void)
       cell[n].modelgridindex = MMODELGRID;
     }
 
-    const bool keepcell = (rho_model > 0);
     read_2d3d_modelabundanceline(model_input, mgi, keepcell);
     if (keepcell)
     {
