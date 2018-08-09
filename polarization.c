@@ -12,6 +12,9 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   double mu,M,tsc,phisc;
   double i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
   double ref1[3],ref2[3];
+  #ifdef DIPOLE
+  double p,x;
+  #endif
 
 
   /// now make the packet a r-pkt and set further flags
@@ -39,7 +42,7 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
 
         const double zrand = gsl_rng_uniform(rng);
         const double zrand2 = gsl_rng_uniform(rng);
-        zrand3 = gsl_rng_uniform(rng);
+        const double zrand3 = gsl_rng_uniform(rng);
 
         phisc = 2 * PI * zrand ;
         M = 2 * zrand2 - 1;
