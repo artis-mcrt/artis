@@ -626,9 +626,11 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double rho = get_rho(modelgridindex);
 
   // Co56 from Ni56 decays plus what remains of the initial Co56
-  const double co56_positron_dep = (0.610 * 0.19 * MEV) *
+  const double co56_positron_dep = (0.19 * 0.610 * MEV) *
         (((exp(-t / T56CO) - exp(-t / T56NI)) / (T56CO - T56NI) * get_modelradioabund(modelgridindex, NUCLIDE_NI56) / MNI56) +
          (exp(-t / T56CO) / T56CO * get_modelradioabund(modelgridindex, NUCLIDE_CO56) / MCO56)) * rho;
+
+  const double ni57_positron_dep = (0.436 * 0.354 * MEV) * exp(-t / T57NI) / T57NI * get_modelradioabund(modelgridindex, NUCLIDE_NI57) / MNI57 * rho;
 
   const double v48_positron_dep = (0.290 * 0.499 * MEV) *
         (exp(-t / T48V) - exp(-t / T48CR)) /
@@ -638,7 +640,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   //printout("nt_deposition_rate: gammadep: %g, poscobalt %g pos48v %g\n",
   //         gamma_deposition,co56_positron_dep,v48_positron_dep);
 
-  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + co56_positron_dep + v48_positron_dep;
+  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + co56_positron_dep + v48_positron_dep + ni57_positron_dep;
   nt_solution[modelgridindex].deposition_at_timestep = timestep;
 }
 
@@ -1148,7 +1150,7 @@ float get_nt_frac_heating(const int modelgridindex)
   if (!NT_ON)
     return 1.;
   else if (!NT_SOLVE_SPENCERFANO)
-    return 0.98;
+    return 0.97;
   else
   {
     const float frac_heating = nt_solution[modelgridindex].frac_heating;
