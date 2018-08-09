@@ -162,7 +162,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   }
 
   // how much do we change the cellindex to move in the the x, y, z directions
-  const int cellindexincrement[3] = {1, ncoordgrid[0], ncoordgrid[0] * ncoordgrid[1]};
+  const int cellindexincrement[3] = {ncoordgrid[2] * ncoordgrid[1], ncoordgrid[2], 1};
 
   //printout("boundary.c: x0 %g, y0 %g, z0 %g\n", initpos[0] initpos[1] initpos[2]);
 
@@ -355,6 +355,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   So if we go up in x we go to cell + 1, up in y we go to cell + ncoordgrid[0], up in z
   we go to cell + (ncoordgrid[0] * ncoordgrid[1]).
   If's going to escape the grid this is flagged with snext = -99. */
+
   return distance;
 }
 
