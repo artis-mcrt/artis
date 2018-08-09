@@ -386,7 +386,7 @@ static void calculate_kappagrey(void)
       }
       else if (opacity_case == 1)
       {
-        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1));
+        set_kappagrey(mgi, ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfeg / mtot) + 0.1));
       }
       else if (opacity_case == 2)
       {
@@ -537,6 +537,7 @@ static void allocate_nonemptycells(void)
     assert(!(model_type == RHO_3D_READ) || (mg_associated_cells[mgi] == 1));
   }
 
+  int numnonemptycells = 0;
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
     if (get_numassociatedcells(mgi) > 0)
@@ -549,6 +550,7 @@ static void allocate_nonemptycells(void)
         printout("Error: negative density. Abort.\n");
         abort();
       }
+      numnonemptycells++;
     }
     else
     {
@@ -560,6 +562,8 @@ static void allocate_nonemptycells(void)
       }
     }
   }
+
+  printout("There are %d modelgrid cells with associated propagation cells\n");
 
   printout("mem_usage: NLTE populations for all allocated cells occupy a total of %.1f MB\n", mem_usage_nltepops / 1024. / 1024.);
 }
@@ -772,11 +776,6 @@ static void density_1d_read(void)
 static void density_2d_read(void)
 // Routine for doing a density grid read from a 2-D model.
 {
-  int mkeep1, mkeep2;
-  // int renorm[MMODELGRID];
-  // double den_norm[MMODELGRID];
-  double zcylindrical, rcylindrical;
-
   for (int n = 0; n < ngrid; n++)
   {
     const double radial_pos = get_cellradialpos(n);
@@ -790,14 +789,14 @@ static void density_2d_read(void)
         dcen[d] = cellcoordmin + (0.5 * wid_init(0));
       }
 
-      mkeep1 = mkeep2 = 0;
       cell[n].modelgridindex = 0;
-      zcylindrical = dcen[2];
+      const double zcylindrical = dcen[2];
       dcen[2] = 0.0;
-      rcylindrical = vec_len(dcen);
+      const double rcylindrical = vec_len(dcen);
 
       // Grid is uniform so only need to search in 1d to get r and z positions
 
+      int mkeep1 = 0;
       for (int m = 0; m < ncoord1_model; m++)
       {
         if (rcylindrical > (m * dcoord1 * tmin/t_model))
@@ -806,6 +805,8 @@ static void density_2d_read(void)
           //cell[n].modelgridindex = m+1;
         }
       }
+
+      int mkeep2 = 0;
       for (int m = 0; m < ncoord2_model; m++)
       {
         if (zcylindrical > (((m * dcoord2) * tmin/t_model) - rmax))
