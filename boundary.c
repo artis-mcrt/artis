@@ -349,6 +349,8 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   // printout("boundary_cross: time %g distance %g\n", time, distance);
   //*closest = close;
 
+  // LJS: the cells are now ordered in z then y then x to match 3D model input
+  // I think previous versions of artis swapped the z and x axes of the input models
   /** Also we've identified the cell we'll go into. The cells are ordered in x then y then z.
   So if we go up in x we go to cell + 1, up in y we go to cell + ncoordgrid[0], up in z
   we go to cell + (ncoordgrid[0] * ncoordgrid[1]).

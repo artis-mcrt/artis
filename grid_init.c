@@ -1145,18 +1145,18 @@ static void uniform_grid_setup(void)
     // cell[n].xyz[1] = ny;
     // cell[n].xyz[2] = nz;
 
-    assert(n == nxyz[2] * ncoordgrid[1] * ncoordgrid[0] + nxyz[1] * ncoordgrid[0] + nxyz[0]);
+    assert(n == nxyz[0] * ncoordgrid[1] * ncoordgrid[2] + nxyz[1] * ncoordgrid[2] + nxyz[2]);
 
-    nxyz[0]++;
-    if (nxyz[0] == ncoordgrid[0])
+    nxyz[2]++;
+    if (nxyz[2] == ncoordgrid[2])
     {
-      nxyz[0] = 0;
+      nxyz[2] = 0;
       nxyz[1]++;
     }
     if (nxyz[1] == ncoordgrid[1])
     {
       nxyz[1] = 0;
-      nxyz[2]++;
+      nxyz[0]++;
     }
 
     ///Do we need this initialisation anywhere else (after modelgridindex was initialised) ???????????????????????????????????

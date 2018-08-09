@@ -16,15 +16,17 @@ inline double wid_init(const int cellindex)
 // for spherical grid this is the radial extent (r_outer - r_inner)
 // these values are for time tmin
 {
-  if (grid_type == GRID_SPHERICAL1D)
+  switch (grid_type)
   {
-    const int modelgridindex = cell[cellindex].modelgridindex;
-    const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
-    return (vout_model[modelgridindex] - v_inner) * tmin;
-  }
-  else
-  {
-    return 2 * coordmax[0] / ncoordgrid[0];
+    case GRID_SPHERICAL1D:
+    {
+      const int modelgridindex = cell[cellindex].modelgridindex;
+      const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
+      return (vout_model[modelgridindex] - v_inner) * tmin;
+    }
+
+    default:
+      return 2 * coordmax[0] / ncoordgrid[0];
   }
 }
 
@@ -33,14 +35,16 @@ inline double vol_init_model(const int modelgridindex)
 // return the model cell volume at tmin
 // for a uniform cubic grid this is constant
 {
-  if (grid_type == GRID_SPHERICAL1D)
+  switch (grid_type)
   {
-    return 4./3. * PI * (pow(tmin * vout_model[modelgridindex], 3) - pow(tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
-  }
-  else
-  {
-    const int assoc_cells = get_numassociatedcells(modelgridindex);
-    return (wid_init(0) * wid_init(0) * wid_init(0)) * assoc_cells;
+    case GRID_SPHERICAL1D:
+      return 4./3. * PI * (pow(tmin * vout_model[modelgridindex], 3) - pow(tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
+
+    default:
+    {
+      const int assoc_cells = get_numassociatedcells(modelgridindex);
+      return (wid_init(0) * wid_init(0) * wid_init(0)) * assoc_cells;
+    }
   }
 }
 
@@ -49,14 +53,16 @@ inline double vol_init_grid(const int cellindex)
 // return the propagation cell volume at tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 {
-  if (grid_type == GRID_SPHERICAL1D)
+  switch (grid_type)
   {
-    const int mgi = cell[cellindex].modelgridindex;
-    return vol_init_model(mgi);
-  }
-  else
-  {
-    return (wid_init(0) * wid_init(0) * wid_init(0));
+    case GRID_SPHERICAL1D:
+    {
+      const int mgi = cell[cellindex].modelgridindex;
+      return vol_init_model(mgi);
+    }
+
+    default:
+      return (wid_init(0) * wid_init(0) * wid_init(0));
   }
 }
 
