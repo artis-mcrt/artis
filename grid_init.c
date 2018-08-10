@@ -90,167 +90,6 @@ void set_modelradioabund(const int modelgridindex, const enum radionuclides nucl
   modelgrid[modelgridindex].fradionuclides[nuclide_type] = abund;
 }
 
-/// Routine for doing a uniform density grid.
-/*int uniform_density_setup ()
-{
-  int n;
-  double vec_len();
-  double dcen[3];
-  double f56ni(CELL *grid_ptr);
-  void allocate_compositiondata(int cellnumber);
-  double opcase2_normal, opcase3_sum, check1, check2;
-  int empty_cells;
-
-  //Calculate the critical opacity at which opacity_case 3 switches from a
-  //regime proportional to the density to a regime independent of the density
-  //This is done by solving for tau_sobolev == 1
-  //tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
-  rho_crit = ME*CLIGHT*MNI56 / (PI*QE*QE * rho_crit_para * 3000e-8 * tmin);
-  printout("grid_init: rho_crit = %g\n", rho_crit);
-
-  rho_sum = 0.0;
-  fe_sum = 0.0;
-  empty_cells = 0;
-  check1 = check2 = 0.0;
-  opcase3_sum = 0;
-
-  //MK: first loop to initialize basic variables
-  for (n=0;n < ngrid; n++)
-  {
-    dcen[0] = cell[n].pos_init[0] + (0.5*wid_init);
-    dcen[1] = cell[n].pos_init[1] + (0.5*wid_init);
-    dcen[2] = cell[n].pos_init[2] + (0.5*wid_init);
-
-
-    if (vec_len(dcen) < rmax)
-    {
-      cell[n].rho_init = cell[n].rho = 3 * mtot / 4 / PI / rmax /rmax /rmax;
-      cell[n].f_ni = cell[n].f_fe = f56ni(&cell[n]);
-      cell[n].f_co = 0.;
-      allocate_compositiondata(n);
-    //printout("[debug] uniform_density_setup: cell[%d].rho_init: %g\n",n,cell[n].rho_init);
-    }
-     //MK: added missing else branch for correct initialization
-    else
-    {
-      cell[n].rho_init = cell[n].rho = 0.0;
-      cell[n].kappa_grey = 0.0;
-      empty_cells++;
-    }
-    rho_sum += cell[n].rho_init;
-    fe_sum += f56ni(&cell[n]);  //MK: use for this model fni as values for iron group mass fractions
-  }
-
-
-  if (opacity_case == 3)
-  {
-    for (n = 0; n < ngrid; n++)
-    {
-      if (cell[n].rho_init > 0)
-      {
-        if (cell[n].rho_init > rho_crit)
-        {
-          cell[n].kappa_grey = (0.9 * f56ni(&cell[n]) + 0.1) * rho_crit/cell[n].rho_init;
-        }
-        else
-        {
-          cell[n].kappa_grey = (0.9 * f56ni(&cell[n]) + 0.1);
-        }
-      }
-      else if (cell[n].rho_init == 0)
-      {
-        cell[n].kappa_grey = 0;
-      }
-      else if (cell[n].rho_init < 0)
-      {
-        printout("Error: negative density. Abort.\n");
-        abort();
-      }
-      opcase3_sum += cell[n].kappa_grey*cell[n].rho_init;
-    }
-  }
-
-
-  //MK: second loop to set up opacities which need integrated basic quantities for normalisation
-  for (n=0;n < ngrid; n++)
-  {
-    if (cell[n].rho_init > 0)
-    {
-      if (opacity_case == 0)
-      {
-        cell[n].kappa_grey = GREY_OP;
-      }
-      else if (opacity_case == 1)
-      {
-        cell[n].kappa_grey = ((0.9 * f56ni(&cell[n])) + 0.1) * GREY_OP / ((0.9 *  mni56 / mtot) + 0.1);
-      }
-      else if (opacity_case == 2)
-      {
-        opcase2_normal = GREY_OP*rho_sum / ((0.9 *  fe_sum) + (0.1 * (ngrid - empty_cells)));
-        cell[n].kappa_grey = opcase2_normal/cell[n].rho_init * ((0.9 * f56ni(&cell[n])) + 0.1);
-      }
-      else if (opacity_case == 3)
-      {
-        opcase3_normal = GREY_OP*rho_sum / opcase3_sum;
-        cell[n].kappa_grey = cell[n].kappa_grey * opcase3_normal;
-      }
-      else if (opacity_case == 4)
-      {
-        cell[n].kappa_grey = SIGMA_T;
-      }
-      else
-      {
-        printout("Unknown opacity case. Abort.\n");
-        abort();
-      }
-    }
-    else if (cell[n].rho_init == 0)
-    {
-      cell[n].kappa_grey = 0.0;
-    }
-    else if (cell[n].rho_init < 0)
-    {
-      printout("Error: negative density. Abort.\n");
-      abort();
-    }
-
-    check1 = check1 + (cell[n].kappa_grey  * cell[n].rho_init);
-    check2 = check2 + cell[n].rho_init;
-  }
-
-
-  printout("Initial densities assigned uniformly.\n");
-  printout("Grey normalisation check: %g\n", check1/check2);
-
-  return 0;
-}*/
-
-
-static void set_fvstable(int modelgridindex, float x)
-{
-  if (x >= 0)
-  {
-    modelgrid[modelgridindex].fvstable = x;
-  }
-  else
-  {
-    //printout("Setting fcrstable to 0.0 to avoid negative.\n");
-    modelgrid[modelgridindex].fvstable = 0.0;
-  }
-}
-
-static void set_ftistable(int modelgridindex, float x)
-{
-  if (x >= 0)
-  {
-    modelgrid[modelgridindex].ftistable = x;
-  }
-  else
-  {
-    //printout("Setting fcrstable to 0.0 to avoid negative.\n");
-    modelgrid[modelgridindex].ftistable = 0.0;
-  }
-}
 
 static void set_stable_abund(const int mgi, const int anumber, const float elemabundance)
 {
@@ -1110,21 +949,15 @@ static void uniform_grid_setup(void)
   coordlabel[1] = 'Y';
   coordlabel[2] = 'Z';
   int nxyz[3] = {0, 0, 0};
+  assert(ngrid == ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
   for (int n = 0; n < ngrid; n++)
   {
     for (int axis = 0; axis < 3; axis++)
     {
       assert(nxyz[axis] == get_cellcoordpointnum(n, axis));
       cell[n].pos_init[axis] = - coordmax[axis] + (2 * nxyz[axis] * coordmax[axis] / ncoordgrid[axis]);
+      // cell[n].xyz[axis] = nxyz[axis];
     }
-
-    //cell[n].cen_init[0] = cell[n].pos_init[0] + (0.5 * wid_init);
-    //cell[n].cen_init[1] = cell[n].pos_init[1] + (0.5 * wid_init);
-    //cell[n].cen_init[2] = cell[n].pos_init[2] + (0.5 * wid_init);
-
-    // cell[n].xyz[0] = nx;
-    // cell[n].xyz[1] = ny;
-    // cell[n].xyz[2] = nz;
 
     assert(n == nxyz[0] * ncoordgrid[1] * ncoordgrid[2] + nxyz[1] * ncoordgrid[2] + nxyz[2]);
 
@@ -1139,11 +972,6 @@ static void uniform_grid_setup(void)
       nxyz[1] = 0;
       nxyz[0]++;
     }
-
-    ///Do we need this initialisation anywhere else (after modelgridindex was initialised) ???????????????????????????????????
-    //cell[n].f_ni_stable = 0.0;
-    //cell[n].f_co_stable = 0.0;
-    //cell[n].f_fe_init = 0.0;
   }
 
   /*
