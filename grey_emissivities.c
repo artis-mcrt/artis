@@ -7,7 +7,7 @@
 #include <string.h>
 
 
-static double meanf_sigma(double x)
+static double meanf_sigma(const double x)
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
 {
@@ -25,7 +25,7 @@ static double meanf_sigma(double x)
 }
 
 
-void rlc_emiss_gamma(const PKT *pkt_ptr, double dist, double t_current)
+void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist, const double t_current)
 {
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
