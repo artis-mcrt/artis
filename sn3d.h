@@ -130,10 +130,6 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 //#define MPTS_MODEL 10000
 
 
-#define MXGRID 50        // Max number of grid cells in x-direction.
-#define MYGRID 50        // Max number of grid cells in y-direction.
-#define MZGRID 50        // Max number of grid cells in z-direction.
-//#define MGRID 1000000  // Max number of grid cells.
 #define MTSTEP 200       // Max number of time steps.
 #define MLINES 500000    // Increase linelist by this blocksize
 
