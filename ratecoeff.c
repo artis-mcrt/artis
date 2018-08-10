@@ -1,15 +1,14 @@
-#include "assert.h"
 #include <string.h>
 #include <gsl/gsl_integration.h>
 #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <stdio.h>
+#include "md5.h"
 #include "sn3d.h"
 #include "atomic.h"
 #include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
-#include "md5.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "grid_init.h"

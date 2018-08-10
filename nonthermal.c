@@ -1,4 +1,3 @@
-#include "assert.h"
 #include <math.h>
 #include <stdbool.h>
 #include <gsl/gsl_integration.h>
@@ -14,6 +13,7 @@
 #include "nonthermal.h"
 #include "update_grid.h"
 #include "sn3d.h"
+
 
 // number of energy points in the Spencer-Fano solution vector
 #define SFPTS 4096

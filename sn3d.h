@@ -54,6 +54,7 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 
 // Polarisation for virtual packets
 #define VPKT_ON
+// #define VPKT_ON
 
 #include "types.h"
 
@@ -508,8 +509,35 @@ extern bool use_cellhist;
   #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
 #endif
 
-int printout(const char *restrict format, ...);
-void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
-FILE *fopen_required(const char *filename, const char *mode);
+
+inline int printout(const char *restrict format, ...)
+{
+   va_list args;
+   va_start(args, format);
+   const int ret_status = vfprintf(output_file, format, args);
+   // fprintf(output_file, "vfprintf return code %d\n", va_arg(args, char*) == NULL);
+   va_end(args);
+
+   return ret_status;
+}
+
+#ifdef DEBUG_ON
+  #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+#else
+  #define	assert(e)	((void)0)
+#endif
+
+
+inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno)
+{
+  printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
+  // abort();
+}
+
+
+inline FILE *fopen_required(const char *filename, const char *mode)
+{
+  FILE *file = fopen(filename, mode);
+  if (file == NULL)
 
 #endif // SN3D_H

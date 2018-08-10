@@ -1,7 +1,6 @@
 #include <gsl/gsl_roots.h>
 #include "sn3d.h"
 #include "atomic.h"
-#include "assert.h"
 #include "grid_init.h"
 #include "kpkt.h"
 #include "ltepop.h"

@@ -1,4 +1,3 @@
-#include "assert.h"
 #include <gsl/gsl_integration.h>
 #include "sn3d.h"
 #include "atomic.h"

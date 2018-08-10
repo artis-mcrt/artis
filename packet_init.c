@@ -1,6 +1,5 @@
 #include "sn3d.h"
 #include "grid_init.h"
-#include "assert.h"
 #include "packet_init.h"
 #include "vectors.h"
 

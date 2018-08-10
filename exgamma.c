@@ -10,8 +10,6 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-#include "assert.h"
-#include <stdarg.h>  // needed for printout()
 #include "exspec.h"
 #include "sn3d.h"
 #include "threadprivate.h"
@@ -223,30 +221,9 @@ int main(int argc, char** argv)
 }
 
 
-// printout should be used instead of printf throughout the whole code for output messages
-int printout(const char *restrict format, ...)
-{
-   int ret_status = 0;
-
-   va_list args;
-   va_start(args,format);
-   ret_status = vfprintf(output_file,format,args);
-   va_end(args);
-   return ret_status;
-}
-
-
-FILE *fopen_required(const char *filename, const char *mode)
-{
-  FILE *file = fopen(filename, mode);
-  if (file == NULL)
-  {
-    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
-    abort();
-  }
-  else
-    return file;
-}
+extern inline int printout(const char *restrict format, ...);
+extern inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
+extern inline FILE *fopen_required(const char *filename, const char *mode);
 
 
 /*void *my_malloc(size_t size)
