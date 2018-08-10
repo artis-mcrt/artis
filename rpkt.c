@@ -1,5 +1,4 @@
 #include "sn3d.h"
-#include "assert.h"
 #include "atomic.h"
 #include "boundary.h"
 #include "grey_emissivities.h"

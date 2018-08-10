@@ -2,7 +2,6 @@
 #include <stdio.h>
 //#include <math.h>
 //#include <stdlib.h>
-#include "assert.h"
 #include "sn3d.h"
 #include "atomic.h"
 #include "gamma.h"

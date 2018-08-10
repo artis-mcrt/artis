@@ -1,5 +1,4 @@
 #include "sn3d.h"
-#include "assert.h"
 #include "boundary.h"
 #include "grid_init.h"
 #include "rpkt.h"

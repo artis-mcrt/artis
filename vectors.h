@@ -2,9 +2,7 @@
 #define VECTORS_H
 
 #include <math.h>
-// #include <string.h>
 #include <gsl/gsl_blas.h>
-#include "assert.h"
 #include "types.h"
 
 void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
