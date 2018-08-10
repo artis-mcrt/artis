@@ -2,6 +2,7 @@
 #define SN3D_H
 
 #include <unistd.h>
+#include <stdarg.h>  /// MK: needed for printout()
 #include <stdbool.h>
 
 #define DEBUG_ON
@@ -49,11 +50,10 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 static const bool SKIPRATECOEFFVALIDATION = false;
 
 // Polarisation for real packets
-#define DIPOLE
-#define POL_ON
+// #define DIPOLE
+// #define POL_ON
 
 // Polarisation for virtual packets
-#define VPKT_ON
 // #define VPKT_ON
 
 #include "types.h"
@@ -271,19 +271,6 @@ struct time
   int pellet_decays; // Number of pellets that decay in this time step. ///ATOMIC
 } time_step[MTSTEP];
 
-
-struct gamma_spec
-{
-  double *energy;
-  double *probability;
-  int nlines;
-};
-
-struct gamma_spec gamma_spectra[RADIONUCLIDE_COUNT];
-
-LIST gam_line_list;
-
-#define RED_OF_LIST -956  //must be negative
 
 double syn_dir[3]; // vector pointing from origin to observer
 
@@ -539,5 +526,13 @@ inline FILE *fopen_required(const char *filename, const char *mode)
 {
   FILE *file = fopen(filename, mode);
   if (file == NULL)
+  {
+    printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
+    abort();
+  }
+  else
+    return file;
+}
+
 
 #endif // SN3D_H
