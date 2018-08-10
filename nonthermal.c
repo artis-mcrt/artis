@@ -783,7 +783,7 @@ static int get_energyindex_ev_gteq(const double energy_ev)
 }
 
 
-static int get_y(const int modelgridindex, const double energy_ev)
+static double get_y(const int modelgridindex, const double energy_ev)
 {
   #if (USE_LOG_E_INCREMENT)
     const int index = log(energy_ev / EMIN) / delta_log_e;
@@ -819,6 +819,8 @@ static double electron_loss_rate(const double energy, const double nne)
 // energy is in ergs
 // return units are erg / cm
 {
+  if (energy <= 0.)
+    return 0;
   const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
   const double v = sqrt(2 * energy / ME);
@@ -1137,7 +1139,7 @@ static float calculate_frac_heating(const int modelgridindex)
 
   if (!isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0)
   {
-    printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n");
+    printout("WARNING: calculate_frac_heating: invalid result of %g. Setting to 1.0 instead\n", frac_heating);
     return 1.0;
   }
 
