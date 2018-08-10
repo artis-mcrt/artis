@@ -207,7 +207,7 @@ void normalise_estimators(int nts)
 
   for (int m = 0; m < emiss_max; m++)
   {
-    dfreq[m] = get_gam_freq(&gam_line_list, m + emiss_offset+1) - get_gam_freq(&gam_line_list, m + emiss_offset);
+    dfreq[m] = get_gam_freq(m + emiss_offset+1) - get_gam_freq(m + emiss_offset);
     if (dfreq[m] < 0)
     {
       printout("Problem with normalisation of estimators. Abort.\n");

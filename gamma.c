@@ -11,6 +11,20 @@
 
 /* Material for handing gamma rays - creation and propagation. */
 
+struct gamma_spec
+{
+  double *energy;
+  double *probability;
+  int nlines;
+};
+
+static struct gamma_spec gamma_spectra[RADIONUCLIDE_COUNT];
+
+static LIST gam_line_list;
+
+#define RED_OF_LIST -956  //must be negative
+
+
 // To construct an energy ordered gamma ray line list.
 void get_gam_ll(void)
 {
@@ -457,7 +471,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
 }
 
 
-double get_gam_freq(const LIST *restrict line_list, int n)
+double get_gam_freq(const int n)
 {
   if (n == RED_OF_LIST)
   {
@@ -465,13 +479,13 @@ double get_gam_freq(const LIST *restrict line_list, int n)
   }
 
   // returns the frequency of line n
-  enum radionuclides iso = line_list->nuclidetype[n];
-  const int lineid = line_list->index[n];
+  enum radionuclides iso = gam_line_list.nuclidetype[n];
+  const int lineid = gam_line_list.index[n];
 
   if (iso >= RADIONUCLIDE_COUNT || lineid >= gamma_spectra[iso].nlines)
   {
     printout("Unknown line. %d Abort.\n", n);
-    printout("line_list->nuclidetype[n] %d line_list->index[n] %d\n", line_list->nuclidetype[n], line_list->index[n]);
+    printout("line_list->nuclidetype[n] %d line_list->index[n] %d\n", gam_line_list.nuclidetype[n], gam_line_list.index[n]);
     // printout(" %d %d \n", gam_line_list.nuclidetype[n], gam_line_list.index[n]);
     abort();
   }
@@ -482,8 +496,8 @@ double get_gam_freq(const LIST *restrict line_list, int n)
 
 int get_nul(double freq)
 {
-  const double freq_max = get_gam_freq(&gam_line_list, gam_line_list.total - 1);
-  const double freq_min = get_gam_freq(&gam_line_list, 0);
+  const double freq_max = get_gam_freq(gam_line_list.total - 1);
+  const double freq_min = get_gam_freq(0);
 
   if (freq > freq_max)
   {
@@ -501,7 +515,7 @@ int get_nul(double freq)
     while (too_high != too_low + 1)
   	{
   	  const int try = (too_high + too_low)/2;
-  	  const double freq_try = get_gam_freq(&gam_line_list, try);
+  	  const double freq_try = get_gam_freq(try);
   	  if (freq_try >= freq)
 	    {
 	      too_high = try;
@@ -514,4 +528,61 @@ int get_nul(double freq)
 
     return too_low;
   }
+}
+
+
+static double read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
+// reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
+{
+  assert(isotope < RADIONUCLIDE_COUNT);
+
+  FILE *filein = fopen_required(filename, "r");
+  int nlines = 0;
+  fscanf(filein, "%d", &nlines);
+
+  gamma_spectra[isotope].nlines = nlines;
+
+  gamma_spectra[isotope].energy = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[isotope].probability = (double *) malloc(nlines * sizeof(double));
+
+  double E_gamma_avg = 0.0;
+  for (int n = 0; n < nlines; n++)
+  {
+    double en_mev;
+    double prob;
+    fscanf(filein, "%lg %lg", &en_mev, &prob);
+    gamma_spectra[isotope].energy[n] = en_mev * MEV;
+    gamma_spectra[isotope].probability[n] = prob;
+    E_gamma_avg += en_mev * MEV * prob;
+  }
+  fclose(filein);
+
+  return E_gamma_avg;
+}
+
+
+void read_decaydata(void)
+{
+  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  {
+    gamma_spectra[iso].nlines = 0;
+    gamma_spectra[iso].energy = NULL;
+    gamma_spectra[iso].probability = NULL;
+  }
+
+  E56NI = read_gamma_spectrum(NUCLIDE_NI56, "ni_lines.txt");
+
+  E56CO_GAMMA = read_gamma_spectrum(NUCLIDE_CO56, "co_lines.txt");
+  /// Average energy per gamma line of Co56 decay and positron annihilation
+  /// For total deposited energy we need to add the kinetic energy per emitted positron
+  E56CO = E56CO_GAMMA + 0.63 * MEV * 0.19;
+
+  E48V = read_gamma_spectrum(NUCLIDE_V48, "v48_lines.txt");
+
+  E48CR = read_gamma_spectrum(NUCLIDE_CR48, "cr48_lines.txt");
+
+  E57NI_GAMMA = read_gamma_spectrum(NUCLIDE_NI57, "ni57_lines.txt");
+  E57NI = E57NI_GAMMA + 0.354 * MEV * 0.436;
+
+  E57CO = read_gamma_spectrum(NUCLIDE_CO57, "co57_lines.txt");
 }

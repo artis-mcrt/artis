@@ -1948,63 +1948,6 @@ static void read_3d_model(void)
 }
 
 
-static double read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
-// reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
-{
-  assert(isotope < RADIONUCLIDE_COUNT);
-
-  FILE *filein = fopen_required(filename, "r");
-  int nlines = 0;
-  fscanf(filein, "%d", &nlines);
-
-  gamma_spectra[isotope].nlines = nlines;
-
-  gamma_spectra[isotope].energy = (double *) malloc(nlines * sizeof(double));
-  gamma_spectra[isotope].probability = (double *) malloc(nlines * sizeof(double));
-
-  double E_gamma_avg = 0.0;
-  for (int n = 0; n < nlines; n++)
-  {
-    double en_mev;
-    double prob;
-    fscanf(filein, "%lg %lg", &en_mev, &prob);
-    gamma_spectra[isotope].energy[n] = en_mev * MEV;
-    gamma_spectra[isotope].probability[n] = prob;
-    E_gamma_avg += en_mev * MEV * prob;
-  }
-  fclose(filein);
-
-  return E_gamma_avg;
-}
-
-
-static void read_decaydata(void)
-{
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-  {
-    gamma_spectra[iso].nlines = 0;
-    gamma_spectra[iso].energy = NULL;
-    gamma_spectra[iso].probability = NULL;
-  }
-
-  E56NI = read_gamma_spectrum(NUCLIDE_NI56, "ni_lines.txt");
-
-  E56CO_GAMMA = read_gamma_spectrum(NUCLIDE_CO56, "co_lines.txt");
-  /// Average energy per gamma line of Co56 decay and positron annihilation
-  /// For total deposited energy we need to add the kinetic energy per emitted positron
-  E56CO = E56CO_GAMMA + 0.63 * MEV * 0.19;
-
-  E48V = read_gamma_spectrum(NUCLIDE_V48, "v48_lines.txt");
-
-  E48CR = read_gamma_spectrum(NUCLIDE_CR48, "cr48_lines.txt");
-
-  E57NI_GAMMA = read_gamma_spectrum(NUCLIDE_NI57, "ni57_lines.txt");
-  E57NI = E57NI_GAMMA + 0.354 * MEV * 0.436;
-
-  E57CO = read_gamma_spectrum(NUCLIDE_CO57, "co57_lines.txt");
-}
-
-
 void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
