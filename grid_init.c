@@ -951,10 +951,12 @@ static void assign_temperature(void)
       //T_initial = 30615.5;
       if (T_initial < MINTEMP)
       {
+        printout("T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", T_initial, MINTEMP);
         T_initial = MINTEMP;
       }
       else if (T_initial > MAXTEMP)
       {
+        printout("T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", T_initial, MAXTEMP);
         T_initial = MAXTEMP;
       }
 
