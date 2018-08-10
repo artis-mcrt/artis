@@ -5,8 +5,9 @@
 
 void grid_init(int my_rank);
 double get_cellradialpos(int cellindex);
-float get_modelradioabund(int modelgridindex, enum radionuclides nuclide_type);
-void set_modelradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
+float get_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type);
+void set_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
+float get_stable_abund(int mgi, int anumber);
 int get_numassociatedcells(int modelgridindex);
 
 
@@ -67,7 +68,8 @@ inline double vol_init_gridcell(const int cellindex)
 
 
 inline double get_cellcoordmin(const int cellindex, const int axis)
-// get the minimum position along each axis at tmin (xyz or radial coords) of a propagation cell
+// get the minimum value of a coordinate at tmin (xyz or radial coords) of a propagation cell
+// e.g., the minimum x position in xyz coords, or the minimum radius
 {
   return cell[cellindex].pos_init[axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
@@ -75,7 +77,7 @@ inline double get_cellcoordmin(const int cellindex, const int axis)
 
 
 inline int get_coordcellindexincrement(const int axis)
-// how much do we change the cellindex to move in the the x, y, z directions (or r direction)
+// how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
   switch (grid_type)
   {
@@ -162,41 +164,6 @@ inline float get_nnetot(int modelgridindex)
 inline float get_ffegrp(int modelgridindex)
 {
   return modelgrid[modelgridindex].ffegrp;
-}
-
-inline float get_fnistable(int modelgridindex)
-{
-  return modelgrid[modelgridindex].fnistable;
-}
-
-inline float get_fcostable(int modelgridindex)
-{
-  return modelgrid[modelgridindex].fcostable;
-}
-
-inline float get_ffestable(int modelgridindex)
-{
-  return modelgrid[modelgridindex].ffestable;
-}
-
-inline float get_fmnstable(int modelgridindex)
-{
-  return modelgrid[modelgridindex].fmnstable;
-}
-
-inline float get_fcrstable(int modelgridindex)
-{
-  return modelgrid[modelgridindex].fcrstable;
-}
-
-inline float get_fvstable(int modelgridindex)
-{
-  return modelgrid[modelgridindex].fvstable;
-}
-
-inline float get_ftistable(int modelgridindex)
-{
-  return modelgrid[modelgridindex].ftistable;
 }
 
 inline float get_kappagrey(int modelgridindex)

@@ -58,21 +58,21 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   }
 
   const int mgi = cell[cellindex].modelgridindex;
-  const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(cellindex) : get_modelradioabund(mgi, NUCLIDE_NI56);
+  const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(cellindex) : get_modelinitradioabund(mgi, NUCLIDE_NI56);
 
   // first choose which of the decay chains to sample
   const int nchains = 10;
   double prob_chain[nchains];
   prob_chain[0] = f56ni / MNI56 * E56NI;
   prob_chain[1] = f56ni / MNI56 * E56CO;
-  prob_chain[2] = get_modelradioabund(mgi, NUCLIDE_FE52) / MFE52 * E52FE;
-  prob_chain[3] = get_modelradioabund(mgi, NUCLIDE_FE52) / MFE52 * E52MN;
-  prob_chain[4] = get_modelradioabund(mgi, NUCLIDE_CR48) / MCR48 * E48CR;
-  prob_chain[5] = get_modelradioabund(mgi, NUCLIDE_CR48) / MCR48 * E48V;
-  prob_chain[6] = get_modelradioabund(mgi, NUCLIDE_CO56) / MCO56 * E56CO;
-  prob_chain[7] = get_modelradioabund(mgi, NUCLIDE_NI57) / MNI57 * E57NI;
-  prob_chain[8] = get_modelradioabund(mgi, NUCLIDE_NI57) / MNI57 * E57CO;
-  prob_chain[9] = get_modelradioabund(mgi, NUCLIDE_CO57) / MCO57 * E57CO;
+  prob_chain[2] = get_modelinitradioabund(mgi, NUCLIDE_FE52) / MFE52 * E52FE;
+  prob_chain[3] = get_modelinitradioabund(mgi, NUCLIDE_FE52) / MFE52 * E52MN;
+  prob_chain[4] = get_modelinitradioabund(mgi, NUCLIDE_CR48) / MCR48 * E48CR;
+  prob_chain[5] = get_modelinitradioabund(mgi, NUCLIDE_CR48) / MCR48 * E48V;
+  prob_chain[6] = get_modelinitradioabund(mgi, NUCLIDE_CO56) / MCO56 * E56CO;
+  prob_chain[7] = get_modelinitradioabund(mgi, NUCLIDE_NI57) / MNI57 * E57NI;
+  prob_chain[8] = get_modelinitradioabund(mgi, NUCLIDE_NI57) / MNI57 * E57CO;
+  prob_chain[9] = get_modelinitradioabund(mgi, NUCLIDE_CO57) / MCO57 * E57CO;
 
   double prob_sum = 0.;
   for (int i = 0; i < nchains; i++)
@@ -229,15 +229,15 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     cont[m] = norm;
     //printf("%g %g %g\n", (f56ni(grid_ptr)*(E56NI + E56CO)/MNI56),(f52fe(grid_ptr)*(E52FE + E52MN)/MFE52),(f48cr(grid_ptr)*(E48V + E48CR)/MCR48));
     const int mgi = cell[m].modelgridindex;
-    const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(m) : get_modelradioabund(mgi, NUCLIDE_NI56);
+    const double f56ni = (model_type == RHO_UNIFORM) ? uniform_ni56(m) : get_modelinitradioabund(mgi, NUCLIDE_NI56);
 
     norm += get_rhoinit(mgi) * vol_init_gridcell(m) *
               ((f56ni * (E56NI + E56CO) / 56.)
-               + (get_modelradioabund(mgi, NUCLIDE_CO56) * (E56CO) / 56.)
-               + (get_modelradioabund(mgi, NUCLIDE_NI57) * (E57NI + E57CO) / 57.)
-               + (get_modelradioabund(mgi, NUCLIDE_CO57) * (E57CO) / 57.)
-               + (get_modelradioabund(mgi, NUCLIDE_FE52) * (E52FE + E52MN) / 52.)
-               + (get_modelradioabund(mgi, NUCLIDE_CR48) * (E48V + E48CR) / 48.));
+               + (get_modelinitradioabund(mgi, NUCLIDE_CO56) * (E56CO) / 56.)
+               + (get_modelinitradioabund(mgi, NUCLIDE_NI57) * (E57NI + E57CO) / 57.)
+               + (get_modelinitradioabund(mgi, NUCLIDE_CO57) * (E57CO) / 57.)
+               + (get_modelinitradioabund(mgi, NUCLIDE_FE52) * (E52FE + E52MN) / 52.)
+               + (get_modelinitradioabund(mgi, NUCLIDE_CR48) * (E48V + E48CR) / 48.));
   }
   cont[ngrid] = norm;
 

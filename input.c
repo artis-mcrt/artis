@@ -1554,7 +1554,7 @@ static void show_totmassradionuclides(void)
     mtot += mass_in_shell;
 
     for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-      totmassradionuclide[iso] += mass_in_shell * get_modelradioabund(mgi, iso);
+      totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
 
     mfeg += mass_in_shell * get_ffegrp(mgi);
   }
@@ -1600,13 +1600,13 @@ static void read_2d3d_modelabundanceline(FILE * model_input, const int mgi, cons
 
     if (keep)
     {
-      set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
-      set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
-      set_modelradioabund(mgi, NUCLIDE_NI57, f57ni_model);
-      set_modelradioabund(mgi, NUCLIDE_CO57, f57co_model);
-      set_modelradioabund(mgi, NUCLIDE_FE52, f52fe_model);
-      set_modelradioabund(mgi, NUCLIDE_CR48, f48cr_model);
-      set_modelradioabund(mgi, NUCLIDE_V48, 0.);
+      set_modelinitradioabund(mgi, NUCLIDE_NI56, f56ni_model);
+      set_modelinitradioabund(mgi, NUCLIDE_CO56, f56co_model);
+      set_modelinitradioabund(mgi, NUCLIDE_NI57, f57ni_model);
+      set_modelinitradioabund(mgi, NUCLIDE_CO57, f57co_model);
+      set_modelinitradioabund(mgi, NUCLIDE_FE52, f52fe_model);
+      set_modelinitradioabund(mgi, NUCLIDE_CR48, f48cr_model);
+      set_modelinitradioabund(mgi, NUCLIDE_V48, 0.);
 
       set_ffegrp(mgi, ffegrp_model);
       //printout("mgi %d, control rho_init %g\n",mgi,get_rhoinit(mgi));
@@ -1695,13 +1695,13 @@ static void read_1d_model(void)
     //          cellnumin, vout_kmps, log_rho, ffegrp_model[n], f56ni_model[n],
     //          f56co_model[n], f52fe_model[n], f48cr_model[n]);
     // printout("   %lg %lg\n", f57ni_model[n], f57co_model[n]);
-    set_modelradioabund(mgi, NUCLIDE_NI56, f56ni_model);
-    set_modelradioabund(mgi, NUCLIDE_CO56, f56co_model);
-    set_modelradioabund(mgi, NUCLIDE_NI57, f57ni_model);
-    set_modelradioabund(mgi, NUCLIDE_CO57, f57co_model);
-    set_modelradioabund(mgi, NUCLIDE_FE52, f52fe_model);
-    set_modelradioabund(mgi, NUCLIDE_CR48, f48cr_model);
-    set_modelradioabund(mgi, NUCLIDE_V48, 0.);
+    set_modelinitradioabund(mgi, NUCLIDE_NI56, f56ni_model);
+    set_modelinitradioabund(mgi, NUCLIDE_CO56, f56co_model);
+    set_modelinitradioabund(mgi, NUCLIDE_NI57, f57ni_model);
+    set_modelinitradioabund(mgi, NUCLIDE_CO57, f57co_model);
+    set_modelinitradioabund(mgi, NUCLIDE_FE52, f52fe_model);
+    set_modelinitradioabund(mgi, NUCLIDE_CR48, f48cr_model);
+    set_modelinitradioabund(mgi, NUCLIDE_V48, 0.);
     set_ffegrp(mgi, ffegrp_model);
 
     mgi += 1;
