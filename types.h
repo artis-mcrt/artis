@@ -577,9 +577,4 @@ typedef struct cellhistory_struct
 } cellhistory_struct;
 
 
-typedef struct transitions_t
-{
-  int *restrict to;
-} transitions_t;
-
 #endif //TYPES_H

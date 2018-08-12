@@ -18,6 +18,13 @@ const bool single_level_top_ion = true; // Only include a single level for the h
 
 const int groundstate_index_in = 1; // starting level index in the input files
 
+typedef struct transitions_t
+{
+  int *to;
+} transitions_t;
+
+static transitions_t *transitions;
+
 typedef struct
 {
   int lower;

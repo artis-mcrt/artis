@@ -472,7 +472,6 @@ float kpktdiffusion_timescale;
 extern FILE *restrict output_file;
 //extern short output_file_open;
 
-transitions_t *restrict transitions;
 int maxion;
 FILE *restrict tau_file;
 FILE *restrict tb_file;
