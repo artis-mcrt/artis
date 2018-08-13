@@ -340,61 +340,19 @@ static void mpi_reduce_estimators(int my_rank)
   #endif
 
   #ifdef RECORD_LINESTAT
-    if (my_rank == 0)
-    {
-      MPI_Reduce(MPI_IN_PLACE, ecounter, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-      MPI_Reduce(MPI_IN_PLACE, acounter, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    }
-    else
-    {
-      MPI_Reduce(ecounter, MPI_IN_PLACE, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-      MPI_Reduce(acounter, MPI_IN_PLACE, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    }
+    MPI_Allreduce(MPI_IN_PLACE, ecounter, nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, acounter, nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
   //double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
   //double deltat = time_step[nts].width;
   if (do_rlc_est != 0)
   {
-    if (my_rank == 0)
-      MPI_Reduce(MPI_IN_PLACE, &rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    else
-      MPI_Reduce(&rpkt_emiss, MPI_IN_PLACE, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
   if (do_comp_est)
   {
-    if (my_rank == 0)
-      MPI_Reduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-    else
-      MPI_Reduce(&compton_emiss, MPI_IN_PLACE, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
-static void mpi_broadcast_estimators(void)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-  #ifndef FORCE_LTE
-    // MPI_Bcast(&photoionestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&mabfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&mabfcount_thermal, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&kbfcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&kbfcount_ion, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&kffcount, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&kffabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&kbfabs, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    // MPI_Bcast(&kgammadep, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  #endif
-  if (do_rlc_est != 0)
-  {
-    MPI_Bcast(&rpkt_emiss, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  }
-  if (do_comp_est)
-  {
-    MPI_Bcast(&compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -983,35 +941,30 @@ int main(int argc, char** argv)
           #ifdef MPI_ON
             // All the processes have their own versions of the estimators for this time step now.
             // Since these are going to be needed in the next time step, we will gather all the
-            // estimators together now, sum them, normalise on the Master thread and then pass back to the
-            // others
+            // estimators together now, sum them, and distribute the results
 
             mpi_reduce_estimators(my_rank);
           #endif
 
-          // The master thread now knows the estimators (averaged over the processors). It will now normalise them.
-          // Then the new values can be sent out to all threads again
-          if (my_rank == 0)
+          // The estimators have been summed across all proceses and distributed.
+          // They will now be normalised independently on all processes
+          if (do_comp_est)
           {
-            if (do_comp_est)
-            {
-              normalise_estimators(nts);
+            normalise_estimators(nts);
+            if (my_rank == 0)
               write_estimators(nts);
-            }
+          }
 
-            if (do_rlc_est != 0)
+          if (do_rlc_est != 0)
+          {
+            normalise_grey(nts);
+            if ((do_rlc_est != 3) && (my_rank == 0))
             {
-              normalise_grey(nts);
-              if (do_rlc_est != 3)
-              {
-                write_grey(nts);
-              }
+              write_grey(nts);
             }
           }
 
           #ifdef MPI_ON
-            // The master thread has normalised the rpkt and compton estimators and printed out a bunch of stuff. Now redistribute the estimators ready for the next run.
-            mpi_broadcast_estimators();
             printout("timestep %d: time after estimators have been communicated %d (took %d seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);
           #endif
 
