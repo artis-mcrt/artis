@@ -308,7 +308,7 @@ typedef struct modelgrid_t
   float rhoinit;
   float rho;
   //modelgrid nn_tot
-  float nnetot;           // total electron density (free + bound). this is not actually used anywhere. keep?
+  float nnetot;           // total electron density (free + bound).
   float fradionuclides[RADIONUCLIDE_COUNT];
   float ffegrp;
   float fnistable;

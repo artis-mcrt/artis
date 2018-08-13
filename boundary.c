@@ -369,8 +369,8 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
 
   if (snext == -99)
   {
-      /* Then the packet is exiting the grid. We need to record
-    where and at what time it leaves the grid. */
+    // Then the packet is exiting the grid. We need to record
+    // where and at what time it leaves the grid.
     pkt_ptr->escape_type = pkt_ptr->type;
     pkt_ptr->escape_time = t_current;
     pkt_ptr->type = TYPE_ESCAPE;
@@ -379,7 +379,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
   }
   else
   {
-    /** Just need to update "where".*/
+    // Just need to update "where".
     const int cellnum = pkt_ptr->where;
     const int old_mgi = cell[cellnum].modelgridindex;
     pkt_ptr->where = snext;

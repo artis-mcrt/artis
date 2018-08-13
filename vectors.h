@@ -83,8 +83,6 @@ doppler_packetpos(const PKT *restrict pkt_ptr, const double t)
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t);
   const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
-  assert(dopplerfactor > 0);
-  assert(isfinite(dopplerfactor));
   return dopplerfactor;
 }
 
