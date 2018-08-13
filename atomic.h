@@ -105,6 +105,7 @@ inline int get_bfcontinua(int element, int ion)
     return max_bf_continua;
 }
 
+
 inline int get_maxrecombininglevel(int element, int ion)
 /// Returns the number of bf-continua associated with ion ion of element element.
 {

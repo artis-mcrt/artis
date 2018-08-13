@@ -16,7 +16,6 @@
 double closest_transition(PKT *restrict pkt_ptr)
 /// for the propagation through non empty cells
 {
-  double nu_trans;
   int match;
 
   //int left = 0;
@@ -99,7 +98,7 @@ double closest_transition(PKT *restrict pkt_ptr)
   /// next transition for this packet. To save memory it is stored
   /// to the macro atoms state variables. This has no influence until
   /// the macro atom becomes activated by rpkt_event.
-  nu_trans = linelist[match].nu;
+  const double nu_trans = linelist[match].nu;
   mastate[tid].element = linelist[match].elementindex;
   mastate[tid].ion     = linelist[match].ionindex;
   mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level

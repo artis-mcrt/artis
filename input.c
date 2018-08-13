@@ -2088,11 +2088,8 @@ void input(int rank)
   //#endif
 
 
-  /// Read in data for gamma ray lines.
-  read_decaydata();
-
-  /// With the lines already in, now make a list of them in energy order.
-  get_gam_ll();
+  /// Read in data for gamma ray lines and make a list of them in energy order.
+  init_gamma_linelist();
 
   /// Now that the list exists use it to find values for spectral synthesis
   /// stuff.

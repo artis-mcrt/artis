@@ -38,17 +38,19 @@ double doppler(const double dir1[3], const double vel[3])
   //double gamma_rel = 1./(sqrt(1 - vsqr));
   const double gamma_rel = 1.;
   const double ndotv = dot(dir1, vel);
-  const double fact1 = gamma_rel * (1. - (ndotv / CLIGHT));
+  const double dopplerfactor = gamma_rel * (1. - (ndotv / CLIGHT));
 
   #ifdef DEBUG_ON
-  if (fabs(fact1 - 1) > 0.5)
+  if (fabs(dopplerfactor - 1) > 0.5)
   {
-    printout("Dopper factor > 1.05?? Abort.\n");
+    printout("Dopper factor > 1.5?? Abort.\n");
     abort();
   }
+  assert(dopplerfactor > 0);
+  assert(isfinite(dopplerfactor));
   #endif
 
-  return fact1;
+  return dopplerfactor;
 }
 
 
