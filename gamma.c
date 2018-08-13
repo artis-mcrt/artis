@@ -22,7 +22,7 @@ static struct gamma_spec gamma_spectra[RADIONUCLIDE_COUNT];
 
 static LIST gam_line_list;
 
-#define RED_OF_LIST -956  //must be negative
+static const int RED_OF_LIST = -956;  // must be negative
 
 
 static double read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
