@@ -445,7 +445,7 @@ static double sample_planck(const double T)
 }
 
 
-double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
+double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   //double nne = cell[pkt_ptr->where].nne ;
@@ -465,7 +465,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, double t1, double t2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
   if (modelgrid[cell[cellindex].modelgridindex].thick != 1)
-    calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb++;
   k_stat_to_r_bb++;
@@ -681,7 +681,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr,t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-      calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      calculate_kappa_rpkt_cont(pkt_ptr, t_current);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_ff++;
       k_stat_to_r_ff++;
@@ -802,15 +802,15 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         abort();
       }
       /// and then emitt the packet randomly in the comoving frame
-      emitt_rpkt(pkt_ptr,t_current);
+      emitt_rpkt(pkt_ptr, t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by fb\n");
-      calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      calculate_kappa_rpkt_cont(pkt_ptr, t_current);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_fb++;
       k_stat_to_r_fb++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
-      pkt_ptr->emissiontype = get_continuumindex(element,ion,level);
+      pkt_ptr->emissiontype = get_continuumindex(element, ion, level);
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;

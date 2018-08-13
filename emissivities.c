@@ -213,7 +213,7 @@ void normalise_estimators(int nts)
       printout("Problem with normalisation of estimators. Abort.\n");
       abort();
     }
-    dfreq[m] = 1./dfreq[m];
+    dfreq[m] = 1. / dfreq[m];
   }
 
   // for (n=0; n < ngrid; n++)
@@ -291,20 +291,13 @@ void write_estimators(int nts)
 
 bool estim_switch(int nts)
 {
-  int on_or_off = true; //on
-
   const double tstart = time_step[nts].start;
   const double tend = time_step[nts].start + time_step[nts].width;
 
   const double ts_want = time_syn[0] * ((1. - rmax / tmin / CLIGHT_PROP));
   const double te_want = time_syn[nsyn_time - 1] * (1. + rmax / tmin / CLIGHT_PROP);
 
-  if ((tstart > te_want) || (tend < ts_want))
-  {
-    on_or_off = false;
-  }
-
-  return on_or_off;
+  return ((tstart > te_want) || (tend < ts_want));
 }
 
 
