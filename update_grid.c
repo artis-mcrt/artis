@@ -32,7 +32,6 @@ void precalculate_partfuncts(int modelgridindex)
       //cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
       modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element,ion,modelgridindex);
     }
-
   }
 }
 
