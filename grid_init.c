@@ -986,18 +986,18 @@ static void uniform_grid_setup(void)
       // cell[n].xyz[axis] = nxyz[axis];
     }
 
-    assert(n == nxyz[2] * ncoordgrid[1] * ncoordgrid[0] + nxyz[1] * ncoordgrid[0] + nxyz[0]);
+    assert(n == nxyz[2] * ncoordgrid[1] * ncoordgrid[2] + nxyz[1] * ncoordgrid[0] + nxyz[0]);
 
-    nxyz[0]++;
+    nxyz[0]++;  // increment x coordinate
     if (nxyz[0] == ncoordgrid[0])
     {
       nxyz[0] = 0;
-      nxyz[1]++;
+      nxyz[1]++;  // increment y coordinate
     }
     if (nxyz[1] == ncoordgrid[1])
     {
       nxyz[1] = 0;
-      nxyz[2]++;
+      nxyz[2]++;  // increment z coordinate
     }
   }
 

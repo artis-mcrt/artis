@@ -91,7 +91,7 @@ inline int get_coordcellindexincrement(const int axis)
           return 1;
 
         case 1:
-          return ncoordgrid[1];
+          return ncoordgrid[0];
 
         case 2:
           return ncoordgrid[0] * ncoordgrid[1];
@@ -102,6 +102,7 @@ inline int get_coordcellindexincrement(const int axis)
       }
   }
 }
+
 
 inline int get_cellcoordpointnum(const int cellindex, const int axis)
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
@@ -132,6 +133,7 @@ inline int get_cellcoordpointnum(const int cellindex, const int axis)
       }
   }
 }
+
 
 
 inline int get_ngriddimensions(void)
