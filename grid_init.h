@@ -116,15 +116,15 @@ inline int get_cellcoordpointnum(const int cellindex, const int axis)
     default:
       switch (axis)
       {
-        // increment z first, then y, then x
+        // increment x first, then y, then z
         case 0:
-          return (cellindex / (ncoordgrid[2] * ncoordgrid[1])) % ncoordgrid[0];
+          return cellindex % ncoordgrid[0];
 
         case 1:
-          return (cellindex / ncoordgrid[2]) % ncoordgrid[1];
+          return (cellindex / ncoordgrid[0]) % ncoordgrid[1];
 
         case 2:
-          return cellindex % ncoordgrid[2];
+          return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
 
         default:
           printout("invalid coordinate index %d", axis);
