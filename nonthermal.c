@@ -27,6 +27,13 @@
 // use a grid of energy points with constant spacing in log energy
 #define USE_LOG_E_INCREMENT true
 
+// trigger a solution at least once every n timesteps
+const int MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 5;
+
+// a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a solution
+const double MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 1;
+
+
 // just consider excitation from the first N levels and to the first M upper levels,
 // because these transitions really slow down the solver
 const int NTEXCITATION_MAXNLEVELS_LOWER = 5;  // set to zero for none
@@ -183,7 +190,8 @@ struct nt_solution_struct {
   struct nt_excitation_struct *frac_excitations_list;
 
   int deposition_at_timestep;                 // the quantities above were calculated for this timestep
-  float nne_when_solved;                    // the nne when the solver was last run
+  int timestep_last_solved;
+  float nneperion_when_solved;                    // the nne when the solver was last run
 };
 
 static struct nt_solution_struct nt_solution[MMODELGRID+1];
@@ -524,6 +532,9 @@ void nt_init(const int my_rank)
       nt_solution[modelgridindex].E_0 = 0.;
       nt_solution[modelgridindex].deposition_rate_density = -1.;
 
+      nt_solution[modelgridindex].nneperion_when_solved = -1.;
+      nt_solution[modelgridindex].timestep_last_solved = -1;
+
       if (STORE_NT_SPECTRUM && get_numassociatedcells(modelgridindex) > 0)
       {
         nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
@@ -785,6 +796,9 @@ static int get_energyindex_ev_gteq(const double energy_ev)
 
 static double get_y(const int modelgridindex, const double energy_ev)
 {
+  if (energy_ev <= 0)
+    return 0.;
+
   #if (USE_LOG_E_INCREMENT)
     const int index = log(energy_ev / EMIN) / delta_log_e;
   #else
@@ -795,6 +809,7 @@ static double get_y(const int modelgridindex, const double energy_ev)
   if (index < 0)
   {
     // return 0.;
+    assert(isfinite(get_y_sample(modelgridindex, 0)));
     return get_y_sample(modelgridindex, 0);
   }
   else if (index > SFPTS - 1)
@@ -2507,42 +2522,73 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 
     return;
   }
-  else
+  else if (get_deposition_rate_density(modelgridindex) / EV < MINDEPRATE)
   {
-    const double deposition_rate_density_ev = get_deposition_rate_density(modelgridindex) / EV;
-    if (deposition_rate_density_ev < MINDEPRATE)
-    {
-      printout("Non-thermal deposition rate of %g eV/cm/s/cm^3 in cell %d at timestep %d. Skipping Spencer-Fano solution.\n", deposition_rate_density_ev, modelgridindex, timestep);
+    printout("Non-thermal deposition rate of %g eV/cm/s/cm^3 below  MINDEPRATE %g in cell %d at timestep %d. Skipping Spencer-Fano solution.\n",
+    get_deposition_rate_density(modelgridindex) / EV, MINDEPRATE, modelgridindex, timestep);
 
-      // if (!STORE_NT_SPECTRUM)
-      // {
-      //   nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
-      // }
+    nt_solution[modelgridindex].frac_heating = 0.97;
+    nt_solution[modelgridindex].frac_ionization = 0.03;
+    nt_solution[modelgridindex].frac_excitation = 0.;
+    nt_solution[modelgridindex].E_0 = 0.;
 
-      // nt_write_to_file(modelgridindex, timestep);
+    nt_solution[modelgridindex].nneperion_when_solved = -1.;
+    nt_solution[modelgridindex].timestep_last_solved = -1;
 
-      nt_solution[modelgridindex].frac_heating = 0.97;
-      nt_solution[modelgridindex].frac_ionization = 0.03;
-      nt_solution[modelgridindex].frac_excitation = 0.;
-      nt_solution[modelgridindex].E_0 = 0.;
+    free(nt_solution[modelgridindex].frac_ionizations_list);
+    nt_solution[modelgridindex].frac_ionizations_list_size = 0;
 
-      free(nt_solution[modelgridindex].frac_ionizations_list);
-      nt_solution[modelgridindex].frac_ionizations_list_size = 0;
+    free(nt_solution[modelgridindex].frac_excitations_list);
+    nt_solution[modelgridindex].frac_excitations_list_size = 0;
 
-      free(nt_solution[modelgridindex].frac_excitations_list);
-      nt_solution[modelgridindex].frac_excitations_list_size = 0;
-
-      zero_all_effionpot(modelgridindex);
-
-      return;
-    }
+    zero_all_effionpot(modelgridindex);
+    return;
   }
 
   const float nne = get_nne(modelgridindex); // electrons per cm^3
-  nt_solution[modelgridindex].nne_when_solved = nne;
+  const double nne_per_ion = nne / get_tot_nion(modelgridindex);
+  const double nne_per_ion_last = nt_solution[modelgridindex].nneperion_when_solved;
+  const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
+  const int timestep_last_solved = nt_solution[modelgridindex].timestep_last_solved;
+
+  printout("Spencer-Fano solver at timestep %d (last solution was at timestep %d) nne/niontot = %g, at last solution was %g fracdiff %g\n",
+           timestep, timestep_last_solved, nne_per_ion, nne_per_ion_last, nne_per_ion_fracdiff);
+
+  if ((nne_per_ion_fracdiff < MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) && (timestep - timestep_last_solved < MAX_TIMESTEPS_BETWEEN_SOLUTIONS) && timestep_last_solved > n_lte_timesteps)
+  {
+    printout("Keeping Spencer-Fano solution from timestep %d because x_e fracdiff %g < %g and because timestep %d - %d < %d\n",
+             timestep_last_solved, nne_per_ion_fracdiff, MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep, timestep_last_solved, MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
+
+    return;
+  }
 
   printout("Setting up Spencer-Fano equation with %d energy points from %g eV to %g eV in cell %d at timestep %d iteration %d (nne=%g e-/cm^3)\n",
            SFPTS, EMIN, EMAX, modelgridindex, timestep, iteration, nne);
+
+  nt_solution[modelgridindex].nneperion_when_solved = nne_per_ion;
+  nt_solution[modelgridindex].timestep_last_solved = timestep;
+
+  bool enable_sfexcitation = true;
+  bool enable_sfionization = true;
+  if (timestep <= n_lte_timesteps)
+  {
+    // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
+    // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
+    nt_solution[modelgridindex].nneperion_when_solved = -1.;
+    enable_sfexcitation = false;
+    enable_sfionization = false;
+
+    printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
+  }
+  else if (timestep <= n_lte_timesteps + 2)
+  {
+    // run the solver in a faster mode for the first couple of NLTE timesteps
+    // nt_solution[modelgridindex].nneperion_when_solved = -1.;
+    enable_sfexcitation = false;
+    // enable_sfionization = false;
+
+    printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
+  }
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
@@ -2578,38 +2624,42 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 
   double E_0 = 0.; // reset E_0 so it can be found it again
 
-  for (int element = 0; element < nelements; element++)
+  if (enable_sfexcitation || enable_sfionization)
   {
-    const int Z = get_element(element);
-    const int nions = get_nions(element);
-    bool first_included_ion_of_element = true;
-    for (int ion = 0; ion < nions; ion++)
+    for (int element = 0; element < nelements; element++)
     {
-      const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
-
-      if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
+      const int Z = get_element(element);
+      const int nions = get_nions(element);
+      bool first_included_ion_of_element = true;
+      for (int ion = 0; ion < nions; ion++)
       {
-        continue;
+        const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
+
+        if (nnion < minionfraction * get_tot_nion(modelgridindex)) // skip negligible ions
+        {
+          continue;
+        }
+
+        const int ionstage = get_ionstage(element, ion);
+        if (first_included_ion_of_element)
+        {
+          printout("  including Z=%2d ion_stages: ", Z);
+          for (int i = 1; i < get_ionstage(element, ion); i++)
+            printout("  ");
+          first_included_ion_of_element = false;
+        }
+
+        printout("%d ", ionstage);
+
+        if (enable_sfexcitation)
+          sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion, &E_0);
+
+        if (enable_sfionization && (ion < nions - 1))
+          sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion, &E_0);
       }
-
-      const int ionstage = get_ionstage(element, ion);
-      if (first_included_ion_of_element)
-      {
-        printout("  including Z=%2d ion_stages: ", Z);
-        for (int i = 1; i < get_ionstage(element, ion); i++)
-          printout("  ");
-        first_included_ion_of_element = false;
-      }
-
-      printout("%d ", ionstage);
-
-      sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion, &E_0);
-
-      if (ion < nions - 1)
-        sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion, &E_0);
+      if (!first_included_ion_of_element)
+        printout("\n");
     }
-    if (!first_included_ion_of_element)
-      printout("\n");
   }
 
   // printout("SF matrix | RHS vector:\n");
@@ -2679,7 +2729,7 @@ void nt_write_restart_data(FILE *gridsave_file)
       fprintf(gridsave_file, "%d %d %g %lg %g %g %g %lg\n",
               modelgridindex,
               nt_solution[modelgridindex].deposition_at_timestep,
-              nt_solution[modelgridindex].nne_when_solved,
+              nt_solution[modelgridindex].nneperion_when_solved,
               nt_solution[modelgridindex].E_0,
               nt_solution[modelgridindex].frac_heating,
               nt_solution[modelgridindex].frac_ionization,
@@ -2771,7 +2821,7 @@ void nt_read_restart_data(FILE *gridsave_file)
       fscanf(gridsave_file, "%d %d %g %lg %g %g %g %lg\n",
              &mgi_in,
              &nt_solution[modelgridindex].deposition_at_timestep,
-             &nt_solution[modelgridindex].nne_when_solved,
+             &nt_solution[modelgridindex].nneperion_when_solved,
              &nt_solution[modelgridindex].E_0,
              &nt_solution[modelgridindex].frac_heating,
              &nt_solution[modelgridindex].frac_ionization,
@@ -2877,7 +2927,8 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
         // printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
       }
       MPI_Bcast(&nt_solution[modelgridindex].deposition_at_timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].nne_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+      MPI_Bcast(&nt_solution[modelgridindex].timestep_last_solved, 1, MPI_INT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
