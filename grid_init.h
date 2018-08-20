@@ -88,13 +88,13 @@ inline int get_coordcellindexincrement(const int axis)
       switch (axis)
       {
         case 0:
-          return ncoordgrid[2] * ncoordgrid[1];
+          return 1;
 
         case 1:
-          return ncoordgrid[2];
+          return ncoordgrid[1];
 
         case 2:
-          return 1;
+          return ncoordgrid[0] * ncoordgrid[1];
 
         default:
           printout("invalid coordinate index %d", axis);
