@@ -1857,13 +1857,17 @@ static void read_3d_model(void)
     //printout("cell %d, posz %g, posy %g, posx %g, rho %g, rho_init %g\n",dum1,dum3,dum4,dum5,rho_model,rho_model* pow( (t_model/tmin), 3.));
 
     assert(mgi_in == n + 1);
-    for (int axis = 0; axis < 3; axis++)
-    {
-      const double cellpos_expected = - rmax_tmodel + (2 * get_cellcoordpointnum(n, axis) * rmax_tmodel / ncoordgrid[axis]);
-      // printout("n %d axis %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d ncoordgrid %d\n",
-      // n, axis, cellpos_expected, cellpos_in[axis], rmax_model, get_cellcoordpointnum(n, axis), ncoordgrid);
-      assert((fabs(cellpos_in[axis] / cellpos_expected - 1) < 1e-3) || ((cellpos_in[axis] == 0) && (cellpos_expected == 0)));
-    }
+
+    // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
+    // however, the cellindex always should increment X first, then Y, then Z
+
+    // for (int axis = 0; axis < 3; axis++)
+    // {
+    //   const double cellpos_expected = - rmax_tmodel + (2 * get_cellcoordpointnum(n, axis) * rmax_tmodel / ncoordgrid[axis]);
+    //   // printout("n %d axis %d expected %g found %g rmax %g get_cellcoordpointnum(n, axis) %d ncoordgrid %d\n",
+    //   // n, axis, cellpos_expected, cellpos_in[axis], rmax_model, get_cellcoordpointnum(n, axis), ncoordgrid);
+    //   assert((fabs(cellpos_in[axis] / cellpos_expected - 1) < 1e-3) || ((cellpos_in[axis] == 0) && (cellpos_expected == 0)));
+    // }
 
     if (rho_model < 0)
     {
