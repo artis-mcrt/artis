@@ -28,7 +28,7 @@
 #define USE_LOG_E_INCREMENT true
 
 // trigger a solution at least once every n timesteps
-const int MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 5;
+const int MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
 // a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a solution
 const double MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 1;
