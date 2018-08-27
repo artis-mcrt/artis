@@ -928,7 +928,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       case MA_ACTION_INTERNALUPHIGHERNT:
         pkt_ptr->interactions += 1;
         // ion += 1;
-        ion = nt_random_upperion(modelgridindex, element, ion, true);
+        ion = nt_random_upperion(modelgridindex, element, ion, false);
         level = 0;
         ma_stat_internaluphighernt++;
         // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion, level);
