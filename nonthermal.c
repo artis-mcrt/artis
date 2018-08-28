@@ -33,7 +33,6 @@ const int MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 // a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a solution
 const double MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 1;
 
-
 // just consider excitation from the first N levels and to the first M upper levels,
 // because these transitions really slow down the solver
 const int NTEXCITATION_MAXNLEVELS_LOWER = 5;  // set to zero for none
@@ -1640,6 +1639,7 @@ double nt_ionization_upperion_probability(
 {
   assert(upperion > lowerion);
   assert(upperion < get_nions(element));
+  assert(upperion <= nt_ionisation_maxupperion(element, lowerion));
 
   if (MAX_AUGER_ELECTRONS > 0)
   {
@@ -1694,6 +1694,17 @@ double nt_ionization_upperion_probability(
 }
 
 
+int nt_ionisation_maxupperion(const int element, const int lowerion)
+{
+  const int nions = get_nions(element);
+  assert(lowerion < nions - 1);
+  int maxupper = lowerion + 1 + MAX_AUGER_ELECTRONS;
+  if (maxupper > nions - 1)
+    maxupper = nions - 1;
+  return maxupper;
+}
+
+
 int nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted)
 {
   const int nions = get_nions(element);
@@ -1703,7 +1714,7 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
     const double zrand = gsl_rng_uniform(rng);
 
     double prob_sum = 0.;
-    for (int upperion = lowerion + 1; upperion < nions && upperion <= lowerion + 1 + MAX_AUGER_ELECTRONS; upperion++)
+    for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++)
     {
       prob_sum += nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, energyweighted);
 
