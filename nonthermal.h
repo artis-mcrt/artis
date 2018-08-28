@@ -10,6 +10,7 @@ void nt_close_file(void);
 void nt_solve_spencerfano(int modelgridindex, int timestep, int iteration);
 double nt_ionization_ratecoeff(int modelgridindex, int element, int ion);
 double nt_ionization_upperion_probability(int modelgridindex, int element, int lowerion, int upperion, bool energyweighted);
+int nt_ionisation_maxupperion(int element, int lowerion);
 int nt_random_upperion(int modelgridindex, int element, int lowerion, bool energyweighted);
 void calculate_deposition_rate_density(int modelgridindex, int timestep);
 double get_deposition_rate_density(int modelgridindex);

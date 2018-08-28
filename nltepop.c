@@ -615,9 +615,9 @@ static void nltepop_matrix_add_nt_ionisation(
     printout("  WARNING: Negative NT_ionization rate from ion_stage %d\n", get_ionstage(element, ion));
   }
 
-  const int nions = get_nions(element);
   const int nlevels = get_nlevels(element, ion);
-  for (int upperion = ion + 1; (upperion < nions) && (upperion <= ion + 3); upperion++)
+
+  for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++)
   {
     const double Y_nt_thisupperion = Y_nt * nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
 

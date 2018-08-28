@@ -1832,7 +1832,7 @@ static void read_3d_model(void)
   /// Now read in vmax for the model (in cm s^-1).
   fscanf(model_input, "%lg\n", &vmax);
 
-  double rmax_tmodel = vmax * t_model;
+  // double rmax_tmodel = vmax * t_model;
 
   /// Now read in the lines of the model.
   min_den = 1.e99;
