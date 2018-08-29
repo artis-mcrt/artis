@@ -6,8 +6,8 @@
 
 # Make the Intel compiler and MPI libs available
 module load gsl/intel/2.4
-module load intel/compilers/18.0.1
-module load intel/mpi/18.0.1
+module load intel/compilers/18.0.3
+module load intel/mpi/18.0.3
 
 # Run the program
 cd $PBS_O_WORKDIR
