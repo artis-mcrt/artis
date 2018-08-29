@@ -1281,7 +1281,7 @@ extern inline FILE *fopen_required(const char *filename, const char *mode);
     for (lower = 0; lower < nlevels; lower++)
     {
       epsilon_lower = epsilon(element,ion,lower);
-      nuptrans = elements[element].ions[ion].levels[lower].uptrans[0].targetlevel;
+      nuptrans = get_nuptrans(element, ion, lower);
       int i = 1; i <= nuptrans; i++)
       {
         upper = elements[element].ions[ion].levels[lower].uptrans[i].targetlevel;

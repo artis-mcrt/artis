@@ -1229,7 +1229,7 @@ static void setup_coolinglist(void)
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        add += elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+        add += get_nuptrans(element, ion, level);
         //if (ion < nions - 1) and (level < get_ionisinglevels(element,ion))
         //  add += get_nphixstargets(element,ion,level)
       }
