@@ -2100,7 +2100,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       for (int lower = 0; lower < nlevels; lower++)
       {
         const double statweight_lower = stat_weight(element, ion, lower);
-        const int nuptrans = elements[element].ions[ion].levels[lower].uptrans[0].targetlevel;
+        const int nuptrans = get_nuptrans(element, ion, lower);
         const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
 
         for (int t = 1; t <= nuptrans; t++)

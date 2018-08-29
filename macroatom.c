@@ -643,7 +643,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       }
 
       printout("[debug]    check excitation\n");
-      printout("[debug]    nuptrans %d %d\n",nuptrans,elements[element].ions[ion].levels[level].uptrans[0].targetlevel);
+      printout("[debug]    nuptrans %d %d\n",nuptrans,get_nuptrans(element, ion, level));
       for (int i = 1; i <= nuptrans; i++)
       {
         const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
