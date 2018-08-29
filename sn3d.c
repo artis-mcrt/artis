@@ -1069,6 +1069,12 @@ int main(int argc, char** argv)
             #endif
 
             printout("time after write final packets file %d\n",time(NULL));
+
+            // final packets*.out have been written, so remove the temporary packets files
+            sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
+            remove(filename);
+            sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
+            remove(filename);
           }
         }
       }
