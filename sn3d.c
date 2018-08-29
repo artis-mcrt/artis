@@ -864,6 +864,13 @@ int main(int argc, char** argv)
           printout("Update input.txt for restart at time step %d\n", nts);
           update_parameterfile(nts);
           printout("input.txt successfully updated\n");
+
+          // remove unused packets file
+          if (nts % 2 == 1)
+            sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
+          else
+            sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
+          remove(filename);
         }
 
 
