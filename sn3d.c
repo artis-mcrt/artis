@@ -30,8 +30,6 @@
 #include "version.h"
 #include "vpkt.h"
 
-static PKT pkt[MPKTS];
-
 
 static FILE *initialise_linestat_file(void)
 {
@@ -359,13 +357,29 @@ static void mpi_reduce_estimators(int my_rank)
 #endif
 
 
-static void write_temp_packetsfile(int timestep, int my_rank, PKT *pkt)
+static void read_temp_packetsfile(const int timestep, const int my_rank, PKT *pkt)
 {
   char filename[100];
   if (timestep % 2 == 0)
-    sprintf(filename,"packets%d_%d_even.tmp", 0, my_rank);
+    sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
   else
-    sprintf(filename,"packets%d_%d_odd.tmp", 0, my_rank);
+    sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
+
+  //sprintf(filename,"packets%d_%d.tmp",0,my_rank);
+  FILE *packets_file = fopen_required(filename, "rb");
+  fread(&pkt[0], sizeof(PKT), npkts, packets_file);
+  //read_packets(packets_file);
+  fclose(packets_file);
+}
+
+
+static void write_temp_packetsfile(const int timestep, const int my_rank, PKT *pkt)
+{
+  char filename[100];
+  if (timestep % 2 == 0)
+    sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
+  else
+    sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
 
   FILE *packets_file = fopen_required(filename, "wb");
 
@@ -377,6 +391,8 @@ static void write_temp_packetsfile(int timestep, int my_rank, PKT *pkt)
 int main(int argc, char** argv)
 // Main - top level routine.
 {
+  PKT pkt[MPKTS];
+
   FILE *restrict packets_file;
   //FILE *temperature_file;
   char filename[100];
@@ -665,18 +681,18 @@ int main(int argc, char** argv)
 
     // Initialise virtual packets file and vspecpol
     #ifdef VPKT_ON
-      // New simulation
       if (!simulation_continued_from_saved)
       {
+        // New simulation
+
         init_vspecpol();
 
         if (vgrid_flag == 1)
           init_vpkt_grid();
       }
-
-      // Continue simulation: read into temporary files
       else
       {
+        // Continue simulation: read into temporary files
 
         if (nts % 2 == 0)
           sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
@@ -766,16 +782,7 @@ int main(int argc, char** argv)
       for (int titer = 0; titer < n_titer; titer++)
       {
         /// Read the packets file for each iteration on the timestep
-        if (nts % 2 == 0)
-          sprintf(filename,"packets%d_%d_odd.tmp", 0, my_rank);
-        else
-          sprintf(filename,"packets%d_%d_even.tmp", 0, my_rank);
-
-        //sprintf(filename,"packets%d_%d.tmp",0,my_rank);
-        packets_file = fopen_required(filename, "rb");
-        fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-        //read_packets(packets_file);
-        fclose(packets_file);
+        read_temp_packetsfile(nts, my_rank, pkt);
 
         /// Some counters on pkt-actions need to be reset to do statistics
         pkt_action_counters_reset();
