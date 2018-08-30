@@ -1780,7 +1780,7 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
 }
 
 
-static double calculate_nt_frac_excitation_perlevelpop(
+static double calculate_nt_excitation_ratecoeff_perdepositionev(
   const int modelgridindex, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // Kozma & Fransson equation 9 divided by level population
 {
@@ -1788,8 +1788,7 @@ static double calculate_nt_frac_excitation_perlevelpop(
   {
     printout("ERROR: Call to nt_excitation_ratecoeff with no y vector in memory.");
     abort();
-  }
-  const double epsilon_trans_ev = epsilon_trans / EV;
+}
 
   gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
   if (get_xs_excitation_vector(xs_excitation_vec, lineindex, statweight_lower, epsilon_trans))
@@ -1807,7 +1806,7 @@ static double calculate_nt_frac_excitation_perlevelpop(
     y_dot_crosssection *= DELTA_E;
     #endif
 
-    return epsilon_trans_ev * y_dot_crosssection / E_init_ev;
+    return y_dot_crosssection / E_init_ev;
   }
   else
   {
@@ -2113,8 +2112,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
           }
 
           const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
-
-          const double nt_frac_excitation_perlevelpop = calculate_nt_frac_excitation_perlevelpop(modelgridindex, lineindex, statweight_lower, epsilon_trans);
+          const double epsilon_trans_ev = epsilon_trans / EV;
+          const double nt_frac_excitation_perlevelpop = epsilon_trans_ev * calculate_nt_excitation_ratecoeff_perdepositionev(modelgridindex, lineindex, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
           frac_excitation_ion += frac_excitation_thistrans;
 
