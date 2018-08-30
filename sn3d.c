@@ -30,7 +30,6 @@
 #include "version.h"
 #include "vpkt.h"
 
-
 static FILE *initialise_linestat_file(void)
 {
   FILE *restrict linestat_file = fopen_required("linestat.out", "w");
@@ -387,11 +386,11 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, PKT *p
   fclose(packets_file);
 }
 
-
 int main(int argc, char** argv)
 // Main - top level routine.
 {
-  PKT pkt[MPKTS];
+  PKT *packets = calloc(MPKTS, sizeof(PKT));
+  assert(packets != NULL);
 
   FILE *restrict packets_file;
   //FILE *temperature_file;
@@ -581,7 +580,7 @@ int main(int argc, char** argv)
     {
       /// Create a bunch of npkts packets
       /// and write them to a binary file for later readin.
-      packet_init(middle_iteration, my_rank, pkt);
+      packet_init(middle_iteration, my_rank, packets);
     }
 
     /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
@@ -782,7 +781,7 @@ int main(int argc, char** argv)
       for (int titer = 0; titer < n_titer; titer++)
       {
         /// Read the packets file for each iteration on the timestep
-        read_temp_packetsfile(nts, my_rank, pkt);
+        read_temp_packetsfile(nts, my_rank, packets);
 
         /// Some counters on pkt-actions need to be reset to do statistics
         pkt_action_counters_reset();
@@ -902,7 +901,7 @@ int main(int argc, char** argv)
           /// Now process the packets.
           const time_t time_update_packets_start = time(NULL);
           printout("timestep %d: time before update packets %d\n", nts, time_update_packets_start);
-          update_packets(nts, pkt);
+          update_packets(nts, packets);
 
           /*
           for (middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
@@ -943,8 +942,7 @@ int main(int argc, char** argv)
           }
           */
 
-          pkt_action_counters_printout(pkt);
-
+          pkt_action_counters_printout(packets);
 
           #ifdef MPI_ON
             MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
@@ -1017,7 +1015,7 @@ int main(int argc, char** argv)
           const time_t time_write_packets_file_start = time(NULL);
           printout("time before write temporary packets file %d\n", time_write_packets_file_start);
 
-          write_temp_packetsfile(nts, my_rank, pkt);
+          write_temp_packetsfile(nts, my_rank, packets);
 
           #ifdef VPKT_ON
           if (nts % 2 == 0)
@@ -1055,7 +1053,7 @@ int main(int argc, char** argv)
             sprintf(filename,"packets%.2d_%.4d.out", 0, my_rank);
             //sprintf(filename,"packets%.2d_%.4d.out", middle_iteration, my_rank);
             packets_file = fopen_required(filename, "w");
-            write_packets(packets_file, pkt);
+            write_packets(packets_file, packets);
             fclose(packets_file);
 
             // write specpol of the virtual packets
@@ -1262,6 +1260,8 @@ int main(int argc, char** argv)
   #ifdef MPI_ON
     MPI_Finalize();
   #endif
+
+  free(packets);
 
   return 0;
 }
