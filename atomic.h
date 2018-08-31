@@ -6,6 +6,7 @@
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
+int get_tot_nions(void);
 
 inline int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
@@ -70,6 +71,43 @@ inline int get_ionisinglevels(int element, int ion)
 /// have energies below the ionisation threshold.
 {
   return elements[element].ions[ion].ionisinglevels;
+}
+
+
+inline int get_uniqueionindex(const int element, const int ion)
+// Get an index for an ion that is unique for every ion of every element
+{
+  int index = 0;
+  for (int e = 0; e < element; e++)
+  {
+    index += get_nions(element);
+  }
+  index += ion;
+
+  // assert(index < get_tot_nions());
+  return index;
+}
+
+
+inline void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion)
+{
+  int allionsindex_thiselementfirstion = 0;
+  for (int e = 0; e < nelements; e++)
+  {
+    if ((allionsindex - allionsindex_thiselementfirstion) >= get_nions(e))
+    {
+      allionsindex_thiselementfirstion += get_nions(e);
+    }
+    else
+    {
+      *element = e;
+      *ion = allionsindex - allionsindex_thiselementfirstion;
+      assert(get_uniqueionindex(*element, *ion) == allionsindex);
+      return;
+    }
+  }
+  *element = -1;
+  *ion = -1;
 }
 
 
