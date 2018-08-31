@@ -2209,12 +2209,16 @@ void read_parameterfile(int rank)
 
   fscanf(input_file, "%d %d", &itstep, &ftstep); // number of start and end time step
 
-  float dum2, dum3;
-  fscanf(input_file, "%g %g", &dum2, &dum3); // start and end times
-  tmin = dum2 * DAY;
-  tmax = dum3 * DAY;
-  //tlimit = dum4 * DAY;
+  float tmin_days = 0.;
+  float tmax_days = 0.;
+  fscanf(input_file, "%g %g", &tmin_days, &tmax_days); // start and end times
+  assert(tmin_days > 0);
+  assert(tmax_days > 0);
+  assert(tmin_days < tmax_days);
+  tmin = tmin_days * DAY;
+  tmax = tmax_days * DAY;
 
+  float dum2, dum3;
   fscanf(input_file, "%g %g", &dum2, &dum3);
   nusyn_min = dum2 * MEV / H; // lowest frequency to synthesise
   nusyn_max = dum3 * MEV / H; // highest frequency to synthesise
