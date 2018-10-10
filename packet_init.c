@@ -423,12 +423,12 @@ void write_packets(FILE *restrict packets_file, PKT *pkt)
 
 void read_packets(FILE *restrict packets_file, PKT *pkt)
 {
-  char *line = malloc(sizeof(char) * 1024);
+  char *line = malloc(sizeof(char) * 4096);
 
   int packets_read = 0;
   while (!feof(packets_file))
   {
-    if (line != fgets(line, 1024, packets_file))
+    if (line != fgets(line, 4096, packets_file))
       break;
 
     packets_read++;
