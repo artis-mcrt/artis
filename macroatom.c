@@ -1096,6 +1096,7 @@ double rad_excitation_ratecoeff(
       R = R_over_J_nu * radfield(nu_trans, modelgridindex);
       if (!initial_iteration)
       {
+        // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
         const int jblueindex = radfield_get_Jblueindex(lineindex);
         if (jblueindex >= 0)
         {
