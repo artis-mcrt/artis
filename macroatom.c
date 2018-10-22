@@ -1016,7 +1016,7 @@ double rad_deexcitation_ratecoeff(
 
     if (tau_sobolev > 0)
     {
-      const double beta = 1.0 / tau_sobolev * (1 - exp(-tau_sobolev));
+      const double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
       // const double beta = 1.0;
       R = A_ul * beta;
     }
@@ -1086,7 +1086,7 @@ double rad_excitation_ratecoeff(
 
     if (tau_sobolev > 0)
     {
-      double beta = 1.0 / tau_sobolev * (1. - exp(-tau_sobolev));
+      double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
       //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
       //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
       //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
