@@ -805,7 +805,7 @@ double radfield(double nu, int modelgridindex)
     if (binindex >= 0)
     {
       const struct radfieldbin_current *restrict const bin = &radfieldbin_current[modelgridindex][binindex];
-      if (bin->W >= 0.)
+      if (bin->W >= 0. && bin->T_R >= 0.)
       {
         // if (bin->fit_type == FIT_DILUTED_BLACKBODY)
         {
