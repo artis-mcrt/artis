@@ -330,7 +330,7 @@ static void read_ion_levels(
 }
 
 
-static void read_ion_transitions(
+static transitiontable_entry *read_ion_transitions(
   FILE *transitiondata, const int tottransitions_in,
   int *tottransitions, transitiontable_entry *transitiontable,
   const int nlevels_requiretransitions, const int nlevels_requiretransitions_upperlevels,
@@ -415,6 +415,8 @@ static void read_ion_transitions(
       prev_upper = upper;
     }
   }
+
+  return transitiontable;
 }
 
 
@@ -819,9 +821,8 @@ static void read_atomicdata_files(void)
           nlevels_requiretransitions = 0;
           nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
         }
-        read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
-                             nlevels_requiretransitions, nlevels_requiretransitions_upperlevels,
-                             Z, ionstage);
+        transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
+          nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
 
         /// store the ions data to memory and set up the ions zeta and levellist
         elements[element].ions[ion].ionstage = ionstage;
