@@ -8,7 +8,6 @@
 #include <gsl/gsl_blas.h>
 
 
-
 static double get_shellcrossdist(
   const double pos[3], const double dir[3], const double shellradius, const bool isinnerboundary, const double tstart, bool debug)
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
@@ -107,7 +106,6 @@ static double get_shellcrossdist(
     printout("single intersection\n");
     return -1.;
   }
-
 }
 
 
@@ -138,7 +136,6 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
   double initpos[ndim];       // pkt_ptr->pos converted to grid coordinates
   double cellcoordmax[ndim];
   double vel[ndim];           // pkt_ptr->dir * CLIGHT_PROP converted to grid coordinates
-  int cellindexincrement[ndim];
 
   if (grid_type == GRID_UNIFORM)
   {
@@ -180,7 +177,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
     {
       enum cell_boundary direction = flip ? posdirections[d] : negdirections[d];
       enum cell_boundary invdirection = !flip ? posdirections[d] : negdirections[d];
-      const int cellindexdiff = flip ? - cellindexincrement[d] : cellindexincrement[d];
+      const int cellindexdiff = flip ? - get_coordcellindexincrement(d) : get_coordcellindexincrement(d);
 
       bool isoutside;
       if (flip)
