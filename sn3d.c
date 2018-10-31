@@ -1076,10 +1076,11 @@ int main(int argc, char** argv)
             printout("time after write final packets file %d\n",time(NULL));
 
             // final packets*.out have been written, so remove the temporary packets files
-            sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
-            remove(filename);
-            sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
-            remove(filename);
+            // commented out because you might still want to resume the simulation
+            // sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
+            // remove(filename);
+            // sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
+            // remove(filename);
           }
         }
       }
