@@ -175,7 +175,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
     case 8: // Ni57 -> Co57 pellet
       pkt_ptr->type = TYPE_57CO_PELLET;
-      const double zrand2 = gsl_rng_uniform(rng);
+      zrand2 = gsl_rng_uniform(rng);
       pkt_ptr->tdecay = (-T57NI * log(zrand)) + (-T57CO * log(zrand2));
       break;
 
