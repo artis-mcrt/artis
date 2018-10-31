@@ -250,7 +250,10 @@ static double get_event(
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
           move_pkt(dummypkt_ptr, ldist, t_current);
-          if (DETAILED_LINE_ESTIMATORS_ON) increment_lineestimator = true;
+          if (DETAILED_LINE_ESTIMATORS_ON)
+          {
+            increment_lineestimator = true;
+          }
 
           #ifdef DEBUG_ON
             if (debuglevel == 2)
@@ -283,7 +286,10 @@ static double get_event(
           {
             t_current += ldist / CLIGHT_PROP;
             move_pkt(dummypkt_ptr, ldist, t_current);
-            increment_lineestimator = true;
+            if (DETAILED_LINE_ESTIMATORS_ON)
+            {
+              increment_lineestimator = true;
+            }
           }
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
