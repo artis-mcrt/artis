@@ -81,7 +81,7 @@ inline double
 doppler_packetpos(const PKT *restrict pkt_ptr, const double t)
 {
   double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, t);
+  get_velocity(pkt_ptr->pos, vel_vec, t); // homologous flow velocity
   const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
   return dopplerfactor;
 }
