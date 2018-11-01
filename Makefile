@@ -3,10 +3,9 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-RAIJINDIRAC := $(or $(findstring dirac,$(HOSTNAME)),$(findstring raijin,$(HOSTNAME)))
-KELVIN := $(findstring kelvin,$(HOSTNAME))
+RAIJINDIRAC := $(or $(or $(findstring dirac,$(HOSTNAME)), $(findstring raijin,$(HOSTNAME))), $(findstring juwels,$(HOSTNAME)))
 
-ifneq (,$(RAIJINDIRAC))
+ifneq (,$(RAIJINDIRACJUWELS))
 	# NCI Raijin cluster
 	# recommended:
 	# module load intel-cc
@@ -23,19 +22,7 @@ ifneq (,$(RAIJINDIRAC))
 
   sn3d: CFLAGS += -DMPI_ON
 
-else ifneq (,$(findstring juwels,$(HOSTNAME)))
-
-  CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF #-fopenmp=libomp
-  LDFLAGS= -lgsl -lgslcblas -lm
-
-  ifeq (,$(findstring raijin,$(HOSTNAME)))
-    LDFLAGS += -lgslcblas
-  endif
-
-  sn3d: CFLAGS += -DMPI_ON
-
-else ifneq (,$(KELVIN))
+else ifneq (,$(findstring kelvin,$(HOSTNAME)))
  # needs
  #  mpi/openmpi/1.8.5/gcc-4.4.7
  #  compilers/gcc/system(default)
