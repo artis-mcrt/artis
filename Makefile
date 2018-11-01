@@ -3,11 +3,22 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-RAIJINDIRAC := $(or $(or $(findstring dirac,$(HOSTNAME)), $(findstring raijin,$(HOSTNAME))), $(findstring juwels,$(HOSTNAME)))
+#RAIJINDIRAC := $(or $(or $(findstring dirac,$(HOSTNAME)), $(findstring raijin,$(HOSTNAME))), $(findstring juwels,$(HOSTNAME)))
 
-ifneq (,$(RAIJINDIRACJUWELS))
-	# NCI Raijin cluster
-	# recommended:
+ifneq (,$(findstring kelvin,$(HOSTNAME)))
+ # needs
+ #  mpi/openmpi/1.8.5/gcc-4.4.7
+ #  compilers/gcc/system(default)
+ #  libs/gsl/1.16/gcc-4.4.7
+
+  CC = mpicc
+  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
+  LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
+
+  sn3d: CFLAGS += -DMPI_ON
+
+else ifneq (, $(shell which lzop))
+	# recommended for NCI Raijin cluster:
 	# module load intel-cc
 	# module load intel-mpi
 	# module load gsl
@@ -19,18 +30,6 @@ ifneq (,$(RAIJINDIRACJUWELS))
   ifeq (,$(findstring raijin,$(HOSTNAME)))
     LDFLAGS += -lgslcblas
 	endif
-
-  sn3d: CFLAGS += -DMPI_ON
-
-else ifneq (,$(findstring kelvin,$(HOSTNAME)))
- # needs
- #  mpi/openmpi/1.8.5/gcc-4.4.7
- #  compilers/gcc/system(default)
- #  libs/gsl/1.16/gcc-4.4.7
-
-  CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
-  LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
 
   sn3d: CFLAGS += -DMPI_ON
 
