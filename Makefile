@@ -17,7 +17,7 @@ ifneq (,$(findstring kelvin,$(HOSTNAME)))
 
   sn3d: CFLAGS += -DMPI_ON
 
-else ifneq (, $(shell which lzop))
+else ifneq (, $(shell which mpicc))
 	# recommended for NCI Raijin cluster:
 	# module load intel-cc
 	# module load intel-mpi
