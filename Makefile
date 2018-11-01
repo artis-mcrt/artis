@@ -14,7 +14,7 @@ ifneq (,$(RAIJINDIRAC))
 	# module load gsl
 
   CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE #-fopenmp=libomp
+  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF #-fopenmp=libomp
   LDFLAGS= -lgsl -lgslcblas -lm
 
   ifeq (,$(findstring raijin,$(HOSTNAME)))
@@ -22,8 +22,18 @@ ifneq (,$(RAIJINDIRAC))
 	endif
 
   sn3d: CFLAGS += -DMPI_ON
-  exspec: CFLAGS += -DDO_EXSPEC
-  exgamma: CFLAGS += -DDO_EXSPEC
+
+else ifneq (,$(findstring juwels,$(HOSTNAME)))
+
+  CC = mpicc
+  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF #-fopenmp=libomp
+  LDFLAGS= -lgsl -lgslcblas -lm
+
+  ifeq (,$(findstring raijin,$(HOSTNAME)))
+    LDFLAGS += -lgslcblas
+  endif
+
+  sn3d: CFLAGS += -DMPI_ON
 
 else ifneq (,$(KELVIN))
  # needs
@@ -32,12 +42,10 @@ else ifneq (,$(KELVIN))
  #  libs/gsl/1.16/gcc-4.4.7
 
   CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -I$(GSLINCLUDE) #-fopenmp=libomp
+  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
   LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
 
   sn3d: CFLAGS += -DMPI_ON
-  exspec: CFLAGS += -DDO_EXSPEC
-  exgamma: CFLAGS += -DDO_EXSPEC
 
 else
 	# macOS laptop
@@ -50,7 +58,7 @@ else
  # CC = icc
   INCLUDE = #-I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
   LIB = #-L/usr/local/lib/gsl #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE # -fopenmp-simd
+  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -fvectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF # -fopenmp-simd
 
 	# enable OpenMP (for Clang)
 	# CFLAGS += -Xpreprocessor -fopenmp -lomp
@@ -63,10 +71,11 @@ else
 
   LDFLAGS = $(LIB) -lgsl -lgslcblas
  # sn3d: CFLAGS += -fopenmp
-  exspec: CFLAGS += -DDO_EXSPEC
-  exgamma: CFLAGS += -DDO_EXSPEC
 
 endif
+
+  exspec: CFLAGS += -DDO_EXSPEC
+  exgamma: CFLAGS += -DDO_EXSPEC
 
 ### Settings for the miner
 # ifeq ($(OSTYPE),linux)
