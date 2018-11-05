@@ -100,8 +100,8 @@ static void pkt_action_counters_printout(const PKT *const pkt)
   {
     allpktinteractions += pkt[i].interactions;
   }
-  const double meaninteractions = allpktinteractions / npkts;
-  printout("mean number of interactions per packet = %g\n",meaninteractions);
+  const double meaninteractions = (double) allpktinteractions / npkts;
+  printout("mean number of interactions per packet = %g\n", meaninteractions);
 
   /// Printout packet statistics
   printout("ma_stat_activation_collexc = %d\n", ma_stat_activation_collexc);
