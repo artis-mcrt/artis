@@ -115,7 +115,6 @@ void init_gamma_linelist(void)
   double energy_last = 0.0;
   int next = -99;
   enum radionuclides next_type = -99;
-  enum radionuclides last_type = -99;
 
   for (int i = 0; i < total_lines; i++)
   {
@@ -126,11 +125,9 @@ void init_gamma_linelist(void)
       // printout("iso %d nlines %d\n", iso, gamma_spectra[iso].nlines);
       for (int j = 0; j < gamma_spectra[iso].nlines; j++)
       {
-        // find the lowest energy gamma line of this nuclide that is still greater energy
-        // than the previous entry in the full gamma line list
-        if (((gamma_spectra[iso].energy[j] > energy_last) || (gamma_spectra[iso].energy[j] == energy_last && iso != last_type))
-          && (gamma_spectra[iso].energy[j] < energy_try))
+        if (gamma_spectra[iso].energy[j] > energy_last && gamma_spectra[iso].energy[j] < energy_try)
         {
+          // next_type = spec_type[iso];
           next_type = iso;
           next = j;
           energy_try = gamma_spectra[iso].energy[j];
@@ -141,17 +138,16 @@ void init_gamma_linelist(void)
     gam_line_list.nuclidetype[i] = next_type;
     gam_line_list.index[i] = next;
     energy_last = energy_try;
-    last_type = next_type;
   }
 
-  FILE *const line_list = fopen_required("linelistgamma.out", "w+");
+  FILE *const line_list = fopen_required("gammalinelist.out", "w+");
 
   for (int i = 0; i < total_lines; i++)
   {
     const enum radionuclides iso = gam_line_list.nuclidetype[i];
     const int index = gam_line_list.index[i];
     fprintf(line_list, "%d %d %d %g %g \n",
-            i, iso, index,
+            i, gam_line_list.nuclidetype[i], gam_line_list.index[i],
             gamma_spectra[iso].energy[index] / MEV, gamma_spectra[iso].probability[index]);
   }
   fclose(line_list);
