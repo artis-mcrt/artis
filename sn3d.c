@@ -93,7 +93,7 @@ static void pkt_action_counters_reset(void)
 }
 
 
-static void pkt_action_counters_printout(PKT *pkt)
+static void pkt_action_counters_printout(const PKT *const pkt)
 {
   int allpktinteractions = 0;
   for (int i = 0; i < npkts; i++)
@@ -356,7 +356,7 @@ static void mpi_reduce_estimators(int my_rank)
 #endif
 
 
-static void read_temp_packetsfile(const int timestep, const int my_rank, PKT *pkt)
+static void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt)
 {
   char filename[100];
   if (timestep % 2 == 0)
@@ -366,13 +366,13 @@ static void read_temp_packetsfile(const int timestep, const int my_rank, PKT *pk
 
   //sprintf(filename,"packets%d_%d.tmp",0,my_rank);
   FILE *packets_file = fopen_required(filename, "rb");
-  fread(&pkt[0], sizeof(PKT), npkts, packets_file);
+  fread(pkt, sizeof(PKT), npkts, packets_file);
   //read_packets(packets_file);
   fclose(packets_file);
 }
 
 
-static void write_temp_packetsfile(const int timestep, const int my_rank, PKT *pkt)
+static void write_temp_packetsfile(const int timestep, const int my_rank, const PKT *const pkt)
 {
   char filename[100];
   if (timestep % 2 == 0)
@@ -382,14 +382,14 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, PKT *p
 
   FILE *packets_file = fopen_required(filename, "wb");
 
-  fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
+  fwrite(pkt, sizeof(PKT), npkts, packets_file);
   fclose(packets_file);
 }
 
 int main(int argc, char** argv)
 // Main - top level routine.
 {
-  PKT *packets = calloc(MPKTS, sizeof(PKT));
+  PKT *const packets = calloc(MPKTS, sizeof(PKT));
   assert(packets != NULL);
 
   FILE *restrict packets_file;
