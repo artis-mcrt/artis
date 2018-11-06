@@ -78,7 +78,7 @@ vec_copy(double destination[3], const double source[3])
 }
 
 inline double
-doppler_packetpos(const PKT *restrict pkt_ptr, const double t)
+doppler_packetpos(const PKT *const restrict pkt_ptr, const double t)
 {
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t); // homologous flow velocity

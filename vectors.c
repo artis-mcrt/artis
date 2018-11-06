@@ -4,12 +4,12 @@
 
 extern inline double vec_len(const double x[3]);
 extern inline void vec_norm(const double vec_in[3], double vec_out[3]);
-extern inline double dot(const double *const restrict x, const double *const restrict y);
-extern inline void get_velocity(const double *const restrict x, double *restrict y, const double t);
+extern inline double dot(const double x[3], const double y[3]);
+extern inline void get_velocity(const double x[3], double y[3], const double t);
 extern inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
 extern inline void vec_scale(double vec[3], const double scalefactor);
 extern inline void vec_copy(double dest[3], const double source[3]);
-extern inline double doppler_packetpos(const PKT *restrict pkt_ptr, const double t);
+extern inline double doppler_packetpos(const PKT *const restrict pkt_ptr, const double t);
 
 
 void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
