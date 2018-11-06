@@ -423,7 +423,7 @@ static void read_collion_data(void)
 {
   printout("Reading collisional ionization data...\n");
 
-  FILE *cifile = cifile = fopen_required("collion.txt", "r");
+  FILE *cifile = fopen_required("collion.txt", "r");
 
   fscanf(cifile, "%d", &colliondatacount);
   printout("Reading %d collisional transition rows\n", colliondatacount);
