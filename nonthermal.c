@@ -2945,19 +2945,21 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
 
       MPI_Bcast(&nt_solution[modelgridindex].E_0, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].deposition_rate_density, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      for (int element = 0; element < nelements; element++)
-      {
-        const int nions = get_nions(element);
-        MPI_Bcast(&nt_solution[modelgridindex].eff_ionpot[element], nions, MPI_FLOAT, root, MPI_COMM_WORLD);
-      }
 
       for (int element = 0; element < nelements; element++)
       {
         const int nions = get_nions(element);
+
+        // MPI_Bcast(&nt_solution[modelgridindex].eff_ionpot[element], nions, MPI_FLOAT, root, MPI_COMM_WORLD);
+
         for (int ion = 0; ion < nions; ion++)
         {
-          MPI_Bcast(&nt_solution[modelgridindex].prob_num_auger[element][ion], MAX_AUGER_ELECTRONS + 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-          MPI_Bcast(&nt_solution[modelgridindex].ionenfrac_num_auger[element][ion], MAX_AUGER_ELECTRONS + 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+          MPI_Bcast(&nt_solution[modelgridindex].eff_ionpot[element][ion], 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+          for (int a = 0; a < MAX_AUGER_ELECTRONS + 1; a++)
+          {
+            MPI_Bcast(&nt_solution[modelgridindex].prob_num_auger[element][ion][a], 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+            MPI_Bcast(&nt_solution[modelgridindex].ionenfrac_num_auger[element][ion][a], 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+          }
         }
       }
 
