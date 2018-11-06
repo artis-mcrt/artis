@@ -2957,6 +2957,7 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
         for (int ion = 0; ion < nions; ion++)
         {
           MPI_Bcast(&nt_solution[modelgridindex].prob_num_auger[element][ion], MAX_AUGER_ELECTRONS + 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+          MPI_Bcast(&nt_solution[modelgridindex].ionenfrac_num_auger[element][ion], MAX_AUGER_ELECTRONS + 1, MPI_FLOAT, root, MPI_COMM_WORLD);
         }
       }
 
