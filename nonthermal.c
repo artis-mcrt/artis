@@ -2313,7 +2313,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 }
 
 
-static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridindex, const int element, const int ion, double *E_0)
+static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion, double *E_0)
 {
   // excitation terms
   gsl_vector *vec_xs_excitation_nnlevel_deltae = gsl_vector_alloc(SFPTS);
@@ -2352,7 +2352,7 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
           {
             if (stopindex > i)
             {
-              gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnlevel_deltae, i, stopindex - i );
+              gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnlevel_deltae, i, stopindex - i);
 
               gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i);
               gsl_vector_add(&a.vector, &b.vector); // add b to a and put the result in a
@@ -2377,7 +2377,7 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
 }
 
 
-static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int ionstage, const double nnion, double *E_0)
+static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int ionstage, const double nnion, double *E_0)
 // add the ionization terms to the Spencer-Fano matrix
 // also, update the value of E_0, the minimum energy for excitation/ionization
 {
@@ -2446,7 +2446,6 @@ static void sfmatrix_add_ionization(gsl_matrix *sfmatrix, const int Z, const int
               }
             }
           }
-
 
           *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
         }
@@ -2727,11 +2726,6 @@ void nt_write_restart_data(FILE *gridsave_file)
   fprintf(gridsave_file, "%d\n", 24724518); // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %lg %lg\n", SFPTS, EMIN, EMAX);
 
-  if (STORE_NT_SPECTRUM)
-  {
-    printout("nt_write_restart_data not implemented for STORE_NT_SPECTRUM ON");
-    abort();
-  }
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
@@ -2784,6 +2778,14 @@ void nt_write_restart_data(FILE *gridsave_file)
                 nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
       }
 
+      // write non-thermal spectrum
+      if (STORE_NT_SPECTRUM)
+      {
+        for (int s = 0; s < SFPTS; s++)
+        {
+          fprintf(gridsave_file, "%lg\n", nt_solution[modelgridindex].yfunc[s]);
+        }
+      }
     }
   }
 }
@@ -2818,11 +2820,6 @@ void nt_read_restart_data(FILE *gridsave_file)
     abort();
   }
 
-  if (STORE_NT_SPECTRUM)
-  {
-    printout("nt_write_restart_data not implemented for STORE_NT_SPECTRUM ON");
-    abort();
-  }
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
@@ -2891,6 +2888,15 @@ void nt_read_restart_data(FILE *gridsave_file)
                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition,
                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition,
                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
+      }
+
+      // write non-thermal spectrum
+      if (STORE_NT_SPECTRUM)
+      {
+        for (int s = 0; s < SFPTS; s++)
+        {
+          fscanf(gridsave_file, "%lg\n", &nt_solution[modelgridindex].yfunc[s]);
+        }
       }
     }
   }
