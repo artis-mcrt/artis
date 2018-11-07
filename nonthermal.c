@@ -1782,7 +1782,7 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
 
 static double calculate_nt_excitation_ratecoeff_perdepositionev(
   const int modelgridindex, const int lineindex, const double statweight_lower, const double epsilon_trans)
-// Kozma & Fransson equation 9 divided by level population
+// Kozma & Fransson equation 9 divided by level population and epsilon_trans
 {
   if (nt_solution[modelgridindex].yfunc == NULL)
   {
@@ -2169,7 +2169,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       if (ion < nions - 1)
       {
         printout("    probability to ionstage:");
-        for (int upperion = ion + 1; (upperion < nions) && (upperion <= ion + 1 + MAX_AUGER_ELECTRONS); upperion++)
+        for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++)
         {
           const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
           if (probability > 0.)
@@ -2178,7 +2178,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
         printout("\n");
 
         printout("         enfrac to ionstage:");
-        for (int upperion = ion + 1; (upperion < nions) && (upperion <= ion + 1 + MAX_AUGER_ELECTRONS); upperion++)
+        for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++)
         {
           const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, true);
           if (probability > 0.)
@@ -2955,7 +2955,7 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
         for (int ion = 0; ion < nions; ion++)
         {
           MPI_Bcast(&nt_solution[modelgridindex].eff_ionpot[element][ion], 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-          for (int a = 0; a < MAX_AUGER_ELECTRONS + 1; a++)
+          for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
           {
             MPI_Bcast(&nt_solution[modelgridindex].prob_num_auger[element][ion][a], 1, MPI_FLOAT, root, MPI_COMM_WORLD);
             MPI_Bcast(&nt_solution[modelgridindex].ionenfrac_num_auger[element][ion][a], 1, MPI_FLOAT, root, MPI_COMM_WORLD);
