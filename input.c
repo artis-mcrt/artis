@@ -792,102 +792,97 @@ static void read_atomicdata_files(void)
         tottransitions = 0;
       }
 
-      /// then read in its level and transition data
-      if (transdata_Z_in == Z && transdata_ionstage_in == ionstage)
+      assert(transdata_Z_in == Z);
+      assert(transdata_ionstage_in == ionstage);
+
+      /// read in the level and transition data for this ion
+      transitiontable_entry *transitiontable = calloc(tottransitions, sizeof(transitiontable_entry));
+
+      /// load transition table for the CURRENT ion to temporary memory
+      if (transitiontable == NULL)
       {
-        transitiontable_entry *transitiontable = calloc(tottransitions, sizeof(transitiontable_entry));
-
-        /// load transition table for the CURRENT ion to temporary memory
-        if (transitiontable == NULL)
+        if (tottransitions > 0)
         {
-          if (tottransitions > 0)
-          {
-            printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
-            abort();
-          }
+          printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
+          abort();
         }
-        // first <nlevels_requiretransitions> levels will be collisionally
-        // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
-        // use 0 to disable adding extra transitions
-        int nlevels_requiretransitions;
-        int nlevels_requiretransitions_upperlevels;
-        // if (Z == 26 && ionstage == 1)
-        // {
-        //   nlevels_requiretransitions = 33;
-        //   nlevels_requiretransitions_upperlevels = 33;
-        // }
-        // else
-        {
-          nlevels_requiretransitions = 0;
-          nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
-        }
-        transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
-          nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
+      }
+      // first <nlevels_requiretransitions> levels will be collisionally
+      // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
+      // use 0 to disable adding extra transitions
+      int nlevels_requiretransitions;
+      int nlevels_requiretransitions_upperlevels;
+      // if (Z == 26 && ionstage == 1)
+      // {
+      //   nlevels_requiretransitions = 33;
+      //   nlevels_requiretransitions_upperlevels = 33;
+      // }
+      // else
+      {
+        nlevels_requiretransitions = 0;
+        nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
+      }
+      transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
+        nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
 
-        /// store the ions data to memory and set up the ions zeta and levellist
-        elements[element].ions[ion].ionstage = ionstage;
-        elements[element].ions[ion].nlevels = nlevelsmax;
-        elements[element].ions[ion].ionisinglevels = 0;
-        elements[element].ions[ion].maxrecombininglevel = 0;
-        elements[element].ions[ion].ionpot = ionpot * EV;
+      /// store the ions data to memory and set up the ions zeta and levellist
+      elements[element].ions[ion].ionstage = ionstage;
+      elements[element].ions[ion].nlevels = nlevelsmax;
+      elements[element].ions[ion].ionisinglevels = 0;
+      elements[element].ions[ion].maxrecombininglevel = 0;
+      elements[element].ions[ion].ionpot = ionpot * EV;
 //           if ((elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
 //           {
 //             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
 //             abort();
 //           }
-        if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
-          abort();
-        }
-        if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n",element,ion);
-          abort();
-        }
-
-
-        /// now we need to readout the data for all those levels, write them to memory
-        /// and set up the list of possible transitions for each level
-        if ((transitions = calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
-          abort();
-        }
-
-        read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, &cont_index);
-
-        add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, &lineindex);
-
-        //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-        //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-
-        for (int level = 0; level < nlevelsmax; level++)
-        {
-          totaldowntrans += get_ndowntrans(element, ion, level);
-          totaluptrans += get_nuptrans(element, ion, level);
-          free(transitions[level].to);
-        }
-        free(transitiontable);
-        free(transitions);
-
-        /// Also the phixslist
-        if (ion < nions - 1)
-        {
-//            elements[element].ions[ion].nbfcontinua = elements[element].ions[ion].ionisinglevels;//nlevelsmax;
-          nbfcheck += elements[element].ions[ion].ionisinglevels; //nlevelsmax;
-/*            if ((elements[element].ions[ion].phixslist = calloc(nlevelsmax, sizeof(ionsphixslist_t))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
-            abort();
-          }*/
-          nbfcontinua += get_bfcontinua(element,ion);//elements[element].ions[ion].ionisinglevels;//nlevelsmax;
-        }
-      }
-      else
+      if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
       {
-        printout("corrupted atomic data\n");
+        printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
         abort();
+      }
+      if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n",element,ion);
+        abort();
+      }
+
+
+      /// now we need to readout the data for all those levels, write them to memory
+      /// and set up the list of possible transitions for each level
+      if ((transitions = calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
+      {
+        printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
+        abort();
+      }
+
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, &cont_index);
+
+      add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, &lineindex);
+
+      //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
+      //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
+
+      for (int level = 0; level < nlevelsmax; level++)
+      {
+        totaldowntrans += get_ndowntrans(element, ion, level);
+        totaluptrans += get_nuptrans(element, ion, level);
+        free(transitions[level].to);
+      }
+      free(transitiontable);
+      free(transitions);
+
+      /// Also the phixslist
+      if (ion < nions - 1)
+      {
+//            elements[element].ions[ion].nbfcontinua = elements[element].ions[ion].ionisinglevels;//nlevelsmax;
+        nbfcheck += elements[element].ions[ion].ionisinglevels; //nlevelsmax;
+/*            if ((elements[element].ions[ion].phixslist = calloc(nlevelsmax, sizeof(ionsphixslist_t))) == NULL)
+        {
+          printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
+          abort();
+        }*/
+        nbfcontinua += get_bfcontinua(element,ion);//elements[element].ions[ion].ionisinglevels;//nlevelsmax;
       }
     }
   }
@@ -1124,8 +1119,6 @@ static void setup_cellhistory(void)
             }
 
             const int ndowntrans = get_ndowntrans(element, ion, level);
-            const int nuptrans = get_nuptrans(element, ion, level);
-
             mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
             if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = (double *) malloc((ndowntrans + 1) * sizeof(double))) == NULL)
             {
@@ -1142,6 +1135,7 @@ static void setup_cellhistory(void)
             }
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[0] = ndowntrans;
 
+            const int nuptrans = get_nuptrans(element, ion, level);
             mem_usage_cellhistory += (nuptrans + 1) * sizeof(double);
             if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = (double *) malloc((nuptrans + 1) * sizeof(double))) == NULL)
             {
