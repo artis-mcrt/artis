@@ -2132,9 +2132,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
             continue;
           }
 
+          const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
           const double nt_frac_excitation_perlevelpop = epsilon_trans_ev * calculate_nt_excitation_ratecoeff_perdepositionev(modelgridindex, lineindex, statweight_lower, epsilon_trans);
-          const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
           frac_excitation_ion += frac_excitation_thistrans;
 
