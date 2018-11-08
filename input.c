@@ -61,7 +61,7 @@ static void read_phixs_data(void)
     bool skip_this_phixs_table = false;
     //printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel, %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
     /// translate readin anumber to element index
-    int element = get_elementindex(Z);
+    const int element = get_elementindex(Z);
 
     /// store only photoionization crosssections for elements that are part of the current model atom
     if (element >= 0)
@@ -1066,7 +1066,6 @@ static void setup_cellhistory(void)
   ///======================================================
   /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
-  long mem_usage_cellhistory = 0;
   if ((cellhistory = (cellhistory_struct *) malloc(nthreads * sizeof(cellhistory_struct))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n",nthreads);
@@ -1076,12 +1075,13 @@ static void setup_cellhistory(void)
     #pragma omp parallel private(mem_usage_cellhistory)
     {
   #endif
-      mem_usage_cellhistory = sizeof(cellhistory_struct);;
+      long mem_usage_cellhistory = 0;
+      mem_usage_cellhistory += sizeof(cellhistory_struct);;
       printout("[info] input: initializing cellhistory for thread %d ...\n", tid);
 
       cellhistory[tid].cellnumber = -99;
 
-      mem_usage_cellhistory += sizeof(ncoolingterms * sizeof(cellhistorycoolinglist_t));
+      mem_usage_cellhistory += ncoolingterms * sizeof(cellhistorycoolinglist_t);
       cellhistory[tid].coolinglist = (cellhistorycoolinglist_t *) malloc(ncoolingterms * sizeof(cellhistorycoolinglist_t));
       if (cellhistory[tid].coolinglist == NULL)
       {
