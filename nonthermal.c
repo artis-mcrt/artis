@@ -2400,12 +2400,23 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
+      double atanexp[SFPTS];
+      for (int j = 0; j < SFPTS; j++)
+      {
+        const double endash = gsl_vector_get(envec, j);
+        const double epsilon_upper = (endash + ionpot_ev) / 2;
+        atanexp[j] = atan((epsilon_upper - ionpot_ev) / J);
+      }
+
       for (int i = 0; i < SFPTS; i++)
       {
         // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
         const double en = gsl_vector_get(envec, i);
 
         const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
+
+        // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
+        const double atanexp2 = atan(en / J);
 
         for (int j = i; j < SFPTS; j++)
         {
@@ -2420,15 +2431,19 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 
           const double prefactor = nnion * xs / atan((endash - ionpot_ev) / 2 / J);
 
-          const double epsilon_upper = (endash + ionpot_ev) / 2;
-          double epsilon_lower = endash - en;
-          // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
-          double ij_contribution = prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
 
+          // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
+
+          const double epsilon_lower = endash - en;
+          // epsilon_upper = (endash + ionpot_ev) / 2;
+          double ij_contribution = prefactor * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+
+          // endash > 2 * en + ionpot_ev
           if (j >= secondintegralstartindex)
           {
-            epsilon_lower = en + ionpot_ev;
-            ij_contribution -= prefactor * (atan((epsilon_upper - ionpot_ev) / J) - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+            // epsilon_lower = en + ionpot_ev;
+            // epsilon_upper = (endash + ionpot_ev) / 2;
+            ij_contribution -= prefactor * (atanexp[j] - atanexp2) * deltaendash;
           }
 
           if (SF_AUGER_CONTRIBUTION_ON && !SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN && en < en_auger_ev)
