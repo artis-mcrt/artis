@@ -2320,7 +2320,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion, double *E_0)
 {
   // excitation terms
-  gsl_vector *vec_xs_excitation_nnlevel_deltae = gsl_vector_alloc(SFPTS);
+  gsl_vector *vec_xs_excitation_deltae = gsl_vector_alloc(SFPTS);
 
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
@@ -2339,45 +2339,38 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      if (get_xs_excitation_vector(vec_xs_excitation_nnlevel_deltae, lineindex, statweight_lower, epsilon_trans))
+      if (get_xs_excitation_vector(vec_xs_excitation_deltae, lineindex, statweight_lower, epsilon_trans))
       {
         #if (USE_LOG_E_INCREMENT)
-        gsl_blas_dscal(nnlevel, vec_xs_excitation_nnlevel_deltae);
-        gsl_vector_mul(vec_xs_excitation_nnlevel_deltae, delta_envec);
+        gsl_vector_mul(vec_xs_excitation_deltae, delta_envec);
         #else
-        gsl_blas_dscal(nnlevel * DELTA_E, vec_xs_excitation_nnlevel_deltae);
+        gsl_blas_dscal(DELTA_E, vec_xs_excitation_nnlevel_deltae);
         #endif
 
         for (int i = 0; i < SFPTS; i++)
         {
           const double en = gsl_vector_get(envec, i);
           const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
-          if (stopindex < SFPTS - 1)
+          for (int j = i; j < stopindex; j++)
           {
-            if (stopindex > i)
-            {
-              gsl_vector_const_view b = gsl_vector_const_subvector(vec_xs_excitation_nnlevel_deltae, i, stopindex - i);
-
-              gsl_vector_view a = gsl_matrix_subrow(sfmatrix, i, i, stopindex - i);
-              gsl_vector_add(&a.vector, &b.vector); // add b to a and put the result in a
-            }
-
-            // do the last bit separately because we're not using the full delta_e interval
-            #if (USE_LOG_E_INCREMENT)
-            const double delta_en = gsl_vector_get(delta_envec, stopindex);
-            #else
-            const double delta_en = DELTA_E;
-            #endif
-
-            const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
-
-            *gsl_matrix_ptr(sfmatrix, i, stopindex) += gsl_vector_get(vec_xs_excitation_nnlevel_deltae, stopindex) * delta_en_actual / delta_en;
+            *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, j);
           }
+
+          // do the last bit separately because we're not using the full delta_e interval
+          #if (USE_LOG_E_INCREMENT)
+          const double delta_en = gsl_vector_get(delta_envec, stopindex);
+          #else
+          const double delta_en = DELTA_E;
+          #endif
+
+          const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
+
+          *gsl_matrix_ptr(sfmatrix, i, stopindex) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;
         }
       }
     }
   }
-  gsl_vector_free(vec_xs_excitation_nnlevel_deltae);
+  gsl_vector_free(vec_xs_excitation_deltae);
 }
 
 
