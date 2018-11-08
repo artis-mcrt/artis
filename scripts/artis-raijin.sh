@@ -39,7 +39,7 @@ ulimit -l 2097152
 mpirun ./sn3d > out.txt
 
 mkdir ${PBS_JOBID}
-./movefiles.sh ${PBS_JOBID}
+./artis/scripts/movefiles.sh ${PBS_JOBID}
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
