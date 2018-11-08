@@ -884,7 +884,7 @@ static double xs_excitation(const int lineindex, const double epsilon_trans, con
 }
 
 
-static bool get_xs_excitation_vector(gsl_vector *xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
+static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
 // returns true if any vector components are (or might be) non-zero
@@ -973,7 +973,7 @@ static double xs_impactionization(const double energy_ev, const int collionindex
 }
 
 
-static void get_xs_ionization_vector(gsl_vector *xs_vec, const int collionindex)
+static void get_xs_ionization_vector(gsl_vector *const xs_vec, const int collionindex)
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
@@ -2277,7 +2277,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   {
     const double endash = gsl_vector_get(envec, i);
     #if (USE_LOG_E_INCREMENT)
-    const double delta_endash = endash * expm1(delta_log_e); //gsl_vector_get(delta_envec, i);
+    const double delta_endash = gsl_vector_get(delta_envec, i);
     #else
     const double delta_endash = DELTA_E;
     #endif
@@ -2360,14 +2360,14 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
 
             // do the last bit separately because we're not using the full delta_e interval
             #if (USE_LOG_E_INCREMENT)
-            const double delta_en = en * expm1(delta_log_e); // gsl_vector_get(delta_envec, stopindex);
+            const double delta_en = gsl_vector_get(delta_envec, stopindex);
             #else
             const double delta_en = DELTA_E;
             #endif
 
             const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
 
-            *gsl_matrix_ptr(sfmatrix, i, stopindex) += gsl_vector_get(vec_xs_excitation_nnlevel_deltae, stopindex) *  delta_en_actual / delta_en;
+            *gsl_matrix_ptr(sfmatrix, i, stopindex) += gsl_vector_get(vec_xs_excitation_nnlevel_deltae, stopindex) * delta_en_actual / delta_en;
           }
         }
       }
