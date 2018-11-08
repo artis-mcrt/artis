@@ -978,16 +978,26 @@ static void get_xs_ionization_vector(gsl_vector *const xs_vec, const int collion
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
-  const int startindex = get_energyindex_ev_lteq(ionpot_ev);
+  const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
+  // en points for which en < ionpot
   for (int i = 0; i < startindex; i++)
+  {
     gsl_vector_set(xs_vec, i, 0.);
+  }
+
+  const double A = colliondata[collionindex].A;
+  const double B = colliondata[collionindex].B;
+  const double C = colliondata[collionindex].C;
+  const double D = colliondata[collionindex].D;
 
   #pragma clang loop vectorize(enable)
+  #pragma omp simd
   for (int i = startindex; i < SFPTS; i++)
   {
-    const double endash = gsl_vector_get(envec, i);
-    gsl_vector_set(xs_vec, i, xs_impactionization(endash, collionindex));
+    const double u = gsl_vector_get(envec, i) / ionpot_ev;
+    const double xs_ioniz = 1e-14 * (A * (1 - 1/u) + B * pow((1 - 1/u), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
+    gsl_vector_set(xs_vec, i, xs_ioniz);
   }
 }
 
