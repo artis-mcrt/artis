@@ -482,13 +482,15 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
   for (int level = 0; level < nlevels; level++)
   {
     const int level_index = get_nlte_vector_index(element, ion, level);
+    const double epsilon_level = epsilon(element, ion, level);
 
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int i = 1; i <= ndowntrans; i++)
     {
       const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-      const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
+
+      const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
       const int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
 
       const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid) * s_renorm[level];
@@ -510,7 +512,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
     for (int i = 1; i <= nuptrans; i++)
     {
       const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
+      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
       const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
 
       const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
@@ -1236,7 +1238,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         for (i = 1; i <= ndowntrans; i++)
         {
           lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
+          epsilon_trans = epsilon_current - epsilon(element, ion, lower);
           lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
 
           mastate[tid].element = element;
@@ -1277,7 +1279,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         for (i = 1; i <= nuptrans; i++)
         {
           int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-          epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
+          epsilon_trans = epsilon(ion, level, upper) - epsilon_current;
           lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
 
           mastate[tid].element = element;

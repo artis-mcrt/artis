@@ -64,6 +64,7 @@ static void calculate_heating_rates(const int modelgridindex)
      for (int level = 0; level < nlevels; level++)
      {
        const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+       const double epsilon_level = epsilon(element, ion, level);
 //
 //
 //         /// Collisional heating: deexcitation to same ionization stage
@@ -71,7 +72,8 @@ static void calculate_heating_rates(const int modelgridindex)
        const int ndowntrans = get_ndowntrans(element, ion, level);
        for (int ii = 1; ii <= ndowntrans; ii++)
        {
-         const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[ii].epsilon_trans;
+         const int lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
+         const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
          const int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
          const double C = nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * epsilon_trans;
          C_deexc += C;

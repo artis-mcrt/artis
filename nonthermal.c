@@ -1061,6 +1061,7 @@ static double N_e(const int modelgridindex, const double energy)
       {
         const int nuptrans = get_nuptrans(element, ion, lower);
         const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+        const double epsilon_lower = epsilon(element, ion, lower);
         for (int t = 1; t <= nuptrans; t++)
         {
           const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
@@ -1069,7 +1070,7 @@ static double N_e(const int modelgridindex, const double energy)
           {
             continue;
           }
-          const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
+          const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
           N_e_ion += (nnlevel / nnion) * get_y(modelgridindex, energy_ev + epsilon_trans_ev) * xs_excitation(lineindex, epsilon_trans, energy + epsilon_trans);
         }
@@ -2120,6 +2121,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
         const double statweight_lower = stat_weight(element, ion, lower);
         const int nuptrans = get_nuptrans(element, ion, lower);
         const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+        const double epsilon_lower = epsilon(element, ion, lower);
 
         for (int t = 1; t <= nuptrans; t++)
         {
@@ -2130,9 +2132,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
             continue;
           }
 
-          const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
           const double epsilon_trans_ev = epsilon_trans / EV;
           const double nt_frac_excitation_perlevelpop = epsilon_trans_ev * calculate_nt_excitation_ratecoeff_perdepositionev(modelgridindex, lineindex, statweight_lower, epsilon_trans);
+          const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
           frac_excitation_ion += frac_excitation_thistrans;
 
@@ -2344,6 +2346,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
   {
     const double statweight_lower = stat_weight(element, ion, lower);
     const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
+    const double epsilon_lower = epsilon(element, ion, lower);
     const int nuptrans = get_nuptrans(element, ion, lower);
     for (int t = 1; t <= nuptrans; t++)
     {
@@ -2353,7 +2356,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
       {
         continue;
       }
-      const double epsilon_trans = elements[element].ions[ion].levels[lower].uptrans[t].epsilon_trans;
+      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
       const double epsilon_trans_ev = epsilon_trans / EV;
 
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)

@@ -55,7 +55,7 @@ static void get_macroatom_transitionrates(
   {
     const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
     const double epsilon_target = epsilon(element, ion, lower);
-    const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
+    const double epsilon_trans = epsilon_current - epsilon_target;
     const int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
 
     const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
@@ -111,7 +111,7 @@ static void get_macroatom_transitionrates(
   for (int i = 1; i <= nuptrans; i++)
   {
     const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-    const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
+    const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
     const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
 
     const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
@@ -144,7 +144,8 @@ static void get_macroatom_transitionrates(
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
     {
       const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
+      const double epsilon_target = epsilon(element, ion + 1, upper);
+      const double epsilon_trans = epsilon_target - epsilon_current;
 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
@@ -177,7 +178,8 @@ static void do_macroatom_raddeexcitation(
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
       #endif
-      epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
+      epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
+
       linelistindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
       //linelistindex = elements[element].ions[ion].levels[level].transitions[level-lower-1].linelistindex;
       #ifdef RECORD_LINESTAT
@@ -635,7 +637,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       for (int i = 1; i <= ndowntrans; i++)
       {
         const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-        const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
+        const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
         const int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
         const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
         const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
@@ -647,7 +649,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       for (int i = 1; i <= nuptrans; i++)
       {
         const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-        const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
+        const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
         const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
         const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
