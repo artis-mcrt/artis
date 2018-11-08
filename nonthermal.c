@@ -1800,7 +1800,7 @@ double nt_ionization_ratecoeff(const int modelgridindex, const int element, cons
 }
 
 
-static double calculate_nt_excitation_ratecoeff_perdepositionev(
+static double calculate_nt_excitation_ratecoeff_perdeposition(
   const int modelgridindex, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 {
@@ -1827,6 +1827,7 @@ static double calculate_nt_excitation_ratecoeff_perdepositionev(
     #endif
 
     return y_dot_crosssection / E_init_ev;
+    return y_dot_crosssection / E_init_ev / EV;
   }
   else
   {
@@ -1837,21 +1838,32 @@ static double calculate_nt_excitation_ratecoeff_perdepositionev(
 }
 
 
-double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
+double nt_excitation_ratecoeff(const int modelgridindex, const int element, const int ion, const int lower, const int upper, const double epsilon_trans, const int lineindex)
 {
 #if !NT_EXCITATION_ON
     return 0.;
 #endif
 
-  // these transitions won't be in the list, so don't waste time searching
-  if ((linelist[lineindex].lowerlevelindex >= NTEXCITATION_MAXNLEVELS_LOWER) ||
-      (linelist[lineindex].upperlevelindex >= NTEXCITATION_MAXNLEVELS_UPPER))
+  if ((lower >= NTEXCITATION_MAXNLEVELS_LOWER) ||
+      (upper >= NTEXCITATION_MAXNLEVELS_UPPER))
     return 0.;
 
   if (get_numassociatedcells(modelgridindex) <= 0)
   {
     printout("ERROR: nt_excitation_ratecoeff called on empty cell %d\n", modelgridindex);
     abort();
+  }
+
+  // if the NT spectrum is stored, we can calculate any non-thermal excitation rate, even if
+  // it didn't make the cut to be kept in the stored excitation list
+  if (STORE_NT_SPECTRUM)
+  {
+    const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+    const double statweight_lower = stat_weight(element, ion, lower);
+
+    const double ratecoeffperdeposition = calculate_nt_excitation_ratecoeff_perdeposition(modelgridindex, lineindex, statweight_lower, epsilon_trans);
+
+    return ratecoeffperdeposition * deposition_rate_density;
   }
 
   const int list_size = nt_solution[modelgridindex].frac_excitations_list_size;
@@ -1889,7 +1901,7 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int lineindex)
 
       return ratecoeffperdeposition * deposition_rate_density;
     }
-   }
+  }
 
   return 0.;
 }
@@ -2133,8 +2145,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
           }
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
-          const double epsilon_trans_ev = epsilon_trans / EV;
-          const double nt_frac_excitation_perlevelpop = epsilon_trans_ev * calculate_nt_excitation_ratecoeff_perdepositionev(modelgridindex, lineindex, statweight_lower, epsilon_trans);
+          const double nt_frac_excitation_perlevelpop = epsilon_trans * calculate_nt_excitation_ratecoeff_perdeposition(modelgridindex, lineindex, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * nt_frac_excitation_perlevelpop;
           frac_excitation_ion += frac_excitation_thistrans;
 

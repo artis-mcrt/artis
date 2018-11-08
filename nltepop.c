@@ -517,7 +517,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
 
       const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
       const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
-      const double NTC = nt_excitation_ratecoeff(modelgridindex, lineindex) * s_renorm[level];
+      const double NTC = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) * s_renorm[level];
 
       // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
       // {
