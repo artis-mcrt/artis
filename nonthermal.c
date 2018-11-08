@@ -245,6 +245,7 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2)
 static double get_tot_nion(const int modelgridindex)
 {
   double result = 0.;
+  #pragma clang loop vectorize(enable)
   for (int element = 0; element < nelements; element++)
   {
     result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
@@ -982,6 +983,7 @@ static void get_xs_ionization_vector(gsl_vector *const xs_vec, const int collion
   for (int i = 0; i < startindex; i++)
     gsl_vector_set(xs_vec, i, 0.);
 
+  #pragma clang loop vectorize(enable)
   for (int i = startindex; i < SFPTS; i++)
   {
     const double endash = gsl_vector_get(envec, i);
@@ -1069,10 +1071,9 @@ static double N_e(const int modelgridindex, const double energy)
 
           const int integral1startindex = get_energyindex_ev_lteq(ionpot_ev);
           const int integral1stopindex = get_energyindex_ev_lteq(lambda);
-          const int integral2startindex = get_energyindex_ev_lteq(2 * energy_ev + ionpot_ev);
 
-          // start from integral1startindex because it is <= integral2startindex
-          for (int i = integral1startindex; i < SFPTS; i++)
+          // integral from ionpot up to lambda
+          for (int i = integral1startindex; i <= integral1stopindex; i++)
           {
             double endash = gsl_vector_get(envec, i);
             #if (USE_LOG_E_INCREMENT)
@@ -1081,18 +1082,21 @@ static double N_e(const int modelgridindex, const double energy)
             const double delta_endash = DELTA_E;
             #endif
 
-            // i >= integral1startindex will be true always in this loop
-            if (i <= integral1stopindex) // integral from ionpot up to lambda
-            {
-              N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, n) * Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
-            }
-
-            if (i >= integral2startindex) // integral from 2E + I up to E_max
-            {
-              N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, n) * Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * delta_endash;
-            }
+            N_e_ion += get_y(modelgridindex, energy_ev + endash) * xs_impactionization(energy_ev + endash, n) * Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_endash;
           }
 
+          // integral from 2E + I up to E_max
+          const int integral2startindex = get_energyindex_ev_lteq(2 * energy_ev + ionpot_ev);
+          for (int i = integral2startindex; i < SFPTS; i++)
+          {
+            double endash = gsl_vector_get(envec, i);
+            #if (USE_LOG_E_INCREMENT)
+            const double delta_endash = gsl_vector_get(delta_envec, i);
+            #else
+            const double delta_endash = DELTA_E;
+            #endif
+            N_e_ion += get_y_sample(modelgridindex, i) * xs_impactionization(endash, n) * Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * delta_endash;
+          }
         }
       }
 
