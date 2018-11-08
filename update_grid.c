@@ -30,7 +30,7 @@ void precalculate_partfuncts(int modelgridindex)
     {
       //printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);
       //cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
-      modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element,ion,modelgridindex);
+      modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
     }
   }
 }
@@ -1326,18 +1326,22 @@ double calculate_populations(const int modelgridindex)
     //printout("[debug] update_grid:   converged nne %g\n",cell[modelgridindex].nne);
 
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
-    double nne_check = 0.;
+    //double nne_check = 0.;
     nne_tot = 0.;   /// total number of electrons in grid cell which are possible
                     /// targets for compton scattering of gamma rays
 
     nntot = nne;
     for (int element = 0; element < nelements; element++)
     {
-      const double abundance = get_abundance(modelgridindex,element);
+      const double abundance = get_abundance(modelgridindex, element);
       const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
+
+      const int uppermost_ion = elements_uppermost_ion[tid][element];
+      double ionfractions[uppermost_ion + 1];
+      get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);
 
       /// Use ionizationfractions to calculate the groundlevel populations
       for (int ion = 0; ion < nions; ion++)
@@ -1348,7 +1352,7 @@ double calculate_populations(const int modelgridindex)
         {
           if (abundance > 0)
           {
-            nnion = nnelement * ionfract(element,ion,modelgridindex,nne);
+            nnion = nnelement * ionfractions[ion];
             if (nnion < MINPOP)
               nnion = MINPOP;
           }
@@ -1358,7 +1362,7 @@ double calculate_populations(const int modelgridindex)
         else
           nnion = MINPOP;  /// uppermost_ion is only < nions-1 in cells with nonzero abundance of the given species
         nntot += nnion;
-        nne_check += nnion * (get_ionstage(element,ion)-1);
+        //nne_check += nnion * (get_ionstage(element,ion)-1);
         //if (modelgrid[modelgridindex].composition[element].groundlevelpop[ion] < 0)
         //if (initial_iteration || modelgrid[modelgridindex].thick == 1)
         {
@@ -1375,7 +1379,7 @@ double calculate_populations(const int modelgridindex)
     {
       printout("Setting ion %d to have glp %g in cell %d\n", ion, modelgrid[modelgridindex].composition[element].groundlevelpop[ion], modelgridindex);
       printout("ion pop was %g and partfn was %g\n", nnion, modelgrid[modelgridindex].composition[element].partfunct[ion]);
-      printout("the ion frac was %g, abundance %g and density %g\n",ionfract(element,ion,modelgridindex,nne), abundance, get_rho(modelgridindex));
+      printout("the ion frac was %g, abundance %g and density %g\n",ionfractions[ion], abundance, get_rho(modelgridindex));
     }
   */
 

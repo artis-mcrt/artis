@@ -39,11 +39,15 @@ double nne_solution_f(double x, void *restrict paras)
         uppermost_ion = elements_uppermost_ion[tid][element];
       #endif
       */
+
+      double ionfractions[uppermost_ion + 1];
+      get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
+
       int ion;
       for (ion = 0; ion <= uppermost_ion; ion++)
       {
-        //printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfract(element,ion,T,x));
-        innersum += (get_ionstage(element, ion) - 1) * ionfract(element, ion, modelgridindex, x);
+        //printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfractions[ion]);
+        innersum += (get_ionstage(element, ion) - 1) * ionfractions[ion];
         if (!isfinite(innersum)) abort();
       }
       outersum += abundance / elements[element].mass * innersum;
@@ -60,60 +64,38 @@ double nne_solution_f(double x, void *restrict paras)
 }
 
 
-double ionfract(int element, int ion, int modelgridindex, double nne)
-/// Calculates ionization fraction for ion=ion of element=element at
-/// temperature T and electron number density nne
-/// modelgridindex needed to access precalculated partition functions
+void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion)
+// Calculate the fractions of an element's population in each ionization stage
+// size of ionfractions array must be >= uppermostion + 1
 {
-  //printout("debug nne %g\n",nne);
-  //const int nions = get_nions(element);
+  double nnionfactor[uppermost_ion + 1];
+  nnionfactor[uppermost_ion] = 1;
 
-  //int uppermost_ion = elements[element].uppermost_ion;
-  const int uppermost_ion = elements_uppermost_ion[tid][element];
-  /*#ifdef FORCE_LTE
-    uppermost_ion = get_nions(element)-1;
-  #else
-    //uppermost_ion = elements[element].uppermost_ion;
-    uppermost_ion = elements_uppermost_ion[tid][element];
-  #endif*/
-  //double phistorage[nions-1-ion];
-  double phistorage[uppermost_ion-ion];
-  double numerator = 1.;
-  //for (i = ion; i < nions-1; i++)
-  for (int i = ion; i < uppermost_ion; i++)
+  double denominator = 1.;
+
+  for (int ion = uppermost_ion - 1; ion >= 0; ion--)
   {
-    //printout("debug phi(element %d, ion %d)=%g\n",element,i,phi(element,i,modelgridindex));
-    phistorage[i-ion] = phi(element,i,modelgridindex);
-    numerator *= nne * phistorage[i-ion];
+    nnionfactor[ion] = nnionfactor[ion + 1] * nne * phi(element, ion, modelgridindex);
+    denominator += nnionfactor[ion];
   }
-  //printout("debug numerator %g\n",numerator);
-  double denominator = 0.;
-  //for (i = 0; i < nions; i++)
-  for (int i = 0; i <= uppermost_ion; i++)
+
+  for (int ion = 0; ion <= uppermost_ion; ion++)
   {
-    double factor = 1.;
-    //for (ii = i; ii < nions-1; ii++)
-    for (int ii = i; ii < uppermost_ion; ii++)
+    const double numerator = nnionfactor[ion];
+    ionfractions[ion] = numerator / denominator;
+
+    if (!isfinite(ionfractions[ion]))
     {
-      if (ii >= ion)
-        factor *= nne * phistorage[ii-ion];
-      else
-        factor *= nne * phi(element,ii,modelgridindex);
+      if (modelgridindex != MGRID)
+      {
+        printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
+                 get_ionstage(element,ion), get_element(element), modelgridindex, get_Te(modelgridindex), get_TR(modelgridindex));
+        //abort();
+        ionfractions[ion] = 0;
+      }
     }
-    denominator += factor;
+    // printout("ionfract(%d,%d,%d,%g) = %g\n", element, ion, modelgridindex, nne, ionfractions[ion]);
   }
-  //printout("debug denominator %g with nne %g and T_e %g\n",denominator, nne, get_Te(modelgridindex));
-
-  if (!isfinite(numerator/denominator))
-  {
-    if (modelgridindex != MGRID)
-      printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",get_ionstage(element,ion),get_element(element),modelgridindex,get_Te(modelgridindex),get_TR(modelgridindex));
-    //abort();
-    printout("debug numerator %g\n",numerator);
-    printout("debug denominator %g\n",denominator);
-    return 0.;
-  }
-  return numerator / denominator;
 }
 
 
