@@ -26,6 +26,7 @@ void precalculate_partfuncts(int modelgridindex)
   for (int element = 0; element < nelements; element++)
   {
     const int nions = get_nions(element);
+    #pragma omp simd
     for (int ion = 0; ion < nions; ion++)
     {
       //printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);
@@ -492,16 +493,21 @@ static void grid_cell_solve_Te_nltepops(const int n, const int nts, const int ti
       const time_t sys_time_start_nltepops = time(NULL);
       // fractional difference between previous and current iteration's (nne or max(ground state population change))
       double nlte_test;
-      for (int element = 0; element < nelements; element++)
+      if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
       {
-        if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
+        for (int element = 0; element < nelements; element++)
+        {
           solve_nlte_pops_element(element, n, nts, nlte_iter);
-        else
+        }
+      }
+      else
+      {
+        for (int element = 0; element < nelements; element++)
         {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions-1; ion++)
           {
-            double trial = fabs(solve_nlte_pops_ion(element, ion, n, nts) - 1);
+            const double trial = fabs(solve_nlte_pops_ion(element, ion, n, nts) - 1);
 
             if (trial > nlte_test)
               nlte_test = trial;
