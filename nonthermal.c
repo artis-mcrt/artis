@@ -3038,6 +3038,11 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
         MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root, MPI_COMM_WORLD);
       }
 
+      if (STORE_NT_SPECTRUM)
+      {
+        MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
+      }
+
       // printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
       //          modelgridindex, logged_element_z, logged_ion_stage,
       //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
