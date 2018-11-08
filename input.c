@@ -511,11 +511,9 @@ static void add_transitions_to_linelist(
     // }
 
     const int level = transitiontable[ii].upper;
-    const double epsilon_upper = epsilon(element, ion, level);
     if (level < nlevelsmax)
     {
       const int targetlevel = transitiontable[ii].lower;
-      const double epsilon_lower = epsilon(element, ion, targetlevel);
 
       //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
       //{
@@ -568,7 +566,6 @@ static void add_transitions_to_linelist(
           abort();
         }
         elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
-        elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon_trans = epsilon_upper - epsilon_lower;
         //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
         //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
         ndownarr[level]++;
@@ -581,7 +578,6 @@ static void add_transitions_to_linelist(
           abort();
         }
         elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
-        elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon_trans = epsilon_upper - epsilon_lower;
         nuparr[targetlevel]++;
       }
       else
