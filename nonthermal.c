@@ -1826,7 +1826,6 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(
     y_dot_crosssection *= DELTA_E;
     #endif
 
-    return y_dot_crosssection / E_init_ev;
     return y_dot_crosssection / E_init_ev / EV;
   }
   else
