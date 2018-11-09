@@ -509,6 +509,11 @@ void nt_init(const int my_rank)
     printout("  MAX_NT_EXCITATIONS %d\n", MAX_NT_EXCITATIONS);
     printout("  NTEXCITATION_MAXNLEVELS_LOWER %d\n", NTEXCITATION_MAXNLEVELS_LOWER);
     printout("  NTEXCITATION_MAXNLEVELS_UPPER %d\n", NTEXCITATION_MAXNLEVELS_UPPER);
+    printout("  SFPTS %d\n", SFPTS);
+    printout("  EMIN %g eV\n", EMIN);
+    printout("  EMAX %g eV\n", EMAX);
+    printout("  USE_LOG_E_INCREMENT %s\n", USE_LOG_E_INCREMENT ? "on" : "off");
+    printout("  STORE_NT_SPECTRUM %s\n", STORE_NT_SPECTRUM ? "on" : "off");
     printout("  USE_VALENCE_IONPOTENTIAL %s\n", USE_VALENCE_IONPOTENTIAL ? "on" : "off");
     printout("  MAX_AUGER_ELECTRONS %d\n", MAX_AUGER_ELECTRONS);
     printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
