@@ -306,7 +306,7 @@ static void read_ion_levels(
         transitions[level].to[i] = -99.;
       }
 
-      if ((elements[element].ions[ion].levels[level].downtrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
+      if ((elements[element].ions[ion].levels[level].downtrans_lineindicies = (int *) malloc(sizeof(int))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize downtranslist ... abort\n");
         abort();
@@ -314,7 +314,7 @@ static void read_ion_levels(
       /// initialize number of downward transitions to zero
       set_ndowntrans(element, ion, level, 0);
 
-      if ((elements[element].ions[ion].levels[level].uptrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
+      if ((elements[element].ions[ion].levels[level].uptrans_lineindicies = (int *) malloc(sizeof(int))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize uptranslist ... abort\n");
         abort();
@@ -559,25 +559,25 @@ static void add_transitions_to_linelist(
         elements[element].ions[ion].levels[level].metastable = false;
 
         set_ndowntrans(element, ion, level, ndownarr[level]);
-        if ((elements[element].ions[ion].levels[level].downtrans
-            = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level] + 1) * sizeof(transitionlist_entry))) == NULL)
+        if ((elements[element].ions[ion].levels[level].downtrans_lineindicies
+            = realloc(elements[element].ions[ion].levels[level].downtrans_lineindicies, (ndownarr[level] + 1) * sizeof(int))) == NULL)
         {
           printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
           abort();
         }
-        elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
-        //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
-        //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
+        // the line list has not been sorted yet, so the store the negative level index for now and
+        // this will be replaced with the index into the sorted line list later
+        elements[element].ions[ion].levels[level].downtrans_lineindicies[ndownarr[level]] = -targetlevel;
         ndownarr[level]++;
 
         set_nuptrans(element, ion, targetlevel, nuparr[targetlevel]);
-        if ((elements[element].ions[ion].levels[targetlevel].uptrans
-            = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel] + 1) * sizeof(transitionlist_entry))) == NULL)
+        if ((elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies
+            = realloc(elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies, (nuparr[targetlevel] + 1) * sizeof(int))) == NULL)
         {
           printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
           abort();
         }
-        elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
+        elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies[nuparr[targetlevel]] = -level;
         nuparr[targetlevel]++;
       }
       else
@@ -612,6 +612,24 @@ static void add_transitions_to_linelist(
       }
     }
   }
+}
+
+
+static int get_lineindex(const int lelement, const int lion, const int llowerlevel, const int lupperlevel)
+{
+  for (int lineindex = 0; lineindex < nlines; lineindex++)
+  {
+   const int element = linelist[lineindex].elementindex;
+   const int ion = linelist[lineindex].ionindex;
+   const int lowerlevel = linelist[lineindex].lowerlevelindex;
+   const int upperlevel = linelist[lineindex].upperlevelindex;
+
+   if (lelement == element && lion == ion && llowerlevel == lowerlevel && lupperlevel == upperlevel)
+   {
+     return lineindex;
+   }
+  }
+  assert(false);
 }
 
 
@@ -911,7 +929,7 @@ static void read_atomicdata_files(void)
   printout("total downtrans %d\n", totaldowntrans);
   printout("coolingcheck %d\n", coolingcheck);
 
-  printout("mem_usage: transitions occupy %.1f MB\n", (totaluptrans + totaldowntrans) * (sizeof(transitionlist_entry *) + sizeof(transitionlist_entry)) / 1024. / 1024.);
+  printout("mem_usage: transitions occupy %.1f MB\n", (totaluptrans + totaldowntrans) * (sizeof(int)) / 1024. / 1024.);
   ///debug output
   /*
   FILE *linelist_file = fopen_required("linelist_unsorted.out", "w");
@@ -954,9 +972,10 @@ static void read_atomicdata_files(void)
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
     for (int ii = 1; ii <= nupperdowntrans; ii++)
     {
-      if (elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevel == lowerlevel)
+      // negative indicates a level instead of a lineindex
+      if (elements[element].ions[ion].levels[upperlevel].downtrans_lineindicies[ii] == -lowerlevel)
       {
-        elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = lineindex;
+        elements[element].ions[ion].levels[upperlevel].downtrans_lineindicies[ii] = lineindex;
         // break; // should be safe to end here if there is max. one transition per pair of levels
       }
     }
@@ -964,14 +983,14 @@ static void read_atomicdata_files(void)
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
     for (int ii = 1; ii <= nloweruptrans; ii++)
     {
-      if (elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevel == upperlevel)
+      // negative indicates a level instead of a lineindex
+      if (elements[element].ions[ion].levels[lowerlevel].uptrans_lineindicies[ii] == -upperlevel)
       {
-        elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = lineindex;
+        elements[element].ions[ion].levels[lowerlevel].uptrans_lineindicies[ii] = lineindex;
         // break; // should be safe to end here if there is max. one transition per pair of levels
       }
     }
   }
-
 
   /// Photoionisation cross-sections
   ///======================================================

@@ -465,7 +465,11 @@ static void read_collion_data(void)
   printout("Stored %d of %d input shell cross sections\n", n, colliondatacount);
   colliondatacount = n;
   colliondata = realloc(colliondata, colliondatacount * sizeof(struct collionrow));
-  assert(colliondata != NULL);
+  if (colliondata == NULL)
+  {
+    printout("Could not reallocate colliondata.\n");
+    abort();
+  }
 
   fclose(cifile);
 
@@ -1069,7 +1073,7 @@ static double N_e(const int modelgridindex, const double energy)
         const double epsilon_lower = epsilon(element, ion, lower);
         for (int t = 1; t <= nuptrans; t++)
         {
-          const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
+          const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
           const int upper = linelist[lineindex].upperlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER)
           {
@@ -2141,7 +2145,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
         for (int t = 1; t <= nuptrans; t++)
         {
-          const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
+          const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
           const int upper = linelist[lineindex].upperlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER)
           {
@@ -2365,7 +2369,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
     const int nuptrans = get_nuptrans(element, ion, lower);
     for (int t = 1; t <= nuptrans; t++)
     {
-      const int lineindex = elements[element].ions[ion].levels[lower].uptrans[t].lineindex;
+      const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
       const int upper = linelist[lineindex].upperlevelindex;
       if (upper >= NTEXCITATION_MAXNLEVELS_UPPER)
       {
