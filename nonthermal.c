@@ -902,7 +902,6 @@ static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
 {
   const double coll_str = get_coll_str(lineindex);
 
-  bool hasnonzerovalue;
   if (coll_str >= 0)
   {
     // collision strength is available, so use it
@@ -910,7 +909,6 @@ static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
     const double constantfactor = pow(H_ionpot, 2) / statweight_lower * coll_str * PI * A_naught_squared;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
-    hasnonzerovalue = (en_startindex < SFPTS - 1);
 
     for (int j = 0; j < en_startindex; j++)
       gsl_vector_set(xs_excitation_vec, j, 0.);
@@ -920,6 +918,7 @@ static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
       const double energy = gsl_vector_get(envec, j) * EV;
       gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
     }
+    return true;
   }
   else if (!linelist[lineindex].forbidden)
   {
@@ -935,7 +934,6 @@ static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
     const double constantfactor = prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
-    hasnonzerovalue = (en_startindex < SFPTS - 1);
 
     for (int j = 0; j < en_startindex; j++)
       gsl_vector_set(xs_excitation_vec, j, 0.);
@@ -947,14 +945,13 @@ static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
       const double g_bar = A * log(U) + B;
       gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / U);
     }
+    return true;
   }
   else
   {
-    hasnonzerovalue = false;
     // gsl_vector_set_zero(xs_excitation_vec);
+    return false;
   }
-
-  return hasnonzerovalue;
 }
 
 
