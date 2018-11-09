@@ -82,7 +82,7 @@ void calculate_kpkt_rates(int modelgridindex)
         for (int level = 0; level < nlevels_currention; level++)
         {
           //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
-          const double epsilon_current = epsilon(element,ion,level);
+          const double epsilon_current = epsilon(element, ion, level);
           // mastate[tid].level = level;
           ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
@@ -92,9 +92,9 @@ void calculate_kpkt_rates(int modelgridindex)
           const int nuptrans = get_nuptrans(element, ion, level);
           for (int ii = 1; ii <= nuptrans; ii++)
           {
-            const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
+            const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+            const int upper = linelist[lineindex].upperlevelindex;
             const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-            const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
             //printout("    excitation to level %d possible\n",upper);
             C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
             //C = 0.;
@@ -301,8 +301,8 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     int nuptrans = get_nuptrans(element, ion, level);
     for (int ii = 1; ii <= nuptrans; ii++)
     {
-      const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+      const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+      const int upper = linelist[lineindex].upperlevelindex;
       //printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
       const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;

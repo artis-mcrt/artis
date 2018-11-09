@@ -1305,8 +1305,8 @@ extern inline FILE *fopen_required(const char *filename, const char *mode);
       nuptrans = get_nuptrans(element, ion, lower);
       int i = 1; i <= nuptrans; i++)
       {
-        upper = elements[element].ions[ion].levels[lower].uptrans[i].targetlevel;
-        lineindex = elements[element].ions[ion].levels[lower].uptrans[i].lineindex;
+        lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[i];
+        upper = linelist[lineindex].upperlevelindex;
         nu_trans = (elements[element].ions[ion].levels[lower].uptrans[i].epsilon - epsilon_lower)/H;
 
         A_ul = einstein_spontaneous_emission(lineindex);

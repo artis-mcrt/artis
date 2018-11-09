@@ -174,28 +174,28 @@ inline int get_continuumindex(int element, int ion, int level)
 inline int get_ndowntrans(int element, int ion, int level)
 // the number of downward bound-bound transitions from the specified level
 {
-  return elements[element].ions[ion].levels[level].downtrans[0].targetlevel;
+  return elements[element].ions[ion].levels[level].ndowntrans;
 }
 
 
 inline int get_nuptrans(int element, int ion, int level)
 // the number of upward bound-bound transitions from the specified level
 {
-  return elements[element].ions[ion].levels[level].uptrans[0].targetlevel;
+  return elements[element].ions[ion].levels[level].nuptrans;
 }
 
 
 inline void set_ndowntrans(const int element, const int ion, const int level, const int ndowntrans)
 // the number of downward bound-bound transitions from the specified level
 {
-  elements[element].ions[ion].levels[level].downtrans[0].targetlevel = ndowntrans;
+  elements[element].ions[ion].levels[level].ndowntrans = ndowntrans;
 }
 
 
 inline void set_nuptrans(const int element, const int ion, const int level, const int nuptrans)
 // the number of upward bound-bound transitions from the specified level
 {
-  elements[element].ions[ion].levels[level].uptrans[0].targetlevel = nuptrans;
+  elements[element].ions[ion].levels[level].nuptrans = nuptrans;
 }
 
 
