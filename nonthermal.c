@@ -2446,11 +2446,13 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
       double atanexp[SFPTS];
+      double prefactors[SFPTS];
       for (int j = 0; j < SFPTS; j++)
       {
         const double endash = gsl_vector_get(envec, j);
         const double epsilon_upper = (endash + ionpot_ev) / 2;
         atanexp[j] = atan((epsilon_upper - ionpot_ev) / J);
+        prefactors[j] = nnion / atan((endash - ionpot_ev) / 2 / J);
       }
 
       for (int i = 0; i < SFPTS; i++)
@@ -2474,7 +2476,8 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           #endif
           const double xs = xs_impactionization(endash, n);
 
-          const double prefactor = nnion * xs / atan((endash - ionpot_ev) / 2 / J);
+          // common_factor = xs * nnion / atan((endash - ionpot_ev) / 2 / J)
+          const double prefactor = xs * prefactors[j];
 
           // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
 
