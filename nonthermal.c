@@ -2383,7 +2383,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
         #if (USE_LOG_E_INCREMENT)
         gsl_vector_mul(vec_xs_excitation_deltae, delta_envec);
         #else
-        gsl_blas_dscal(DELTA_E, vec_xs_excitation_nnlevel_deltae);
+        gsl_blas_dscal(DELTA_E, vec_xs_excitation_deltae);
         #endif
 
         for (int i = 0; i < SFPTS; i++)
