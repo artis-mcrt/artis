@@ -1303,7 +1303,7 @@ extern inline FILE *fopen_required(const char *filename, const char *mode);
     {
       epsilon_lower = epsilon(element,ion,lower);
       nuptrans = get_nuptrans(element, ion, lower);
-      int i = 1; i <= nuptrans; i++)
+      int i = 0; i < nuptrans; i++)
       {
         lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[i];
         upper = linelist[lineindex].upperlevelindex;

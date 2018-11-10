@@ -51,7 +51,7 @@ static void get_macroatom_transitionrates(
   processrates[MA_ACTION_COLDEEXC] = 0.;
   processrates[MA_ACTION_INTERNALDOWNSAME] = 0.;
   const int ndowntrans = get_ndowntrans(element, ion, level);
-  for (int i = 1; i <= ndowntrans; i++)
+  for (int i = 0; i < ndowntrans; i++)
   {
     const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
     const int lower = linelist[lineindex].lowerlevelindex;
@@ -108,7 +108,7 @@ static void get_macroatom_transitionrates(
   /// transitions within the current ionisation stage
   processrates[MA_ACTION_INTERNALUPSAME] = 0.;
   const int nuptrans = get_nuptrans(element, ion, level);
-  for (int i = 1; i <= nuptrans; i++)
+  for (int i = 0; i < nuptrans; i++)
   {
     const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
     const int upper = linelist[lineindex].upperlevelindex;
@@ -169,7 +169,7 @@ static void do_macroatom_raddeexcitation(
   int lower = -1;
   const int ndowntrans = get_ndowntrans(element, ion, level);
   double epsilon_trans = -100;
-  for (i = 1; i <= ndowntrans; i++)
+  for (i = 0; i < ndowntrans; i++)
   {
     rate += get_individ_rad_deexc(element, ion, level, i);
     if (zrand * rad_deexc < rate)
@@ -634,7 +634,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
       printout("[debug]    check deexcitation\n");
       printout("[debug]    ndowntrans %d %d\n", ndowntrans, get_ndowntrans(element, ion, level));
-      for (int i = 1; i <= ndowntrans; i++)
+      for (int i = 0; i < ndowntrans; i++)
       {
         const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
         const int lower = linelist[lineindex].lowerlevelindex;
@@ -646,7 +646,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
       printout("[debug]    check excitation\n");
       printout("[debug]    nuptrans %d %d\n",nuptrans,get_nuptrans(element, ion, level));
-      for (int i = 1; i <= nuptrans; i++)
+      for (int i = 0; i < nuptrans; i++)
       {
         const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
         const int upper = linelist[lineindex].upperlevelindex;
@@ -777,7 +777,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         zrand = gsl_rng_uniform(rng);
         int lower = -99;
         double rate = 0.;
-        for (int i = 1; i <= ndowntrans; i++)
+        for (int i = 0; i < ndowntrans; i++)
         {
           rate += get_individ_internal_down_same(element, ion, level, i);
           if (zrand * processrates[MA_ACTION_INTERNALDOWNSAME] < rate)
@@ -904,7 +904,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         zrand = gsl_rng_uniform(rng);
         int upper = -99;
         rate = 0.;
-        for (int i = 1; i <= nuptrans; i++)
+        for (int i = 0; i < nuptrans; i++)
         {
           rate += get_individ_internal_up_same(element, ion, level, i);
           if (zrand * processrates[MA_ACTION_INTERNALUPSAME] < rate)

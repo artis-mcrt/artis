@@ -306,19 +306,13 @@ static void read_ion_levels(
         transitions[level].to[i] = -99.;
       }
 
-      if ((elements[element].ions[ion].levels[level].downtrans_lineindicies = (int *) malloc(sizeof(int))) == NULL)
-      {
-        printout("[fatal] input: not enough memory to initialize downtranslist ... abort\n");
-        abort();
-      }
+      elements[element].ions[ion].levels[level].downtrans_lineindicies = NULL;
+
       /// initialize number of downward transitions to zero
       set_ndowntrans(element, ion, level, 0);
 
-      if ((elements[element].ions[ion].levels[level].uptrans_lineindicies = (int *) malloc(sizeof(int))) == NULL)
-      {
-        printout("[fatal] input: not enough memory to initialize uptranslist ... abort\n");
-        abort();
-      }
+      elements[element].ions[ion].levels[level].uptrans_lineindicies = NULL;
+
       /// initialize number of upward transitions to zero
       set_nuptrans(element, ion, level, 0);
     }
@@ -492,13 +486,6 @@ static void add_transitions_to_linelist(
   const int element, const int ion, const int nlevelsmax, const int tottransitions,
   transitiontable_entry *transitiontable, int *lineindex)
 {
-  int nuparr[nlevelsmax];
-  int ndownarr[nlevelsmax];
-  for (int level = 0; level < nlevelsmax; level++)
-  {
-    ndownarr[level] = 1;
-    nuparr[level] = 1;
-  }
   for (int ii = 0; ii < tottransitions; ii++)
   {
     // if (get_element(element) == 28 && get_ionstage(element, ion) == 2)
@@ -558,27 +545,27 @@ static void add_transitions_to_linelist(
         /// This is not a metastable level.
         elements[element].ions[ion].levels[level].metastable = false;
 
-        set_ndowntrans(element, ion, level, ndownarr[level]);
+        const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
+        set_ndowntrans(element, ion, level, nupperdowntrans);
         if ((elements[element].ions[ion].levels[level].downtrans_lineindicies
-            = realloc(elements[element].ions[ion].levels[level].downtrans_lineindicies, (ndownarr[level] + 1) * sizeof(int))) == NULL)
+            = realloc(elements[element].ions[ion].levels[level].downtrans_lineindicies, nupperdowntrans * sizeof(int))) == NULL)
         {
           printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
           abort();
         }
         // the line list has not been sorted yet, so the store the negative level index for now and
         // this will be replaced with the index into the sorted line list later
-        elements[element].ions[ion].levels[level].downtrans_lineindicies[ndownarr[level]] = -targetlevel;
-        ndownarr[level]++;
+        elements[element].ions[ion].levels[level].downtrans_lineindicies[nupperdowntrans-1] = -targetlevel;
 
-        set_nuptrans(element, ion, targetlevel, nuparr[targetlevel]);
+        const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
+        set_nuptrans(element, ion, targetlevel, nloweruptrans);
         if ((elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies
-            = realloc(elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies, (nuparr[targetlevel] + 1) * sizeof(int))) == NULL)
+            = realloc(elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies, nloweruptrans * sizeof(int))) == NULL)
         {
           printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
           abort();
         }
-        elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies[nuparr[targetlevel]] = -level;
-        nuparr[targetlevel]++;
+        elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies[nloweruptrans-1] = -level;
       }
       else
       {
@@ -970,7 +957,7 @@ static void read_atomicdata_files(void)
     const int upperlevel = linelist[lineindex].upperlevelindex;
 
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
-    for (int ii = 1; ii <= nupperdowntrans; ii++)
+    for (int ii = 0; ii < nupperdowntrans; ii++)
     {
       // negative indicates a level instead of a lineindex
       if (elements[element].ions[ion].levels[upperlevel].downtrans_lineindicies[ii] == -lowerlevel)
@@ -981,7 +968,7 @@ static void read_atomicdata_files(void)
     }
 
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-    for (int ii = 1; ii <= nloweruptrans; ii++)
+    for (int ii = 0; ii < nloweruptrans; ii++)
     {
       // negative indicates a level instead of a lineindex
       if (elements[element].ions[ion].levels[lowerlevel].uptrans_lineindicies[ii] == -upperlevel)
