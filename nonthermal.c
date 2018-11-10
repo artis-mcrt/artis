@@ -1068,7 +1068,7 @@ static double N_e(const int modelgridindex, const double energy)
         const int nuptrans = get_nuptrans(element, ion, lower);
         const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
-        for (int t = 1; t <= nuptrans; t++)
+        for (int t = 0; t < nuptrans; t++)
         {
           const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
           const int upper = linelist[lineindex].upperlevelindex;
@@ -2140,7 +2140,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
         const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
         const double epsilon_lower = epsilon(element, ion, lower);
 
-        for (int t = 1; t <= nuptrans; t++)
+        for (int t = 0; t < nuptrans; t++)
         {
           const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
           const int upper = linelist[lineindex].upperlevelindex;
@@ -2364,7 +2364,7 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
     const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
     const double epsilon_lower = epsilon(element, ion, lower);
     const int nuptrans = get_nuptrans(element, ion, lower);
-    for (int t = 1; t <= nuptrans; t++)
+    for (int t = 0; t < nuptrans; t++)
     {
       const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
       const int upper = linelist[lineindex].upperlevelindex;
@@ -2630,25 +2630,25 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 
   bool enable_sfexcitation = true;
   bool enable_sfionization = true;
-  if (timestep <= n_lte_timesteps)
-  {
-    // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
-    // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
-    nt_solution[modelgridindex].nneperion_when_solved = -1.;
-    enable_sfexcitation = false;
-    enable_sfionization = false;
-
-    printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
-  }
-  else if (timestep <= n_lte_timesteps + 2)
-  {
-    // run the solver in a faster mode for the first couple of NLTE timesteps
-    // nt_solution[modelgridindex].nneperion_when_solved = -1.;
-    enable_sfexcitation = false;
-    // enable_sfionization = false;
-
-    printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
-  }
+  // if (timestep <= n_lte_timesteps)
+  // {
+  //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
+  //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
+  //   nt_solution[modelgridindex].nneperion_when_solved = -1.;
+  //   enable_sfexcitation = false;
+  //   enable_sfionization = false;
+  //
+  //   printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
+  // }
+  // else if (timestep <= n_lte_timesteps + 2)
+  // {
+  //   // run the solver in a faster mode for the first couple of NLTE timesteps
+  //   // nt_solution[modelgridindex].nneperion_when_solved = -1.;
+  //   enable_sfexcitation = false;
+  //   // enable_sfionization = false;
+  //
+  //   printout("Doing a faster solution without excitation in the SF equation for the first couple of NLTE timesteps.\n");
+  // }
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc(SFPTS, SFPTS);
   gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
