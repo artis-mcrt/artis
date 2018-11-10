@@ -142,6 +142,7 @@ static FILE *restrict nonthermalfile = NULL;
 static bool nonthermal_initialized = false;
 
 static gsl_vector *envec;            // energy grid on which solution is sampled
+static gsl_vector *logenvec;         // log of envec
 static gsl_vector *sourcevec;        // samples of the source function (energy distribution of deposited energy)
 static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
@@ -563,6 +564,7 @@ void nt_init(const int my_rank)
     }
 
     envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
+    logenvec = gsl_vector_calloc(SFPTS);
     sourcevec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
 
     #if (USE_LOG_E_INCREMENT)
@@ -596,6 +598,7 @@ void nt_init(const int my_rank)
       #endif
 
       gsl_vector_set(envec, s, energy_ev);
+      gsl_vector_set(logenvec, s, log(energy_ev));
 
       // spread the source over some energy width
       if (s < sourcelowerindex)
@@ -894,11 +897,11 @@ static double xs_excitation(const int lineindex, const double epsilon_trans, con
 }
 
 
-static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
+static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
-// returns true if any vector components are (or might be) non-zero
-// if it returns false, all vector components are zero, so the contents of xs_excitation_vec should be ignored
+// returns the index of the first valid cross section point (en >= epsilon_trans)
+// all elements below this index are invalid and should not be used
 {
   const double coll_str = get_coll_str(lineindex);
 
@@ -918,7 +921,7 @@ static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
       const double energy = gsl_vector_get(envec, j) * EV;
       gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
     }
-    return true;
+    return en_startindex;
   }
   else if (!linelist[lineindex].forbidden)
   {
@@ -930,27 +933,34 @@ static bool get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const 
     const double B = 0.15;
 
     const double prefactor = 45.585750051; // 8 * pi^2/sqrt(3)
-    // Eq 4 of Mewe 1972, possibly from Seaton 1962?
-    const double constantfactor = prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij;
+    const double epsilon_trans_ev = epsilon_trans / EV;
 
-    const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
+    // Eq 4 of Mewe 1972, possibly from Seaton 1962?
+    const double constantfactor = epsilon_trans_ev * prefactor * A_naught_squared * pow(H_ionpot / epsilon_trans, 2) * fij;
+
+    const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
 
     for (int j = 0; j < en_startindex; j++)
       gsl_vector_set(xs_excitation_vec, j, 0.);
 
+    // U = en / epsilon
+    // g_bar = A * log(U) + b
+    // xs[j] = constantfactor * g_bar / envec[j]
+
     for (int j = en_startindex; j < SFPTS; j++)
     {
-      const double energy = gsl_vector_get(envec, j) * EV;
-      const double U = energy / epsilon_trans;
-      const double g_bar = A * log(U) + B;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / U);
+      const double logU = gsl_vector_get(logenvec, j) - log(epsilon_trans_ev);
+      const double g_bar = A * logU + B;
+      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar);
     }
-    return true;
+    gsl_vector_div(xs_excitation_vec, envec);
+
+    return en_startindex;
   }
   else
   {
     // gsl_vector_set_zero(xs_excitation_vec);
-    return false;
+    return -1;
   }
 }
 
@@ -1817,7 +1827,7 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(
 }
 
   gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
-  if (get_xs_excitation_vector(xs_excitation_vec, lineindex, statweight_lower, epsilon_trans))
+  if (get_xs_excitation_vector(xs_excitation_vec, lineindex, statweight_lower, epsilon_trans) >= 0)
   {
     #if (USE_LOG_E_INCREMENT)
     gsl_vector_mul(xs_excitation_vec, delta_envec);
@@ -2378,7 +2388,8 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      if (get_xs_excitation_vector(vec_xs_excitation_deltae, lineindex, statweight_lower, epsilon_trans))
+      const int xsstartindex = get_xs_excitation_vector(vec_xs_excitation_deltae, lineindex, statweight_lower, epsilon_trans);
+      if (xsstartindex >= 0)
       {
         #if (USE_LOG_E_INCREMENT)
         gsl_vector_mul(vec_xs_excitation_deltae, delta_envec);
@@ -2390,7 +2401,9 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
         {
           const double en = gsl_vector_get(envec, i);
           const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
-          for (int j = i; j < stopindex; j++)
+
+          const int startindex = i > xsstartindex ? i : xsstartindex;
+          for (int j = startindex; j < stopindex; j++)
           {
             *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, j);
           }
@@ -2462,7 +2475,6 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           const double xs = xs_impactionization(endash, n);
 
           const double prefactor = nnion * xs / atan((endash - ionpot_ev) / 2 / J);
-
 
           // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
 
