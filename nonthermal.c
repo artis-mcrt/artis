@@ -951,9 +951,8 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
     {
       const double logU = gsl_vector_get(logenvec, j) - log(epsilon_trans_ev);
       const double g_bar = A * logU + B;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar);
+      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / gsl_vector_get(envec, j));
     }
-    gsl_vector_div(xs_excitation_vec, envec);
 
     return en_startindex;
   }

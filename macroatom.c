@@ -1226,7 +1226,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
       //f = osc_strength(element,ion,upper,lower);
       //C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) * stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
 
-      const double fac1 = epsilon_trans / KB / T_e;
+      const double eoverkt = epsilon_trans / (KB * T_e);
       ///Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
       const double g_bar = 0.2; ///this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
       //test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
@@ -1236,11 +1236,11 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
       //double Gamma = (g_bar > test) ? g_bar : test;
 
       //optimisation
-      const double gauntfac = (fac1 > 0.33421) ? g_bar : 0.276 * exp(fac1) * (-0.5772156649 - log(fac1));
+      const double gauntfac = (eoverkt > 0.33421) ? g_bar : 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
 
       const double g_ratio = statweight_target / statweight;
 
-      C = C_0 * 14.51039491 * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans,2) * fac1 * g_ratio * gauntfac;
+      C = C_0 * 14.51039491 * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot / epsilon_trans, 2) * eoverkt * g_ratio * gauntfac;
     }
     else // alterative: (coll_strength > -3.5) to catch -2 or -3
     {
@@ -1301,16 +1301,17 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
       const double g_bar = 0.2; // this should be read in from transitions data: it is 0.2 for transitions nl -> n'l' and 0.7 for transitions nl -> nl'
       // test = 0.276 * exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
       /// crude approximation to the already crude Van-Regemorter formula
+      const double exp_eoverkt = exp(eoverkt);
 
-      const double test = 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
+      const double test = 0.276 * exp_eoverkt * (-0.5772156649 - log(eoverkt));
       const double Gamma = g_bar > test ? g_bar : test;
-      C = C_0 * nne * sqrt(T_e) * 14.51039491 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans, 2) * eoverkt * exp(-eoverkt) * Gamma;
+      C = C_0 * nne * sqrt(T_e) * 14.51039491 * osc_strength(lineindex) * pow(H_ionpot/epsilon_trans, 2) * eoverkt / exp_eoverkt * Gamma;
     }
     else // alterative: (coll_strength > -3.5) to catch -2 or -3
     {
       // forbidden transitions: magnetic dipole, electric quadropole...
       // Axelrod's approximation (thesis 1980)
-      C = nne * 8.629e-6 * 0.01 * pow(T_e,-0.5) * exp(-eoverkt) * statw_upper(lineindex);
+      C = nne * 8.629e-6 * 0.01 * pow(T_e, -0.5) * exp(-eoverkt) * statw_upper(lineindex);
     }
   }
   else
