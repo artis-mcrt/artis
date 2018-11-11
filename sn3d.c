@@ -389,7 +389,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
 int main(int argc, char** argv)
 // Main - top level routine.
 {
-  PKT *const packets = calloc(MPKTS, sizeof(PKT));
+  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
   assert(packets != NULL);
 
   FILE *restrict packets_file;
@@ -464,22 +464,22 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  if ((mastate = calloc(nthreads,sizeof(mastate_t))) == NULL)
+  if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)
   {
     printout("[fatal] input: error initializing macro atom state variables ... abort\n");
     abort();
   }
-  if ((kappa_rpkt_cont = calloc(nthreads,sizeof(rpkt_cont_opacity_struct))) == NULL)
+  if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     abort();
   }
-  if ((coolingrates = calloc(nthreads,sizeof(coolingrates_t))) == NULL)
+  if ((coolingrates = (coolingrates_t *) calloc(nthreads, sizeof(coolingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing coolingrates communication variables ... abort\n");
     abort();
   }
-  if ((heatingrates = calloc(nthreads,sizeof(heatingrates_t))) == NULL)
+  if ((heatingrates = (heatingrates_t *) calloc(nthreads, sizeof(heatingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing heatingrates communication variables ... abort\n");
     abort();

@@ -68,23 +68,23 @@ static double choose_f(double xx, double zrand)
   while ((err > 1.e-4) && (count < 1000))
   {
     ftry = (f_max + f_min) / 2;
-    const double try = sigma_compton_partial(xx, ftry);
+    const double sigma_try = sigma_compton_partial(xx, ftry);
     //printout("ftry %g %g %g %g %g\n",ftry, f_min, f_max, try, norm);
-    if (try > norm)
+    if (sigma_try > norm)
     {
       f_max = ftry;
-      err = (try - norm) / norm;
+      err = (sigma_try - norm) / norm;
     }
     else
     {
       f_min = ftry;
-      err = (norm - try) / norm;
+      err = (norm - sigma_try) / norm;
     }
     //      printout("error %g\n",err);
     count++;
     if (count == 1000)
     {
-      printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, try, norm);
+      printout("Compton hit 1000 tries. %g %g %g %g %g\n", f_max, f_min, ftry, sigma_try, norm);
     }
   }
 
@@ -100,7 +100,7 @@ static double thomson_angle(void)
 
   const double B_coeff = (8. * zrand) - 4.;
 
-  double t_coeff = sqrt( (B_coeff * B_coeff) + 4);
+  double t_coeff = sqrt((B_coeff * B_coeff) + 4);
   t_coeff = t_coeff - B_coeff;
   t_coeff = t_coeff / 2;
   t_coeff = cbrt(t_coeff);

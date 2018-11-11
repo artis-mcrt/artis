@@ -361,7 +361,7 @@ static void allocate_nonemptycells(void)
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
   set_ffegrp(MMODELGRID, 0.);
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     set_modelinitradioabund(MMODELGRID, iso, 0.);
   }
@@ -402,7 +402,7 @@ static void allocate_nonemptycells(void)
     {
       set_rhoinit(mgi, 0.);
       set_rho(mgi, 0.);
-      for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+      for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
       {
         set_modelinitradioabund(mgi, iso, 0.);
       }

@@ -585,15 +585,17 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
     // select transition according to probabilities
     double total_transitions = 0.;
-    for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
+    for (int action = 0; action < MA_ACTION_COUNT; action++)
+    {
       total_transitions += processrates[action];
+    }
 
     enum ma_action selected_action;
     double zrand = gsl_rng_uniform(rng);
     //printout("zrand %g\n",zrand);
     const double randomrate = zrand * total_transitions;
     double rate = 0.;
-    for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
+    for (int action = 0; action < MA_ACTION_COUNT; action++)
     {
       rate += processrates[action];
       if (rate > randomrate)

@@ -1519,7 +1519,7 @@ static void show_totmassradionuclides(void)
   mtot = 0.;
   mfeg = 0.;
 
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
     totmassradionuclide[iso] = 0.;
 
   int n1 = 0;
@@ -1556,7 +1556,7 @@ static void show_totmassradionuclides(void)
 
     mtot += mass_in_shell;
 
-    for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
       totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
 
     mfeg += mass_in_shell * get_ffegrp(mgi);
