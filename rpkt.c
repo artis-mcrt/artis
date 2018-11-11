@@ -102,7 +102,6 @@ double closest_transition(PKT *restrict pkt_ptr)
   mastate[tid].element = linelist[match].elementindex;
   mastate[tid].ion     = linelist[match].ionindex;
   mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
-  mastate[tid].activatedfromlevel = linelist[match].lowerlevelindex;
   mastate[tid].activatingline = match;
   pkt_ptr->next_trans   = match + 1;  ///helper variable to overcome numerical problems after line scattering
                                       ///further scattering events should be located at lower frequencies to prevent
@@ -160,12 +159,12 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:   line interaction possible\n");
       #endif
 
-      const int element = mastate[tid].element;
-      const int ion = mastate[tid].ion;
-      const int upper = mastate[tid].level;
-      const int lower = mastate[tid].activatedfromlevel;
       // const int lineindex = mastate[tid].activatingline;
       const int lineindex = dummypkt_ptr->next_trans - 1;
+      const int element = linelist[lineindex].elementindex;
+      const int ion = linelist[lineindex].ionindex;
+      const int upper = linelist[lineindex].upperlevelindex;
+      const int lower = linelist[lineindex].lowerlevelindex;
 
       double ldist;  // distance from current position to the line interaction
       if (dummypkt_ptr->nu_cmf < nu_trans)
@@ -1383,9 +1382,6 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
                         //}
                         nnionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
 
-                        mastate[tid].element = element;
-                        mastate[tid].ion = ion;
-                        mastate[tid].level = level;
                         const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
 
                         bef = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact;

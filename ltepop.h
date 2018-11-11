@@ -27,7 +27,7 @@ inline double calculate_sahafact(int element, int ion, int level, int upperionle
   //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
   if (sf < 0)
   {
-    printout("[fatal] calculate_sahafact: Negative  Saha factor. sfac %g element %d ion %d level %d upperionlevel %d g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
+    printout("[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
              sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
     abort();
   }

@@ -158,7 +158,7 @@ static void get_macroatom_transitionrates(
 
 static void do_macroatom_raddeexcitation(
   PKT *restrict pkt_ptr, const int element, const int ion, const int level, const double rad_deexc,
-  const double total_transitions, const double t_current)
+  const double total_transitions, const double t_current, const int activatingline)
 {
   ///radiative deexcitation of MA: emitt rpkt
   ///randomly select which line transitions occurs
@@ -229,7 +229,7 @@ static void do_macroatom_raddeexcitation(
   /// Emit the rpkt in a random direction
   emitt_rpkt(pkt_ptr, t_current);
 
-  if (linelistindex == mastate[tid].activatingline)
+  if (linelistindex == activatingline)
     resonancescatterings++;
   else
   {
@@ -588,6 +588,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
       total_transitions += processrates[action];
 
+    enum ma_action selected_action;
     double zrand = gsl_rng_uniform(rng);
     //printout("zrand %g\n",zrand);
     const double randomrate = zrand * total_transitions;
@@ -597,7 +598,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       rate += processrates[action];
       if (rate > randomrate)
       {
-        mastate[tid].lastaction = action;
+        selected_action = action;
         break;
       }
     }
@@ -718,7 +719,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       }
     #endif
 
-    switch (mastate[tid].lastaction)
+    switch (selected_action)
     {
       case MA_ACTION_RADDEEXC:
         #ifdef DEBUG_ON
@@ -728,7 +729,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             printout("[debug] do_ma:   jumps = %d\n",jumps);
           }
         #endif
-        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current);
+        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline);
 
         if (LOG_MACROATOM)
         {
