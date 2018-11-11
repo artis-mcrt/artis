@@ -242,14 +242,10 @@ enum ma_action {
 
 typedef struct mastate_t
 {
-  double einstein;
   int element;              /// macro atom of type element (this is an element index)
   int ion;                  /// in ionstage ion (this is an ion index)
   int level;                /// and level=level (this is a level index)
-  int activatedfromlevel;   /// Helper variable for bb-activation of macro atoms due to a rpkt event
-                            /// It holds information about the lower level of the bb-transition.
   int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
-  enum ma_action lastaction;           /// Holds information on last action performed by do_ma
 } mastate_t;
 
 

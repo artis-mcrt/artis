@@ -179,11 +179,13 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
           nutrans = closest_transition(dummy_ptr);
 
-          element = mastate[tid].element;
-          ion = mastate[tid].ion;
-          upper = mastate[tid].level;
-          lower = mastate[tid].activatedfromlevel;
-          A_ul = mastate[tid].einstein;
+          const int lineindex = mastate[tid].activatingline;
+
+          element = linelist[lineindex].elementindex;
+          ion = linelist[lineindex].ionindex;
+          upper = linelist[lineindex].upperlevelindex;
+          lower = linelist[lineindex].lowerlevelindex;
+          A_ul = linelist[lineindex].einstein_A;
 
           anumber = get_element(element);
 
