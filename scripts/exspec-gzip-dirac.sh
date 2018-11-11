@@ -10,12 +10,14 @@ module load intel/mpi/18.0.3
 
 cd $PBS_O_WORKDIR
 
-gunzip -v phixsdata.txt.gz transitiondata.txt.gz ratecoeff.dat.gz packets*.out.gz
+gunzip -v phixsdata.txt.gz transitiondata.txt.gz ratecoeff.dat.gz
+gunzip packets*.out.gz
 
 ./exspec
 
-gzip -v emission*.out absorption.out
-
-gzip -v packets*.out
-mkdir packets
-mv packets*.out.gz packets/
+if [ -f spec.out ]; then
+  gzip -v emission*.out absorption.out
+  gzip -v packets*.out
+  mkdir packets
+  mv packets*.out.gz packets/
+fi
