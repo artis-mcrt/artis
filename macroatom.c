@@ -1214,7 +1214,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
 {
   double C;
   const double coll_str_thisline = get_coll_str(lineindex);
-  const double statweight = statw_upper(lineindex);
+  const double upperstatweight = statw_upper(lineindex);
   if (coll_str_thisline < 0)
   {
     const double statweight_target = statw_lower(lineindex);
@@ -1239,7 +1239,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
       //optimisation
       const double gauntfac = (eoverkt > 0.33421) ? g_bar : 0.276 * exp(eoverkt) * (-0.5772156649 - log(eoverkt));
 
-      const double g_ratio = statweight_target / statweight;
+      const double g_ratio = statweight_target / upperstatweight;
 
       C = C_0 * 14.51039491 * nne * sqrt(T_e) * osc_strength(lineindex) * pow(H_ionpot / epsilon_trans, 2) * eoverkt * g_ratio * gauntfac;
     }
@@ -1247,14 +1247,14 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
     {
       //forbidden transitions: magnetic dipole, electric quadropole...
       //could be Axelrod? or Maurer
-      C = nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
+      C = nne * 8.629e-6 * 0.01 * statweight_target / sqrt(T_e);
     }
   }
   else //positive values are treated as effective collision strengths
   {
     //from Osterbrock and Ferland, p51
     //statweight_target is LOWER LEVEL stat weight
-    C = nne * 8.629e-6 * pow(T_e, -0.5) * coll_str_thisline / statweight;
+    C = nne * 8.629e-6 * coll_str_thisline / upperstatweight / sqrt(T_e);
     // test test
     //C = n_u * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * statweight_target;
   }
@@ -1312,13 +1312,13 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
     {
       // forbidden transitions: magnetic dipole, electric quadropole...
       // Axelrod's approximation (thesis 1980)
-      C = nne * 8.629e-6 * 0.01 * pow(T_e, -0.5) * exp(-eoverkt) * statw_upper(lineindex);
+      C = nne * 8.629e-6 * 0.01 * exp(-eoverkt) * statw_upper(lineindex) / sqrt(T_e);
     }
   }
   else
   {
     //from Osterbrock and Ferland, p51
-    C = nne * 8.629e-6 * pow(T_e, -0.5) * coll_strength * exp(-eoverkt) / statw_lower(lineindex);
+    C = nne * 8.629e-6 * coll_strength * exp(-eoverkt) / statw_lower(lineindex) / sqrt(T_e);
     //test test
     //C = n_l * nne * 8.629e-6 * pow(T_e,-0.5) * 0.01 * exp(-fac1) * statw_upper(lineindex);
   }
