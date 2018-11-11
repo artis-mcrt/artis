@@ -10,7 +10,7 @@ void radfield_init(int my_rank);
 void radfield_write_to_file(int modelgridindex, int timestep);
 void radfield_close_file(void);
 void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf);
-void radfield_increment_Jb_lu_estimator(int modelgridindex, int jblueindex, double increment);
+void radfield_increment_lineestimator(int modelgridindex, int lineindex, double increment);
 double radfield(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex, int timestep);
 void radfield_set_J_normfactor(int modelgridindex, double normfactor);
