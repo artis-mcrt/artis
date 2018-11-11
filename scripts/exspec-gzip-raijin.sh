@@ -30,6 +30,9 @@ gunzip packets*.out.gz
 
 ./exspec
 
-gzip -v phixsdata.txt.gz transitiondata.txt.gz ratecoeff.dat.gz
-gzip -v packets*.out.gz
-
+if [ -f spec.out ]; then
+  gzip -v phixsdata.txt.gz transitiondata.txt.gz ratecoeff.dat.gz
+  gzip -v packets*.out.gz
+  mkdir packets
+  mv packets*.out.gz packets/
+fi
