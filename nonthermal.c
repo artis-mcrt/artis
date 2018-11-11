@@ -989,7 +989,7 @@ static double xs_impactionization(const double energy_ev, const int collionindex
 }
 
 
-static void get_xs_ionization_vector(gsl_vector *const xs_vec, const int collionindex)
+static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collionindex)
 // xs_vec will be set with impact ionization cross sections for E > ionpot_ev (and zeros below this energy)
 {
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
@@ -1014,6 +1014,8 @@ static void get_xs_ionization_vector(gsl_vector *const xs_vec, const int collion
     const double xs_ioniz = 1e-14 * (A * (1 - 1/u) + B * pow((1 - 1/u), 2) + C * log(u) + D * log(u) / u) / (u * pow(ionpot_ev, 2));
     gsl_vector_set(xs_vec, i, xs_ioniz);
   }
+
+  return startindex;
 }
 
 
@@ -2429,12 +2431,13 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 // add the ionization terms to the Spencer-Fano matrix
 // also, update the value of E_0, the minimum energy for excitation/ionization
 {
-  for (int n = 0; n < colliondatacount; n++)
+  gsl_vector *const vec_xs_ionization = gsl_vector_alloc(SFPTS);
+  for (int collionindex = 0; collionindex < colliondatacount; collionindex++)
   {
-    if (colliondata[n].Z == Z && colliondata[n].nelec == Z - ionstage + 1)
+    if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1)
     {
-      const double ionpot_ev = colliondata[n].ionpot_ev;
-      const double en_auger_ev = colliondata[n].en_auger_ev;
+      const double ionpot_ev = colliondata[collionindex].ionpot_ev;
+      const double en_auger_ev = colliondata[collionindex].en_auger_ev;
       // const double n_auger_elec_avg = colliondata[n].n_auger_elec_avg;
       const double J = get_J(Z, ionstage, ionpot_ev);
 
@@ -2444,9 +2447,11 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
+      const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionindex);
+
       double atanexp[SFPTS];
       double prefactors[SFPTS];
-      for (int j = 0; j < SFPTS; j++)
+      for (int j = xsstartindex; j < SFPTS; j++)
       {
         const double endash = gsl_vector_get(envec, j);
         const double epsilon_upper = (endash + ionpot_ev) / 2;
@@ -2464,7 +2469,8 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
         // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
         const double atanexp2 = atan(en / J);
 
-        for (int j = i; j < SFPTS; j++)
+        const int jstart = i > xsstartindex ? i : xsstartindex;
+        for (int j = jstart; j < SFPTS; j++)
         {
           // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E' = envec(j)
           const double endash = gsl_vector_get(envec, j);
@@ -2473,7 +2479,8 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           #else
           const double deltaendash = DELTA_E;
           #endif
-          const double xs = xs_impactionization(endash, n);
+
+          const double xs = gsl_vector_get(vec_xs_ionization, j);
 
           // common_factor = xs * nnion / atan((endash - ionpot_ev) / 2 / J)
           const double prefactor = xs * prefactors[j];
@@ -2482,6 +2489,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 
           const double epsilon_lower = endash - en;
           // epsilon_upper = (endash + ionpot_ev) / 2;
+          // double ij_contribution = prefactor * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
           double ij_contribution = prefactor * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
 
           // endash > 2 * en + ionpot_ev
@@ -2497,17 +2505,16 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
             // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
             ij_contribution -= nnion * xs; // * n_auger_elec_avg; // * en_auger_ev???
           }
-
-          if (SF_AUGER_CONTRIBUTION_ON && SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
+          else if (SF_AUGER_CONTRIBUTION_ON && SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
           {
             // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger electrons
             // so we need a boost to get the average energy of Auger electrons given that there are one or more
-            const double en_boost = 1 / (1. - colliondata[n].prob_num_auger[0]);
+            const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
             for (int a = 1; a <= MAX_AUGER_ELECTRONS; a++)
             {
               if (en < (en_auger_ev * en_boost))
               {
-                ij_contribution -= nnion * xs * colliondata[n].prob_num_auger[a] * a;
+                ij_contribution -= nnion * xs * colliondata[collionindex].prob_num_auger[a] * a;
               }
             }
           }
@@ -2517,6 +2524,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       }
     }
   }
+  free(vec_xs_ionization);
 }
 
 

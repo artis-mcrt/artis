@@ -48,8 +48,8 @@ double nne_solution_f(double x, void *restrict paras)
       {
         //printout("debug element %d, ion %d, ionfract(element,ion,T,x) %g\n",element,ion,ionfractions[ion]);
         innersum += (get_ionstage(element, ion) - 1) * ionfractions[ion];
-        if (!isfinite(innersum)) abort();
       }
+      assert(isfinite(innersum));
       outersum += abundance / elements[element].mass * innersum;
       if (!isfinite(outersum))
       {
@@ -300,12 +300,12 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   //double epsilon_groundlevel = epsilon(element,ion,0);
 
   int initial = 0;
-  if (get_groundlevelpop(modelgridindex,element,ion) < MINPOP)
+  if (get_groundlevelpop(modelgridindex, element, ion) < MINPOP)
   {
     //either there reall is none of this ion or this is a first pass through
     //in either case, we won't have any real nlte_populations so the actual value of
     //of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
-    pop_store = get_groundlevelpop(modelgridindex,element,ion);
+    pop_store = get_groundlevelpop(modelgridindex, element, ion);
     initial = 1;
     modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = 1.0;
   }
@@ -313,7 +313,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   //printout("groundlevelpop %g\n", get_groundlevelpop(modelgridindex,element,ion));
 
   double U = 1.0;//stat_weight(element,ion,0);
-  const int nlevels = get_nlevels(element,ion);
+  const int nlevels = get_nlevels(element, ion);
 /*  if (T_exc <= MINTEMP)
   {
     for (level = 1; level < nlevels; level++)
@@ -333,9 +333,10 @@ double calculate_partfunct(int element, int ion, int modelgridindex)
   }
   else
   {*/
+    const double groundpop = get_groundlevelpop(modelgridindex, element, ion);
     for (int level = 1; level < nlevels; level++)
     {
-      const double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / get_groundlevelpop(modelgridindex,element,ion);//*stat_weight(element,ion,0);
+      const double nn = calculate_exclevelpop(modelgridindex, element, ion, level) / groundpop;//*stat_weight(element,ion,0);
 
       //if (NLTE_POPS_ON)
       //{
