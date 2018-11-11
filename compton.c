@@ -103,7 +103,7 @@ static double thomson_angle(void)
   double t_coeff = sqrt( (B_coeff * B_coeff) + 4);
   t_coeff = t_coeff - B_coeff;
   t_coeff = t_coeff / 2;
-  t_coeff = pow(t_coeff, (1 / 3));
+  t_coeff = cbrt(t_coeff);
 
   const double mu = (1 / t_coeff) - t_coeff;
 
