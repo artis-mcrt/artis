@@ -1,6 +1,7 @@
 #ifndef RADFIELD_H
 #define RADFIELD_H
 
+#include <stdio.h>
 #include <gsl/gsl_integration.h>
 
 void radfield_zero_estimators(int modelgridindex);
