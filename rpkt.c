@@ -220,7 +220,6 @@ static double get_event(
           if (debuglevel == 2) printout("[debug] get_event:     tau_line %g\n", tau_line);
         #endif
 
-        bool increment_lineestimator = false;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
         #endif
@@ -249,10 +248,7 @@ static double get_event(
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
           move_pkt(dummypkt_ptr, ldist, t_current);
-          if (DETAILED_LINE_ESTIMATORS_ON)
-          {
-            increment_lineestimator = true;
-          }
+          radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           #ifdef DEBUG_ON
             if (debuglevel == 2)
@@ -285,10 +281,7 @@ static double get_event(
           {
             t_current += ldist / CLIGHT_PROP;
             move_pkt(dummypkt_ptr, ldist, t_current);
-            if (DETAILED_LINE_ESTIMATORS_ON)
-            {
-              increment_lineestimator = true;
-            }
+            radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
@@ -297,18 +290,6 @@ static double get_event(
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop   %d\n",edist,abort_dist,edist-abort_dist,endloop);
           #endif
-        }
-
-        if (increment_lineestimator)
-        {
-          const int jblueindex = radfield_get_Jblueindex(lineindex);
-          if (jblueindex >= 0)
-          {
-            const double increment = t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf;
-            // printout("get_event: Jb_lu increment: dist %g ldist %g e_cmf %g nu_cmf %g nu_trans %g\n",
-            //          dist, ldist, dummypkt_ptr->e_cmf, dummypkt_ptr->nu_cmf, nu_trans);
-            radfield_increment_Jb_lu_estimator(modelgridindex, jblueindex, increment);
-          }
         }
       }
       else

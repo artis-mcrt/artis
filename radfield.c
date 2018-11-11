@@ -784,16 +784,20 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
 }
 
 
-inline
-void radfield_increment_Jb_lu_estimator(const int modelgridindex, const int jblueindex, const double increment)
+void radfield_increment_lineestimator(const int modelgridindex, const int lineindex, const double increment)
 {
-  Jb_lu_raw[modelgridindex][jblueindex].value += increment;
-  Jb_lu_raw[modelgridindex][jblueindex].contribcount += 1;
-  // const int lineindex = detailed_lineindicies[jblueindex];
-  // printout(" increment cell %d lineindex %d Jb_lu_raw %g prev_Jb_lu_normed %g radfield(nu_trans) %g\n",
-  //       modelgridindex, lineindex, Jb_lu_raw[modelgridindex][jblueindex], prev_Jb_lu_normed[modelgridindex][jblueindex].value, radfield(linelist[lineindex].nu, modelgridindex));
-}
+  if (!DETAILED_LINE_ESTIMATORS_ON) return;
 
+  const int jblueindex = radfield_get_Jblueindex(lineindex);
+  if (jblueindex >= 0)
+  {
+    Jb_lu_raw[modelgridindex][jblueindex].value += increment;
+    Jb_lu_raw[modelgridindex][jblueindex].contribcount += 1;
+    // const int lineindex = detailed_lineindicies[jblueindex];
+    // printout(" increment cell %d lineindex %d Jb_lu_raw %g prev_Jb_lu_normed %g radfield(nu_trans) %g\n",
+    //       modelgridindex, lineindex, Jb_lu_raw[modelgridindex][jblueindex], prev_Jb_lu_normed[modelgridindex][jblueindex].value, radfield(linelist[lineindex].nu, modelgridindex));
+  }
+}
 
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
