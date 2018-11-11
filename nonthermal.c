@@ -2500,26 +2500,51 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
             ij_contribution -= prefactor * (atanexp[j] - atanexp2) * deltaendash;
           }
 
-          if (SF_AUGER_CONTRIBUTION_ON && !SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN && en < en_auger_ev)
+          *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
+        }
+      }
+
+      if (SF_AUGER_CONTRIBUTION_ON)
+      {
+        int augerstopindex = 0;
+        if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
+        {
+          // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger electrons
+          // so we need a boost to get the average energy of Auger electrons given that there are one or more
+          const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
+
+          augerstopindex = get_energyindex_ev_gteq(en_auger_ev * en_boost);
+        }
+        else
+        {
+          augerstopindex = get_energyindex_ev_gteq(en_auger_ev);
+        }
+
+        for (int i = 0; i < augerstopindex; i++)
+        {
+          const int jstart = i > xsstartindex ? i : xsstartindex;
+          for (int j = jstart; j < SFPTS; j++)
           {
-            // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
-            ij_contribution -= nnion * xs; // * n_auger_elec_avg; // * en_auger_ev???
-          }
-          else if (SF_AUGER_CONTRIBUTION_ON && SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
-          {
-            // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger electrons
-            // so we need a boost to get the average energy of Auger electrons given that there are one or more
-            const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
-            for (int a = 1; a <= MAX_AUGER_ELECTRONS; a++)
+            const double xs = gsl_vector_get(vec_xs_ionization, j);
+            if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
             {
-              if (en < (en_auger_ev * en_boost))
+              const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
+              for (int a = 1; a <= MAX_AUGER_ELECTRONS; a++)
               {
-                ij_contribution -= nnion * xs * colliondata[collionindex].prob_num_auger[a] * a;
+                if (gsl_vector_get(envec, i) < (en_auger_ev * en_boost / a))
+                {
+                  *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs * colliondata[collionindex].prob_num_auger[a] * a;
+                }
               }
             }
+            else
+            {
+              const double en = gsl_vector_get(envec, i);
+              assert(en < en_auger_ev);
+              // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
+              *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs; // * n_auger_elec_avg; // * en_auger_ev???
+            }
           }
-
-          *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
         }
       }
     }
