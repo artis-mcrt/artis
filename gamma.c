@@ -57,7 +57,7 @@ static double read_gamma_spectrum(enum radionuclides isotope, const char filenam
 
 static void read_decaydata(void)
 {
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     gamma_spectra[iso].nlines = 0;
     gamma_spectra[iso].energy = NULL;
@@ -102,7 +102,7 @@ void init_gamma_linelist(void)
   /* Now do the sorting. */
 
   int total_lines = 0;
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     total_lines += gamma_spectra[iso].nlines;
   }
@@ -120,7 +120,7 @@ void init_gamma_linelist(void)
   {
     double energy_try = 1.e50;
 
-    for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
     {
       // printout("iso %d nlines %d\n", iso, gamma_spectra[iso].nlines);
       for (int j = 0; j < gamma_spectra[iso].nlines; j++)
