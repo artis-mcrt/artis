@@ -2490,17 +2490,21 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           const double epsilon_lower = endash - en;
           // epsilon_upper = (endash + ionpot_ev) / 2;
           // double ij_contribution = prefactor * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
-          double ij_contribution = prefactor * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+          *gsl_matrix_ptr(sfmatrix, i, j) += prefactor * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+        }
 
-          // endash > 2 * en + ionpot_ev
-          if (j >= secondintegralstartindex)
-          {
-            // epsilon_lower = en + ionpot_ev;
-            // epsilon_upper = (endash + ionpot_ev) / 2;
-            ij_contribution -= prefactor * (atanexp[j] - atanexp2) * deltaendash;
-          }
+        // endash ranges from 2 * en + ionpot_ev to EMAX
+        for (int j = secondintegralstartindex; j < SFPTS; j++)
+        {
+          #if (USE_LOG_E_INCREMENT)
+          const double deltaendash = gsl_vector_get(delta_envec, j);
+          #else
+          const double deltaendash = DELTA_E;
+          #endif
 
-          *gsl_matrix_ptr(sfmatrix, i, j) += ij_contribution;
+          // epsilon_lower = en + ionpot_ev;
+          // epsilon_upper = (endash + ionpot_ev) / 2;
+          *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * gsl_vector_get(vec_xs_ionization, j) * (atanexp[j] - atanexp2) * deltaendash;
         }
       }
 
