@@ -30,6 +30,12 @@
 #include "version.h"
 #include "vpkt.h"
 
+#ifndef _OPENMP
+typedef int omp_int_t;
+static inline omp_int_t omp_get_thread_num(void) { return 0; }
+static inline omp_int_t omp_get_num_threads(void) { return 1; }
+#endif
+
 static FILE *initialise_linestat_file(void)
 {
   FILE *restrict linestat_file = fopen_required("linestat.out", "w");
@@ -386,6 +392,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   fclose(packets_file);
 }
 
+
 int main(int argc, char** argv)
 // Main - top level routine.
 {
@@ -419,11 +426,11 @@ int main(int argc, char** argv)
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
 
-# ifdef _OPENMP
+#ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
   #pragma omp parallel private(filename)
-# endif
+#endif
   {
     /// Get the current threads ID, copy it to a threadprivate variable
     tid = omp_get_thread_num();

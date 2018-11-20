@@ -70,10 +70,6 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 //#define _OPENMP
 #ifdef _OPENMP
   #include "omp.h"
-#else
-  typedef int omp_int_t;
-  inline omp_int_t omp_get_thread_num(void) { return 0; }
-  inline omp_int_t omp_get_num_threads(void) { return 1; }
 #endif
 
 
