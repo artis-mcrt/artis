@@ -22,6 +22,8 @@ extern inline int get_nuptrans(int element, int ion, int level);
 extern inline int get_nphixstargets(int element, int ion, int level);
 extern inline int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
 extern inline double get_phixsprobability(int element, int ion, int level, int phixstargetindex);
+extern inline void set_ndowntrans( int element,  int ion,  int level,  int ndowntrans);
+extern inline void set_nuptrans( int element, int ion,  int level,  int nuptrans);
 extern inline double einstein_spontaneous_emission(int lineindex);
 extern inline double osc_strength(int lineindex);
 extern inline double get_coll_str(int lineindex);
