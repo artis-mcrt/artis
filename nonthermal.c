@@ -2456,7 +2456,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
         const double endash = gsl_vector_get(envec, j);
         const double epsilon_upper = (endash + ionpot_ev) / 2;
         atanexp[j] = atan((epsilon_upper - ionpot_ev) / J);
-        prefactors[j] = nnion / atan((endash - ionpot_ev) / 2 / J);
+        prefactors[j] = gsl_vector_get(vec_xs_ionization, j) * nnion / atan((endash - ionpot_ev) / 2 / J);
       }
 
       for (int i = 0; i < SFPTS; i++)
@@ -2464,11 +2464,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
         // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
         const double en = gsl_vector_get(envec, i);
 
-        const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
-
-        // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
-        const double atanexp2 = atan(en / J);
-
+        // endash ranges from en to EMAX, but skip over the zero-cross section points
         const int jstart = i > xsstartindex ? i : xsstartindex;
         for (int j = jstart; j < SFPTS; j++)
         {
@@ -2480,20 +2476,17 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           const double deltaendash = DELTA_E;
           #endif
 
-          const double xs = gsl_vector_get(vec_xs_ionization, j);
-
-          // common_factor = xs * nnion / atan((endash - ionpot_ev) / 2 / J)
-          const double prefactor = xs * prefactors[j];
-
           // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
 
-          const double epsilon_lower = endash - en;
-          // epsilon_upper = (endash + ionpot_ev) / 2;
-          // double ij_contribution = prefactor * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
-          *gsl_matrix_ptr(sfmatrix, i, j) += prefactor * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+          const double epsilon_lower = endash - en; // and epsilon_upper = (endash + ionpot_ev) / 2;
+          *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
         }
 
+        // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
+        const double atanexp2 = atan(en / J);
+
         // endash ranges from 2 * en + ionpot_ev to EMAX
+        const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
         for (int j = secondintegralstartindex; j < SFPTS; j++)
         {
           #if (USE_LOG_E_INCREMENT)
@@ -2504,7 +2497,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 
           // epsilon_lower = en + ionpot_ev;
           // epsilon_upper = (endash + ionpot_ev) / 2;
-          *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * gsl_vector_get(vec_xs_ionization, j) * (atanexp[j] - atanexp2) * deltaendash;
+          *gsl_matrix_ptr(sfmatrix, i, j) -= prefactors[j] * (atanexp[j] - atanexp2) * deltaendash;
         }
       }
 
@@ -2526,6 +2519,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
 
         for (int i = 0; i < augerstopindex; i++)
         {
+          const double en = gsl_vector_get(envec, i);
           const int jstart = i > xsstartindex ? i : xsstartindex;
           for (int j = jstart; j < SFPTS; j++)
           {
@@ -2535,7 +2529,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
               const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
               for (int a = 1; a <= MAX_AUGER_ELECTRONS; a++)
               {
-                if (gsl_vector_get(envec, i) < (en_auger_ev * en_boost / a))
+                if (en < (en_auger_ev * en_boost / a))
                 {
                   *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs * colliondata[collionindex].prob_num_auger[a] * a;
                 }
@@ -2543,7 +2537,6 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
             }
             else
             {
-              const double en = gsl_vector_get(envec, i);
               assert(en < en_auger_ev);
               // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
               *gsl_matrix_ptr(sfmatrix, i, j) -= nnion * xs; // * n_auger_elec_avg; // * en_auger_ev???
