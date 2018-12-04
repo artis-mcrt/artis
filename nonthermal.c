@@ -2476,7 +2476,8 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
           const double deltaendash = DELTA_E;
           #endif
 
-          // atan bit is the definite integral of 1/[1 + (epsilon - I)/J] in Kozma & Fransson 1992 equation 4
+          // atan[(epsilon - ionpot_ev) / J] is the indefinite integral of 1/[1 + (epsilon - ionpot_ev) / J]
+          // in Kozma & Fransson 1992 equation 4
 
           const double epsilon_lower = endash - en; // and epsilon_upper = (endash + ionpot_ev) / 2;
           *gsl_matrix_ptr(sfmatrix, i, j) += prefactors[j] * (atanexp[j] - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
