@@ -1006,7 +1006,6 @@ static int get_xs_ionization_vector(gsl_vector *const xs_vec, const int collioni
   const double C = colliondata[collionindex].C;
   const double D = colliondata[collionindex].D;
 
-  #pragma clang loop vectorize(enable)
   #pragma omp simd
   for (int i = startindex; i < SFPTS; i++)
   {

@@ -26,7 +26,6 @@ void precalculate_partfuncts(int modelgridindex)
   for (int element = 0; element < nelements; element++)
   {
     const int nions = get_nions(element);
-    #pragma omp simd
     for (int ion = 0; ion < nions; ion++)
     {
       //printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);

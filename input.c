@@ -1069,7 +1069,7 @@ static void setup_cellhistory(void)
     abort();
   }
   #ifdef _OPENMP
-    #pragma omp parallel private(mem_usage_cellhistory)
+    #pragma omp parallel
     {
   #endif
       long mem_usage_cellhistory = 0;

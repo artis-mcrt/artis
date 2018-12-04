@@ -228,6 +228,14 @@ ifeq ($(WORK),/lustre/jwork1)
 endif
 
 
+sn3dmpi: CC = mpicc
+sn3dmpi: CFLAGS += -DMPI_ON
+sn3dmpi: sn3d
+
+sn3dopenmp: CFLAGS += -Xpreprocessor
+sn3dopenmp: CFLAGS += -fopenmp
+sn3dopenmp: LDFLAGS += -lomp
+sn3dopenmp: sn3d
 
 
 ### use pg when you want to use gprof the profiler
@@ -236,14 +244,10 @@ sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_em
 
 sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o ltepop.o macroatom.o move.o nltepop.o nonthermal.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o time_init.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
 
+all: sn3d exspec
+
 sn3d: clean version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
-
-sn3dopenmp: clean version
-	$(CC) $(CFLAGS) -Xpreprocessor -fopenmp -lomp $(sn3d_files) $(LDFLAGS) -o sn3d
-
-sn3dmpi: clean version
-	mpicc $(CFLAGS) -DMPI_ON $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
