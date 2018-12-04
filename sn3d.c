@@ -30,6 +30,7 @@
 #include "version.h"
 #include "vpkt.h"
 
+
 #ifndef _OPENMP
 typedef int omp_int_t;
 static inline omp_int_t omp_get_thread_num(void) { return 0; }
