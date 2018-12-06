@@ -330,6 +330,7 @@ void radfield_init(int my_rank)
 
   setup_bin_boundaries();
 
+  long radfield_mem_usage = 0;
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     radfield_set_J_normfactor(modelgridindex, -1.0);
@@ -338,7 +339,8 @@ void radfield_init(int my_rank)
     {
       radfieldbin_previous[modelgridindex] = (struct radfieldbin_previous *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin_previous));
       radfieldbin_current[modelgridindex] = (struct radfieldbin_current *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin_current));
-
+      radfield_mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin_previous);
+      radfield_mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin_current);
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
         radfieldbin_previous[modelgridindex][binindex].prev_J_normed = -1.;
@@ -353,7 +355,7 @@ void radfield_init(int my_rank)
       }
     }
   }
-  printout("mem_usage: radiation field bins for nonempty cells occupy %.1f MB\n", 2 * RADFIELDBINCOUNT * sizeof(struct radfieldbin_previous) / 1024. / 1024.);
+  printout("mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", radfield_mem_usage / 1024. / 1024.);
 }
 
 
