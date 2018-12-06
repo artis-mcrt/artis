@@ -41,7 +41,7 @@ const int NTEXCITATION_MAXNLEVELS_UPPER = 250; // maximum number of upper levels
 // limit the number of stored non-thermal excitation transition rates to reduce memory cost.
 // if this is higher than SFPTS, then you might as well just store
 // the full NT degradation spectrum and calculate the rates as needed (although CPU costs)
-const int MAX_NT_EXCITATIONS = 25000;
+const int MAX_NT_EXCITATIONS_STORED = 25000;
 
 // set to true to keep a list of non-thermal excitation rates for use
 // in the NLTE pop solver, macroatom, and NTLEPTON packets.
@@ -511,7 +511,7 @@ void nt_init(const int my_rank)
   {
     printout("Initializing non-thermal solver with:\n");
     printout("  NT_EXCITATION %s\n", NT_EXCITATION_ON ? "on" : "off");
-    printout("  MAX_NT_EXCITATIONS %d\n", MAX_NT_EXCITATIONS);
+    printout("  MAX_NT_EXCITATIONS_STORED %d\n", MAX_NT_EXCITATIONS_STORED);
     printout("  NTEXCITATION_MAXNLEVELS_LOWER %d\n", NTEXCITATION_MAXNLEVELS_LOWER);
     printout("  NTEXCITATION_MAXNLEVELS_UPPER %d\n", NTEXCITATION_MAXNLEVELS_UPPER);
     printout("  SFPTS %d\n", SFPTS);
@@ -2247,71 +2247,72 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
         nt_solution[modelgridindex].frac_ionizations_list_size, sizeof(struct nt_ionization_struct),
         compare_ionization_fractions);
 
-#if NT_EXCITATION_ON
-  if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size)
+  if (NT_EXCITATION_ON && (MAX_NT_EXCITATIONS_STORED > 0))
   {
-    // shrink the list to match the data
-    realloc_frac_excitations_list(modelgridindex, excitationindex);
-  }
-
-  qsort(nt_solution[modelgridindex].frac_excitations_list,
-        nt_solution[modelgridindex].frac_excitations_list_size, sizeof(struct nt_excitation_struct),
-        compare_excitation_fractions);
-
-  // the excitation list is now sorted by frac_deposition descending
-  const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
-
-  if (nt_solution[modelgridindex].frac_excitations_list_size > MAX_NT_EXCITATIONS)
-  {
-    // truncate the sorted list to save memory
-    printout("  Truncating non-thermal excitation list from %d to %d transitions.\n",
-             nt_solution[modelgridindex].frac_excitations_list_size, MAX_NT_EXCITATIONS);
-    realloc_frac_excitations_list(modelgridindex, MAX_NT_EXCITATIONS);
-  }
-
-  printout("mem_usage: non-thermal excitations for cell %d at this timestep occupy %.1f MB\n",
-           modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size *
-           (sizeof(nt_solution[modelgridindex].frac_excitations_list) + sizeof(nt_solution[modelgridindex].frac_excitations_list[0])) / 1024. / 1024.);
-
-  const float T_e = get_Te(modelgridindex);
-  printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
-           nt_solution[modelgridindex].frac_excitations_list_size);
-  int ntransdisplayed = nt_solution[modelgridindex].frac_excitations_list_size;
-  ntransdisplayed = (ntransdisplayed > 50) ? 50 : ntransdisplayed;
-  for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++)
-  {
-    const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
-    if (frac_deposition > 0.)
+    if (excitationindex < nt_solution[modelgridindex].frac_excitations_list_size)
     {
-      const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-      const int element = linelist[lineindex].elementindex;
-      const int ion = linelist[lineindex].ionindex;
-      const int lower = linelist[lineindex].lowerlevelindex;
-      const int upper = linelist[lineindex].upperlevelindex;
-      const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
-
-      const double ratecoeffperdeposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
-      const double ntcollexc_ratecoeff = ratecoeffperdeposition * deposition_rate_density;
-
-      const double t_current = time_step[timestep].start;
-      const double radexc_ratecoeff = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_current);
-
-      const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
-
-      const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
-
-      printout("    frac_deposition %.3e Z=%d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e nt/tot %.1e collstr %.1e lineindex %d\n",
-               frac_deposition, get_element(element), get_ionstage(element, ion), lower, upper,
-               radexc_ratecoeff, collexc_ratecoeff, ntcollexc_ratecoeff, ntcollexc_ratecoeff / exc_ratecoeff, get_coll_str(lineindex), lineindex);
+      // shrink the list to match the data
+      realloc_frac_excitations_list(modelgridindex, excitationindex);
     }
-  }
 
-  // now sort the excitation list by lineindex ascending for fast lookup with a binary search
-  qsort(nt_solution[modelgridindex].frac_excitations_list,
-        nt_solution[modelgridindex].frac_excitations_list_size, sizeof(struct nt_excitation_struct),
-        compare_excitation_lineindicies);
+    qsort(nt_solution[modelgridindex].frac_excitations_list,
+          nt_solution[modelgridindex].frac_excitations_list_size, sizeof(struct nt_excitation_struct),
+          compare_excitation_fractions);
 
-#endif // NT_EXCITATION_ON
+    // the excitation list is now sorted by frac_deposition descending
+    const double deposition_rate_density = get_deposition_rate_density(modelgridindex);
+
+    if (nt_solution[modelgridindex].frac_excitations_list_size > MAX_NT_EXCITATIONS_STORED)
+    {
+      // truncate the sorted list to save memory
+      printout("  Truncating non-thermal excitation list from %d to %d transitions.\n",
+               nt_solution[modelgridindex].frac_excitations_list_size, MAX_NT_EXCITATIONS_STORED);
+      realloc_frac_excitations_list(modelgridindex, MAX_NT_EXCITATIONS_STORED);
+    }
+
+    printout("mem_usage: non-thermal excitations for cell %d at this timestep occupy %.1f MB\n",
+             modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size *
+             (sizeof(nt_solution[modelgridindex].frac_excitations_list) + sizeof(nt_solution[modelgridindex].frac_excitations_list[0])) / 1024. / 1024.);
+
+    const float T_e = get_Te(modelgridindex);
+    printout("  Top non-thermal excitation fractions (total excitations = %d):\n",
+             nt_solution[modelgridindex].frac_excitations_list_size);
+    int ntransdisplayed = nt_solution[modelgridindex].frac_excitations_list_size;
+    ntransdisplayed = (ntransdisplayed > 50) ? 50 : ntransdisplayed;
+    for (excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++)
+    {
+      const double frac_deposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
+      if (frac_deposition > 0.)
+      {
+        const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
+        const int element = linelist[lineindex].elementindex;
+        const int ion = linelist[lineindex].ionindex;
+        const int lower = linelist[lineindex].lowerlevelindex;
+        const int upper = linelist[lineindex].upperlevelindex;
+        const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
+
+        const double ratecoeffperdeposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
+        const double ntcollexc_ratecoeff = ratecoeffperdeposition * deposition_rate_density;
+
+        const double t_current = time_step[timestep].start;
+        const double radexc_ratecoeff = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_current);
+
+        const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+
+        const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
+
+        printout("    frac_deposition %.3e Z=%d ionstage %d lower %4d upper %4d rad_exc %.1e coll_exc %.1e nt_exc %.1e nt/tot %.1e collstr %.1e lineindex %d\n",
+                 frac_deposition, get_element(element), get_ionstage(element, ion), lower, upper,
+                 radexc_ratecoeff, collexc_ratecoeff, ntcollexc_ratecoeff, ntcollexc_ratecoeff / exc_ratecoeff, get_coll_str(lineindex), lineindex);
+      }
+    }
+
+    // now sort the excitation list by lineindex ascending for fast lookup with a binary search
+    qsort(nt_solution[modelgridindex].frac_excitations_list,
+          nt_solution[modelgridindex].frac_excitations_list_size, sizeof(struct nt_excitation_struct),
+          compare_excitation_lineindicies);
+
+  } // NT_EXCITATION_ON
 
   const float frac_heating = get_nt_frac_heating(modelgridindex);
 
