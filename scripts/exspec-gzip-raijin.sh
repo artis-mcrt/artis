@@ -25,14 +25,8 @@ module load gsl/2.5
 module load intel-mpi/2018.3.222
 module load intel-cc/2018.3.222
 
-gunzip -v phixsdata.txt.gz transitiondata.txt.gz ratecoeff.dat.gz
-gunzip packets*.out.gz
+./artis/scripts/exspec-before.sh
 
 ./exspec
 
-if [ -f spec.out ]; then
-  gzip -v phixsdata.txt.gz transitiondata.txt.gz ratecoeff.dat.gz
-  gzip -v packets*.out.gz
-  mkdir packets
-  mv packets*.out.gz packets/
-fi
+./artis/scripts/exspec-after.sh
