@@ -16,7 +16,7 @@ cd $SLURM_SUBMIT_DIR
 srun ./sn3d
 
 mkdir ${SLURM_JOBID}.slurm
-./movefiles.sh ${SLURM_JOBID}.slurm
+./artis/scripts/movefiles.sh ${SLURM_JOBID}.slurm
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
