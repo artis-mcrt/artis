@@ -531,6 +531,7 @@ void nt_init(const int my_rank)
             "timestep","modelgridindex","index","energy_ev","source","y");
     fflush(nonthermalfile);
 
+    long mem_usage_yfunc = 0;
     for (int modelgridindex = 0; modelgridindex < MMODELGRID + 1; modelgridindex++)
     {
       // should make these negative?
@@ -548,6 +549,8 @@ void nt_init(const int my_rank)
       if (STORE_NT_SPECTRUM && get_numassociatedcells(modelgridindex) > 0)
       {
         nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
+        assert(nt_solution[modelgridindex].yfunc != NULL);
+        mem_usage_yfunc += SFPTS * sizeof(double);
       }
       else
       {
@@ -562,6 +565,9 @@ void nt_init(const int my_rank)
 
       zero_all_effionpot(modelgridindex);
     }
+
+    if (STORE_NT_SPECTRUM)
+      printout("mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n", mem_usage_yfunc / 1024 / 1024.);;
 
     envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
     logenvec = gsl_vector_calloc(SFPTS);
@@ -2986,7 +2992,7 @@ void nt_read_restart_data(FILE *gridsave_file)
                 &nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex);
       }
 
-      // write non-thermal spectrum
+      // read non-thermal spectrum
       if (STORE_NT_SPECTRUM)
       {
         for (int s = 0; s < SFPTS; s++)
