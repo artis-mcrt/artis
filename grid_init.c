@@ -372,7 +372,7 @@ static void allocate_nonemptycells(void)
   allocate_cooling(MMODELGRID);
 
   // Determine the number of simulation cells associated with the model cells
-  for (int mgi = 0; mgi < npts_model; mgi++)
+  for (int mgi = 0; mgi < (MMODELGRID + 1); mgi++)
     mg_associated_cells[mgi] = 0;
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++)
