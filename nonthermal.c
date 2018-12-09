@@ -3041,8 +3041,9 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
       MPI_Barrier(MPI_COMM_WORLD);
       if (STORE_NT_SPECTRUM)
       {
-        MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
         // printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
+        assert(nt_solution[modelgridindex].yfunc != NULL);
+        MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
       }
       MPI_Bcast(&nt_solution[modelgridindex].deposition_at_timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
