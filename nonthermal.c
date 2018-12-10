@@ -327,24 +327,26 @@ static void read_auger_data(void)
       float en_auger_ev_total_nocorrection;
       int epsilon_e3;
 
-      sscanf(linepos, "%d %g %g %d%n", &shellnum, &ionpot_ev, &en_auger_ev_total_nocorrection, &epsilon_e3, &offset);
+      assert(sscanf(linepos, "%d %g %g %d%n", &shellnum, &ionpot_ev, &en_auger_ev_total_nocorrection, &epsilon_e3, &offset) == 4);
       assert(offset == 20);
       linepos += offset + 1; // skip one space after so all following columns are exactly 5 characters each
 
       float n_auger_elec_avg = 0;
       double prob_num_auger[MAX_AUGER_ELECTRONS + 1];
-      for (int a = 0; a < 10; a++)
+      for (int a = 0; a < 9; a++)
       {
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
         char strprob[6];
-        sscanf(linepos, "%5c", strprob);
-        offset = 5;
+        assert(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
+        assert(offset == 5);
         linepos += offset;
 
         int probnaugerelece4;
         sscanf(strprob, "%d", &probnaugerelece4);
 
         const double probnaugerelec = probnaugerelece4 / 10000.;
+
+        assert(probnaugerelec <= 1.0);
 
         n_auger_elec_avg += a * probnaugerelec;
 
