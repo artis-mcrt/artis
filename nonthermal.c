@@ -1755,22 +1755,25 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
   assert(lowerion < nions - 1);
   if (MAX_AUGER_ELECTRONS > 0)
   {
-    const double zrand = gsl_rng_uniform(rng);
-
-    double prob_sum = 0.;
-    for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++)
+    while (true)
     {
-      prob_sum += nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, energyweighted);
+      const double zrand = gsl_rng_uniform(rng);
 
-      if (zrand <= prob_sum)
+      double prob_sum = 0.;
+      for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++)
       {
-        return upperion;
-      }
-    }
+        prob_sum += nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, energyweighted);
 
-    printout("ERROR: nt_ionization_upperion_probability did not sum to more than zrand = %lg, prob_sum = %lg (Z=%d ionstage %d)\n",
-             zrand, prob_sum, get_element(element), get_ionstage(element, lowerion));
-    abort();
+        if (zrand <= prob_sum)
+        {
+          return upperion;
+        }
+      }
+
+      printout("ERROR: nt_ionization_upperion_probability did not sum to more than zrand = %lg, prob_sum = %lg (Z=%d ionstage %d). Retrying with new random number.\n",
+               zrand, prob_sum, get_element(element), get_ionstage(element, lowerion));
+      assert(abs(prob_sum - 1.0) < 1e-3);
+    }
   }
   else
   {
