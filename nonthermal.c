@@ -1772,7 +1772,7 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
 
       printout("ERROR: nt_ionization_upperion_probability did not sum to more than zrand = %lg, prob_sum = %lg (Z=%d ionstage %d). Retrying with new random number.\n",
                zrand, prob_sum, get_element(element), get_ionstage(element, lowerion));
-      assert(abs(prob_sum - 1.0) < 1e-3);
+      assert(fabs(prob_sum - 1.0) < 1e-3);
     }
   }
   else
