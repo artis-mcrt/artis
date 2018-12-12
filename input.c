@@ -2430,6 +2430,8 @@ int compare_linelistentry(const void *p1, const void *p2)
 void update_parameterfile(int nts)
 /// Subroutine to read in input parameters from input.txt.
 {
+  printout("Update input.txt for restart at time step %d\n", nts);
+
   FILE *input_file = fopen_required("input.txt", "r+");
   //setvbuf(input_file, NULL, _IOLBF, 0);
 
@@ -2464,4 +2466,6 @@ void update_parameterfile(int nts)
   //fscanf(input_file, "%d", &dum1);  /// Do we start a new simulation or, continue another one?
 
   fclose(input_file);
+
+  printout("input.txt successfully updated\n");
 }

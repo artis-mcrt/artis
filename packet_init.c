@@ -337,12 +337,6 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 
   const int pktnumberoffset = middle_iteration * npkts;
   setup_packets(pktnumberoffset, pkt);
-  char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
-  sprintf(filename, "packets%d_%d_odd.tmp", middle_iteration, my_rank);
-  FILE *packets_file = fopen_required(filename, "wb");
-  fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
-  //write_packets(packets_file);
-  fclose(packets_file);
 
   /* Consistency check to debug read/write
   PKT testpkt[MPKTS];

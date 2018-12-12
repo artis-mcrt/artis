@@ -1429,7 +1429,7 @@ void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart
 
 void radfield_write_restart_data(FILE *gridsave_file)
 {
-  printout("data for binned radiation field and detailed lines, ");
+  printout("binned radiation field and detailed lines, ");
 
   fprintf(gridsave_file, "%d\n", 30490824); // special number marking the beginning of radfield data
 
