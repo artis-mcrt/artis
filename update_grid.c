@@ -1,3 +1,4 @@
+#include<unistd.h>
 #include <gsl/gsl_roots.h>
 #include "sn3d.h"
 #include "atomic.h"
@@ -1562,9 +1563,17 @@ double get_Gamma_phys(int cellnumber, int element, int ion)
 #endif
 
 
-void write_grid_restart_data(void)
+void write_grid_restart_data(const int timestep)
 {
-  FILE *restrict gridsave_file = fopen_required("gridsave.dat", "w");
+  char filename[100];
+  sprintf(filename, "gridsave_ts%d.tmp", timestep);
+
+  const time_t sys_time_start_write_restart = time(NULL);
+  printout("Write grid restart data to %s...", filename);
+
+  FILE *restrict gridsave_file = fopen_required(filename, "w");
+
+  fprintf(gridsave_file, "%d ", timestep);
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
@@ -1604,6 +1613,7 @@ void write_grid_restart_data(void)
   nt_write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
+  printout("done in %d seconds.\n", time(NULL) - sys_time_start_write_restart);
 }
 
 
