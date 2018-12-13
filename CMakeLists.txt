@@ -21,10 +21,12 @@ set(SN3D_SOURCES sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c gre
 add_executable(sn3d ${SN3D_SOURCES})
 
 set(EXSPEC_SOURCES exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c)
-add_executable(exspec ${EXSPEC_SOURCES})
 
-set(EXGAMMA_SOURCES exgamma.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c)
-add_executable(exgamma ${EXGAMMA_SOURCES})
+add_executable(exspec ${EXSPEC_SOURCES})
+add_executable(exgamma ${EXSPEC_SOURCES})
+
+target_compile_definitions(exspec  PRIVATE DO_EXSPEC)
+target_compile_definitions(exgamma PRIVATE DO_EXSPEC DO_EXGAMMA)
 
 if(UNIX AND NOT APPLE)
   find_package(MPI)

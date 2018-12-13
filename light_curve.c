@@ -15,6 +15,24 @@
 }
 */
 
+struct lc
+{
+  float lower_time;
+  float delta_t;
+  double lum;
+};
+
+/// Light curve data structure
+#define MTLCBINS  200
+#define MALCBINS  100
+#define MANGLCBINS 100
+
+
+static struct lc light_curve[MTLCBINS];
+static struct lc light_curve_cmf[MTLCBINS];
+// static struct lc light_curve_angle[MTLCBINS][MANGLCBINS];
+
+
 static void add_to_lc(const EPKT *pkt_ptr)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
@@ -62,8 +80,12 @@ void init_light_curve(void)
 }
 
 
-void write_light_curve(FILE *lc_file, int current_abin)
+void write_light_curve(char lc_filename[], int current_abin)
 {
+  FILE *lc_file = fopen_required(lc_filename, "w");
+
+  printout("Writing %s\n", lc_filename);
+
   /*
   FILE *lc_file;
   double save2[MTSTEP][2];
@@ -144,16 +166,15 @@ void write_light_curve(FILE *lc_file, int current_abin)
       fprintf(lc_file, "%g %g %g\n", time_step[m].mid/DAY, (time_step[m].gamma_dep/LSUN/time_step[m].width),  (time_step[m].cmf_lum/time_step[m].width/LSUN));
     }
   }
+
+  fclose(lc_file);
 }
 
 
-void gather_light_curve(void)
+void gather_light_curve(EPKT *epkts, int nepkts)
 {
   //void read_packets(FILE *packets_file);
   //int i,n,p;
-
-  /// Set up the light curve grid and initialise the bins to zero.
-  init_light_curve();
 
   /// Now add the energy of all the escaping packets to the
   /// appropriate bins.
@@ -210,13 +231,10 @@ static void add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
 }
 
 
-void gather_light_curve_res(int current_abin)
+void gather_light_curve_res(EPKT *epkts, int nepkts, int current_abin)
 {
   //void read_packets(FILE *packets_file);
   //int i,n,p,nn;
-
-  /// Set up the light curve grid and initialise the bins to zero.
-  init_light_curve();
 
   /// Now add the energy of all the escaping packets to the
   /// appropriate bins.
