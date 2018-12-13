@@ -45,37 +45,36 @@ static int get_escaped_packets(int i, int nprocs, EPKT *epkts, int npkts, enum p
   int nepkts = 0;
   for (int ii = 0; ii < npkts; ii++)
   {
-    PKT *pkt_ptr = &pkt[ii];
-    // printout("packet %d escape_type %d type %d", ii, pkt_ptr->escape_type, pkt_ptr->type);
-    if (pkt_ptr->type == TYPE_ESCAPE && pkt_ptr->escape_type == escape_type)
+    // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
+    if (pkt[ii].type == TYPE_ESCAPE && pkt[ii].escape_type == escape_type)
     {
       /// We know that a packet escaped at "escape_time". However, we have
       /// to allow for travel time. Use the formula in Leon's paper. The extra
       /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-      const double arrive_time = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+      const double arrive_time = pkt[ii].escape_time - (dot(pkt[ii].pos, pkt[ii].dir) / CLIGHT_PROP);
       epkts[nepkts].arrive_time = arrive_time;
 
       /// Now do the cmf time.
-      const double arrive_time_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
+      const double arrive_time_cmf = pkt[ii].escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
       epkts[nepkts].arrive_time_cmf = arrive_time_cmf;
       // printout("add packet %d. arrive_time %g arrive_time_cmf %g nu_rf %g e_rf %g e_cmf %g \n",
-      //          j, arrive_time, arrive_time_cmf, pkt_ptr->nu_rf, pkt_ptr->e_rf, pkt_ptr->nu_cmf);
+      //          j, arrive_time, arrive_time_cmf, pkt[ii].nu_rf, pkt[ii].e_rf, pkt[ii].nu_cmf);
 
-      epkts[nepkts].dir[0] = pkt_ptr->dir[0];
-      epkts[nepkts].dir[1] = pkt_ptr->dir[1];
-      epkts[nepkts].dir[2] = pkt_ptr->dir[2];
-      epkts[nepkts].nu_rf = pkt_ptr->nu_rf;
-      epkts[nepkts].e_rf = pkt_ptr->e_rf;
-      epkts[nepkts].e_cmf = pkt_ptr->e_cmf;
-      epkts[nepkts].em_pos[0] = pkt_ptr->em_pos[0];
-      epkts[nepkts].em_pos[1] = pkt_ptr->em_pos[1];
-      epkts[nepkts].em_pos[2] = pkt_ptr->em_pos[2];
-      epkts[nepkts].em_time = pkt_ptr->em_time;
-      epkts[nepkts].emissiontype = pkt_ptr->emissiontype;
-      epkts[nepkts].trueemissiontype = pkt_ptr->trueemissiontype;
-      epkts[nepkts].absorptionfreq = pkt_ptr->absorptionfreq;
-      epkts[nepkts].absorptiontype = pkt_ptr->absorptiontype;
-      epkts[nepkts].trueemissionvelocity = pkt_ptr->trueemissionvelocity;
+      epkts[nepkts].dir[0] = pkt[ii].dir[0];
+      epkts[nepkts].dir[1] = pkt[ii].dir[1];
+      epkts[nepkts].dir[2] = pkt[ii].dir[2];
+      epkts[nepkts].nu_rf = pkt[ii].nu_rf;
+      epkts[nepkts].e_rf = pkt[ii].e_rf;
+      epkts[nepkts].e_cmf = pkt[ii].e_cmf;
+      epkts[nepkts].em_pos[0] = pkt[ii].em_pos[0];
+      epkts[nepkts].em_pos[1] = pkt[ii].em_pos[1];
+      epkts[nepkts].em_pos[2] = pkt[ii].em_pos[2];
+      epkts[nepkts].em_time = pkt[ii].em_time;
+      epkts[nepkts].emissiontype = pkt[ii].emissiontype;
+      epkts[nepkts].trueemissiontype = pkt[ii].trueemissiontype;
+      epkts[nepkts].absorptionfreq = pkt[ii].absorptionfreq;
+      epkts[nepkts].absorptiontype = pkt[ii].absorptiontype;
+      epkts[nepkts].trueemissionvelocity = pkt[ii].trueemissionvelocity;
 
       nepkts++;
     }

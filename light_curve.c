@@ -180,8 +180,7 @@ void gather_light_curve(EPKT *epkts, int nepkts)
   /// appropriate bins.
   for (int p = 0; p < nepkts; p++)
   {
-    EPKT *pkt_ptr = &epkts[p];
-    add_to_lc(pkt_ptr);
+    add_to_lc(&epkts[p]);
   }
 }
 
@@ -240,7 +239,6 @@ void gather_light_curve_res(EPKT *epkts, int nepkts, int current_abin)
   /// appropriate bins.
   for (int p = 0; p < nepkts; p++)
   {
-    EPKT *pkt_ptr = &epkts[p];
-    add_to_lc_res(pkt_ptr,current_abin);
+    add_to_lc_res(&epkts[p], current_abin);
   }
 }

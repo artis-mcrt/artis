@@ -20,7 +20,6 @@ typedef struct
 
 double dlognu;
 
-
 double dlogtlc;
 double dlogtlc_angle;
 
