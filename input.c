@@ -2020,13 +2020,6 @@ void input(int rank)
 
   nu_min_r = 1e14;   /// lower frequency boundary for UVOIR spectra and BB sampling
   nu_max_r = 5e15;   /// upper frequency boundary for UVOIR spectra and BB sampling
-  #ifdef DO_EXSPEC
-    /// Spectra settings
-    nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
-    /// lower and upper frequency boundaries for make_spectrum_res: gamma spectra?
-    nu_min = 0.05 * MEV / H;
-    nu_max = 4 * MEV / H;
-  #endif
 
   /// Lightcurve setting
   do_r_lc = false;    /// default to no lc = gamma-ray spectrum
@@ -2108,54 +2101,6 @@ void input(int rank)
     abort();
   }
 
-  #ifdef DO_EXSPEC
-    /// Check if enough  memory for spectra has been assigned
-    /// and allocate memory for the emission statistics
-    if (nnubins > MNUBINS)
-    {
-      printout("Too many frequency bins in spectrum - reducing.\n");
-      nnubins = MNUBINS;
-    }
-    if (ntbins > MTBINS)
-    {
-      printout("Too many time bins in spectrum - reducing.\n");
-      ntbins = MTBINS;
-    }
-    for (int n = 0; n < ntbins; n++)
-    {
-      for (int m = 0; m < nnubins; m++)
-      {
-        if ((spectra[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
-          abort();
-        }
-        if ((spectra[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
-          abort();
-        }
-        if ((spectra[n].stat[m].trueemission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
-          abort();
-        }
-        /*
-        if (do_emission_res == 1)
-        {
-          for (nn = 0; nn < MABINS; nn++)
-          {
-            if ((spectra_res[n][nn].emission[m].count = malloc((2*nelements*maxion+1)*sizeof(int))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialise spectra_res structure ... abort\n");
-              abort();
-            }
-          }
-        }
-        */
-      }
-    }
-  #endif
 }
 
 

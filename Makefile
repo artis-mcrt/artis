@@ -60,8 +60,6 @@ else
 
 endif
 
-  exspec: CFLAGS += -DDO_EXSPEC
-  exgamma: CFLAGS += -DDO_EXSPEC
 
 ### Settings for the miner
 # ifeq ($(OSTYPE),linux)
@@ -182,8 +180,7 @@ ifeq ($(DOMAIN),opt.rzg.mpg.de)
   #in memory http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
   #LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
   LDFLAGS= $(GSL_LDFLAGS) -lgsl -lgslcblas -lm
-  exspec: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
-  exgamma: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
+  exspec exgamma: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
 endif
 
 
@@ -223,10 +220,12 @@ ifeq ($(WORK),/lustre/jwork1)
   CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -openmp -DMPI_ON
   CFLAGS = -O3 -I$(GSL_ROOT) -openmp -DMPI_ON
   LDFLAGS= -L$(GSL_ROOT) -lgsl -lgslcblas -lm
-  exspec: override CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -DDO_EXSPEC
-  exgamma: override CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -DDO_EXSPEC
+  exspec exgamma: override CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -DDO_EXSPEC
 endif
 
+
+exspec exgamma: CFLAGS += -DDO_EXSPEC
+exgamma: CFLAGS += -DDO_EXGAMMA
 
 sn3dmpi: CC = mpicc
 sn3dmpi: CFLAGS += -DMPI_ON
@@ -257,10 +256,8 @@ exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c 
 exspec: clean version
 	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exspec
 
-exgamma_files = exgamma.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
-
 exgamma: clean version
-	$(CC) $(CFLAGS) $(exgamma_files) $(LDFLAGS) -o exgamma
+	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exgamma
 
 
 .PHONY: clean version
