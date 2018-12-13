@@ -21,8 +21,6 @@ typedef struct
 double dlognu;
 
 
-double nu_min, nu_max; //limits on frequency range for gamma spectrum
-
 double dlogtlc;
 double dlogtlc_angle;
 
