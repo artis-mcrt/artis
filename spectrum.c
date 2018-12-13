@@ -290,7 +290,7 @@ static int columnindex_from_emissiontype(const int et)
 }
 
 
-static void add_to_spec(const EPKT *pkt_ptr, const bool do_emission_res)
+static void add_to_spec(const EPKT *const pkt_ptr, const bool do_emission_res)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
@@ -458,7 +458,7 @@ void init_spectrum(void)
 }
 
 
-void gather_spectrum(EPKT *epkts, int nepkts, int depth, bool do_emission_res)
+void gather_spectrum(const EPKT *const epkts, int nepkts, int depth, bool do_emission_res)
 {
   if (depth < 0)
   {
@@ -495,7 +495,7 @@ void gather_spectrum(EPKT *epkts, int nepkts, int depth, bool do_emission_res)
 }
 
 
-static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
+static void add_to_spec_res(const EPKT *const pkt_ptr, int current_abin)
 // Routine to add a packet to the outgoing spectrum.
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
@@ -575,7 +575,7 @@ static void add_to_spec_res(EPKT *pkt_ptr, int current_abin)
 }
 
 
-void gather_spectrum_res(EPKT *epkts, const int nepkts, const int current_abin)
+void gather_spectrum_res(const EPKT *const epkts, const int nepkts, const int current_abin)
 {
   /// Now add the energy of all the escaping packets to the
   /// appropriate bins.
