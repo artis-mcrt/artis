@@ -146,16 +146,10 @@ int main(int argc, char** argv)
   nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
   if (MODE_GAMMA)
   {
-    do_emission_res = 0;         /// We don't record information on gamma packet last interactions, thus create no emission/absorption files.
-    nu_min_r = 0.05 * MEV / H;   /// Lower frequency boundary for gamma spectra
-    nu_max_r = 4 * MEV / H;      /// Upper frequency boundary for gamma spectra
-  }
-  else
-  {
     /// Spectra settings
-    /// lower and upper frequency boundaries for make_spectrum_res: gamma spectra?
-    nu_min = 0.05 * MEV / H;
-    nu_max = 4 * MEV / H;
+    do_emission_res = 0;         /// We don't record information on gamma packet last interactions, thus create no emission/absorption files.
+    nu_min_r = 0.05 * MEV / H;   /// Lower frequency boundary for gamma spectra (badly named variable)
+    nu_max_r = 4 * MEV / H;      /// Upper frequency boundary for gamma spectra
   }
 
   for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
