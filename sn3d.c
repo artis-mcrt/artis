@@ -425,7 +425,6 @@ int main(int argc, char** argv)
   PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
   assert(packets != NULL);
 
-  FILE *restrict packets_file;
   //FILE *temperature_file;
   char filename[100];
 
@@ -731,7 +730,7 @@ int main(int argc, char** argv)
         else
           sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
 
-        packets_file = fopen_required(filename, "rb");
+        FILE *restrict packets_file = fopen_required(filename, "rb");
 
         read_vspecpol(packets_file);
 
@@ -1082,16 +1081,14 @@ int main(int argc, char** argv)
 
           if (nts == ftstep - 1)
           {
-            sprintf(filename,"packets%.2d_%.4d.out", 0, my_rank);
+            sprintf(filename, "packets%.2d_%.4d.out", 0, my_rank);
             //sprintf(filename,"packets%.2d_%.4d.out", middle_iteration, my_rank);
-            packets_file = fopen_required(filename, "w");
-            write_packets(packets_file, packets);
-            fclose(packets_file);
+            write_packets(filename, packets);
 
             // write specpol of the virtual packets
             #ifdef VPKT_ON
               sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
-              FILE *vspecpol_file= fopen_required(filename, "w");
+              FILE *vspecpol_file = fopen_required(filename, "w");
 
               write_vspecpol(vspecpol_file);
               fclose(vspecpol_file);

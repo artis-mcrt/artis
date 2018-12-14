@@ -411,7 +411,7 @@ static double planck(const double nu, const double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
 {
-  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / expm1(HOVERKB*nu/T);
+  return TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
 }
 
 
@@ -458,7 +458,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
     abort();
   }
   /// and then emitt the packet randomly in the comoving frame
-  emitt_rpkt(pkt_ptr,t_current);
+  emitt_rpkt(pkt_ptr, t_current);
   if (debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;

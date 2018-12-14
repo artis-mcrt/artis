@@ -27,20 +27,15 @@ const bool MODE_GAMMA = true;
 const bool MODE_GAMMA = false;
 #endif
 
-static PKT pkt[MPKTS];
 
-static int get_escaped_packets(int i, int nprocs, EPKT *epkts, int npkts, enum packet_type escape_type)
+static int get_escaped_packets(int i, int nprocs, PKT pkt[], EPKT *epkts, int npkts, enum packet_type escape_type)
 {
   char filename[100];
   /// Read in the next bunch of packets to work on
   //sprintf(filename,"packets%d_%d.tmp",0,i);
   sprintf(filename, "packets%.2d_%.4d.out", 0, i);
   printout("reading %s (file %d of %d)\n", filename, i + 1, nprocs);
-  //packets_file = fopen_required(filename, "rb");
-  FILE *packets_file = fopen_required(filename, "r");
-  //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-  read_packets(packets_file, pkt);
-  fclose(packets_file);
+  read_packets(filename, pkt);
 
   int nepkts = 0;
   for (int ii = 0; ii < npkts; ii++)
@@ -101,39 +96,12 @@ int main(int argc, char** argv)
   #endif
 
   /// Get input stuff
-  printout("time before input %d\n",time(NULL));
+  printout("time before input %d\n", time(NULL));
   input(my_rank);
-  printout("time after input %d\n",time(NULL));
+  printout("time after input %d\n", time(NULL));
   nprocs = nprocs_exspec;
 
-  /// Read binary packet files and create ASCII packets files out of them
-  /*
-  npkts=MPKTS;
-  for (i = 0; i < nprocs; i++)
-  {
-    /// Read in the next bunch of packets to work on
-    sprintf(filename,"packets%d_%d.tmp",0,i);
-    printout("%s\n",filename);
-    packets_file = fopen_required(filename, "rb")) == NULL);
-    //sprintf(filename,"packets%.2d_%.4d.out",0,i);
-    //packets_file = fopen_required(filename, "r");
-    fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-    //read_packets(packets_file);
-    /// Close the current file.
-    fclose(packets_file);
-
-
-    /// Read in the next bunch of packets to work on
-    sprintf(filename,"packets%.2d_%.4d.out",0,i);
-    printout("%s\n",filename);
-    packets_file = fopen_required(filename, "w");
-    write_packets(packets_file);
-    //read_packets(packets_file);
-    /// Close the current file.
-    fclose(packets_file);
-  }
-  abort();
-  */
+  PKT *pkts = malloc(npkts * sizeof(PKT));
   EPKT *epkts = malloc(npkts * sizeof(EPKT));
 
   if (epkts == NULL)
@@ -169,9 +137,11 @@ int main(int argc, char** argv)
       /// Set up the spectrum grid and initialise the bins to zero.
       init_spectrum();
 
+
       for (int p = 0; p < nprocs; p++)
       {
-        nepkts = get_escaped_packets(p, nprocs, epkts, npkts, MODE_GAMMA ? TYPE_GAMMA : TYPE_RPKT);
+        printout("here p %d\n", p);
+        nepkts = get_escaped_packets(p, nprocs, pkts, epkts, npkts, MODE_GAMMA ? TYPE_GAMMA : TYPE_RPKT);
         printout("  %d of %d packets escaped with type %s\n", nepkts, npkts, MODE_GAMMA ? "TYPE_GAMMA" : "TYPE_RPKT");
 
         if (a == -1)
@@ -248,6 +218,8 @@ int main(int argc, char** argv)
   /* Spec syn. */
   //grid_init();
   //syn_gamma();
+  free(epkts);
+  free(pkts);
 
   printout("exspec finished at %d (tstart + %d seconds)\n", time(NULL), time(NULL) - sys_time_start);
   fclose(output_file);
