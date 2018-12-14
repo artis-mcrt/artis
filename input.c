@@ -1956,6 +1956,42 @@ static void read_3d_model(void)
 }
 
 
+static void read_ejecta_model(enum model_types model_type)
+{
+  switch (model_type)
+  {
+    case RHO_UNIFORM:
+    {
+      mtot = 1.39 * MSUN;
+      totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
+      vmax = 1.e9;
+      // rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
+      break;
+    }
+
+    case RHO_1D_READ:
+      printout("Read 1D model!\n");
+      read_1d_model();
+      break;
+
+    case RHO_2D_READ:
+      printout("Read 2D model!\n");
+
+      read_2d_model();
+      break;
+
+    case RHO_3D_READ:
+      printout("Read 3D model!\n");
+      read_3d_model();
+      break;
+
+    default:
+      printout("Unknown model. Abort.\n");
+      abort();
+  }
+}
+
+
 void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
@@ -2033,53 +2069,17 @@ void input(int rank)
   ntbins = ntstep;   ///time bins for spectrum equal #(timesteps)
   ntlcbins = ntstep; ///time bins for light curve #(timesteps)
 
-  /// Read in atomic data
-  ///======================================================
   read_atomicdata();
 
-  //#ifndef DO_EXSPEC
-    /// Read in input model
-    ///======================================================
-    switch (model_type)
-    {
-      case RHO_UNIFORM:
-      {
-        mtot = 1.39 * MSUN;
-        totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
-        vmax = 1.e9;
-        // rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
-        break;
-      }
+  read_ejecta_model(model_type);
 
-      case RHO_1D_READ:
-        printout("Read 1D model!\n");
-        read_1d_model();
-        break;
+  printout("npts_model: %d\n", npts_model);
+  rmax = vmax * tmin;
+  printout("rmax %g\n", rmax);
 
-      case RHO_2D_READ:
-        printout("Read 2D model!\n");
-        read_2d_model();
-        break;
+  coordmax[0] = coordmax[1] = coordmax[2] = rmax;
 
-      case RHO_3D_READ:
-        printout("Read 3D model!\n");
-        read_3d_model();
-        break;
-
-      default:
-        printout("Unknown model. Abort.\n");
-        abort();
-    }
-
-    printout("npts_model: %d\n", npts_model);
-    rmax = vmax * tmin;
-    printout("rmax %g\n", rmax);
-
-    coordmax[0] = coordmax[1] = coordmax[2] = rmax;
-
-    show_totmassradionuclides();
-
-  //#endif
+  show_totmassradionuclides();
 
 
   /// Read in data for gamma ray lines and make a list of them in energy order.

@@ -377,8 +377,9 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 }
 
 
-void write_packets(FILE *restrict packets_file, PKT *pkt)
+void write_packets(char filename[], PKT *pkt)
 {
+  FILE *packets_file = fopen_required(filename, "w");
   for (int i = 0; i < npkts; i++)
   {
     fprintf(packets_file, "%d ", pkt[i].number);
@@ -412,11 +413,13 @@ void write_packets(FILE *restrict packets_file, PKT *pkt)
     fprintf(packets_file, "%g ", pkt[i].trueemissionvelocity);
     fprintf(packets_file, "\n");
   }
+  fclose(packets_file);
 }
 
 
-void read_packets(FILE *restrict packets_file, PKT *pkt)
+void read_packets(char filename[], PKT *pkt)
 {
+  FILE *packets_file = fopen_required(filename, "r");
   char *line = malloc(sizeof(char) * 4096);
 
   int packets_read = 0;
@@ -506,4 +509,5 @@ void read_packets(FILE *restrict packets_file, PKT *pkt)
     abort();
   }
   free(line);
+  fclose(packets_file);
 }
