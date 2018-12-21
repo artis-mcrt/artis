@@ -36,16 +36,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // assert(radius >= r_inner);
     // assert(radius <= r_outer);
 
-    const double zrand = gsl_rng_uniform(rng);
-    const double zrand2 = gsl_rng_uniform(rng);
-
-    const double mu = -1 + (2. * zrand);
-    const double phi = zrand2 * 2 * PI;
-    const double sintheta = sqrt(1. - (mu * mu));
-
-    pkt_ptr->pos[0] = radius * sintheta * cos(phi);
-    pkt_ptr->pos[1] = radius * sintheta * sin(phi);
-    pkt_ptr->pos[2] = radius * mu;
+    get_rand_isotropic_unitvec(pkt_ptr->pos);
+    vec_scale(pkt_ptr->pos, radius);
   }
   else
   {

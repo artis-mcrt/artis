@@ -90,3 +90,18 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
   dir_out[2] = (r13 * xprime) + (r23 * yprime) + (r33 * zprime);
 }
 
+
+void get_rand_isotropic_unitvec(double vecout[3])
+// Assume isotropic distribution, get a random direction vector
+{
+  const double zrand = gsl_rng_uniform(rng);
+  const double zrand2 = gsl_rng_uniform(rng);
+
+  const double mu = -1 + (2. * zrand);
+  const double phi = zrand2 * 2 * PI;
+  const double sintheta = sqrt(1. - (mu * mu));
+
+  vecout[0] = sintheta * cos(phi);
+  vecout[1] = sintheta * sin(phi);
+  vecout[2] = mu;
+}
