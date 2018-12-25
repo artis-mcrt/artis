@@ -140,7 +140,6 @@ int main(int argc, char** argv)
 
       for (int p = 0; p < nprocs; p++)
       {
-        printout("here p %d\n", p);
         nepkts = get_escaped_packets(p, nprocs, pkts, epkts, npkts, MODE_GAMMA ? TYPE_GAMMA : TYPE_RPKT);
         printout("  %d of %d packets escaped with type %s\n", nepkts, npkts, MODE_GAMMA ? "TYPE_GAMMA" : "TYPE_RPKT");
 
