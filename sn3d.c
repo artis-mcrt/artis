@@ -460,7 +460,7 @@ int main(int argc, char** argv)
     /// Get the current threads ID, copy it to a threadprivate variable
     tid = omp_get_thread_num();
     /// and initialise the threads outputfile
-    sprintf(filename,"output_%.4d-%d.txt",my_rank,tid);
+    sprintf(filename,"output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
     /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
