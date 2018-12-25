@@ -921,7 +921,7 @@ int main(int argc, char** argv)
 
 
           #ifdef MPI_ON
-            MPI_BARRER(MPI_COMM_WORLD);
+            MPI_Barrier(MPI_COMM_WORLD);
           #endif
           // time is measured from just before packet propagation from one timestep to the next
           const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
