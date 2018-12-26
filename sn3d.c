@@ -422,6 +422,9 @@ static void remove_grid_restart_data(const int timestep)
 int main(int argc, char** argv)
 // Main - top level routine.
 {
+  const time_t real_time_start = time(NULL);
+  printout("time at start %d\n", real_time_start);
+
   PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
   assert(packets != NULL);
 
@@ -550,8 +553,6 @@ int main(int argc, char** argv)
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
-  const time_t real_time_start = time(NULL);
-  printout("time before input %d\n", real_time_start);
   input(my_rank);
 
   /// Initialise linestat file
@@ -932,7 +933,7 @@ int main(int argc, char** argv)
             const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
             printout("TIME: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, WALLTIMELIMITSECONDS);
 
-            if (wallclock_remaining_seconds < (1.2 * estimated_time_per_timestep))
+            if (wallclock_remaining_seconds < (1.5 * estimated_time_per_timestep))
             {
               do_this_full_loop = false; // This flag being false will make it update_grid, and then exit
             }
@@ -942,9 +943,9 @@ int main(int argc, char** argv)
               MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
             #endif
             if (do_this_full_loop)
-              printout("TIME: Going to continue since remaining time %d s >= 1.2 * time_per_timestep\n", wallclock_remaining_seconds);
+              printout("TIME: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
             else
-              printout("TIME: Going to terminate since remaining time %d s < 1.2 * time_per_timestep\n", wallclock_remaining_seconds);
+              printout("TIME: Going to terminate since remaining time %d s < 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
           #endif
         }
         time_timestep_start = time(NULL);
