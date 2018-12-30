@@ -422,12 +422,6 @@ static void remove_grid_restart_data(const int timestep)
 int main(int argc, char** argv)
 // Main - top level routine.
 {
-  const time_t real_time_start = time(NULL);
-  printout("time at start %d\n", real_time_start);
-
-  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
-  assert(packets != NULL);
-
   //FILE *temperature_file;
   char filename[100];
 
@@ -479,6 +473,12 @@ int main(int argc, char** argv)
     printout("OpenMP parallelisation active with %d threads\n", nthreads);
 #   endif
   }
+
+  const time_t real_time_start = time(NULL);
+  printout("time at start %d\n", real_time_start);
+
+  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
+  assert(packets != NULL);
 
   #ifndef GIT_BRANCH
     #define GIT_BRANCH "UNKNOWN"
