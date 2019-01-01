@@ -929,9 +929,9 @@ int main(int argc, char** argv)
           printout("TIME: time between timesteps is %d seconds (counted after upgrade grid and before packet prop)\n", estimated_time_per_timestep);
 
           #ifdef WALLTIMELIMITSECONDS
-            const int wallclock_used_seconds = time_timestep_start - real_time_start;
+            const int wallclock_used_seconds = time(NULL) - real_time_start;
             const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
-            printout("TIME: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, WALLTIMELIMITSECONDS);
+            printout("TIMED_RESTARTS: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, WALLTIMELIMITSECONDS);
 
             if (wallclock_remaining_seconds < (1.5 * estimated_time_per_timestep))
             {
@@ -943,9 +943,9 @@ int main(int argc, char** argv)
               MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
             #endif
             if (do_this_full_loop)
-              printout("TIME: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
+              printout("TIMED_RESTARTS: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
             else
-              printout("TIME: Going to terminate since remaining time %d s < 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
+              printout("TIMED_RESTARTS: Going to terminate since remaining time %d s < 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
           #endif
         }
         time_timestep_start = time(NULL);
