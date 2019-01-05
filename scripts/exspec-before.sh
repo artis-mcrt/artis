@@ -3,4 +3,4 @@ if [! -f packets00_0000.out* ]; then
 fi
 
 gunzip packets*.out.gz || true
-gunzip -v phixsdata.txt.gz transitiondata.txt.gz ratecoeff.dat.gz || true
+gunzip -v phixsdata_v2.txt.gz transitiondata.txt.gz ratecoeff.dat.gz || true
