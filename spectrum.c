@@ -34,7 +34,7 @@ const bool TRACE_EMISSION_ABSORPTION_REGION_ON = true;
 #define traceemissabs_lambdamax 25000.
 #define traceemissabs_nulower (1.e8 * CLIGHT / traceemissabs_lambdamax)
 #define traceemissabs_nuupper (1.e8 * CLIGHT / traceemissabs_lambdamin)
-#define traceemissabs_timemin 310.
+#define traceemissabs_timemin 320.
 #define traceemissabs_timemax 340.
 
 typedef struct emissionabsorptioncontrib
@@ -317,8 +317,7 @@ static void add_to_spec(const EPKT *const pkt_ptr, const bool do_emission_res)
         const int et = pkt_ptr->trueemissiontype;
         if (et >= 0)
         {
-          if (nt >= 34 && nt <= 57)
-          // if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
+          if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
           {
             if (pkt_ptr->nu_rf >= traceemissabs_nulower && pkt_ptr->nu_rf <= traceemissabs_nuupper)
             {
