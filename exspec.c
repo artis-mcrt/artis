@@ -186,7 +186,6 @@ int main(int argc, char** argv)
 
         if (do_emission_res)
         {
-
           sprintf(emission_filename, "emission_res_%.2d.out", a);
           printout("%s \n", emission_filename);
 
