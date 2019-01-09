@@ -2,8 +2,8 @@
 
 #PBS -P fm5
 #PBS -q express
-#PBS -l walltime=3:00:00
-#PBS -l mem=6GB
+#PBS -l walltime=12:00:00
+#PBS -l mem=4GB
 #PBS -l ncpus=1
 #PBS -l wd
 #PBS -m abe
@@ -21,6 +21,12 @@
 
 ulimit -l 2097152
 
+module load gsl/2.5
+module load intel-mpi/2018.3.222
+module load intel-cc/2018.3.222
+
+./artis/scripts/exspec-before.sh
+
 ./exspec
 
-
+./artis/scripts/exspec-after.sh

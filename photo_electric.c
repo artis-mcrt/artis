@@ -163,37 +163,18 @@ void pair_prod(PKT *restrict pkt_ptr, double t_current)
 
     // Now let's give the gamma ray a direction.
 
-    const double zrand2 = gsl_rng_uniform(rng);
-    const double zrand3 = gsl_rng_uniform(rng);
+    double dir_cmf[3];
+    get_rand_isotropic_unitvec(dir_cmf);
 
-    // Assuming isotropic emission in cmf, use these two random numbers to set
-    // up a cmf direction in cos(theta) and phi.
+    // This direction is in the cmf - we want to convert it to the rest
+    // frame - use aberation of angles. We want to convert from cmf to
+    // rest so need -ve velocity.
 
-    const double mu = -1 + (2.*zrand2);
-    const double phi = zrand3 * 2 * PI;
-    const double sintheta = sqrt(1. - (mu * mu));
-
-    pkt_ptr->dir[0] = sintheta * cos(phi);
-    pkt_ptr->dir[1] = sintheta * sin(phi);
-    pkt_ptr->dir[2] = mu;
-
-    /* This direction is in the cmf - we want to convert it to the rest
-       frame - use aberation of angles. We want to convert from cmf to
-       rest so need -ve velocity. */
     double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, (-1*(t_current)));
+    get_velocity(pkt_ptr->pos, vel_vec, -1. * t_current);
     // negative time since we want the backwards transformation here
-    double dummy_dir[3];
-    angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
 
-    vec_copy(pkt_ptr->dir, dummy_dir);
-
-    // Check unit vector.
-    if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
-    {
-      printout("Not a unit vector. Abort.\n");
-      abort();
-    }
+    angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
     const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->tdecay);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;

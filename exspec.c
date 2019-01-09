@@ -10,6 +10,7 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
+#include <stdbool.h>
 #include "exspec.h"
 #include "sn3d.h"
 #include "threadprivate.h"
@@ -20,54 +21,103 @@
 #include "spectrum.h"
 #include "vectors.h"
 
-static PKT pkt[MPKTS];
+#ifdef DO_EXGAMMA
+const bool MODE_GAMMA = true;
+#else
+const bool MODE_GAMMA = false;
+#endif
+
+
+static int get_escaped_packets(int i, int nprocs, PKT pkt[], EPKT *epkts, int npkts, enum packet_type escape_type)
+{
+  char filename[100];
+  /// Read in the next bunch of packets to work on
+  //sprintf(filename,"packets%d_%d.tmp",0,i);
+  sprintf(filename, "packets%.2d_%.4d.out", 0, i);
+  printout("reading %s (file %d of %d)\n", filename, i + 1, nprocs);
+  read_packets(filename, pkt);
+
+  int nepkts = 0;
+  for (int ii = 0; ii < npkts; ii++)
+  {
+    // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
+    if (pkt[ii].type == TYPE_ESCAPE && pkt[ii].escape_type == escape_type)
+    {
+      /// We know that a packet escaped at "escape_time". However, we have
+      /// to allow for travel time. Use the formula in Leon's paper. The extra
+      /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
+      const double arrive_time = pkt[ii].escape_time - (dot(pkt[ii].pos, pkt[ii].dir) / CLIGHT_PROP);
+      epkts[nepkts].arrive_time = arrive_time;
+
+      /// Now do the cmf time.
+      const double arrive_time_cmf = pkt[ii].escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
+      epkts[nepkts].arrive_time_cmf = arrive_time_cmf;
+      // printout("add packet %d. arrive_time %g arrive_time_cmf %g nu_rf %g e_rf %g e_cmf %g \n",
+      //          j, arrive_time, arrive_time_cmf, pkt[ii].nu_rf, pkt[ii].e_rf, pkt[ii].nu_cmf);
+
+      epkts[nepkts].dir[0] = pkt[ii].dir[0];
+      epkts[nepkts].dir[1] = pkt[ii].dir[1];
+      epkts[nepkts].dir[2] = pkt[ii].dir[2];
+      epkts[nepkts].nu_rf = pkt[ii].nu_rf;
+      epkts[nepkts].e_rf = pkt[ii].e_rf;
+      epkts[nepkts].e_cmf = pkt[ii].e_cmf;
+      epkts[nepkts].em_pos[0] = pkt[ii].em_pos[0];
+      epkts[nepkts].em_pos[1] = pkt[ii].em_pos[1];
+      epkts[nepkts].em_pos[2] = pkt[ii].em_pos[2];
+      epkts[nepkts].em_time = pkt[ii].em_time;
+      epkts[nepkts].emissiontype = pkt[ii].emissiontype;
+      epkts[nepkts].trueemissiontype = pkt[ii].trueemissiontype;
+      epkts[nepkts].absorptionfreq = pkt[ii].absorptionfreq;
+      epkts[nepkts].absorptiontype = pkt[ii].absorptiontype;
+      epkts[nepkts].trueemissionvelocity = pkt[ii].trueemissionvelocity;
+
+      nepkts++;
+    }
+  }
+  return nepkts;
+}
 
 
 int main(int argc, char** argv)
 {
   const int my_rank = 0;
   char filename[100];
-  sprintf(filename,"exspec.txt");
+
+  sprintf(filename, MODE_GAMMA ? "exgamma.txt" : "exspec.txt");
   output_file = fopen_required(filename, "w");
   setvbuf(output_file, NULL, _IOLBF, 1);
 
   const time_t sys_time_start = time(NULL);
+
+  #ifdef EXGAMMA
+  printout("Begining do_exspec for gamma rays.\n");
+  #else
   printout("Begining do_exspec.\n");
+  #endif
 
   /// Get input stuff
-  printout("time before input %d\n",time(NULL));
+  printout("time before input %d\n", time(NULL));
   input(my_rank);
-  printout("time after input %d\n",time(NULL));
+  printout("time after input %d\n", time(NULL));
   nprocs = nprocs_exspec;
 
-  /// Read binary packet files and create ASCII packets files out of them
-  /*
-  npkts=MPKTS;
-  for (i = 0; i < nprocs; i++)
+  PKT *pkts = malloc(npkts * sizeof(PKT));
+  EPKT *epkts = malloc(npkts * sizeof(EPKT));
+
+  if (epkts == NULL)
   {
-    /// Read in the next bunch of packets to work on
-    sprintf(filename,"packets%d_%d.tmp",0,i);
-    printout("%s\n",filename);
-    packets_file = fopen_required(filename, "rb")) == NULL);
-    //sprintf(filename,"packets%.2d_%.4d.out",0,i);
-    //packets_file = fopen_required(filename, "r");
-    fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-    //read_packets(packets_file);
-    /// Close the current file.
-    fclose(packets_file);
-
-
-    /// Read in the next bunch of packets to work on
-    sprintf(filename,"packets%.2d_%.4d.out",0,i);
-    printout("%s\n",filename);
-    packets_file = fopen_required(filename, "w");
-    write_packets(packets_file);
-    //read_packets(packets_file);
-    /// Close the current file.
-    fclose(packets_file);
+    printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
+    abort();
   }
-  abort();
-  */
+
+  nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
+  if (MODE_GAMMA)
+  {
+    /// Spectra settings
+    do_emission_res = 0;         /// We don't record information on gamma packet last interactions, thus create no emission/absorption files.
+    nu_min_r = 0.05 * MEV / H;   /// Lower frequency boundary for gamma spectra (badly named variable)
+    nu_max_r = 4 * MEV / H;      /// Upper frequency boundary for gamma spectra
+  }
 
   for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
   {
@@ -76,126 +126,87 @@ int main(int argc, char** argv)
     //grid_init();
     time_init();
 
-    if ((epkts = malloc((nprocs * npkts) * sizeof(EPKT))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
-      abort();
-    }
-
     /// Loop over all packets in all the packets files of the simulation and check if
     /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
     /// epkts array, which is then used for the binning.
-    int j = 0;
-    for (int i = 0; i < nprocs; i++)
+    const int amax = ((model_type == RHO_1D_READ) || MODE_GAMMA) ? 0 : MABINS;
+    for (int a = -1; a < amax; a++)
     {
-      /// Read in the next bunch of packets to work on
-      //sprintf(filename,"packets%d_%d.tmp",0,i);
-      sprintf(filename,"packets%.2d_%.4d.out", 0, i);
-      printout("reading %s (file %d of %d)\n", filename, i + 1, nprocs);
-      //packets_file = fopen_required(filename, "rb");
-      FILE *packets_file = fopen_required(filename, "r");
-      //fread(&pkt[0], sizeof(PKT), npkts, packets_file);
-      read_packets(packets_file, pkt);
-      fclose(packets_file);
+      /// Set up the light curve grid and initialise the bins to zero.
+      init_light_curve();
+      /// Set up the spectrum grid and initialise the bins to zero.
+      init_spectrum();
 
-      for (int ii = 0; ii < npkts; ii++)
+
+      for (int p = 0; p < nprocs; p++)
       {
-        PKT *pkt_ptr = &pkt[ii];
-        // printout("packet %d escape_type %d type %d", ii, pkt_ptr->escape_type, pkt_ptr->type);
-        if (pkt_ptr->escape_type == TYPE_RPKT && pkt_ptr->type == TYPE_ESCAPE)
+        nepkts = get_escaped_packets(p, nprocs, pkts, epkts, npkts, MODE_GAMMA ? TYPE_GAMMA : TYPE_RPKT);
+        printout("  %d of %d packets escaped with type %s\n", nepkts, npkts, MODE_GAMMA ? "TYPE_GAMMA" : "TYPE_RPKT");
+
+        if (a == -1)
         {
-          /// We know that a packet escaped at "escape_time". However, we have
-          /// to allow for travel time. Use the formula in Leon's paper. The extra
-          /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-          const double arrive_time = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
-          epkts[j].arrive_time = arrive_time;
-
-          /// Now do the cmf time.
-          const double arrive_time_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
-          epkts[j].arrive_time_cmf = arrive_time_cmf;
-          // printout("add packet %d. arrive_time %g arrive_time_cmf %g nu_rf %g e_rf %g e_cmf %g \n",
-          //          j, arrive_time, arrive_time_cmf, pkt_ptr->nu_rf, pkt_ptr->e_rf, pkt_ptr->nu_cmf);
-
-          epkts[j].dir[0] = pkt_ptr->dir[0];
-          epkts[j].dir[1] = pkt_ptr->dir[1];
-          epkts[j].dir[2] = pkt_ptr->dir[2];
-          epkts[j].nu_rf = pkt_ptr->nu_rf;
-          epkts[j].e_rf = pkt_ptr->e_rf;
-          epkts[j].e_cmf = pkt_ptr->e_cmf;
-          epkts[j].em_pos[0] = pkt_ptr->em_pos[0];
-          epkts[j].em_pos[1] = pkt_ptr->em_pos[1];
-          epkts[j].em_pos[2] = pkt_ptr->em_pos[2];
-          epkts[j].em_time = pkt_ptr->em_time;
-          epkts[j].emissiontype = pkt_ptr->emissiontype;
-          epkts[j].trueemissiontype = pkt_ptr->trueemissiontype;
-          epkts[j].absorptionfreq = pkt_ptr->absorptionfreq;
-          epkts[j].absorptiontype = pkt_ptr->absorptiontype;
-          epkts[j].trueemissionvelocity = pkt_ptr->trueemissionvelocity;
-          j++;
+          gather_light_curve(epkts, nepkts);
+          gather_spectrum(epkts, nepkts, -1, do_emission_res);
+        }
+        else
+        {
+          gather_light_curve_res(epkts, nepkts, a);
+          gather_spectrum_res(epkts, nepkts, a);
         }
       }
-    }
-    nepkts = j;
 
-
-    /// Extract angle-averaged spectra and light curves
-    FILE *lc_file = fopen_required("light_curve.out", "w");
-    FILE *spec_file = fopen_required("spec.out", "w");
-    FILE *emission_file = fopen_required("emission.out", "w");
-    FILE *trueemission_file = fopen_required("emissiontrue.out", "w");
-    FILE *absorption_file = fopen_required("absorption.out", "w");
-
-    gather_spectrum(-1);
-    gather_light_curve();
-    write_spectrum(spec_file, emission_file, trueemission_file, absorption_file);
-    write_light_curve(lc_file, -1);
-    //make_gamma_light_curve();
-
-    fclose(lc_file);
-    fclose(spec_file);
-    fclose(emission_file);
-    fclose(trueemission_file);
-    fclose(absorption_file);
-
-    printout("finished angle-averaged stuff\n");
-
-    /// Extract LOS dependent spectra and light curves
-    if (model_type != RHO_1D_READ)
-    {
-      lc_file = fopen_required("light_curve_res.out", "w");
-      spec_file = fopen_required("spec_res.out", "w");
-      for (int i = 0; i < MABINS; i++)
+      if (a == -1)
       {
-        if (do_emission_res == 1)
+        /// Extract angle-averaged spectra and light curves
+        if (!MODE_GAMMA)
         {
-          sprintf(filename, "emission_res_%.2d.out", i);
-          printout("%s \n", filename);
-          emission_file = fopen_required(filename, "w");
-
-          sprintf(filename, "emissiontrue_res_%.2d.out", i);
-          printout("%s \n", filename);
-          trueemission_file = fopen_required(filename, "w");
-
-          sprintf(filename, "absorption_res_%.2d.out", i);
-          printout("%s \n", filename);
-          absorption_file = fopen_required(filename, "w");
+          write_light_curve("light_curve.out", -1);
+          write_spectrum("spec.out", do_emission_res, "emission.out", "emissiontrue.out", "absorption.out");
         }
-        gather_spectrum_res(i);
-        gather_light_curve_res(i);
-
-        write_spectrum(spec_file, emission_file, trueemission_file, absorption_file);
-        write_light_curve(lc_file, i);
-
-        if (do_emission_res == 1)
+        else
         {
-          fclose(emission_file);
-          fclose(trueemission_file);
-          fclose(absorption_file);
+          write_light_curve("gamma_light_curve.out", -1);
+          write_spectrum("gamma_spec.out", do_emission_res, NULL, NULL, NULL);
         }
-        printout("Did %d of %d angle bins.\n",i+1,MABINS);
       }
-      fclose(lc_file);
-      fclose(spec_file);
+      else
+      {
+        /// Extract LOS dependent spectra and light curves
+        char lc_filename[100] = "";
+        char spec_filename[100] = "";
+        char emission_filename[100] = "";
+        char trueemission_filename[100] = "";
+        char absorption_filename[100] = "";
+
+        sprintf(lc_filename, "light_curve_res_%.2d.out", a);
+        printout("%s \n", lc_filename);
+
+        sprintf(spec_filename, "spec_res_%.2d.out", a);
+        printout("%s \n", spec_filename);
+
+        if (do_emission_res)
+        {
+          sprintf(emission_filename, "emission_res_%.2d.out", a);
+          printout("%s \n", emission_filename);
+
+          sprintf(trueemission_filename, "emissiontrue_res_%.2d.out", a);
+          printout("%s \n", trueemission_filename);
+
+          sprintf(absorption_filename, "absorption_res_%.2d.out", a);
+          printout("%s \n", absorption_filename);
+        }
+
+        write_light_curve(lc_filename, a);
+        write_spectrum(spec_filename, do_emission_res, emission_filename, trueemission_filename, absorption_filename);
+      }
+      if (a == -1)
+      {
+        printout("finished angle-averaged stuff\n");
+      }
+      else
+      {
+        printout("Did %d of %d angle bins.\n", a + 1, MABINS);
+      }
     }
   }
 
@@ -205,6 +216,8 @@ int main(int argc, char** argv)
   /* Spec syn. */
   //grid_init();
   //syn_gamma();
+  free(epkts);
+  free(pkts);
 
   printout("exspec finished at %d (tstart + %d seconds)\n", time(NULL), time(NULL) - sys_time_start);
   fclose(output_file);

@@ -70,10 +70,6 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 //#define _OPENMP
 #ifdef _OPENMP
   #include "omp.h"
-#else
-  typedef int omp_int_t;
-  inline omp_int_t omp_get_thread_num(void) { return 0; }
-  inline omp_int_t omp_get_num_threads(void) { return 1; }
 #endif
 
 
@@ -188,12 +184,13 @@ enum model_types model_type;
 
 int nprocs;      /// Global variable which holds the number of MPI processes
 int rank_global; /// Global variable which holds the rank of the active MPI process
-//int nprocs_exspec;
 int npkts;
 int nesc; //number of packets that escape during current timestep  ///ATOMIC
 
 double coordmax[3];
-double mtot, vmax, rmax;  /// Total mass and outer velocity/radius
+double mtot;
+double vmax;
+double rmax;  /// Total mass and outer velocity/radius
 double totmassradionuclide[RADIONUCLIDE_COUNT]; /// total mass of each radionuclide in the ejecta
 double mfeg;              /// Total mass of Fe group elements in ejecta
 double tmax;              /// End time of current simulation

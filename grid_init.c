@@ -361,7 +361,7 @@ static void allocate_nonemptycells(void)
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
   set_ffegrp(MMODELGRID, 0.);
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     set_modelinitradioabund(MMODELGRID, iso, 0.);
   }
@@ -372,7 +372,7 @@ static void allocate_nonemptycells(void)
   allocate_cooling(MMODELGRID);
 
   // Determine the number of simulation cells associated with the model cells
-  for (int mgi = 0; mgi < npts_model; mgi++)
+  for (int mgi = 0; mgi < (MMODELGRID + 1); mgi++)
     mg_associated_cells[mgi] = 0;
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++)
@@ -402,7 +402,7 @@ static void allocate_nonemptycells(void)
     {
       set_rhoinit(mgi, 0.);
       set_rho(mgi, 0.);
-      for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+      for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
       {
         set_modelinitradioabund(mgi, iso, 0.);
       }
@@ -818,10 +818,17 @@ static void abundances_read(void)
 }
 
 
-static void read_grid_restart_data(void)
+static void read_grid_restart_data(const int timestep)
 {
-  printout("READIN GRID SNAPSHOT\n");
-  FILE *restrict gridsave_file = fopen_required("gridsave.dat", "r");
+  char filename[100];
+  sprintf(filename, "gridsave_ts%d.tmp", timestep);
+
+  printout("READIN GRID SNAPSHOT from %s\n", filename);
+  FILE *restrict gridsave_file = fopen_required(filename, "r");
+
+  int timestep_in;
+  fscanf(gridsave_file, "%d ", &timestep_in);
+  assert(timestep_in = timestep);
 
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
@@ -878,93 +885,84 @@ static void read_grid_restart_data(void)
 static void assign_temperature(void)
 /// Routine for assigning temperatures to the grid cells at the start of the simulation.
 {
-  if (simulation_continued_from_saved)
+  /// For a simulation started from scratch we estimate the initial temperatures
+
+  /// We assume that for early times the material is so optically thick, that
+  /// all the radiation is trapped in the cell it originates from. This
+  /// means furthermore LTE, so that both temperatures can be evaluated
+  /// according to the local energy density resulting from the 56Ni decay.
+  /// The dilution factor is W=1 in LTE.
+
+  const double tstart = time_step[0].mid;
+
+  const double factor56ni = 1. / 56 / MH * (-1. / (tstart * (- T56CO + T56NI)))
+    * (- E56NI * exp(- tstart / T56NI) * tstart * T56CO - E56NI * exp(- tstart / T56NI) * T56NI * T56CO
+       + E56NI * exp(- tstart / T56NI) * tstart * T56NI + pow(T56NI, 2) * E56NI * exp(- tstart / T56NI)
+       - T56CO * tstart * E56CO * exp(- tstart / T56CO) - pow(T56CO, 2) * E56CO * exp(- tstart / T56CO)
+       + E56CO * tstart * T56NI * exp(- tstart / T56NI) + pow(T56NI, 2) * E56CO * exp(- tstart / T56NI)
+       + E56NI * T56CO * T56NI - E56NI * pow(T56NI, 2) - pow(T56NI, 2) * E56CO + E56CO * pow(T56CO, 2));
+
+  const double factor56co = 1. / 56 / MH * (1. / (tstart * T56CO))
+    * (T56CO * tstart * E56CO * exp(- tstart / T56CO) + pow(T56CO, 2) * E56CO * exp(- tstart / T56CO));
+
+  const double factor57ni = 1. / 57 / MH * (-1. / (tstart * (- T57CO + T57NI)))
+    * (- E57NI * exp(- tstart / T57NI) * tstart * T57CO - E57NI * exp(- tstart / T57NI) * T57NI * T57CO
+       + E57NI * exp(- tstart / T57NI) * tstart * T57NI + pow(T57NI, 2) * E57NI * exp(- tstart / T57NI)
+       - T57CO * tstart * E57CO * exp(- tstart / T57CO) - pow(T57CO, 2) * E57CO * exp(- tstart / T57CO)
+       + E57CO * tstart * T57NI * exp(- tstart / T57NI) + pow(T57NI, 2) * E57CO * exp(- tstart / T57NI)
+       + E57NI * T57CO * T57NI - E57NI * pow(T57NI, 2) - pow(T57NI, 2) * E57CO + E57CO * pow(T57CO, 2));
+
+  const double factor52fe = 1. / 52 / MH * (-1. / (tstart * (- T52MN + T52FE)))
+    * (- E52FE * exp(- tstart / T52FE) * tstart * T52MN - E52FE * exp(- tstart / T52FE) * T52FE * T52MN
+       + E52FE * exp(- tstart / T52FE) * tstart * T52FE + pow(T52FE, 2) * E52FE * exp(- tstart / T52FE)
+       - T52MN * tstart * E52MN * exp(- tstart / T52MN) - pow(T52MN, 2) * E52MN * exp(- tstart / T52MN)
+       + E52MN * tstart * T52FE * exp(- tstart / T52FE) + pow(T52FE, 2) * E52MN * exp(- tstart / T52FE)
+       + E52FE * T52MN * T52FE - E52FE * pow(T52FE, 2) - pow(T52FE, 2) * E52MN + E52MN * pow(T52MN, 2));
+
+  const double factor48cr = 1. / 48 / MH * (-1. / (tstart * (- T48V + T48CR)))
+    * (- E48CR * exp(- tstart / T48CR) * tstart * T48V - E48CR * exp(- tstart / T48CR) * T48CR * T48V
+       + E48CR * exp(- tstart / T48CR) * tstart * T48CR + pow(T48CR, 2) * E48CR * exp(- tstart / T48CR)
+       - T48V * tstart * E48V * exp(- tstart / T48V) - pow(T48V, 2) * E48V * exp(- tstart / T48V)
+       + E48V * tstart * T48CR * exp(- tstart / T48CR) + pow(T48CR, 2) * E48V * exp(- tstart / T48CR)
+       + E48CR * T48V * T48CR - E48CR * pow(T48CR, 2) - pow(T48CR, 2) * E48V + E48V * pow(T48V, 2));
+
+  // printout("factor56ni %g\n", factor56ni);
+  // printout("factor56co %g\n", factor56co);
+  // printout("factor57ni %g\n", factor57ni);
+  //factor56ni = CLIGHT/4/STEBO * E56NI/56/MH;
+  /// This works only for the inbuilt Lucy model
+  //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * E56NI/56/MH  / pow(vmax,3);
+  //for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < npts_model; n++)
   {
-    /// For continuation of an existing simulation we read the temperatures
-    /// at the end of the simulation and write them to the grid.
-    read_grid_restart_data();
-  }
-  else
-  {
-    /// For a simulation started from scratch we estimate the initial temperatures
+    //mgi = cell[n].modelgridindex;
+    double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(n) * (
+         (factor56ni * get_modelinitradioabund(n, NUCLIDE_NI56)) +
+         (factor56co * get_modelinitradioabund(n, NUCLIDE_CO56)) +
+         (factor57ni * get_modelinitradioabund(n, NUCLIDE_NI57)) +
+         // (factor57co * get_modelinitradioabund(n, NUCLIDE_CO57)) +
+         (factor52fe * get_modelinitradioabund(n, NUCLIDE_FE52)) +
+         (factor48cr * get_modelinitradioabund(n, NUCLIDE_CR48))), 1. / 4.);
 
-    /// We assume that for early times the material is so optically thick, that
-    /// all the radiation is trapped in the cell it originates from. This
-    /// means furthermore LTE, so that both temperatures can be evaluated
-    /// according to the local energy density resulting from the 56Ni decay.
-    /// The dilution factor is W=1 in LTE.
-
-    const double tstart = time_step[0].mid;
-
-    const double factor56ni = 1. / 56 / MH * (-1. / (tstart * (- T56CO + T56NI)))
-      * (- E56NI * exp(- tstart / T56NI) * tstart * T56CO - E56NI * exp(- tstart / T56NI) * T56NI * T56CO
-         + E56NI * exp(- tstart / T56NI) * tstart * T56NI + pow(T56NI, 2) * E56NI * exp(- tstart / T56NI)
-         - T56CO * tstart * E56CO * exp(- tstart / T56CO) - pow(T56CO, 2) * E56CO * exp(- tstart / T56CO)
-         + E56CO * tstart * T56NI * exp(- tstart / T56NI) + pow(T56NI, 2) * E56CO * exp(- tstart / T56NI)
-         + E56NI * T56CO * T56NI - E56NI * pow(T56NI, 2) - pow(T56NI, 2) * E56CO + E56CO * pow(T56CO, 2));
-
-    const double factor56co = 1. / 56 / MH * (1. / (tstart * T56CO))
-      * (T56CO * tstart * E56CO * exp(- tstart / T56CO) + pow(T56CO, 2) * E56CO * exp(- tstart / T56CO));
-
-    const double factor57ni = 1. / 57 / MH * (-1. / (tstart * (- T57CO + T57NI)))
-      * (- E57NI * exp(- tstart / T57NI) * tstart * T57CO - E57NI * exp(- tstart / T57NI) * T57NI * T57CO
-         + E57NI * exp(- tstart / T57NI) * tstart * T57NI + pow(T57NI, 2) * E57NI * exp(- tstart / T57NI)
-         - T57CO * tstart * E57CO * exp(- tstart / T57CO) - pow(T57CO, 2) * E57CO * exp(- tstart / T57CO)
-         + E57CO * tstart * T57NI * exp(- tstart / T57NI) + pow(T57NI, 2) * E57CO * exp(- tstart / T57NI)
-         + E57NI * T57CO * T57NI - E57NI * pow(T57NI, 2) - pow(T57NI, 2) * E57CO + E57CO * pow(T57CO, 2));
-
-    const double factor52fe = 1. / 52 / MH * (-1. / (tstart * (- T52MN + T52FE)))
-      * (- E52FE * exp(- tstart / T52FE) * tstart * T52MN - E52FE * exp(- tstart / T52FE) * T52FE * T52MN
-         + E52FE * exp(- tstart / T52FE) * tstart * T52FE + pow(T52FE, 2) * E52FE * exp(- tstart / T52FE)
-         - T52MN * tstart * E52MN * exp(- tstart / T52MN) - pow(T52MN, 2) * E52MN * exp(- tstart / T52MN)
-         + E52MN * tstart * T52FE * exp(- tstart / T52FE) + pow(T52FE, 2) * E52MN * exp(- tstart / T52FE)
-         + E52FE * T52MN * T52FE - E52FE * pow(T52FE, 2) - pow(T52FE, 2) * E52MN + E52MN * pow(T52MN, 2));
-
-    const double factor48cr = 1. / 48 / MH * (-1. / (tstart * (- T48V + T48CR)))
-      * (- E48CR * exp(- tstart / T48CR) * tstart * T48V - E48CR * exp(- tstart / T48CR) * T48CR * T48V
-         + E48CR * exp(- tstart / T48CR) * tstart * T48CR + pow(T48CR, 2) * E48CR * exp(- tstart / T48CR)
-         - T48V * tstart * E48V * exp(- tstart / T48V) - pow(T48V, 2) * E48V * exp(- tstart / T48V)
-         + E48V * tstart * T48CR * exp(- tstart / T48CR) + pow(T48CR, 2) * E48V * exp(- tstart / T48CR)
-         + E48CR * T48V * T48CR - E48CR * pow(T48CR, 2) - pow(T48CR, 2) * E48V + E48V * pow(T48V, 2));
-
-    // printout("factor56ni %g\n", factor56ni);
-    // printout("factor56co %g\n", factor56co);
-    // printout("factor57ni %g\n", factor57ni);
-    //factor56ni = CLIGHT/4/STEBO * E56NI/56/MH;
-    /// This works only for the inbuilt Lucy model
-    //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * E56NI/56/MH  / pow(vmax,3);
-    //for (n = 0; n < ngrid; n++)
-    for (int n = 0; n < npts_model; n++)
+    //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/T56NI)), 1./4.);
+    //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/T56NI))/pow(tmin,3), 1./4.);
+    //T_initial = 30615.5;
+    if (T_initial < MINTEMP)
     {
-      //mgi = cell[n].modelgridindex;
-      double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(n) * (
-           (factor56ni * get_modelinitradioabund(n, NUCLIDE_NI56)) +
-           (factor56co * get_modelinitradioabund(n, NUCLIDE_CO56)) +
-           (factor57ni * get_modelinitradioabund(n, NUCLIDE_NI57)) +
-           // (factor57co * get_modelinitradioabund(n, NUCLIDE_CO57)) +
-           (factor52fe * get_modelinitradioabund(n, NUCLIDE_FE52)) +
-           (factor48cr * get_modelinitradioabund(n, NUCLIDE_CR48))), 1. / 4.);
-
-      //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/T56NI)), 1./4.);
-      //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/T56NI))/pow(tmin,3), 1./4.);
-      //T_initial = 30615.5;
-      if (T_initial < MINTEMP)
-      {
-        printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", n, T_initial, MINTEMP);
-        T_initial = MINTEMP;
-      }
-      else if (T_initial > MAXTEMP)
-      {
-        printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", n, T_initial, MAXTEMP);
-        T_initial = MAXTEMP;
-      }
-
-      set_Te(n, T_initial);
-      set_TJ(n, T_initial);
-      set_TR(n, T_initial);
-
-      set_W(n, 1.);
+      printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", n, T_initial, MINTEMP);
+      T_initial = MINTEMP;
     }
+    else if (T_initial > MAXTEMP)
+    {
+      printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", n, T_initial, MAXTEMP);
+      T_initial = MAXTEMP;
+    }
+
+    set_Te(n, T_initial);
+    set_TJ(n, T_initial);
+    set_TR(n, T_initial);
+
+    set_W(n, 1.);
   }
 }
 
@@ -1139,7 +1137,16 @@ void grid_init(int my_rank)
     nt_init(my_rank);
 
   /// and assign a temperature to the cells
-  assign_temperature();
+  if (simulation_continued_from_saved)
+  {
+    /// For continuation of an existing simulation we read the temperatures
+    /// at the end of the simulation and write them to the grid.
+    read_grid_restart_data(itstep);
+  }
+  else
+  {
+    assign_temperature();
+  }
 
   /// Finally determine which cells are non-empty...
   /*if ((nonemptycells = malloc(ngrid*sizeof(int))) == NULL)

@@ -57,7 +57,7 @@ static double read_gamma_spectrum(enum radionuclides isotope, const char filenam
 
 static void read_decaydata(void)
 {
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     gamma_spectra[iso].nlines = 0;
     gamma_spectra[iso].energy = NULL;
@@ -102,7 +102,7 @@ void init_gamma_linelist(void)
   /* Now do the sorting. */
 
   int total_lines = 0;
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     total_lines += gamma_spectra[iso].nlines;
   }
@@ -120,7 +120,7 @@ void init_gamma_linelist(void)
   {
     double energy_try = 1.e50;
 
-    for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
     {
       // printout("iso %d nlines %d\n", iso, gamma_spectra[iso].nlines);
       for (int j = 0; j < gamma_spectra[iso].nlines; j++)
@@ -238,19 +238,10 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
 
   // Now let's give the gamma ray a direction.
 
-  const double zrand = gsl_rng_uniform(rng);
-  const double zrand2 = gsl_rng_uniform(rng);
+  // Assuming isotropic emission in cmf
 
-  // Assuming isotropic emission in cmf, use these two random numbers to set
-  // up a cmf direction in cos(theta) and phi.
-
-  const double mu = -1 + (2.*zrand);
-  const double phi = zrand2 * 2 * PI;
-  const double sintheta = sqrt(1. - (mu * mu));
-
-  pkt_ptr->dir[0] = sintheta * cos(phi);
-  pkt_ptr->dir[1] = sintheta * sin(phi);
-  pkt_ptr->dir[2] = mu;
+  double dir_cmf[3];
+  get_rand_isotropic_unitvec(dir_cmf);
 
   /* This direction is in the cmf - we want to convert it to the rest
   frame - use aberation of angles. We want to convert from cmf to
@@ -260,17 +251,7 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->tdecay);
   //negative time since we want the backwards transformation here
 
-  double dummy_dir[3];
-  angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
-
-  vec_copy(pkt_ptr->dir, dummy_dir);
-
-  /*Check unit vector.*/
-  if (fabs(vec_len(pkt_ptr->dir) - 1) > 1.e-8)
-  {
-    printout("Not a unit vector. Abort.\n");
-    abort();
-  }
+  angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
   /* Now need to assign the frequency of the packet in the co-moving frame.*/
 
@@ -286,9 +267,11 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   pkt_ptr->type = TYPE_GAMMA;
   pkt_ptr->last_cross = NONE;
 
-  /* initialise polarisation information */
+  // initialise polarisation information
   pkt_ptr->stokes[0] = 1.0;
   pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
+  double dummy_dir[3];
+
   dummy_dir[0] = dummy_dir[1] = 0.0;
   dummy_dir[2] = 1.0;
   cross_prod(pkt_ptr->dir, dummy_dir, pkt_ptr->pol_dir);

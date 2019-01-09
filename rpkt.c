@@ -102,7 +102,6 @@ double closest_transition(PKT *restrict pkt_ptr)
   mastate[tid].element = linelist[match].elementindex;
   mastate[tid].ion     = linelist[match].ionindex;
   mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
-  mastate[tid].activatedfromlevel = linelist[match].lowerlevelindex;
   mastate[tid].activatingline = match;
   pkt_ptr->next_trans   = match + 1;  ///helper variable to overcome numerical problems after line scattering
                                       ///further scattering events should be located at lower frequencies to prevent
@@ -160,12 +159,12 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:   line interaction possible\n");
       #endif
 
-      const int element = mastate[tid].element;
-      const int ion = mastate[tid].ion;
-      const int upper = mastate[tid].level;
-      const int lower = mastate[tid].activatedfromlevel;
       // const int lineindex = mastate[tid].activatingline;
       const int lineindex = dummypkt_ptr->next_trans - 1;
+      const int element = linelist[lineindex].elementindex;
+      const int ion = linelist[lineindex].ionindex;
+      const int upper = linelist[lineindex].upperlevelindex;
+      const int lower = linelist[lineindex].lowerlevelindex;
 
       double ldist;  // distance from current position to the line interaction
       if (dummypkt_ptr->nu_cmf < nu_trans)
@@ -221,7 +220,6 @@ static double get_event(
           if (debuglevel == 2) printout("[debug] get_event:     tau_line %g\n", tau_line);
         #endif
 
-        bool increment_lineestimator = false;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] get_event:       tau_rnd - tau > tau_cont\n");
         #endif
@@ -250,10 +248,7 @@ static double get_event(
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
           move_pkt(dummypkt_ptr, ldist, t_current);
-          if (DETAILED_LINE_ESTIMATORS_ON)
-          {
-            increment_lineestimator = true;
-          }
+          radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           #ifdef DEBUG_ON
             if (debuglevel == 2)
@@ -286,10 +281,7 @@ static double get_event(
           {
             t_current += ldist / CLIGHT_PROP;
             move_pkt(dummypkt_ptr, ldist, t_current);
-            if (DETAILED_LINE_ESTIMATORS_ON)
-            {
-              increment_lineestimator = true;
-            }
+            radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
@@ -298,18 +290,6 @@ static double get_event(
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         edist %g, abort_dist %g, edist-abort_dist %g, endloop   %d\n",edist,abort_dist,edist-abort_dist,endloop);
           #endif
-        }
-
-        if (increment_lineestimator)
-        {
-          const int jblueindex = radfield_get_Jblueindex(lineindex);
-          if (jblueindex >= 0)
-          {
-            const double increment = t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf;
-            // printout("get_event: Jb_lu increment: dist %g ldist %g e_cmf %g nu_cmf %g nu_trans %g\n",
-            //          dist, ldist, dummypkt_ptr->e_cmf, dummypkt_ptr->nu_cmf, nu_trans);
-            radfield_increment_Jb_lu_estimator(modelgridindex, jblueindex, increment);
-          }
         }
       }
       else
@@ -717,8 +697,8 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
     if (sdist == 0)
     {
       change_cell(pkt_ptr, snext, &end_packet, t_current);
-      const int cellindex = pkt_ptr->where;
-      mgi = cell[cellindex].modelgridindex;
+      const int cellindexnew = pkt_ptr->where;
+      mgi = cell[cellindexnew].modelgridindex;
     }
     else
     {
@@ -731,15 +711,15 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
 
       if (sdist < 1)
       {
-        const int cellindex = pkt_ptr->where;
+        const int cellindexnew = pkt_ptr->where;
         printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-        printout("[warning] r_pkt: cell %d snext %d\n", cellindex, snext);
+        printout("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
         printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
         printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
         printout("[warning] r_pkt: cell corner %g %g %g\n",
-                 get_cellcoordmin(cellindex, 0) * t_current / tmin,
-                 get_cellcoordmin(cellindex, 1) * t_current / tmin,
-                 get_cellcoordmin(cellindex, 2) * t_current / tmin);
+                 get_cellcoordmin(cellindexnew, 0) * t_current / tmin,
+                 get_cellcoordmin(cellindexnew, 1) * t_current / tmin,
+                 get_cellcoordmin(cellindexnew, 2) * t_current / tmin);
         printout("[warning] r_pkt: cell width %g\n",wid_init(0)*t_current/tmin);
         //abort();
       }
@@ -789,8 +769,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
         /// Get distance to the next physical event in this case only electron scattering
         //kappa = SIGMA_T*get_nne(mgi);
-        double kappa = get_kappagrey(mgi) * get_rho(mgi);
-        kappa *= doppler_packetpos(pkt_ptr, t_current);
+        const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr, t_current);
         const double tau_current = 0.0;
         edist = (tau_next - tau_current) / kappa;
         find_nextline = true;
@@ -838,8 +817,8 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         if (snext != pkt_ptr->where)
         {
           change_cell(pkt_ptr, snext, &end_packet, t_current);
-          const int cellindex = pkt_ptr->where;
-          mgi = cell[cellindex].modelgridindex;
+          const int cellindexnew = pkt_ptr->where;
+          mgi = cell[cellindexnew].modelgridindex;
         }
         #ifdef DEBUG_ON
           /** New cell so reset the scat_counter */
@@ -938,29 +917,18 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
   pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
 
   /// Need to assign a new direction. Assume isotropic emission in the cmf
-  const double zrand = gsl_rng_uniform(rng);
-  const double zrand2 = gsl_rng_uniform(rng);
 
-  const double mu = -1 + (2.*zrand);
-  const double phi = zrand2 * 2 * PI;
-  const double sintheta = sqrt(1. - (mu * mu));
+  double dir_cmf[3];
+  get_rand_isotropic_unitvec(dir_cmf);
 
-  pkt_ptr->dir[0] = sintheta * cos(phi);
-  pkt_ptr->dir[1] = sintheta * sin(phi);
-  pkt_ptr->dir[2] = mu;
-  //printout("[debug] pkt_ptr->dir in CMF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-
-  double dummy_dir[3], vel_vec[3];
+  double vel_vec[3];
   /// This direction is in the cmf - we want to convert it to the rest
   /// frame - use aberation of angles. We want to convert from cmf to
   /// rest so need -ve velocity.
-  get_velocity(pkt_ptr->pos, vel_vec, (-1*(t_current)));
+  get_velocity(pkt_ptr->pos, vel_vec, -1. * t_current);
   ///negative time since we want the backwards transformation here
 
-  angle_ab(pkt_ptr->dir, vel_vec, dummy_dir);
-  pkt_ptr->dir[0] = dummy_dir[0];
-  pkt_ptr->dir[1] = dummy_dir[1];
-  pkt_ptr->dir[2] = dummy_dir[2];
+  angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
   //printout("[debug] pkt_ptr->dir in RF: %g %g %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
   /// Check unit vector.
@@ -990,6 +958,7 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
   // Reset polarization information
   pkt_ptr->stokes[0] = 1.0;
   pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
+  double dummy_dir[3];
   dummy_dir[0] = dummy_dir[1] = 0.0;
   dummy_dir[2] = 1.0;
   cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
@@ -1383,9 +1352,6 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
                         //}
                         nnionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
 
-                        mastate[tid].element = element;
-                        mastate[tid].ion = ion;
-                        mastate[tid].level = level;
                         const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
 
                         bef = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact;

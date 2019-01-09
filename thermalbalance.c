@@ -64,15 +64,17 @@ static void calculate_heating_rates(const int modelgridindex)
      for (int level = 0; level < nlevels; level++)
      {
        const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
+       const double epsilon_level = epsilon(element, ion, level);
 //
 //
 //         /// Collisional heating: deexcitation to same ionization stage
 //         /// ----------------------------------------------------------
        const int ndowntrans = get_ndowntrans(element, ion, level);
-       for (int ii = 1; ii <= ndowntrans; ii++)
+       for (int ii = 0; ii < ndowntrans; ii++)
        {
-         const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[ii].epsilon_trans;
-         const int lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
+         const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[ii];
+         const int lower = linelist[lineindex].lowerlevelindex;
+         const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
          const double C = nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * epsilon_trans;
          C_deexc += C;
        }
@@ -257,10 +259,10 @@ static void calculate_cooling_rates(const int modelgridindex)
         /// excitation to same ionization stage
         /// -----------------------------------
         const int nuptrans = get_nuptrans(element, ion, level);
-        for (int ii = 1; ii <= nuptrans; ii++)
+        for (int ii = 0; ii < nuptrans; ii++)
         {
-          const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
-          const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+          const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+          const int upper = linelist[lineindex].upperlevelindex;
           //printout("    excitation to level %d possible\n",upper);
           const double epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
           C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
@@ -648,7 +650,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 // //         {
 // //           lower = elements[element].ions[ion].levels[level].downtrans[ii].targetlevel;
 // //           epsilon_target = elements[element].ions[ion].levels[level].downtrans[ii].epsilon;
-// //           lineindex = elements[element].ions[ion].levels[level].downtrans[ii].lineindex;
+// //           lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[ii];
 // //           epsilon_trans = epsilon_current - epsilon_target;
 // //           C = col_deexcitation(pkt_ptr,lower,epsilon_trans,statweight_target,lineindex)*epsilon_trans;
 // //           C_deexc += C;

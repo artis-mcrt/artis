@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# this script will move the Artis output files from the current run into a subfolder
+# this script will move the ARTIS output files from the current run into a subfolder
 # given by the command line argument
 
 if [ $# -ne 1 ]; then

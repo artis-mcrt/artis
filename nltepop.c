@@ -482,14 +482,16 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
   for (int level = 0; level < nlevels; level++)
   {
     const int level_index = get_nlte_vector_index(element, ion, level);
+    const double epsilon_level = epsilon(element, ion, level);
 
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);
-    for (int i = 1; i <= ndowntrans; i++)
+    for (int i = 0; i < ndowntrans; i++)
     {
-      const int lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-      const double epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
-      const int lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
+      const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+      const int lower = linelist[lineindex].lowerlevelindex;
+
+      const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
       const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid) * s_renorm[level];
       const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * s_renorm[level];
@@ -507,15 +509,15 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
 
     // excitation
     const int nuptrans = get_nuptrans(element, ion, level);
-    for (int i = 1; i <= nuptrans; i++)
+    for (int i = 0; i < nuptrans; i++)
     {
-      const int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
+      const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+      const int upper = linelist[lineindex].upperlevelindex;
+      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
       const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
       const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
-      const double NTC = nt_excitation_ratecoeff(modelgridindex, lineindex) * s_renorm[level];
+      const double NTC = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) * s_renorm[level];
 
       // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
       // {
@@ -1233,11 +1235,11 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         double s_renorm;
 
         // deexcitation
-        for (i = 1; i <= ndowntrans; i++)
+        for (i = 0; i < ndowntrans; i++)
         {
-          lower = elements[element].ions[ion].levels[level].downtrans[i].targetlevel;
-          epsilon_trans = elements[element].ions[ion].levels[level].downtrans[i].epsilon_trans;
-          lineindex = elements[element].ions[ion].levels[level].downtrans[i].lineindex;
+          epsilon_trans = epsilon_current - epsilon(element, ion, lower);
+          lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+          lower = linelist[lineindex].lowerlevelindex;
 
           mastate[tid].element = element;
           mastate[tid].ion = ion;
@@ -1274,11 +1276,11 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         }
 
         // excitation
-        for (i = 1; i <= nuptrans; i++)
+        for (i = 0; i < nuptrans; i++)
         {
-          int upper = elements[element].ions[ion].levels[level].uptrans[i].targetlevel;
-          epsilon_trans = elements[element].ions[ion].levels[level].uptrans[i].epsilon_trans;
-          lineindex = elements[element].ions[ion].levels[level].uptrans[i].lineindex;
+          lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+          const int upper = linelist[lineindex].upperlevelindex;
+          epsilon_trans = epsilon(ion, level, upper) - epsilon_current;
 
           mastate[tid].element = element;
           mastate[tid].ion = ion;
@@ -1667,7 +1669,7 @@ void nltepop_write_restart_data(FILE *restart_file)
   if (!NLTE_POPS_ON)
     return;
 
-  printout("data for NLTE populations, ");
+  printout("NLTE populations, ");
 
   fprintf(restart_file, "%d\n", 75618527); // special number marking the beginning of nlte data
   fprintf(restart_file, "%d\n", total_nlte_levels);

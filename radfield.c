@@ -330,6 +330,7 @@ void radfield_init(int my_rank)
 
   setup_bin_boundaries();
 
+  long radfield_mem_usage = 0;
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
     radfield_set_J_normfactor(modelgridindex, -1.0);
@@ -338,7 +339,8 @@ void radfield_init(int my_rank)
     {
       radfieldbin_previous[modelgridindex] = (struct radfieldbin_previous *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin_previous));
       radfieldbin_current[modelgridindex] = (struct radfieldbin_current *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin_current));
-
+      radfield_mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin_previous);
+      radfield_mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin_current);
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
         radfieldbin_previous[modelgridindex][binindex].prev_J_normed = -1.;
@@ -353,7 +355,7 @@ void radfield_init(int my_rank)
       }
     }
   }
-  printout("mem_usage: radiation field bins for nonempty cells occupy %.1f MB\n", 2 * RADFIELDBINCOUNT * sizeof(struct radfieldbin_previous) / 1024. / 1024.);
+  printout("mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", radfield_mem_usage / 1024. / 1024.);
 }
 
 
@@ -784,16 +786,20 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
 }
 
 
-inline
-void radfield_increment_Jb_lu_estimator(const int modelgridindex, const int jblueindex, const double increment)
+void radfield_increment_lineestimator(const int modelgridindex, const int lineindex, const double increment)
 {
-  Jb_lu_raw[modelgridindex][jblueindex].value += increment;
-  Jb_lu_raw[modelgridindex][jblueindex].contribcount += 1;
-  // const int lineindex = detailed_lineindicies[jblueindex];
-  // printout(" increment cell %d lineindex %d Jb_lu_raw %g prev_Jb_lu_normed %g radfield(nu_trans) %g\n",
-  //       modelgridindex, lineindex, Jb_lu_raw[modelgridindex][jblueindex], prev_Jb_lu_normed[modelgridindex][jblueindex].value, radfield(linelist[lineindex].nu, modelgridindex));
-}
+  if (!DETAILED_LINE_ESTIMATORS_ON) return;
 
+  const int jblueindex = radfield_get_Jblueindex(lineindex);
+  if (jblueindex >= 0)
+  {
+    Jb_lu_raw[modelgridindex][jblueindex].value += increment;
+    Jb_lu_raw[modelgridindex][jblueindex].contribcount += 1;
+    // const int lineindex = detailed_lineindicies[jblueindex];
+    // printout(" increment cell %d lineindex %d Jb_lu_raw %g prev_Jb_lu_normed %g radfield(nu_trans) %g\n",
+    //       modelgridindex, lineindex, Jb_lu_raw[modelgridindex][jblueindex], prev_Jb_lu_normed[modelgridindex][jblueindex].value, radfield(linelist[lineindex].nu, modelgridindex));
+  }
+}
 
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
@@ -1423,7 +1429,7 @@ void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart
 
 void radfield_write_restart_data(FILE *gridsave_file)
 {
-  printout("data for binned radiation field and detailed lines, ");
+  printout("binned radiation field and detailed lines, ");
 
   fprintf(gridsave_file, "%d\n", 30490824); // special number marking the beginning of radfield data
 

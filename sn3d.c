@@ -10,6 +10,7 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
+#include<unistd.h>
 #include "sn3d.h"
 #include "threadprivate.h"
 #include "emissivities.h"
@@ -29,6 +30,15 @@
 #include "update_packets.h"
 #include "version.h"
 #include "vpkt.h"
+
+const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.tmp have been written, don't delete the previous set
+
+
+#ifndef _OPENMP
+typedef int omp_int_t;
+static inline omp_int_t omp_get_thread_num(void) { return 0; }
+static inline omp_int_t omp_get_num_threads(void) { return 1; }
+#endif
 
 static FILE *initialise_linestat_file(void)
 {
@@ -359,40 +369,59 @@ static void mpi_reduce_estimators(int my_rank)
 static void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt)
 {
   char filename[100];
-  if (timestep % 2 == 0)
-    sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
-  else
-    sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
+  sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
-  //sprintf(filename,"packets%d_%d.tmp",0,my_rank);
+  printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
   fread(pkt, sizeof(PKT), npkts, packets_file);
   //read_packets(packets_file);
   fclose(packets_file);
+  printout("done\n");
 }
 
 
 static void write_temp_packetsfile(const int timestep, const int my_rank, const PKT *const pkt)
 {
   char filename[100];
-  if (timestep % 2 == 0)
-    sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
-  else
-    sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
+  sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
+  printout("Writing %s...", filename);
   FILE *packets_file = fopen_required(filename, "wb");
 
   fwrite(pkt, sizeof(PKT), npkts, packets_file);
   fclose(packets_file);
+  printout("done\n");
 }
+
+
+static void remove_temp_packetsfile(const int timestep, const int my_rank, const PKT *const pkt)
+{
+  char filename[100];
+  sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
+
+  if (!access(filename, F_OK))
+  {
+    remove(filename);
+    printout("Deleted %s\n", filename);
+  }
+}
+
+
+static void remove_grid_restart_data(const int timestep)
+{
+  char prevfilename[100];
+  sprintf(prevfilename, "gridsave_ts%d.tmp", timestep);
+  if (!access(prevfilename, F_OK))
+  {
+    remove(prevfilename);
+    printout("Deleted %s\n", prevfilename);
+  }
+}
+
 
 int main(int argc, char** argv)
 // Main - top level routine.
 {
-  PKT *const packets = calloc(MPKTS, sizeof(PKT));
-  assert(packets != NULL);
-
-  FILE *restrict packets_file;
   //FILE *temperature_file;
   char filename[100];
 
@@ -419,16 +448,16 @@ int main(int argc, char** argv)
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
 
-# ifdef _OPENMP
+#ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
   omp_set_dynamic(0);
   #pragma omp parallel private(filename)
-# endif
+#endif
   {
     /// Get the current threads ID, copy it to a threadprivate variable
     tid = omp_get_thread_num();
     /// and initialise the threads outputfile
-    sprintf(filename,"output_%d-%d.txt",my_rank,tid);
+    sprintf(filename,"output_%d-%d.txt", my_rank, tid);
     output_file = fopen_required(filename, "w");
     /// Makes sure that the output_file is written line-by-line
     setvbuf(output_file, NULL, _IOLBF, 1);
@@ -444,6 +473,12 @@ int main(int argc, char** argv)
     printout("OpenMP parallelisation active with %d threads\n", nthreads);
 #   endif
   }
+
+  const time_t real_time_start = time(NULL);
+  printout("time at start %d\n", real_time_start);
+
+  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
+  assert(packets != NULL);
 
   #ifndef GIT_BRANCH
     #define GIT_BRANCH "UNKNOWN"
@@ -464,22 +499,22 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  if ((mastate = calloc(nthreads,sizeof(mastate_t))) == NULL)
+  if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)
   {
     printout("[fatal] input: error initializing macro atom state variables ... abort\n");
     abort();
   }
-  if ((kappa_rpkt_cont = calloc(nthreads,sizeof(rpkt_cont_opacity_struct))) == NULL)
+  if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     abort();
   }
-  if ((coolingrates = calloc(nthreads,sizeof(coolingrates_t))) == NULL)
+  if ((coolingrates = (coolingrates_t *) calloc(nthreads, sizeof(coolingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing coolingrates communication variables ... abort\n");
     abort();
   }
-  if ((heatingrates = calloc(nthreads,sizeof(heatingrates_t))) == NULL)
+  if ((heatingrates = (heatingrates_t *) calloc(nthreads, sizeof(heatingrates_t))) == NULL)
   {
     printout("[fatal] input: error initializing heatingrates communication variables ... abort\n");
     abort();
@@ -518,8 +553,6 @@ int main(int argc, char** argv)
   //printout("CELLHISTORYSIZE %d\n",CELLHISTORYSIZE);
 
   /// Get input stuff
-  const time_t real_time_start = time(NULL);
-  printout("time before input %d\n",real_time_start);
   input(my_rank);
 
   /// Initialise linestat file
@@ -569,7 +602,7 @@ int main(int argc, char** argv)
     /// Initialise the grid. Call routine that sets up the initial positions
     /// and sizes of the grid cells.
     time_init();
-    printout("time time init %d\n",time(NULL));
+    printout("time time init %d\n", time(NULL));
 
     grid_init(my_rank);
 
@@ -698,7 +731,7 @@ int main(int argc, char** argv)
         else
           sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
 
-        packets_file = fopen_required(filename, "rb");
+        FILE *restrict packets_file = fopen_required(filename, "rb");
 
         read_vspecpol(packets_file);
 
@@ -716,10 +749,7 @@ int main(int argc, char** argv)
       }
     #endif
 
-    #ifdef WALLTIMELIMITSECONDS
-      int estimated_time_for_clean_exit = -1;
-      time_t time_timestep_start = time(NULL);
-    #endif
+    time_t time_timestep_start = -1; // this will be set after the first update of the grid and before packet prop
     while (nts < last_loop)
     {
       nts_global = nts;
@@ -728,30 +758,6 @@ int main(int argc, char** argv)
         MPI_Barrier(MPI_COMM_WORLD);
 //        const time_t time_after_barrier = time(NULL);
 //        printout("timestep %d: time before barrier %d, time after barrier %d\n", nts, time_before_barrier, time_after_barrier);
-      #endif
-
-      #ifdef WALLTIMELIMITSECONDS
-        const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
-        time_timestep_start = time(NULL);
-        const int wallclock_used_seconds = time_timestep_start - real_time_start;
-        const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
-        if (my_rank == 0 && estimated_time_for_clean_exit > -1)
-        {
-          printout("TIMED_RESTARTS: Used %d of %d seconds of wall time. Estimated time for full timestep is %d plus final update_grid time of %d seconds\n",
-                   wallclock_used_seconds, WALLTIMELIMITSECONDS, estimated_time_per_timestep, estimated_time_for_clean_exit);
-
-          if (wallclock_remaining_seconds < 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit))
-          {
-            do_this_full_loop = false; // This flag being false will make it update_grid, and then exit
-          }
-        }
-        #ifdef MPI_ON
-          MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-        #endif
-        if (do_this_full_loop)
-          printout("TIMED_RESTARTS: Going to continue since remaining time %ds >= 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit)\n", wallclock_remaining_seconds);
-        else
-          printout("TIMED_RESTARTS: Going to terminate since remaining time %ds< 2 * (estimated_time_per_timestep + estimated_time_for_clean_exit)\n", wallclock_remaining_seconds);
       #endif
 
       #ifdef DO_TITER
@@ -780,8 +786,11 @@ int main(int argc, char** argv)
 
       for (int titer = 0; titer < n_titer; titer++)
       {
-        /// Read the packets file for each iteration on the timestep
-        read_temp_packetsfile(nts, my_rank, packets);
+        if ((titer > 0) || (simulation_continued_from_saved && (nts == itstep)))
+        {
+          /// Read the packets file to reset before each additional iteration on the timestep
+          read_temp_packetsfile(nts, my_rank, packets);
+        }
 
         /// Some counters on pkt-actions need to be reset to do statistics
         pkt_action_counters_reset();
@@ -861,23 +870,85 @@ int main(int argc, char** argv)
         /// If this is not the 0th time step of the current job step,
         /// write out a snapshot of the grid properties for further restarts
         /// and update input.txt accordingly
-        if (((nts - itstep) != 0) && (my_rank == 0))
+        if (((nts - itstep) != 0))
         {
-          const time_t sys_time_start_write_restart = time(NULL);
-          printout("Write grid restart data...");
-          write_grid_restart_data();
-          printout("done in %d seconds.\n", time(NULL) - sys_time_start_write_restart);
-          printout("Update input.txt for restart at time step %d\n", nts);
-          update_parameterfile(nts);
-          printout("input.txt successfully updated\n");
+          const time_t time_write_packets_file_start = time(NULL);
+          printout("time before write temporary packets file %d\n", time_write_packets_file_start);
 
-          // remove unused packets file
-          if (nts % 2 == 1)
-            sprintf(filename, "packets%d_%d_odd.tmp", 0, my_rank);
+          write_temp_packetsfile(nts, my_rank, packets); // save packet state at start of current timestep (before propagation)
+
+          #ifdef VPKT_ON
+          if (nts % 2 == 0)
+            sprintf(filename,"vspecpol_%d_%d_even.tmp", 0, my_rank);
           else
-            sprintf(filename, "packets%d_%d_even.tmp", 0, my_rank);
-          remove(filename);
+            sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
+
+          packets_file = fopen_required(filename, "wb");
+
+          write_vspecpol(packets_file);
+          fclose(packets_file);
+
+          // Write temporary files for vpkt_grid
+          if (vgrid_flag == 1)
+          {
+            if (nts % 2 == 0)
+              sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
+            else
+              sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
+
+            packets_file = fopen_required(filename, "wb");
+
+            write_vpkt_grid(packets_file);
+            fclose(packets_file);
+          }
+          #endif
+
+          printout("time after write temporary packets file %d (took %d seconds)\n", time(NULL), time(NULL) - time_write_packets_file_start);
+
+          if (my_rank == 0)
+          {
+            write_grid_restart_data(nts);
+            update_parameterfile(nts);
+          }
+
+          if (!KEEP_ALL_RESTART_FILES)
+          {
+            if (my_rank == 0)
+              remove_grid_restart_data(nts - 1);
+
+            // delete temp packets files from previous timestep now that all restart data for the new timestep is available
+            remove_temp_packetsfile(nts - 1, my_rank, packets);
+          }
+
+
+          #ifdef MPI_ON
+            MPI_Barrier(MPI_COMM_WORLD);
+          #endif
+          // time is measured from just before packet propagation from one timestep to the next
+          const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
+          printout("TIME: time between timesteps is %d seconds (counted after upgrade grid and before packet prop)\n", estimated_time_per_timestep);
+
+          #ifdef WALLTIMELIMITSECONDS
+            const int wallclock_used_seconds = time(NULL) - real_time_start;
+            const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
+            printout("TIMED_RESTARTS: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, WALLTIMELIMITSECONDS);
+
+            if (wallclock_remaining_seconds < (1.5 * estimated_time_per_timestep))
+            {
+              do_this_full_loop = false; // This flag being false will make it update_grid, and then exit
+            }
+
+            #ifdef MPI_ON
+              // communicate whatever decision the rank 0 process decided, just in case they differ
+              MPI_Bcast(&do_this_full_loop, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+            #endif
+            if (do_this_full_loop)
+              printout("TIMED_RESTARTS: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
+            else
+              printout("TIMED_RESTARTS: Going to terminate since remaining time %d s < 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
+          #endif
         }
+        time_timestep_start = time(NULL);
 
 
         /// Do this - which is only an initialisation and no need of calculation - outside update_grid to avoid communication
@@ -893,9 +964,6 @@ int main(int argc, char** argv)
         zero_estimators();
 
         // MPI_Barrier(MPI_COMM_WORLD);
-        #ifdef WALLTIMELIMITSECONDS
-          estimated_time_for_clean_exit = time(NULL) - time_timestep_start;
-        #endif
         if ((nts < ftstep) && do_this_full_loop)
         {
           /// Now process the packets.
@@ -1012,54 +1080,16 @@ int main(int argc, char** argv)
             }
           #endif
 
-          const time_t time_write_packets_file_start = time(NULL);
-          printout("time before write temporary packets file %d\n", time_write_packets_file_start);
-
-          write_temp_packetsfile(nts, my_rank, packets);
-
-          #ifdef VPKT_ON
-          if (nts % 2 == 0)
-            sprintf(filename,"vspecpol_%d_%d_even.tmp", 0, my_rank);
-          else
-            sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
-
-          packets_file = fopen_required(filename, "wb");
-
-          write_vspecpol(packets_file);
-          fclose(packets_file);
-
-          // Write temporary files for vpkt_grid
-
-          if (vgrid_flag == 1)
-          {
-            if (nts % 2 == 0)
-              sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
-            else
-              sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
-
-            packets_file = fopen_required(filename, "wb");
-
-            write_vpkt_grid(packets_file);
-            fclose(packets_file);
-          }
-
-          #endif
-
-
-          printout("time after write temporary packets file %d (took %d seconds)\n", time(NULL), time(NULL) - time_write_packets_file_start);
-
           if (nts == ftstep - 1)
           {
-            sprintf(filename,"packets%.2d_%.4d.out", 0, my_rank);
+            sprintf(filename, "packets%.2d_%.4d.out", 0, my_rank);
             //sprintf(filename,"packets%.2d_%.4d.out", middle_iteration, my_rank);
-            packets_file = fopen_required(filename, "w");
-            write_packets(packets_file, packets);
-            fclose(packets_file);
+            write_packets(filename, packets);
 
             // write specpol of the virtual packets
             #ifdef VPKT_ON
               sprintf(filename,"vspecpol_%d-%d.out",my_rank,tid);
-              FILE *vspecpol_file= fopen_required(filename, "w");
+              FILE *vspecpol_file = fopen_required(filename, "w");
 
               write_vspecpol(vspecpol_file);
               fclose(vspecpol_file);
@@ -1303,10 +1333,10 @@ extern inline FILE *fopen_required(const char *filename, const char *mode);
     {
       epsilon_lower = epsilon(element,ion,lower);
       nuptrans = get_nuptrans(element, ion, lower);
-      int i = 1; i <= nuptrans; i++)
+      int i = 0; i < nuptrans; i++)
       {
-        upper = elements[element].ions[ion].levels[lower].uptrans[i].targetlevel;
-        lineindex = elements[element].ions[ion].levels[lower].uptrans[i].lineindex;
+        lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[i];
+        upper = linelist[lineindex].upperlevelindex;
         nu_trans = (elements[element].ions[ion].levels[lower].uptrans[i].epsilon - epsilon_lower)/H;
 
         A_ul = einstein_spontaneous_emission(lineindex);

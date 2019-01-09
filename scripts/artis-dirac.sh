@@ -9,12 +9,12 @@ module load gsl/intel/2.4
 module load intel/compilers/18.0.3
 module load intel/mpi/18.0.3
 
-# Run the program
 cd $PBS_O_WORKDIR
+
 mpirun ./sn3d > out.txt
 
 mkdir ${PBS_JOBID}
-./movefiles.sh ${PBS_JOBID}
+./artis/scripts/movefiles.sh ${PBS_JOBID}
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then

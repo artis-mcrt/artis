@@ -9,11 +9,12 @@
 
 
 static double get_shellcrossdist(
-  const double pos[3], const double dir[3], const double shellradius, const bool isinnerboundary, const double tstart, bool debug)
+  const double pos[3], const double dir[3], const double shellradius, const bool isinnerboundary, const double tstart)
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
 // return -1 if there are no forward intersections (or if the intersection is tangential to the shell)
 {
   assert(shellradius > 0);
+  const bool debug = false;
   if (debug)
   {
     printout("get_shellcrossdist isinnerboundary %d\n", isinnerboundary);
@@ -242,11 +243,11 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
     not_allowed = NONE; // we will handle this separately by setting d_minus and d_plus negative for invalid directions
     const double r_inner = get_cellcoordmin(cellindex, 0) * tstart / tmin;
 
-    const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart, false) : -1.;
+    const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart) : -1.;
     t_minus_coordboundary[0] = d_minus / CLIGHT_PROP;
 
     const double r_outer = cellcoordmax[0] * tstart / tmin;
-    const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart, false);
+    const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart);
     t_plus_coordboundary[0] = d_plus / CLIGHT_PROP;
 
     // printout("cell %d\n", pkt_ptr->where);

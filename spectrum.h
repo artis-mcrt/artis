@@ -2,9 +2,11 @@
 #define SPECTRUM_H
 
 #include <stdio.h>
+#include "exspec.h"
 
-void write_spectrum(FILE *spec_file, FILE *emission_file, FILE *trueemission_file, FILE *absorption_file);
-void gather_spectrum(int depth);
-void gather_spectrum_res(int current_abin);
+void write_spectrum(char spec_filename[], bool do_emission_res, char emission_filename[], char trueemission_filename[], char absorption_filename[]);
+void gather_spectrum(const EPKT *const epkts, int nepkts, int depth, bool do_emission_res);
+void gather_spectrum_res(const EPKT *const epkts, int nepkts, int current_abin);
+void init_spectrum(void);
 
 #endif //SPECTRUM_H

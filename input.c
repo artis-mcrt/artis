@@ -61,7 +61,7 @@ static void read_phixs_data(void)
     bool skip_this_phixs_table = false;
     //printout("[debug] Z %d, upperion %d, upperlevel %d, lowerion %d, lowerlevel, %d\n",Z,upperion,upperlevel,lowerion,lowerlevel);
     /// translate readin anumber to element index
-    int element = get_elementindex(Z);
+    const int element = get_elementindex(Z);
 
     /// store only photoionization crosssections for elements that are part of the current model atom
     if (element >= 0)
@@ -306,19 +306,13 @@ static void read_ion_levels(
         transitions[level].to[i] = -99.;
       }
 
-      if ((elements[element].ions[ion].levels[level].downtrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
-      {
-        printout("[fatal] input: not enough memory to initialize downtranslist ... abort\n");
-        abort();
-      }
+      elements[element].ions[ion].levels[level].downtrans_lineindicies = NULL;
+
       /// initialize number of downward transitions to zero
       set_ndowntrans(element, ion, level, 0);
 
-      if ((elements[element].ions[ion].levels[level].uptrans = (transitionlist_entry *) malloc(sizeof(transitionlist_entry))) == NULL)
-      {
-        printout("[fatal] input: not enough memory to initialize uptranslist ... abort\n");
-        abort();
-      }
+      elements[element].ions[ion].levels[level].uptrans_lineindicies = NULL;
+
       /// initialize number of upward transitions to zero
       set_nuptrans(element, ion, level, 0);
     }
@@ -492,13 +486,6 @@ static void add_transitions_to_linelist(
   const int element, const int ion, const int nlevelsmax, const int tottransitions,
   transitiontable_entry *transitiontable, int *lineindex)
 {
-  int nuparr[nlevelsmax];
-  int ndownarr[nlevelsmax];
-  for (int level = 0; level < nlevelsmax; level++)
-  {
-    ndownarr[level] = 1;
-    nuparr[level] = 1;
-  }
   for (int ii = 0; ii < tottransitions; ii++)
   {
     // if (get_element(element) == 28 && get_ionstage(element, ion) == 2)
@@ -511,11 +498,9 @@ static void add_transitions_to_linelist(
     // }
 
     const int level = transitiontable[ii].upper;
-    const double epsilon_upper = epsilon(element, ion, level);
     if (level < nlevelsmax)
     {
       const int targetlevel = transitiontable[ii].lower;
-      const double epsilon_lower = epsilon(element, ion, targetlevel);
 
       //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
       //{
@@ -560,29 +545,27 @@ static void add_transitions_to_linelist(
         /// This is not a metastable level.
         elements[element].ions[ion].levels[level].metastable = false;
 
-        set_ndowntrans(element, ion, level, ndownarr[level]);
-        if ((elements[element].ions[ion].levels[level].downtrans
-            = realloc(elements[element].ions[ion].levels[level].downtrans, (ndownarr[level] + 1) * sizeof(transitionlist_entry))) == NULL)
+        const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
+        set_ndowntrans(element, ion, level, nupperdowntrans);
+        if ((elements[element].ions[ion].levels[level].downtrans_lineindicies
+            = realloc(elements[element].ions[ion].levels[level].downtrans_lineindicies, nupperdowntrans * sizeof(int))) == NULL)
         {
           printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
           abort();
         }
-        elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].targetlevel = targetlevel;
-        elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].epsilon_trans = epsilon_upper - epsilon_lower;
-        //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].einstein_A = A_ul;
-        //elements[element].ions[ion].levels[level].downtrans[ndownarr[level]].oscillator_strength = f_ul;
-        ndownarr[level]++;
+        // the line list has not been sorted yet, so the store the negative level index for now and
+        // this will be replaced with the index into the sorted line list later
+        elements[element].ions[ion].levels[level].downtrans_lineindicies[nupperdowntrans-1] = -targetlevel;
 
-        set_nuptrans(element, ion, targetlevel, nuparr[targetlevel]);
-        if ((elements[element].ions[ion].levels[targetlevel].uptrans
-            = realloc(elements[element].ions[ion].levels[targetlevel].uptrans, (nuparr[targetlevel] + 1) * sizeof(transitionlist_entry))) == NULL)
+        const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
+        set_nuptrans(element, ion, targetlevel, nloweruptrans);
+        if ((elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies
+            = realloc(elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies, nloweruptrans * sizeof(int))) == NULL)
         {
           printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
           abort();
         }
-        elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].targetlevel = level;
-        elements[element].ions[ion].levels[targetlevel].uptrans[nuparr[targetlevel]].epsilon_trans = epsilon_upper - epsilon_lower;
-        nuparr[targetlevel]++;
+        elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies[nloweruptrans-1] = -level;
       }
       else
       {
@@ -616,6 +599,24 @@ static void add_transitions_to_linelist(
       }
     }
   }
+}
+
+
+static int get_lineindex(const int lelement, const int lion, const int llowerlevel, const int lupperlevel)
+{
+  for (int lineindex = 0; lineindex < nlines; lineindex++)
+  {
+   const int element = linelist[lineindex].elementindex;
+   const int ion = linelist[lineindex].ionindex;
+   const int lowerlevel = linelist[lineindex].lowerlevelindex;
+   const int upperlevel = linelist[lineindex].upperlevelindex;
+
+   if (lelement == element && lion == ion && llowerlevel == lowerlevel && lupperlevel == upperlevel)
+   {
+     return lineindex;
+   }
+  }
+  assert(false);
 }
 
 
@@ -792,102 +793,97 @@ static void read_atomicdata_files(void)
         tottransitions = 0;
       }
 
-      /// then read in its level and transition data
-      if (transdata_Z_in == Z && transdata_ionstage_in == ionstage)
+      assert(transdata_Z_in == Z);
+      assert(transdata_ionstage_in == ionstage);
+
+      /// read in the level and transition data for this ion
+      transitiontable_entry *transitiontable = calloc(tottransitions, sizeof(transitiontable_entry));
+
+      /// load transition table for the CURRENT ion to temporary memory
+      if (transitiontable == NULL)
       {
-        transitiontable_entry *transitiontable = calloc(tottransitions, sizeof(transitiontable_entry));
-
-        /// load transition table for the CURRENT ion to temporary memory
-        if (transitiontable == NULL)
+        if (tottransitions > 0)
         {
-          if (tottransitions > 0)
-          {
-            printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
-            abort();
-          }
+          printout("[fatal] input: not enough memory to initialize transitiontable ... abort\n");
+          abort();
         }
-        // first <nlevels_requiretransitions> levels will be collisionally
-        // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
-        // use 0 to disable adding extra transitions
-        int nlevels_requiretransitions;
-        int nlevels_requiretransitions_upperlevels;
-        // if (Z == 26 && ionstage == 1)
-        // {
-        //   nlevels_requiretransitions = 33;
-        //   nlevels_requiretransitions_upperlevels = 33;
-        // }
-        // else
-        {
-          nlevels_requiretransitions = 0;
-          nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
-        }
-        transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
-          nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
+      }
+      // first <nlevels_requiretransitions> levels will be collisionally
+      // coupled to the first <nlevels_requiretransitions_upperlevels> levels (assumed forbidden)
+      // use 0 to disable adding extra transitions
+      int nlevels_requiretransitions;
+      int nlevels_requiretransitions_upperlevels;
+      // if (Z == 26 && ionstage == 1)
+      // {
+      //   nlevels_requiretransitions = 33;
+      //   nlevels_requiretransitions_upperlevels = 33;
+      // }
+      // else
+      {
+        nlevels_requiretransitions = 0;
+        nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
+      }
+      transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
+        nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
 
-        /// store the ions data to memory and set up the ions zeta and levellist
-        elements[element].ions[ion].ionstage = ionstage;
-        elements[element].ions[ion].nlevels = nlevelsmax;
-        elements[element].ions[ion].ionisinglevels = 0;
-        elements[element].ions[ion].maxrecombininglevel = 0;
-        elements[element].ions[ion].ionpot = ionpot * EV;
+      /// store the ions data to memory and set up the ions zeta and levellist
+      elements[element].ions[ion].ionstage = ionstage;
+      elements[element].ions[ion].nlevels = nlevelsmax;
+      elements[element].ions[ion].ionisinglevels = 0;
+      elements[element].ions[ion].maxrecombininglevel = 0;
+      elements[element].ions[ion].ionpot = ionpot * EV;
 //           if ((elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
 //           {
 //             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
 //             abort();
 //           }
-        if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
-          abort();
-        }
-        if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n",element,ion);
-          abort();
-        }
-
-
-        /// now we need to readout the data for all those levels, write them to memory
-        /// and set up the list of possible transitions for each level
-        if ((transitions = calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
-          abort();
-        }
-
-        read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, &cont_index);
-
-        add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, &lineindex);
-
-        //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-        //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
-
-        for (int level = 0; level < nlevelsmax; level++)
-        {
-          totaldowntrans += get_ndowntrans(element, ion, level);
-          totaluptrans += get_nuptrans(element, ion, level);
-          free(transitions[level].to);
-        }
-        free(transitiontable);
-        free(transitions);
-
-        /// Also the phixslist
-        if (ion < nions - 1)
-        {
-//            elements[element].ions[ion].nbfcontinua = elements[element].ions[ion].ionisinglevels;//nlevelsmax;
-          nbfcheck += elements[element].ions[ion].ionisinglevels; //nlevelsmax;
-/*            if ((elements[element].ions[ion].phixslist = calloc(nlevelsmax, sizeof(ionsphixslist_t))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
-            abort();
-          }*/
-          nbfcontinua += get_bfcontinua(element,ion);//elements[element].ions[ion].ionisinglevels;//nlevelsmax;
-        }
-      }
-      else
+      if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
       {
-        printout("corrupted atomic data\n");
+        printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
         abort();
+      }
+      if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n",element,ion);
+        abort();
+      }
+
+
+      /// now we need to readout the data for all those levels, write them to memory
+      /// and set up the list of possible transitions for each level
+      if ((transitions = calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
+      {
+        printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
+        abort();
+      }
+
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, &cont_index);
+
+      add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, &lineindex);
+
+      //printf("A %g\n",elements[element].ions[ion].levels[level].transitions[i].einstein_A );
+      //printout("%d -> %d has A %g\n",level,level-i-1,elements[element].ions[ion].levels[level].transitions[i].einstein_A );
+
+      for (int level = 0; level < nlevelsmax; level++)
+      {
+        totaldowntrans += get_ndowntrans(element, ion, level);
+        totaluptrans += get_nuptrans(element, ion, level);
+        free(transitions[level].to);
+      }
+      free(transitiontable);
+      free(transitions);
+
+      /// Also the phixslist
+      if (ion < nions - 1)
+      {
+//            elements[element].ions[ion].nbfcontinua = elements[element].ions[ion].ionisinglevels;//nlevelsmax;
+        nbfcheck += elements[element].ions[ion].ionisinglevels; //nlevelsmax;
+/*            if ((elements[element].ions[ion].phixslist = calloc(nlevelsmax, sizeof(ionsphixslist_t))) == NULL)
+        {
+          printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
+          abort();
+        }*/
+        nbfcontinua += get_bfcontinua(element,ion);//elements[element].ions[ion].ionisinglevels;//nlevelsmax;
       }
     }
   }
@@ -920,7 +916,7 @@ static void read_atomicdata_files(void)
   printout("total downtrans %d\n", totaldowntrans);
   printout("coolingcheck %d\n", coolingcheck);
 
-  printout("mem_usage: transitions occupy %.1f MB\n", (totaluptrans + totaldowntrans) * (sizeof(transitionlist_entry *) + sizeof(transitionlist_entry)) / 1024. / 1024.);
+  printout("mem_usage: transitions occupy %.1f MB\n", (totaluptrans + totaldowntrans) * (sizeof(int)) / 1024. / 1024.);
   ///debug output
   /*
   FILE *linelist_file = fopen_required("linelist_unsorted.out", "w");
@@ -961,26 +957,27 @@ static void read_atomicdata_files(void)
     const int upperlevel = linelist[lineindex].upperlevelindex;
 
     const int nupperdowntrans = get_ndowntrans(element, ion, upperlevel);
-    for (int ii = 1; ii <= nupperdowntrans; ii++)
+    for (int ii = 0; ii < nupperdowntrans; ii++)
     {
-      if (elements[element].ions[ion].levels[upperlevel].downtrans[ii].targetlevel == lowerlevel)
+      // negative indicates a level instead of a lineindex
+      if (elements[element].ions[ion].levels[upperlevel].downtrans_lineindicies[ii] == -lowerlevel)
       {
-        elements[element].ions[ion].levels[upperlevel].downtrans[ii].lineindex = lineindex;
+        elements[element].ions[ion].levels[upperlevel].downtrans_lineindicies[ii] = lineindex;
         // break; // should be safe to end here if there is max. one transition per pair of levels
       }
     }
 
     const int nloweruptrans = get_nuptrans(element, ion, lowerlevel);
-    for (int ii = 1; ii <= nloweruptrans; ii++)
+    for (int ii = 0; ii < nloweruptrans; ii++)
     {
-      if (elements[element].ions[ion].levels[lowerlevel].uptrans[ii].targetlevel == upperlevel)
+      // negative indicates a level instead of a lineindex
+      if (elements[element].ions[ion].levels[lowerlevel].uptrans_lineindicies[ii] == -upperlevel)
       {
-        elements[element].ions[ion].levels[lowerlevel].uptrans[ii].lineindex = lineindex;
+        elements[element].ions[ion].levels[lowerlevel].uptrans_lineindicies[ii] = lineindex;
         // break; // should be safe to end here if there is max. one transition per pair of levels
       }
     }
   }
-
 
   /// Photoionisation cross-sections
   ///======================================================
@@ -1066,22 +1063,22 @@ static void setup_cellhistory(void)
   ///======================================================
   /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
-  long mem_usage_cellhistory = 0;
   if ((cellhistory = (cellhistory_struct *) malloc(nthreads * sizeof(cellhistory_struct))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n",nthreads);
     abort();
   }
   #ifdef _OPENMP
-    #pragma omp parallel private(mem_usage_cellhistory)
+    #pragma omp parallel
     {
   #endif
-      mem_usage_cellhistory = sizeof(cellhistory_struct);;
+      long mem_usage_cellhistory = 0;
+      mem_usage_cellhistory += sizeof(cellhistory_struct);;
       printout("[info] input: initializing cellhistory for thread %d ...\n", tid);
 
       cellhistory[tid].cellnumber = -99;
 
-      mem_usage_cellhistory += sizeof(ncoolingterms * sizeof(cellhistorycoolinglist_t));
+      mem_usage_cellhistory += ncoolingterms * sizeof(cellhistorycoolinglist_t);
       cellhistory[tid].coolinglist = (cellhistorycoolinglist_t *) malloc(ncoolingterms * sizeof(cellhistorycoolinglist_t));
       if (cellhistory[tid].coolinglist == NULL)
       {
@@ -1124,8 +1121,6 @@ static void setup_cellhistory(void)
             }
 
             const int ndowntrans = get_ndowntrans(element, ion, level);
-            const int nuptrans = get_nuptrans(element, ion, level);
-
             mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
             if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = (double *) malloc((ndowntrans + 1) * sizeof(double))) == NULL)
             {
@@ -1142,6 +1137,7 @@ static void setup_cellhistory(void)
             }
             cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[0] = ndowntrans;
 
+            const int nuptrans = get_nuptrans(element, ion, level);
             mem_usage_cellhistory += (nuptrans + 1) * sizeof(double);
             if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = (double *) malloc((nuptrans + 1) * sizeof(double))) == NULL)
             {
@@ -1523,7 +1519,7 @@ static void show_totmassradionuclides(void)
   mtot = 0.;
   mfeg = 0.;
 
-  for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
     totmassradionuclide[iso] = 0.;
 
   int n1 = 0;
@@ -1560,7 +1556,7 @@ static void show_totmassradionuclides(void)
 
     mtot += mass_in_shell;
 
-    for (enum radionuclides iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
       totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
 
     mfeg += mass_in_shell * get_ffegrp(mgi);
@@ -1960,6 +1956,42 @@ static void read_3d_model(void)
 }
 
 
+static void read_ejecta_model(enum model_types model_type)
+{
+  switch (model_type)
+  {
+    case RHO_UNIFORM:
+    {
+      mtot = 1.39 * MSUN;
+      totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
+      vmax = 1.e9;
+      // rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
+      break;
+    }
+
+    case RHO_1D_READ:
+      printout("Read 1D model!\n");
+      read_1d_model();
+      break;
+
+    case RHO_2D_READ:
+      printout("Read 2D model!\n");
+
+      read_2d_model();
+      break;
+
+    case RHO_3D_READ:
+      printout("Read 3D model!\n");
+      read_3d_model();
+      break;
+
+    default:
+      printout("Unknown model. Abort.\n");
+      abort();
+  }
+}
+
+
 void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
@@ -2024,13 +2056,6 @@ void input(int rank)
 
   nu_min_r = 1e14;   /// lower frequency boundary for UVOIR spectra and BB sampling
   nu_max_r = 5e15;   /// upper frequency boundary for UVOIR spectra and BB sampling
-  #ifdef DO_EXSPEC
-    /// Spectra settings
-    nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
-    /// lower and upper frequency boundaries for make_spectrum_res: gamma spectra?
-    nu_min = 0.05 * MEV / H;
-    nu_max = 4 * MEV / H;
-  #endif
 
   /// Lightcurve setting
   do_r_lc = false;    /// default to no lc = gamma-ray spectrum
@@ -2044,53 +2069,17 @@ void input(int rank)
   ntbins = ntstep;   ///time bins for spectrum equal #(timesteps)
   ntlcbins = ntstep; ///time bins for light curve #(timesteps)
 
-  /// Read in atomic data
-  ///======================================================
   read_atomicdata();
 
-  //#ifndef DO_EXSPEC
-    /// Read in input model
-    ///======================================================
-    switch (model_type)
-    {
-      case RHO_UNIFORM:
-      {
-        mtot = 1.39 * MSUN;
-        totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
-        vmax = 1.e9;
-        // rhotot = 3 * mtot / 4 / PI / rmax /rmax /rmax; //MK
-        break;
-      }
+  read_ejecta_model(model_type);
 
-      case RHO_1D_READ:
-        printout("Read 1D model!\n");
-        read_1d_model();
-        break;
+  printout("npts_model: %d\n", npts_model);
+  rmax = vmax * tmin;
+  printout("rmax %g\n", rmax);
 
-      case RHO_2D_READ:
-        printout("Read 2D model!\n");
-        read_2d_model();
-        break;
+  coordmax[0] = coordmax[1] = coordmax[2] = rmax;
 
-      case RHO_3D_READ:
-        printout("Read 3D model!\n");
-        read_3d_model();
-        break;
-
-      default:
-        printout("Unknown model. Abort.\n");
-        abort();
-    }
-
-    printout("npts_model: %d\n", npts_model);
-    rmax = vmax * tmin;
-    printout("rmax %g\n", rmax);
-
-    coordmax[0] = coordmax[1] = coordmax[2] = rmax;
-
-    show_totmassradionuclides();
-
-  //#endif
+  show_totmassradionuclides();
 
 
   /// Read in data for gamma ray lines and make a list of them in energy order.
@@ -2112,54 +2101,6 @@ void input(int rank)
     abort();
   }
 
-  #ifdef DO_EXSPEC
-    /// Check if enough  memory for spectra has been assigned
-    /// and allocate memory for the emission statistics
-    if (nnubins > MNUBINS)
-    {
-      printout("Too many frequency bins in spectrum - reducing.\n");
-      nnubins = MNUBINS;
-    }
-    if (ntbins > MTBINS)
-    {
-      printout("Too many time bins in spectrum - reducing.\n");
-      ntbins = MTBINS;
-    }
-    for (int n = 0; n < ntbins; n++)
-    {
-      for (int m = 0; m < nnubins; m++)
-      {
-        if ((spectra[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
-          abort();
-        }
-        if ((spectra[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
-          abort();
-        }
-        if ((spectra[n].stat[m].trueemission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
-          abort();
-        }
-        /*
-        if (do_emission_res == 1)
-        {
-          for (nn = 0; nn < MABINS; nn++)
-          {
-            if ((spectra_res[n][nn].emission[m].count = malloc((2*nelements*maxion+1)*sizeof(int))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialise spectra_res structure ... abort\n");
-              abort();
-            }
-          }
-        }
-        */
-      }
-    }
-  #endif
 }
 
 
@@ -2434,6 +2375,8 @@ int compare_linelistentry(const void *p1, const void *p2)
 void update_parameterfile(int nts)
 /// Subroutine to read in input parameters from input.txt.
 {
+  printout("Update input.txt for restart at time step %d\n", nts);
+
   FILE *input_file = fopen_required("input.txt", "r+");
   //setvbuf(input_file, NULL, _IOLBF, 0);
 
@@ -2468,4 +2411,6 @@ void update_parameterfile(int nts)
   //fscanf(input_file, "%d", &dum1);  /// Do we start a new simulation or, continue another one?
 
   fclose(input_file);
+
+  printout("input.txt successfully updated\n");
 }

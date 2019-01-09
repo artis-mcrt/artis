@@ -12,7 +12,7 @@ ifneq (,$(findstring kelvin,$(HOSTNAME)))
  #  libs/gsl/1.16/gcc-4.4.7
 
   CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
+  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c11 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
   LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
 
   sn3d: CFLAGS += -DMPI_ON
@@ -44,7 +44,7 @@ else
  # CC = icc
   INCLUDE = #-I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
   LIB = #-L/usr/local/lib/gsl #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-  CFLAGS = -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing -ftree-vectorize -fvectorize -O3 -march=native -fstrict-aliasing -flto -std=c11 $(INCLUDE) -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF # -fopenmp-simd
+  CFLAGS = -std=c17 -march=native -O3 -fstrict-aliasing -ftree-vectorize -fvectorize -flto -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing $(INCLUDE) # -fopenmp-simd
 
 	# enable OpenMP (for Clang)
 	# CFLAGS += -Xpreprocessor -fopenmp -lomp
@@ -60,8 +60,6 @@ else
 
 endif
 
-  exspec: CFLAGS += -DDO_EXSPEC
-  exgamma: CFLAGS += -DDO_EXSPEC
 
 ### Settings for the miner
 # ifeq ($(OSTYPE),linux)
@@ -182,8 +180,7 @@ ifeq ($(DOMAIN),opt.rzg.mpg.de)
   #in memory http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
   #LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
   LDFLAGS= $(GSL_LDFLAGS) -lgsl -lgslcblas -lm
-  exspec: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
-  exgamma: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
+  exspec exgamma: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
 endif
 
 
@@ -223,11 +220,21 @@ ifeq ($(WORK),/lustre/jwork1)
   CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -openmp -DMPI_ON
   CFLAGS = -O3 -I$(GSL_ROOT) -openmp -DMPI_ON
   LDFLAGS= -L$(GSL_ROOT) -lgsl -lgslcblas -lm
-  exspec: override CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -DDO_EXSPEC
-  exgamma: override CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -DDO_EXSPEC
+  exspec exgamma: override CFLAGS = -O3 -I$(GSL_ROOT) -mcmodel medium -shared-intel -DDO_EXSPEC
 endif
 
 
+exspec exgamma: CFLAGS += -DDO_EXSPEC
+exgamma: CFLAGS += -DDO_EXGAMMA
+
+sn3dmpi: CC = mpicc
+sn3dmpi: CFLAGS += -DMPI_ON
+sn3dmpi: sn3d
+
+sn3dopenmp: CFLAGS += -Xpreprocessor
+sn3dopenmp: CFLAGS += -fopenmp
+sn3dopenmp: LDFLAGS += -lomp
+sn3dopenmp: sn3d
 
 
 ### use pg when you want to use gprof the profiler
@@ -236,14 +243,10 @@ sn3d_files = sn3d.c atomic.c boundary.c compton.c emissivities.c gamma.c grey_em
 
 sn3d_objects = sn3d.o atomic.o boundary.o compton.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o ltepop.o macroatom.o move.o nltepop.o nonthermal.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o time_init.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
 
+all: sn3d exspec
+
 sn3d: clean version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
-
-sn3dopenmp: clean version
-	$(CC) $(CFLAGS) -Xpreprocessor -fopenmp -lomp $(sn3d_files) $(LDFLAGS) -o sn3d
-
-sn3dmpi: clean version
-	mpicc $(CFLAGS) -DMPI_ON $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
@@ -253,10 +256,8 @@ exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c 
 exspec: clean version
 	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exspec
 
-exgamma_files = exgamma.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c move.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
-
 exgamma: clean version
-	$(CC) $(CFLAGS) $(exgamma_files) $(LDFLAGS) -o exgamma
+	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exgamma
 
 
 .PHONY: clean version

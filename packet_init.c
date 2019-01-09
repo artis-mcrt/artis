@@ -36,16 +36,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // assert(radius >= r_inner);
     // assert(radius <= r_outer);
 
-    const double zrand = gsl_rng_uniform(rng);
-    const double zrand2 = gsl_rng_uniform(rng);
-
-    const double mu = -1 + (2. * zrand);
-    const double phi = zrand2 * 2 * PI;
-    const double sintheta = sqrt(1. - (mu * mu));
-
-    pkt_ptr->pos[0] = radius * sintheta * cos(phi);
-    pkt_ptr->pos[1] = radius * sintheta * sin(phi);
-    pkt_ptr->pos[2] = radius * mu;
+    get_rand_isotropic_unitvec(pkt_ptr->pos);
+    vec_scale(pkt_ptr->pos, radius);
   }
   else
   {
@@ -337,12 +329,6 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 
   const int pktnumberoffset = middle_iteration * npkts;
   setup_packets(pktnumberoffset, pkt);
-  char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
-  sprintf(filename, "packets%d_%d_odd.tmp", middle_iteration, my_rank);
-  FILE *packets_file = fopen_required(filename, "wb");
-  fwrite(&pkt[0], sizeof(PKT), npkts, packets_file);
-  //write_packets(packets_file);
-  fclose(packets_file);
 
   /* Consistency check to debug read/write
   PKT testpkt[MPKTS];
@@ -383,8 +369,9 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 }
 
 
-void write_packets(FILE *restrict packets_file, PKT *pkt)
+void write_packets(char filename[], PKT *pkt)
 {
+  FILE *packets_file = fopen_required(filename, "w");
   for (int i = 0; i < npkts; i++)
   {
     fprintf(packets_file, "%d ", pkt[i].number);
@@ -418,11 +405,13 @@ void write_packets(FILE *restrict packets_file, PKT *pkt)
     fprintf(packets_file, "%g ", pkt[i].trueemissionvelocity);
     fprintf(packets_file, "\n");
   }
+  fclose(packets_file);
 }
 
 
-void read_packets(FILE *restrict packets_file, PKT *pkt)
+void read_packets(char filename[], PKT *pkt)
 {
+  FILE *packets_file = fopen_required(filename, "r");
   char *line = malloc(sizeof(char) * 4096);
 
   int packets_read = 0;
@@ -512,4 +501,5 @@ void read_packets(FILE *restrict packets_file, PKT *pkt)
     abort();
   }
   free(line);
+  fclose(packets_file);
 }

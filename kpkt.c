@@ -82,7 +82,7 @@ void calculate_kpkt_rates(int modelgridindex)
         for (int level = 0; level < nlevels_currention; level++)
         {
           //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
-          const double epsilon_current = epsilon(element,ion,level);
+          const double epsilon_current = epsilon(element, ion, level);
           // mastate[tid].level = level;
           ///Use the cellhistory populations here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
@@ -90,13 +90,12 @@ void calculate_kpkt_rates(int modelgridindex)
           /// excitation to same ionization stage
           /// -----------------------------------
           const int nuptrans = get_nuptrans(element, ion, level);
-          for (int ii = 1; ii <= nuptrans; ii++)
+          for (int ii = 0; ii < nuptrans; ii++)
           {
-            // const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
-            const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+            const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+            const int upper = linelist[lineindex].upperlevelindex;
+            const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
             //printout("    excitation to level %d possible\n",upper);
-            //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-            const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon_trans;
             C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
             //C = 0.;
             //C_exc += C;
@@ -300,14 +299,13 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     /// excitation to same ionization stage
     /// -----------------------------------
     int nuptrans = get_nuptrans(element, ion, level);
-    for (int ii = 1; ii <= nuptrans; ii++)
+    for (int ii = 0; ii < nuptrans; ii++)
     {
-      const int upper = elements[element].ions[ion].levels[level].uptrans[ii].targetlevel;
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans[ii].lineindex;
+      const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+      const int upper = linelist[lineindex].upperlevelindex;
       //printout("    excitation to level %d possible\n",upper);
-      //epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-      const double epsilon_trans = elements[element].ions[ion].levels[level].uptrans[ii].epsilon_trans;
-      const double C = nnlevel * col_excitation_ratecoeff(T_e,nne,lineindex,epsilon_trans) * epsilon_trans;
+      const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
+      const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
       //C = 0.;
       //C_exc += C;
       //C_ion += C;
@@ -413,7 +411,7 @@ static double planck(const double nu, const double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
 {
-  return TWOHOVERCLIGHTSQUARED * pow(nu,3) / expm1(HOVERKB*nu/T);
+  return TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
 }
 
 
@@ -460,7 +458,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
     abort();
   }
   /// and then emitt the packet randomly in the comoving frame
-  emitt_rpkt(pkt_ptr,t_current);
+  emitt_rpkt(pkt_ptr, t_current);
   if (debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;

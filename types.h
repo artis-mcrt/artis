@@ -19,7 +19,7 @@
 
 // Maximum number of energy packets in calculation.
 //25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625
-#define MPKTS 2000000
+#define MPKTS 20000
 
 //26 //27 //9
 #define MELEMENTS 17
@@ -242,14 +242,10 @@ enum ma_action {
 
 typedef struct mastate_t
 {
-  double einstein;
   int element;              /// macro atom of type element (this is an element index)
   int ion;                  /// in ionstage ion (this is an ion index)
   int level;                /// and level=level (this is a level index)
-  int activatedfromlevel;   /// Helper variable for bb-activation of macro atoms due to a rpkt event
-                            /// It holds information about the lower level of the bb-transition.
   int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
-  enum ma_action lastaction;           /// Holds information on last action performed by do_ma
 } mastate_t;
 
 
@@ -381,14 +377,6 @@ typedef struct syn_ray
 /// ATOMIC DATA
 ///============================================================================
 
-typedef struct transitionlist_entry
-{
-  double epsilon_trans;
-  int targetlevel;
-  int lineindex;
-} transitionlist_entry;
-
-
 typedef struct phixstarget_entry
 {
   double *restrict spontrecombcoeff;
@@ -407,10 +395,11 @@ typedef struct phixstarget_entry
 
 typedef struct levellist_entry
 {
-  transitionlist_entry *restrict uptrans;    /// Allowed upward transitions from this level
-  transitionlist_entry *restrict downtrans;  /// Allowed downward transitions from this level
-
   double epsilon;                            /// Excitation energy of this level relative to the neutral ground level.
+  int *uptrans_lineindicies;    /// Allowed upward transitions from this level
+  int *downtrans_lineindicies;  /// Allowed downward transitions from this level
+  int nuptrans;
+  int ndowntrans;
   double phixs_threshold;                    /// Energy of first point in the photion_xs table
   phixstarget_entry *restrict phixstargets;  /// pointer to table of target states and probabilities
   float *restrict photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
