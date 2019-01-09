@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "grid_init.h"
 #include "compton.h"
+#include "nonthermal.h"
 #include "vectors.h"
 
 
@@ -237,6 +238,7 @@ void compton_scatter(PKT *pkt_ptr, double t_current)
   {
     // It's converted to an e-minus packet.
     pkt_ptr->type = TYPE_NTLEPTON;
+    place_ntlepton(pkt_ptr, t_current);
     pkt_ptr->absorptiontype = -3;
   }
 }

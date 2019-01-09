@@ -7,11 +7,13 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_linalg.h>
 #include "atomic.h"
+#include "boundary.h"
 #include "grid_init.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
 #include "update_grid.h"
+#include "vectors.h"
 #include "sn3d.h"
 
 
@@ -151,6 +153,10 @@ static double E_init_ev = 0;         // the energy injection rate density (and m
 #else
   static const double DELTA_E = (EMAX - EMIN) / (SFPTS - 1);
 #endif
+
+float cell_cumulativepositrondepfrac[MGRID + 1];
+float modelcellpositrondepfrac[MMODELGRID];
+float modelcellpositroninjectfrac[MMODELGRID];
 
 struct nt_ionization_struct
 {
@@ -331,18 +337,20 @@ static void read_auger_data(void)
 
       float n_auger_elec_avg = 0;
       double prob_num_auger[MAX_AUGER_ELECTRONS + 1];
-      for (int a = 0; a < 10; a++)
+      for (int a = 0; a < 9; a++)
       {
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
         char strprob[6];
-        sscanf(linepos, "%5c", strprob);
-        offset = 5;
-        linepos += offset;
+        assert(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
+        assert(offset == 5);
+	linepos += offset;
 
         int probnaugerelece4;
         sscanf(strprob, "%d", &probnaugerelece4);
 
         const double probnaugerelec = probnaugerelece4 / 10000.;
+
+	assert(probnaugerelec <= 1.0);
 
         n_auger_elec_avg += a * probnaugerelec;
 
@@ -494,9 +502,139 @@ static void zero_all_effionpot(const int modelgridindex)
 }
 
 
+static void read_positron_deposition_data(void)
+{
+  printout("Reading positron deposition data...\n");
+  FILE *depfile = fopen_required("positrondeposition.txt", "r");
+
+  double inject_sum_input = 0.0;
+  double inject_sum_nonempty = 0.0;
+
+  while (!feof(depfile))
+  {
+    double alpha_in;
+    fscanf(depfile, "%lg\n", &alpha_in);
+    printout("Found data for alpha %g ", alpha_in);
+    bool keep_table = (fabs(alpha_in / 4.89e-9 - 1.) < 1e-2);
+    if (keep_table)
+      printout(" keeping\n");
+    else
+      printout(" ignoring\n");
+
+    for (int mgi = 0; mgi < npts_model; mgi++)
+    {
+      int mgiplusone;
+      double prob_injection_in;
+      double prob_deposition_in;
+      fscanf(depfile, "%d %lg %lg\n", &mgiplusone, &prob_injection_in, &prob_deposition_in);
+      assert(mgiplusone == mgi + 1);
+
+      if (keep_table)
+      {
+        if (get_numassociatedcells(mgi) > 0)
+        {
+          modelcellpositroninjectfrac[mgi] = prob_injection_in;
+          modelcellpositrondepfrac[mgi] = prob_deposition_in;
+        }
+        else
+        {
+          modelcellpositroninjectfrac[mgi] = 0.;
+          modelcellpositrondepfrac[mgi] = 0.;
+        }
+        inject_sum_input += prob_injection_in;
+        inject_sum_nonempty += modelcellpositroninjectfrac[mgi];
+      }
+    }
+    if (keep_table)
+      break;
+  }
+
+  double depfrac_sum = 0.;
+  for (int mgi = 0; mgi < MMODELGRID; mgi++)
+  {
+    modelcellpositroninjectfrac[mgi] /= inject_sum_nonempty;
+    modelcellpositrondepfrac[mgi] /= inject_sum_nonempty;
+    depfrac_sum += modelcellpositrondepfrac[mgi];
+    printout("mgi %d positron injectfrac %g depfrac %g depfrac_sum %g\n", mgi, modelcellpositroninjectfrac[mgi], modelcellpositrondepfrac[mgi], depfrac_sum);
+  }
+
+  // the deposition cumulative probabilties for each propagation cell will later be used to generate random positions for the NTLEPTON packets
+  double prob_dep_sum = 0.0;
+  for (int cellindex = 0; cellindex < ngrid; cellindex++)
+  {
+    const int mgi = cell[cellindex].modelgridindex;
+    prob_dep_sum += (modelcellpositrondepfrac[mgi] / get_numassociatedcells(mgi));
+    cell_cumulativepositrondepfrac[cellindex] = prob_dep_sum;
+  }
+
+  // normalise the cumulative probabilities so that they sum to 1.0
+  for (int cellindex = 0; cellindex < ngrid; cellindex++)
+  {
+    cell_cumulativepositrondepfrac[cellindex] /= prob_dep_sum;
+
+    // const int mgi = cell[cellindex].modelgridindex;
+    // printout("cellindex %d mgi %d prob_deposition[mgi] %g cell_cumulativepositrondepfrac %g\n", cellindex, mgi, prob_positron_deposition[mgi], cell_cumulativepositrondepfrac[cellindex]);
+  }
+
+  fclose(depfile);
+}
+
+
+void place_ntlepton(PKT *pkt_ptr, double t_current)
+{
+  /// Get random cell based on positron deposition probabilities
+  const double zrand = gsl_rng_uniform(rng);
+
+  int cellindex = -99;
+  for (int c = 0; c < ngrid; c++)
+  {
+    if (cell_cumulativepositrondepfrac[c] >= zrand)
+    {
+      cellindex = c;
+      break;
+    }
+  }
+
+  if (cellindex >= 0)
+  {
+    const int mgi = cell[cellindex].modelgridindex;
+    printout("Placing NTLEPTON in cell %d mgi %d\n", cellindex, mgi);
+  }
+  else
+  {
+    printout("NTLEPTON escaped\n");
+  }
+
+  pkt_ptr->type = TYPE_NTLEPTON;
+  if (grid_type == GRID_UNIFORM)
+  {
+    for (int axis = 0; axis < 3; axis++)
+    {
+      const double zrand = gsl_rng_uniform_pos(rng);
+      pkt_ptr->pos[axis] = (get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0))) * t_current / tmin;
+    }
+  }
+  else
+  {
+    abort();
+  }
+
+  bool end_packet;
+  change_cell(pkt_ptr, cellindex, &end_packet, t_current);
+  // pkt_ptr->where = cellindex;
+
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
+  pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
+
+  pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
+}
+
+
 void nt_init(const int my_rank)
 {
   read_binding_energies();
+  read_positron_deposition_data();
 
   if (!NT_SOLVE_SPENCERFANO)
     return;
@@ -625,6 +763,33 @@ void nt_init(const int my_rank)
 }
 
 
+static double get_globalpositroninjectionrate(const int timestep)
+{
+  const double t = time_step[timestep].mid;
+  double totalrate = 0.;
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    if (get_numassociatedcells(modelgridindex) > 0)
+    {
+      const double rho = get_rho(modelgridindex);
+
+      const double co56_positron_dep = (0.19 * 0.610 * MEV) *
+            (((exp(-t / T56CO) - exp(-t / T56NI)) / (T56CO - T56NI) * get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) / MNI56) +
+             (exp(-t / T56CO) / T56CO * get_modelinitradioabund(modelgridindex, NUCLIDE_CO56) / MCO56)) * rho;
+
+      const double ni57_positron_dep = (0.436 * 0.354 * MEV) * exp(-t / T57NI) / T57NI * get_modelinitradioabund(modelgridindex, NUCLIDE_NI57) / MNI57 * rho;
+
+      const double v48_positron_dep = (0.290 * 0.499 * MEV) *
+            (exp(-t / T48V) - exp(-t / T48CR)) /
+            (T48V - T48CR) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
+
+      totalrate += (co56_positron_dep + v48_positron_dep + ni57_positron_dep) * vol_init_modelcell(modelgridindex) * pow(t / tmin, 3);
+    }
+  }
+  return totalrate;
+}
+
+
 void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
 // should be in erg / s / cm^3
 {
@@ -646,11 +811,21 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
         (exp(-t / T48V) - exp(-t / T48CR)) /
         (T48V - T48CR) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
 
+  const double local_positron_injectrate = (co56_positron_dep + v48_positron_dep + ni57_positron_dep) * vol_init_modelcell(modelgridindex) * pow(t / tmin, 3);
+
+  const double globalpositroninjectionrate = get_globalpositroninjectionrate(timestep);
+  const double positron_dep = modelcellpositrondepfrac[modelgridindex] * globalpositroninjectionrate;
+
+  printout("global positron injection rate %g erg/s dep_frac[mgi %d] %g cell_dep_rate %g (local injection rate %g, frac %g vs input %g)\n",
+           globalpositroninjectionrate, modelgridindex, modelcellpositrondepfrac[modelgridindex], positron_dep, local_positron_injectrate, local_positron_injectrate / globalpositroninjectionrate, modelcellpositroninjectfrac[modelgridindex]);
+
+  const double positron_dep_density = positron_dep / (vol_init_modelcell(modelgridindex) * pow(t / tmin, 3));
+
   //printout("nt_deposition_rate: element: %d, ion %d\n",element,ion);
   //printout("nt_deposition_rate: gammadep: %g, poscobalt %g pos48v %g\n",
   //         gamma_deposition,co56_positron_dep,v48_positron_dep);
 
-  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + co56_positron_dep + v48_positron_dep + ni57_positron_dep;
+  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + positron_dep_density;
   nt_solution[modelgridindex].deposition_at_timestep = timestep;
 }
 

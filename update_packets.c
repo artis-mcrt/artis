@@ -142,6 +142,7 @@ static void update_pellet(
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;
+      place_ntlepton(pkt_ptr, tdecay);
       packet_prop(pkt_ptr, tdecay, ts + tw, nts);
     }
     else
