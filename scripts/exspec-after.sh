@@ -1,7 +1,7 @@
 if [ -f spec.out ]; then
-  gzip -v absorption.out emission*.out || true
-  gzip -v phixsdata_v2.txt transitiondata.txt ratecoeff.dat linestat.out || true
-  gzip -v packets*.out || true
+  xz -v absorption.out emission*.out || true
+  xz -v phixsdata_v2.txt transitiondata.txt ratecoeff.dat linestat.out || true
+  xz -v -T 0 packets*.out || true
   mkdir packets || true
-  mv packets*.out.gz packets/
+  mv packets*.out* packets/
 fi
