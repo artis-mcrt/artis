@@ -176,7 +176,7 @@ static void update_pellet(
   }
   else
   {
-    printout("Something gone wrong with decaying pellets. Abort.\n");
+    printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g tw %g (ts + tw) %g\n", tdecay, ts, tw, ts + tw);
     abort();
   }
 }
