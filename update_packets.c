@@ -102,8 +102,12 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
         t_current = do_macroatom(pkt_ptr, t_current, t2, nts);
         break;
 
+      case TYPE_ESCAPE:
+        return;
+        break;
+
       default:
-        printout("Unknown packet type - abort\n");
+        printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
         abort();
     }
   }
@@ -337,7 +341,7 @@ void update_packets(const int nts, PKT *pkt)
           break;
 
         default:
-          printout("Unknown packet type %d %d. Abort.\n", pkt_ptr->type, n);
+          printout("update_packets: Unknown packet type %d for pkt number %d. Abort.\n", pkt_ptr->type, n);
           abort();
       }
 
