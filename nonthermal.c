@@ -515,6 +515,8 @@ static void read_positron_deposition_data(void)
 
   double inject_sum_input = 0.0;
   double inject_sum_nonempty = 0.0;
+  double dep_sum_input = 0.0;
+  double dep_sum_nonempty = 0.0;
 
   while (!feof(depfile))
   {
@@ -549,19 +551,24 @@ static void read_positron_deposition_data(void)
         }
         inject_sum_input += prob_injection_in;
         inject_sum_nonempty += modelcellpositroninjectfrac[mgi];
+        dep_sum_input += prob_deposition_in;
+        dep_sum_nonempty += modelcellpositrondepfrac[mgi];
       }
     }
     if (keep_table)
       break;
   }
 
+  double injectfrac_sum = 0;
   double depfrac_sum = 0.;
-  for (int mgi = 0; mgi < MMODELGRID; mgi++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
     modelcellpositroninjectfrac[mgi] /= inject_sum_nonempty;
-    modelcellpositrondepfrac[mgi] /= inject_sum_nonempty;
+    modelcellpositrondepfrac[mgi] /= inject_sum_input * (dep_sum_input / dep_sum_nonempty); // scale up to account for unused cells
+    injectfrac_sum += modelcellpositroninjectfrac[mgi];
     depfrac_sum += modelcellpositrondepfrac[mgi];
-    printout("mgi %d positron injectfrac %g depfrac %g depfrac_sum %g\n", mgi, modelcellpositroninjectfrac[mgi], modelcellpositrondepfrac[mgi], depfrac_sum);
+    printout("mgi %d positron injectfrac %g depfrac %g injectfrac_sum %g depfrac_sum %g\n",
+              mgi, modelcellpositroninjectfrac[mgi], modelcellpositrondepfrac[mgi], injectfrac_sum, depfrac_sum);
   }
 
   // the deposition cumulative probabilties for each propagation cell will later be used to generate random positions for the NTLEPTON packets
@@ -606,7 +613,7 @@ void place_ntlepton(PKT *pkt_ptr, double t_current)
 
   if (cellindex >= 0)
   {
-    const int mgi = cell[cellindex].modelgridindex;
+    // const int mgi = cell[cellindex].modelgridindex;
     // printout("Placing NTLEPTON in cell %d mgi %d\n", cellindex, mgi);
 
     if (grid_type == GRID_UNIFORM)
@@ -790,7 +797,7 @@ static double get_globalpositroninjectionrate(const int timestep)
 {
   const double t = time_step[timestep].mid;
   double totalrate = 0.;
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
