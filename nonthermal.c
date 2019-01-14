@@ -518,10 +518,10 @@ static void read_positron_deposition_data(void)
 
   while (!feof(depfile))
   {
-    double alpha_in;
+    double alpha_in; // sometimes actually an escape probably rather than alpha (scaled cross secton)
     fscanf(depfile, "%lg\n", &alpha_in);
     printout("Found data for alpha %g ", alpha_in);
-    bool keep_table = (fabs(alpha_in / 4.89e-9 - 1.) < 1e-2);
+    bool keep_table = (fabs(alpha_in / 0.10 - 1.) < 1e-2);
     if (keep_table)
       printout(" keeping\n");
     else
@@ -573,14 +573,17 @@ static void read_positron_deposition_data(void)
     cell_cumulativepositrondepfrac[cellindex] = prob_dep_sum;
   }
 
-  // normalise the cumulative probabilities so that they sum to 1.0
-  for (int cellindex = 0; cellindex < ngrid; cellindex++)
-  {
-    cell_cumulativepositrondepfrac[cellindex] /= prob_dep_sum;
 
-    // const int mgi = cell[cellindex].modelgridindex;
-    // printout("cellindex %d mgi %d prob_deposition[mgi] %g cell_cumulativepositrondepfrac %g\n", cellindex, mgi, prob_positron_deposition[mgi], cell_cumulativepositrondepfrac[cellindex]);
-  }
+  // normalise the cumulative probabilities so that they sum to 1.0
+  // for (int cellindex = 0; cellindex < ngrid; cellindex++)
+  // {
+  //   cell_cumulativepositrondepfrac[cellindex] /= prob_dep_sum;
+  //
+  //   // const int mgi = cell[cellindex].modelgridindex;
+  //   // printout("cellindex %d mgi %d prob_deposition[mgi] %g cell_cumulativepositrondepfrac %g\n", cellindex, mgi, prob_positron_deposition[mgi], cell_cumulativepositrondepfrac[cellindex]);
+  // }
+
+  printout("positron escape probability: %g\n", 1. - cell_cumulativepositrondepfrac[ngrid - 1]);
 
   fclose(depfile);
 }
@@ -604,7 +607,20 @@ void place_ntlepton(PKT *pkt_ptr, double t_current)
   if (cellindex >= 0)
   {
     const int mgi = cell[cellindex].modelgridindex;
-    printout("Placing NTLEPTON in cell %d mgi %d\n", cellindex, mgi);
+    // printout("Placing NTLEPTON in cell %d mgi %d\n", cellindex, mgi);
+
+    if (grid_type == GRID_UNIFORM)
+    {
+      for (int axis = 0; axis < 3; axis++)
+      {
+        const double zrand = gsl_rng_uniform_pos(rng);
+        pkt_ptr->pos[axis] = (get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0))) * t_current / tmin;
+      }
+    }
+    else
+    {
+      abort();
+    }
   }
   else
   {
@@ -612,18 +628,6 @@ void place_ntlepton(PKT *pkt_ptr, double t_current)
   }
 
   pkt_ptr->type = TYPE_NTLEPTON;
-  if (grid_type == GRID_UNIFORM)
-  {
-    for (int axis = 0; axis < 3; axis++)
-    {
-      const double zrand = gsl_rng_uniform_pos(rng);
-      pkt_ptr->pos[axis] = (get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0))) * t_current / tmin;
-    }
-  }
-  else
-  {
-    abort();
-  }
 
   bool end_packet;
   change_cell(pkt_ptr, cellindex, &end_packet, t_current);

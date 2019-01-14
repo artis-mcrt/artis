@@ -1,4 +1,4 @@
-WALLTIMEHOURS := 24
+WALLTIMEHOURS := 10
 GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
