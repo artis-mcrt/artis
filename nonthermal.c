@@ -596,7 +596,7 @@ static void read_positron_deposition_data(void)
 }
 
 
-void place_ntlepton(PKT *pkt_ptr, double t_current)
+static void deposit_ntlepton(PKT *pkt_ptr, double t_current)
 {
   /// Get random cell based on positron deposition probabilities
   const double zrand = gsl_rng_uniform(rng);
@@ -628,23 +628,26 @@ void place_ntlepton(PKT *pkt_ptr, double t_current)
     {
       abort();
     }
+    pkt_ptr->type = TYPE_KPKT;
   }
   else
   {
     printout("NTLEPTON escaped\n");
+    pkt_ptr->type = TYPE_NTLEPTON;
   }
-
-  pkt_ptr->type = TYPE_NTLEPTON;
 
   bool end_packet;
   change_cell(pkt_ptr, cellindex, &end_packet, t_current);
   // pkt_ptr->where = cellindex;
 
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
-  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
-  pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
+  if (!end_packet)
+  {
+    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+    pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
+    pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 
-  pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
+    pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
+  }
 }
 
 
@@ -793,41 +796,8 @@ void nt_init(const int my_rank)
 }
 
 
-static double get_globalpositroninjectionrate(const int timestep)
+static double get_positroninjection_rate_density(const int modelgridindex, const double t)
 {
-  const double t = time_step[timestep].mid;
-  double totalrate = 0.;
-  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
-  {
-    if (get_numassociatedcells(modelgridindex) > 0)
-    {
-      const double rho = get_rho(modelgridindex);
-
-      const double co56_positron_dep = (0.19 * 0.610 * MEV) *
-            (((exp(-t / T56CO) - exp(-t / T56NI)) / (T56CO - T56NI) * get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) / MNI56) +
-             (exp(-t / T56CO) / T56CO * get_modelinitradioabund(modelgridindex, NUCLIDE_CO56) / MCO56)) * rho;
-
-      const double ni57_positron_dep = (0.436 * 0.354 * MEV) * exp(-t / T57NI) / T57NI * get_modelinitradioabund(modelgridindex, NUCLIDE_NI57) / MNI57 * rho;
-
-      const double v48_positron_dep = (0.290 * 0.499 * MEV) *
-            (exp(-t / T48V) - exp(-t / T48CR)) /
-            (T48V - T48CR) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
-
-      totalrate += (co56_positron_dep + v48_positron_dep + ni57_positron_dep) * vol_init_modelcell(modelgridindex) * pow(t / tmin, 3);
-    }
-  }
-  return totalrate;
-}
-
-
-void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
-// should be in erg / s / cm^3
-{
-  const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
-
-  // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-
-  const double t = time_step[timestep].mid;
   const double rho = get_rho(modelgridindex);
 
   // Co56 from Ni56 decays plus what remains of the initial Co56
@@ -841,21 +811,51 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
         (exp(-t / T48V) - exp(-t / T48CR)) /
         (T48V - T48CR) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
 
-  const double local_positron_injectrate = (co56_positron_dep + v48_positron_dep + ni57_positron_dep) * vol_init_modelcell(modelgridindex) * pow(t / tmin, 3);
-
-  const double globalpositroninjectionrate = get_globalpositroninjectionrate(timestep);
-  const double positron_dep = modelcellpositrondepfrac[modelgridindex] * globalpositroninjectionrate;
-
-  printout("global positron injection rate %g erg/s dep_frac[mgi %d] %g cell_dep_rate %g (local injection rate %g, frac %g vs input %g)\n",
-           globalpositroninjectionrate, modelgridindex, modelcellpositrondepfrac[modelgridindex], positron_dep, local_positron_injectrate, local_positron_injectrate / globalpositroninjectionrate, modelcellpositroninjectfrac[modelgridindex]);
-
-  const double positron_dep_density = positron_dep / (vol_init_modelcell(modelgridindex) * pow(t / tmin, 3));
-
-  //printout("nt_deposition_rate: element: %d, ion %d\n",element,ion);
   //printout("nt_deposition_rate: gammadep: %g, poscobalt %g pos48v %g\n",
   //         gamma_deposition,co56_positron_dep,v48_positron_dep);
 
-  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + positron_dep_density;
+  return co56_positron_dep + v48_positron_dep + ni57_positron_dep;
+}
+
+
+static double get_globalpositroninjectionrate(const int timestep)
+{
+  const double t = time_step[timestep].mid;
+  double totalrate = 0.;
+  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  {
+    if (get_numassociatedcells(modelgridindex) > 0)
+    {
+      totalrate += get_positroninjection_rate_density(modelgridindex, t) * vol_init_modelcell(modelgridindex) * pow(t / tmin, 3);
+    }
+  }
+  return totalrate;
+}
+
+
+void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
+// should be in erg / s / cm^3
+{
+  const double gamma_deposition_rate_density = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
+
+  // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
+
+  const double t = time_step[timestep].mid;
+
+  const double local_positron_injectrate = get_positroninjection_rate_density(modelgridindex, t) * vol_init_modelcell(modelgridindex) * pow(t / tmin, 3);
+
+  const double globalpositroninjectionrate = get_globalpositroninjectionrate(timestep);
+  const double positron_dep_rate = globalpositroninjectionrate * modelcellpositrondepfrac[modelgridindex];
+
+  printout("global positron injection rate %g erg/s dep_frac[mgi %d] %g cell_dep_rate %g (local injection rate %g, injec_frac %g vs input_injec_frac %g)\n",
+           globalpositroninjectionrate, modelgridindex, modelcellpositrondepfrac[modelgridindex],
+           positron_dep_rate, local_positron_injectrate, local_positron_injectrate / globalpositroninjectionrate, modelcellpositroninjectfrac[modelgridindex]);
+
+  const double positron_dep_rate_density = positron_dep_rate / (vol_init_modelcell(modelgridindex) * pow(t / tmin, 3));
+
+  //printout("nt_deposition_rate: element: %d, ion %d\n",element,ion);
+
+  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition_rate_density + positron_dep_rate_density;
   nt_solution[modelgridindex].deposition_at_timestep = timestep;
 }
 
@@ -2117,7 +2117,7 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int element, cons
 }
 
 
-void do_ntlepton(PKT *pkt_ptr)
+void do_ntlepton(PKT *pkt_ptr, double t_current)
 {
   const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
@@ -2207,7 +2207,7 @@ void do_ntlepton(PKT *pkt_ptr)
 
   /*It's an electron - convert to k-packet*/
   //printout("e-minus propagation\n");
-  pkt_ptr->type = TYPE_KPKT;
+  deposit_ntlepton(pkt_ptr, t_current);
   #ifndef FORCE_LTE
     //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif

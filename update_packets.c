@@ -69,7 +69,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
         break;
 
       case TYPE_NTLEPTON:
-        do_ntlepton(pkt_ptr);
+        do_ntlepton(pkt_ptr, t_current);
         break;
 
       case TYPE_KPKT:
@@ -150,11 +150,7 @@ static void update_pellet(
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;
-      place_ntlepton(pkt_ptr, tdecay);
-      if (pkt_ptr->type != TYPE_ESCAPE)
-      {
-        packet_prop(pkt_ptr, tdecay, ts + tw, nts);
-      }
+      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
     }
     else
     {
