@@ -596,7 +596,7 @@ static void read_positron_deposition_data(void)
 }
 
 
-static void deposit_ntlepton(PKT *pkt_ptr, double t_current)
+static void place_ntlepton(PKT *pkt_ptr, double t_current)
 {
   /// Get random cell based on positron deposition probabilities
   const double zrand = gsl_rng_uniform(rng);
@@ -628,12 +628,6 @@ static void deposit_ntlepton(PKT *pkt_ptr, double t_current)
     {
       abort();
     }
-    pkt_ptr->type = TYPE_KPKT;
-  }
-  else
-  {
-    printout("NTLEPTON escaped\n");
-    pkt_ptr->type = TYPE_NTLEPTON;
   }
 
   bool end_packet;
@@ -2119,6 +2113,14 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int element, cons
 
 void do_ntlepton(PKT *pkt_ptr, double t_current)
 {
+  place_ntlepton(pkt_ptr, t_current);
+
+  if (pkt_ptr->type == TYPE_ESCAPE)
+  {
+    printout("NTLEPTON escaped\n");
+    return;
+  }
+
   const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   double zrand = gsl_rng_uniform(rng);
@@ -2204,10 +2206,10 @@ void do_ntlepton(PKT *pkt_ptr, double t_current)
     // then just convert it to a kpkt
   }
 
+  pkt_ptr->type = TYPE_KPKT;
 
   /*It's an electron - convert to k-packet*/
   //printout("e-minus propagation\n");
-  deposit_ntlepton(pkt_ptr, t_current);
   #ifndef FORCE_LTE
     //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif
