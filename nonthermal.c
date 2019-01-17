@@ -2206,10 +2206,10 @@ void do_ntlepton(PKT *pkt_ptr, double t_current)
     // then just convert it to a kpkt
   }
 
-  pkt_ptr->type = TYPE_KPKT;
 
   /*It's an electron - convert to k-packet*/
   //printout("e-minus propagation\n");
+  pkt_ptr->type = TYPE_KPKT;
   #ifndef FORCE_LTE
     //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif
