@@ -1,6 +1,5 @@
 #include "sn3d.h"
 #include "grid_init.h"
-#include "nonthermal.h"
 #include "photo_electric.h"
 #include "vectors.h"
 
