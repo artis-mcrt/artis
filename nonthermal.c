@@ -646,14 +646,9 @@ void nt_init(const int my_rank)
 }
 
 
-void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
-// should be in erg / s / cm^3
+static double get_positroninjection_rate_density(const int modelgridindex, const double t)
+// in erg / s / cm^3
 {
-  const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
-
-  // Above is the gamma-ray bit. Below is *supposed* to be the kinetic energy of positrons created by 56Co and 48V. These formulae should be checked, however.
-
-  const double t = time_step[timestep].mid;
   const double rho = get_rho(modelgridindex);
 
   // Co56 from Ni56 decays plus what remains of the initial Co56
@@ -667,11 +662,21 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
         (exp(-t / T48V) - exp(-t / T48CR)) /
         (T48V - T48CR) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
 
-  //printout("nt_deposition_rate: element: %d, ion %d\n",element,ion);
   //printout("nt_deposition_rate: gammadep: %g, poscobalt %g pos48v %g\n",
   //         gamma_deposition,co56_positron_dep,v48_positron_dep);
 
-  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + co56_positron_dep + v48_positron_dep + ni57_positron_dep;
+  return co56_positron_dep + v48_positron_dep + ni57_positron_dep;
+}
+
+
+void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
+// should be in erg / s / cm^3
+{
+  const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
+
+  const double t = time_step[timestep].mid;
+
+  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + get_positroninjection_rate_density(modelgridindex, t);
   nt_solution[modelgridindex].deposition_at_timestep = timestep;
 }
 
