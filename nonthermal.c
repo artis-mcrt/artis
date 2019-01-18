@@ -596,55 +596,6 @@ static void read_positron_deposition_data(void)
 }
 
 
-static void place_ntlepton(PKT *pkt_ptr, double t_current)
-{
-  /// Get random cell based on positron deposition probabilities
-  const double zrand = gsl_rng_uniform(rng);
-
-  int cellindex = -99;
-  for (int c = 0; c < ngrid; c++)
-  {
-    if (cell_cumulativepositrondepfrac[c] >= zrand)
-    {
-      cellindex = c;
-      break;
-    }
-  }
-
-  if (cellindex >= 0)
-  {
-    // const int mgi = cell[cellindex].modelgridindex;
-    // printout("Placing NTLEPTON in cell %d mgi %d\n", cellindex, mgi);
-
-    if (grid_type == GRID_UNIFORM)
-    {
-      for (int axis = 0; axis < 3; axis++)
-      {
-        const double zrand = gsl_rng_uniform_pos(rng);
-        pkt_ptr->pos[axis] = (get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0))) * t_current / tmin;
-      }
-    }
-    else
-    {
-      abort();
-    }
-  }
-
-  bool end_packet;
-  change_cell(pkt_ptr, cellindex, &end_packet, t_current);
-  // pkt_ptr->where = cellindex;
-
-  if (!end_packet)
-  {
-    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
-    pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
-    pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
-
-    pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
-  }
-}
-
-
 void nt_init(const int my_rank)
 {
   read_binding_energies();
@@ -791,6 +742,7 @@ void nt_init(const int my_rank)
 
 
 static double get_positroninjection_rate_density(const int modelgridindex, const double t)
+// in erg / s / cm^3
 {
   const double rho = get_rho(modelgridindex);
 
@@ -2111,13 +2063,62 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int element, cons
 }
 
 
+static void place_ntlepton(PKT *pkt_ptr, double t_current)
+{
+  /// Get random cell based on positron deposition probabilities
+  const double zrand = gsl_rng_uniform(rng);
+
+  int cellindex = -99;
+  for (int c = 0; c < ngrid; c++)
+  {
+    if (cell_cumulativepositrondepfrac[c] >= zrand)
+    {
+      cellindex = c;
+      break;
+    }
+  }
+
+  if (cellindex >= 0)
+  {
+    // const int mgi = cell[cellindex].modelgridindex;
+    // printout("Placing NTLEPTON in cell %d mgi %d\n", cellindex, mgi);
+
+    if (grid_type == GRID_UNIFORM)
+    {
+      for (int axis = 0; axis < 3; axis++)
+      {
+        const double zrand = gsl_rng_uniform_pos(rng);
+        pkt_ptr->pos[axis] = (get_cellcoordmin(cellindex, axis) + (zrand * wid_init(0))) * t_current / tmin;
+      }
+    }
+    else
+    {
+      abort();
+    }
+  }
+
+  bool end_packet;
+  change_cell(pkt_ptr, cellindex, &end_packet, t_current);
+  // pkt_ptr->where = cellindex;
+
+  if (!end_packet)
+  {
+    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+    pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
+    pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
+
+    pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
+  }
+}
+
+
 void do_ntlepton(PKT *pkt_ptr, double t_current)
 {
   place_ntlepton(pkt_ptr, t_current);
 
   if (pkt_ptr->type == TYPE_ESCAPE)
   {
-    printout("NTLEPTON escaped\n");
+    // printout("NTLEPTON escaped\n");
     return;
   }
 
