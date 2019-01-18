@@ -243,6 +243,14 @@ void update_packets(const int nts, PKT *pkt)
     #ifdef _OPENMP
     #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_ntcollexc,ma_stat_activation_ntcollion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,k_stat_from_gamma,k_stat_from_eminus,k_stat_from_earlierdecay)
     #endif
+    double sum_e_cmf = 0.;
+    double sum_e_rf = 0.;
+    for (int n = 0; n < npkts; n++)
+    {
+      sum_e_cmf += pkt[n].e_cmf;
+      sum_e_rf += pkt[n].e_rf;
+    }
+    printout("all packets sum of e_cmf %g e_rf %g\n", sum_e_cmf, sum_e_rf);
     for (int n = 0; n < npkts; n++)
     {
       // if ((time(NULL) - time_of_last_packet_printout > 1) || n == npkts - 1)
