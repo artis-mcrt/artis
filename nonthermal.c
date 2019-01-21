@@ -2103,9 +2103,10 @@ static void place_ntlepton(PKT *pkt_ptr, double t_current)
 
   if (!end_packet)
   {
-    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
-    pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
-    pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
+    // MAYBE THIS IS THE PROBLEM? pellets have e_cmf but not e_rf
+    // const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+    // pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
+    // pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 
     pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
   }
