@@ -1316,9 +1316,9 @@ void radfield_titer_nuJ(const int modelgridindex)
 void radfield_reduce_estimators(void)
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  MPI_Allreduce(MPI_IN_PLACE, &J, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, J, npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #ifndef FORCE_LTE
-    MPI_Allreduce(MPI_IN_PLACE, &nuJ, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, nuJ, npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
@@ -1326,12 +1326,12 @@ void radfield_reduce_estimators(void)
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing binned radiation field estimators");
 
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
     {
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
       if (get_numassociatedcells(modelgridindex) > 0)
       {
-        MPI_Barrier(MPI_COMM_WORLD);
+        // MPI_Barrier(MPI_COMM_WORLD);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
           // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
@@ -1352,7 +1352,7 @@ void radfield_reduce_estimators(void)
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing detailed line estimators");
 
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
     {
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
       if (get_numassociatedcells(modelgridindex) > 0)
