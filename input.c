@@ -820,8 +820,12 @@ static void read_atomicdata_files(void)
       // }
       // else
       {
-        nlevels_requiretransitions = 0;
-        nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
+        nlevels_requiretransitions = 10;
+        nlevels_requiretransitions_upperlevels = 300; // no effect if previous line is zero
+        if (nlevels_requiretransitions_upperlevels > nlevelsmax)
+        {
+          nlevels_requiretransitions_upperlevels = nlevelsmax;
+        }
       }
       transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
         nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
