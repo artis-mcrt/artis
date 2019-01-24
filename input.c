@@ -1340,6 +1340,7 @@ static void setup_phixs_list(void)
         i++;
       }
     }
+    ///sort groundcont in ascending order of nu_edge
     qsort(phixslist[itid].groundcont, nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
 
 
@@ -1376,6 +1377,7 @@ static void setup_phixs_list(void)
           phixslist[itid].allcont[i].level = level;
           phixslist[itid].allcont[i].nu_edge = nu_edge;
           phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
+//          printout("phixslist.allcont nbfcontinua_allcont %d, i %d, element Z = %d, ionstage %d, level %d, nu_edge %g, edge_eV %g\n",nbfcontinua,i,get_element(element),get_ionstage(element, ion),level,nu_edge, E_threshold);
           #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
             if (itid == 0)
               elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
