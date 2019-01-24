@@ -156,11 +156,11 @@ inline bool is_nlte(int element, int ion, int level)
 // (note this function returns true for the ground state,
 //  although it is stored separately from the excited NLTE states)
 {
-  if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
-    return (level <= 197);
-  else
-    return (level <= 80);
-  // return (level <= 80);
+//  if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
+//    return (level <= 197);
+//  else
+//    return (level <= 80);
+   return (level <= 300);
 }
 
 
