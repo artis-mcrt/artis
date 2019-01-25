@@ -114,8 +114,8 @@ static FILE *restrict radfieldfile = NULL;
 extern inline double radfield_dbb(double nu, float T, float W);
 
 
-static inline
-double get_bin_nu_upper(int binindex)
+//static inline
+inline double get_bin_nu_upper(int binindex)
 {
   return radfieldbin_nu_upper[binindex];
 }
@@ -496,8 +496,8 @@ double get_bin_nu_bar(int modelgridindex, int binindex)
 }
 
 
-static inline
-double get_bin_nu_lower(int binindex)
+//static inline
+inline double get_bin_nu_lower(int binindex)
 {
   if (binindex > 0)
     return radfieldbin_nu_upper[binindex - 1];
@@ -518,22 +518,22 @@ int get_bin_contribcount(int modelgridindex, int binindex, bool averaged)
 }
 
 
-static inline
-float get_bin_W(int modelgridindex, int binindex)
+//static inline
+inline float get_bin_W(int modelgridindex, int binindex)
 {
   return radfieldbin_current[modelgridindex][binindex].W;
 }
 
 
-static inline
-float get_bin_T_R(int modelgridindex, int binindex)
+//static inline
+inline float get_bin_T_R(int modelgridindex, int binindex)
 {
   return radfieldbin_current[modelgridindex][binindex].T_R;
 }
 
 
-static inline
-int select_bin(double nu)
+//static inline
+inline int select_bin(double nu)
 {
   // linear search one by one until found
   if (nu >= radfieldbin_nu_upper[RADFIELDBINCOUNT - 1])
