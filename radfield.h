@@ -30,6 +30,11 @@ void radfield_read_restart_data(FILE *gridsave_file);
 int radfield_integrate(
   const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
   size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);
+double get_bin_nu_upper(int binindex);
+double get_bin_nu_lower(int binindex);
+float get_bin_W(int modelgridindex, int binindex);
+float get_bin_T_R(int modelgridindex, int binindex);
+int select_bin(double nu);
 
 
 inline double radfield_dbb(double nu, float T, float W)
