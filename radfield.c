@@ -815,7 +815,6 @@ double radfield(double nu, int modelgridindex)
     return 0.;
   }
 
-  // return 0.;
   if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {
     const int binindex = select_bin(nu);
@@ -824,46 +823,12 @@ double radfield(double nu, int modelgridindex)
       const struct radfieldbin_current *restrict const bin = &radfieldbin_current[modelgridindex][binindex];
       if (bin->W >= 0.)
       {
-        // if (bin->fit_type == FIT_DILUTED_BLACKBODY)
-        {
           const double J_nu = radfield_dbb(nu, bin->T_R, bin->W);
-          /*if (fabs(J_nu / J_nu_fullspec - 1.0) > 0.5)
-          {
-            printout("WARNING: radfield: significant discrepancy. J_nu_fullspec %g, J_nu %g, nu %g bin->W %g bin->T_R %g\n",
-                     J_nu_fullspec, J_nu, nu, bin->W, bin->T_R);
-          }*/
+
           return J_nu;
-        }
-        // else
-        // {
-        //   return bin->W;
-        // }
       }
-      else //W < 0
-      {
-        //printout("WARNING: Radfield modelgridindex %d binindex %d has W_bin=%g<0, using W %g T_R %g nu %g\n",
-        //         modelgridindex, binindex, W_bin, W_fullspec, T_R_fullspec, nu);
-      }
-    }
-    else //binindex < 0
-    {
-      // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
-      // {
-      //   // undiluted LTE blueward of the bins
-      //   const double J_nu_LTE = radfield_dbb(nu, get_Te(modelgridindex), 1.0);
-      //   return J_nu_LTE;
-      // }
-      // else
-      //   return 0; // no radfield redwards of the bins
-      //printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
-      //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
     }
   }
-  /*else
-  {
-    printout("radfield: WARNING: Radfield called before initialized. Using global T_R %g W %g nu %g modelgridindex %d\n",
-             W_fullspec, T_R_fullspec, nu, modelgridindex);
-  }*/
 
   const float T_R_fullspec = get_TR(modelgridindex);
   const float W_fullspec   = get_W(modelgridindex);
