@@ -1052,8 +1052,8 @@ static void set_radfield_params_fullspec(const int modelgridindex, const int tim
   const double nubar = nuJ[modelgridindex] / J[modelgridindex];
   if (!isfinite(nubar) || nubar == 0.)
   {
-    printout("[warning] T_R estimator infinite in cell %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g\n",
-             modelgridindex, J[modelgridindex], nuJ[modelgridindex]);
+    printout("[warning] T_R estimator infinite in cell %d timestep %d, keep T_R, T_J, W of last timestep. J = %g. nuJ = %g. Previous T_R %g T_J %g W %g\n",
+             modelgridindex, timestep, J[modelgridindex], nuJ[modelgridindex], get_TR(modelgridindex), get_TJ(modelgridindex), get_W(modelgridindex));
   }
   else
   {
