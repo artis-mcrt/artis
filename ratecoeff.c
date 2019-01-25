@@ -13,6 +13,8 @@
 #include "ratecoeff.h"
 #include "grid_init.h"
 
+static const bool gammacorr_from_radbin_midpoint = true; // False uses original integral to calculate gammacorr
+
 // typedef struct gslintegration_ffheatingparas
 // {
 //   double T_e;
@@ -36,6 +38,18 @@ typedef struct
   int ion;
   int level;
 } gsl_integral_paras_gammacorr;
+
+typedef struct
+{
+    double nu_edge;
+    int element;
+    int ion;
+    int level;
+    double T_R_modelgridindex;
+    double T_R;
+    double W;
+
+} gsl_integral_paras_gammacorr_sum;
 
 typedef struct
 {
@@ -870,7 +884,7 @@ double calculate_ionrecombcoeff(
         alpha += alpha_level;
         if (printdebug && alpha_level > 0.)
         {
-          fprintf(estimators_file, "recomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha %7.2e alpha_sum %7.2e nnlevel %7.2e nnionfrac %7.2e\n",
+          fprintf(estimators_file, "\nrecomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha %7.2e alpha_sum %7.2e nnlevel %7.2e nnionfrac %7.2e\n",
                   get_element(element), get_ionstage(element, lowerion + 1),
                   get_ionstage(element, lowerion), upper + 1, lower + 1, alpha_level, alpha,
                   nnupperlevel, nnupperlevel_so_far / nnupperion);
@@ -1236,6 +1250,178 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
 }
 
 
+static double integrand_corrphotoioncoeff_sum_gammacorr(const double nu, void *restrict voidparas)
+/// Integrand to calculate the rate coefficient for photoionization
+/// using gsl integrators. Corrected for stimulated recombination.
+/// integrate over area of single bin, not all bins
+{
+  const gsl_integral_paras_gammacorr_sum *const restrict params = (gsl_integral_paras_gammacorr_sum *) voidparas;
+  const double T_R_modelgridindex = params->T_R_modelgridindex;
+  const double T_R = params->T_R;
+  const double W = params->W;
+
+  const float sigma_bf = photoionization_crosssection(params->element, params->ion, params->level, params->nu_edge, nu);
+
+  return sigma_bf * W * pow(nu, 2) / expm1(HOVERKB * nu / T_R) * (1 - exp(-HOVERKB * nu / T_R_modelgridindex));
+}
+
+
+static double calculate_corrphotoioncoeff_intgral(double nu_threshold, int modelgridindex, int element,
+                                                  int ion, int level, double nu_lower_bound, double nu_upper_bound,
+                                                  int phixstargetindex, double W, double T_R, gsl_integration_workspace *workspace)
+                                                  //W and TR of radbin, unless out of range -- then fullspec W and TR
+{
+  const double epsrel = 0.1; //2e-3;
+  const double epsabs = 0.;
+
+  gsl_integral_paras_gammacorr_sum intparas;
+  intparas.nu_edge = nu_threshold;
+  intparas.element = element;
+  intparas.ion = ion;
+  intparas.level = level;
+  intparas.T_R_modelgridindex = get_TR(modelgridindex);
+  intparas.T_R = T_R;
+  intparas.W = W;
+
+  gsl_function F_gammacorr;
+  F_gammacorr.function = &
+          integrand_corrphotoioncoeff_sum_gammacorr;
+  F_gammacorr.params = &intparas;
+  double error = 0.0;
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  double gammacorr = 0.0;
+  const int status = gsl_integration_qag(
+          &F_gammacorr, nu_lower_bound, nu_upper_bound, epsabs, epsrel, 8192, GSL_INTEG_GAUSS31, workspace, &gammacorr, &error);
+
+
+  gsl_set_error_handler(previous_handler);
+  if (status != 0)
+  {
+    error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+    printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d gamma %g error %g\n",
+             status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
+  }
+
+  return gammacorr;
+}
+
+
+static double gammacorr_from_nu_bin_midpoint(double nu_edge, int modelgridindex, int element,
+                                              int ion, int level, double nu_lower_bound, double nu_upper_bound,
+                                              double W_bin, double T_R_bin)
+{
+  ///Instead of doing integral take nu as midpoint of radfieldbin
+
+  double T_R_modelgridindex = get_TR(modelgridindex);
+  double nu_bin_midpoint = (nu_lower_bound + nu_upper_bound) / 2.;
+
+  const float sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu_bin_midpoint);
+
+  return W_bin * pow(nu_bin_midpoint,2) / expm1(HOVERKB * nu_bin_midpoint / T_R_bin)
+         * sigma_bf * (1 - exp(-HOVERKB * nu_bin_midpoint / T_R_modelgridindex))
+         * (nu_upper_bound - nu_lower_bound);
+}
+
+
+static double calculate_corrphotoioncoeff_summation(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+{
+  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+
+  const double nu_threshold = ONEOVERH * E_threshold;
+  double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+
+  ///search for binindex of nu_threshold
+  int nu_threshold_bin = select_bin(nu_threshold);
+  ///search for binindex of numaxphixs
+  int nu_max_phixs_bin = select_bin(nu_max_phixs);
+  double sum_gammacorr = 0.;
+
+  double nu_lower_bound;
+  double nu_upper_bound;
+
+  int binindex;
+
+  double W;
+  double T_R;
+
+//  gsl_integration_workspace *restrict workspace = gsl_integration_workspace_alloc(8192);
+
+  if (nu_threshold_bin == nu_max_phixs_bin && nu_threshold_bin < 0)  //out of range of radfield bins, both same side
+  {
+    ///upper and lower boundaries outside range of bins (-1 too high, -2 too low)
+    W = 0.; //get_W(modelgridindex);
+    T_R = -99.; // get_TR(modelgridindex);
+    ///Evaluate integral between nu_threshold and nu_max_phixs using fullspec
+//    sum_gammacorr = calculate_corrphotoioncoeff_intgral(nu_threshold, modelgridindex, element, ion,
+//                                                           level, nu_threshold, nu_max_phixs, phixstargetindex, W, T_R, workspace);
+    sum_gammacorr = 0.; //gammacorr_from_nu_bin_midpoint(nu_threshold, modelgridindex, element, ion, level, nu_threshold, nu_max_phixs, W, T_R);
+
+    return 0.; //sum_gammacorr *= gammacorr_factors() * get_phixsprobability(element, ion, level, phixstargetindex);
+  }
+
+
+  if (nu_max_phixs_bin == -1) //out of range - too high
+  {
+    ///Upper boundary too high, but lower within range
+    ///Do calculation once between out of range bounds then go into loop for frequencies in range of bins
+    nu_lower_bound = get_bin_nu_upper(RADFIELDBINCOUNT - 1);  //nu lower = max bin frequency
+    nu_upper_bound = nu_max_phixs;
+//    binindex = nu_max_phixs_bin; //Don't use radfield bins (-ve)
+
+    W = 0.;// get_W(modelgridindex);
+    T_R = -99.; // get_TR(modelgridindex);
+//    sum_gammacorr = calculate_corrphotoioncoeff_intgral(nu_threshold, modelgridindex, element, ion, level,
+//                                                        nu_lower_bound, nu_upper_bound, phixstargetindex, W, T_R, workspace);
+    sum_gammacorr = 0.; //gammacorr_from_nu_bin_midpoint(nu_threshold, modelgridindex, element, ion, level, nu_lower_bound, nu_upper_bound, W, T_R);
+
+    nu_max_phixs = nu_lower_bound; //set new maximum frequency for loop
+    nu_max_phixs_bin = RADFIELDBINCOUNT - 1; //set max binindex in for loop
+//    printout("Out of range - too high. Shifting to max bin of %d\n", RADFIELDBINCOUNT - 1);
+  }
+
+  nu_lower_bound = nu_threshold;
+
+  for (binindex = nu_threshold_bin; binindex <= nu_max_phixs_bin; binindex++)
+  {
+    nu_upper_bound = get_bin_nu_upper(binindex);
+    W = get_bin_W(modelgridindex, binindex);
+    T_R = get_bin_T_R(modelgridindex, binindex);
+    if (W < 0.)
+    {
+      W = 0.;// get_W(modelgridindex);
+      T_R = -99.;// get_TR(modelgridindex);
+    }
+    if (binindex == -2) //out of range - too low
+    {
+      ///caluculate for out of range too low using fullspec then use bins in next loop
+//      printout("Out of range - too low\n");
+      nu_upper_bound = get_bin_nu_lower(0);
+      binindex ++; //-ve binindex = use fullspec. Starts next loop at bin 0
+      W = 0.; //get_W(modelgridindex);
+      T_R = -99.; // get_TR(modelgridindex);
+    }
+    if (binindex == nu_max_phixs_bin) //last loop shift upper bound to nu_max_phixs
+    {
+      nu_upper_bound = nu_max_phixs;
+    }
+
+    ///Do integral between bin boundaries
+//    double gammacorr = calculate_corrphotoioncoeff_intgral(nu_threshold, modelgridindex, element, ion, level,
+//                                                           nu_lower_bound, nu_upper_bound, phixstargetindex, W, T_R, workspace);
+    double gammacorr = gammacorr_from_nu_bin_midpoint(nu_threshold, modelgridindex, element, ion, level, nu_lower_bound,
+                                                      nu_upper_bound, W, T_R);
+
+    sum_gammacorr += gammacorr;
+
+    nu_lower_bound = nu_upper_bound;
+
+  }
+  sum_gammacorr *= FOURPI * TWOHOVERCLIGHTSQUARED * ONEOVERH * get_phixsprobability(element, ion, level, phixstargetindex);
+  return sum_gammacorr;
+}
+
+
 double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 /// Returns the photoionisation rate coefficient (corrected for stimulated emission)
 /// Only needed during packet propagation, therefore the value is taken from the
@@ -1256,7 +1442,14 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     gammacorr = interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
   #else
     #if (NO_LUT_PHOTOION)
-      gammacorr = calculate_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
+    if (!gammacorr_from_radbin_midpoint)
+    {
+      gammacorr = calculate_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);  ///Use original integral over whole frequency range
+    }
+    else
+    {
+      gammacorr = calculate_corrphotoioncoeff_summation(element,ion,level,phixstargetindex,modelgridindex); ///Sum bins over range of frequency bins using mid-point of bin
+    }
     #else
       const double W = get_W(modelgridindex);
       const double T_R = get_TR(modelgridindex);
