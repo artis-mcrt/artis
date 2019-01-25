@@ -577,7 +577,8 @@ int main(int argc, char** argv)
   printout("time before tabulation of rate coefficients %d\n",time(NULL));
   ratecoefficients_init();
   printout("time after tabulation of rate coefficients %d\n",time(NULL));
-//  abort();
+//  abort();  // Quit after rate calculations
+
 //  #ifdef MPI_ON
 //    const time_t time_before_barrier = time(NULL);
 //    MPI_Barrier(MPI_COMM_WORLD);
