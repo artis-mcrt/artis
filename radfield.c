@@ -542,33 +542,35 @@ int select_bin(double nu)
     return -2; // out of range, nu lower than lowest bin
   else
   {
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-    {
-      if (radfieldbin_nu_upper[binindex] > nu)
-      {
-        return binindex;
-      }
-    }
+//    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+//    {
+//      if (radfieldbin_nu_upper[binindex] > nu)
+//      {
+//        return binindex;
+//      }
+//    }
 
     // binary search for bin with nu_lower <= nu > nu_upper
-    // int low = 0;
-    // int high = RADFIELDBINCOUNT - 1;
-    // while (low <= high)
-    // {
-    //   int mid = low + ((high - low) / 2);
-    //   if (radfieldbin_nu_upper[mid] <= nu)
-    //   {
-    //     low = mid + 1;
-    //   }
-    //   else if (get_bin_nu_lower(mid) > nu)
-    //   {
-    //     high = mid - 1;
-    //   }
-    //   else
-    //   {
-    //     return mid;
-    //   }
-    //  }
+     int low = 0;
+     int high = RADFIELDBINCOUNT - 1;
+     while (low <= high)
+     {
+       int mid = low + ((high - low) / 2);
+       if (radfieldbin_nu_upper[mid] <= nu)
+       {
+         low = mid + 1;
+       }
+       else if (radfieldbin_nu_upper[mid - 1] > nu)
+//       else if (get_bin_nu_lower(mid) > nu)
+       {
+         high = mid - 1;
+       }
+       else
+       {
+//         printout("result binary search %d\n", mid);
+         return mid;
+       }
+      }
     assert(false);
   }
 }
