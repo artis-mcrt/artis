@@ -125,8 +125,9 @@ static void
 setup_bin_boundaries(void)
 {
   double prev_nu_upper = nu_lower_first_initial;
+//  printout("nu_lower_first_initial %g, nu_upper_last_initial %g \n", nu_lower_first_initial, nu_upper_last_initial);
 
-  // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
+  /// choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
   const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT;
   // const double lambda_lower_first_initial = 1e8 * CLIGHT / nu_lower_first_initial;
   // const double lambda_upper_last_initial = 1e8 * CLIGHT / nu_upper_last_initial;
@@ -138,6 +139,7 @@ setup_bin_boundaries(void)
     radfieldbin_nu_upper[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
 
     // Align the bin edges with bound-free edges, except for the last one
+//    printout("binindex %d ===============================================================================\n", binindex);
     if (binindex < RADFIELDBINCOUNT - 1)
     {
       for (int i = 0; i < nbfcontinua_ground; i++)
@@ -150,6 +152,10 @@ setup_bin_boundaries(void)
         const int level = phixslist[tid].groundcont[i].level;
 
         //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
+//        if (binindex == 0)
+//        {
+//          printout("phixslist.groundcont i %d, element Z = %d, ionstage %d, level %d, nu_edge %g\n",i,Z,ion_stage,level,nu_edge);
+//        }
 
         // this is compares the highest and lowest bins to the bound-free list, only do it once, i.e. binindex == 0
         if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
@@ -168,6 +174,7 @@ setup_bin_boundaries(void)
       }
     }
     prev_nu_upper = get_bin_nu_upper(binindex);
+//    printout("bin nu_upper %g \n", prev_nu_upper);
   }
 }
 
