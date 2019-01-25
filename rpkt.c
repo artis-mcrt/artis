@@ -990,6 +990,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
     const float nne = get_nne(modelgridindex);
     const float T_e = get_Te(modelgridindex);
     const double nu = pkt_ptr->nu_cmf;
+    const double nu_over_T_e = nu / T_e;
     const double g_ff = 1;
     if (opacity_case == 4)
     {
@@ -1031,7 +1032,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
           }
         }
       }
-      kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+      kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu_over_T_e));
       //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB*nu/T_e));
       kappa_ffheating = kappa_ff;
       //kappa_ff *= 1e5;
@@ -1052,6 +1053,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
           //printout("i %d, nu_edge %g\n",i,nu_edge);
           if (nu >= nu_edge && nnlevel > 0)
           {
+            const double Hnu_edge = H * nu_edge;
             //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
 
             //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
@@ -1071,16 +1073,16 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
               const int upper = get_phixsupperlevel(element, ion, level, 0);
               const double probability = get_phixsprobability(element, ion, level, 0);
               const double nnionlevel = get_levelpop(modelgridindex, element,ion + 1, upper);
-              const double sf = get_sahafact(element, ion, level, 0, T_e, H * nu_edge);
+              const double sf = get_sahafact(element, ion, level, 0, T_e, Hnu_edge);
               const double helper = nnlevel * sigma_bf * probability;
               const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
-              kappa_bf_contr = helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
+              kappa_bf_contr = helper * (1 - departure_ratio * exp(-HOVERKB * nu_over_T_e));
 
               if (level == 0)
               {
                 const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
-                double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
+                double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu_over_T_e);
                 if (corrfactor < 0)
                   corrfactor = 1;
                 phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * probability * corrfactor;
@@ -1090,11 +1092,11 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
             {
               const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
               const double nnionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-              const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_edge);
+              const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, Hnu_edge);
               const double helper = nnlevel * sigma_bf * get_phixsprobability(element, ion, level, phixstargetindex);
               const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
-              kappa_bf_contr += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
+              kappa_bf_contr += helper * (1 - departure_ratio * exp(-HOVERKB * nu_over_T_e));
             }
 
             if (kappa_bf_contr < 0)
@@ -1190,7 +1192,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
           }
         }
       }
-      kappa_ff *= 1e5 * 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+      kappa_ff *= 1e5 * 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu_over_T_e));
       kappa_bf = 0.;
     }
 
