@@ -811,6 +811,10 @@ void radfield_increment_lineestimator(const int modelgridindex, const int linein
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
 {
+  if (nu < 1e10){
+    return 0.;
+  }
+
   // return 0.;
   if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {
