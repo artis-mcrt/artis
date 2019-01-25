@@ -10,8 +10,8 @@
 
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 
-static const double nu_lower_first_initial = (CLIGHT / (10000e-8)); // in Angstroms
-static const double nu_upper_last_initial = (CLIGHT /  (500e-8));  // in Angstroms
+static const double nu_lower_first_initial = (CLIGHT / (20000e-8)); // 10000e-8 in Angstroms = 2.99792e+14 Hz
+static const double nu_upper_last_initial = (CLIGHT /  (150e-8));  // 500e-8 in Angstroms = 5.99585e+15 Hz      (150e-8 = 2e16)
 
 static const double boost_region_nu_lower = (CLIGHT / (2500e-8)); // in Angstroms
 static const double boost_region_nu_upper = (CLIGHT / (2100e-8));  // in Angstroms
