@@ -8,8 +8,6 @@
 #include "radfield.h"
 #include "sn3d.h"
 
-#define RADFIELDBINCOUNT 96
-
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 
 static const double nu_lower_first_initial = (CLIGHT / (10000e-8)); // in Angstroms
