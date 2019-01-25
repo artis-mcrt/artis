@@ -1578,7 +1578,7 @@ double superlevel_boltzmann(const int modelgridindex, const int element, const i
 {
   const int superlevel_index = get_nlevels_nlte(element,ion) + 1;
   // const double T_exc = get_TJ(modelgridindex);
-  const double T_exc = get_Te(modelgridindex);
+  const double T_exc = get_TR(modelgridindex);
   const double E_level = epsilon(element, ion, level);
   const double E_superlevel = epsilon(element, ion, superlevel_index);
 
