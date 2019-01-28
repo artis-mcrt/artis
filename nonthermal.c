@@ -2087,9 +2087,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   double frac_ionization_total = 0.;
 
   int allionindex = 0; // unique index for every ion of all elements
-#if NT_EXCITATION_ON
+//#if NT_EXCITATION_ON
   int excitationindex = 0; // unique index for every included excitation transition
-#endif
+//#endif
   for (int element = 0; element < nelements; element++)
   {
     const int Z = get_element(element);
