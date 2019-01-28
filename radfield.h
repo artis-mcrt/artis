@@ -1,7 +1,7 @@
 #ifndef RADFIELD_H
 #define RADFIELD_H
 
-#define RADFIELDBINCOUNT 1024
+#define RADFIELDBINCOUNT 100
 
 #include <gsl/gsl_integration.h>
 
