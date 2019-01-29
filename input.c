@@ -658,7 +658,7 @@ static int calculate_nlevels_groundterm(int element, int ion)
       const int g_b = stat_weight(element, ion, levelb);
       if (g == g_b)
       {
-        printout("ERROR: duplicate g value in ground term for Z=%d ion_stage %d nlevels_groundterm %d g(level %d) %d g(level %d) %d\n",
+        printout("ERROR: Z=%d ion_stage %d nlevels_groundterm %d g(level %d) %d g(level %d) %d\n",
                  get_element(element), get_ionstage(element, ion), nlevels_groundterm, level, g, levelb, g_b);
       }
     }
@@ -674,7 +674,11 @@ static int calculate_nlevels_groundterm(int element, int ion)
       // assert(nlevels_groundterm == phixstargetlevels);
       if (nlevels_groundterm != phixstargetlevels)
       {
+<<<<<<< HEAD
         printout("WARNING: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d\n",
+=======
+        printout("ERROR: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels %d\n",
+>>>>>>> 0d59646... Add detection of levels within the ground term
                  get_element(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
       }
     }
