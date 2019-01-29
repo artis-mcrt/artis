@@ -44,7 +44,7 @@ void update_estimators(const PKT *restrict pkt_ptr, const double distance)
             /// Cells with zero abundance for a specific element have zero contribution
             /// (set in calculate_kappa_rpkt_cont and therefore do not contribute to
             /// the estimators
-            if (get_abundance(modelgridindex,element) > 0)
+            if (get_abundance(modelgridindex, element) > 0)
             {
               const int ionestimindex = modelgridindex * nelements * maxion + element * maxion + ion;
               #if (!NO_LUT_PHOTOION)
