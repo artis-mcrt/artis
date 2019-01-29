@@ -396,7 +396,8 @@ heatingrates_t *heatingrates;
 
 phixslist_t *restrict phixslist;
 //extern groundphixslist_t *groundphixslist;
-int nbfcontinua,nbfcontinua_ground; ///number of bf-continua
+int nbfcontinua;
+int nbfcontinua_ground; ///number of bf-continua
 //int importantbfcontinua;
 int NPHIXSPOINTS;
 double NPHIXSNUINCREMENT;

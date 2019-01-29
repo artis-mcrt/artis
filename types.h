@@ -450,6 +450,7 @@ typedef struct ionlist_entry
   int first_nlte;                            /// index into nlte_pops array of a grid cell
   int ionisinglevels;                        /// Number of levels which have a bf-continuum
   int maxrecombininglevel;                   /// level index of the highest level with a non-zero recombination rate
+  int nlevels_groundterm;
   int coolingoffset;
   int ncoolingterms;
   float *Alpha_sp;
