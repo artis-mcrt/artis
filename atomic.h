@@ -66,6 +66,12 @@ inline int get_nlevels_nlte(int element, int ion)
 }
 
 
+inline int get_nlevels_groundterm(int element, int ion)
+{
+  return elements[element].ions[ion].nlevels_groundterm;
+}
+
+
 inline int get_ionisinglevels(int element, int ion)
 /// Returns the number of levels associated with an ion that
 /// have energies below the ionisation threshold.

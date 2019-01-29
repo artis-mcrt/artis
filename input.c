@@ -620,6 +620,70 @@ static int get_lineindex(const int lelement, const int lion, const int llowerlev
 }
 
 
+static int calculate_nlevels_groundterm(int element, int ion)
+{
+  int nlevels_groundterm = 1;
+  const int nlevels = get_nlevels(element, ion);
+  // detect single-level ground term
+  const double endiff10 = epsilon(element, ion, 1) - epsilon(element, ion, 0);
+  const double endiff21 = epsilon(element, ion, 2) - epsilon(element, ion, 1);
+  if (nlevels == 1)
+  {
+    nlevels_groundterm = 1;
+  }
+  else if (endiff10 > 2. * endiff21)
+  {
+    nlevels_groundterm = 1;
+  }
+  else
+  {
+    for (int level = 1; level < nlevels - 2; level++)
+    {
+      const double endiff1 = epsilon(element, ion, level) - epsilon(element, ion, level - 1);
+      const double endiff2 = epsilon(element, ion, level + 1) - epsilon(element, ion, level);
+      if (endiff2 > 2. * endiff1)
+      {
+        nlevels_groundterm = level + 1;
+        break;
+      }
+    }
+  }
+
+  for (int level = 0; level < nlevels_groundterm; level++)
+  {
+    const int g = stat_weight(element, ion, level);
+    for (int levelb = 0; levelb < level; levelb++)
+    {
+      // there should be no duplicate stat weights within the ground term
+      const int g_b = stat_weight(element, ion, levelb);
+      if (g == g_b)
+      {
+        printout("ERROR: Z=%d ion_stage %d nlevels_groundterm %d g(level %d) %d g(level %d) %d\n",
+                 get_element(element), get_ionstage(element, ion), nlevels_groundterm, level, g, levelb, g_b);
+      }
+    }
+  }
+
+  // all levels in the ground term should be photoionisation targets from the lower ground state
+  if (ion > 0 && ion < get_nions(element) - 1)
+  {
+    if (get_phixsupperlevel(element, ion - 1, 0, 0) == 0)
+    {
+      const int nphixstargets = get_nphixstargets(element, ion - 1, 0);
+      const int phixstargetlevels = get_phixsupperlevel(element, ion - 1, 0, nphixstargets - 1) + 1;
+      // assert(nlevels_groundterm == phixstargetlevels);
+      if (nlevels_groundterm != phixstargetlevels)
+      {
+        printout("ERROR: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels %d\n",
+                 get_element(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
+      }
+    }
+  }
+
+  return nlevels_groundterm;
+}
+
+
 static void read_atomicdata_files(void)
 {
   radfield_jblue_init();
@@ -674,8 +738,13 @@ static void read_atomicdata_files(void)
   for (int element = 0; element < nelements; element++)
   {
     /// read information about the next element which should be stored to memory
-    int Z, nions, lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin;
-    double abundance, mass_amu;
+    int Z;
+    int nions;
+    int lowermost_ionstage;
+    int uppermost_ionstage;
+    int nlevelsmax_readin;
+    double abundance;
+    double mass_amu;
     fscanf(compositiondata,"%d %d %d %d %d %lg %lg", &Z, &nions, &lowermost_ionstage, &uppermost_ionstage, &nlevelsmax_readin, &abundance, &mass_amu);
     printout("readin compositiondata: next element Z %d, nions %d, lowermost %d, uppermost %d, nlevelsmax %d\n",Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin);
     assert(Z > 0);
@@ -984,7 +1053,16 @@ static void read_atomicdata_files(void)
   ///finally read in photoionisation cross sections and store them to the atomic data structure
   read_phixs_data();
 
-  printout("cont_index %d\n",cont_index);
+  for (int element = 0; element < nelements; element++)
+  {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
+    {
+      elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
+    }
+  }
+
+  printout("cont_index %d\n", cont_index);
 }
 
 
@@ -1444,8 +1522,9 @@ static void read_atomicdata(void)
       int photoiontransitions = 0;
       for (int level = 0; level < get_nlevels(element,ion); level++)
         photoiontransitions += get_nphixstargets(element,ion,level);
-      printout("[input.c]      ion_stage %d with %d levels (%d ionising) and %d photoionisation transitions\n",
-               get_ionstage(element,ion),get_nlevels(element,ion),get_ionisinglevels(element,ion),photoiontransitions);
+      printout("[input.c]     ion_stage %d with %4d levels (%d in groundterm, %4d ionising) and %d photoionisation transitions\n",
+               get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_groundterm(element, ion),
+               get_ionisinglevels(element, ion), photoiontransitions);
       includedlevels += get_nlevels(element,ion);
       includedionisinglevels += get_ionisinglevels(element,ion);
       includedphotoiontransitions += photoiontransitions;
