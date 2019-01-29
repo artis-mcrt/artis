@@ -1253,22 +1253,20 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   #ifdef FORCE_LTE
     /// Interpolate gammacorr out of precalculated values
     const double T_R = get_TR(modelgridindex);
-    gammacorr = interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
+    gammacorr = interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+  #elif (NO_LUT_PHOTOION)
+    gammacorr = calculate_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
   #else
-    #if (NO_LUT_PHOTOION)
-      gammacorr = calculate_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
-    #else
-      const double W = get_W(modelgridindex);
-      const double T_R = get_TR(modelgridindex);
+    const double W = get_W(modelgridindex);
+    const double T_R = get_TR(modelgridindex);
 
-      gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,phixstargetindex,T_R);
-      const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-      if (index_in_groundlevelcontestimator >= 0)
-        gammacorr *= corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimator];
-    #endif
+    gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+    const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+    if (index_in_groundlevelcontestimator >= 0)
+      gammacorr *= corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimator];
   #endif
-    if (use_cellhist)
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
+  if (use_cellhist)
+    cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
   }
 
   return gammacorr;
