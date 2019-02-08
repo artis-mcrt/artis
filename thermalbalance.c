@@ -58,7 +58,7 @@ static void calculate_heating_rates(const int modelgridindex)
       #ifdef DIRECT_COL_HEAT
       // mastate[tid].ion = ion;
       const int nlevels = get_nlevels(element,ion);
-      const int nbflevels = get_bfcontinua(element,ion);
+      const int nbflevels = get_ionisinglevels(element,ion);
 //      if (ion > 0) nlevels_lowerion = get_nlevels(element,ion-1);
 
      for (int level = 0; level < nlevels; level++)
@@ -235,7 +235,7 @@ static void calculate_cooling_rates(const int modelgridindex)
       //printout("[debug] do_kpkt: ion %d\n",ion);
       mastate[tid].ion = ion;
       const int nlevels_currention = get_nlevels(element,ion);
-      const int ionisinglevels = get_bfcontinua(element,ion);
+      const int ionisinglevels = get_ionisinglevels(element,ion);
       //double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
       const double nncurrention = ionstagepop(modelgridindex,element,ion);
 

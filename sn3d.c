@@ -544,7 +544,7 @@ int main(int argc, char** argv)
   macroatom_open_file(my_rank);
 
   sprintf(filename, "estimators_%.4d.out", my_rank);
-  estimators_file = fopen_required(filename, "w");
+  FILE *estimators_file = fopen_required(filename, "w");
   //setvbuf(estimators_file, NULL, _IOLBF, 1);
 
   if (NLTE_POPS_ON)
@@ -836,7 +836,7 @@ int main(int argc, char** argv)
           #endif
         #endif
 
-        update_grid(nts, my_rank, nstart, ndo, titer);
+        update_grid(estimators_file, nts, my_rank, nstart, ndo, titer);
 
         const time_t sys_time_finish_update_grid = time(NULL);
         printout("timestep %d: update_grid: process %d finished update_grid at %d (took %d seconds)\n",
