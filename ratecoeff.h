@@ -1,6 +1,8 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
+#include <stdbool.h>
+
 void ratecoefficients_init(void);
 
 double alpha_sp_integrand_gsl(double nu, void *restrict paras);
@@ -19,7 +21,7 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 double calculate_iongamma_per_gspop(int modelgridindex, int element, int ion);
 double calculate_iongamma_per_ionpop(
   int modelgridindex, float T_e, int element, int lowerion,
-  bool assume_lte, bool collisional_not_radiative, bool printdebug);
+  bool assume_lte, bool collisional_not_radiative, bool printdebug, bool use_bfest);
 
 double calculate_ionrecombcoeff(
   int modelgridindex, float T_e,

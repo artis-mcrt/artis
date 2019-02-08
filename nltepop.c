@@ -552,7 +552,7 @@ static void nltepop_matrix_add_ionisation(
   assert(ion + 1 < get_nions(element)); // can't ionise the top ion
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
-  const int nionisinglevels = get_bfcontinua(element, ion);
+  const int nionisinglevels = get_ionisinglevels(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
   for (int level = 0; level < nionisinglevels; level++)
@@ -1334,7 +1334,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
         }
 
         //now put in the photoionization/recombination processes
-        ionisinglevels = get_bfcontinua(element,ion);
+        ionisinglevels = get_ionisinglevels(element,ion);
         if (ion < get_nions(element)-1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
         {
           s_renorm = 1.0;

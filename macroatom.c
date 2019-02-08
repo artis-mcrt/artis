@@ -86,7 +86,7 @@ static void get_macroatom_transitionrates(
   if (ion > 0 && level <= get_maxrecombininglevel(element, ion)) ///checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
   {
     //nlevels = get_nlevels(element,ion-1);
-    const int nlevels = get_bfcontinua(element, ion - 1);
+    const int nlevels = get_ionisinglevels(element, ion - 1);
     //nlevels = get_ionisinglevels(element,ion-1);
     for (int lower = 0; lower < nlevels; lower++)
     {
@@ -135,7 +135,7 @@ static void get_macroatom_transitionrates(
   /// Transitions to higher ionisation stages
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
   processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
-  const int ionisinglevels = get_bfcontinua(element,ion);
+  const int ionisinglevels = get_ionisinglevels(element,ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
   {
     if (NT_ON)
@@ -261,7 +261,7 @@ static void do_macroatom_radrecomb(
   //zrand = 1. - 1e-14;
   double rate = 0;
   //nlevels = get_nlevels(element,*ion-1);
-  const int nlevels = get_bfcontinua(element, *ion - 1);
+  const int nlevels = get_ionisinglevels(element, *ion - 1);
   //nlevels = get_ionisinglevels(element,*ion-1);
   int lower;
   double epsilon_trans;
@@ -623,7 +623,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       {
         printout("[debug]    check recombination\n");
         //nlevels = get_nlevels(element,ion-1);
-        const int nlevels = get_bfcontinua(element, ion - 1);
+        const int nlevels = get_ionisinglevels(element, ion - 1);
         //nlevels = get_ionisinglevels(element,ion-1);
         for (int lower = 0; lower < nlevels; lower++)
         {
@@ -860,7 +860,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         //zrand = 1. - 1e-14;
         rate = 0.;
         //nlevels = get_nlevels(element,ion-1);
-        const int nlevels = get_bfcontinua(element, ion - 1);
+        const int nlevels = get_ionisinglevels(element, ion - 1);
         //nlevels = get_ionisinglevels(element,ion-1);
         for (lower = 0; lower < nlevels; lower++)
         {

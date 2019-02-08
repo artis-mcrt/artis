@@ -29,7 +29,10 @@ static const int NLTEITER = 30;
 static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 // store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
-static const bool DETAILED_LINE_ESTIMATORS_ON = false;
+#define DETAILED_LINE_ESTIMATORS_ON false
+
+// store detailed bound-free rate estimators
+#define DETAILED_BF_ESTIMATORS_ON true
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
@@ -58,6 +61,9 @@ static const bool SKIPRATECOEFFVALIDATION = false;
 
 #include "types.h"
 
+#if (DETAILED_BF_ESTIMATORS_ON && !NO_LUT_PHOTOION)
+  #error Must use NO_LUT_PHOTOION with DETAILED_BF_ESTIMATORS_ON
+#endif
 
 #if !defined DO_EXSPEC && !defined MPI_ON
   // #define MPI_ON //only needed for debugging MPI, the makefile will switch this on
@@ -474,7 +480,6 @@ int maxion;
 FILE *restrict tau_file;
 FILE *restrict tb_file;
 FILE *restrict heating_file;
-FILE *restrict estimators_file;
 
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
 extern bool neutral_flag;

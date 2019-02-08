@@ -55,7 +55,7 @@ void calculate_kpkt_rates(int modelgridindex)
         // mastate[tid].ion = ion;
         const int nlevels_currention = get_nlevels(element,ion);
         //ionisinglevels = get_ionisinglevels(element,ion);
-        const int ionisinglevels = get_bfcontinua(element,ion);
+        const int ionisinglevels = get_ionisinglevels(element,ion);
         //double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
         const double nncurrention = ionstagepop(modelgridindex, element, ion);
 
@@ -263,7 +263,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   // mastate[tid].ion = ion;
   const int nlevels_currention = get_nlevels(element,ion);
   //ionisinglevels = get_ionisinglevels(element,ion);
-  const int ionisinglevels = get_bfcontinua(element,ion);
+  const int ionisinglevels = get_ionisinglevels(element,ion);
   //double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
   const double nncurrention = ionstagepop(modelgridindex,element,ion);
 

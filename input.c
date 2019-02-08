@@ -37,6 +37,8 @@ typedef struct
 
 static void read_phixs_data(void)
 {
+  nbfcontinua_ground = 0;
+  nbfcontinua = 0;
   long mem_usage_phixs = 0;
   long mem_usage_phixsderivedcoeffs = 0;
   printout("readin phixs data\n");
@@ -211,6 +213,9 @@ static void read_phixs_data(void)
 
           //nbfcontinua++;
           //printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
+          nbfcontinua += get_nphixstargets(element, lowerion, lowerlevel);
+          if (lowerlevel < get_nlevels_groundterm(element, lowerion))
+            nbfcontinua_ground += get_nphixstargets(element, lowerion, lowerlevel);
           skip_this_phixs_table = false;
       }
       else
@@ -241,6 +246,7 @@ static void read_phixs_data(void)
       }
     }
   }
+
   fclose(phixsdata);
   printout("mem_usage: photoionisation tables occupy %.1f MB\n", mem_usage_phixs / 1024. / 1024.);
   printout("mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and corrphotoioncoeff/bfheating if enabled) occupy %.1f MB\n",
@@ -664,22 +670,6 @@ static int calculate_nlevels_groundterm(int element, int ion)
     }
   }
 
-  // all levels in the ground term should be photoionisation targets from the lower ground state
-  if (ion > 0 && ion < get_nions(element) - 1)
-  {
-    if (get_phixsupperlevel(element, ion - 1, 0, 0) == 0)
-    {
-      const int nphixstargets = get_nphixstargets(element, ion - 1, 0);
-      const int phixstargetlevels = get_phixsupperlevel(element, ion - 1, 0, nphixstargets - 1) + 1;
-      // assert(nlevels_groundterm == phixstargetlevels);
-      if (nlevels_groundterm != phixstargetlevels)
-      {
-        printout("WARNING: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d\n",
-                 get_element(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
-      }
-    }
-  }
-
   return nlevels_groundterm;
 }
 
@@ -956,7 +946,6 @@ static void read_atomicdata_files(void)
           printout("[fatal] input: not enough memory to initialize phixslist for element %d, ion %d ... abort\n",element,ion);
           abort();
         }*/
-        nbfcontinua += get_bfcontinua(element,ion);//elements[element].ions[ion].ionisinglevels;//nlevelsmax;
       }
     }
   }
@@ -1052,6 +1041,15 @@ static void read_atomicdata_files(void)
     }
   }
 
+  for (int element = 0; element < nelements; element++)
+  {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
+    {
+      elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
+    }
+  }
+
   /// Photoionisation cross-sections
   ///======================================================
   ///finally read in photoionisation cross sections and store them to the atomic data structure
@@ -1062,7 +1060,23 @@ static void read_atomicdata_files(void)
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
-      elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
+      const int nlevels_groundterm = elements[element].ions[ion].nlevels_groundterm;
+
+      // all levels in the ground term should be photoionisation targets from the lower ground state
+      if (ion > 0 && ion < get_nions(element) - 1)
+      {
+        if (get_phixsupperlevel(element, ion - 1, 0, 0) == 0)
+        {
+          const int nphixstargets = get_nphixstargets(element, ion - 1, 0);
+          const int phixstargetlevels = get_phixsupperlevel(element, ion - 1, 0, nphixstargets - 1) + 1;
+
+          if (nlevels_groundterm != phixstargetlevels)
+          {
+            printout("WARNING: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d\n",
+                     get_element(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
+          }
+        }
+      }
     }
   }
 
@@ -1303,7 +1317,7 @@ static void setup_coolinglist(void)
       /// Ionisinglevels below the closure ion add to bf and col ionisation
       if (ion < nions - 1)
       //  add += 2 * get_ionisinglevels(element,ion);
-        add += 2 * get_bfcontinua(element,ion);
+        add += 2 * get_ionisinglevels(element,ion);
       /// All the levels add number of col excitations
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
@@ -1366,8 +1380,7 @@ static void setup_phixs_list(void)
 {
   /// SET UP THE PHIXSLIST
   ///======================================================
-  printout("[info] read_atomicdata: number of bfcontinua %d\n",nbfcontinua);
-  nbfcontinua_ground = includedions - nelements;
+  printout("[info] read_atomicdata: number of bfcontinua %d\n", nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", nbfcontinua_ground);
 
   phixslist = (phixslist_t *) malloc(nthreads * sizeof(phixslist_t));
@@ -1405,17 +1418,25 @@ static void setup_phixs_list(void)
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions-1; ion++)
       {
-        const int level = 0;
-        // const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
-        // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-        const double E_threshold = get_phixs_threshold(element, ion, level, 0);
-        const double nu_edge = E_threshold / H;
-        phixslist[itid].groundcont[i].element = element;
-        phixslist[itid].groundcont[i].ion = ion;
-        phixslist[itid].groundcont[i].level = level;
-        phixslist[itid].groundcont[i].nu_edge = nu_edge;
-        //printout("phixslist.groundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
-        i++;
+        const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
+        for (int level = 0; level < nlevels_groundterm; level++)
+        {
+          const int nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+          {
+            // const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
+            // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+            const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+            const double nu_edge = E_threshold / H;
+            phixslist[itid].groundcont[i].element = element;
+            phixslist[itid].groundcont[i].ion = ion;
+            phixslist[itid].groundcont[i].level = level;
+            phixslist[itid].groundcont[i].nu_edge = nu_edge;
+            phixslist[itid].groundcont[i].phixstargetindex = phixstargetindex;
+            //printout("phixslist.groundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
+            i++;
+          }
+        }
       }
     }
     ///sort groundcont in ascending order of nu_edge
@@ -1437,33 +1458,39 @@ static void setup_phixs_list(void)
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++)
       {
-        const int nlevels = get_bfcontinua(element, ion);
+        const int nlevels = get_ionisinglevels(element, ion);
         //nlevels = get_ionisinglevels(element,ion);
         ///// The following line reduces the number of bf-continua per ion
         //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
         for (int level = 0; level < nlevels; level++)
         {
-          // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
-          // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-          const double E_threshold = get_phixs_threshold(element, ion, level, 0);
-          const double nu_edge = E_threshold / H;
+          const int nphixstargets = get_nphixstargets(element, ion, level);
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+          {
+            // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
+            // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+            const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+            const double nu_edge = E_threshold / H;
 
-          int index_in_groundlevelcontestimator;
+            int index_in_groundlevelcontestimator;
 
-          phixslist[itid].allcont[i].element = element;
-          phixslist[itid].allcont[i].ion = ion;
-          phixslist[itid].allcont[i].level = level;
-          phixslist[itid].allcont[i].nu_edge = nu_edge;
-          phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
-//          printout("phixslist.allcont nbfcontinua_allcont %d, i %d, element Z = %d, ionstage %d, level %d, nu_edge %g, edge_eV %g\n",nbfcontinua,i,get_element(element),get_ionstage(element, ion),level,nu_edge, E_threshold);
-          #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-            if (itid == 0)
-              elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
-          #endif
-          i++;
+            phixslist[itid].allcont[i].element = element;
+            phixslist[itid].allcont[i].ion = ion;
+            phixslist[itid].allcont[i].level = level;
+            phixslist[itid].allcont[i].phixstargetindex = phixstargetindex;
+            phixslist[itid].allcont[i].nu_edge = nu_edge;
+            phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
+            //          printout("phixslist.allcont nbfcontinua_allcont %d, i %d, element Z = %d, ionstage %d, level %d, nu_edge %g, edge_eV %g\n",nbfcontinua,i,get_element(element),get_ionstage(element, ion),level,nu_edge, E_threshold);
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+              if (itid == 0)
+                elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
+            #endif
+            i++;
+          }
         }
       }
     }
+
     //nbfcontinua = i;
     //printout("number of bf-continua reduced to %d\n",nbfcontinua);
     qsort(phixslist[itid].allcont, nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
@@ -1478,7 +1505,6 @@ static void read_atomicdata(void)
 /// Subroutine to read in input parameters.
 {
   ///new atomic data scheme by readin of adata////////////////////////////////////////////////////////////////////////
-  nbfcontinua = 0;
   includedions = 0;
 
   read_atomicdata_files();

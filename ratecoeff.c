@@ -33,10 +33,10 @@ static double T_step_log;
 typedef struct
 {
   double nu_edge;
+  double departure_ratio;
+  float *photoion_xs;
+  float T_e;
   int modelgridindex;
-  int element;
-  int ion;
-  int level;
 } gsl_integral_paras_gammacorr;
 
 typedef struct
@@ -160,7 +160,7 @@ static bool read_ratecoeff_dat(void)
         {
           //nlevels = get_nlevels(element,ion);
           const int nlevels = get_ionisinglevels(element,ion); /// number of ionising levels associated with current ion
-          // int nbfcont = get_bfcontinua(element,ion);     /// number of ionising levels of the current ion which are used in the simulation
+          // int nbfcont = get_ionisinglevels(element,ion);     /// number of ionising levels of the current ion which are used in the simulation
           for (int level = 0; level < nlevels; level++)
           {
             /// Loop over the phixs target states
@@ -812,8 +812,10 @@ double calculate_ionrecombcoeff(
     if (per_groundmultipletpop)
     {
       // assume that photoionisation of the ion below is only to the ground multiplet levels of the current ion
-      const int nphixstargets = get_nphixstargets(element, lowerion, 0);
-      upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets - 1) + 1;
+      // const int nphixstargets = get_nphixstargets(element, lowerion, 0);
+      // upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets - 1) + 1;
+
+      upper_nlevels = get_nlevels_groundterm(element, lowerion + 1);
     }
     else
     {
@@ -884,17 +886,17 @@ double calculate_ionrecombcoeff(
         alpha += alpha_level;
         if (printdebug && alpha_level > 0.)
         {
-          fprintf(estimators_file, "\nrecomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha %7.2e alpha_sum %7.2e nnlevel %7.2e nnionfrac %7.2e\n",
-                  get_element(element), get_ionstage(element, lowerion + 1),
-                  get_ionstage(element, lowerion), upper + 1, lower + 1, alpha_level, alpha,
-                  nnupperlevel, nnupperlevel_so_far / nnupperion);
+          printout("recomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha %7.2e alpha_sum %7.2e nnlevel %7.2e nnionfrac %7.2e\n",
+                   get_element(element), get_ionstage(element, lowerion + 1),
+                   get_ionstage(element, lowerion), upper + 1, lower + 1, alpha_level, alpha,
+                   nnupperlevel, nnupperlevel_so_far / nnupperion);
         }
       }
     }
   }
   if (printdebug)
   {
-    fprintf(estimators_file, "recomb_debug: Z=%2d ionstage %d->%d upper+1 [all] lower+1 [all] Alpha %g\n",
+    printout("recomb_debug: Z=%2d ionstage %d->%d upper+1 [all] lower+1 [all] Alpha %g\n",
              get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
   return alpha;
@@ -1103,7 +1105,7 @@ static void precalculate_ion_alpha_sp()
       {
         //nlevels = get_nlevels(element, ion);
         //nlevels = get_ionisinglevels(element, ion); ///number of levels of the current ion which have an associated photoion cross section
-        const int nlevels = get_bfcontinua(element, ion); /// number of ionising levels used in the simulation
+        const int nlevels = get_ionisinglevels(element, ion); /// number of ionising levels used in the simulation
         double zeta = 0.;
         for (int level = 0; level < nlevels; level++)
         {
@@ -1193,16 +1195,20 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 {
   const gsl_integral_paras_gammacorr *const restrict params = (gsl_integral_paras_gammacorr *) voidparas;
   const int modelgridindex = params->modelgridindex;
-  const double T_R = get_TR(modelgridindex);
+  const float T_e = params->T_e;
+  double corrfactor = 1 - params->departure_ratio * exp(-HOVERKB * nu / T_e);
 
-  const float sigma_bf = photoionization_crosssection(params->element, params->ion, params->level, params->nu_edge, nu);
+  if (corrfactor < 0)
+    corrfactor = 1;
+
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
   //TODO: MK thesis page 41, use population ratios and Te?
-  return ONEOVERH * sigma_bf / nu * radfield(nu, modelgridindex) * (1 - exp(-HOVERKB * nu / T_R));
+  return ONEOVERH * sigma_bf / nu * radfield(nu, modelgridindex) * corrfactor;
 }
 
 
-static double calculate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+static double calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   const double epsrel = 2e-4;
   const double epsabs = 0.;
@@ -1219,9 +1225,16 @@ static double calculate_corrphotoioncoeff(int element, int ion, int level, int p
   gsl_integral_paras_gammacorr intparas;
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
-  intparas.element = element;
-  intparas.ion = ion;
-  intparas.level = level;
+  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
+  const float T_e = get_Te(modelgridindex);
+  intparas.T_e = T_e;
+  const double nne = get_nne(modelgridindex);
+  const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_threshold);
+  const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+  const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+  const double departure_ratio = nnupperionlevel / nnlevel * nne * sf; // put that to phixslist
+  intparas.departure_ratio = departure_ratio;
 
   gsl_function F_gammacorr;
   F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
@@ -1450,13 +1463,29 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
       gammacorr = calculate_corrphotoioncoeff_summation(element, ion, level, phixstargetindex, modelgridindex); ///Sum bins over range of frequency bins using mid-point of bin
     }
   #else
-    const double W = get_W(modelgridindex);
-    const double T_R = get_TR(modelgridindex);
+  if (DETAILED_BF_ESTIMATORS_ON)
+  {
+    gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+    // will be -1 if no estimators available
+  }
+  if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0)
+  {
+    #if (NO_LUT_PHOTOION)
+    {
+      gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+    }
+    #else
+    {
+      const double W = get_W(modelgridindex);
+      const double T_R = get_TR(modelgridindex);
 
-    gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-    const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-    if (index_in_groundlevelcontestimator >= 0)
-      gammacorr *= corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimator];
+      gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+      const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+      if (index_in_groundlevelcontestimator >= 0)
+        gammacorr *= corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimator];
+    }
+    #endif
+  }
   #endif
   if (use_cellhist)
     cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
@@ -1688,7 +1717,7 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
   {
     const float T_e = get_Te(modelgridindex);
     const float nne = get_nne(modelgridindex);
-    const int ionisinglevels = get_bfcontinua(element,ion);
+    const int ionisinglevels = get_ionisinglevels(element,ion);
 
     double Col_ion = 0.;
     for (int level = 0; level < ionisinglevels; level++)
@@ -1717,7 +1746,7 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
 
 double calculate_iongamma_per_ionpop(
   const int modelgridindex, const float T_e, const int element, const int lowerion,
-  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug)
+  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool use_bfest)
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate
 {
   assert(lowerion < get_nions(element) - 1);
@@ -1726,7 +1755,7 @@ double calculate_iongamma_per_ionpop(
 
   // const double nnlowerion = ionstagepop(modelgridindex, element, lowerion);
   double nnlowerion = 0.;
-  for (int lower = 0; lower < get_bfcontinua(element, lowerion); lower++)
+  for (int lower = 0; lower < get_ionisinglevels(element, lowerion); lower++)
   {
     double nnlowerlevel;
     if (assume_lte)
@@ -1771,22 +1800,40 @@ double calculate_iongamma_per_ionpop(
     {
       const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
 
-      double gamma_coeff = 0.;
+      double gamma_coeff_integral = 0.;
+      double gamma_coeff_bfest = 0.;
+      double gamma_coeff_used = 0.;
       if (collisional_not_radiative)
       {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        gamma_coeff += col_ionization_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
+        gamma_coeff_used += col_ionization_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex, epsilon_trans);
       }
       else
-        gamma_coeff += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, modelgridindex);
-
-      const double gamma_ion_contribution = gamma_coeff * nnlowerlevel / nnlowerion;
-      gamma_ion += gamma_ion_contribution;
-      if (printdebug && gamma_ion_contribution > 0.)
       {
-        fprintf(estimators_file, "gamma: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d gamma %7.2e\n",
+        gamma_coeff_integral += calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+        gamma_coeff_bfest += get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+        gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, modelgridindex);
+      }
+
+      const double gamma_ion_contribution_integral = gamma_coeff_integral * nnlowerlevel / nnlowerion;
+      const double gamma_ion_contribution_bfest = gamma_coeff_bfest * nnlowerlevel / nnlowerion;
+      const double gamma_ion_contribution_used = gamma_coeff_used * nnlowerlevel / nnlowerion;
+      if (use_bfest)
+      {
+        gamma_ion += gamma_ion_contribution_bfest;
+      }
+      else
+      {
+        gamma_ion += gamma_ion_contribution_integral;
+      }
+
+      if (printdebug && gamma_ion_contribution_bfest > 0. && lower < 50)
+      {
+        const double threshold_angstroms = 1e8 * CLIGHT / (get_phixs_threshold(element, lowerion, lower, phixstargetindex) / H);
+        printout("gamma: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d lambda_threshold %7.1f gamma_integral %7.2e gamma_bfest %7.2e gamma_used %7.2e\n",
                 get_element(element), get_ionstage(element, lowerion),
-                get_ionstage(element, lowerion + 1), lower + 1, upper + 1, gamma_ion_contribution);
+                get_ionstage(element, lowerion + 1), lower + 1, upper + 1, threshold_angstroms, gamma_ion_contribution_integral,
+                gamma_ion_contribution_bfest, gamma_ion_contribution_used);
       }
     }
   }
