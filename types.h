@@ -19,7 +19,7 @@
 
 // Maximum number of energy packets in calculation.
 //25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625
-#define MPKTS 20000
+#define MPKTS 3000000
 
 //26 //27 //9
 #define MELEMENTS 17
@@ -119,12 +119,15 @@ typedef struct heatingrates_t
 typedef struct fullphixslist_t
 {
   double nu_edge;
-  double kappa_bf_contr;
   int element;
   int ion;
-  int level;          ///limited to 32767 levels
+  int level;
+  int phixstargetindex;
   int index_in_groundphixslist;
-  //double nnlevel;
+  double kappa_bf_contr;
+#if (DETAILED_BF_ESTIMATORS_ON)
+  double gamma_contr;
+#endif
 } fullphixslist_t;
 
 typedef struct groundphixslist_t
@@ -136,7 +139,8 @@ typedef struct groundphixslist_t
   //double bfheating_contr;
   int element;
   int ion;
-  int level;          ///limited to 32767 levels
+  int level;
+  int phixstargetindex;
 } groundphixslist_t;
 
 

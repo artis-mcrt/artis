@@ -489,6 +489,7 @@ static void rpkt_event(PKT *restrict pkt_ptr, const int rpkt_eventtype, double t
           const int element = phixslist[tid].allcont[i].element;
           const int ion = phixslist[tid].allcont[i].ion;
           const int level = phixslist[tid].allcont[i].level;
+          const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
 
 #ifdef DEBUG_ON
           if (debuglevel == 2)
@@ -514,7 +515,8 @@ static void rpkt_event(PKT *restrict pkt_ptr, const int rpkt_eventtype, double t
             #endif
             mastate[tid].element = element;
             mastate[tid].ion     = ion + 1;
-            const int upper = 0; //TODO: this should come from phixsupperlevel;
+            // const int upper = 0; //TODO: this should come from phixsupperlevel;
+            const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
             mastate[tid].level   = upper;
             // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
             mastate[tid].activatingline = -99;
@@ -974,6 +976,178 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
   //printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
+static double calculate_kappa_ff(const int modelgridindex, const double nu)
+/// free-free opacity
+{
+  const double g_ff = 1;
+
+  const float nne = get_nne(modelgridindex);
+  const float T_e = get_Te(modelgridindex);
+
+  double kappa_ff = 0.;
+  //kappa_ffheating = 0.;
+
+  for (int element = 0; element < nelements; element++)
+  {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
+    {
+      ///calculate population of ionstage ...
+      const double nnion = ionstagepop(modelgridindex, element, ion); // TODO: nnetot should be get_tot_nions???
+      //Z = get_element(element);  ///atomic number
+      //if (get_ionstage(element,ion) > 1)
+      /// Z is ionic charge in the following formula
+      const int Z = get_ionstage(element,ion) - 1;
+      if (Z > 0)
+      {
+        //kappa_ff += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
+        kappa_ff += pow(Z, 2) * g_ff * nnion;
+        //kappa_ffheating += pow(Z,2) * g_ff * nnion;
+        /// heating with level dependence
+        //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1 - exp(-HOVERKB*nu/T_e));
+        /// heating without level dependence
+        //kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
+      }
+    }
+  }
+  kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB*nu/T_e));
+  //kappa_ff *= 1e5;
+  return kappa_ff;
+}
+
+
+static double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
+// bound-free opacity
+{
+  for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
+  {
+    phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
+  }
+
+  double kappa_bf = 0.;
+  const double nnetot = get_nnetot(modelgridindex);
+  for (int i = 0; i < nbfcontinua; i++)
+  {
+    const int element = phixslist[tid].allcont[i].element;
+    const int ion = phixslist[tid].allcont[i].ion;
+    const int level = phixslist[tid].allcont[i].level;
+    /// The bf process happens only if the current cell contains
+    /// the involved atomic species
+    if ((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level < 10)))
+    {
+      const double nu_edge = phixslist[tid].allcont[i].nu_edge;
+      const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
+      const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      //printout("i %d, nu_edge %g\n",i,nu_edge);
+
+      if (nu >= nu_edge)
+      {
+        //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
+
+        //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
+        //if (fabs(nnlevel - phixslist[tid].allcont[i].nnlevel) > 0)
+        //{
+        //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);
+        //  printout("pkt_ptr->number %d\n",pkt_ptr->number);
+        //}
+        const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
+        const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
+        const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+        const double nnionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+        const double T_e = get_Te(modelgridindex);
+        const double nne = get_nne(modelgridindex);
+        const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_edge);
+        const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+
+        double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
+        // printout("Z=%d ionstage %d level %d corrfactor %g departure_ratio %g\n", get_element(element), get_ionstage(element, ion), level, corrfactor, departure_ratio);
+
+        if (corrfactor < 0)
+          corrfactor = 1;
+
+        double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
+
+        #if (DETAILED_BF_ESTIMATORS_ON)
+        phixslist[tid].allcont[i].gamma_contr = sigma_bf * probability * corrfactor;
+        #endif
+
+        if (level == 0)
+        {
+          const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+          phixslist[tid].groundcont[gphixsindex].gamma_contr += sigma_bf * probability * corrfactor;
+        }
+
+        if (kappa_bf_contr < 0)
+        {
+          #ifdef DEBUG_ON
+            //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution T_e %g, T_R %g, W %g, E_threshold %g, kappa_bf_contr %g\n", T_e,cell[pkt_ptr->where].T_R,cell[pkt_ptr->where].W,nu_edge*H,nnlevel*sigma_bf);
+            //printout("[warning] calculate_kappa_rpkt_cont: set this contribution to zero\n");
+            if (fabs(kappa_bf_contr) > 1e-10)
+              printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnlevel %g, nne %g, sigma_bf %g)\n",
+                kappa_bf_contr, element, ion, level, nnlevel, get_nne(modelgridindex), sigma_bf);
+          #endif
+          kappa_bf_contr = 0.;
+        }
+        /*
+        else
+        {
+          phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
+          phixslist[tid].allcont[i].photoion_contr = nnlevel * sigma_bf;
+          phixslist[tid].allcont[i].stimrecomb_contr = sf * sigma_bf;
+        }*/
+        //kappa_bf_contr *= 2;
+        phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
+        kappa_bf += kappa_bf_contr;
+        #ifdef DEBUG_ON
+          if (!isfinite(kappa_bf_contr))
+          {
+            printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",kappa_bf_contr);
+            printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
+            printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
+            printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
+            printout("[fatal] nne %g, nnlevel %g, (or %g)\n", get_nne(modelgridindex), nnlevel, calculate_exclevelpop(modelgridindex,element,ion,level));
+            printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,get_Te(modelgridindex),nu,nu_edge);
+            abort();
+          }
+        #endif
+      }
+      else // nu < nu_edge
+      {
+        /// The important part of phixslist is sorted by nu_edge in ascending order
+        /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
+        /// is possible, therefore leave the loop.
+
+        // the rest of the list shouldn't be accessed
+        // but set them to zero to be safe. This is a fast operation anyway.
+        // if the packet's nu increases, this function must re-run to re-calculate kappa_bf_contr
+        // a slight red-shifting is ignored
+        for (int j = i; j < nbfcontinua; j++)
+        {
+          phixslist[tid].allcont[j].kappa_bf_contr = 0.;
+          #if (DETAILED_BF_ESTIMATORS_ON)
+          phixslist[tid].allcont[j].gamma_contr = 0.;
+          #endif
+        }
+        break;
+      }
+    }
+    else // no element present or not an important level
+    {
+      phixslist[tid].allcont[i].kappa_bf_contr = 0.;
+      #if (DETAILED_BF_ESTIMATORS_ON)
+      phixslist[tid].allcont[i].gamma_contr = 0.;
+      #endif
+      if (phixslist[tid].allcont[i].level == 0)
+      {
+        const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+        phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
+      }
+    }
+  }
+  return kappa_bf;
+}
+
 
 void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current)
 {
@@ -988,9 +1162,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
   if (do_r_lc)
   {
     const float nne = get_nne(modelgridindex);
-    const float T_e = get_Te(modelgridindex);
-    const double nu = pkt_ptr->nu_cmf;
-    const double g_ff = 1;
+    const double nu_cmf = pkt_ptr->nu_cmf;
+
     if (opacity_case == 4)
     {
       /// First contribution: Thomson scattering on free electrons
@@ -1002,161 +1175,12 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
       //sigma *= 0.1;
 
       /// Second contribution: free-free absorption
-      kappa_ff = 0.;
-      /// Estimator for bound-free heating
-      //kappa_ffheating = 0.;
-
-      double ionpops_local[MELEMENTS][MIONS];
-      for (int element = 0; element < nelements; element++)
-      {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++)
-        {
-          ///calculate population of ionstage ...
-          const double nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
-          ionpops_local[element][ion] = nnion / get_nnetot(modelgridindex);
-          //Z = get_element(element);  ///atomic number
-          //if (get_ionstage(element,ion) > 1)
-          /// Z is ionic charge in the following formula
-          const int Z = get_ionstage(element,ion) - 1;
-          if (Z > 0)
-          {
-            //kappa_ff += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1-exp(-HOVERKB*nu/T_e));
-            kappa_ff += pow(Z,2) * g_ff * nnion;
-            //kappa_ffheating += pow(Z,2) * g_ff * nnion;
-            /// heating with level dependence
-            //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1 - exp(-HOVERKB*nu/T_e));
-            /// heating without level dependence
-            //kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
-          }
-        }
-      }
-      kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
-      //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB*nu/T_e));
+      kappa_ff = calculate_kappa_ff(modelgridindex, nu_cmf);
       kappa_ffheating = kappa_ff;
-      //kappa_ff *= 1e5;
 
       /// Third contribution: bound-free absorption
-      kappa_bf = 0.;
-      for (int i = 0; i < nbfcontinua; i++)
-      {
-        const int element = phixslist[tid].allcont[i].element;
-        const int ion = phixslist[tid].allcont[i].ion;
-        const int level = phixslist[tid].allcont[i].level;
-        /// The bf process happens only if the current cell contains
-        /// the involved atomic species
-        if ((get_abundance(modelgridindex,element) > 0) && ((ionpops_local[element][ion] > 1.e-6) || (level == 0)))
-        {
-          const double nu_edge = phixslist[tid].allcont[i].nu_edge;
-          const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
-          //printout("i %d, nu_edge %g\n",i,nu_edge);
-          if (nu >= nu_edge && nnlevel > 0)
-          {
-            //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
+      kappa_bf = calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf);
 
-            //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
-            //if (fabs(nnlevel - phixslist[tid].allcont[i].nnlevel) > 0)
-            //{
-            //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);
-            //  printout("pkt_ptr->number %d\n",pkt_ptr->number);
-            //}
-            mastate[tid].element = element;
-            mastate[tid].ion = ion;
-            mastate[tid].level = level;
-            const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
-            double kappa_bf_contr = 0.0; //corrfactor
-            const int nphixstargets = get_nphixstargets(element,ion,level);
-            if (nphixstargets > 0)
-            {
-              const int upper = get_phixsupperlevel(element, ion, level, 0);
-              const double probability = get_phixsprobability(element, ion, level, 0);
-              const double nnionlevel = get_levelpop(modelgridindex, element,ion + 1, upper);
-              const double sf = get_sahafact(element, ion, level, 0, T_e, H * nu_edge);
-              const double helper = nnlevel * sigma_bf * probability;
-              const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
-
-              kappa_bf_contr = helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
-
-              if (level == 0)
-              {
-                const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
-                double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
-                if (corrfactor < 0)
-                  corrfactor = 1;
-                phixslist[tid].groundcont[gphixsindex].gamma_contr = sigma_bf * probability * corrfactor;
-              }
-            }
-            for (int phixstargetindex = 1; phixstargetindex < nphixstargets; phixstargetindex++)
-            {
-              const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-              const double nnionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-              const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_edge);
-              const double helper = nnlevel * sigma_bf * get_phixsprobability(element, ion, level, phixstargetindex);
-              const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
-
-              kappa_bf_contr += helper * (1 - departure_ratio * exp(-HOVERKB * nu / T_e));
-            }
-
-            if (kappa_bf_contr < 0)
-            {
-              #ifdef DEBUG_ON
-                //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution T_e %g, T_R %g, W %g, E_threshold %g, kappa_bf_contr %g\n", T_e,cell[pkt_ptr->where].T_R,cell[pkt_ptr->where].W,nu_edge*H,nnlevel*sigma_bf);
-                //printout("[warning] calculate_kappa_rpkt_cont: set this contribution to zero\n");
-                if (fabs(kappa_bf_contr) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnlevel %g, nne %g, sigma_bf %g)\n", kappa_bf_contr,element,ion,level,nnlevel,nne,sigma_bf);
-              #endif
-              kappa_bf_contr = 0.;
-              //phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
-              //phixslist[tid].allcont[i].photoion_contr = 0.;
-              //phixslist[tid].allcont[i].stimrecomb_contr = 0.;
-            }
-            /*
-            else
-            {
-              phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
-              phixslist[tid].allcont[i].photoion_contr = nnlevel * sigma_bf;
-              phixslist[tid].allcont[i].stimrecomb_contr = sf * sigma_bf;
-            }*/
-            //kappa_bf_contr *= 2;
-            phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
-            kappa_bf += kappa_bf_contr;
-            #ifdef DEBUG_ON
-              if (!isfinite(kappa_bf_contr))
-              {
-                printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",kappa_bf_contr);
-                printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
-                printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
-                printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
-                printout("[fatal] nne %g, nnlevel %g, (or %g)\n", nne, nnlevel, calculate_exclevelpop(modelgridindex,element,ion,level));
-                printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,T_e,nu,nu_edge);
-                abort();
-              }
-            #endif
-          }
-          /// The important part of phixslist is sorted by nu_edge in ascending order
-          /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
-          /// is possible, therefore leave the loop.
-          else
-            break;
-          //  {
-          //  /// Set photoion_contr to zero for continua with nu < nu_edge
-          //  /// to get the correct estimators for the photoionisation rate coefficients
-          //  for (ii = i; ii < importantbfcontinua; ii++) phixslist[tid].allcont[ii].photoion_contr = 0;
-          //  break;
-          //}
-        }
-        else
-        {
-          phixslist[tid].allcont[i].kappa_bf_contr = 0.;
-          if (phixslist[tid].allcont[i].level == 0)
-          {
-            const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
-            //phixslist[tid].groundcont[gphixsindex].photoion_contr = 0.;
-            phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
-            //phixslist[tid].groundcont[gphixsindex].stimrecomb_contr = 0.;
-            //phixslist[tid].groundcont[gphixsindex].bfheating_contr = 0.;
-          }
-        }
-      }
       kappa_rpkt_cont[tid].bf_inrest = kappa_bf;
     }
     else
@@ -1174,23 +1198,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
       */
 
       /// Second contribution: free-free absorption
-      kappa_ff = 0.;
-      for (int element = 0; element < nelements; element++)
-      {
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions; ion++)
-        {
-          ///calculate population of ionstage ...
-          const double nnion = ionstagepop(modelgridindex,element,ion); ///partfunct needs to be adjusted
-          /// Z is ionic charge in the following formula
-          const int Z = get_ionstage(element,ion)-1;
-          if (Z > 0)
-          {
-            kappa_ff += pow(Z,2) * g_ff * nnion;
-          }
-        }
-      }
-      kappa_ff *= 1e5 * 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+      kappa_ff = 1e5 * calculate_kappa_ff(modelgridindex, nu_cmf);
+
       kappa_bf = 0.;
     }
 

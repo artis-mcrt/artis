@@ -7,6 +7,7 @@ double last_phixs_nuovernuedge; // last photoion cross section point as a factor
 
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 int get_tot_nions(void);
+double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
 
 inline int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
@@ -135,18 +136,6 @@ inline double stat_weight(int element, int ion, int level)
   }
   #endif
   return elements[element].ions[ion].levels[level].stat_weight;
-}
-
-
-inline int get_bfcontinua(int element, int ion)
-/// Returns the number of bf-continua associated with ion ion of element element.
-{
-  const int nionisinglevels = get_ionisinglevels(element,ion);
-
-  if (nionisinglevels < max_bf_continua)
-    return nionisinglevels;
-  else
-    return max_bf_continua;
 }
 
 
@@ -313,59 +302,8 @@ inline double statw_lower(int lineindex)
 
 
 inline double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu)
-/// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
-/// Input: - edge frequency nu_edge of the desired bf-continuum
-///        - nu
 {
-  float sigma_bf;
-  if (nu == nu_edge)
-  {
-    sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[0];
-  }
-  else
-  {
-    const double ireal = (nu / nu_edge - 1.0) / NPHIXSNUINCREMENT;
-    const int i = floor(ireal);
-
-    if (i < 0)
-    {
-      sigma_bf = 0.0;
-      //printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
-      //printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
-      //printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
-      //printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
-      //abort();
-    }
-    else if (i < NPHIXSPOINTS - 1)
-    {
-      // sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
-
-      const double sigma_bf_a = elements[element].ions[ion].levels[level].photoion_xs[i];
-      const double sigma_bf_b = elements[element].ions[ion].levels[level].photoion_xs[i + 1];
-      const double factor_b = ireal - i;
-      sigma_bf = ((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b);
-    }
-    else
-    {
-      /// use a parameterization of sigma_bf by the Kramers formula
-      /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
-      /// so far the highest grid point, otherwise the cross-section is not continuous
-      const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-      sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs / nu, 3);
-    }
-  }
-
-  #ifdef DEBUG_ON
-    if (sigma_bf < 0)
-    {
-      //printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
-      //printout("[warning]   nu=%g,  nu_edge=%g\n",nu,nu_edge);
-      //printout("[warning]   xs@edge=%g, xs@maxfreq\n",elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
-      //printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
-    }
-  #endif
-
-  return sigma_bf;
+  return photoionization_crosssection_fromtable(elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);
 }
 
 
@@ -377,7 +315,7 @@ inline double photoionization_crosssection_macroatom(double nu_edge, double nu)
   const int ion = mastate[tid].ion;
   const int level = mastate[tid].level;
 
-  return photoionization_crosssection(element, ion, level, nu_edge, nu);
+  return photoionization_crosssection_fromtable(elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);
 }
 
 /*static double osc_strength_old(int lineindex)
