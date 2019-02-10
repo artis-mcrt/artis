@@ -57,7 +57,7 @@ struct Jb_lu_estimator
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
 static const int BLOCKSIZEJBLUE = 128;
-static int detailed_linecount;
+static int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines
 static int *detailed_lineindicies;
@@ -209,16 +209,19 @@ static void realloc_detailed_lines(const int new_size)
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    prev_Jb_lu_normed[modelgridindex] = realloc(
-      prev_Jb_lu_normed[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
-
-    Jb_lu_raw[modelgridindex] = realloc(
-      Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
-
-    if (prev_Jb_lu_normed[modelgridindex] == NULL || Jb_lu_raw[modelgridindex] == NULL)
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
-      printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
-      abort();
+      prev_Jb_lu_normed[modelgridindex] = realloc(
+        prev_Jb_lu_normed[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
+
+      Jb_lu_raw[modelgridindex] = realloc(
+        Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
+
+      if (prev_Jb_lu_normed[modelgridindex] == NULL || Jb_lu_raw[modelgridindex] == NULL)
+      {
+        printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
+        abort();
+      }
     }
   }
 }
@@ -236,12 +239,15 @@ static void add_detailed_line(const int lineindex)
 
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
   {
-    prev_Jb_lu_normed[modelgridindex][detailed_linecount].value = 0;
-    prev_Jb_lu_normed[modelgridindex][detailed_linecount].contribcount = 0;
+    if (get_numassociatedcells(modelgridindex) > 0)
+    {
+      prev_Jb_lu_normed[modelgridindex][detailed_linecount].value = 0;
+      prev_Jb_lu_normed[modelgridindex][detailed_linecount].contribcount = 0;
 
-    // radfield_zero_estimators should do the next part anyway, but just to be sure:
-    Jb_lu_raw[modelgridindex][detailed_linecount].value = 0;
-    Jb_lu_raw[modelgridindex][detailed_linecount].contribcount = 0;
+      // radfield_zero_estimators should do the next part anyway, but just to be sure:
+      Jb_lu_raw[modelgridindex][detailed_linecount].value = 0;
+      Jb_lu_raw[modelgridindex][detailed_linecount].contribcount = 0;
+    }
   }
   detailed_lineindicies[detailed_linecount] = lineindex;
   detailed_linecount++;
@@ -679,7 +685,7 @@ void radfield_zero_estimators(int modelgridindex)
 // for a timestep
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
-  if (radfield_initialized)
+  if (radfield_initialized && (get_numassociatedcells(modelgridindex) > 0))
   {
     for (int i = 0; i < nbfcontinua; i++)
     {
@@ -698,7 +704,7 @@ void radfield_zero_estimators(int modelgridindex)
 #ifndef FORCE_LTE
   nuJ[modelgridindex] = 0.;
 
-  if (MULTIBIN_RADFIELD_MODEL_ON && radfield_initialized && get_numassociatedcells(modelgridindex) > 0)
+  if (MULTIBIN_RADFIELD_MODEL_ON && radfield_initialized && (get_numassociatedcells(modelgridindex) > 0))
   {
     // printout("radfield: zeroing estimators in %d bins in cell %d\n",RADFIELDBINCOUNT,modelgridindex);
 

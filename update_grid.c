@@ -292,6 +292,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       }
       fprintf(estimators_file, "\n");
 
+      #if (DETAILED_BF_ESTIMATORS_ON)
       fprintf(estimators_file, "gamma_R_detail Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -304,6 +305,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
                 calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug_gammar, true));
       }
       fprintf(estimators_file, "\n");
+      #endif
 
       // fprintf(estimators_file, "gamma_C        Z=%2d", get_element(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
