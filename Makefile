@@ -12,7 +12,7 @@ ifneq (,$(findstring kelvin,$(HOSTNAME)))
  #  libs/gsl/1.16/gcc-4.4.7
 
   CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c11 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
+  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c99 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
   LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
 
   sn3d: CFLAGS += -DMPI_ON
