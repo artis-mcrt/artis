@@ -855,6 +855,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           jump = 1;
         #endif
 
+        ma_stat_internaldownlower++;
+
         /// Randomly select the occuring transition
         zrand = gsl_rng_uniform(rng);
         //zrand = 1. - 1e-14;
@@ -929,6 +931,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           jump = 3;
         #endif
 
+        ma_stat_internaluphigher++;
         do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
         break;
 
