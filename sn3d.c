@@ -82,7 +82,9 @@ static void pkt_action_counters_reset(void)
   ma_stat_deactivation_collrecomb = 0;
   ma_stat_deactivation_bb = 0;
   ma_stat_deactivation_fb = 0;
+  ma_stat_internaluphigher = 0;
   ma_stat_internaluphighernt = 0;
+  ma_stat_internaldownlower = 0;
   k_stat_to_ma_collexc = 0;
   k_stat_to_ma_collion = 0;
   k_stat_to_r_ff = 0;
@@ -124,7 +126,9 @@ static void pkt_action_counters_printout(const PKT *const pkt)
   printout("ma_stat_deactivation_collrecomb = %d\n", ma_stat_deactivation_collrecomb);
   printout("ma_stat_deactivation_bb = %d\n", ma_stat_deactivation_bb);
   printout("ma_stat_deactivation_fb = %d\n", ma_stat_deactivation_fb);
+  printout("ma_stat_internaluphigher = %d\n", ma_stat_internaluphigher);
   printout("ma_stat_internaluphighernt = %d\n", ma_stat_internaluphighernt);
+  printout("ma_stat_internaldownlower = %d\n", ma_stat_internaldownlower);
 
   printout("k_stat_to_ma_collexc = %d\n", k_stat_to_ma_collexc);
   printout("k_stat_to_ma_collion = %d\n", k_stat_to_ma_collion);

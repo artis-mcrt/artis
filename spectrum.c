@@ -285,6 +285,9 @@ static int columnindex_from_emissiontype(const int et)
     const int et_new = -1 - et;
     const int element = bflist[et_new].elementindex;
     const int ion = bflist[et_new].ionindex;
+
+    assert(get_continuumindex(element, ion, bflist[et_new].levelindex) == et);
+
     return nelements * maxion + element * maxion + ion;
   }
 }
