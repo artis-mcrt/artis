@@ -1249,6 +1249,12 @@ static void setup_cellhistory(void)
 
 static void write_bflist_file(int includedionisinglevels)
 {
+  if ((bflist = (bflist_t *) malloc(includedionisinglevels * sizeof(bflist_t))) == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize bflist ... abort\n");
+    abort();
+  }
+
   FILE *bflist_file;
   if (rank_global == 0)
   {
@@ -1267,12 +1273,15 @@ static void write_bflist_file(int includedionisinglevels)
         bflist[i].elementindex = element;
         bflist[i].ionindex = ion;
         bflist[i].levelindex = level;
+
+        assert(-1 - i == get_continuumindex(element, ion, level));
         if (rank_global == 0)
           fprintf(bflist_file,"%d %d %d %d\n",i,element,ion,level);
         i++;
       }
     }
   }
+  assert(i == includedionisinglevels);
   if (rank_global == 0)
     fclose(bflist_file);
 }
@@ -1558,12 +1567,6 @@ static void read_atomicdata(void)
   }
   printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
            includedions,includedlevels,includedionisinglevels,nlines,includedphotoiontransitions);
-
-  if ((bflist = (bflist_t *) malloc(includedionisinglevels*sizeof(bflist_t))) == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize bflist ... abort\n");
-    abort();
-  }
 
   write_bflist_file(includedionisinglevels);
 
