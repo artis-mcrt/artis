@@ -282,7 +282,7 @@ static int columnindex_from_emissiontype(const int et)
   else
   {
     /// bf-emission
-    const int et_new = -1 * et - 1;
+    const int et_new = -1 - et;
     const int element = bflist[et_new].elementindex;
     const int ion = bflist[et_new].ionindex;
     return nelements * maxion + element * maxion + ion;
