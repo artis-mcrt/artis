@@ -780,6 +780,8 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
             #if (!NO_LUT_PHOTOION)
               set_all_corrphotoionrenorm(n, 1.);
             #endif
+//            if (nts > 0)  // print what radfield parameters would be when in LTE
+//              radfield_fit_parameters(n, nts);
           #endif
 
           precalculate_partfuncts(n);
