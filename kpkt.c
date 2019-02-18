@@ -755,7 +755,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         }
         if (ii == NPHIXSPOINTS)
         {
-          printout("kpkt emitts bf-photon at upper limit. Z=%d ionstage %d level %d\n", get_element(element), get_ionstage(element, ion), level);
+//          printout("kpkt emitts bf-photon at upper limit. Z=%d ionstage %d level %d\n", get_element(element), get_ionstage(element, ion), level);
           nu_lower = nu_max_phixs;
         }
         else if (ii > 0)
