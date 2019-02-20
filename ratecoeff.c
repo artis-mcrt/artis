@@ -147,11 +147,8 @@ static bool read_ratecoeff_dat(void)
       }
     }
 
-    if (fileisamatch || SKIPRATECOEFFVALIDATION)
+    if (fileisamatch)
     {
-      if (SKIPRATECOEFFVALIDATION && !fileisamatch)
-        printout("SKIPRATECOEFFVALIDATION on, ignoring checks and forcing use ratecoeff.dat\n");
-
       printout("Matching ratecoeff.dat file found. Readin this file ...\n");
       for (int element = 0; element < nelements; element++)
       {
@@ -954,7 +951,7 @@ static void scale_level_phixs(const int element, const int ion, const int level,
 
 
 static void read_recombrate_file(void)
-// calibrate the recombiation rates to tabulated values by scaling the photoionisation cross sections
+// calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
 {
   use_cellhist = false;
   FILE *recombrate_file = fopen("recombrates.txt", "r");
