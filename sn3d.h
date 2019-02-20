@@ -50,7 +50,6 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 #define TABLESIZE 100 //200 //100
 #define MINTEMP 1000.
 #define MAXTEMP 50000. //1000000.
-static const bool SKIPRATECOEFFVALIDATION = false;
 
 // Polarisation for real packets
 // #define DIPOLE
