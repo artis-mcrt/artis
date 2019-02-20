@@ -16,8 +16,6 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 double get_groundmultiplet_pop(
   int modelgridindex, float T_e, int element, int ion, bool assume_lte);
 
-void initialise_photoionestimators(void);
-
 inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {

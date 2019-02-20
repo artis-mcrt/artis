@@ -370,6 +370,56 @@ void radfield_init(int my_rank)
 }
 
 
+/// Initialise estimator arrays which hold the last time steps values (used to damp out
+/// fluctuations over timestep iterations if DO_TITER is defined) to -1.
+void initialise_photoionestimators(void)
+{
+  //for (n = 0; n < ngrid; n++)
+  for (int n = 0; n < npts_model; n++)
+  {
+    //double T_e = get_Te(n);
+    #ifdef DO_TITER
+      J_reduced_save[n] = -1.;
+    #endif
+    #ifndef FORCE_LTE
+      #ifdef DO_TITER
+        nuJ_reduced_save[n] = -1.;
+        ffheatingestimator_save[n] = -1.;
+        colheatingestimator_save[n] = -1.;
+      #endif
+      for (int element = 0; element < nelements; element++)
+      {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions - 1; ion++)
+        {
+          //  double ionpot,Alpha_sp,sw_ratio,Gamma;
+          //ionpot = epsilon(element,ion+1,0) - epsilon(element,ion,0);
+          //Alpha_sp = interpolate_ions_spontrecombcoeff(element,ion,T_e);
+          //sw_ratio = stat_weight(element,ion+1,0)/stat_weight(element,ion,0);
+          //Gamma = Alpha_sp * sw_ratio / SAHACONST * pow(T_e,1.5) * exp(-ionpot/KB/T_e);
+          ////gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) + interpolate_photoioncoeff_above(element,ion,0,T_e);
+          ////zeta = interpolate_zeta(element,ion,T_e);
+          //gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
+          ////corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 1.;
+          ////photoionestimator[n*nelements*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
+
+          #ifdef DO_TITER
+            gammaestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+            if (!NO_LUT_BFHEATING)
+              bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+            /*
+            photoionestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+            stimrecombestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+            ionfluxestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+            */
+          #endif
+        }
+      }
+    #endif
+  }
+}
+
+
 inline
 int radfield_get_Jblueindex(const int lineindex)
 // returns -1 if the line does not have a Jblue estimator
