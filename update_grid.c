@@ -193,14 +193,14 @@ static void update_abundances(const int modelgridindex, const int timestep, cons
 }
 
 
-static void write_to_estimators_file(FILE *estimators_file, const int n, const int timestep)
+static void write_to_estimators_file(FILE *estimators_file, const int n, const int timestep, const int titer)
 {
   if (get_numassociatedcells(n) > 0)
   {
     //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
     //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
-    fprintf(estimators_file, "timestep %d modelgridindex %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",
-            timestep, n, get_TR(n), get_Te(n), get_W(n), get_TJ(n), modelgrid[n].grey_depth, get_nne(n));
+    fprintf(estimators_file, "timestep %d modelgridindex %d iteration %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",
+            timestep, n, titer, get_TR(n), get_Te(n), get_W(n), get_TJ(n), modelgrid[n].grey_depth, get_nne(n));
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
@@ -1082,7 +1082,7 @@ void update_grid(FILE *estimators_file, const int nts, const int my_rank, const 
         #pragma omp critical(estimators_file)
         #endif
         {
-          write_to_estimators_file(estimators_file, mgi, nts);
+          write_to_estimators_file(estimators_file, mgi, nts, titer);
         }
       }
       else
