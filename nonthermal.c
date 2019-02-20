@@ -675,8 +675,12 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
 
   const double t = time_step[timestep].mid;
+  const double positron_deposition = get_positroninjection_rate_density(modelgridindex, t);
 
-  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + get_positroninjection_rate_density(modelgridindex, t);
+  nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + positron_deposition;
+
+  printout("nt_deposition_rate(cell %d timestep %d): gammadep %g, posdep %g\n", modelgridindex, timestep, gamma_deposition, positron_deposition);
+
   nt_solution[modelgridindex].deposition_at_timestep = timestep;
 }
 
