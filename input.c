@@ -2140,7 +2140,7 @@ void input(int rank)
   }
 
   nu_min_r = 1e14;   /// lower frequency boundary for UVOIR spectra and BB sampling
-  nu_max_r = 5e15;   /// upper frequency boundary for UVOIR spectra and BB sampling
+  nu_max_r = 5e16;   /// upper frequency boundary for UVOIR spectra and BB sampling
 
   /// Lightcurve setting
   do_r_lc = false;    /// default to no lc = gamma-ray spectrum
