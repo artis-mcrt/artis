@@ -4,8 +4,8 @@
 #define RADFIELDBINCOUNT 100
 
 #include <gsl/gsl_integration.h>
-#include <types.h>
-#include <sn3d.h>
+#include "types.h"
+#include "sn3d.h"
 
 void radfield_zero_estimators(int modelgridindex);
 void radfield_jblue_init(void);
