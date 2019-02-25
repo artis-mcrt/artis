@@ -34,8 +34,8 @@ const bool TRACE_EMISSION_ABSORPTION_REGION_ON = true;
 #define traceemissabs_lambdamax 25000.
 #define traceemissabs_nulower (1.e8 * CLIGHT / traceemissabs_lambdamax)
 #define traceemissabs_nuupper (1.e8 * CLIGHT / traceemissabs_lambdamin)
-#define traceemissabs_timemin 320.
-#define traceemissabs_timemax 340.
+#define traceemissabs_timemin 320. * DAY
+#define traceemissabs_timemax 340. * DAY
 
 typedef struct emissionabsorptioncontrib
 {
@@ -147,14 +147,14 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
                  traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper);
 
         printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
-                 traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin, traceemissabs_timemax,
+                 traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
                  traceemission_totalenergy);
       }
       else
       {
         qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_absorption);
         printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
-                 traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin, traceemissabs_timemax,
+                 traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
                  traceabsorption_totalenergy);
       }
 
@@ -351,15 +351,18 @@ static void add_to_spec(const EPKT *const pkt_ptr, const bool do_emission_res)
           const int ion = linelist[at].ionindex;
           spectra[nt].stat[nnu].absorption[element * maxion + ion] += deltaE_absorption;
 
-          if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res && (pkt_ptr->nu_rf >= traceemissabs_nulower) && (pkt_ptr->nu_rf <= traceemissabs_nuupper))
+          if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
           {
-            traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
+            if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res && (pkt_ptr->nu_rf >= traceemissabs_nulower) && (pkt_ptr->nu_rf <= traceemissabs_nuupper))
+            {
+              traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
-            double vel_vec[3];
-            get_velocity(pkt_ptr->em_pos, vel_vec, pkt_ptr->em_time);
-            traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
+              double vel_vec[3];
+              get_velocity(pkt_ptr->em_pos, vel_vec, pkt_ptr->em_time);
+              traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
 
-            traceabsorption_totalenergy += deltaE_absorption;
+              traceabsorption_totalenergy += deltaE_absorption;
+            }
           }
         }
       }
