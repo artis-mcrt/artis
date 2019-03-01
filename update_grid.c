@@ -199,7 +199,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
   {
     //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
     //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
-    fprintf(estimators_file, "timestep %d modelgridindex %d iteration %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",
+    fprintf(estimators_file, "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",
             timestep, n, titer, get_TR(n), get_Te(n), get_W(n), get_TJ(n), modelgrid[n].grey_depth, get_nne(n));
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
