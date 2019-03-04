@@ -312,8 +312,8 @@ static void do_macroatom_radrecomb(
   mastate[tid].element = element;
   mastate[tid].ion = *ion;
   mastate[tid].level = *level;
-  const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-  gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(1024);
+  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
+  gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(2048);
   gslintegration_paras intparas;
   intparas.T = T_e;
   intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
@@ -325,7 +325,7 @@ static void do_macroatom_radrecomb(
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
   double error;
   double total_alpha_sp;
-  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &total_alpha_sp, &error);
+  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 2048, GSL_INTEG_GAUSS61, wsp, &total_alpha_sp, &error);
   double alpha_sp_old = total_alpha_sp;
   double nu_lower = nu_threshold;
   for (int i = 1; i < NPHIXSPOINTS; i++)
@@ -338,7 +338,7 @@ static void do_macroatom_radrecomb(
     double alpha_sp;
     nu_lower += deltanu;
     /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-    gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 1024, GSL_INTEG_GAUSS61, wsp, &alpha_sp, &error);
+    gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 2048, GSL_INTEG_GAUSS61, wsp, &alpha_sp, &error);
     //alpha_sp *= FOURPI * sf;
     //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,get_Te(pkt_ptr->where))) break;
     if (zrand >= alpha_sp / total_alpha_sp)
@@ -1112,15 +1112,15 @@ double rad_excitation_ratecoeff(
         const int jblueindex = radfield_get_Jblueindex(lineindex);
         if (jblueindex >= 0)
         {
-          const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
           const double Jb_lu = radfield_get_Jb_lu(modelgridindex, jblueindex);
-          const double R_radfield = R;
           const double R_Jb = R_over_J_nu * Jb_lu;
-          const double linelambda = 1e8 * CLIGHT / nu_trans;
-          printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R %g\n",
-                   linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
-          printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
-                   get_element(element), get_ionstage(element, ion), lower, upper);
+          // const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
+          // const double R_radfield = R;
+          // const double linelambda = 1e8 * CLIGHT / nu_trans;
+          // printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R %g\n",
+          //          linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
+          // printout("  (for transition Z=%02d ionstage %d lower %d upper %d)\n",
+          //          get_element(element), get_ionstage(element, ion), lower, upper);
           R = R_Jb;
         }
       }

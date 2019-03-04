@@ -1034,7 +1034,7 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
     const int level = phixslist[tid].allcont[i].level;
     /// The bf process happens only if the current cell contains
     /// the involved atomic species
-    if ((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level < 10)))
+    if ((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level < 100)))
     {
       const double nu_edge = phixslist[tid].allcont[i].nu_edge;
       const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
@@ -1061,10 +1061,15 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
         const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
 
         double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
-        // printout("Z=%d ionstage %d level %d corrfactor %g departure_ratio %g\n", get_element(element), get_ionstage(element, ion), level, corrfactor, departure_ratio);
 
         if (corrfactor < 0)
           corrfactor = 1;
+
+        // if (get_element(element) >= 26 && level < 100 && fabs(corrfactor - 1.0) > 0.5)
+        // {
+        //   printout("kappa_bf modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d departure_ratio %g corrfactor_edge %g\n",
+        //           modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, departure_ratio, corrfactor);
+        // }
 
         double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
 
