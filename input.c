@@ -1320,13 +1320,14 @@ static void setup_coolinglist(void)
       if (get_ionstage(element,ion) > 1)
         add++;
       /// Ionisinglevels below the closure ion add to bf and col ionisation
-      if (ion < nions - 1)
-      //  add += 2 * get_ionisinglevels(element,ion);
-        add += 2 * get_ionisinglevels(element,ion);
+      // if (ion < nions - 1)
+      //   add += 2 * get_ionisinglevels(element,ion);
       /// All the levels add number of col excitations
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
+        if (ion < nions - 1)
+          add += 2 * get_nphixstargets(element,ion,level);
         add += get_nuptrans(element, ion, level);
         //if (ion < nions - 1) and (level < get_ionisinglevels(element,ion))
         //  add += get_nphixstargets(element,ion,level)
@@ -2162,7 +2163,7 @@ void input(int rank)
     abort();
   }
 
-  nu_min_r = 1e14;   /// lower frequency boundary for UVOIR spectra and BB sampling
+  nu_min_r = 1e13;   /// lower frequency boundary for UVOIR spectra and BB sampling
   nu_max_r = 5e15;   /// upper frequency boundary for UVOIR spectra and BB sampling
 
   /// Lightcurve setting

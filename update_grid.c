@@ -299,7 +299,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       for (int ion = 0; ion < nions - 1; ion++)
       {
         // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
-        const bool printdebug_gammar = true;
+        // const bool printdebug_gammar = (get_element(element) >= 26);
+        const bool printdebug_gammar = false;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
                 calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug_gammar, true));

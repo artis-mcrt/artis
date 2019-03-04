@@ -183,6 +183,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
   /// Now assign the energy to the pellet.
   pkt_ptr->e_cmf = e0;
+  pkt_ptr->trueemissiontype = -1;
 }
 
 
