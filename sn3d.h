@@ -32,7 +32,7 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 #define DETAILED_LINE_ESTIMATORS_ON false
 
 // store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
+#define DETAILED_BF_ESTIMATORS_ON false
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
