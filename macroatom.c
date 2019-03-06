@@ -145,9 +145,7 @@ static void get_macroatom_transitionrates(
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
     {
-      const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      const double epsilon_target = epsilon(element, ion + 1, upper);
-      const double epsilon_trans = epsilon_target - epsilon_current;
+      const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
