@@ -183,6 +183,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
   /// Now assign the energy to the pellet.
   pkt_ptr->e_cmf = e0;
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, tmin);
+  pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
   pkt_ptr->trueemissiontype = -1;
 }
 
@@ -316,6 +318,8 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   for (int n = 0; n < npkts; n++)
   {
     pkt[n].e_cmf = pkt[n].e_cmf * npkts / (npkts + packet_reset);
+    pkt[n].e_rf = pkt[n].e_rf * npkts / (npkts + packet_reset);
+
     pkt[n].interactions = 0;
   }
   printout("radioactive energy which will be freed during simulation time %g\n", etot * npkts / (npkts + packet_reset));
