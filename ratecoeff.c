@@ -1195,7 +1195,7 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
   const float T_e = params->T_e;
   double corrfactor = 1 - params->departure_ratio * exp(-HOVERKB * nu / T_e);
 
-  if (corrfactor < 0)
+  if (corrfactor < 0 || !isfinite(corrfactor))
     corrfactor = 1;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
@@ -1273,47 +1273,6 @@ static double integrand_corrphotoioncoeff_sum_gammacorr(const double nu, void *r
   const float sigma_bf = photoionization_crosssection(params->element, params->ion, params->level, params->nu_edge, nu);
 
   return sigma_bf * W * pow(nu, 2) / expm1(HOVERKB * nu / T_R) * (1 - exp(-HOVERKB * nu / T_R_modelgridindex));
-}
-
-
-static double calculate_corrphotoioncoeff_intgral(double nu_threshold, int modelgridindex, int element,
-                                                  int ion, int level, double nu_lower_bound, double nu_upper_bound,
-                                                  int phixstargetindex, double W, double T_R, gsl_integration_workspace *workspace)
-                                                  //W and TR of radbin, unless out of range -- then fullspec W and TR
-{
-  const double epsrel = 0.1; //2e-3;
-  const double epsabs = 0.;
-
-  gsl_integral_paras_gammacorr_sum intparas;
-  intparas.nu_edge = nu_threshold;
-  intparas.element = element;
-  intparas.ion = ion;
-  intparas.level = level;
-  intparas.T_R_modelgridindex = get_TR(modelgridindex);
-  intparas.T_R = T_R;
-  intparas.W = W;
-
-  gsl_function F_gammacorr;
-  F_gammacorr.function = &
-          integrand_corrphotoioncoeff_sum_gammacorr;
-  F_gammacorr.params = &intparas;
-  double error = 0.0;
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  double gammacorr = 0.0;
-  const int status = gsl_integration_qag(
-          &F_gammacorr, nu_lower_bound, nu_upper_bound, epsabs, epsrel, 8192, GSL_INTEG_GAUSS31, workspace, &gammacorr, &error);
-
-
-  gsl_set_error_handler(previous_handler);
-  if (status != 0)
-  {
-    error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-    printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d gamma %g error %g\n",
-             status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
-  }
-
-  return gammacorr;
 }
 
 
@@ -1450,15 +1409,6 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
     /// Interpolate gammacorr out of precalculated values
     const double T_R = get_TR(modelgridindex);
     gammacorr = interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-  #elif (NO_LUT_PHOTOION)
-    if (!gammacorr_from_radbin_midpoint)
-    {
-      gammacorr = calculate_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);  ///Use original integral over whole frequency range
-    }
-    else
-    {
-      gammacorr = calculate_corrphotoioncoeff_summation(element, ion, level, phixstargetindex, modelgridindex); ///Sum bins over range of frequency bins using mid-point of bin
-    }
   #else
   if (DETAILED_BF_ESTIMATORS_ON)
   {
@@ -1469,7 +1419,14 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   {
     #if (NO_LUT_PHOTOION)
     {
-      gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+      if (!gammacorr_from_radbin_midpoint)
+      {
+        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);  ///Use original integral over whole frequency range
+      }
+      else
+      {
+        gammacorr = calculate_corrphotoioncoeff_summation(element, ion, level, phixstargetindex, modelgridindex); ///Sum bins over range of frequency bins using mid-point of bin
+      }
     }
     #else
     {
@@ -1831,6 +1788,14 @@ double calculate_iongamma_per_ionpop(
                 get_element(element), get_ionstage(element, lowerion),
                 get_ionstage(element, lowerion + 1), lower + 1, upper + 1, threshold_angstroms, gamma_ion_contribution_integral,
                 gamma_ion_contribution_bfest, gamma_ion_contribution_used);
+      }
+      if (!isfinite(gamma_ion))
+      {
+        printout("Fatal: gamma ion is %g Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d gamma_integral %7.2e gamma_bfest %7.2e gamma_used %7.2e\n",
+                 gamma_ion, get_element(element), get_ionstage(element, lowerion),
+                 get_ionstage(element, lowerion + 1), lower + 1, upper + 1,
+                 gamma_ion_contribution_integral, gamma_ion_contribution_bfest, gamma_ion_contribution_used);
+        abort();
       }
     }
   }
