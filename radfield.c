@@ -1225,7 +1225,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       double W_bin = -1.0;
       const int contribcount = get_bin_contribcount(modelgridindex, binindex);
 
-      if (contribcount > 0) ///If packet contribution is less zero bin
+      if (contribcount > 0) ///If packet contribution is less then zero bin
       {
         // // enum_bin_fit_type bin_fit_type = radfieldbins[modelgridindex][binindex].fit_type;
         // if (bin_fit_type == FIT_DILUTED_BLACKBODY)
@@ -1270,16 +1270,16 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         //   W_bin = -1.;
         // }
       }
-      else if (contribcount == 0)
+//      else if (contribcount == 0)
+//      {
+//        T_R_bin = 0.;
+//        W_bin = 0.;
+//      }
+      else
       {
         T_R_bin = 0.;
         W_bin = 0.;
       }
-      // else
-      // {
-      //   T_R_bin = -1;
-      //   W_bin = -1;
-      // }
       radfieldbins[modelgridindex][binindex].T_R = T_R_bin;
       radfieldbins[modelgridindex][binindex].W = W_bin;
     }
