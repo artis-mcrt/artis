@@ -652,20 +652,20 @@ static double get_positroninjection_rate_density(const int modelgridindex, const
   const double rho = get_rho(modelgridindex);
 
   // Co56 from Ni56 decays plus what remains of the initial Co56
-  const double co56_positron_dep = (0.19 * 0.610 * MEV) *
+  const double co56_positron_dep = (E56CO - E56CO_GAMMA) *
         (((exp(-t / T56CO) - exp(-t / T56NI)) / (T56CO - T56NI) * get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) / MNI56) +
          (exp(-t / T56CO) / T56CO * get_modelinitradioabund(modelgridindex, NUCLIDE_CO56) / MCO56)) * rho;
 
-  const double ni57_positron_dep = (0.436 * 0.354 * MEV) * exp(-t / T57NI) / T57NI * get_modelinitradioabund(modelgridindex, NUCLIDE_NI57) / MNI57 * rho;
+  const double ni57_positron_dep = (E57NI - E57NI_GAMMA) * exp(-t / T57NI) / T57NI * get_modelinitradioabund(modelgridindex, NUCLIDE_NI57) / MNI57 * rho;
 
   const double v48_positron_dep = (0.290 * 0.499 * MEV) *
         (exp(-t / T48V) - exp(-t / T48CR)) /
         (T48V - T48CR) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
 
-  //printout("nt_deposition_rate: gammadep: %g, poscobalt %g pos48v %g\n",
-  //         gamma_deposition,co56_positron_dep,v48_positron_dep);
+  printout("positroninjection_rate_density(mgi %d time %g): %g erg/s/cm3 = co56 %g + ni57 %g + v48 %g\n",
+          modelgridindex, t, co56_positron_dep, ni57_positron_dep, v48_positron_dep);
 
-  return co56_positron_dep + v48_positron_dep + ni57_positron_dep;
+  return co56_positron_dep + ni57_positron_dep + v48_positron_dep;
 }
 
 
@@ -679,7 +679,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 
   nt_solution[modelgridindex].deposition_rate_density = gamma_deposition + positron_deposition;
 
-  printout("nt_deposition_rate(cell %d timestep %d): gammadep %g, posdep %g\n", modelgridindex, timestep, gamma_deposition, positron_deposition);
+  printout("nt_deposition_rate(mgi %d timestep %d): gammadep %g, posdep %g\n", modelgridindex, timestep, gamma_deposition, positron_deposition);
 
   nt_solution[modelgridindex].deposition_at_timestep = timestep;
 }
