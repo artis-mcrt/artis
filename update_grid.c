@@ -334,14 +334,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
     }
 
 
-    const int element = get_elementindex(28);
-    const int lowerionstage = 2;
-    const int lowerion = lowerionstage - get_ionstage(element, 0);
-    const bool printdebug = false;
-    const bool lower_superlevel_only = false;
-    const bool per_gmpop = false;
-    calculate_ionrecombcoeff(n, T_e, element, lowerion + 1, false, false, printdebug, lower_superlevel_only, per_gmpop);
-
     #ifndef FORCE_LTE
       #if (!NO_LUT_PHOTOION)
         fprintf(estimators_file, "corrphotoionrenorm: ");
