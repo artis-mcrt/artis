@@ -1040,6 +1040,11 @@ static double Psecondary(const double e_p, const double epsilon, const double I,
 // Opal, Peterson, & Beaty (1971)
 {
   const double e_s = epsilon - I;
+
+  if (e_p <= I || e_s < 0.)
+  {
+    return 0.;
+  }
   return 1 / (J * atan((e_p - I) / 2 / J) * (1 + pow(e_s / J, 2)));
 }
 
