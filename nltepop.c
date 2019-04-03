@@ -227,10 +227,12 @@ static void print_level_rates_summary(
       {
         printout("        level%5d  ", selected_level);
       }
+      printout(" pop %9.1e ", gsl_vector_get(popvec, selected_index));
     }
     else
     {
       printout("                    ");
+      printout("               ");
     }
 
     const bool into_level = (i <= 1);
@@ -297,7 +299,7 @@ static void print_element_rates_summary(
     {
       if (level == 0)
       {
-        printout("  Z=%2d ion_stage %2d      rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n",
+        printout("  Z=%2d ion_stage %2d pop      rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n",
                  atomic_number, ionstage);
       }
 
@@ -863,8 +865,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   const double t_mid = time_step[timestep].mid;
   const int nions = get_nions(element);
 
-  printout("Solving for NLTE populations in cell %d at timestep %d iteration %d for element Z=%d (mass fraction %.2e)\n",
-           modelgridindex, timestep, nlte_iter, atomic_number, get_abundance(modelgridindex, element));
+  printout("Solving for NLTE populations in cell %d at timestep %d iteration %d for element Z=%d (mass fraction %.2e, population %.2e)\n",
+           modelgridindex, timestep, nlte_iter, atomic_number, get_abundance(modelgridindex, element),
+           get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex));
 
   // LTE test, make sure binned radfield is off
   //set_TR(modelgridindex,3000);
