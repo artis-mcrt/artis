@@ -473,15 +473,15 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
       else if ((kap_compton + kap_photo_electric) > (zrand*kap_tot))
       {
         // Photo electric effect - makes it a k-packet for sure.
-        pkt_ptr->type = TYPE_KPKT;
+        pkt_ptr->type = TYPE_NTLEPTON;
         pkt_ptr->absorptiontype = -4;
         #ifndef FORCE_LTE
           //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
         #endif
         //pkt_ptr->type = TYPE_PRE_KPKT;
         //pkt_ptr->type = TYPE_GAMMA_KPKT;
-        //if (tid == 0) k_stat_from_gamma++;
-        k_stat_from_gamma++;
+        //if (tid == 0) nt_stat_from_gamma++;
+        nt_stat_from_gamma++;
         return t_current;
       }
       else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand*kap_tot))

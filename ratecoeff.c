@@ -830,8 +830,6 @@ double calculate_ionrecombcoeff(
     const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
     for (int upper = 0; upper <= maxrecombininglevel; upper++)
     {
-      if (printdebug && upper >= 5)
-        break;
       double nnupperlevel;
       if (assume_lte)
       {
@@ -851,8 +849,6 @@ double calculate_ionrecombcoeff(
       nnupperlevel_so_far += nnupperlevel;
       for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
       {
-        if (printdebug && lower >= 5)
-          break;
         if (lower_superlevel_only && (is_nlte(element, lowerion, lower) || lower == 0))
           continue;
 
@@ -865,13 +861,14 @@ double calculate_ionrecombcoeff(
         else
           recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower);
 
-        const double alpha_level = recomb_coeff / nne * nnupperlevel / nnupperion;
-        alpha += alpha_level;
-        if (printdebug && alpha_level > 0.)
+        const double alpha_level = recomb_coeff / nne;
+        const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
+        alpha += alpha_ion_contrib;
+        if (printdebug && alpha_ion_contrib > 0. && lower < 50)
         {
-          printout("recomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha %7.2e alpha_sum %7.2e nnlevel %7.2e nnionfrac %7.2e\n",
+          printout("recomb: Z=%d ionstage %d->%d upper+1 %5d lower+1 %5d alpha_level %7.2e alpha_ion_contrib %7.2e sum %7.2e nnlevel %7.2e nnionfrac %7.2e\n",
                    get_element(element), get_ionstage(element, lowerion + 1),
-                   get_ionstage(element, lowerion), upper + 1, lower + 1, alpha_level, alpha,
+                   get_ionstage(element, lowerion), upper + 1, lower + 1, alpha_level, alpha_ion_contrib, alpha,
                    nnupperlevel, nnupperlevel_so_far / nnupperion);
         }
       }
@@ -879,7 +876,7 @@ double calculate_ionrecombcoeff(
   }
   if (printdebug)
   {
-    printout("recomb_debug: Z=%2d ionstage %d->%d upper+1 [all] lower+1 [all] Alpha %g\n",
+    printout("recomb: Z=%2d ionstage %d->%d upper+1 [all] lower+1 [all] Alpha %g\n\n",
              get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
   return alpha;
@@ -1267,7 +1264,8 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   #else
   if (DETAILED_BF_ESTIMATORS_ON)
   {
-    gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+    // gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+    gammacorr = -1;
     // will be -1 if no estimators available
   }
   if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0)
@@ -1632,12 +1630,18 @@ double calculate_iongamma_per_ionpop(
       if (printdebug && (gamma_ion_contribution_integral < 0. || gamma_ion_contribution_bfest > 0.) && lower < 50)
       {
         const double threshold_angstroms = 1e8 * CLIGHT / (get_phixs_threshold(element, lowerion, lower, phixstargetindex) / H);
-        printout("gamma: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d lambda_threshold %7.1f gamma_integral %7.2e gamma_bfest %7.2e gamma_used %7.2e\n",
+        printout("gamma: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d lambda_threshold %7.1f gamma_integral %7.2e gamma_bfest %7.2e gamma_used %7.2e gamma_used_sum %7.2e\n",
                 get_element(element), get_ionstage(element, lowerion),
                 get_ionstage(element, lowerion + 1), lower + 1, upper + 1, threshold_angstroms, gamma_ion_contribution_integral,
-                gamma_ion_contribution_bfest, gamma_ion_contribution_used);
+                gamma_ion_contribution_bfest, gamma_ion_contribution_used, gamma_ion);
       }
     }
+  }
+  if (printdebug)
+  {
+    printout("gamma: Z=%d ionstage %d->%d lower+1 [all] upper+1 [all] gamma_used_ion %7.2e\n",
+             get_element(element), get_ionstage(element, lowerion),
+             get_ionstage(element, lowerion + 1), gamma_ion);
   }
   return gamma_ion;
 }

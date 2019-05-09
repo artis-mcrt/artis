@@ -704,6 +704,10 @@ static double get_y_sample(const int modelgridindex, const int index)
 {
   if (nt_solution[modelgridindex].yfunc != NULL)
   {
+    if (!isfinite(nt_solution[modelgridindex].yfunc[index]))
+    {
+      printout("get_y_sample index %d %g\n", index, nt_solution[modelgridindex].yfunc[index]);
+    }
     return nt_solution[modelgridindex].yfunc[index];
   }
   else
@@ -1045,6 +1049,10 @@ static double Psecondary(const double e_p, const double epsilon, const double I,
   {
     return 0.;
   }
+  assert(J > 0);
+  assert(e_p >= I);
+  assert(e_s >= 0);
+  assert(isfinite(atan((e_p - I) / 2 / J)));
   return 1 / (J * atan((e_p - I) / 2 / J) * (1 + pow(e_s / J, 2)));
 }
 
@@ -1161,6 +1169,7 @@ static double N_e(const int modelgridindex, const double energy)
   // source term, should be zero at the low end anyway
   N_e += gsl_vector_get(sourcevec, get_energyindex_ev_lteq(energy_ev));
 
+  assert(isfinite(N_e));
   return N_e;
 }
 
@@ -1985,9 +1994,11 @@ void do_ntlepton(PKT *pkt_ptr)
         pkt_ptr->type = TYPE_MA;
         ma_stat_activation_ntcollion++;
         pkt_ptr->interactions += 1;
-        pkt_ptr->last_event = 9;
+        pkt_ptr->last_event = 20;
         pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
         pkt_ptr->trueemissionvelocity = -1;
+
+        nt_stat_to_ionization++;
 
         // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
         //          modelgridindex, get_element(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
@@ -2021,9 +2032,11 @@ void do_ntlepton(PKT *pkt_ptr)
         pkt_ptr->type = TYPE_MA;
         ma_stat_activation_ntcollexc++;
         pkt_ptr->interactions += 1;
-        pkt_ptr->last_event = 8;
+        pkt_ptr->last_event = 21;
         pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
         pkt_ptr->trueemissionvelocity = -1;
+
+        nt_stat_to_excitation++;
 
         printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
                  modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
@@ -2039,6 +2052,7 @@ void do_ntlepton(PKT *pkt_ptr)
 
   /*It's an electron - convert to k-packet*/
   //printout("e-minus propagation\n");
+  pkt_ptr->last_event = 22;
   pkt_ptr->type = TYPE_KPKT;
   #ifndef FORCE_LTE
     //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
@@ -2047,6 +2061,7 @@ void do_ntlepton(PKT *pkt_ptr)
   //pkt_ptr->type = TYPE_GAMMA_KPKT;
   //if (tid == 0) k_stat_from_eminus += 1;
   k_stat_from_eminus += 1;
+  nt_stat_to_kpkt++;
 }
 
 
