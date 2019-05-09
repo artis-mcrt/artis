@@ -92,9 +92,12 @@ static void pkt_action_counters_reset(void)
   k_stat_to_r_bb = 0;
   k_stat_from_ff = 0;
   k_stat_from_bf = 0;
-  k_stat_from_gamma = 0;
+  nt_stat_from_gamma = 0;
   k_stat_from_eminus = 0;
   k_stat_from_earlierdecay = 0;
+  nt_stat_to_ionization = 0;
+  nt_stat_to_excitation = 0;
+  nt_stat_to_kpkt = 0;
   escounter = 0;
   cellcrossings = 0;
   updatecellcounter = 0;
@@ -137,9 +140,13 @@ static void pkt_action_counters_printout(const PKT *const pkt)
   printout("k_stat_to_r_bb = %d\n", k_stat_to_r_bb);
   printout("k_stat_from_ff = %d\n", k_stat_from_ff);
   printout("k_stat_from_bf = %d\n", k_stat_from_bf);
-  printout("k_stat_from_gamma = %d\n", k_stat_from_gamma);
+  printout("nt_stat_from_gamma = %d\n", nt_stat_from_gamma);
   printout("k_stat_from_eminus = %d\n", k_stat_from_eminus);
   printout("k_stat_from_earlierdecay = %d\n", k_stat_from_earlierdecay);
+
+  printout("nt_stat_to_ionization = %d\n", nt_stat_to_ionization);
+  printout("nt_stat_to_excitation = %d\n", nt_stat_to_excitation);
+  printout("nt_stat_to_kpkt = %d\n", nt_stat_to_kpkt);
 
   printout("escounter = %d\n", escounter);
   printout("cellcrossing  = %d\n", cellcrossings);
