@@ -3,6 +3,8 @@
 #PBS -A dp033
 #PBS -l walltime=24:00:00
 #PBS -l nodes=13:ppn=36
+#PBS -m abe
+#PBS -M luke.shingles@gmail.com
 
 # Make the Intel compiler and MPI libs available
 module load gsl/intel/2.4
