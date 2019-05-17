@@ -734,6 +734,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
 
         gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(2048);
+        gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
         zrand = gsl_rng_uniform(rng);
         zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
@@ -784,6 +785,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         nu_lower = nu_threshold;
         pkt_ptr->nu_cmf = nu_lower;
 
+        gsl_set_error_handler(previous_handler);
         gsl_integration_workspace_free(wsp);
 
       /*}

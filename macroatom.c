@@ -312,6 +312,7 @@ static void do_macroatom_radrecomb(
   mastate[tid].level = *level;
   const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
   gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(2048);
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   gslintegration_paras intparas;
   intparas.T = T_e;
   intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
@@ -349,6 +350,7 @@ static void do_macroatom_radrecomb(
     alpha_sp_old = alpha_sp;
   }
   gsl_integration_workspace_free(wsp);
+  gsl_set_error_handler(previous_handler);
   if (nu_lower == nu_threshold)
   {
     nu_lower = nu_max_phixs;
