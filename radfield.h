@@ -12,7 +12,7 @@ void radfield_init(int my_rank);
 void initialise_photoionestimators(void);
 void radfield_write_to_file(int modelgridindex, int timestep);
 void radfield_close_file(void);
-void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf);
+void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr);
 void radfield_increment_lineestimator(int modelgridindex, int lineindex, double increment);
 double radfield(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex, int timestep);
@@ -31,6 +31,8 @@ void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);
 void radfield_normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
 double get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex);
+void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex, double nnlowerlevel, double nnlowerion);
+void reset_bfrate_contributions(const int modelgridindex);
 int radfield_integrate(
   const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
   size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);

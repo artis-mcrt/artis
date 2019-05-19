@@ -1634,6 +1634,10 @@ double calculate_iongamma_per_ionpop(
                 get_element(element), get_ionstage(element, lowerion),
                 get_ionstage(element, lowerion + 1), lower + 1, upper + 1, threshold_angstroms, gamma_ion_contribution_integral,
                 gamma_ion_contribution_bfest, gamma_ion_contribution_used, gamma_ion);
+
+        #if (DETAILED_BF_ESTIMATORS_BYTYPE)
+        print_bfrate_contributions(element, lowerion, lower, phixstargetindex, modelgridindex, nnlowerlevel, nnlowerion);
+        #endif
       }
     }
   }

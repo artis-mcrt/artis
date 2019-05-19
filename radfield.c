@@ -5,6 +5,7 @@
 #include <gsl/gsl_roots.h>
 #include "atomic.h"
 #include "grid_init.h"
+#include "ltepop.h"
 #include "radfield.h"
 #include "sn3d.h"
 
@@ -73,6 +74,30 @@ static struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised esti
 static bool normed_bfrates_available = false;
 static float *prev_bfrate_normed[MMODELGRID + 1];  // values from the previous timestep
 static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the current timestep
+  #if (DETAILED_BF_ESTIMATORS_BYTYPE)
+
+  struct bfratecontrib
+  {
+    int emissiontype;
+    double ratecontrib;
+  };
+
+  static struct bfratecontrib **bfrate_raw_bytype[MMODELGRID + 1];   // unnormalised estimator contributions for stats
+  static int *bfrate_raw_bytype_size[MMODELGRID + 1];
+
+  static int compare_bfrate_raw_bytype(const void *p1, const void *p2)
+  {
+    const struct bfratecontrib *elem1 = p1;
+    const struct bfratecontrib *elem2 = p2;
+
+   if (elem1->ratecontrib < elem2->ratecontrib)
+      return 1;
+   else if (elem1->ratecontrib > elem2->ratecontrib)
+      return -1;
+   else
+      return 0;
+  }
+  #endif
 #endif
 
 static double J[MMODELGRID + 1];
@@ -350,6 +375,16 @@ void radfield_init(int my_rank)
       {
         bfrate_raw[modelgridindex] = calloc(nbfcontinua, sizeof(double));
         prev_bfrate_normed[modelgridindex] = calloc(nbfcontinua, sizeof(float));
+
+        #if (DETAILED_BF_ESTIMATORS_BYTYPE)
+        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(nbfcontinua, sizeof(struct bfratecontrib *));
+        bfrate_raw_bytype_size[modelgridindex] = (int *) calloc(nbfcontinua, sizeof(int));
+        for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
+        {
+          bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+          bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
+        }
+        #endif
       }
       #endif
 
@@ -764,8 +799,15 @@ void radfield_zero_estimators(int modelgridindex)
 
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-static void radfield_increment_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf)
+static void radfield_increment_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf, const PKT *const pkt_ptr)
 {
+  if (distance_e_cmf == 0)
+    return;
+
+  // const double deltaV = vol_init_modelcell(modelgridindex) * pow(time_step[nts_global].mid / tmin, 3);
+  // const double deltat = time_step[nts_global].width;
+  // const double estimator_normfactor_over_H = 1 / deltaV / deltat / nprocs / H;
+
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf;
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
   {
@@ -776,6 +818,42 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
         #pragma omp atomic
       #endif
       bfrate_raw[modelgridindex][allcontindex] += phixslist[tid].allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu;
+
+      #if (DETAILED_BF_ESTIMATORS_BYTYPE)
+      const int element = phixslist[tid].allcont[allcontindex].element;
+      // const int ion = phixslist[tid].allcont[allcontindex].ion;
+      // const int ionstage = get_ionstage(element, ion);
+      const int atomic_number = get_element(element);
+      if ((atomic_number == 26)) //  && ionstage == 2
+      {
+        const int oldlistsize = bfrate_raw_bytype_size[modelgridindex][allcontindex];
+        if (oldlistsize % 16 == 0)
+        {
+          bfrate_raw_bytype[modelgridindex][allcontindex] = realloc(
+            bfrate_raw_bytype[modelgridindex][allcontindex], (oldlistsize + 16) * sizeof(struct bfratecontrib));
+        }
+
+        int listindex = oldlistsize;
+        for (int i = 0; i < oldlistsize; i++)
+        {
+          if (bfrate_raw_bytype[modelgridindex][allcontindex][i].emissiontype == pkt_ptr->emissiontype)
+          {
+            listindex = i;
+            break;
+          }
+        }
+
+        if (listindex == oldlistsize)
+        {
+          // printout("  bfrate_bytype allcontindex %d expanding list size to %d for emtype %d\n", allcontindex, oldlistsize + 1, pkt_ptr->emissiontype);
+          bfrate_raw_bytype_size[modelgridindex][allcontindex] = oldlistsize + 1;
+          bfrate_raw_bytype[modelgridindex][allcontindex][listindex].emissiontype = pkt_ptr->emissiontype;
+          bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib = 0;
+        }
+
+        bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib += (phixslist[tid].allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu);
+      }
+      #endif
     }
     else
     {
@@ -788,7 +866,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
 
 
 inline
-void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf)
+void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr)
 {
   #ifdef _OPENMP
     #pragma omp atomic
@@ -816,7 +894,7 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
   #endif
 
   #if (DETAILED_BF_ESTIMATORS_ON)
-  radfield_increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf);
+  radfield_increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
   #endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
@@ -1343,10 +1421,21 @@ void radfield_normalise_J(const int modelgridindex, const double estimator_normf
 void radfield_normalise_bf_estimators(const int modelgridindex, const double estimator_normfactor_over_H)
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
-  // printout("radfield_normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
+  printout("radfield_normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
   for (int i = 0; i < nbfcontinua; i++)
   {
     prev_bfrate_normed[modelgridindex][i] = bfrate_raw[modelgridindex][i] * estimator_normfactor_over_H;
+
+    #if (DETAILED_BF_ESTIMATORS_BYTYPE)
+    const int listsize = bfrate_raw_bytype_size[modelgridindex][i];
+
+    for (int j = 0; j < listsize; j++)
+    {
+      bfrate_raw_bytype[modelgridindex][i][j].ratecontrib = bfrate_raw_bytype[modelgridindex][i][j].ratecontrib * estimator_normfactor_over_H;
+    }
+
+    qsort(bfrate_raw_bytype[modelgridindex][i], listsize, sizeof(struct bfratecontrib), compare_bfrate_raw_bytype);
+    #endif
   }
 
   for (int i = 0; i < nbfcontinua; i++)
@@ -1359,6 +1448,105 @@ void radfield_normalise_bf_estimators(const int modelgridindex, const double est
   }
   #endif
 }
+
+
+// TODO: use in get_bfrate_estimator
+static int get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex)
+{
+  const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+  for (int i = 0; i < nbfcontinua; i++)
+  {
+    if ((phixslist[tid].allcont[i].element == element) && (phixslist[tid].allcont[i].ion == lowerion) &&
+        (phixslist[tid].allcont[i].level == lower) && (phixslist[tid].allcont[i].phixstargetindex == phixstargetindex))
+    {
+      return i;
+    }
+
+    if (nu_edge > phixslist[tid].allcont[i].nu_edge)
+      break;
+  }
+  return -1;
+}
+
+#if (DETAILED_BF_ESTIMATORS_BYTYPE)
+void reset_bfrate_contributions(const int modelgridindex)
+{
+  for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
+  {
+    free(bfrate_raw_bytype[modelgridindex][allcontindex]);
+    bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+    bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0;
+  }
+}
+
+
+void print_bfrate_contributions(const int element, const int lowerion, const int lower, const int phixstargetindex, const int modelgridindex, const double nnlowerlevel, const double nnlowerion)
+{
+  const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
+  if (allcontindex >= 0)
+  {
+    const int listsize = bfrate_raw_bytype_size[modelgridindex][allcontindex];
+    if (listsize > 0)
+    {
+      printout("  %d contributions found for this bf transition\n", listsize);
+    }
+    else
+    {
+      // printout("  no contributions found for this bf transition\n");
+    }
+    for (int i = 0; i < listsize; i++)
+    {
+      const int et = bfrate_raw_bytype[modelgridindex][allcontindex][i].emissiontype;
+      const double bfcontrib = bfrate_raw_bytype[modelgridindex][allcontindex][i].ratecontrib;
+      printout("    Gamma_contrib %7.2e gamma_contrib %7.2e emissiontype ", bfcontrib * nnlowerlevel / nnlowerion, bfcontrib);
+
+      if (et >= 0)
+      {
+        /// bb-emission
+        const int element = linelist[et].elementindex;
+        const int ion = linelist[et].ionindex;
+        const int upper = linelist[et].upperlevelindex;
+        const int lower = linelist[et].lowerlevelindex;
+        const double lambda_trans = 1e8 * CLIGHT / linelist[et].nu;
+        printout("%7d bound-bound Z=%2d ion_stage %d upper+1 %4d lower+1 %4d lambda %5.1f\n",
+                 et, get_element(element), get_ionstage(element, ion), upper + 1, lower + 1, lambda_trans);
+      }
+      else if (et == -9999999)
+      {
+        /// ff-emission
+        printout("%7d free-free scattering\n", et);
+      }
+      else
+      {
+        /// bf-emission
+        const int bfindex = -1 - et;
+        const int element = bflist[bfindex].elementindex;
+        const int ion = bflist[bfindex].ionindex;
+        const int lower = bflist[bfindex].levelindex;
+        const int phixstargetindex = bflist[bfindex].phixstargetindex;
+
+        const double nuthreshold = get_phixs_threshold(element, ion, lower, phixstargetindex) / H;
+        const double lambda_trans = 1e8 * CLIGHT / nuthreshold;
+        const int upperionlevel = get_phixsupperlevel(element, ion, lower, phixstargetindex);
+        assert(get_continuumindex(element, ion, lower, upperionlevel) == et);
+        const int lowerionstage = get_ionstage(element, ion);
+        printout("%7d bound-free  Z=%2d ion_stage %d->%d lower+1 %4d upper+1 %4d lambda %5.1f\n", et, get_element(element), lowerionstage + 1, lowerionstage, lower + 1, upperionlevel + 1, lambda_trans);
+      }
+    }
+
+    // reset the list for the next timestep
+    free(bfrate_raw_bytype[modelgridindex][allcontindex]);
+    bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+    bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0;
+  }
+  else
+  {
+    printout("  no continuum index found for this bf transition\n");
+    abort();
+  }
+}
+#endif
+
 
 double get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex, const int modelgridindex)
 {
