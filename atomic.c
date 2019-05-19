@@ -35,7 +35,7 @@ extern inline double get_phixs_threshold(int element, int ion, int level, int ph
 static int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
 /// Returns the index of the continuum associated to the given level.
 {
-  return elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
+  return elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
 }
 
 
@@ -43,8 +43,7 @@ static int get_phixtargetindex(const int element, const int ion, const int level
 {
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
   {
-    const int this_upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-    if (this_upperionlevel == upperionlevel)
+    if (upperionlevel == get_phixsupperlevel(element, ion, level, phixstargetindex))
       return phixstargetindex;
   }
   printout("Could not find phixstargetindex\n");

@@ -256,7 +256,7 @@ static void read_phixs_data(void)
 
 static void read_ion_levels(
   FILE* adata, const int element, const int ion, const int nions, const int nlevels, const int nlevelsmax,
-  const double energyoffset, const double ionpot, int *cont_index)
+  const double energyoffset, const double ionpot)
 {
   for (int level = 0; level < nlevels; level++)
   {
@@ -293,9 +293,6 @@ static void read_ion_levels(
       if (levelenergy < ionpot && ion < nions - 1) ///thats only an option for pure LTE && level < TAKE_N_BFCONTINUA)
       {
         elements[element].ions[ion].ionisinglevels++;
-
-        elements[element].ions[ion].levels[level].cont_index = *cont_index;
-        (*cont_index)--;
       }
 
 
@@ -679,7 +676,6 @@ static void read_atomicdata_files(void)
   radfield_jblue_init();
   int totaluptrans = 0;
   int totaldowntrans = 0;
-  int cont_index = -1;
 
   ///open atomic data file
   FILE *restrict compositiondata = fopen_required("compositiondata.txt", "r");
@@ -916,7 +912,7 @@ static void read_atomicdata_files(void)
         abort();
       }
 
-      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot, &cont_index);
+      read_ion_levels(adata, element, ion, nions, nlevels, nlevelsmax, energyoffset, ionpot);
 
       add_transitions_to_linelist(element, ion, nlevelsmax, tottransitions, transitiontable, &lineindex);
 
@@ -1051,11 +1047,19 @@ static void read_atomicdata_files(void)
   ///finally read in photoionisation cross sections and store them to the atomic data structure
   read_phixs_data();
 
+  int cont_index = -1;
   for (int element = 0; element < nelements; element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
+      for (int level = 0; level < get_ionisinglevels(element, ion); level++)
+      {
+        elements[element].ions[ion].levels[level].cont_index = cont_index;
+        cont_index -= get_nphixstargets(element, ion, level);
+      }
+
+      // below is just an extra warning consistency check
       const int nlevels_groundterm = elements[element].ions[ion].nlevels_groundterm;
 
       // all levels in the ground term should be photoionisation targets from the lower ground state
@@ -1278,9 +1282,10 @@ static void write_bflist_file(int includedphotoiontransitions)
           bflist[i].levelindex = level;
           bflist[i].phixstargetindex = phixstargetindex;
 
-          assert(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
           if (rank_global == 0)
             fprintf(bflist_file,"%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
+
+          assert(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
           i++;
         }
       }
