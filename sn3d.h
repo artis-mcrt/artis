@@ -34,6 +34,12 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 // store detailed bound-free rate estimators
 #define DETAILED_BF_ESTIMATORS_ON true
 
+// extremely slow and memory consuming - for debugging only
+// not safe for MPI or OpenMP - single process and single thread only!
+// this will output a list of contributions to each bound-free rate estimator
+// with each packet emission type ranked by their contribution to the rate
+#define DETAILED_BF_ESTIMATORS_BYTYPE false
+
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
 #define NO_LUT_PHOTOION true
