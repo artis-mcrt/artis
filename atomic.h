@@ -5,6 +5,7 @@
 
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
+int get_continuumindex(int element, int ion, int level, int upperionlevel);
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 int get_tot_nions(void);
 double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
@@ -156,13 +157,6 @@ inline bool is_nlte(int element, int ion, int level)
   else
     return (level <= 80);
   // return (level <= 80);
-}
-
-
-inline int get_continuumindex(int element, int ion, int level)
-/// Returns the index of the continuum associated to the given level.
-{
-  return elements[element].ions[ion].levels[level].cont_index;
 }
 
 

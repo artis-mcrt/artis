@@ -494,6 +494,7 @@ typedef struct bflist_t
   int elementindex;
   int ionindex;
   int levelindex;
+  int phixstargetindex;
 } bflist_t;
 
 typedef struct nne_solution_paras
