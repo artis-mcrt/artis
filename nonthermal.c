@@ -2038,8 +2038,8 @@ void do_ntlepton(PKT *pkt_ptr)
 
         nt_stat_to_excitation++;
 
-        printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
-                 modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
+        // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
+        //          modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
 
         return;
       }
