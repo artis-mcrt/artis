@@ -1247,9 +1247,9 @@ static void setup_cellhistory(void)
 }
 
 
-static void write_bflist_file(int includedionisinglevels)
+static void write_bflist_file(int includedphotoiontransitions)
 {
-  if ((bflist = (bflist_t *) malloc(includedionisinglevels * sizeof(bflist_t))) == NULL)
+  if ((bflist = (bflist_t *) malloc(includedphotoiontransitions * sizeof(bflist_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize bflist ... abort\n");
     abort();
@@ -1259,7 +1259,7 @@ static void write_bflist_file(int includedionisinglevels)
   if (rank_global == 0)
   {
     bflist_file = fopen_required("bflist.dat", "w");
-    fprintf(bflist_file,"%d\n", includedionisinglevels);
+    fprintf(bflist_file,"%d\n", includedphotoiontransitions);
   }
   int i = 0;
   for (int element = 0; element < nelements; element++)
@@ -1270,18 +1270,23 @@ static void write_bflist_file(int includedionisinglevels)
       const int nlevels = get_ionisinglevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        bflist[i].elementindex = element;
-        bflist[i].ionindex = ion;
-        bflist[i].levelindex = level;
+        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
+        {
+          const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+          bflist[i].elementindex = element;
+          bflist[i].ionindex = ion;
+          bflist[i].levelindex = level;
+          bflist[i].phixstargetindex = phixstargetindex;
 
-        assert(-1 - i == get_continuumindex(element, ion, level));
-        if (rank_global == 0)
-          fprintf(bflist_file,"%d %d %d %d\n",i,element,ion,level);
-        i++;
+          assert(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
+          if (rank_global == 0)
+            fprintf(bflist_file,"%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
+          i++;
+        }
       }
     }
   }
-  assert(i == includedionisinglevels);
+  assert(i == includedphotoiontransitions);
   if (rank_global == 0)
     fclose(bflist_file);
 }
@@ -1567,9 +1572,9 @@ static void read_atomicdata(void)
     }
   }
   printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
-           includedions,includedlevels,includedionisinglevels,nlines,includedphotoiontransitions);
+           includedions, includedlevels, includedionisinglevels, nlines, includedphotoiontransitions);
 
-  write_bflist_file(includedionisinglevels);
+  write_bflist_file(includedphotoiontransitions);
 
   setup_phixs_list();
 

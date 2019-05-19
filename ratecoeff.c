@@ -1630,7 +1630,7 @@ double calculate_iongamma_per_ionpop(
       if (printdebug && (gamma_ion_contribution_integral < 0. || gamma_ion_contribution_bfest > 0.) && lower < 50)
       {
         const double threshold_angstroms = 1e8 * CLIGHT / (get_phixs_threshold(element, lowerion, lower, phixstargetindex) / H);
-        printout("gamma: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d lambda_threshold %7.1f gamma_integral %7.2e gamma_bfest %7.2e gamma_used %7.2e gamma_used_sum %7.2e\n",
+        printout("Gamma_R: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d lambda_threshold %7.1f Gamma_integral %7.2e Gamma_bfest %7.2e Gamma_used %7.2e Gamma_used_sum %7.2e\n",
                 get_element(element), get_ionstage(element, lowerion),
                 get_ionstage(element, lowerion + 1), lower + 1, upper + 1, threshold_angstroms, gamma_ion_contribution_integral,
                 gamma_ion_contribution_bfest, gamma_ion_contribution_used, gamma_ion);
@@ -1639,7 +1639,7 @@ double calculate_iongamma_per_ionpop(
   }
   if (printdebug)
   {
-    printout("gamma: Z=%d ionstage %d->%d lower+1 [all] upper+1 [all] gamma_used_ion %7.2e\n",
+    printout("Gamma_R: Z=%d ionstage %d->%d lower+1 [all] upper+1 [all] Gamma_used_ion %7.2e\n",
              get_element(element), get_ionstage(element, lowerion),
              get_ionstage(element, lowerion + 1), gamma_ion);
   }

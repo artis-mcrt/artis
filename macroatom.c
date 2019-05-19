@@ -256,6 +256,7 @@ static void do_macroatom_radrecomb(
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
+  const int upperionlevel = *level;
   /// Randomly select a continuum
   double zrand = gsl_rng_uniform(rng);
   //zrand = 1. - 1e-14;
@@ -443,7 +444,7 @@ static void do_macroatom_radrecomb(
   emitt_rpkt(pkt_ptr, t_current);
   calculate_kappa_rpkt_cont(pkt_ptr, t_current);
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
-  pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower);
+  pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = t_current;
   pkt_ptr->nscatterings = 0;

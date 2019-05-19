@@ -827,7 +827,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       k_stat_to_r_fb++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
-      pkt_ptr->emissiontype = get_continuumindex(element, ion, level);
+      pkt_ptr->emissiontype = get_continuumindex(element, ion, level, upper);
       pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = t_current;

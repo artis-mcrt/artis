@@ -15,7 +15,6 @@ extern inline double epsilon(int element, int ion, int level);
 extern inline double stat_weight(int element, int ion, int level);
 extern inline int get_maxrecombininglevel(int element, int ion);
 extern inline bool is_nlte(int element, int ion, int level);
-extern inline int get_continuumindex(int element, int ion, int level);
 extern inline int get_ndowntrans(int element, int ion, int level);
 extern inline int get_nuptrans(int element, int ion, int level);
 extern inline int get_nphixstargets(int element, int ion, int level);
@@ -31,6 +30,34 @@ extern inline double statw_lower(int lineindex);
 extern inline double photoionization_crosssection_macroatom(double nu_edge, double nu);
 extern inline double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
 extern inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
+
+
+static int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
+/// Returns the index of the continuum associated to the given level.
+{
+  return elements[element].ions[ion].levels[level].cont_index + phixstargetindex;
+}
+
+
+static int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel)
+{
+  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
+  {
+    const int this_upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+    if (this_upperionlevel == upperionlevel)
+      return phixstargetindex;
+  }
+  printout("Could not find phixstargetindex\n");
+  abort();
+}
+
+
+int get_continuumindex(int element, int ion, int level, int upperionlevel)
+/// Returns the index of the continuum associated to the given level.
+{
+  const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
+  return get_continuumindex_phixstargetindex(element, ion, level, phixstargetindex);
+}
 
 
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)

@@ -285,8 +285,11 @@ static int columnindex_from_emissiontype(const int et)
     const int et_new = -1 - et;
     const int element = bflist[et_new].elementindex;
     const int ion = bflist[et_new].ionindex;
+    const int level = bflist[et_new].levelindex;
+    const int phixstargetindex = bflist[et_new].phixstargetindex;
+    const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-    assert(get_continuumindex(element, ion, bflist[et_new].levelindex) == et);
+    assert(get_continuumindex(element, ion, level, upperionlevel) == et);
 
     return nelements * maxion + element * maxion + ion;
   }
