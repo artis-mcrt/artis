@@ -2022,7 +2022,7 @@ void do_ntlepton(PKT *pkt_ptr)
         const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
         const int element = linelist[lineindex].elementindex;
         const int ion = linelist[lineindex].ionindex;
-        const int lower = linelist[lineindex].lowerlevelindex;
+        // const int lower = linelist[lineindex].lowerlevelindex;
         const int upper = linelist[lineindex].upperlevelindex;
 
         mastate[tid].element = element;

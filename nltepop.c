@@ -221,18 +221,17 @@ static void print_level_rates_summary(
       const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, selected_ion) - 1));
       if (has_superlevel && (selected_level == nlevels_nlte + 1))
       {
-        printout("        superlevel  ");
+        printout("      superlevel  ");
       }
       else
       {
-        printout("        level%5d  ", selected_level);
+        printout("    level+1%5d  ", selected_level + 1);
       }
-      printout(" pop %9.1e ", gsl_vector_get(popvec, selected_index));
+      printout(" %9.1e ", gsl_vector_get(popvec, selected_index));
     }
     else
     {
-      printout("                    ");
-      printout("               ");
+      printout("                             ");
     }
 
     const bool into_level = (i <= 1);
@@ -250,11 +249,11 @@ static void print_level_rates_summary(
       // into this level
       if (only_levels_below)
       {
-        printout("from below ");
+        printout(" from below ");
       }
       else
       {
-        printout("from above ");
+        printout(" from above ");
       }
     }
     else
@@ -262,11 +261,11 @@ static void print_level_rates_summary(
       // out of this level
       if (only_levels_below)
       {
-        printout("  to below ");
+        printout("   to below ");
       }
       else
       {
-        printout("  to above ");
+        printout("   to above ");
       }
     }
 
@@ -299,7 +298,7 @@ static void print_element_rates_summary(
     {
       if (level == 0)
       {
-        printout("  Z=%2d ion_stage %2d pop      rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n",
+        printout("  Z=%2d ion_stage %2d      pop       rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n",
                  atomic_number, ionstage);
       }
 
