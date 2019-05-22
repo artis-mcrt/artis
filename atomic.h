@@ -5,7 +5,7 @@
 
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
-int get_continuumindex(int element, int ion, int level, int upperionlevel);
+long get_continuumindex(int element, int ion, int level, int upperionlevel);
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 int get_tot_nions(void);
 double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
