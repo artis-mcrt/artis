@@ -747,7 +747,6 @@ double interpolate_spontrecombcoeff(int element, int ion, int level, int phixsta
   return Alpha_sp;
 }
 
-
 double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
 /// Returns the rate coefficient for spontaneous recombination. Only needed during
 /// packet propagation, therefore the value is taken from the
@@ -756,12 +755,15 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
 {
   if (use_cellhist)
   {
-    double alpha_sp = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate;
+    double alpha_sp;
 
-    if (alpha_sp < 0.)
+    if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, spontaneousrecombrate_mask))
     {
       alpha_sp = interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e);
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = alpha_sp;
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask &= ~spontaneousrecombrate_mask;
+    } else {
+      alpha_sp = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate;
     }
     return alpha_sp;
   }
@@ -770,7 +772,6 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
     return interpolate_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
   }
 }
-
 
 double calculate_ionrecombcoeff(
   const int modelgridindex, const float T_e,
@@ -1242,6 +1243,60 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   return gammacorr;
 }
 
+//double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+///// Returns the photoionisation rate coefficient (corrected for stimulated emission)
+///// Only needed during packet propagation, therefore the value is taken from the
+///// cell history if known.
+//{
+//  /// The correction factor for stimulated emission in gammacorr is set to its
+//  /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+//  /// correction may be evaluated at T_R!
+//  double gammacorr;
+//  //if (use_cellhist)
+//  //  gammacorr = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
+//  
+//  const bool cellhist_reset = check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, corrphotoioncoeff_mask);
+//
+//  if (!use_cellhist || cellhist_reset)
+//  {
+//  #ifdef FORCE_LTE
+//    /// Interpolate gammacorr out of precalculated values
+//    const double T_R = get_TR(modelgridindex);
+//    gammacorr = interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+//  #else
+//    if (DETAILED_BF_ESTIMATORS_ON)
+//    {
+//      // gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+//      gammacorr = -1;
+//      // will be -1 if no estimators available
+//    }
+//    if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0)
+//    {
+//      #if (NO_LUT_PHOTOION)
+//      {
+//        gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+//      }
+//      #else
+//      {
+//        const double W = get_W(modelgridindex);
+//        const double T_R = get_TR(modelgridindex);
+//
+//        gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
+//        const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+//        if (index_in_groundlevelcontestimator >= 0)
+//          gammacorr *= corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimator];
+//      }
+//      #endif
+//    }
+//  #endif
+//  }
+//  if (use_cellhist) {
+//    cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
+//    cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask &= ~corrphotoioncoeff_mask;
+//  }
+//
+//  return gammacorr;
+//}
 
 double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 /// Returns the photoionisation rate coefficient (corrected for stimulated emission)
@@ -1251,6 +1306,10 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
+
+  // Has the cell been reset?
+  //const bool cellhist_reset = check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, corrphotoioncoeff_mask);
+
   double gammacorr;
   if (use_cellhist)
     gammacorr = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
@@ -1414,9 +1473,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   double bfheatingcoeff;
-  bfheatingcoeff = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff;
-
-  if (bfheatingcoeff < 0)
+  if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, bfheatingcoeff_mask))
   {
     #if NO_LUT_BFHEATING
       bfheatingcoeff = calculate_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
@@ -1441,10 +1498,12 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
     // depends on the radiation temperature, not the electron temperature,
     // so we can keep the old value during T_e finder, even if use_cellhist is false
     cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = bfheatingcoeff;
+    cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask &= ~bfheatingcoeff_mask;
+  } else {
+    bfheatingcoeff = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff;
   }
   return bfheatingcoeff;
 }
-
 
 static double interpolate_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, double T)
 {
@@ -1475,8 +1534,9 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
 /// known or not.
 {
   double bfcooling = -99.;
+  bool cellhist_reset = check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, bfcooling_mask);
 
-  if (use_cellhist)
+  if (use_cellhist && !cellhist_reset)
     bfcooling = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling;
 
   if (bfcooling < 0)
@@ -1490,8 +1550,10 @@ double get_bfcooling(int element, int ion, int level, int phixstargetindex, int 
     //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel * nne;
     bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnion * nne;
 
-    if (use_cellhist)
+    if (use_cellhist && cellhist_reset) {
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = bfcooling;
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask &= ~bfcooling_mask;
+    }
 
     #ifdef DEBUG_ON
       if (!isfinite(bfcooling))

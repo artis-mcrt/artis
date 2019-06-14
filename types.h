@@ -19,7 +19,7 @@
 
 // Maximum number of energy packets in calculation.
 //25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625
-#define MPKTS 3000000
+#define MPKTS 10000
 
 //26 //27 //9
 #define MELEMENTS 17
@@ -68,6 +68,7 @@ typedef struct cellhistorycoolinglist_t
   int level;
   int upperlevel;
   int lineindex;
+  int reset_mask;
 } cellhistorycoolinglist_t;
 
 /*enum heatingtype {
@@ -535,6 +536,7 @@ typedef struct
   double bfheatingcoeff;
   double corrphotoioncoeff;
   double sahafact;
+  int reset_mask;
 } chphixstargets_struct;
 
 
@@ -548,6 +550,7 @@ typedef struct chlevels_struct
   double *restrict individ_internal_up_same;
 
   chphixstargets_struct *restrict chphixstargets;
+  int reset_mask;
 } chlevels_struct;
 
 typedef struct chions_struct

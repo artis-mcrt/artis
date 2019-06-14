@@ -16,6 +16,34 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 double get_groundmultiplet_pop(
   int modelgridindex, float T_e, int element, int ion, bool assume_lte);
 
+typedef enum {
+// ALEXEI:
+// enum to indicate fields within cellhistory_struct which could be reset
+  sahafact_mask = 1,
+  spontaneousrecombrate_mask = 2,
+  bfcooling_mask = 4,
+  bfheatingcoeff_mask = 8,
+  corrphotoioncoeff_mask = 16,
+  population_mask = 32,
+  processrates_mask = 64,
+  cooling_contribution_mask = 128,
+  count,
+  cell_reset_mask = 255
+} cellhist_reset_field;
+
+__attribute__((always_inline)) inline bool check_cellhist_param_reset(int reset_mask, cellhist_reset_field field_mask) {
+/// ALEXEI:
+/// Checks whether relevant field within cellhist has been reset (e.g. for a new timestep) 
+/// by comparing with bitmask.
+  
+  bool reset = false;
+  
+  // compare to reset mask
+  reset = (reset_mask & field_mask);
+
+  return reset;
+}
+
 inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {

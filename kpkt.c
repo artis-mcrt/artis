@@ -608,10 +608,12 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
     int low = ilow;
     int high = low + get_ncoolingterms(element,ion)-1;
     //printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
+    //if (check_cellhist_param_reset(cellhistory[tid].coolinglist[low].reset_mask, cooling_contribution_mask))
     if (cellhistory[tid].coolinglist[low].contribution == COOLING_UNDEFINED)
     {
       //printout("calculate kpkt rates on demand\n");
       calculate_kpkt_rates_ion(modelgridindex,element,ion,low,oldcoolingsum);
+      cellhistory[tid].coolinglist[low].reset_mask &= ~cooling_contribution_mask;
     }
     //if (cellhistory[tid].coolinglist[high].contribution != coolingsum);
     //{

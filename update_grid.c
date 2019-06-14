@@ -374,7 +374,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
   fflush(estimators_file);
 }
 
-
 void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 {
   /// All entries of the cellhistory stack must be flagged as empty at the
@@ -397,22 +396,25 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
     for (int ion = 0; ion < nions; ion++)
     {
       cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution = COOLING_UNDEFINED;
+      //cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].reset_mask = cell_reset_mask;
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
         const double population = (new_timestep) ? -99 : calculate_exclevelpop(modelgridindex,element,ion,level);
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
+        //cellhistory[tid].chelements[element].chions[ion].chlevels[level].reset_mask = cell_reset_mask;
+        //if (!new_timestep) {
+        //  cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = 
+        //      calculate_exclevelpop(modelgridindex,element,ion,level);
+        //  cellhistory[tid].chelements[element].chions[ion].chlevels[level].reset_mask &= ~population_mask;
+	//}
 
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask = cell_reset_mask;
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99;
         }
-        /// This is the only flag needed for all of the following MA stuff!
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
+	cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
         /*
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = -99.;
