@@ -20,15 +20,15 @@ typedef enum {
 // ALEXEI:
 // enum to indicate fields within cellhistory_struct which could be reset
   sahafact_mask = 1,
-  spontaneousrecombrate_mask = 2,
-  bfcooling_mask = 4,
-  bfheatingcoeff_mask = 8,
-  corrphotoioncoeff_mask = 16,
-  population_mask = 32,
-  processrates_mask = 64,
-  cooling_contribution_mask = 128,
+  //spontaneousrecombrate_mask = 2,
+  //bfcooling_mask = 4,
+  //bfheatingcoeff_mask = 8,
+  //corrphotoioncoeff_mask = 16,
+  //population_mask = 32,
+  //processrates_mask = 64,
+  //cooling_contribution_mask = 128,
   count,
-  cell_reset_mask = 255
+  cell_reset_mask = 1
 } cellhist_reset_field;
 
 __attribute__((always_inline)) inline bool check_cellhist_param_reset(int reset_mask, cellhist_reset_field field_mask) {
