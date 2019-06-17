@@ -708,16 +708,25 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 
   if (use_cellhist)
   {
-    //sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
+    sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
 
 
     if (sf < 0)
-    if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, sahafact_mask))
+    //if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, sahafact_mask))
     {
+      if (!check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, sahafact_mask)) {
+        printout("reset check 1 failed. reset mask %d mask %d");
+	abort();
+      }
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
       sf = calculate_sahafact(element, ion, level, upperionlevel, T, E_threshold);
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask &= ~sahafact_mask;
+    } else {
+      if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, sahafact_mask)) {
+        printout("reset check 2 failed. reset mask %d mask %d");
+	abort();
+      }
     }
   }
   else
