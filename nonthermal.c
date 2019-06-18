@@ -662,10 +662,11 @@ static double get_positroninjection_rate_density(const int modelgridindex, const
         (exp(-t / T48V) - exp(-t / T48CR)) /
         (T48V - T48CR) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
 
+  const double pos_dep_sum = co56_positron_dep + ni57_positron_dep + v48_positron_dep;
   printout("positroninjection_rate_density(mgi %d time %g): %g erg/s/cm3 = co56 %g + ni57 %g + v48 %g\n",
-          modelgridindex, t, co56_positron_dep, ni57_positron_dep, v48_positron_dep);
+          modelgridindex, t, pos_dep_sum, co56_positron_dep, ni57_positron_dep, v48_positron_dep);
 
-  return co56_positron_dep + ni57_positron_dep + v48_positron_dep;
+  return pos_dep_sum;
 }
 
 
