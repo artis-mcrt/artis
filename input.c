@@ -321,7 +321,7 @@ static void read_ion_levels(
     }
     else
     {
-      elements[element].ions[ion].levels[nlevelsmax - 1].stat_weight += statweight;
+      // elements[element].ions[ion].levels[nlevelsmax - 1].stat_weight += statweight;
     }
   }
 }
