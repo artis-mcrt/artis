@@ -1599,19 +1599,17 @@ static void read_atomicdata(void)
         elements[element].ions[ion].first_nlte = total_nlte_levels;
         const int nlevels = get_nlevels(element,ion);
         int count = 0;
-        if (nlevels > 1)
+        for (int level = 1; level < nlevels; level++)
         {
-          for (int level = 1; level < nlevels; level++)
+          if (is_nlte(element,ion,level))
           {
-            if (is_nlte(element,ion,level))
-            {
-              count++;
-              total_nlte_levels++;
-            }
+            count++;
+            total_nlte_levels++;
           }
         }
 
-        if (count < (nlevels - 1))
+        const bool has_superlevel = (nlevels > (count + 1));
+        if (has_superlevel)
         {
           // If there are more levels that the ground state + the number of NLTE levels then we need an extra
           // slot to store data for the "superlevel", which is a representation of all the other levels that
@@ -1622,9 +1620,13 @@ static void read_atomicdata(void)
 
         elements[element].ions[ion].nlevels_nlte = count;
 
-        printout("[input.c]  element %2d Z=%2d ion_stage %2d has %5d NLTE levels. Starting at %d\n",
-                 element, get_element(element), get_ionstage(element,ion),
-                 get_nlevels_nlte(element,ion), elements[element].ions[ion].first_nlte);
+        assert(has_superlevel == ion_has_superlevel(element, ion));
+
+        printout("[input.c]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n",
+                 element, get_element(element), get_ionstage(element, ion),
+                 get_nlevels_nlte(element, ion),
+                 has_superlevel ? " plus a superlevel" : "",
+                 elements[element].ions[ion].first_nlte);
       }
     }
   }
