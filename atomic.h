@@ -61,8 +61,8 @@ inline int get_nlevels(int element, int ion)
 
 
 inline int get_nlevels_nlte(int element, int ion)
-// Returns the number of levels associated with with a specific ion given
-// its elementindex and ionindex.
+// Returns the number of NLTE levels associated with with a specific ion given
+// its elementindex and ionindex. Includes the superlevel if there is one but does not include the ground state
 {
   return elements[element].ions[ion].nlevels_nlte;
 }
@@ -157,6 +157,12 @@ inline bool is_nlte(int element, int ion, int level)
   else
     return (level <= 80);
   // return (level <= 80);
+}
+
+
+inline bool ion_has_superlevel(const int element, const int ion)
+{
+  return (get_nlevels(element, ion) > get_nlevels_nlte(element, ion) + 1);
 }
 
 

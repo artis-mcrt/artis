@@ -47,7 +47,7 @@ const int MAX_NT_EXCITATIONS_STORED = 25000;
 // in the NLTE pop solver, macroatom, and NTLEPTON packets.
 // Even with this off, excitations will be included in the solution
 // and their combined deposition fraction is calculated
-#define NT_EXCITATION_ON true
+#define NT_EXCITATION_ON false
 
 // increase the excitation and ionization lists by this blocksize when reallocating
 #define BLOCKSIZEEXCITATION 5192

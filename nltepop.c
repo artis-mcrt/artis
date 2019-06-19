@@ -23,6 +23,7 @@ int get_nlte_vector_index(const int element, const int ion, const int level)
 {
   // have to convert from nlte_pops index to nlte_vector index
   // the difference is that nlte vectors apply to a single element and include ground states
+  // The (+ ion) term accounts for the ground state population indicies that are not counted in the NLTE array
   const int gs_index = elements[element].ions[ion].first_nlte - elements[element].ions[0].first_nlte + ion;
 
   // add in level or superlevel number
@@ -37,9 +38,9 @@ static void get_ion_level_of_nlte_vector_index(const int index, const int elemen
   // this could easily be optimized if need be
   for (int dion = 0; dion < get_nions(element); dion++)
   {
-    for (int dlevel = 0; dlevel < get_nlevels(element,dion); dlevel++)
+    for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++)
     {
-      if (get_nlte_vector_index(element,dion,dlevel) == index)
+      if (get_nlte_vector_index(element, dion, dlevel) == index)
       {
         *ion = dion;
         *level = dlevel;
@@ -218,8 +219,7 @@ static void print_level_rates_summary(
     if (i == 0)
     {
       const int nlevels_nlte = get_nlevels_nlte(element, selected_ion);
-      const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, selected_ion) - 1));
-      if (has_superlevel && (selected_level == nlevels_nlte + 1))
+      if (ion_has_superlevel(element, selected_ion) && (selected_level == nlevels_nlte + 1))
       {
         printout("      superlevel  ");
       }
@@ -294,7 +294,9 @@ static void print_element_rates_summary(
     const int atomic_number = get_element(element);
     const int ionstage = get_ionstage(element, ion);
 
-    for (int level = 0; (level < 16) && (level < nlevels) && (level < nlevels_nlte); level++)
+    const int max_printed_levels = 81;
+
+    for (int level = 0; (level < max_printed_levels) && (level < nlevels) && (level <= nlevels_nlte + 1); level++)
     {
       if (level == 0)
       {
@@ -305,8 +307,7 @@ static void print_element_rates_summary(
       print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
-    const bool has_superlevel = (nlevels_nlte != (get_nlevels(element, ion) - 1));
-    if (has_superlevel)
+    if (ion_has_superlevel(element, ion) && max_printed_levels < (nlevels_nlte + 1))
     {
       const int level_superlevel = nlevels_nlte + 1;
 
@@ -328,7 +329,7 @@ static void print_level_rates(
 {
   // very detailed output of the NLTE processes for a particular levels
 
-  if (element > nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > get_nlevels_nlte(element, selected_ion) + 1)
+  if (element > nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > (get_nlevels_nlte(element, selected_ion) + (ion_has_superlevel(element, selected_ion) ? 1 : 0)))
   {
     printout("print_level_rates: invalid element/ion/level arguments\n");
     abort();
@@ -421,11 +422,12 @@ static void nltepop_reset_element(const int modelgridindex, const int element)
   {
     const int nlte_start = elements[element].ions[ion].first_nlte;
     const int nlevels_nlte = get_nlevels_nlte(element,ion);
-    for (int level = 1; level < nlevels_nlte + 1; level++)
+    for (int level = 1; level < nlevels_nlte; level++)
     {
       modelgrid[modelgridindex].nlte_pops[nlte_start + level - 1] = -1.0; // flag to indicate no useful data
     }
-    if (nlevels_nlte != (get_nlevels(element,ion) - 1)) // a superlevel exists
+
+    if (ion_has_superlevel(element, ion))
     {
       modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = -1.0;
     }
@@ -439,29 +441,29 @@ static int get_element_nlte_dimension_and_slpartfunc(
   int nlte_dimension = 0;
   for (int ion = 0; ion < nions; ion++)
   {
-    superlevel_partfunc[ion] = 0;
-    const int nlevels_nlte = get_nlevels_nlte(element,ion);
+    superlevel_partfunc[ion] = 0.;
+    const int nlevels_nlte = get_nlevels_nlte(element, ion);
 
     //this is the total number of nlte_levels (i.e. the size of the
     //storage). Our rate matrix will need to be of this dimension +2: the
     //ground state, the "super level".
     //If there's no super level needed then we only need +1
-    if (nlevels_nlte == (get_nlevels(element, ion) - 1))
+    if (ion_has_superlevel(element, ion))
+    {
+      nlte_dimension += nlevels_nlte + 2;
+      const int nlevels = get_nlevels(element, ion);
+      for (int level = nlevels_nlte + 1; level < nlevels; level++)
+      {
+        superlevel_partfunc[ion] += superlevel_boltzmann(modelgridindex, element, ion, level);
+      }
+      // printout("  NLTE: including ion_stage %d, which contributes %d to the vector dimension (including superlevel with partfunc %g)\n",
+      //          get_ionstage(element, ion), nlevels_nlte + 2, superlevel_partfunc[ion]);
+    }
+    else
     {
       nlte_dimension += nlevels_nlte + 1;
       // printout("  NLTE: including ion_stage %d, which contributes %d to the vector dimension (no super level)\n",
       //          get_ionstage(element, ion), nlevels_nlte + 1);
-    }
-    else
-    {
-      for (int level = 1; level < get_nlevels(element,ion); level++)
-      {
-        if (is_nlte(element, ion, level) == false)
-          superlevel_partfunc[ion] += superlevel_boltzmann(modelgridindex,element,ion,level);
-      }
-      nlte_dimension += nlevels_nlte + 2;
-      // printout("  NLTE: including ion_stage %d, which contributes %d to the vector dimension (including superlevel with partfunc %g)\n",
-      //          get_ionstage(element, ion), nlevels_nlte + 2, superlevel_partfunc[ion]);
     }
   }
 
@@ -708,17 +710,25 @@ static void set_element_pops_lte(const int modelgridindex, const int element)
 }
 
 
-static bool lumatrix_is_singular(const gsl_matrix * LU)
+static bool lumatrix_is_singular(const gsl_matrix *LU, const int element)
 {
-  size_t i, n = LU->size1;
+  size_t n = LU->size1;
+  bool is_singular = false;
 
-  for (i = 0; i < n; i++)
+  for (size_t i = 0; i < n; i++)
   {
     const double u = gsl_matrix_get(LU, i, i);
-    if (u == 0) return true;
+    if (u == 0)
+    {
+      int ion = -1;
+      int level = -1;
+      get_ion_level_of_nlte_vector_index(i, element, &ion, &level);
+      printout("NLTE disconnected level: Z=%d ionstage %d level+1 %d\n", get_element(element), get_ionstage(element, ion), level + 1);
+      is_singular = true;
+    }
   }
 
- return false;
+ return is_singular;
 }
 
 
@@ -748,7 +758,7 @@ static bool nltepop_matrix_solve(
   int s; // sign of the transformation
   gsl_linalg_LU_decomp(rate_matrix_LU_decomp, p, &s);
 
-  if (lumatrix_is_singular(rate_matrix_LU_decomp))
+  if (lumatrix_is_singular(rate_matrix_LU_decomp, element))
   {
     printout("ERROR: NLTE matrix is singular for element Z=%d!\n", get_element(element));
     // abort();
@@ -920,11 +930,16 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     // printout(" %d", ionstage);
 
     const int nlevels = get_nlevels(element, ion);
+    const int nlevels_nlte = get_nlevels_nlte(element, ion);
     double s_renorm[nlevels];
-    for (int level = 0; level < nlevels; level++)
+    for (int level = 0; level <= nlevels_nlte; level++)
     {
-      s_renorm[level] = ((!is_nlte(element, ion, level)) && (level != 0)) ?
-        superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion] : 1.0;
+      s_renorm[level] = 1.0;
+    }
+
+    for (int level = (nlevels_nlte + 1); level < nlevels; level++)
+    {
+      s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
     }
 
     nltepop_matrix_add_boundbound(
@@ -964,21 +979,21 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_vector *pop_norm_factor_vec = gsl_vector_calloc(nlte_dimension);
   nltepop_matrix_normalise(modelgridindex, element, rate_matrix, pop_norm_factor_vec);
 
-  /*printout("Rate matrix | balance vector:\n");
-  for (int row = 0; row < nlte_dimension; row++)
-  {
-    for (int column = 0; column < nlte_dimension; column++)
-    {
-      char str[15];
-      sprintf(str, "%+.1e ", rate_matrix[row * nlte_dimension + column]);
-      printout(str);
-    }
-    printout("| ");
-    char str[15];
-    sprintf(str, "%+.1e\n", balance_vector[row]);
-    printout(str);
-  }
-  printout("\n");*/
+  // printout("Rate matrix | balance vector:\n");
+  // for (int row = 0; row < nlte_dimension; row++)
+  // {
+  //   for (int column = 0; column < nlte_dimension; column++)
+  //   {
+  //     char str[15];
+  //     sprintf(str, "%+.1e ", gsl_matrix_get(rate_matrix, row, column));
+  //     printout(str);
+  //   }
+  //   printout("| ");
+  //   char str[15];
+  //   sprintf(str, "%+.1e\n", gsl_vector_get(balance_vector, row));
+  //   printout(str);
+  // }
+  // printout("\n");
 
   // eliminate barely-interacting levels from the NLTE matrix by removing
   // their interactions and setting their normalised populations (probably departure coeff) to 1.0
@@ -1019,12 +1034,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       }
 
       // store the superlevel population if there is one
-      if (nlevels_nlte != (get_nlevels(element,ion) - 1)) //a superlevel exists
+      if (ion_has_superlevel(element, ion)) //a superlevel exists
       {
         const int index_sl = get_nlte_vector_index(element, ion, nlevels_nlte + 1);
-        modelgrid[modelgridindex].nlte_pops[nlte_start+nlevels_nlte] = gsl_vector_get(popvec, index_sl) /
-                                                                       modelgrid[modelgridindex].rho /
-                                                                       superlevel_partfunc[ion];
+        modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte] = (
+          gsl_vector_get(popvec, index_sl) / modelgrid[modelgridindex].rho / superlevel_partfunc[ion]);
+
+        // printout("solve_nlte_pops_element: The Z=%d ionstage %d superlevel population is %g with rho %g and superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_element(element), get_ionstage(element, ion), gsl_vector_get(popvec, index_sl), modelgrid[modelgridindex].rho, superlevel_partfunc[ion], get_Te(modelgridindex), modelgrid[modelgridindex].nlte_pops[nlte_start + nlevels_nlte]);
         // the stored population is already divided by the partfunc, so just multiply
         // it by the superlevel_boltzmann to get the population of a level in the SL
 
@@ -1623,37 +1639,47 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
       const int ion_first_nlte = elements[element].ions[ion].first_nlte;
       const int ion_stage = get_ionstage(element, ion);
 
-      const int nlevels = get_nlevels(element, ion);
-      int superlevel = (nlevels_nlte != (nlevels - 1));
+      const int nsuperlevels = ion_has_superlevel(element, ion) ? 1 : 0;
 
-      for (int level = 0; level <= nlevels_nlte + superlevel; level++)
+      for (int level = 0; level <= nlevels_nlte + nsuperlevels; level++)
       {
         double nnlevellte = calculate_levelpop_lte(modelgridindex, element, ion, level);
         double nnlevelnlte;
 
         // use "%8d %14d %2d %9d " for fixed width
         fprintf(nlte_file, "%d %d %d %d ", timestep, modelgridindex, atomic_number, ion_stage);
-        if (level < nlevels_nlte + 1)
+        if (level <= nlevels_nlte)
         {
           fprintf(nlte_file, "%d ", level);
 
-          nnlevelnlte = (level == 0) ? nnlevellte : (
-           modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
+          if (level == 0)
+          {
+            nnlevelnlte = get_groundlevelpop(modelgridindex, element, ion);
+          }
+          else
+          {
+            nnlevelnlte =  (
+               modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
+          }
         }
         else
         {
           // superlevel, so add the populations of all other levels in the superlevel
           const double slpopfactor = (
-            modelgrid[modelgridindex].nlte_pops[ion_first_nlte + level - 1] * modelgrid[modelgridindex].rho);
+            modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte] * modelgrid[modelgridindex].rho);
 
           nnlevellte = 0;
-          nnlevelnlte = 0;
+          double superlevel_partfunc = 0;
           fprintf(nlte_file, "%d ", -1);
           for (int level_sl = nlevels_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++)
           {
             nnlevellte += calculate_levelpop_lte(modelgridindex, element, ion, level_sl);
-            nnlevelnlte += slpopfactor * superlevel_boltzmann(modelgridindex, element, ion, level);
+            superlevel_partfunc += superlevel_boltzmann(modelgridindex, element, ion, level_sl);
           }
+
+          nnlevelnlte = slpopfactor * superlevel_partfunc;
+
+          // printout("nltepop_write_to_file: The Z=%d ionstage %d superlevel population is %g with rho %g and superlevel_partfunc %g Te %g scaled pop stored as %g\n", get_element(element), get_ionstage(element, ion), nnlevelnlte, modelgrid[modelgridindex].rho, superlevel_partfunc, get_Te(modelgridindex), modelgrid[modelgridindex].nlte_pops[ion_first_nlte + nlevels_nlte]);
         }
 
         const double ion_popfrac = nnlevelnlte / ionstagepop(modelgridindex, element, ion);
