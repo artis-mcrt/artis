@@ -519,6 +519,9 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation population of a level assuming LTE excitation
 {
+  if (level == 0)
+    return get_groundlevelpop(modelgridindex, element, ion);
+
   const double T_exc = get_TJ(modelgridindex);
   const double W = 1.;
 
