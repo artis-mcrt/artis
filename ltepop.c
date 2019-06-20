@@ -483,7 +483,6 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
   return nn;
 }*/
 
-
 double get_levelpop(int modelgridindex, int element, int ion, int level)
 /// Returns the given levels occupation number, which are stored in the active
 /// entry of the cellhistory.
@@ -502,11 +501,13 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
       abort();
     }
 
-    levelpop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
-    if (levelpop < 0)
+    if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].reset_mask, population_mask))
     {
       levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = levelpop;
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].reset_mask &= ~population_mask;
+    } else {
+      levelpop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
     }
   }
   else
@@ -514,7 +515,6 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
 
   return levelpop;
 }
-
 
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation population of a level assuming LTE excitation
@@ -700,7 +700,6 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }
 }*/
 
-
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
 /// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
 {
@@ -708,25 +707,14 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
 
   if (use_cellhist)
   {
-    sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
-
-
-    if (sf < 0)
-    //if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, sahafact_mask))
+    if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, sahafact_mask))
     {
-      if (!check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, sahafact_mask)) {
-        printout("reset check 1 failed. reset mask %d mask %d");
-	abort();
-      }
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
       sf = calculate_sahafact(element, ion, level, upperionlevel, T, E_threshold);
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
       cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask &= ~sahafact_mask;
     } else {
-      if (check_cellhist_param_reset(cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].reset_mask, sahafact_mask)) {
-        printout("reset check 2 failed. reset mask %d mask %d");
-	abort();
-      }
+      sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
     }
   }
   else
@@ -738,5 +726,4 @@ double get_sahafact(int element, int ion, int level, int phixstargetindex, doubl
   //printout("get_sahafact: sf= %g\n",sf);
   return sf;
 }
-
 
