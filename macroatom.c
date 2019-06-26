@@ -1059,10 +1059,6 @@ double rad_deexcitation_ratecoeff(
       }
     #endif
   }
-  else
-  {
-    R = 0.0;
-  }
 
   return R;
 }
@@ -1169,10 +1165,6 @@ double rad_excitation_ratecoeff(
       abort();
     }
     #endif
-  }
-  else
-  {
-    R = 0.0;
   }
 
   return R;

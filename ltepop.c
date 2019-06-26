@@ -425,7 +425,9 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
       return 0.;
   }
   else
+  {
     return nn;
+  }
 }
 
 
