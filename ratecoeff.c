@@ -124,6 +124,10 @@ static bool read_ratecoeff_dat(void)
               break;
             }
           }
+          if (!fileisamatch)
+          {
+            break;
+          }
         }
       }
       else
@@ -824,6 +828,11 @@ double calculate_ionrecombcoeff(
         nnupperlevel = calculate_exclevelpop(modelgridindex, element, lowerion + 1, upper);
       }
       nnupperion += nnupperlevel;
+    }
+
+    if (nnupperion <= 0.)
+    {
+      return 0.;
     }
 
     double nnupperlevel_so_far = 0.;
@@ -1574,6 +1583,11 @@ double calculate_iongamma_per_ionpop(
       nnlowerlevel = calculate_exclevelpop(modelgridindex, element, lowerion, lower);
     }
     nnlowerion += nnlowerlevel;
+  }
+
+  if (nnlowerion <= 0.)
+  {
+    return 0.;
   }
 
   double gamma_ion = 0.;
