@@ -1100,7 +1100,7 @@ double rad_excitation_ratecoeff(
       //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
       //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
 
-      const double R_over_J_nu = (B_lu - B_ul * n_u / n_l) * beta;
+      const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
 
       R = R_over_J_nu * radfield(nu_trans, modelgridindex);
       if (!initial_iteration)
