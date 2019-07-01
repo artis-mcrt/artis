@@ -1017,7 +1017,11 @@ static void read_recombrate_file(void)
           printout("  input_rrc_low_n: %10.3e\n", input_rrc_low_n);
 
           const double phixs_multiplier = input_rrc_low_n / rrc;
-          if (phixs_multiplier >= 0.5 && phixs_multiplier < 1.0)
+          if (phixs_multiplier < 0.5 || phixs_multiplier >= 1.0)
+          {
+            printout("    Not scaling phixs of all levels by %.3f (because < 0.5 or >= 1.0)\n", phixs_multiplier);
+          }
+          else
           {
             printout("    scaling phixs of all levels by %.3f\n", phixs_multiplier);
 
@@ -1027,8 +1031,6 @@ static void read_recombrate_file(void)
             rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
             printout("              rrc: %10.3e\n", rrc);
           }
-          else
-            printout("    Not scaling phixs of all levels by %.3f (because < 0.5 or >= 1.0)\n", phixs_multiplier);
         }
 
         // hopefully the RRC now matches the low_n value well, if it was defined
