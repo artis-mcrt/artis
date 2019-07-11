@@ -95,6 +95,29 @@ int get_tot_nions(void)
 }
 
 
+bool is_nlte(int element, int ion, int level)
+// Returns true if (element,ion,level) is to be treated in nlte.
+// (note this function returns true for the ground state,
+//  although it is stored separately from the excited NLTE states)
+{
+  if (!NLTE_POPS_ON)
+  {
+    return false;
+  }
+  else if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
+    return (level <= 197);
+  else
+    return (level <= 80);
+}
+
+
+bool level_isinsuperlevel(int element, int ion, int level)
+// ion has NLTE levels, but this one is not NLTE => is in the superlevel
+{
+  return (NLTE_POPS_ON && !is_nlte(element,ion,level) && level != 0 && (get_nlevels_nlte(element, ion) > 0));
+}
+
+
 double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
