@@ -444,7 +444,7 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 
 static void solve_Te_nltepops(const int n, const int nts, const int titer)
 {
-  const double covergence_tolerance = 0.03;
+  const double covergence_tolerance = 0.02;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
   {
     const time_t sys_time_start_spencerfano = time(NULL);
@@ -477,12 +477,14 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer)
     const int duration_solve_partfuncs_or_gamma = time(NULL) - sys_time_start_partfuncs_or_gamma;
 
     /// Find T_e as solution for thermal balance
+    const double prev_T_e = get_Te(n);
     const time_t sys_time_start_Te = time(NULL);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
     call_T_e_finder(n, nts, time_step[nts_for_te].mid, MINTEMP, MAXTEMP);
 
     const int duration_solve_T_e = time(NULL) - sys_time_start_Te;
+    const double fracdiff_T_e = fabs((get_Te(n) / prev_T_e) - 1);
 
     if (!NLTE_POPS_ON || !NLTE_POPS_ALL_IONS_SIMULTANEOUS) // do this in LTE or NLTE single ion solver mode
     {
@@ -529,11 +531,12 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer)
         const double nne_prev = get_nne(n);
         precalculate_partfuncts(n);
         calculate_electron_densities(n); // sets nne
-        nlte_test = fabs((get_nne(n) / nne_prev) - 1);
+        const double fracdiff_nne = fabs((get_nne(n) / nne_prev) - 1);
+        nlte_test = fracdiff_nne;
         printout("NLTE solver cell %d timestep %d iteration %d: time spent on: Spencer-Fano %ds, T_e %ds, NLTE populations %ds\n",
                  n, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
-        printout("NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: previous nne was %g, new nne is %g, fractional difference is %g\n",
-                 n, nts, nlte_iter, nne_prev, get_nne(n), nlte_test);
+        printout("NLTE (Spencer-Fano/Te/pops) solver cell %d timestep %d iteration %d: prev_iter nne %g, new nne is %g, fracdiff %g, prev T_e %g new T_e %g fracdiff %g\n",
+                 n, nts, nlte_iter, nne_prev, get_nne(n), nlte_test, prev_T_e, get_Te(n), fracdiff_T_e);
         // damp changes in nne if oscillating to much
         //set_nne(n, (get_nne(n) + nne_prev) / 2.);
       }
@@ -543,9 +546,9 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer)
                  n, nts, nlte_test);
       }
 
-      if (nlte_test <= covergence_tolerance)
+      if (nlte_test <= covergence_tolerance && fracdiff_T_e <= covergence_tolerance)
       {
-        printout("NLTE solver converged to tolerance %g <= %g after %d iterations.\n", nlte_test, covergence_tolerance, nlte_iter + 1);
+        printout("NLTE (Spencer-Fano/Te/pops) solver nne converged to tolerance %g <= %g and T_e to tolerance %g <= %g after %d iterations.\n", nlte_test, covergence_tolerance, fracdiff_T_e, covergence_tolerance, nlte_iter + 1);
         break;
       }
       else if (nlte_iter == NLTEITER)
