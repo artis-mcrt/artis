@@ -16,11 +16,6 @@ static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
 static const double nu_lower_first_initial = (CLIGHT / (10000e-8)); // in Angstroms
 static const double nu_upper_last_initial = (CLIGHT /  (50e-8));  // in Angstroms
 
-static const double boost_region_nu_lower = (CLIGHT / (2500e-8)); // in Angstroms
-static const double boost_region_nu_upper = (CLIGHT / (2100e-8));  // in Angstroms
-static const double boost_region_factor = 1.0;
-static const bool boost_region_on = false;
-
 static double J_normfactor[MMODELGRID + 1];
 
 static bool radfield_initialized = false;
@@ -1326,11 +1321,6 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
     {
       const double nu_lower = get_bin_nu_lower(binindex);
       const double nu_upper = get_bin_nu_upper(binindex);
-      if (boost_region_on && boost_region_nu_lower < nu_upper && boost_region_nu_upper > nu_lower)
-      {
-        printout("Artificially boosting bin %d\n",binindex);
-        set_bin_J(modelgridindex, binindex, J_bin_max * boost_region_factor);
-      }
       const double J_bin = get_bin_J(modelgridindex, binindex);
       float T_R_bin = -1.0;
       double W_bin = -1.0;
