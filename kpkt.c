@@ -422,7 +422,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   /// don't calculate cooling rates after each cell crossings anylonger
   /// but only if we really get a kpkt and they hadn't been calculated already
   //if (cellhistory[tid].totalcooling == COOLING_UNDEFINED)
-  //printout("mgi %d, histindex %d\n",modelgridindex,histindex);
 /*  int ondemand = 1;
   if (modelgrid[modelgridindex].totalcooling == COOLING_UNDEFINED)
   {

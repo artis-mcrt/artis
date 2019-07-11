@@ -197,7 +197,6 @@ static double get_event(
 
       if (tau_rnd - tau > tau_cont)
       {
-        //A_ul = einstein_spontaneous_emission(element,ion,upper,lower);
         const double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans - 1);
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
@@ -206,7 +205,7 @@ static double get_event(
         const double n_l = get_levelpop(modelgridindex, element, ion, lower);
 
         double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
-        //if (element == 7) fprintf(tau_file,"%g %g %d\n",nu_trans,tau_line,ion);
+
         if (tau_line < 0)
         {
           //printout("[warning] get_event: tau_line %g < 0, n_l %g, n_u %g, B_lu %g, B_ul %g, W %g, T_R %g, element %d, ion %d, upper %d, lower %d ... abort\n",tau_line, n_l,n_u,B_lu,B_ul,get_W(cell[pkt_ptr->where].modelgridindex),get_TR(cell[pkt_ptr->where].modelgridindex),element,ion,upper,lower);

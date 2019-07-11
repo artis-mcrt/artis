@@ -320,7 +320,6 @@ static void calculate_cooling_rates(const int modelgridindex, const double T_e, 
           //epsilon_upper = epsilon(element,ion+1,0);
           //E_threshold = epsilon_upper - epsilon_current;
           //E_threshold = epsilon_trans;
-          //printout("get_bfcooling(%d,%d,%d,%d) for histindex %d\n",element,ion,level,cellnumber,histindex);
           C = 0.0;
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {

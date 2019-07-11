@@ -490,7 +490,6 @@ double get_levelpop(int modelgridindex, int element, int ion, int level)
 /// Returns the given levels occupation number, which are stored in the active
 /// entry of the cellhistory.
 {
-//printout("get_levelpop histindex %d\n",histindex);
   double levelpop;
   if (use_cellhist)
   {

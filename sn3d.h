@@ -417,7 +417,6 @@ double NPHIXSNUINCREMENT;
 ///============================================================================
 
 cellhistory_struct *restrict cellhistory;          /// Global pointer to the beginning of the cellhistory stack.
-//extern int histindex;                   /// Global index variable to acces the cellhistory stack.
 //#define CELLHISTORYSIZE 2               /// Size of the cellhistory stack.
 
 

@@ -866,7 +866,6 @@ int main(int argc, char** argv)
                  nts, sys_time_finish_update_grid_all_processes - sys_time_finish_update_grid);
         printout("timestep %d: time after update grid for all processes %d (took %d seconds)\n",
                  nts, sys_time_finish_update_grid_all_processes, sys_time_finish_update_grid_all_processes - sys_time_start_update_grid);
-        //printout("histindex %d\n",histindex);
 
         const time_t sys_time_start_communicate_grid = time(NULL);
 
