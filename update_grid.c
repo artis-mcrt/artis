@@ -695,7 +695,8 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
   const int assoc_cells = get_numassociatedcells(n);
   if (assoc_cells > 0)
   {
-    const double deltaV = vol_init_modelcell(n) * pow(time_step[nts_prev].mid / tmin, 3);
+    // estimators were accumulated in nts_prev, but radiation density, etc should be scaled to the cell volume at nts
+    const double deltaV = vol_init_modelcell(n) * pow(time_step[nts].mid / tmin, 3);
     const time_t sys_time_start_update_cell = time(NULL);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
     const bool log_this_cell = true;
