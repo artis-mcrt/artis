@@ -430,6 +430,47 @@ static void remove_grid_restart_data(const int timestep)
 }
 
 
+static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo)
+{
+  #ifndef MPI_ON
+    // no MPI, single process updates all cells
+    *nstart = 0;
+    *ndo = npts_model;
+    return;
+  #endif
+
+  int nblock;
+  int n_leftover;
+
+  nblock = npts_model / nprocesses; // integer division, minimum cells for any process
+  const int numtot = nblock * nprocesses; // cells counted if all processes do the minimum number of cells
+  if (numtot > npts_model) // LJS: should never be the case?
+  {
+    nblock = nblock - 1;
+    n_leftover = npts_model - (nblock * nprocesses);
+  }
+  else if (numtot < npts_model)
+  {
+    n_leftover = npts_model - (nblock * nprocesses);
+  }
+  else
+  {
+    n_leftover = 0;
+  }
+
+  if (my_rank < n_leftover)
+  {
+    *ndo = nblock + 1;
+    *nstart = my_rank * (nblock + 1);
+  }
+  else
+  {
+    *ndo = nblock;
+    *nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
+  }
+}
+
+
 int main(int argc, char** argv)
 // Main - top level routine.
 {
@@ -631,60 +672,20 @@ int main(int argc, char** argv)
     /// The next loop is over all grid cells. For parallelisation, we want to split this loop between
     /// processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
     /// cells are sent to processes 0 ... process n_leftover -1.
+    int nstart = 0;
+    int ndo = 0;
+    get_nstart_ndo(my_rank, p, &nstart, &ndo);
+    printout("process rank %d (of %d) doing %d cells", my_rank, nprocs, ndo);
+    if (ndo > 0)
+    {
+      printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
+    }
+    else
+    {
+      printout("\n");
+    }
+
     #ifdef MPI_ON
-      int nblock;
-      int numtot;
-      int n_leftover;
-
-      int nstart;
-      int ndo;
-      //nblock = ngrid / p;
-      //nblock = nnonemptycells / p;
-      nblock = npts_model / p;
-      numtot = nblock * p;
-      //if (numtot > ngrid)
-      //if (numtot > nnonemptycells)
-      if (numtot > npts_model)
-      {
-        nblock = nblock - 1;
-        //n_leftover = ngrid - (nblock * p);
-        //n_leftover = nnonemptycells - (nblock * p);
-        n_leftover = npts_model - (nblock * p);
-      }
-      //else if (numtot < ngrid)
-      //else if (numtot < nnonemptycells)
-      else if (numtot < npts_model)
-      {
-        //n_leftover = ngrid - (nblock * p);
-        //n_leftover = nnonemptycells - (nblock * p);
-        n_leftover = npts_model - (nblock * p);
-      }
-      else
-      {
-        n_leftover = 0;
-      }
-
-      if (my_rank < n_leftover)
-      {
-        ndo = nblock + 1;
-        nstart = my_rank * (nblock + 1);
-      }
-      else
-      {
-        ndo = nblock;
-        nstart = n_leftover * (nblock + 1) + (my_rank - n_leftover) * (nblock);
-      }
-
-      printout("process rank %d (of %d) doing %d cells", my_rank, nprocs, ndo);
-      if (ndo > 0)
-      {
-        printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
-      }
-      else
-      {
-        printout("\n");
-      }
-
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
@@ -697,11 +698,6 @@ int main(int argc, char** argv)
         printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");
         abort();
       }
-    #else
-      const int nstart = 0;
-      //ndo = ngrid;
-      //ndo = nnonemptycells;
-      const int ndo = npts_model;
     #endif
 
 
