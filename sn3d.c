@@ -797,6 +797,7 @@ int main(int argc, char** argv)
 
       for (int titer = 0; titer < n_titer; titer++)
       {
+        const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
         if ((titer > 0) || (simulation_continued_from_saved && (nts == itstep)))
         {
           /// Read the packets file to reset before each additional iteration on the timestep
@@ -847,7 +848,7 @@ int main(int argc, char** argv)
           #endif
         #endif
 
-        update_grid(estimators_file, nts, my_rank, nstart, ndo, titer);
+        update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer);
 
         const time_t sys_time_finish_update_grid = time(NULL);
         printout("timestep %d: update_grid: process %d finished update_grid at %d (took %d seconds)\n",
