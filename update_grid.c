@@ -293,7 +293,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       fprintf(estimators_file, "\n");
 
       #if (DETAILED_BF_ESTIMATORS_ON)
-      fprintf(estimators_file, "gamma_R_detail Z=%2d", get_element(element));
+      fprintf(estimators_file, "gamma_R_bfest  Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
