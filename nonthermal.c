@@ -2060,8 +2060,6 @@ void do_ntlepton(PKT *pkt_ptr)
   #endif
   //pkt_ptr->type = TYPE_PRE_KPKT;
   //pkt_ptr->type = TYPE_GAMMA_KPKT;
-  //if (tid == 0) k_stat_from_eminus += 1;
-  k_stat_from_eminus += 1;
   nt_stat_to_kpkt++;
 }
 

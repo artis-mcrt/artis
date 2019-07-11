@@ -1,7 +1,7 @@
 #ifndef UPDATE_GRID_H
 #define UPDATE_GRID_H
 
-void update_grid(FILE *estimators_file, int nts, int my_rank, int nstart, int ndo, int titer);
+void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer);
 void precalculate_partfuncts(int modelgridindex);
 void cellhistory_reset(int cellnumber, bool set_population);
 double calculate_populations(int modelgridindex);
