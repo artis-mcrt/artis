@@ -15,6 +15,7 @@ void radfield_close_file(void);
 void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr);
 void radfield_increment_lineestimator(int modelgridindex, int lineindex, double increment);
 double radfield(double nu, int modelgridindex);
+double radfield_dbb_mgi(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex, int timestep);
 void radfield_set_J_normfactor(int modelgridindex, double normfactor);
 void radfield_normalise_J(int modelgridindex, double estimator_normfactor_over4pi);

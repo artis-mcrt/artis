@@ -963,6 +963,15 @@ void radfield_increment_lineestimator(const int modelgridindex, const int linein
   }
 }
 
+
+double radfield_dbb_mgi(double nu, int modelgridindex)
+{
+  const float T_R_fullspec = get_TR(modelgridindex);
+  const float W_fullspec   = get_W(modelgridindex);
+  return radfield_dbb(nu, T_R_fullspec, W_fullspec);
+}
+
+
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
 {
