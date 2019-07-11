@@ -356,9 +356,8 @@ void update_packets(const int nts, PKT *pkt)
         printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",
                  n, pkt_ptr->interactions, nts);
 
-      if (n == npkts - 1)
-        printout("last packet updated at %d\n",time(NULL));
     }
+    printout("last packet updated at %d\n",time(NULL));
   }
 
   printout("end of update_packets parallel for loop %d\n",time(NULL));

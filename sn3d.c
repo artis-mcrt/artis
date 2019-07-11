@@ -635,8 +635,7 @@ int main(int argc, char** argv)
       int nblock;
       int numtot;
       int n_leftover;
-    #endif
-    #ifdef MPI_ON
+
       int nstart;
       int ndo;
       //nblock = ngrid / p;
@@ -738,9 +737,9 @@ int main(int argc, char** argv)
         // Continue simulation: read into temporary files
 
         if (nts % 2 == 0)
-          sprintf(filename,"vspecpol_%d_%d_odd.tmp",0,my_rank);
+          sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
         else
-          sprintf(filename,"vspecpol_%d_%d_even.tmp",0,my_rank);
+          sprintf(filename,"vspecpol_%d_%d_even.tmp", 0 ,my_rank);
 
         FILE *restrict packets_file = fopen_required(filename, "rb");
 
@@ -749,9 +748,9 @@ int main(int argc, char** argv)
         if (vgrid_flag == 1)
         {
           if (nts % 2 == 0)
-            sprintf(filename,"vpkt_grid_%d_%d_odd.tmp",0,my_rank);
+            sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
           else
-            sprintf(filename,"vpkt_grid_%d_%d_even.tmp",0,my_rank);
+            sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
 
           packets_file = fopen_required(filename, "rb");
 
@@ -938,7 +937,7 @@ int main(int argc, char** argv)
           #endif
           // time is measured from just before packet propagation from one timestep to the next
           const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
-          printout("TIME: time between timesteps is %d seconds (counted after upgrade grid and before packet prop)\n", estimated_time_per_timestep);
+          printout("TIME: time between timesteps is %d seconds (measured after upgrade grid and before packet prop from ts %d to %d)\n", estimated_time_per_timestep, nts_prev, nts);
 
           #ifdef WALLTIMELIMITSECONDS
             const int wallclock_used_seconds = time(NULL) - real_time_start;
