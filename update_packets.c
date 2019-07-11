@@ -33,8 +33,6 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
     switch (pkt_type)
     {
       case TYPE_GAMMA:
-        /*It's a gamma-ray packet.*/
-        /* Call do_gamma. */
         //printout("gamma propagation\n");
         t_current = do_gamma(pkt_ptr, t_current, t2);
   	    /* This returns a flag if the packet gets to t2 without
@@ -51,7 +49,6 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
         break;
 
       case TYPE_RPKT:
-        /*It's an r-packet. */
         //printout("r-pkt propagation\n");
         t_current = do_rpkt(pkt_ptr, t_current, t2);
   //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
@@ -213,11 +210,8 @@ static int compare_packets_bymodelgriddensity(const void *restrict p1, const voi
 
 
 void update_packets(const int nts, PKT *pkt)
-/** Subroutine to move the packets and update them during the currect timestep. */
-///nts the time step we're doing
+// Subroutine to move and update packets during the current timestep (nts)
 {
-  //double n_1;
-
   /** At the start, the packets have all either just been initialised or have already been
   processed for one or more timesteps. Those that are pellets will just be sitting in the
   matter. Those that are photons (or one sort or another) will already have a position and
@@ -226,21 +220,9 @@ void update_packets(const int nts, PKT *pkt)
   const double ts = time_step[nts].start;
   const double tw = time_step[nts].width;
 
-  /*for (n = 0; n < npkts; n++)
-  {
-    printout("pkt[%d].where = %d\n",n,pkt[n].where);
-  }*/
-
-  /// If we want to do that with this version, sorting should be by modelgridcell
   //qsort(pkt,npkts,sizeof(PKT),compare_packets_bymodelgridposition);
   /// For 2D and 3D models sorting by the modelgrid cell's density should be most efficient
   qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
-  /*for (n = 0; n < npkts; n++)
-  {
-    printout("pkt[%d].where = %d, mgi %d\n",n,pkt[n].where,cell[pkt[n].where].modelgridindex);
-  }*/
-
-  //printout("before update packets\n");
 
   printout("start of parallel update_packets loop %d\n",time(NULL));
   /// Initialise the OpenMP reduction target to zero
@@ -307,13 +289,13 @@ void update_packets(const int nts, PKT *pkt)
 
         case TYPE_52FE_PELLET:
         case TYPE_52MN_PELLET:
-          // convert to kpts
+          // convert to kpkts
           update_pellet(pkt_ptr, true, false, nts, ts, tw);
           break;
 
         case TYPE_57NI_POSITRON_PELLET:
         case TYPE_56CO_POSITRON_PELLET:
-          // covert to to non-thermal leptons
+          // convert to to non-thermal leptons
           update_pellet(pkt_ptr, false, true, nts, ts, tw);
           break;
 
@@ -343,28 +325,7 @@ void update_packets(const int nts, PKT *pkt)
   }
 
   printout("end of update_packets parallel for loop %d\n",time(NULL));
-  //printout("[debug] update_packets: packet %d updated for timestep %d\n",n,nts);
 }
-
-
-
-
-
-///***************************************************************************/
-/*int search_cellhistory(int cellnumber)
-/// Returns the historyindex of cellnumber if available in cellhistory.
-/// Otherwise a negative value is returned as not found flag.
-{
-  int i;
-
-  for (i = 0; i < CELLHISTORYSIZE; i++)
-  {
-    //printout("search_cellhistory: cellnumber %d in stack entry %d\n",cellhistory[i].cellnumber,i);
-    if (cellnumber == cellhistory[i].cellnumber) return i;
-  }
-
-  return -99;
-}*/
 
 
 /*static int compare_packets_byposition(const void *restrict p1, const void *restrict p2)
