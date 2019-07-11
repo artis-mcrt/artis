@@ -926,7 +926,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
 }
 
 
-void update_grid(FILE *estimators_file, const int nts, const int my_rank, const int nstart, const int ndo, const int titer)
+void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 /// m timestep
@@ -993,7 +993,6 @@ void update_grid(FILE *estimators_file, const int nts, const int my_rank, const 
 
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero
-  const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   const double deltat = time_step[nts_prev].width;
 
   printout("timestep %d, titer %d\n", nts, titer);
