@@ -282,24 +282,6 @@ void update_packets(const int nts, PKT *pkt)
         if (cellhistory[tid].cellnumber != mgi)
           update_cell(mgi);
 
-        /*
-        histindex = 0;
-        /// in the case of non isothermal or non homogenous grids this must be done for each packet
-        /// unless we do some special treatment
-        if (cellhistory[histindex].cellnumber != mgi)
-        {
-          histindex = search_cellhistory(mgi);
-          if (histindex < 0)
-          {
-            //histindex = find_farthestcell_initial(mgi);
-            histindex = 0;
-            //printout("thread%d _ update_packets histindex %d\n",tid,histindex);
-            update_cell(mgi);
-          }
-        }
-        */
-
-        //copy_populations_to_phixslist();
         /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
         if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
         {
@@ -382,101 +364,6 @@ void update_packets(const int nts, PKT *pkt)
   }
 
   return -99;
-}*/
-
-
-///***************************************************************************/
-/*int find_farthestcell_initial(int cellnumber)
-/// Searches the cellhistory for the cell with largest distance to cellnumber
-/// and returns this cells historyindex.
-/// This version may replace any element and should be used only for calls
-/// from update_packets.
-{
-  int i,n,overwrite_histindex;
-  double previous_distance,current_distance;
-
-  n = cellhistory[0].cellnumber;
-  overwrite_histindex = 0;
-  if (n >= 0)
-  {
-    previous_distance = pow(cell[n].pos_init[0] - cell[cellnumber].pos_init[0], 2) + pow(cell[n].pos_init[1] - cell[cellnumber].pos_init[1], 2) + pow(cell[n].pos_init[2] - cell[cellnumber].pos_init[2], 2);
-
-    for (i = 1; i < CELLHISTORYSIZE; i++)
-    {
-      n = cellhistory[i].cellnumber;
-      if (n >= 0)
-      {
-        current_distance = pow(cell[n].pos_init[0] - cell[cellnumber].pos_init[0], 2) + pow(cell[n].pos_init[1] - cell[cellnumber].pos_init[1], 2) + pow(cell[n].pos_init[2] - cell[cellnumber].pos_init[2], 2);
-        if (current_distance > previous_distance)
-        {
-          previous_distance = current_distance;
-          overwrite_histindex = i;
-        }
-      }
-      else
-      {
-        overwrite_histindex = i;
-        break;
-      }
-    }
-  }
-
-  return overwrite_histindex;
-}*/
-
-
-///***************************************************************************/
-/*int find_farthestcell(int cellnumber)
-/// Searches the cellhistory for the cell with largest distance to cellnumber
-/// and returns this cells historyindex.
-/// This version which keeps the zeroth element of cellhistory should be used
-/// for calls from change_cell.
-{
-  int i,n,overwrite_histindex;
-  double previous_distance,current_distance;
-
-  n = cellhistory[1].cellnumber;
-  overwrite_histindex = 1;
-  if (n >= 0)
-  {
-    previous_distance = pow(cell[n].pos_init[0] - cell[cellnumber].pos_init[0], 2) + pow(cell[n].pos_init[1] - cell[cellnumber].pos_init[1], 2) + pow(cell[n].pos_init[2] - cell[cellnumber].pos_init[2], 2);
-
-    for (i = 2; i < CELLHISTORYSIZE; i++)
-    {
-      n = cellhistory[i].cellnumber;
-      if (n >= 0)
-      {
-        current_distance = pow(cell[n].pos_init[0] - cell[cellnumber].pos_init[0], 2) + pow(cell[n].pos_init[1] - cell[cellnumber].pos_init[1], 2) + pow(cell[n].pos_init[2] - cell[cellnumber].pos_init[2], 2);
-        if (current_distance > previous_distance)
-        {
-          previous_distance = current_distance;
-          overwrite_histindex = i;
-        }
-      }
-      else
-      {
-        overwrite_histindex = i;
-        break;
-      }
-    }
-  }
-
-  return overwrite_histindex;
-}*/
-
-
-///***************************************************************************/
-/*void copy_populations_to_phixslist()
-{
-  //double nnlevel;
-  int i;
-  for (i=0; i < importantbfcontinua; i++)
-  {
-    phixslist[i].nnlevel = get_levelpop(phixslist[i].element, phixslist[i].ion, phixslist[i].level);
-    //nnlevel = get_levelpop(phixslist[i].element, phixslist[i].ion, phixslist[i].level);
-    //printout("phixlistnnlevel i%d, element %d, ion %d, level %d, nnlevel %g\n",i,phixslist[i].element,phixslist[i].ion,phixslist[i].level,nnlevel);
-    //phixslist[i].nnlevel = nnlevel;
-  }
 }*/
 
 

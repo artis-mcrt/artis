@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 int tid;
-//int histindex;
 bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng;

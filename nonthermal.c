@@ -246,7 +246,6 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2)
 static double get_tot_nion(const int modelgridindex)
 {
   double result = 0.;
-  #pragma clang loop vectorize(enable)
   for (int element = 0; element < nelements; element++)
   {
     result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);

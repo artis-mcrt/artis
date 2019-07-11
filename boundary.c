@@ -403,19 +403,6 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
         {
           update_cell(mgi);
         }
-        /// Using a cellhistory stack, we update the cell data only if it was not
-        /// calculated already
-        /*
-        histindex = search_cellhistory(mgi);
-        //printout("change cell: histindex found %d\n",histindex);
-        if (histindex < 0)
-        {
-          //histindex = find_farthestcell(pkt_ptr->where);
-          histindex = CELLHISTORYSIZE-1;
-          //printout("change cell: histindex farthest %d\n",histindex);
-          update_cell(mgi);
-        }
-        */
       }
 
       //copy_populations_to_phixslist();

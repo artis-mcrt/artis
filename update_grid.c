@@ -931,29 +931,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 //   of the new timestep.
 /// m timestep
 {
-  /// only needed if all level populations should be printed to the output-file
-  //double pop, excitedlevelpops;
-
-  //int samplecell;
-  //double deltarho;
-
-  //int first_nonempty_cell = -1000;
-  //int lastelement = nelements-1;
-
-  //temprange_paras paras2;
-  //int status;
-  //double x_0,x_lo,x_hi;
-  //int kpkt_cuts_determined = 0;
-  //char tempfilename[100],ionfractfilename[100],Gammafilename[100],Alphaspfilename[100];
-  //FILE *temperature_file,*ionfract_file,*corrphotoion_file,*thermal_file,*Gamma_file,*Alpha_file,*bfcount_file;
-  //FILE *gammaest_file,*gammaana_file;
-
-  /*if (&modelgrid[96].composition[0] == NULL)
-  {
-   printout("fatal error in ts %d abort\n",m);
-   abort();
-  }*/
-
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
   const double trat = time_step[nts].start / tmin;
   const double tratmid = time_step[nts].mid / tmin;
@@ -1050,11 +1027,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
     use_cellhist = false;
     cellhistory_reset(-99, true);
-
-    /// Reset histindex to unknown
-    //printout("thread%d _ update_grid histindex %d\n",tid,histindex);
-    //histindex = -99;
-    //printout("thread%d _ update_grid histindex %d\n",tid,histindex);
 
     /// Updating cell information
     #ifdef _OPENMP
