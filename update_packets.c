@@ -183,10 +183,24 @@ static void update_pellet(
 
 
 static int compare_packets_bymodelgriddensity(const void *restrict p1, const void *restrict p2)
-/// Helper function to sort the phixslist by descending cell density.
 {
-  const int a1_where = ((PKT *)p1)->where;
-  const int a2_where = ((PKT *)p2)->where;
+  // <0 The element pointed by p1 goes before the element pointed by p2
+  // 0  The element pointed by p1 is equivalent to the element pointed by p2
+  // >0 The element pointed by p1 goes after the element pointed by p2
+
+  // move escaped packets to the end of the list for better performance
+  const bool esc1 = (((PKT *) p1)->type == TYPE_ESCAPE);
+  const bool esc2 = (((PKT *) p2)->type == TYPE_ESCAPE);
+  if (esc1 && !esc2)
+    return 1;
+  else if (!esc1 && esc2)
+    return -1;
+  else if (esc1 && esc2)
+    return 0;
+
+  // for both non-escaped packets, order by descending cell density
+  const int a1_where = ((PKT *) p1)->where;
+  const int a2_where = ((PKT *) p2)->where;
 
   const double rho_diff = get_rho(cell[a1_where].modelgridindex) - get_rho(cell[a2_where].modelgridindex);
   if (rho_diff < 0)
