@@ -1539,7 +1539,7 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
         const int upperionlevel = get_phixsupperlevel(element, ion, lower, phixstargetindex);
         assert(get_continuumindex(element, ion, lower, upperionlevel) == et);
         const int lowerionstage = get_ionstage(element, ion);
-        printout("%7d bound-free  Z=%2d ion_stage %d->%d lower+1 %4d upper+1 %4d lambda %5.1f\n", et, get_element(element), lowerionstage + 1, lowerionstage, lower + 1, upperionlevel + 1, lambda_trans);
+        printout("%7d bound-free  Z=%2d ion_stage %d->%d upper+1 %4d lower+1 %4d lambda %5.1f\n", et, get_element(element), lowerionstage + 1, lowerionstage, upperionlevel + 1, lower + 1, lambda_trans);
       }
     }
 
