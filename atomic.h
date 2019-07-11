@@ -8,6 +8,8 @@ double last_phixs_nuovernuedge; // last photoion cross section point as a factor
 long get_continuumindex(int element, int ion, int level, int upperionlevel);
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 int get_tot_nions(void);
+bool is_nlte(int element, int ion, int level);
+bool level_isinsuperlevel(int element, int ion, int level);
 double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
 
 inline int get_element(int element)
@@ -144,19 +146,6 @@ inline int get_maxrecombininglevel(int element, int ion)
 /// Returns the number of bf-continua associated with ion ion of element element.
 {
   return elements[element].ions[ion].maxrecombininglevel;
-}
-
-
-inline bool is_nlte(int element, int ion, int level)
-// Returns true if (element,ion,level) is to be treated in nlte.
-// (note this function returns true for the ground state,
-//  although it is stored separately from the excited NLTE states)
-{
-  if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
-    return (level <= 197);
-  else
-    return (level <= 80);
-  // return (level <= 80);
 }
 
 
