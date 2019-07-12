@@ -430,7 +430,7 @@ static void remove_grid_restart_data(const int timestep)
 }
 
 
-static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo)
+static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *maxndo)
 {
   #ifndef MPI_ON
     // no MPI, single process updates all cells
@@ -439,22 +439,24 @@ static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo)
     return;
   #endif
 
-  int nblock;
-  int n_leftover;
+  int n_leftover = 0;
 
-  nblock = npts_model / nprocesses; // integer division, minimum cells for any process
+  int nblock = npts_model / nprocesses; // integer division, minimum cells for any process
   const int numtot = nblock * nprocesses; // cells counted if all processes do the minimum number of cells
   if (numtot > npts_model) // LJS: should never be the case?
   {
     nblock = nblock - 1;
+    *maxndo = nblock + 1;
     n_leftover = npts_model - (nblock * nprocesses);
   }
   else if (numtot < npts_model)
   {
+    *maxndo = nblock + 1;
     n_leftover = npts_model - (nblock * nprocesses);
   }
   else
   {
+    *maxndo = nblock;
     n_leftover = 0;
   }
 
@@ -674,7 +676,8 @@ int main(int argc, char** argv)
     /// cells are sent to processes 0 ... process n_leftover -1.
     int nstart = 0;
     int ndo = 0;
-    get_nstart_ndo(my_rank, p, &nstart, &ndo);
+    int maxndo = 0;
+    get_nstart_ndo(my_rank, p, &nstart, &ndo, &maxndo);
     printout("process rank %d (of %d) doing %d cells", my_rank, nprocs, ndo);
     if (ndo > 0)
     {
@@ -689,7 +692,7 @@ int main(int argc, char** argv)
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-      int mpi_grid_buffer_size = 4 * ((12 + 4 * includedions) * (nblock + 1) + 1);
+      int mpi_grid_buffer_size = 4 * ((12 + 4 * includedions) * (maxndo) + 1);
       printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
       //char buffer[mpi_grid_buffer_size];
       char *mpi_grid_buffer  = malloc(mpi_grid_buffer_size * sizeof(char));
