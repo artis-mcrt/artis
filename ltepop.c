@@ -523,7 +523,7 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
   if (level == 0)
     return get_groundlevelpop(modelgridindex, element, ion);
 
-  const double T_exc = get_TJ(modelgridindex);
+  const double T_exc = get_Te(modelgridindex);
   const double W = 1.;
 
   const double E_level = epsilon(element, ion, level);
