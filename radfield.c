@@ -25,7 +25,7 @@ static const double T_R_max = 280000;
 
 // typedef enum
 // {
-//   FIT_DILUTED_BLACKBODY = 0,
+//   FIT_DILUTE_BLACKBODY = 0,
 //   FIT_CONSTANT = 1,
 // } enum_bin_fit_type;
 
@@ -392,7 +392,7 @@ void radfield_init(int my_rank)
         radfieldbins[modelgridindex][binindex].contribcount = 0;
         radfieldbins[modelgridindex][binindex].W = -1.;
         radfieldbins[modelgridindex][binindex].T_R = -1.;
-        // radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTED_BLACKBODY;
+        // radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTE_BLACKBODY;
       }
     }
   }
@@ -826,6 +826,8 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
         {
           bfrate_raw_bytype[modelgridindex][allcontindex] = realloc(
             bfrate_raw_bytype[modelgridindex][allcontindex], (oldlistsize + 16) * sizeof(struct bfratecontrib));
+
+          assert(bfrate_raw_bytype[modelgridindex][allcontindex] != NULL);
         }
 
         int listindex = oldlistsize;
@@ -979,14 +981,9 @@ double radfield(double nu, int modelgridindex)
       const struct radfieldbin *restrict const bin = &radfieldbins[modelgridindex][binindex];
       if (bin->W >= 0.)
       {
-        // if (bin->fit_type == FIT_DILUTED_BLACKBODY)
+        // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
         {
           const double J_nu = radfield_dbb(nu, bin->T_R, bin->W);
-          /*if (fabs(J_nu / J_nu_fullspec - 1.0) > 0.5)
-          {
-            printout("WARNING: radfield: significant discrepancy. J_nu_fullspec %g, J_nu %g, nu %g bin->W %g bin->T_R %g\n",
-                     J_nu_fullspec, J_nu, nu, bin->W, bin->T_R);
-          }*/
           return J_nu;
         }
         // else
@@ -1313,10 +1310,6 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         J_bin_max = J_bin;
     }
 
-    // int contribcount_allbins = 0;
-    // for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-    //   contribcount_allbins += get_bin_contribcount(modelgridindex, binindex, true);
-
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
       const double nu_lower = get_bin_nu_lower(binindex);
@@ -1329,7 +1322,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       if (contribcount > 0)
       {
         // // enum_bin_fit_type bin_fit_type = radfieldbins[modelgridindex][binindex].fit_type;
-        // if (bin_fit_type == FIT_DILUTED_BLACKBODY)
+        // if (bin_fit_type == FIT_DILUTE_BLACKBODY)
         {
           T_R_bin = find_T_R(modelgridindex, binindex);
 
