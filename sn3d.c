@@ -10,7 +10,7 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-#include<unistd.h>
+#include <unistd.h>
 #include "sn3d.h"
 #include "threadprivate.h"
 #include "emissivities.h"
@@ -164,7 +164,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
   int position = 0;
   for (int root = 0; root < p; root++)
   {
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Barrier(MPI_COMM_WORLD);
     int root_nstart = nstart;
     MPI_Bcast(&root_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
     int root_ndo = ndo;
@@ -220,7 +220,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       printout("mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position, mpi_grid_buffer_size);
       assert(position <= mpi_grid_buffer_size);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
 
     position = 0;
