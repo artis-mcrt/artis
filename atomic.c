@@ -8,6 +8,7 @@ extern inline int get_nions(int element);
 extern inline int get_ionstage(int element, int ion);
 extern inline int get_nlevels(int element, int ion);
 extern inline int get_nlevels_nlte(int element, int ion);
+extern inline int get_nlevels_groundterm(int element, int ion);
 extern inline int get_ionisinglevels(int element, int ion);
 extern inline int get_uniqueionindex(int element, int ion);
 extern inline void get_ionfromuniqueionindex(int allionsindex, int *element, int *ion);
