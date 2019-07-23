@@ -384,7 +384,7 @@ static transitiontable_entry *read_ion_transitions(
         {
           if (tmplevel == prev_lower)
             continue;
-          printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower, tmplevel);
+          // printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower, tmplevel);
           (*tottransitions)++;
           transitiontable = realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
           if (transitiontable == NULL)
@@ -501,9 +501,9 @@ static void add_transitions_to_linelist(
     // }
 
     const int level = transitiontable[ii].upper;
-    if (level < nlevelsmax)
+    const int targetlevel = transitiontable[ii].lower;
+    if (targetlevel < nlevelsmax && level < nlevelsmax)
     {
-      const int targetlevel = transitiontable[ii].lower;
 
       //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
       //{
@@ -812,7 +812,6 @@ static void read_atomicdata_files(void)
         nlevelsmax = nlevels;
       }
 
-
       /// and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
       int transdata_Z_in = -1;
       int transdata_ionstage_in = -1;
@@ -868,16 +867,21 @@ static void read_atomicdata_files(void)
       // use 0 to disable adding extra transitions
       int nlevels_requiretransitions;
       int nlevels_requiretransitions_upperlevels;
-      // if (Z == 26 && ionstage == 1)
-      // {
-      //   nlevels_requiretransitions = 33;
-      //   nlevels_requiretransitions_upperlevels = 33;
-      // }
-      // else
+      // if (((Z == 26 || Z == 28) && ionstage >= 1))
       {
-        nlevels_requiretransitions = 0;
-        nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
+        nlevels_requiretransitions = 80;
+        nlevels_requiretransitions_upperlevels = nlevelsmax;
       }
+      // else
+      // {
+      //   nlevels_requiretransitions = 0;
+      //   nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
+      // }
+      if (nlevels_requiretransitions > nlevelsmax)
+        nlevels_requiretransitions = nlevelsmax;
+      if (nlevels_requiretransitions_upperlevels > nlevelsmax)
+        nlevels_requiretransitions_upperlevels = nlevelsmax;
+
       transitiontable = read_ion_transitions(transitiondata, tottransitions_in, &tottransitions, transitiontable,
         nlevels_requiretransitions, nlevels_requiretransitions_upperlevels, Z, ionstage);
 
