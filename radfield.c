@@ -9,19 +9,19 @@
 #include "radfield.h"
 #include "sn3d.h"
 
-#define RADFIELDBINCOUNT 168
+#define RADFIELDBINCOUNT 256
 
-static const int FIRST_NLTE_RADFIELD_TIMESTEP = 13;
+static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
-static const double nu_lower_first_initial = (CLIGHT / (10000e-8)); // in Angstroms
-static const double nu_upper_last_initial = (CLIGHT /  (50e-8));  // in Angstroms
+static const double nu_lower_first_initial = (CLIGHT / (40000e-8)); // CLIGHT / ([lambda Angstroms]e-8)
+static const double nu_upper_last_initial = (CLIGHT /  (1085-8));  // not including the very top super bin
 
 static double J_normfactor[MMODELGRID + 1];
 
 static bool radfield_initialized = false;
 
-static const double T_R_min = 2000;
-static const double T_R_max = 280000;
+static const double T_R_min = 500;
+static const double T_R_max = 250000;
 
 // typedef enum
 // {
@@ -147,53 +147,54 @@ setup_bin_boundaries(void)
   double prev_nu_upper = nu_lower_first_initial;
 
   // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
-  const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / RADFIELDBINCOUNT;
+  const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1); // - 1 for the top super bin
   // const double lambda_lower_first_initial = 1e8 * CLIGHT / nu_lower_first_initial;
   // const double lambda_upper_last_initial = 1e8 * CLIGHT / nu_upper_last_initial;
   // const double delta_lambda = (lambda_upper_last_initial - lambda_lower_first_initial) / RADFIELDBINCOUNT;
 
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  for (int binindex = 0; binindex < RADFIELDBINCOUNT - 1; binindex++)
   {
     // radfieldbin_nu_upper[binindex] = 1e8 * CLIGHT / (lambda_lower_first_initial + (binindex + 1) * delta_lambda);
     radfieldbin_nu_upper[binindex] = nu_lower_first_initial + (binindex + 1) * delta_nu;
 
     // Align the bin edges with bound-free edges, except for the last one
-    if (binindex < RADFIELDBINCOUNT - 1)
-    {
-      for (int i = 0; i < nbfcontinua_ground; i++)
-      {
-        const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
-        const double eV_edge = H * nu_edge / EV;
-        const double angstrom_edge = 1e8 * CLIGHT / nu_edge;
-        const int element = phixslist[tid].groundcont[i].element;
-        const int ion = phixslist[tid].groundcont[i].ion;
-        const int level = phixslist[tid].groundcont[i].level;
-        const int phixstargetindex = phixslist[tid].groundcont[i].phixstargetindex;
-
-        const int Z = get_element(element);
-        const int ion_stage = get_ionstage(element, ion);
-        const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-
-        //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
-
-        // this is compares the highest and lowest bins to the bound-free list, only do it once, i.e. binindex == 0
-        if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
-        {
-          printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e Hz, Z=%d ion_stage %d level %d upperionlevel %d\n",
-                   nu_edge, eV_edge, angstrom_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level, upperionlevel);
-        }
-
-        const double bin_nu_upper = get_bin_nu_upper(binindex);
-        if ((nu_edge > prev_nu_upper) && (nu_edge < bin_nu_upper))
-        {
-          printout("Shifting bin %d nu_upper from %12.5e Hz to bf edge at %12.5e Hz (%6.2f eV, %6.1f A) for Z=%d ion_stage %d level %d upperionlevel %d\n",
-                   binindex, bin_nu_upper, nu_edge, eV_edge, angstrom_edge, Z, ion_stage, level, upperionlevel);
-          radfieldbin_nu_upper[binindex] = nu_edge;
-        }
-      }
-    }
-    prev_nu_upper = get_bin_nu_upper(binindex);
+    // if (binindex < RADFIELDBINCOUNT - 1)
+    // {
+    //   for (int i = 0; i < nbfcontinua_ground; i++)
+    //   {
+    //     const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+    //     const double eV_edge = H * nu_edge / EV;
+    //     const double angstrom_edge = 1e8 * CLIGHT / nu_edge;
+    //     const int element = phixslist[tid].groundcont[i].element;
+    //     const int ion = phixslist[tid].groundcont[i].ion;
+    //     const int level = phixslist[tid].groundcont[i].level;
+    //     const int phixstargetindex = phixslist[tid].groundcont[i].phixstargetindex;
+    //
+    //     const int Z = get_element(element);
+    //     const int ion_stage = get_ionstage(element, ion);
+    //     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+    //
+    //     //printout("bf edge at %g, nu_lower_first %g, nu_upper_last %g\n",nu_edge,nu_lower_first,nu_upper_last);
+    //
+    //     // this is compares the highest and lowest bins to the bound-free list, only do it once, i.e. binindex == 0
+    //     if (binindex == 0 && ((nu_edge < nu_lower_first_initial) || (nu_edge > nu_upper_last_initial)))
+    //     {
+    //       printout("Missed bf edge at %12.5e Hz (%6.2f eV, %6.1f A), nu_lower_first %11.5e Hz, nu_upper_last %11.5e Hz, Z=%d ion_stage %d level %d upperionlevel %d\n",
+    //                nu_edge, eV_edge, angstrom_edge, nu_lower_first_initial, nu_upper_last_initial, Z, ion_stage, level, upperionlevel);
+    //     }
+    //
+    //     const double bin_nu_upper = get_bin_nu_upper(binindex);
+    //     if ((nu_edge > prev_nu_upper) && (nu_edge < bin_nu_upper))
+    //     {
+    //       printout("Shifting bin %d nu_upper from %12.5e Hz to bf edge at %12.5e Hz (%6.2f eV, %6.1f A) for Z=%d ion_stage %d level %d upperionlevel %d\n",
+    //                binindex, bin_nu_upper, nu_edge, eV_edge, angstrom_edge, Z, ion_stage, level, upperionlevel);
+    //       radfieldbin_nu_upper[binindex] = nu_edge;
+    //     }
+    //   }
+    // }
+    // prev_nu_upper = get_bin_nu_upper(binindex);
   }
+  radfieldbin_nu_upper[RADFIELDBINCOUNT - 1] = (CLIGHT /  (10e-8));  // very top end super bin
 }
 
 
@@ -972,9 +973,13 @@ double radfield_dbb_mgi(double nu, int modelgridindex)
 double radfield(double nu, int modelgridindex)
 // mean intensity J_nu
 {
-  // return 0.;
   if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {
+    // const double lambda = 1e8 * CLIGHT / nu;
+    // if (lambda < 1085) // Fe II ground state edge
+    // {
+    //   return radfield_dbb(nu, get_TR(modelgridindex), get_W(modelgridindex));
+    // }
     const int binindex = select_bin(nu);
     if (binindex >= 0)
     {
@@ -1010,6 +1015,7 @@ double radfield(double nu, int modelgridindex)
       //printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
       //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
     }
+    return 0.;
   }
   /*else
   {
@@ -1319,12 +1325,19 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       double W_bin = -1.0;
       const int contribcount = get_bin_contribcount(modelgridindex, binindex);
 
-      if (contribcount > 0)
+      if (contribcount > 0 || binindex == RADFIELDBINCOUNT - 1)
       {
         // // enum_bin_fit_type bin_fit_type = radfieldbins[modelgridindex][binindex].fit_type;
         // if (bin_fit_type == FIT_DILUTE_BLACKBODY)
         {
-          T_R_bin = find_T_R(modelgridindex, binindex);
+          if (binindex == RADFIELDBINCOUNT - 1)
+          {
+            T_R_bin = get_Te(modelgridindex);
+          }
+          else
+          {
+            T_R_bin = find_T_R(modelgridindex, binindex);
+          }
 
           double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
 //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower, nu_upper, planck_integral_result);
@@ -1364,7 +1377,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         //   W_bin = -1.;
         // }
       }
-      else if (contribcount == 0)
+      else
       {
         T_R_bin = 0.;
         W_bin = 0.;
@@ -1378,15 +1391,21 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       radfieldbins[modelgridindex][binindex].W = W_bin;
     }
 
-    /*for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+
+    double prev_nu_upper = nu_lower_first_initial;
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      double J_bin = get_bin_J(modelgridindex,binindex);
-      double T_R_bin = get_bin_T_R(modelgridindex,binindex);
-      double W_bin = get_bin_W(modelgridindex,binindex);
-      printout("bin %4d: J %g, T_R %7.1f, W %12.5e\n",
-             binindex, J_bin, T_R_bin, W_bin);
-    }*/
-    // if (timestep % 2 == 0)
+      const double J_bin = get_bin_J(modelgridindex,binindex);
+      const double T_R_bin = get_bin_T_R(modelgridindex,binindex);
+      const double W_bin = get_bin_W(modelgridindex,binindex);
+      const int contribcount = get_bin_contribcount(modelgridindex, binindex);
+      const double bin_nu_upper = get_bin_nu_upper(binindex);
+
+      printout("bin %4d (lambda %7.1f Å to %7.1f Å): contribcount %5d J %7.1e, T_R %7.1f, W %12.5e\n",
+             binindex, 1e8 * CLIGHT / prev_nu_upper, 1e8 * CLIGHT / bin_nu_upper, contribcount, J_bin, T_R_bin, W_bin);
+     prev_nu_upper = get_bin_nu_upper(binindex);
+    }
+
     radfield_write_to_file(modelgridindex, timestep);
   }
 }
