@@ -520,7 +520,8 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
 
       const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
       const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
-      const double NTC = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) * s_renorm[level];
+      // const double NTC = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) * s_renorm[level];
+      const double NTC = 0.;
 
       // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
       // {
@@ -590,7 +591,7 @@ static void nltepop_matrix_add_ionisation(
       // recombination
       if (upper <= maxrecombininglevel) // we can skip this part if the functions below will return zero anyway
       {
-        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level);
+        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, modelgridindex);
         const double C_recomb = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
 
         *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
@@ -1392,7 +1393,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
             int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             mastate[tid].level = upper;
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            R = rad_recombination_ratecoeff(T_e, nne, element, ion+1, upper, level);
+            R = rad_recombination_ratecoeff(T_e, nne, element, ion+1, upper, level, modelgridindex);
             //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
             //printout("%d %d %d %d %g %g %g \n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
             C = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);

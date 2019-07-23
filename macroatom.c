@@ -93,7 +93,7 @@ static void get_macroatom_transitionrates(
       const double epsilon_target = epsilon(element, ion - 1, lower);
       const double epsilon_trans = epsilon_current - epsilon_target;
 
-      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower);
+      const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
       //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
       const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
 
@@ -114,11 +114,12 @@ static void get_macroatom_transitionrates(
     const int upper = linelist[lineindex].upperlevelindex;
     const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
+    double individ_internal_up_same = 0.;
     const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
     const double NT = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
 
-    const double individ_internal_up_same = (R + C + NT) * epsilon_current;
+    individ_internal_up_same = (R + C + NT) * epsilon_current;
 
     chlevel->individ_internal_up_same[i] = individ_internal_up_same;
 
@@ -136,7 +137,7 @@ static void get_macroatom_transitionrates(
   processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
   processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
   const int ionisinglevels = get_ionisinglevels(element,ion);
-  if (ion < get_nions(element) - 1 && level < ionisinglevels)  //&& get_ionstage(element,ion) < get_element(element)+1)
+  if (ion < get_nions(element) - 1 && level < ionisinglevels)
   {
     if (NT_ON)
     {
@@ -269,7 +270,7 @@ static void do_macroatom_radrecomb(
   for (lower = 0; lower < nlevels; lower++)
   {
     epsilon_trans = epsilon_current - epsilon(element, *ion - 1, lower);
-    const double R = rad_recombination_ratecoeff(T_e, nne, element, *ion, *level, lower);
+    const double R = rad_recombination_ratecoeff(T_e, nne, element, *ion, *level, lower, modelgridindex);
     rate += R * epsilon_trans;
     #ifdef DEBUG_ON
       if (debuglevel == 2)
@@ -632,7 +633,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         {
           const double epsilon_target = epsilon(element, ion - 1,lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower);
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
           const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
           printout("[debug]    recombination to ion %d, level %d, epsilon_target %g, epsilon_trans %g, R %g, C %g\n",ion-1,lower,epsilon_target,epsilon_trans,R,C);
         }
@@ -871,7 +872,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         {
           const double epsilon_target = epsilon(element, ion - 1, lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
-          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower);
+          const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
           const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
           if (zrand * processrates[MA_ACTION_INTERNALDOWNLOWER] < rate)
@@ -1017,7 +1018,7 @@ double rad_deexcitation_ratecoeff(
 
   double R = 0.0;
 
-  if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
+  // if ((n_u > 1.1 * MINPOP) && (n_l > 1.1 * MINPOP))
   {
     const double nu_trans = epsilon_trans / H;
 
@@ -1084,7 +1085,7 @@ double rad_excitation_ratecoeff(
   const double n_u = get_levelpop(modelgridindex, element, ion, upper);
   const double n_l = get_levelpop(modelgridindex, element, ion, lower);
   double R = 0.0;
-  if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
+  // if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {
     const double nu_trans = epsilon_trans / H;
     const double A_ul = einstein_spontaneous_emission(lineindex);
@@ -1102,7 +1103,16 @@ double rad_excitation_ratecoeff(
 
       const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
 
-      R = R_over_J_nu * radfield(nu_trans, modelgridindex);
+      // const double linelambda = 1e8 * CLIGHT / nu_trans;
+      // if (use_cellhist && false) //  || (linelambda > 7000)
+      {
+        R = R_over_J_nu * radfield(nu_trans, modelgridindex);
+      }
+      // else
+      {
+        // R = R_over_J_nu * radfield_dbb_mgi(nu_trans, modelgridindex);
+        // R = 0.;
+      }
       if (!initial_iteration)
       {
         // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
@@ -1112,7 +1122,7 @@ double rad_excitation_ratecoeff(
           const double Jb_lu = radfield_get_Jb_lu(modelgridindex, jblueindex);
           const double R_Jb = R_over_J_nu * Jb_lu;
           // const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
-          // const double R_radfield = R;
+          // const double R_radfield = R_over_J_nu * radfield(nu_trans, modelgridindex);
           // const double linelambda = 1e8 * CLIGHT / nu_trans;
           // printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R %g\n",
           //          linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
@@ -1172,7 +1182,7 @@ double rad_excitation_ratecoeff(
 
 
 double rad_recombination_ratecoeff(
-  const float T_e, const float nne, const int element, const int upperion, const int upper, const int lower)
+  const float T_e, const float nne, const int element, const int upperion, const int upper, const int lower, const int modelgridindex)
 ///radiative recombination rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
 {
@@ -1189,17 +1199,45 @@ double rad_recombination_ratecoeff(
     {
       R = nne * get_spontrecombcoeff(element, upperion - 1, lower, phixstargetindex, T_e);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
       //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, n_u %g, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,mastate[tid].nnlevel,nne,get_spontrecombcoeff(element, ion-1, lower, T_e));
+
+      if (modelgridindex >= 0 && SEPARATE_STIMRECOMB)
+      {
+        R += nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, modelgridindex);
+      }
       break;
     }
   }
 
   #ifdef DEBUG_ON
-    if (!isfinite(R))
-    {
-      printout("fatal a2: abort\n");
-      abort();
-    }
+  assert(isfinite(R));
   #endif
+
+  return R;
+}
+
+
+double stim_recombination_ratecoeff(
+  const float nne, const int element, const int upperion, const int upper, const int lower, const int modelgridindex)
+///radiative recombination rate: paperII 3.5.2
+// multiply by upper level population to get a rate per second
+{
+  // it's probably faster to only check this condition outside this function
+  // in a case where this wasn't checked, the function will return zero anyway
+  // if (upper > get_maxrecombininglevel(element, upperion))
+  //   return 0.;
+
+  double R = 0.0;
+  const int nphixstargets = get_nphixstargets(element, upperion - 1,lower);
+  for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
+  {
+    if (get_phixsupperlevel(element, upperion - 1, lower, phixstargetindex) == upper)
+    {
+      R = nne * get_stimrecombcoeff(element, upperion - 1, lower, phixstargetindex, modelgridindex);
+    }
+    break;
+  }
+
+  assert(isfinite(R));
 
   return R;
 }

@@ -355,198 +355,240 @@ static double get_event(
 }
 
 
-static void rpkt_event(PKT *restrict pkt_ptr, const int rpkt_eventtype, double t_current)
-//, double kappa_cont, double sigma, double kappa_ff, double kappa_bf)
+static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread)
 {
-  //double nnionlevel,nnlevel,nne;
-  //double ma_prob,p_maactivate,p_bf,prob;
-  //double departure_ratio,corr_photoion;
-  //double sigma_bf;
-
-  //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
-
-  // const int cellindex = pkt_ptr->where;
-  // const int modelgridindex = cell[cellindex].modelgridindex;
-
-  //double nne = get_nne(modelgridindex);
-  //double T_e = get_Te(modelgridindex);
   const double nu = pkt_ptr->nu_cmf;
 
-  const double kappa_cont = kappa_rpkt_cont[tid].total;
-  const double sigma = kappa_rpkt_cont[tid].es;
-  const double kappa_ff = kappa_rpkt_cont[tid].ff;
-  const double kappa_bf = kappa_rpkt_cont[tid].bf;
+  const double kappa_cont = kappa_rpkt_cont_thisthread.total;
+  const double sigma = kappa_rpkt_cont_thisthread.es;
+  const double kappa_ff = kappa_rpkt_cont_thisthread.ff;
+  const double kappa_bf = kappa_rpkt_cont_thisthread.bf;
 
-  if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
+  /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
+  double zrand = gsl_rng_uniform(rng);
+  #ifdef DEBUG_ON
+    if (debuglevel == 2)
+    {
+      printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
+      printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont, sigma, kappa_ff, kappa_bf);
+    }
+  #endif
+  if (zrand * kappa_cont < sigma)
   {
-    /// bound-bound transition occured
-    /// activate macro-atom in corresponding upper-level. Actually all the information
-    /// about the macro atoms state has already been set by closest_transition, so
-    /// we need here just the activation!
+    /// electron scattering occurs
+    /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
+    /// but with different direction
     #ifdef DEBUG_ON
-      if (debuglevel == 2) printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
-      //if (tid == 0) ma_stat_activation_bb++;
-      ma_stat_activation_bb++;
+      if (debuglevel == 2) printout("[debug] rpkt_event:   electron scattering\n");
       pkt_ptr->interactions += 1;
-      pkt_ptr->last_event = 1;
+      pkt_ptr->nscatterings += 1;
+      pkt_ptr->last_event = 12;
+      escounter++;
     #endif
 
-    pkt_ptr->absorptiontype = mastate[tid].activatingline;
-    pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
-    pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
-    pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
-    pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];
-    pkt_ptr->type = TYPE_MA;
-    #ifndef FORCE_LTE
-      //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-    #endif
-    #ifdef RECORD_LINESTAT
-      if (tid == 0) acounter[pkt_ptr->next_trans-1] += 1;  /// This way we will only record line statistics from OMP-thread 0
-                                                           /// With an atomic pragma or a thread-private structure with subsequent
-                                                           /// reduction this could be extended to all threads. However, I'm not
-                                                           /// sure if this is worth the additional computational expenses.
-    #endif
-    //mastate[tid].element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
-    //mastate[tid].ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
-    //mastate[tid].level   = pkt_ptr->nextrans_uppper;
+    //pkt_ptr->nu_cmf = 3.7474058e+14;
+    escat_rpkt(pkt_ptr,t_current);
+    /// Electron scattering does not modify the last emission flag
+    //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
+    /// but it updates the last emission position
+    vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
+    pkt_ptr->em_time = t_current;
+
+    /// Set some flags
+    //pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
+                                 ///don't touch the value of next_trans to save transition history
   }
-  else
+  else if (zrand * kappa_cont < sigma + kappa_ff)
   {
-    /// else: continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
-    double zrand = gsl_rng_uniform(rng);
+    /// ff: transform to k-pkt
     #ifdef DEBUG_ON
-      if (debuglevel == 2)
-      {
-        printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
-        printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont, sigma, kappa_ff, kappa_bf);
-      }
+      if (debuglevel == 2) printout("[debug] rpkt_event:   free-free transition\n");
+      //if (tid == 0) k_stat_from_ff++;
+      k_stat_from_ff++;
+      pkt_ptr->interactions += 1;
+      pkt_ptr->last_event = 5;
     #endif
-    if (zrand * kappa_cont < sigma)
+    pkt_ptr->type = TYPE_KPKT;
+    pkt_ptr->absorptiontype = -1;
+    #ifndef FORCE_LTE
+      //kffabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+    #endif
+  }
+  else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf)
+  {
+    /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
+    #ifdef DEBUG_ON
+      if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free transition\n");
+    #endif
+    pkt_ptr->absorptiontype = -2;
+
+    /// Update the bf-opacity for the packets current frequency
+    //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+    const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf_inrest;
+
+    /// Determine in which continuum the bf-absorption occurs
+    const double zrand2 = gsl_rng_uniform(rng);
+    double kappa_bf_sum = 0.;
+    int i;
+    for (i = 0; i < nbfcontinua; i++)
     {
-      /// electron scattering occurs
-      /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
-      /// but with different direction
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] rpkt_event:   electron scattering\n");
-        pkt_ptr->interactions += 1;
-        pkt_ptr->nscatterings += 1;
-        pkt_ptr->last_event = 12;
-        escounter++;
-      #endif
-
-      //pkt_ptr->nu_cmf = 3.7474058e+14;
-      escat_rpkt(pkt_ptr,t_current);
-      /// Electron scattering does not modify the last emission flag
-      //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
-      /// but it updates the last emission position
-      vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
-      pkt_ptr->em_time = t_current;
-
-      /// Set some flags
-      //pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
-                                   ///don't touch the value of next_trans to save transition history
-    }
-    else if (zrand * kappa_cont < sigma + kappa_ff)
-    {
-      /// ff: transform to k-pkt
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] rpkt_event:   free-free transition\n");
-        //if (tid == 0) k_stat_from_ff++;
-        k_stat_from_ff++;
-        pkt_ptr->interactions += 1;
-        pkt_ptr->last_event = 5;
-      #endif
-      pkt_ptr->type = TYPE_KPKT;
-      pkt_ptr->absorptiontype = -1;
-      #ifndef FORCE_LTE
-        //kffabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-      #endif
-    }
-    else
-    {
-      /// bf: transform to k-pkt or activate macroatom corresponding to probabilities
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free transition\n");
-      #endif
-      pkt_ptr->absorptiontype = -2;
-
-      /// Update the bf-opacity for the packets current frequency
-      //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
-      const double kappa_bf_inrest = kappa_rpkt_cont[tid].bf_inrest;
-
-      /// Determine in which continuum the bf-absorption occurs
-      zrand = gsl_rng_uniform(rng);
-      double kappa_bf_sum = 0.;
-      int i;
-      for (i = 0; i < nbfcontinua; i++)
+      kappa_bf_sum += phixslist[tid].allcont[i].kappa_bf_contr;
+      if (kappa_bf_sum > zrand2 * kappa_bf_inrest)
       {
-        kappa_bf_sum += phixslist[tid].allcont[i].kappa_bf_contr;
-        if (kappa_bf_sum > zrand * kappa_bf_inrest)
-        {
-          const double nu_edge = phixslist[tid].allcont[i].nu_edge;
-          //if (nu < nu_edge) printout("does this ever happen?\n");
-          const int element = phixslist[tid].allcont[i].element;
-          const int ion = phixslist[tid].allcont[i].ion;
-          const int level = phixslist[tid].allcont[i].level;
-          const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
+        const double nu_edge = phixslist[tid].allcont[i].nu_edge;
+        //if (nu < nu_edge) printout("does this ever happen?\n");
+        const int element = phixslist[tid].allcont[i].element;
+        const int ion = phixslist[tid].allcont[i].ion;
+        const int level = phixslist[tid].allcont[i].level;
+        const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
 
 #ifdef DEBUG_ON
-          if (debuglevel == 2)
-          {
-            printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion + 1, 0, ion, level);
-            printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
-          }
+        if (debuglevel == 2)
+        {
+          printout("[debug] rpkt_event:   bound-free: element %d, ion+1 %d, upper %d, ion %d, lower %d\n", element, ion + 1, 0, ion, level);
+          printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
+        }
 #endif
 
-          /// and decide whether we go to ionisation energy
-          zrand = gsl_rng_uniform(rng);
-          if (zrand < nu_edge / nu)
-          {
-            #ifdef DEBUG_ON
-              //if (tid == 0) ma_stat_activation_bf++;
-              ma_stat_activation_bf++;
-              pkt_ptr->interactions += 1;
-              pkt_ptr->last_event = 3;
-            #endif
-            pkt_ptr->type = TYPE_MA;
-            #ifndef FORCE_LTE
-              //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-            #endif
-            mastate[tid].element = element;
-            mastate[tid].ion     = ion + 1;
-            // const int upper = 0; //TODO: this should come from phixsupperlevel;
-            const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-            mastate[tid].level   = upper;
-            // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
-            mastate[tid].activatingline = -99;
-            //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-          }
-          /// or to the thermal pool
-          else
-          {
-            /// transform to k-pkt
-            #ifdef DEBUG_ON
-              if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
-              //if (tid == 0) k_stat_from_bf++;
-              k_stat_from_bf++;
-              pkt_ptr->interactions += 1;
-              pkt_ptr->last_event = 4;
-            #endif
-            pkt_ptr->type = TYPE_KPKT;
-            #ifndef FORCE_LTE
-              //kbfabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-            #endif
-            //if (element == 6) cell[pkt_ptr->where].bfabs[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-          }
-          break;
+        /// and decide whether we go to ionisation energy
+        const double zrand3 = gsl_rng_uniform(rng);
+        if (zrand3 < nu_edge / nu)
+        {
+          #ifdef DEBUG_ON
+            //if (tid == 0) ma_stat_activation_bf++;
+            ma_stat_activation_bf++;
+            pkt_ptr->interactions += 1;
+            pkt_ptr->last_event = 3;
+          #endif
+          pkt_ptr->type = TYPE_MA;
+          #ifndef FORCE_LTE
+            //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+          #endif
+          mastate[tid].element = element;
+          mastate[tid].ion     = ion + 1;
+          // const int upper = 0; //TODO: this should come from phixsupperlevel;
+          const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+          mastate[tid].level   = upper;
+          // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+          mastate[tid].activatingline = -99;
+          //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         }
+        /// or to the thermal pool
+        else
+        {
+          /// transform to k-pkt
+          #ifdef DEBUG_ON
+            if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free: transform to k-pkt\n");
+            //if (tid == 0) k_stat_from_bf++;
+            k_stat_from_bf++;
+            pkt_ptr->interactions += 1;
+            pkt_ptr->last_event = 4;
+          #endif
+          pkt_ptr->type = TYPE_KPKT;
+          #ifndef FORCE_LTE
+            //kbfabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+          #endif
+          //if (element == 6) cell[pkt_ptr->where].bfabs[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
+        }
+        break;
       }
-
-      #ifdef DEBUG_ON
-        if (i >= nbfcontinua) printout("[warning] rpkt_event: problem in selecting bf-continuum zrand %g, kappa_bf_sum %g, kappa_bf_inrest %g\n",zrand,kappa_bf_sum,kappa_bf_inrest);
-      #endif
     }
+
+    #ifdef DEBUG_ON
+      if (i >= nbfcontinua) printout("[warning] rpkt_event: problem in selecting bf-continuum zrand2 %g, kappa_bf_sum %g, kappa_bf_inrest %g\n",zrand,kappa_bf_sum,kappa_bf_inrest);
+    #endif
   }
+#if (SEPARATE_STIMRECOMB)
+  else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf + kappa_rpkt_cont_thisthread.fb)
+  {
+    /// fb: stimulated recombination
+    #ifdef DEBUG_ON
+      printout("[debug] rpkt_event:   free-bound transition\n");
+    #endif
+    pkt_ptr->absorptiontype = -2;
+
+    /// Update the bf-opacity for the packets current frequency
+    //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+    const double kappa_fb_inrest = kappa_rpkt_cont_thisthread.fb_inrest;
+
+    /// Determine in which continuum the bf-absorption occurs
+    const double zrand2 = gsl_rng_uniform(rng);
+    double kappa_fb_sum = 0.;
+    int i;
+    for (i = 0; i < nbfcontinua; i++)
+    {
+      kappa_fb_sum += phixslist[tid].allcont[i].kappa_fb_contr;
+      if (kappa_fb_sum > zrand2 * kappa_fb_inrest)
+      {
+        // const double nu_edge = phixslist[tid].allcont[i].nu_edge;
+        // assert(nu >= nu_edge);
+        const int element = phixslist[tid].allcont[i].element;
+        const int ion = phixslist[tid].allcont[i].ion;
+        const int level = phixslist[tid].allcont[i].level;
+
+        #ifdef DEBUG_ON
+          ma_stat_activation_fb++;
+          pkt_ptr->interactions += 1;
+          pkt_ptr->last_event = 3;
+        #endif
+        pkt_ptr->type = TYPE_MA;
+        #ifndef FORCE_LTE
+          //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+        #endif
+        mastate[tid].element = element;
+        mastate[tid].ion     = ion;
+        // const int upper = 0; //TODO: this should come from phixsupperlevel;
+        mastate[tid].level   = level;
+        // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+        mastate[tid].activatingline = -99;
+        //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
+        return;
+      }
+    }
+    printout("ERROR: could not select stimulated recombination process\n");
+    abort();
+  }
+#endif
+  else
+  {
+    printout("ERROR: could not continuum process\n");
+    abort();
+  }
+}
+
+
+static void rpkt_event_boundbound(PKT *restrict pkt_ptr)
+{
+  /// bound-bound transition occured
+  /// activate macro-atom in corresponding upper-level. Actually all the information
+  /// about the macro atoms state has already been set by closest_transition, so
+  /// we need here just the activation!
+  #ifdef DEBUG_ON
+    if (debuglevel == 2) printout("[debug] rpkt_event: bound-bound activation of macroatom\n");
+    //if (tid == 0) ma_stat_activation_bb++;
+    ma_stat_activation_bb++;
+    pkt_ptr->interactions += 1;
+    pkt_ptr->last_event = 1;
+  #endif
+
+  pkt_ptr->absorptiontype = mastate[tid].activatingline;
+  pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
+  pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
+  pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
+  pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];
+  pkt_ptr->type = TYPE_MA;
+  #ifndef FORCE_LTE
+    //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
+  #endif
+  #ifdef RECORD_LINESTAT
+    if (tid == 0) acounter[pkt_ptr->next_trans-1] += 1;  /// This way we will only record line statistics from OMP-thread 0
+                                                         /// With an atomic pragma or a thread-private structure with subsequent
+                                                         /// reduction this could be extended to all threads. However, I'm not
+                                                         /// sure if this is worth the additional computational expenses.
+  #endif
+  //mastate[tid].element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
+  //mastate[tid].ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
+  //mastate[tid].level   = pkt_ptr->nextrans_uppper;
 }
 
 
@@ -564,7 +606,6 @@ static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
     escounter++;
   #endif
 
-  //pkt_ptr->nu_cmf = 3.7474058e+14;
   emitt_rpkt(pkt_ptr, t_current);
   /// Electron scattering does not modify the last emission flag
   //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
@@ -655,7 +696,7 @@ static double closest_transition_empty(PKT *restrict pkt_ptr)
 
 
 double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
-/** Routine for moving an r-packet. Similar to do_gamma in objective.*/
+// Routine for moving an r-packet. Similar to do_gamma in objective.
 {
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
@@ -667,13 +708,6 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
   bool end_packet = false; ///means "keep working"
   while (!end_packet)
   {
-
-    /*
-    int i;
-    for (i=0; i < CELLHISTORYSIZE; i++)
-      printout("thread%d _ do_rpkt: cellhistory[%d].cellnumber = %d\n",tid,i,cellhistory[i].cellnumber);
-    */
-
     #ifdef DEBUG_ON
       if (pkt_ptr->next_trans > 0)
       {
@@ -684,14 +718,14 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
 
     //printout("[debug] r-pkt propagation iteration %d\n",it);
     //it++;
-    /** Assign optical depth to next physical event. And start counter of
-    optical depth for this path.*/
+    // Assign optical depth to next physical event. And start counter of
+    // optical depth for this path.
     double zrand = gsl_rng_uniform(rng);
     double tau_next = -1. * log(zrand);
 
-    /** Start by finding the distance to the crossing of the grid cell
-    boundaries. sdist is the boundary distance and snext is the
-    grid cell into which we pass.*/
+    // Start by finding the distance to the crossing of the grid cell
+    // boundaries. sdist is the boundary distance and snext is the
+    // grid cell into which we pass.
     int snext;
     double sdist = boundary_cross(pkt_ptr, t_current, &snext);
 
@@ -738,10 +772,10 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
       }
 
 
-      /** At present there is no scattering/destruction process so all that needs to
-      happen is that we determine whether the packet reaches the boundary during the timestep. */
+      // At present there is no scattering/destruction process so all that needs to
+      // happen is that we determine whether the packet reaches the boundary during the timestep.
 
-      /** Find how far it can travel during the time inverval. */
+      // Find how far it can travel during the time inverval.
 
       double tdist = (t2 - t_current) * CLIGHT_PROP;
 
@@ -888,9 +922,21 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
 
         /** The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event*/
         if (modelgrid[mgi].thick == 1)
+        {
           rpkt_event_thickcell(pkt_ptr, t_current);
+        }
+        else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
+        {
+          rpkt_event_boundbound(pkt_ptr);
+        }
+        else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
+        {
+          rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont[tid]);
+        }
         else
-          rpkt_event(pkt_ptr, rpkt_eventtype, t_current);
+        {
+          assert(false);
+        }
 
         if (pkt_ptr->type != TYPE_RPKT)
         {
@@ -1016,7 +1062,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
 }
 
 
-static double calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu)
+static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
 // bound-free opacity
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
@@ -1024,7 +1070,6 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
     phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
   }
 
-  double kappa_bf = 0.;
   const double nnetot = get_nnetot(modelgridindex);
   for (int i = 0; i < nbfcontinua; i++)
   {
@@ -1039,8 +1084,9 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
       const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
       const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
       //printout("i %d, nu_edge %g\n",i,nu_edge);
+      const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
-      if (nu >= nu_edge)
+      if (nu >= nu_edge && nu <= nu_max_phixs)
       {
         //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
 
@@ -1058,23 +1104,18 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
         const double nne = get_nne(modelgridindex);
         const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_edge);
         const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+        const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
 
-        double corrfactor = 1 - departure_ratio * exp(-HOVERKB * nu / T_e);
-
-        if (corrfactor < 0)
-          corrfactor = 1;
-
-        // if (get_element(element) >= 26 && level < 100 && fabs(corrfactor - 1.0) > 0.5)
-        // {
-        //   printout("kappa_bf modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d departure_ratio %g corrfactor_edge %g\n",
-        //           modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, departure_ratio, corrfactor);
-        // }
-
-        double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
-
-        #if (DETAILED_BF_ESTIMATORS_ON)
-        phixslist[tid].allcont[i].gamma_contr = sigma_bf * probability * corrfactor;
+        #if (SEPARATE_STIMRECOMB)
+          const double corrfactor = 1.; // no subtraction of stimulated recombination
+          const double kappa_fb_contr = nnlevel * sigma_bf * probability * stimfactor;
+        #else
+          double corrfactor = 1 - stimfactor; // photoionisation minus stimulated recombination
+          if (corrfactor < 0)
+            corrfactor = 0.;
         #endif
+
+        const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
 
         if (level == 0)
         {
@@ -1082,27 +1123,10 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
           phixslist[tid].groundcont[gphixsindex].gamma_contr += sigma_bf * probability * corrfactor;
         }
 
-        if (kappa_bf_contr < 0)
-        {
-          #ifdef DEBUG_ON
-            //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution T_e %g, T_R %g, W %g, E_threshold %g, kappa_bf_contr %g\n", T_e,cell[pkt_ptr->where].T_R,cell[pkt_ptr->where].W,nu_edge*H,nnlevel*sigma_bf);
-            //printout("[warning] calculate_kappa_rpkt_cont: set this contribution to zero\n");
-            if (fabs(kappa_bf_contr) > 1e-10)
-              printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnlevel %g, nne %g, sigma_bf %g)\n",
-                kappa_bf_contr, element, ion, level, nnlevel, get_nne(modelgridindex), sigma_bf);
-          #endif
-          kappa_bf_contr = 0.;
-        }
-        /*
-        else
-        {
-          phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
-          phixslist[tid].allcont[i].photoion_contr = nnlevel * sigma_bf;
-          phixslist[tid].allcont[i].stimrecomb_contr = sf * sigma_bf;
-        }*/
-        //kappa_bf_contr *= 2;
-        phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
-        kappa_bf += kappa_bf_contr;
+        #if (DETAILED_BF_ESTIMATORS_ON)
+        phixslist[tid].allcont[i].gamma_contr = sigma_bf * probability * corrfactor;
+        #endif
+
         #ifdef DEBUG_ON
           if (!isfinite(kappa_bf_contr))
           {
@@ -1115,10 +1139,19 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
             abort();
           }
         #endif
+
+        phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
+        *kappa_bf = *kappa_bf + kappa_bf_contr;
+
+        #if (SEPARATE_STIMRECOMB)
+          phixslist[tid].allcont[i].kappa_fb_contr = kappa_fb_contr;
+          *kappa_fb = *kappa_fb + kappa_fb_contr;
+        #endif
+
       }
-      else // nu < nu_edge
+      else if (nu < nu_edge) // nu < nu_edge
       {
-        /// The important part of phixslist is sorted by nu_edge in ascending order
+        /// The phixslist is sorted by nu_edge in ascending order
         /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
         /// is possible, therefore leave the loop.
 
@@ -1129,16 +1162,33 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
         for (int j = i; j < nbfcontinua; j++)
         {
           phixslist[tid].allcont[j].kappa_bf_contr = 0.;
+          #if (SEPARATE_STIMRECOMB)
+          phixslist[tid].allcont[j].kappa_fb_contr = 0.;
+          #endif
           #if (DETAILED_BF_ESTIMATORS_ON)
           phixslist[tid].allcont[j].gamma_contr = 0.;
           #endif
         }
-        break;
+        break; // all further processes in the list will have larger nu_edge, so stop here
+      }
+      else
+      {
+        // ignore this particular process but continue through the list
+        phixslist[tid].allcont[i].kappa_bf_contr = 0.;
+        #if (SEPARATE_STIMRECOMB)
+        phixslist[tid].allcont[i].kappa_fb_contr = 0.;
+        #endif
+        #if (DETAILED_BF_ESTIMATORS_ON)
+        phixslist[tid].allcont[i].gamma_contr = 0.;
+        #endif
       }
     }
     else // no element present or not an important level
     {
       phixslist[tid].allcont[i].kappa_bf_contr = 0.;
+      #if (SEPARATE_STIMRECOMB)
+      phixslist[tid].allcont[i].kappa_fb_contr = 0.;
+      #endif
       #if (DETAILED_BF_ESTIMATORS_ON)
       phixslist[tid].allcont[i].gamma_contr = 0.;
       #endif
@@ -1149,7 +1199,6 @@ static double calculate_kappa_bf_gammacontr(const int modelgridindex, const doub
       }
     }
   }
-  return kappa_bf;
 }
 
 
@@ -1158,6 +1207,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
   double sigma = 0.0;
   double kappa_ff = 0.;
   double kappa_bf = 0.;
+  double kappa_fb = 0.;
   double kappa_ffheating = 0.;
 
   const int cellindex = pkt_ptr->where;
@@ -1183,9 +1233,16 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
       kappa_ffheating = kappa_ff;
 
       /// Third contribution: bound-free absorption
-      kappa_bf = calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf);
+      calculate_kappa_bf_fb_gammacontr(modelgridindex, nu_cmf, &kappa_bf, &kappa_fb);
 
       kappa_rpkt_cont[tid].bf_inrest = kappa_bf;
+      kappa_rpkt_cont[tid].fb_inrest = kappa_fb;
+
+      // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
+      // if (pkt_lambda < 4000)
+      // {
+      //   printout("lambda %7.1f kappa_bf %g \n", pkt_lambda, kappa_bf);
+      // }
     }
     else
     {
@@ -1195,35 +1252,26 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
       //sigma = SIGMA_T * nne;
 
       sigma = 0.;
-      /*
-      kappa_ff = 0.9*sigma;
-      sigma *= 0.1;
-      kappa_bf = 0.;
-      */
+      // kappa_ff = 0.9*sigma;
+      // sigma *= 0.1;
+      // kappa_bf = 0.;
 
-      /// Second contribution: free-free absorption
+      // Second contribution: free-free absorption
       kappa_ff = 1e5 * calculate_kappa_ff(modelgridindex, nu_cmf);
 
       kappa_bf = 0.;
     }
 
-    /// Now need to convert between frames.
+    // convert between frames.
     const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
     sigma *= dopplerfactor;
     kappa_ff *= dopplerfactor;
     kappa_bf *= dopplerfactor;
-  }
-  else
-  {
-    sigma = 0.;
-    kappa_ff = 0.;
-    kappa_bf = 0.;
-    //kappa_ffheating = 0.;
-    //kappa_bfheating = 0.;
+    kappa_fb *= dopplerfactor;
   }
 
 
-  kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_ff;
+  kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_fb + kappa_ff;
   #ifdef DEBUG_ON
     //if (debuglevel == 2)
     //  printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
@@ -1231,9 +1279,9 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
   kappa_rpkt_cont[tid].es = sigma;
   kappa_rpkt_cont[tid].ff = kappa_ff;
   kappa_rpkt_cont[tid].bf = kappa_bf;
+  kappa_rpkt_cont[tid].fb = kappa_fb;
   kappa_rpkt_cont[tid].ffheating = kappa_ffheating;
   //kappa_rpkt_cont[tid].bfheating = kappa_bfheating;
-
 
   #ifdef DEBUG_ON
     if (!isfinite(kappa_rpkt_cont[tid].total))
@@ -1510,7 +1558,6 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
     kappa_rpkt_cont[tid].bf = kappa_bf;
     kappa_rpkt_cont[tid].ffheating = kappa_ffheating;
     //kappa_rpkt_cont[tid].bfheating = kappa_bfheating;
-
 
     #ifdef DEBUG_ON
     if (!isfinite(kappa_rpkt_cont[tid].total))

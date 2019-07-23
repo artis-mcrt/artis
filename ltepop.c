@@ -170,7 +170,7 @@ double phi(const int element, const int ion, const int modelgridindex)
 
     double Alpha_sp = 0.;
     if (NLTE_POPS_ON)
-      Alpha_sp = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false);
+      Alpha_sp = calculate_ionrecombcoeff(modelgridindex, T_e, element, ion + 1, false, false, false, false, false, false);
     else
       Alpha_sp = interpolate_ions_spontrecombcoeff(element, ion, T_e);
 
@@ -625,6 +625,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   {
     if (get_abundance(modelgridindex,element) > 0)
       nn = MINPOP;
+      // nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
     else
       nn = 0.;
   }
