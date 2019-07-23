@@ -1,6 +1,7 @@
 #include "sn3d.h"
 #include "move.h"
 #include "radfield.h"
+#include "rpkt.h"
 #include "update_grid.h"
 #include "vectors.h"
 
@@ -92,13 +93,8 @@ void move_pkt(PKT *restrict pkt_ptr, const double distance, const double time)
 /// time at the end of distance travelled.
 {
   /// First update pos.
-  if (distance < 0)
-  {
-    printout("Trying to move -v distance. Abort.\n");
-    abort();
-  }
+  assert(distance >= 0);
 
-  //printout("Move distance %g\n", distance);
   pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
   pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
   pkt_ptr->pos[2] += (pkt_ptr->dir[2] * distance);
@@ -108,10 +104,8 @@ void move_pkt(PKT *restrict pkt_ptr, const double distance, const double time)
   const double dopplerfactor = doppler_packetpos(pkt_ptr, time);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
-  /*
-  if (pkt_ptr->e_rf * pkt_ptr->nu_cmf /pkt_ptr->nu_rf > 1e46)
-    {
-      printout("here2 %g %g \n", pkt_ptr->e_rf, pkt_ptr->nu_cmf /pkt_ptr->nu_rf);
-    }
-  */
+
+  // this is a very slow way to ensure the cross sections are take
+  // at the current red shifted packet frequency
+  // calculate_kappa_rpkt_cont(pkt_ptr, time);
 }
