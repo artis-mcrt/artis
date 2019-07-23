@@ -238,7 +238,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_ionrecombcoeff(-1, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop));
+                calculate_ionrecombcoeff(-1, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop, false));
       }
       fprintf(estimators_file, "\n");
 
@@ -257,17 +257,37 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
 
       assume_lte = false;
 
+      // spontaneous radiative recombination rate coefficient (may or may not include stim. recomb)
       fprintf(estimators_file, "Alpha_R*nne    Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
+        // const bool printdebug = false;
+        const bool printdebug = (get_element(element) >= 26);
+
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop) * nne);
+                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop, false) * nne);
       }
       fprintf(estimators_file, "\n");
 
+      // stimulated recombination rate coefficient
+      // fprintf(estimators_file, "Alpha_stim*nne Z=%2d", get_element(element));
+      // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+      //   fprintf(estimators_file, "              ");
+      // for (int ion = 0; ion < nions; ion++)
+      // {
+      //   // const bool printdebug = false;
+      //   const bool printdebug = (get_element(element) >= 26);
+      //
+      //   fprintf(estimators_file, "  %d: %9.3e",
+      //           get_ionstage(element, ion),
+      //           calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop, true) * nne);
+      // }
+      // fprintf(estimators_file, "\n");
+
+      // thermal collisional recombination rate coefficient
       // fprintf(estimators_file, "Alpha_C*nne    Z=%2d", get_element(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
@@ -284,8 +304,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
       {
-        // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 1);
-        const bool printdebug_gammar = false;
+        const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
+        // const bool printdebug_gammar = false;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
                 calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
@@ -410,6 +430,9 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = -99.;
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = -99.;
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
+#if (SEPARATE_STIMRECOMB)
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
+#endif
         }
         /// This is the only flag needed for all of the following MA stuff!
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;

@@ -780,7 +780,7 @@ double calculate_ionrecombcoeff(
   const int modelgridindex, const float T_e,
   const int element, const int upperion,
   const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
-  const bool lower_superlevel_only, const bool per_groundmultipletpop)
+  const bool lower_superlevel_only, const bool per_groundmultipletpop, const bool stimonly)
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) if and nne to get a rate
 {
   const int lowerion = upperion - 1;
@@ -867,8 +867,14 @@ double calculate_ionrecombcoeff(
           const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
           recomb_coeff += col_recombination_ratecoeff(modelgridindex, element, upperion, upper, lower, epsilon_trans);
         }
+        else if (!stimonly)
+        {
+          recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, modelgridindex);
+        }
         else
-          recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower);
+        {
+          recomb_coeff += stim_recombination_ratecoeff(nne, element, upperion, upper, lower, modelgridindex);
+        }
 
         const double alpha_level = recomb_coeff / nne;
         const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
@@ -1009,7 +1015,7 @@ static void read_recombrate_file(void)
         const bool printdebug = false;
         const bool per_groundmultipletpop = true;
 
-        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
+        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop, false);
         printout("              rrc: %10.3e\n", rrc);
 
         if (input_rrc_low_n >= 0)  // if it's < 0, ignore it
@@ -1017,9 +1023,9 @@ static void read_recombrate_file(void)
           printout("  input_rrc_low_n: %10.3e\n", input_rrc_low_n);
 
           const double phixs_multiplier = input_rrc_low_n / rrc;
-          if (phixs_multiplier < 0.5 || phixs_multiplier >= 1.0)
+          if (phixs_multiplier < 0.05 || phixs_multiplier >= 1.0)
           {
-            printout("    Not scaling phixs of all levels by %.3f (because < 0.5 or >= 1.0)\n", phixs_multiplier);
+            printout("    Not scaling phixs of all levels by %.3f (because < 0.05 or >= 1.0)\n", phixs_multiplier);
           }
           else
           {
@@ -1028,7 +1034,7 @@ static void read_recombrate_file(void)
             for (int level = 0; level < nlevels; level++)
               scale_level_phixs(element, ion - 1, level, phixs_multiplier);
 
-            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
+            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop, false);
             printout("              rrc: %10.3e\n", rrc);
           }
         }
@@ -1040,7 +1046,7 @@ static void read_recombrate_file(void)
 
         if (rrc < input_rrc_total)
         {
-          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, true, per_groundmultipletpop);
+          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, true, per_groundmultipletpop, false);
           printout("  rrc(superlevel): %10.3e\n", rrc_superlevel);
 
           if (rrc_superlevel > 0)
@@ -1075,7 +1081,7 @@ static void read_recombrate_file(void)
             scale_level_phixs(element, ion - 1, level, phixs_multiplier);
         }
 
-        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop);
+        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, false, printdebug, false, per_groundmultipletpop, false);
         printout("              rrc: %10.3e\n", rrc);
       }
     }
@@ -1180,31 +1186,137 @@ void ratecoefficients_init(void)
 #endif
 
 
+static double integrand_stimrecombination_custom_radfield(const double nu, void *restrict voidparas)
+{
+  {
+    const gsl_integral_paras_gammacorr *const restrict params = (gsl_integral_paras_gammacorr *) voidparas;
+    const int modelgridindex = params->modelgridindex;
+    const float T_e = params->T_e;
+
+    const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+
+    const double Jnu = radfield(nu, modelgridindex);
+
+    //TODO: MK thesis page 41, use population ratios and Te?
+    return ONEOVERH * sigma_bf / nu * Jnu * exp(-HOVERKB * nu / T_e);
+  }
+}
+
+
+static double calculate_stimrecombcoeff_integral(int element, int lowerion, int level, int phixstargetindex, int modelgridindex)
+{
+  // if (nnlevel <= 1.1 * MINPOP)
+  // {
+  //   return 0.;
+  // }
+
+  const double epsrel = 1e-3;
+  const double epsabs = 0.;
+
+  gsl_integration_workspace *restrict workspace = gsl_integration_workspace_alloc(8192);
+
+  const double E_threshold = get_phixs_threshold(element, lowerion, level, phixstargetindex);
+  const double nu_threshold = ONEOVERH * E_threshold;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+
+  gsl_integral_paras_gammacorr intparas;
+  intparas.nu_edge = nu_threshold;
+  intparas.modelgridindex = modelgridindex;
+  intparas.photoion_xs = elements[element].ions[lowerion].levels[level].photoion_xs;
+  const float T_e = get_Te(modelgridindex);
+  intparas.T_e = T_e;
+  // const double nne = get_nne(modelgridindex);
+  const double sf = get_sahafact(element, lowerion, level, phixstargetindex, T_e, H * nu_threshold);
+
+  gsl_function F_stimrecomb;
+  F_stimrecomb.function = &integrand_stimrecombination_custom_radfield;
+  F_stimrecomb.params = &intparas;
+  double error = 0.0;
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  double stimrecombcoeff = 0.0;
+  const int status = gsl_integration_qag(
+    &F_stimrecomb, nu_threshold, nu_max_phixs, epsabs, epsrel, 8192, GSL_INTEG_GAUSS31, workspace, &stimrecombcoeff, &error);
+
+  gsl_set_error_handler(previous_handler);
+
+  stimrecombcoeff *= FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
+
+  // if (status != 0)
+  // {
+  //   error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+  //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d gamma %g error %g\n",
+  //            status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
+  // }
+
+  gsl_integration_workspace_free(workspace);
+
+  return stimrecombcoeff;
+}
+
+
+double get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex)
+/// Returns the stimulated recombination rate coefficient
+// multiple by upper level population and nne to get rate
+{
+  double stimrecombcoeff = -1.;
+#if (SEPARATE_STIMRECOMB)
+  if (use_cellhist)
+  {
+    stimrecombcoeff = cellhistory[tid].chelements[element].chions[lowerion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff;
+  }
+#endif
+
+  if (!use_cellhist || stimrecombcoeff < 0)
+  {
+    #ifdef FORCE_LTE
+      stimrecombcoeff = 0.;
+    #else
+      stimrecombcoeff = calculate_stimrecombcoeff_integral(element, lowerion, level, phixstargetindex, modelgridindex);
+    #endif
+
+#if (SEPARATE_STIMRECOMB)
+  if (use_cellhist)
+  {
+    cellhistory[tid].chelements[element].chions[lowerion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = stimrecombcoeff;
+  }
+#endif
+  }
+
+  return stimrecombcoeff;
+}
+
+
 static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
   const gsl_integral_paras_gammacorr *const restrict params = (gsl_integral_paras_gammacorr *) voidparas;
   const int modelgridindex = params->modelgridindex;
-  const float T_e = params->T_e;
-  double corrfactor = 1 - params->departure_ratio * exp(-HOVERKB * nu / T_e);
 
+  #if (SEPARATE_STIMRECOMB)
+  const double corrfactor = 1.0;
+  #else
+  const float T_e = params->T_e;
+  double corrfactor = 1. - params->departure_ratio * exp(-HOVERKB * nu / T_e);
   if (corrfactor < 0)
-    corrfactor = 1;
+    corrfactor = 0.;
+  #endif
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
+  // const double Jnu = use_cellhist ? radfield(nu, modelgridindex) : radfield_dbb_mgi(nu, modelgridindex);
+  const double Jnu = radfield(nu, modelgridindex);
+
   //TODO: MK thesis page 41, use population ratios and Te?
-  return ONEOVERH * sigma_bf / nu * radfield(nu, modelgridindex) * corrfactor;
+  return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
 }
 
 
 static double calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  const double epsrel = 2e-4;
+  const double epsrel = 1e-3;
   const double epsabs = 0.;
-
-  gsl_integration_workspace *restrict workspace = gsl_integration_workspace_alloc(8192);
 
   // const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
@@ -1217,15 +1329,25 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
   intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
+
+#if SEPARATE_STIMRECOMB
+  intparas.departure_ratio = 0.; // zero the stimulated recomb contribution
+#else
+  // stimulated recombination is negative photoionisation
+  const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+  // if (nnlevel <= 1.1 * MINPOP)
+  // {
+  //   return 0.;
+  // }
   const float T_e = get_Te(modelgridindex);
   intparas.T_e = T_e;
   const double nne = get_nne(modelgridindex);
   const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_threshold);
-  const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
   const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-  const double nnupperionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-  const double departure_ratio = nnupperionlevel / nnlevel * nne * sf; // put that to phixslist
+  const double nnupperionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+  const double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.0; // put that to phixslist
   intparas.departure_ratio = departure_ratio;
+#endif
 
   gsl_function F_gammacorr;
   F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
@@ -1233,13 +1355,28 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   double error = 0.0;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  gsl_integration_workspace *restrict workspace = gsl_integration_workspace_alloc(8192);
+
   double gammacorr = 0.0;
   const int status = gsl_integration_qag(
     &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, 8192, GSL_INTEG_GAUSS31, workspace, &gammacorr, &error);
+  gsl_integration_workspace_free(workspace);
 
   gsl_set_error_handler(previous_handler);
 
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+
+  // if (get_element(element) == 26 && get_ionstage(element, ion) == 3) //  && level >= get_nlevels_groundterm(element, ion)
+  // {
+  //   gammacorr *= 0.5;
+  // }
+
+  // if (gammacorr < 0)
+  // {
+  //   printout("corrphotoioncoeff negative modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d gamma %g\n",
+  //            modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr);
+  // }
 
   if (status != 0)
   {
@@ -1248,7 +1385,6 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
 
-  gsl_integration_workspace_free(workspace);
 
   return gammacorr;
 }
@@ -1276,8 +1412,8 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   if (DETAILED_BF_ESTIMATORS_ON)
   {
     // gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
-    gammacorr = -1;
     // will be -1 if no estimators available
+    gammacorr = -1;
   }
   if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0)
   {
@@ -1593,6 +1729,7 @@ double calculate_iongamma_per_ionpop(
   }
 
   double gamma_ion = 0.;
+  double gamma_ion_used = 0.;
   for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
   {
     double nnlowerlevel;
@@ -1628,12 +1765,13 @@ double calculate_iongamma_per_ionpop(
       {
         gamma_coeff_integral += calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
         gamma_coeff_bfest += get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
-        gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, modelgridindex);
+        gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, modelgridindex); // whatever ARTIS uses internally
       }
 
       const double gamma_ion_contribution_integral = gamma_coeff_integral * nnlowerlevel / nnlowerion;
       const double gamma_ion_contribution_bfest = gamma_coeff_bfest * nnlowerlevel / nnlowerion;
       const double gamma_ion_contribution_used = gamma_coeff_used * nnlowerlevel / nnlowerion;
+      gamma_ion_used += gamma_ion_contribution_used;
       if (use_bfest)
       {
         gamma_ion += gamma_ion_contribution_bfest;
@@ -1643,13 +1781,13 @@ double calculate_iongamma_per_ionpop(
         gamma_ion += gamma_ion_contribution_integral;
       }
 
-      if (printdebug && (gamma_ion_contribution_integral < 0. || gamma_ion_contribution_bfest > 0.) && lower < 50)
+      if (printdebug && (gamma_ion_contribution_integral < 0. || gamma_ion_contribution_used > 0.) && lower < 20)
       {
         const double threshold_angstroms = 1e8 * CLIGHT / (get_phixs_threshold(element, lowerion, lower, phixstargetindex) / H);
         printout("Gamma_R: Z=%d ionstage %d->%d lower+1 %5d upper+1 %5d lambda_threshold %7.1f Gamma_integral %7.2e Gamma_bfest %7.2e Gamma_used %7.2e Gamma_used_sum %7.2e\n",
                 get_element(element), get_ionstage(element, lowerion),
                 get_ionstage(element, lowerion + 1), lower + 1, upper + 1, threshold_angstroms, gamma_ion_contribution_integral,
-                gamma_ion_contribution_bfest, gamma_ion_contribution_used, gamma_ion);
+                gamma_ion_contribution_bfest, gamma_ion_contribution_used, gamma_ion_used);
 
         #if (DETAILED_BF_ESTIMATORS_BYTYPE)
         print_bfrate_contributions(element, lowerion, lower, phixstargetindex, modelgridindex, nnlowerlevel, nnlowerion);
@@ -1661,7 +1799,7 @@ double calculate_iongamma_per_ionpop(
   {
     printout("Gamma_R: Z=%d ionstage %d->%d lower+1 [all] upper+1 [all] Gamma_used_ion %7.2e\n",
              get_element(element), get_ionstage(element, lowerion),
-             get_ionstage(element, lowerion + 1), gamma_ion);
+             get_ionstage(element, lowerion + 1), gamma_ion_used);
   }
   return gamma_ion;
 }

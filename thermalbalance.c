@@ -26,7 +26,7 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
   for (int level = 0; level < nlevels; level++)
   {
     const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-    if (nnlevel <= MINPOP || level_isinsuperlevel(element, ion, level))
+    if (nnlevel <= MINPOP)
     {
       continue;
     }
@@ -230,7 +230,7 @@ static double get_cooling_ion_coll_exc(const int modelgridindex, const int eleme
   for (int level = 0; level < nlevels; level++)
   {
     const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-    if (nnlevel <= MINPOP || level_isinsuperlevel(element, ion, level))
+    if (nnlevel <= MINPOP)
     {
       continue;
     }
