@@ -671,30 +671,3 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 }*/
 
 
-double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold)
-/// retrieves or calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
-{
-  double sf;
-
-  if (use_cellhist)
-  {
-    sf = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact;
-
-    if (sf < 0)
-    {
-      const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      sf = calculate_sahafact(element, ion, level, upperionlevel, T, E_threshold);
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = sf;
-    }
-  }
-  else
-  {
-    const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-    sf = calculate_sahafact(element, ion, level, upperionlevel, T, E_threshold);
-  }
-
-  //printout("get_sahafact: sf= %g\n",sf);
-  return sf;
-}
-
-

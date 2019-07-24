@@ -225,37 +225,18 @@ double rho_crit;                 ///MK: critical opacity in opacity_case 3 (coul
 //FILE *ldist_file;
 int debug_packet;                /// activate debug output for this packet if non negative
 //double global_threshold;         /// global variable to transfer a threshold frequency to another function
-//char filename[100];               /// this must be long enough to hold "packetsxx.tmp" where xx is the number of "middle" iterations
-//int pktnumberoffset;
 int n_middle_it;
 #define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-40
-
 
 int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;
 
 mastate_t *restrict mastate;
 
-
 CELL cell[MGRID+1];
 //int *nonemptycells;  /// Array which contains all the non-empty cells cellnumbers
 //int nnonemptycells;  /// Total number of non-empty cells
-
-//samplegrid_t samplegrid[MSAMPLEGRID];
-//extern float rhosum[MSAMPLEGRID];
-//extern float T_Rsum[MSAMPLEGRID];
-//extern float T_esum[MSAMPLEGRID];
-//extern float Wsum[MSAMPLEGRID];
-//extern float T_Dsum[MSAMPLEGRID];
-//extern int associatedcells[MSAMPLEGRID];
-//float rhosum2[MSAMPLEGRID];
-//float T_Rsum2[MSAMPLEGRID];
-//float T_esum2[MSAMPLEGRID];
-//float Wsum2[MSAMPLEGRID];
-//float T_Dsum2[MSAMPLEGRID];
-//int associatedcells2[MSAMPLEGRID];
-
 
 
 struct time
@@ -370,12 +351,8 @@ double dlogt;
 /// ATOMIC DATA
 ///============================================================================
 int nelements,nlines,includedions;
-/// Global pointer to beginning of atomic data. This is used as the starting point to fill up
-/// the atomic data in input.c after it was read in from the database.
 elementlist_entry *restrict elements;
-/// Global pointer to beginning of linelist
 linelist_entry *restrict linelist;
-/// Global pointer to beginning of the bound-free list
 bflist_t *restrict bflist;
 
 
@@ -399,10 +376,8 @@ int importantcoolingterms;
 ///============================================================================
 
 phixslist_t *restrict phixslist;
-//extern groundphixslist_t *groundphixslist;
 int nbfcontinua;
 int nbfcontinua_ground; ///number of bf-continua
-//int importantbfcontinua;
 int NPHIXSPOINTS;
 double NPHIXSNUINCREMENT;
 
@@ -410,8 +385,6 @@ double NPHIXSNUINCREMENT;
 ///============================================================================
 
 cellhistory_struct *restrict cellhistory;          /// Global pointer to the beginning of the cellhistory stack.
-//#define CELLHISTORYSIZE 2               /// Size of the cellhistory stack.
-
 
 /// Debug/Analysis Counter
 int ma_stat_activation_collexc;
@@ -447,20 +420,11 @@ int upscatter;
 int downscatter;
 int updatecellcounter;
 int coolingratecalccounter;
-//extern int propagationcounter;
 
-//extern int debuglevel;
 int debuglevel;
 
 
-//int currentcell; ///was used for an fdf-solver
-
-
 bool homogeneous_abundances;
-
-// now set by input files
-//#define NPHIXSPOINTS 200
-//#define NPHIXSNUINCREMENT 0.1  //sets the frequency/energy spacing of the phixs array in units of nu_edge
 
 bool simulation_continued_from_saved;
 int nthreads;
@@ -475,9 +439,9 @@ int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
 
 int maxion;
-FILE *restrict tau_file;
-FILE *restrict tb_file;
-FILE *restrict heating_file;
+// FILE *restrict tau_file;
+// FILE *restrict tb_file;
+// FILE *restrict heating_file;
 
 short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid

@@ -531,7 +531,6 @@ typedef struct
   double bfcooling;
   double bfheatingcoeff;
   double corrphotoioncoeff;
-  double sahafact;
 #if (SEPARATE_STIMRECOMB)
   double stimrecombcoeff;
 #endif
@@ -559,9 +558,6 @@ typedef struct chelements_struct
 
 typedef struct cellhistory_struct
 {
-//  double totalcooling;                    /// Total cooling rate in this cell.
-//  double bfcooling;                       /// Total cooling rate in this cell.
-//  coolinglist_contributions *coolinglist; /// Cooling contributions by the different processes.
   cellhistorycoolinglist_t *restrict coolinglist;    /// Cooling contributions by the different processes.
   chelements_struct *restrict chelements;            /// Pointer to a nested list which helds compositional
                                             /// information for all the elements=0,1,...,nelements-1
