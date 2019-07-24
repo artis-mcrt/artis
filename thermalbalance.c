@@ -195,7 +195,6 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   ffheating *= FOURPI;
   */
 
-
 #ifdef DIRECT_COL_HEAT
   heatingcoolingrates->heating_collisional = C_deexc;
 #else
@@ -228,12 +227,6 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   const float nne = get_nne(modelgridindex);
   calculate_cooling_rates(modelgridindex, heatingcoolingrates);
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
-  /// These heating rates using estimators work only for hydrogen!!!
-  //double heating_ff,heating_bf;
-  //double nne = cell[cellnumber].nne;
-  //double W = cell[cellnumber].W;
-  //heating_ff = cell[cellnumber].heating_ff * ionstagepop(cellnumber,0,1)/cell[cellnumber].composition[0].partfunct[1]*nne / sqrt(T_e);
-  //heating_bf = cell[cellnumber].heating_bf * W*ionstagepop(cellnumber,0,0)/cell[cellnumber].composition[0].partfunct[0];
 
   /// If selected take direct gamma heating into account
   if (do_rlc_est == 3)
@@ -246,7 +239,6 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   {
     heatingcoolingrates->heating_gamma = 0.;
   }
-
 
   /// Adiabatic cooling term
   const double p = nntot * KB * T_e;

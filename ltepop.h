@@ -9,7 +9,6 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
 double phi(int element, int ion, int modelgridindex);
 double calculate_partfunct(int element, int ion, int modelgridindex);
 double get_groundlevelpop(int modelgridindex, int element, int ion);
-double get_levelpop(int modelgridindex, int element, int ion, int level);
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
 double get_sahafact(int element, int ion, int level, int phixstargetindex, double T, double E_threshold);

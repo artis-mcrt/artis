@@ -420,9 +420,6 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        const double population = (new_timestep) ? -99 : calculate_exclevelpop(modelgridindex,element,ion,level);
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = population;
-
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].sahafact = -99.;

@@ -201,8 +201,8 @@ static double get_event(
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
-        const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-        const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+        const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
+        const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
 
         double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
@@ -469,7 +469,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
           // const int upper = 0; //TODO: this should come from phixsupperlevel;
           const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
           mastate[tid].level   = upper;
-          // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+          // mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
           mastate[tid].activatingline = -99;
           //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         }
@@ -539,7 +539,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
         mastate[tid].ion     = ion;
         // const int upper = 0; //TODO: this should come from phixsupperlevel;
         mastate[tid].level   = level;
-        // mastate[tid].nnlevel = get_levelpop(modelgridindex,element,ion+1,upper);
+        // mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
         mastate[tid].activatingline = -99;
         //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         return;
@@ -1084,7 +1084,7 @@ static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const dou
     {
       const double nu_edge = phixslist[tid].allcont[i].nu_edge;
       const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
-      const double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+      const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
       //printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
@@ -1101,7 +1101,7 @@ static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const dou
         const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
         const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const double nnionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
+        const double nnionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
         const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_edge);
         const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);

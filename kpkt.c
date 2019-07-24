@@ -179,7 +179,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
   {
     //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
     const double epsilon_current = epsilon(element,ion,level);
-    double nnlevel = get_levelpop(modelgridindex, element, ion, level);
+    double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
 
     /// excitation to same ionization stage
     /// -----------------------------------
@@ -244,7 +244,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        // const double nnupperlevel = get_levelpop(modelgridindex,element,ion + 1, upper);
+        // const double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion + 1, upper);
 
         const double C = get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
         contrib += C;
