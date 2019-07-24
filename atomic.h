@@ -132,11 +132,7 @@ inline double stat_weight(int element, int ion, int level)
 /// Returns the statistical weight of (element,ion,level).
 {
   #ifdef DEBUG_ON
-  if (level > elements[element].ions[ion].nlevels)
-  {
-    printout("[fatal] stat_weight: level %d greater than nlevels=%d ... abort\n",level,elements[element].ions[ion].nlevels);
-    abort();
-  }
+  assert(level <= elements[element].ions[ion].nlevels);
   #endif
   return elements[element].ions[ion].levels[level].stat_weight;
 }
