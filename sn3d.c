@@ -11,8 +11,8 @@
    explosions. */
 
 #include <unistd.h>
+#include <stdbool.h>
 #include "sn3d.h"
-#include "threadprivate.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
@@ -33,6 +33,13 @@
 
 const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 
+// threadprivate variables
+int tid;
+bool use_cellhist;
+bool neutral_flag;
+gsl_rng *rng;
+gsl_integration_workspace *gslworkspace;
+FILE *restrict output_file;
 
 #ifndef _OPENMP
 typedef int omp_int_t;
@@ -526,6 +533,8 @@ int main(int argc, char** argv)
 #   ifdef _OPENMP
     printout("OpenMP parallelisation active with %d threads\n", nthreads);
 #   endif
+
+    gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
   }
 
   const time_t real_time_start = time(NULL);
@@ -1285,6 +1294,14 @@ int main(int argc, char** argv)
     {
       fclose(output_file);
     }
+
+  #ifdef _OPENMP
+    omp_set_dynamic(0);
+    #pragma omp parallel
+  #endif
+  {
+    gsl_integration_workspace_free(gslworkspace);
+  }
 
   #ifdef MPI_ON
     MPI_Finalize();

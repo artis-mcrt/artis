@@ -313,7 +313,6 @@ static void do_macroatom_radrecomb(
   mastate[tid].ion = *ion;
   mastate[tid].level = *level;
   const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
-  gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(2048);
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   gslintegration_paras intparas;
   intparas.T = T_e;
@@ -326,7 +325,7 @@ static void do_macroatom_radrecomb(
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
   double error;
   double total_alpha_sp;
-  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, 2048, GSL_INTEG_GAUSS61, wsp, &total_alpha_sp, &error);
+  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &total_alpha_sp, &error);
   double alpha_sp_old = total_alpha_sp;
   double nu_lower = nu_threshold;
   for (int i = 1; i < NPHIXSPOINTS; i++)
@@ -339,7 +338,7 @@ static void do_macroatom_radrecomb(
     double alpha_sp;
     nu_lower += deltanu;
     /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-    gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, 2048, GSL_INTEG_GAUSS61, wsp, &alpha_sp, &error);
+    gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &alpha_sp, &error);
     //alpha_sp *= FOURPI * sf;
     //if (zrand > alpha_sp/get_spontrecombcoeff(element,ion-1,lower,get_Te(pkt_ptr->where))) break;
     if (zrand >= alpha_sp / total_alpha_sp)
@@ -351,7 +350,6 @@ static void do_macroatom_radrecomb(
     //printout("[debug] macroatom: zrand %g, step %d, alpha_sp %g, total_alpha_sp %g, alpha_sp/total_alpha_sp %g, nu_lower %g\n",zrand,i,alpha_sp,total_alpha_sp,alpha_sp/total_alpha_sp,nu_lower);
     alpha_sp_old = alpha_sp;
   }
-  gsl_integration_workspace_free(wsp);
   gsl_set_error_handler(previous_handler);
   if (nu_lower == nu_threshold)
   {

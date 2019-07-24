@@ -51,11 +51,6 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
-  //gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1024);
-  //double intaccuracy = 1e-2;
-  //double error;
-  //size_t neval; ///for qng integrator
-
   /*
   gsl_function F_bfheating;
   F_bfheating.function = &bfheating_integrand_gsl;
@@ -169,7 +164,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
           //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           //double epsilon_upper = epsilon(element,ion+1,upper);
           //double epsilon_trans = epsilon_upper - epsilon_current;
-          bfheating += nnlevel * get_bfheatingcoeff(element,ion,level,phixstargetindex,modelgridindex);
+          bfheating += nnlevel * get_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
         }
       }
     }
@@ -210,8 +205,6 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 
   heatingcoolingrates->heating_bf = bfheating;
   heatingcoolingrates->heating_ff = ffheating;
-
-  // gsl_integration_workspace_free(wspace);
 }
 
 
@@ -500,7 +493,6 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //   int element,ion,level,lower;
 //   int ii,lineindex;
 //
-//   gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(1024);
 //   double intaccuracy = 1e-2;
 //   double error;
 //   //size_t neval; ///for qng integrator
@@ -658,6 +650,4 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //   heatingrates[tid].bf = bfheating;
 //   heatingrates[tid].ff = ffheating;
 //   //printout("ffheating %g, bfheating %g, colheating %g\n",ffheating,bfheating,C_deexc+C_recomb);
-//
-//   gsl_integration_workspace_free(wspace);
 // }
