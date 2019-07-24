@@ -193,7 +193,7 @@ static void update_abundances(const int modelgridindex, const int timestep, cons
 }
 
 
-static void write_to_estimators_file(FILE *estimators_file, const int n, const int timestep, const int titer, heatingcoolingrates_t *heatingcoolingrates)
+static void write_to_estimators_file(FILE *estimators_file, const int n, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates)
 {
   if (get_numassociatedcells(n) > 0)
   {

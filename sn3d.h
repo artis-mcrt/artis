@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdarg.h>  /// MK: needed for printout()
 #include <stdbool.h>
+#include <gsl/gsl_integration.h>
 
 #define DEBUG_ON
 // #define DO_TITER
@@ -66,6 +67,8 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 // Polarisation for virtual packets
 // #define VPKT_ON
 
+static const size_t GSLWSIZE = 16384;
+
 #include "types.h"
 
 #if (DETAILED_BF_ESTIMATORS_ON && !NO_LUT_PHOTOION)
@@ -85,11 +88,6 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
   #include "omp.h"
 #endif
 
-
-//#define mpi_grid_buffer_size 2000018
-//#define mpi_grid_buffer_size 50000
-//double buffer[mpi_grid_buffer_size];
-//float *buffer;
 
 /// fundamental constants
 #define CLIGHT        2.99792458e+10    /// Speed of light [cm/s]
@@ -136,9 +134,6 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 #define MFE52 (52 * MH)                            /// Mass of Fe52
 #define MCR48 (48 * MH)                            /// Mass of Cr48
 
-//#define MPTS_MODEL 10000
-
-
 #define MTSTEP 200       // Max number of time steps.
 #define MLINES 500000    // Increase linelist by this blocksize
 
@@ -178,8 +173,6 @@ double E48V;
 
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40
-
-extern gsl_rng *rng; /// pointer for random number generator
 
 int ncoordgrid[3]; /// actual grid dimensions to use
 int ngrid;
@@ -470,7 +463,6 @@ bool homogeneous_abundances;
 //#define NPHIXSNUINCREMENT 0.1  //sets the frequency/energy spacing of the phixs array in units of nu_edge
 
 bool simulation_continued_from_saved;
-extern int tid;
 int nthreads;
 double nu_rfcut;
 int n_lte_timesteps;
@@ -482,27 +474,25 @@ int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
 
-extern FILE *restrict output_file;
-//extern short output_file_open;
-
 int maxion;
 FILE *restrict tau_file;
 FILE *restrict tb_file;
 FILE *restrict heating_file;
 
-//double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
-extern bool neutral_flag;
-
 short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid
                                                    /// routine and their daughters.
 
+extern int tid;
 extern bool use_cellhist;
+extern bool neutral_flag;
+extern gsl_rng *rng;  // pointer for random number generator
+extern gsl_integration_workspace *gslworkspace;
+extern FILE *restrict output_file;
 
 #ifdef _OPENMP
-  #pragma omp threadprivate(tid,use_cellhist,neutral_flag,rng,output_file)
+  #pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
 #endif
-
 
 inline int printout(const char *restrict format, ...)
 {

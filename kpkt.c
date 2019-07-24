@@ -583,7 +583,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       //{
 
 
-        gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(2048);
         gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
         zrand = gsl_rng_uniform(rng);
@@ -597,7 +596,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         const double deltanu = nu_threshold * NPHIXSNUINCREMENT;
         const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
         double error;
-        gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 2048, GSL_INTEG_GAUSS61, wsp, &total_bfcooling_coeff, &error);
+        gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &total_bfcooling_coeff, &error);
         bfcooling_coeff = total_bfcooling_coeff;
         int ii;
         for (ii = 0; ii < NPHIXSPOINTS; ii++)
@@ -608,7 +607,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
           {
             nu_lower = nu_threshold + ii * deltanu;
             /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-            gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, 2048, GSL_INTEG_GAUSS61, wsp, &bfcooling_coeff, &error);
+            gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfcooling_coeff, &error);
             //bfcooling_coeff *= FOURPI * sf;
             //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
           }
@@ -636,7 +635,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         pkt_ptr->nu_cmf = nu_lower;
 
         gsl_set_error_handler(previous_handler);
-        gsl_integration_workspace_free(wsp);
 
       /*}
       else
@@ -787,7 +785,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
   double error;
   double nu_max_phixs;
-  wsp = gsl_integration_workspace_alloc(1024);
 
   float T_e = cell[cellnumber].T_e;
   float nne = cell[cellnumber].nne;
@@ -805,7 +802,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling, &error);
   bfcooling *= nnionlevel*nne*4*PI*calculate_sahafact(element,ion,level,upperionlevel,T_e,nu_threshold*H);
 
-  gsl_integration_workspace_free(wsp);
   return bfcooling;
 }*/
 

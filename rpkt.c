@@ -1070,6 +1070,8 @@ static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const dou
     phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
   }
 
+  const double T_e = get_Te(modelgridindex);
+  const double nne = get_nne(modelgridindex);
   const double nnetot = get_nnetot(modelgridindex);
   for (int i = 0; i < nbfcontinua; i++)
   {
@@ -1100,8 +1102,6 @@ static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const dou
         const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
         const double nnionlevel = get_levelpop(modelgridindex, element, ion + 1, upper);
-        const double T_e = get_Te(modelgridindex);
-        const double nne = get_nne(modelgridindex);
         const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_edge);
         const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);

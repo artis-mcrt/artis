@@ -144,7 +144,7 @@ double get_bin_nu_upper(int binindex)
 static void
 setup_bin_boundaries(void)
 {
-  double prev_nu_upper = nu_lower_first_initial;
+  // double prev_nu_upper = nu_lower_first_initial;
 
   // choose between equally spaced in energy/frequency or wavelength (before bf edges shift boundaries around)
   const double delta_nu = (nu_upper_last_initial - nu_lower_first_initial) / (RADFIELDBINCOUNT - 1); // - 1 for the top super bin
@@ -1052,8 +1052,6 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   const double epsrel = 1e-10;
   const double epsabs = 0.;
 
-  gsl_integration_workspace *restrict w = gsl_integration_workspace_alloc(65536);
-
   gsl_planck_integral_paras intparas;
   intparas.T_R = T_R;
   intparas.prefactor = prefactor;
@@ -1063,15 +1061,13 @@ static double planck_integral(double T_R, double nu_lower, double nu_upper, enum
   F_planck.params = &intparas;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, 65536, GSL_INTEG_GAUSS61, w, &integral, &error);
+  int status = gsl_integration_qag(&F_planck, nu_lower, nu_upper, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &integral, &error);
   if (status != 0)
   {
     printout("planck_integral integrator status %d, GSL_FAILURE= %d. Integral value %g, setting to zero.\n", status,GSL_FAILURE,integral);
     integral = 0.;
   }
   gsl_set_error_handler(previous_handler);
-
-  gsl_integration_workspace_free(w);
 
   return integral;
 }

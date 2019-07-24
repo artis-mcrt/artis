@@ -13,7 +13,6 @@
 #include <stdbool.h>
 #include "exspec.h"
 #include "sn3d.h"
-#include "threadprivate.h"
 #include "input.h"
 #include "time_init.h"
 #include "light_curve.h"
@@ -27,6 +26,9 @@ const bool MODE_GAMMA = true;
 const bool MODE_GAMMA = false;
 #endif
 
+int tid;
+gsl_rng *rng;
+FILE *restrict output_file;
 
 static int get_escaped_packets(int i, int nprocs, PKT pkt[], EPKT *epkts, int npkts, enum packet_type escape_type)
 {
