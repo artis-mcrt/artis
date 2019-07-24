@@ -1102,7 +1102,7 @@ static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const dou
         const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
         const double nnionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
-        const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_edge);
+        const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
         const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
 
@@ -1415,7 +1415,8 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
 
                         const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
 
-                        bef = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact;
+                        // bef = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact;
+                        bef = 0.;
 
                         sf = calculate_sahafact(element,ion,level,0,T_e,nu_edge*H); //TODO: this is not correct, fix before using VPKTS
                         helper = nnlevel * sigma_bf;
@@ -1430,7 +1431,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
                             #ifdef DEBUG_ON
                             //printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution T_e %g, T_R %g, W %g, E_threshold %g, check %g\n", T_e,cell[pkt_ptr->where].T_R,cell[pkt_ptr->where].W,nu_edge*H,nnlevel*sigma_bf);
                             //printout("[warning] calculate_kappa_rpkt_cont: set this contribution to zero\n");
-                            if (fabs(check) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g) before %g after %g \n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf,bef,cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact);
+                            // if (fabs(check) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g) before %g after %g \n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf,bef,cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact);
                             #endif
                             check = 0.;
                             //phixslist[tid].allcont[i].kappa_bf_contr = check;

@@ -1414,22 +1414,8 @@ double col_recombination_ratecoeff(
         elements[element].ions[upperion - 1].levels[lower].photoion_xs[0] *
         get_phixsprobability(element, upperion - 1, lower, phixstargetindex));
 
-      double C = nne * nne * get_sahafact(element, upperion - 1, lower, phixstargetindex, T_e, epsilon_trans) *
+      double C = nne * nne * calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans) *
                        1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
-
-      #ifdef DEBUG_ON
-        /*if (debuglevel == 777)
-        {
-          printout("get_sahafact %g, fac1 %g, C %g\n",get_sahafact(element,ion-1,lower,phixstargetindex,T_e,epsilon_trans),fac1,C);
-          ///means n_u*nne * detailed_balancing of c_ikappa
-          printout("[debug] col_recomb: n_u %g, nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n",n_u, nne,T_e,g,epsilon_trans,sigma_bf);
-        }
-        if (!isfinite(C))
-        {
-          printout("fatal a8: abort\n");
-          abort();
-        }*/
-      #endif
 
       return C;
     }

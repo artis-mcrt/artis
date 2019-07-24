@@ -1221,8 +1221,8 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   intparas.photoion_xs = elements[element].ions[lowerion].levels[level].photoion_xs;
   const float T_e = get_Te(modelgridindex);
   intparas.T_e = T_e;
-  // const double nne = get_nne(modelgridindex);
-  const double sf = get_sahafact(element, lowerion, level, phixstargetindex, T_e, H * nu_threshold);
+  const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
+  const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
 
   gsl_function F_stimrecomb;
   F_stimrecomb.function = &integrand_stimrecombination_custom_radfield;
@@ -1336,9 +1336,9 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   const float T_e = get_Te(modelgridindex);
   intparas.T_e = T_e;
   const double nne = get_nne(modelgridindex);
-  const double sf = get_sahafact(element, ion, level, phixstargetindex, T_e, H * nu_threshold);
-  const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-  const double nnupperionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+  const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
+  const double nnupperionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upperionlevel);
   const double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.0; // put that to phixslist
   intparas.departure_ratio = departure_ratio;
 #endif
