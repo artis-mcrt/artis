@@ -1232,7 +1232,7 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   double stimrecombcoeff = 0.0;
   const int status = gsl_integration_qag(
-    &F_stimrecomb, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS31, gslworkspace, &stimrecombcoeff, &error);
+    &F_stimrecomb, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &stimrecombcoeff, &error);
 
   gsl_set_error_handler(previous_handler);
 
@@ -1352,7 +1352,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 
   double gammacorr = 0.0;
   const int status = gsl_integration_qag(
-    &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS31, gslworkspace, &gammacorr, &error);
+    &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
 
   gsl_set_error_handler(previous_handler);
 
@@ -1526,7 +1526,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
   const int status = gsl_integration_qag(
     &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-     GSLWSIZE, GSL_INTEG_GAUSS15, gslworkspace, &bfheating, &error);
+     GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating, &error);
   // const int status = gsl_integration_qags(
   //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
   //   GSLWSIZE, workspace_bfheating, &bfheating, &error);
