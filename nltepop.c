@@ -132,56 +132,57 @@ static double get_total_rate(
   const int index_selected, const gsl_matrix *restrict rate_matrix, const gsl_vector *restrict popvec,
   const bool into_level, const bool only_levels_below, const bool only_levels_above)
 {
-  gsl_vector *rates_vec;
+  double total_rate = 0.;
+  assert(!only_levels_below || !only_levels_above);
+
   if (into_level)
   {
     // find rate into selected level
     gsl_vector_const_view row_view = gsl_matrix_const_row(rate_matrix, index_selected);
-    rates_vec = gsl_vector_alloc(rate_matrix->size1);
-
-    // copy the rate coefficients
-    gsl_vector_memcpy(rates_vec, &row_view.vector);
+    const gsl_vector *rates_vec = &row_view.vector;
 
     // multiply incoming rate coefficients by their corresponding populations to get rates
-    gsl_vector_mul(rates_vec, popvec);
+    if (!only_levels_above) // add levels below
+    {
+      for (int index = 0; index < index_selected; index++)
+      {
+        total_rate += gsl_vector_get(rates_vec, index) * gsl_vector_get(popvec, index);
+      }
+    }
+
+    if (!only_levels_below) // add levels above
+    {
+      for (unsigned int index = index_selected + 1; index < rate_matrix->size1; index++)
+      {
+        total_rate += gsl_vector_get(rates_vec, index) * gsl_vector_get(popvec, index);
+      }
+    }
   }
   else
   {
     // find rate out of selected level
     gsl_vector_const_view col_view = gsl_matrix_const_column(rate_matrix, index_selected);
-    rates_vec = gsl_vector_alloc(rate_matrix->size2);
-
-    // copy the rate coefficients
-    gsl_vector_memcpy(rates_vec, &col_view.vector);
+    const gsl_vector *rates_vec = &col_view.vector;
 
     // multiply outgoing rate coefficients by the population of the selected level to get rates
-    gsl_vector_scale(rates_vec, gsl_vector_get(popvec, index_selected));
-  }
 
-  assert(!only_levels_below || !only_levels_above);
-  if (only_levels_above)
-  {
-    for (int index = 0; index < index_selected; index++)
+    if (!only_levels_above) // add levels below
     {
-      gsl_vector_set(rates_vec, index, 0.);
+      for (int index = 0; index < index_selected; index++)
+      {
+        total_rate += gsl_vector_get(rates_vec, index);
+      }
     }
-  }
 
-  if (only_levels_below)
-  {
-    for (unsigned int index = index_selected; index < rates_vec->size; index++)
+    if (!only_levels_below) // add levels above
     {
-      gsl_vector_set(rates_vec, index, 0.);
+      for (unsigned int index = index_selected + 1; index < rate_matrix->size2; index++)
+      {
+        total_rate += gsl_vector_get(rates_vec, index);
+      }
     }
+    total_rate *= gsl_vector_get(popvec, index_selected);
   }
-
-  // set rate to/from self to zero
-  gsl_vector_set(rates_vec, index_selected, 0.);
-
-  // add up the rates to/from individual levels
-  const double total_rate = gsl_blas_dasum(rates_vec);
-
-  gsl_vector_free(rates_vec);
 
   return total_rate;
 }
@@ -237,13 +238,14 @@ static void print_level_rates_summary(
 
     const bool into_level = (i <= 1);
     const bool only_levels_below = i % 2;
+    const bool only_levels_above = !only_levels_below;
 
-    const double rad_bb_total = get_total_rate(selected_index, rate_matrix_rad_bb, popvec, into_level, only_levels_below, !only_levels_below);
-    const double coll_bb_total = get_total_rate(selected_index, rate_matrix_coll_bb, popvec, into_level, only_levels_below, !only_levels_below);
-    const double ntcoll_bb_total = get_total_rate(selected_index, rate_matrix_ntcoll_bb, popvec, into_level, only_levels_below, !only_levels_below);
-    const double rad_bf_total = get_total_rate(selected_index, rate_matrix_rad_bf, popvec, into_level, only_levels_below, !only_levels_below);
-    const double coll_bf_total = get_total_rate(selected_index, rate_matrix_coll_bf, popvec, into_level, only_levels_below, !only_levels_below);
-    const double ntcoll_bf_total = get_total_rate(selected_index, rate_matrix_ntcoll_bf, popvec, into_level, only_levels_below, !only_levels_below);
+    const double rad_bb_total = get_total_rate(selected_index, rate_matrix_rad_bb, popvec, into_level, only_levels_below, only_levels_above);
+    const double coll_bb_total = get_total_rate(selected_index, rate_matrix_coll_bb, popvec, into_level, only_levels_below, only_levels_above);
+    const double ntcoll_bb_total = get_total_rate(selected_index, rate_matrix_ntcoll_bb, popvec, into_level, only_levels_below, only_levels_above);
+    const double rad_bf_total = get_total_rate(selected_index, rate_matrix_rad_bf, popvec, into_level, only_levels_below, only_levels_above);
+    const double coll_bf_total = get_total_rate(selected_index, rate_matrix_coll_bf, popvec, into_level, only_levels_below, only_levels_above);
+    const double ntcoll_bf_total = get_total_rate(selected_index, rate_matrix_ntcoll_bf, popvec, into_level, only_levels_below, only_levels_above);
 
     if (into_level)
     {
