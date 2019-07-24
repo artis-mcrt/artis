@@ -3,6 +3,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
+#include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
@@ -14,7 +15,8 @@
 typedef struct Te_solution_paras
 {
   double t_current;
-  int cellnumber;
+  int modelgridindex;
+  heatingcoolingrates_t *heatingcoolingrates;
 } Te_solution_paras;
 
 
@@ -26,11 +28,6 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
   for (int level = 0; level < nlevels; level++)
   {
     const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-    if (nnlevel <= MINPOP)
-    {
-      continue;
-    }
-
     const double epsilon_level = epsilon(element, ion, level);
     // Collisional heating: deexcitation to same ionization stage
     // ----------------------------------------------------------
@@ -49,7 +46,8 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
   return C_deexc;
 }
 
-static void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne)
+
+static void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne, heatingcoolingrates_t *heatingcoolingrates)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
@@ -204,150 +202,25 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 
 
 #ifdef DIRECT_COL_HEAT
-  heatingrates[tid].collisional = C_deexc;
+  heatingcoolingrates->heating_collisional = C_deexc;
 #else
   /// Collisional heating (from estimators)
-  heatingrates[tid].collisional = colheatingestimator[modelgridindex];//C_deexc + C_recomb;
+  heatingcoolingrates->heating_collisional = colheatingestimator[modelgridindex];//C_deexc + C_recomb;
 #endif
 
-  // heatingrates[tid].collbb = C_deexc;
-  // heatingrates[tid].collbf = C_recomb;
-  heatingrates[tid].bf = bfheating;
-  heatingrates[tid].ff = ffheating;
-  // printout("ffheating %g, bfheating %g, colheating %g\n",ffheating,bfheating,C_deexc+C_recomb);
+  heatingcoolingrates->heating_bf = bfheating;
+  heatingcoolingrates->heating_ff = ffheating;
 
   // gsl_integration_workspace_free(wspace);
-}
-
-
-static double get_cooling_ion_coll_exc(const int modelgridindex, const int element, const int ion, const double T_e, const double nne)
-{
-  double C_exc = 0.;
-  const int nlevels = get_nlevels(element, ion);
-
-  /// excitation to same ionization stage
-  /// -----------------------------------
-  for (int level = 0; level < nlevels; level++)
-  {
-    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-    if (nnlevel <= MINPOP)
-    {
-      continue;
-    }
-
-    const double epsilon_current = epsilon(element,ion,level);
-    const int nuptrans = get_nuptrans(element, ion, level);
-    for (int ii = 0; ii < nuptrans; ii++)
-    {
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
-      const int upper = linelist[lineindex].upperlevelindex;
-      //printout("    excitation to level %d possible\n",upper);
-      const double epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-      const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
-      C_exc += C;
-    }
-  }
-  // const double nnion = ionstagepop(modelgridindex, element, ion);
-  // printout("get_ion_cooling_coll_exc: T_e %g nne %g Z=%d ionstage %d nnion %g cooling_contrib %g contrib/nnion %g\n", T_e, nne, get_element(element), get_ionstage(element, ion), nnion, C_exc, C_exc / nnion);
-  return C_exc;
-}
-
-
-static void calculate_cooling_rates(const int modelgridindex, const double T_e, const double nne)
-/// Calculate the cooling rates for a given cell. Results are returned
-/// via the elements of the global coolingrates data structure.
-{
-/*  PKT dummypkt;
-  dummypkt.where = cellnumber;
-  PKT *pkt_ptr;
-  pkt_ptr = &dummypkt;*/
-
-  /// calculate rates for
-  double C = 0.;
-  double C_ff = 0.;   /// free-free creation of rpkts
-  double C_fb = 0.;   /// free-bound creation of rpkt
-  double C_exc = 0.;  /// collisional excitation of macroatoms
-  double C_ion = 0.;  /// collisional ionisation of macroatoms
-  for (int element = 0; element < nelements; element++)
-  {
-    //printout("[debug] do_kpkt: element %d\n",element);
-    mastate[tid].element = element;
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++)
-    {
-      //printout("[debug] do_kpkt: ion %d\n",ion);
-      const int nlevels_currention = get_nlevels(element, ion);
-      const int ionisinglevels = get_ionisinglevels(element, ion);
-      //double nnnextionlevel = get_groundlevelpop(modelgridindex,element,ion+1);
-      const double nncurrention = ionstagepop(modelgridindex, element, ion);
-
-      /// ff creation of rpkt
-      /// -------------------
-      const int ioncharge = get_ionstage(element,ion) - 1;
-      //printout("[debug] ioncharge %d, nncurrention %g, nne %g\n",ion,nncurrention,nne);
-      if (ioncharge > 0)
-      {
-        C = 1.426e-27 * sqrt(T_e) * pow(ioncharge,2) * nncurrention * nne;
-        C_ff += C;
-      }
-
-      C_exc += get_cooling_ion_coll_exc(modelgridindex, element, ion, T_e, nne);
-
-      for (int level = 0; level < nlevels_currention; level++)
-      {
-        //printout("[debug] do_kpkt: element %d, ion %d, level %d\n",element,ion,level);
-        const double epsilon_current = epsilon(element,ion,level);
-        const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-        if (ion < nions-1 && level < ionisinglevels) ///check whether further ionisation stage available
-        {
-          //printout("    ionisation possible\n");
-          /// ionization to higher ionization stage
-          /// -------------------------------------
-          C = 0.0;
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
-          {
-            const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
-            //printout("cooling list: col_ionization\n");
-            C += nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
-          }
-          C_ion += C;
-
-          /// fb creation of r-pkt
-          /// free bound rates are calculated from the lower ion, but associated to the higher ion
-          /// --------------------
-          //upper = 0;
-          //epsilon_upper = epsilon(element,ion+1,0);
-          //E_threshold = epsilon_upper - epsilon_current;
-          //E_threshold = epsilon_trans;
-          C = 0.0;
-          for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
-          {
-            //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            //double epsilon_upper = epsilon(element,ion+1,upper);
-            //double epsilon_trans = epsilon_upper - epsilon_current;
-            // TODO: pass in a workspace rather than allocating within the function that is called many times
-            C += get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
-          }
-          C_fb += C;
-        }
-      }
-    }
-  }
-
-  coolingrates[tid].collisional = C_exc + C_ion;
-  //coolingrates[tid].collbb = C_exc;
-  //coolingrates[tid].collbf = C_ion;
-  coolingrates[tid].fb = C_fb;
-  coolingrates[tid].ff = C_ff;
 }
 
 
 static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 /// Thermal balance equation on which we have to iterate to get T_e
 {
-  const int modelgridindex = ((Te_solution_paras *) paras)->cellnumber;
+  const int modelgridindex = ((Te_solution_paras *) paras)->modelgridindex;
   const double t_current = ((Te_solution_paras *) paras)->t_current;
+  heatingcoolingrates_t *heatingcoolingrates = ((Te_solution_paras *) paras)->heatingcoolingrates;
 
   /// Set new T_e guess for the current cell and update populations
   //cell[cellnumber].T_e = T_e;
@@ -360,8 +233,8 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 
   /// Then calculate heating and cooling rates
   const float nne = get_nne(modelgridindex);
-  calculate_cooling_rates(modelgridindex, T_e, nne);
-  calculate_heating_rates(modelgridindex, T_e, nne);
+  calculate_cooling_rates(modelgridindex, heatingcoolingrates);
+  calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
   /// These heating rates using estimators work only for hydrogen!!!
   //double heating_ff,heating_bf;
   //double nne = cell[cellnumber].nne;
@@ -373,12 +246,12 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   if (do_rlc_est == 3)
   {
     const double nt_frac_heating = get_nt_frac_heating(modelgridindex);
-    heatingrates[tid].gamma = get_deposition_rate_density(modelgridindex) * nt_frac_heating;
-    heatingrates[tid].nt_frac_heating = nt_frac_heating;
+    heatingcoolingrates->heating_gamma = get_deposition_rate_density(modelgridindex) * nt_frac_heating;
+    heatingcoolingrates->nt_frac_heating = nt_frac_heating;
   }
   else
   {
-    heatingrates[tid].gamma = 0.;
+    heatingcoolingrates->heating_gamma = 0.;
   }
 
 
@@ -388,16 +261,16 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   const double dV = 3 * volumetmin / pow(tmin, 3) * pow(t_current, 2);
   const double V = volumetmin * pow(t_current / tmin, 3);
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
-  coolingrates[tid].adiabatic = p * dV / V;
+  heatingcoolingrates->cooling_adiabatic = p * dV / V;
 
-  const double total_heating_rate = heatingrates[tid].ff + heatingrates[tid].bf + heatingrates[tid].collisional + heatingrates[tid].gamma;
-  const double total_coolingrate = coolingrates[tid].ff + coolingrates[tid].fb + coolingrates[tid].collisional + coolingrates[tid].adiabatic;
+  const double total_heating_rate = heatingcoolingrates->heating_ff + heatingcoolingrates->heating_bf + heatingcoolingrates->heating_collisional + heatingcoolingrates->heating_gamma;
+  const double total_coolingrate = heatingcoolingrates->cooling_ff + heatingcoolingrates->cooling_fb + heatingcoolingrates->cooling_collisional + heatingcoolingrates->cooling_adiabatic;
 
-  return total_heating_rate - total_coolingrate; // - 0.01*(heatingrates[tid].bf+coolingrates[tid].fb)/2;
+  return total_heating_rate - total_coolingrate; // - 0.01*(heatingrates_thisthread->bf+coolingrates[tid].fb)/2;
 }
 
 
-void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min, const double T_max)
+void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min, const double T_max, heatingcoolingrates_t *heatingcoolingrates)
 {
   const double T_e_old = get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
@@ -422,8 +295,9 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   //maxtemp_f.function = &maxtemp_solution_f;
 
   Te_solution_paras paras;
-  paras.cellnumber = modelgridindex;
+  paras.modelgridindex = modelgridindex;
   paras.t_current = t_current;
+  paras.heatingcoolingrates = heatingcoolingrates;
 
   gsl_function find_T_e_f;
   find_T_e_f.function = &T_e_eqn_heating_minus_cooling;

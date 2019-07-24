@@ -193,7 +193,7 @@ static void update_abundances(const int modelgridindex, const int timestep, cons
 }
 
 
-static void write_to_estimators_file(FILE *estimators_file, const int n, const int timestep, const int titer)
+static void write_to_estimators_file(FILE *estimators_file, const int n, const int timestep, const int titer, heatingcoolingrates_t *heatingcoolingrates)
 {
   if (get_numassociatedcells(n) > 0)
   {
@@ -379,9 +379,9 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       #endif
 
       fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e     gamma %11.5e gamma/gamma_dep %.2f\n",
-              heatingrates[tid].ff, heatingrates[tid].bf, heatingrates[tid].collisional, heatingrates[tid].gamma, heatingrates[tid].nt_frac_heating);
+              heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional, heatingcoolingrates->heating_gamma, heatingcoolingrates->nt_frac_heating);
       fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
-              coolingrates[tid].ff, coolingrates[tid].fb, coolingrates[tid].collisional, coolingrates[tid].adiabatic);
+              heatingcoolingrates->cooling_ff, heatingcoolingrates->cooling_fb, heatingcoolingrates->cooling_collisional, heatingcoolingrates->cooling_adiabatic);
     #endif
   }
   else
@@ -465,7 +465,7 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 }
 
 
-static void solve_Te_nltepops(const int n, const int nts, const int titer)
+static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates_t *heatingcoolingrates)
 {
   const double covergence_tolerance = 0.02;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
@@ -504,7 +504,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer)
     const time_t sys_time_start_Te = time(NULL);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
-    call_T_e_finder(n, nts, time_step[nts_for_te].mid, MINTEMP, MAXTEMP);
+    call_T_e_finder(n, nts, time_step[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates);
 
     const int duration_solve_T_e = time(NULL) - sys_time_start_Te;
     const double fracdiff_T_e = fabs((get_Te(n) / prev_T_e) - 1);
@@ -712,7 +712,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
 
 
 static void update_grid_cell(const int n, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, double *mps)
+                             const double deltat, double *mps, heatingcoolingrates_t *heatingcoolingrates)
 // n is the modelgrid index
 {
   const int assoc_cells = get_numassociatedcells(n);
@@ -841,7 +841,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
 
           update_gamma_corrphotoionrenorm_bfheating_estimators(n, estimator_normfactor);
 
-          solve_Te_nltepops(n, nts, titer);
+          solve_Te_nltepops(n, nts, titer, heatingcoolingrates);
         }
         #endif
         printout("Temperature/NLTE solution for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_temperature_corrections);
@@ -897,7 +897,9 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
       /// and ion contributions inside update grid and communicate between MPI tasks
       const time_t sys_time_start_calc_kpkt_rates = time(NULL);
 
-      calculate_kpkt_rates(n);
+      // don't pass pointer to heatingcoolingrates because current populations and rates weren't used to determine T_e
+      calculate_cooling_rates(n, NULL);
+
       printout("calculate_kpkt_rates for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_calc_kpkt_rates);
     }
     else if (opacity_case == 3)
@@ -1066,14 +1068,15 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo)
       {
-        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps);
+        heatingcoolingrates_t heatingcoolingrates = {0};
+        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
         #ifdef _OPENMP
         #pragma omp critical(estimators_file)
         #endif
         {
-          write_to_estimators_file(estimators_file, mgi, nts, titer);
+          write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates);
         }
       }
       else

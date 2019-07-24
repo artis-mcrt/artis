@@ -563,17 +563,6 @@ int main(int argc, char** argv)
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     abort();
   }
-  if ((coolingrates = (coolingrates_t *) calloc(nthreads, sizeof(coolingrates_t))) == NULL)
-  {
-    printout("[fatal] input: error initializing coolingrates communication variables ... abort\n");
-    abort();
-  }
-  if ((heatingrates = (heatingrates_t *) calloc(nthreads, sizeof(heatingrates_t))) == NULL)
-  {
-    printout("[fatal] input: error initializing heatingrates communication variables ... abort\n");
-    abort();
-  }
-
 
   /// Using this and the global variable output_file opens and closes the output_file
   /// only once, which speeds up the simulation with a lots of output switched on (debugging).
