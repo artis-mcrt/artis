@@ -540,13 +540,10 @@ typedef struct
 
 typedef struct chlevels_struct
 {
-  double population;                      /// The level's population
   double processrates[MA_ACTION_COUNT];
-
   double *restrict individ_rad_deexc;
   double *restrict individ_internal_down_same;
   double *restrict individ_internal_up_same;
-
   chphixstargets_struct *restrict chphixstargets;
 } chlevels_struct;
 

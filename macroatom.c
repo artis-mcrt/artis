@@ -1011,8 +1011,8 @@ double rad_deexcitation_ratecoeff(
   const double statweight_target = statw_lower(lineindex);
   const double statweight = statw_upper(lineindex);
 
-  const double n_u = get_levelpop(modelgridindex,element,ion,upper);
-  const double n_l = get_levelpop(modelgridindex,element,ion,lower);
+  const double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
+  const double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower);
 
   double R = 0.0;
 
@@ -1080,8 +1080,8 @@ double rad_excitation_ratecoeff(
   const double statweight = statw_lower(lineindex);
   const double statweight_target = statw_upper(lineindex);
 
-  const double n_u = get_levelpop(modelgridindex, element, ion, upper);
-  const double n_l = get_levelpop(modelgridindex, element, ion, lower);
+  const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
+  const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
   double R = 0.0;
   // if ((n_u >= 1.1 * MINPOP) && (n_l >= 1.1 * MINPOP))
   {

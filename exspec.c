@@ -26,6 +26,8 @@ const bool MODE_GAMMA = true;
 const bool MODE_GAMMA = false;
 #endif
 
+
+// threadprivate variables
 int tid;
 gsl_rng *rng;
 FILE *restrict output_file;

@@ -201,8 +201,8 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
           const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
           const double B_lu = statweight_target / statweight_lower * B_ul;
 
-          // const double n_l = get_levelpop(modelgridindex,element,ion,lower);
-          // const double n_u = get_levelpop(modelgridindex,element,ion,upper);
+          // const double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower);
+          // const double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
           // const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * em_time;
 
           printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n",

@@ -486,37 +486,6 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 }*/
 
 
-double get_levelpop(int modelgridindex, int element, int ion, int level)
-/// Returns the given levels occupation number, which are stored in the active
-/// entry of the cellhistory.
-{
-  double levelpop;
-  if (use_cellhist)
-  {
-    // const int cellmgi = cell[cellhistory[tid].cellnumber].modelgridindex;
-    const int cellmgi = cellhistory[tid].cellnumber;
-
-    if (cellmgi != modelgridindex)
-    {
-      printout("Abort: get_levelpop called, but cellhistory mgi %d != argument modelgridindex %d",
-               cellmgi, modelgridindex);
-      abort();
-    }
-
-    levelpop = cellhistory[tid].chelements[element].chions[ion].chlevels[level].population;
-    if (levelpop < 0)
-    {
-      levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].population = levelpop;
-    }
-  }
-  else
-    levelpop = calculate_exclevelpop(modelgridindex,element,ion,level);
-
-  return levelpop;
-}
-
-
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation population of a level assuming LTE excitation
 {
