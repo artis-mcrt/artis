@@ -2200,6 +2200,8 @@ void input(int rank)
 
   printout("npts_model: %d\n", npts_model);
   rmax = vmax * tmin;
+  printout("vmax %g\n", vmax);
+  printout("tmin %g\n", tmin);
   printout("rmax %g\n", rmax);
 
   coordmax[0] = coordmax[1] = coordmax[2] = rmax;
