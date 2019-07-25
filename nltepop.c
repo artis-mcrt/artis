@@ -181,6 +181,7 @@ static double get_total_rate(
         total_rate += gsl_vector_get(rates_vec, index);
       }
     }
+
     total_rate *= gsl_vector_get(popvec, index_selected);
   }
 

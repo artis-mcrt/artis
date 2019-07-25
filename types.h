@@ -527,7 +527,6 @@ typedef struct rpkt_cont_opacity_struct
 
 typedef struct
 {
-  double spontaneousrecombrate;
   double bfcooling;
   double bfheatingcoeff;
   double corrphotoioncoeff;

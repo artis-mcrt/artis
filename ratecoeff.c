@@ -722,55 +722,32 @@ static void precalculate_rate_coefficient_integrals(void)
 }
 
 
-double interpolate_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, double T)
+double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
+/// Returns the rate coefficient for spontaneous recombination.
 {
   /*int lowerindex = floor((T-MINTEMP)/T_step);
   int upperindex = lowerindex + 1;
   double T_upper =  MINTEMP + upperindex*T_step;
   double T_lower =  MINTEMP + lowerindex*T_step;*/
   double Alpha_sp;
-  const int lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE - 1)
   {
     const int upperindex = lowerindex + 1;
-    const double T_lower =  MINTEMP * exp(lowerindex*T_step_log);
-    const double T_upper =  MINTEMP * exp(upperindex*T_step_log);
+    const double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
+    const double T_upper =  MINTEMP * exp(upperindex * T_step_log);
 
     const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[upperindex];
     const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[lowerindex];
     // printout("interpolate_spontrecombcoeff element %d, ion %d, level %d, upper %g, lower %g\n",
     //          element,ion,level,f_upper,f_lower);
-    Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
+    Alpha_sp = (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   }
   else
   {
     Alpha_sp = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[TABLESIZE-1];
   }
   return Alpha_sp;
-}
-
-
-double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
-/// Returns the rate coefficient for spontaneous recombination. Only needed during
-/// packet propagation, therefore the value is taken from the
-/// cell history if known.
-/// For ionisation to other levels than the ground level this must be adapted.
-{
-  if (use_cellhist)
-  {
-    double alpha_sp = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate;
-
-    if (alpha_sp < 0.)
-    {
-      alpha_sp = interpolate_spontrecombcoeff(element,ion,level,phixstargetindex,T_e);
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].spontaneousrecombrate = alpha_sp;
-    }
-    return alpha_sp;
-  }
-  else
-  {
-    return interpolate_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
-  }
 }
 
 
@@ -1106,7 +1083,7 @@ static void precalculate_ion_alpha_sp()
         {
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            const double zeta_level = interpolate_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
+            const double zeta_level = get_spontrecombcoeff(element, ion, level, phixstargetindex, T_e);
             zeta += zeta_level;
           }
         }
