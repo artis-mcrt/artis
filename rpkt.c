@@ -1021,6 +1021,7 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
   //printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
+
 static double calculate_kappa_ff(const int modelgridindex, const double nu)
 /// free-free opacity
 {

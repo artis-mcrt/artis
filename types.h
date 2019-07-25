@@ -501,6 +501,7 @@ typedef struct gslintegration_paras
 {
   double nu_edge;
   double T;
+  float *photoion_xs;
 } gslintegration_paras;
 
 typedef struct rpkt_cont_opacity_struct

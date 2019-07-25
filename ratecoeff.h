@@ -5,8 +5,7 @@
 
 void ratecoefficients_init(void);
 
-double alpha_sp_integrand_gsl(double nu, void *restrict paras);
-double alpha_sp_E_integrand_gsl(double nu, void *restrict paras);
+double select_continuum_nu(int element, int ion, int level, float T_e, double nu_threshold);
 
 double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
 

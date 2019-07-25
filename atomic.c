@@ -29,7 +29,6 @@ extern inline double osc_strength(int lineindex);
 extern inline double get_coll_str(int lineindex);
 extern inline double statw_upper(int lineindex);
 extern inline double statw_lower(int lineindex);
-extern inline double photoionization_crosssection_macroatom(double nu_edge, double nu);
 extern inline double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
 extern inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
@@ -41,7 +40,7 @@ static long get_continuumindex_phixstargetindex(int element, int ion, int level,
 }
 
 
-static int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel)
+int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel)
 {
   for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
   {
