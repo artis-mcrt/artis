@@ -269,15 +269,14 @@ static void write_ratecoeff_dat(void)
 ///****************************************************************************
 /// The following functions define the integrands for these rate coefficients
 /// for use with libgsl integrators.
-double alpha_sp_integrand_gsl(double nu, void *restrict paras)
+double alpha_sp_integrand_gsl(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const double T = ((gslintegration_paras *) paras)->T;
-  const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
+  const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
 
-  const double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
-  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu,2) * exp(-HOVERKB*nu/T);
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
+  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu);
   ///in formula this looks like
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
@@ -287,15 +286,17 @@ double alpha_sp_integrand_gsl(double nu, void *restrict paras)
 }
 
 
-double alpha_sp_E_integrand_gsl(double nu, void *restrict paras)
+double alpha_sp_E_integrand_gsl(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const double T = ((gslintegration_paras *) paras)->T;
-  const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
+  const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
 
-  const double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
-  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu,3) / nu_edge * exp(-HOVERKB*nu/T);
+  const double T = params->T;
+  const double nu_edge = params->nu_edge;
+
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+  const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 3) / nu_edge * exp(-HOVERKB*nu/T);
   ///in formula this looks like
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
@@ -315,7 +316,7 @@ double alpha_sp_E_integrand_gsl(double nu, void *restrict paras)
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
+  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
 
   /// Dependence on dilution factor W is linear. This allows to set it here to
   /// 1. and scale to its actual value later on.
@@ -330,14 +331,16 @@ double alpha_sp_E_integrand_gsl(double nu, void *restrict paras)
 
 
 #if (!NO_LUT_PHOTOION)
-static double gammacorr_integrand_gsl(double nu, void *restrict paras)
+static double gammacorr_integrand_gsl(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  const double T = ((gslintegration_paras *) paras)->T;
-  const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
+  const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
 
-  const double sigma_bf = photoionization_crosssection_macroatom(nu_edge, nu);
+  const double T = params->T;
+  const double nu_edge = params->nu_edge;
+
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   /// Dependence on dilution factor W is linear. This allows to set it here to
   /// 1. and scale to its actual value later on.
@@ -348,17 +351,20 @@ static double gammacorr_integrand_gsl(double nu, void *restrict paras)
 
 
 #if (!NO_LUT_BFHEATING)
-  static double approx_bfheating_integrand_gsl(double nu, void *restrict paras)
+  static double approx_bfheating_integrand_gsl(double nu, void *restrict voidparas)
   /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
   /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
   /// formula. The radiation fields dependence on W is taken into account by multiplying
   /// the resulting expression with the correct W later on.
   {
-    const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
-    const double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
+    const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
+
+    const double T = params->T;
+    const double nu_edge = params->nu_edge;
+
+    const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
     /// Precalculation for T_e=T_R and W=1
-    const double T  = ((gslintegration_paras *) paras)->T;
     const double x = sigma_bf * (1-nu_edge/nu) * radfield_dbb(nu,T,1) * (1-exp(-HOVERKB*nu/T));
 
     /// Information about the current level is passed via the global variable
@@ -369,9 +375,6 @@ static double gammacorr_integrand_gsl(double nu, void *restrict paras)
     /// But not the W in the stimulated correction term!
     /*double T_e  = ((gslintegration_paras *) paras)->T;
     double T_R  = ((gslintegration_paras *) paras)->T2;
-    int element = mastate[tid].element;
-    int ion  = mastate[tid].ion;
-    int level = mastate[tid].level;
     double E_threshold = nu_edge*H;
     double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
     double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
@@ -396,14 +399,7 @@ static double gammacorr_integrand_gsl(double nu, void *restrict paras)
   double W = cell[cellnumber].W;
   float nne = cell[cellnumber].nne;
 
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  int element = mastate[tid].element;
-  int ion  = mastate[tid].ion;
-  int level = mastate[tid].level;
-  double nnlevel = mastate[tid].nnlevel;
-  double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
+  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
   double E_threshold = nu_edge*H;
   double sfac = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
@@ -464,19 +460,18 @@ static double gammacorr_integrand_gsl(double nu, void *restrict paras)
   return x;
 }*/
 
-static double bfcooling_integrand_gsl(double nu, void *paras)
+static double bfcooling_integrand_gsl(double nu, void *voidparas)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  const double T = ((gslintegration_paras *) paras)->T;
-  const double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
+  const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
 
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  const double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
+  const double T = params->T;
+  const double nu_edge = params->nu_edge;
+
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   //return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
   return sigma_bf * (nu-nu_edge) * TWOHOVERCLIGHTSQUARED * nu * nu * exp(-HOVERKB*nu/T);
@@ -494,7 +489,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
+  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
 
   return sigma_bf*(1/nu_edge-1/nu) * TWOOVERCLIGHTSQUARED*pow(nu,3) * exp(-HOVERKB*nu/T);
 }*/
@@ -512,7 +507,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
+  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
 
   return sigma_bf * (1-nu_edge/nu) * radfield_dbb(nu, T, 1) * exp(-HOVERKB*nu/T);
 }*/
@@ -522,10 +517,6 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  //int element = mastate[tid].element;
-  //int ion = mastate[tid].ion;
-  //int level = mastate[tid].level;
-
   double T = ((gslintegration_paras *) paras)->T;
   double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
 
@@ -534,7 +525,7 @@ static double bfcooling_integrand_gsl(double nu, void *paras)
   /// Information about the current level is passed via the global variable
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_macroatom(nu_edge,nu);
+  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
   double x = sigma_bf / H / nu * radfield_dbb(nu,T,1) * exp(-HOVERKB*nu/T);
   ///in formula this looks like
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
@@ -602,6 +593,7 @@ static void precalculate_rate_coefficient_integrals(void)
             //printout("%d %g\n",iter,T_e);
 
             intparas.T = T_e;
+            intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
 
             //gsl_function F_gamma;
             //F_gamma.function = &gamma_integrand_gsl;
@@ -1379,9 +1371,9 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   #else
   if (DETAILED_BF_ESTIMATORS_ON)
   {
-    // gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+    gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
     // will be -1 if no estimators available
-    gammacorr = -1;
+    // gammacorr = -1;
   }
   if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0)
   {
@@ -1559,65 +1551,22 @@ double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex,
 }
 
 
-static double interpolate_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, double T)
+double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
 {
-/*  int lowerindex = floor((T-MINTEMP)/T_step);
-  int upperindex = lowerindex + 1;
-  double T_upper =  MINTEMP + upperindex*T_step;
-  double T_lower =  MINTEMP + lowerindex*T_step;*/
-  const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
+  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
   if (lowerindex < TABLESIZE-1)
   {
     const int upperindex = lowerindex + 1;
-    const double T_lower =  MINTEMP * exp(lowerindex*T_step_log);
-    const double T_upper =  MINTEMP * exp(upperindex*T_step_log);
+    const double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
+    const double T_upper =  MINTEMP * exp(upperindex * T_step_log);
 
     const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[upperindex];
     const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[lowerindex];
 
-    return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower));
+    return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   }
   else
     return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[TABLESIZE-1];
-}
-
-
-double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-/// Returns the rate for bfcooling. This can be called during packet propagation
-/// or update_grid. Therefore we need to decide whether a cell history is
-/// known or not.
-{
-  double bfcooling = -99.;
-
-  if (use_cellhist)
-    bfcooling = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling;
-
-  if (bfcooling < 0)
-  {
-    /// Interpolate bfcooling out of precalculated values
-    //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-    const float T_e = get_Te(modelgridindex);
-    const float nne = get_nne(modelgridindex);
-    const double nnion = ionstagepop(modelgridindex,element,ion+1);
-    //double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
-    //bfcooling = interpolate_bfcoolingcoeff(element,ion,level,T_e) * nnionlevel * nne;
-    bfcooling = interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e) * nnion * nne;
-
-    if (use_cellhist)
-      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfcooling = bfcooling;
-
-    #ifdef DEBUG_ON
-      if (!isfinite(bfcooling))
-      {
-        printout("[warning] get_bfcooling: bfcooling infinite (%g) for element Z=%d, ion_stage %d, level %d in modelgridcell %d. Returning zero\n",
-                 bfcooling,get_element(element),get_ionstage(element, ion),level,modelgridindex);
-        //printout("[fatal] get_bfcooling: bfcoolingcoeff %g, nnion %g, nne %g, T_e %g\n",interpolate_bfcoolingcoeff(element,ion,level,phixstargetindex,T_e),nnion,nne,T_e);
-        bfcooling = 0.;
-      }
-    #endif
-  }
-
-  return bfcooling;
 }
 
 

@@ -384,7 +384,7 @@ typedef struct phixstarget_entry
   #endif
   #if (!NO_LUT_BFHEATING)
   double *restrict bfheating_coeff;
-    #endif
+  #endif
   double *restrict bfcooling_coeff;
 
   double probability;        // fraction of phixs cross section leading to this final level
@@ -527,7 +527,6 @@ typedef struct rpkt_cont_opacity_struct
 
 typedef struct
 {
-  double bfcooling;
   double bfheatingcoeff;
   double corrphotoioncoeff;
 #if (SEPARATE_STIMRECOMB)
