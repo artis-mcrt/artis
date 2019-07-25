@@ -361,12 +361,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 //  return do_kpkt_bb(pkt_ptr, t1, t2);
 //}
 {
-  gslintegration_paras intparas;
-  gsl_function F_bfcooling;
-  //F_bfcooling.function = &bfcooling_integrand_gsl_2;
-  F_bfcooling.function = &alpha_sp_E_integrand_gsl;
-  const double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
 
@@ -397,8 +391,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
   if (t_current <= t2)
   {
-    double nu_lower,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff_old,nuoffset;
-
     vec_scale(pkt_ptr->pos, t_current / t1);
 
     /// Randomly select the occuring cooling process out of the important ones
@@ -564,7 +556,9 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       const int level = cellhistory[tid].coolinglist[i].level;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
       // const double nu_threshold = get_phixs_threshold(element, ion, level, phixstargetindex)
-      const double nu_threshold = (epsilon(element,ion+1,upper) - epsilon(element,ion,level)) / H; // TODO: use get_phixs_threshold?
+      const int phixstargetindex = get_phixtargetindex(element, ion, level, upper);
+      const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+      const double nu_threshold = ONEOVERH * E_threshold;
 
       #ifdef DEBUG_ON
         // printout("[debug] do_kpkt: k-pkt -> free-bound\n");
@@ -581,68 +575,14 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
       //zrand = gsl_rng_uniform(rng);
       //if (zrand < 0.5)
-      //{
-
-
-        gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-        zrand = gsl_rng_uniform(rng);
-        zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
-        mastate[tid].element = element;
-        mastate[tid].ion = ion;
-        mastate[tid].level = level;
-        intparas.T = T_e;
-        intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
-        F_bfcooling.params = &intparas;
-        const double deltanu = nu_threshold * NPHIXSNUINCREMENT;
-        const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-        double error;
-        gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &total_bfcooling_coeff, &error);
-        bfcooling_coeff = total_bfcooling_coeff;
-        int ii;
-        for (ii = 0; ii < NPHIXSPOINTS; ii++)
-        // LJS: As in macro atom, this sampling process could be optimized
-        {
-          bfcooling_coeff_old = bfcooling_coeff;
-          if (ii > 0)
-          {
-            nu_lower = nu_threshold + ii * deltanu;
-            /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-            gsl_integration_qag(&F_bfcooling, nu_lower, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfcooling_coeff, &error);
-            //bfcooling_coeff *= FOURPI * sf;
-            //if (zrand > bfcooling_coeff/get_bfcooling(element,ion,level,pkt_ptr->where)) break;
-          }
-          //printout("[debug] kpkt: zrand %g, step %d, bfcooling_coeff %g, total_bfcooling_coeff %g, bfcooling_coeff/total_bfcooling_coeff %g, nu_lower %g\n",zrand,ii,bfcooling_coeff,total_bfcooling_coeff,bfcooling_coeff/total_bfcooling_coeff,nu_lower);
-          if (zrand >= bfcooling_coeff / total_bfcooling_coeff)
-            break;
-        }
-        if (ii == NPHIXSPOINTS)
-        {
-          printout("kpkt emitts bf-photon at upper limit. Z=%d ionstage %d level %d\n", get_element(element), get_ionstage(element, ion), level);
-          nu_lower = nu_max_phixs;
-        }
-        else if (ii > 0)
-        {
-          nuoffset = (total_bfcooling_coeff * zrand - bfcooling_coeff_old) / (bfcooling_coeff - bfcooling_coeff_old) * deltanu;
-          nu_lower = nu_threshold + (ii-1) * deltanu + nuoffset;
-        }
-        else
-          nu_lower = nu_threshold; // + ii*deltanu;
-        //printout("emitt at nu %g\n",nu_lower);
-
-        // pkt_ptr->e_cmf = 0;
-        // pkt_ptr->e_rf = 0;
-        nu_lower = nu_threshold;
-        pkt_ptr->nu_cmf = nu_lower;
-
-        gsl_set_error_handler(previous_handler);
-
-      /*}
-      else
       {
-        ///Emitt like a BB
-        pkt_ptr->nu_cmf = sample_planck(T_e);
-      }*/
+        pkt_ptr->nu_cmf = select_continuum_nu(element, ion, level, T_e, nu_threshold);
+      }
+      // else
+      // {
+      //   ///Emitt like a BB
+      //   pkt_ptr->nu_cmf = sample_planck(T_e);
+      // }
 
         //if (pkt_ptr->last_event == 4)
         #ifndef FORCE_LTE

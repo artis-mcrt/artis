@@ -269,7 +269,7 @@ static void write_ratecoeff_dat(void)
 ///****************************************************************************
 /// The following functions define the integrands for these rate coefficients
 /// for use with libgsl integrators.
-double alpha_sp_integrand_gsl(double nu, void *restrict voidparas)
+static double alpha_sp_integrand_gsl(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -286,7 +286,7 @@ double alpha_sp_integrand_gsl(double nu, void *restrict voidparas)
 }
 
 
-double alpha_sp_E_integrand_gsl(double nu, void *restrict voidparas)
+static double alpha_sp_E_integrand_gsl(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
@@ -711,6 +711,61 @@ static void precalculate_rate_coefficient_integrals(void)
       gsl_set_error_handler(previous_handler);
     }
   }
+}
+
+
+double select_continuum_nu(int element, int ion, int level, float T_e, double nu_threshold)
+{
+  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
+
+  const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  gslintegration_paras intparas;
+  intparas.T = T_e;
+  intparas.nu_edge = nu_threshold;
+  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
+  gsl_function F_alpha_sp;
+  //F_alpha_sp.function = &alpha_sp_integrand_gsl;
+  F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
+  F_alpha_sp.params = &intparas;
+  const double deltanu = nu_threshold * NPHIXSNUINCREMENT;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+  double error;
+  double total_alpha_sp;
+  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &total_alpha_sp, &error);
+  double alpha_sp_old = total_alpha_sp;
+  double nu_lower = nu_threshold;
+
+  double alpha_sp = total_alpha_sp;
+  int i = 0;
+  for (i = 0; i < NPHIXSPOINTS; i++)
+  {
+    alpha_sp_old = alpha_sp;
+    if (i > 0)
+    {
+      nu_lower = nu_threshold + i * deltanu;
+      /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+      gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &alpha_sp, &error);
+    }
+    if (zrand >= alpha_sp / total_alpha_sp)
+    {
+      break;
+    }
+  }
+  gsl_set_error_handler(previous_handler);
+  double nu_selected;
+  if (i > 0)
+  {
+    const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
+    nu_selected = nu_threshold + (i - 1) * deltanu + nuoffset;
+  }
+  else
+  {
+    nu_selected = nu_threshold;
+  }
+
+  return nu_selected;
 }
 
 

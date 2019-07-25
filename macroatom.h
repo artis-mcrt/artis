@@ -1,6 +1,8 @@
 #ifndef MACROATOM_H
 #define MACROATOM_H
 
+#include "types.h"
+
 void macroatom_open_file(const int my_rank);
 void macroatom_close_file(void);
 

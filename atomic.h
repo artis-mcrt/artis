@@ -6,6 +6,7 @@
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
 long get_continuumindex(int element, int ion, int level, int upperionlevel);
+int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel);
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
 int get_tot_nions(void);
 bool is_nlte(int element, int ion, int level);
@@ -291,17 +292,6 @@ inline double photoionization_crosssection(int element, int ion, int level, doub
   return photoionization_crosssection_fromtable(elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);
 }
 
-
-inline double photoionization_crosssection_macroatom(double nu_edge, double nu)
-///        - BE AWARE: the elements of the global structure variable mastate
-///                    must fit to the bound state of the desired bf-continuum!!!
-{
-  const int element = mastate[tid].element;
-  const int ion = mastate[tid].ion;
-  const int level = mastate[tid].level;
-
-  return photoionization_crosssection_fromtable(elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);
-}
 
 /*static double osc_strength_old(int lineindex)
 //double osc_strength(int element, int ion, int upper, int lower)
