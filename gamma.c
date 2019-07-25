@@ -311,7 +311,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     int snext;
     double sdist = boundary_cross(pkt_ptr, t_current, &snext);
 
-    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * t_current / tmin : rmax * t_current / tmin;
+    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
     if (sdist > maxsdist)
     {
       printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
