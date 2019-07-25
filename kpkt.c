@@ -104,9 +104,10 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
           /// --------------------
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-            //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            // TODO: pass in a workspace rather than allocating within the function that is called many times
-            const double C_fb_ion_thistarget = get_bfcooling(element, ion, level, phixstargetindex, modelgridindex);
+            const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
+            const double nnupperlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+
+            const double C_fb_ion_thistarget = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperlevel * nne;
             C_fb_all += C_fb_ion_thistarget;
             C_ion += C_fb_ion_thistarget;
           }
@@ -244,9 +245,9 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
       {
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        // const double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion + 1, upper);
+        const double nnupperlevel = calculate_exclevelpop(modelgridindex,element,ion + 1, upper);
 
-        const double C = get_bfcooling(element,ion,level,phixstargetindex,modelgridindex);
+        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperlevel * nne;
         contrib += C;
         cellhistory[tid].coolinglist[i].contribution = contrib;
         cellhistory[tid].coolinglist[i].type = COOLINGTYPE_FB;

@@ -17,7 +17,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
-double get_bfcooling(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e);
 
 double calculate_iongamma_per_gspop(int modelgridindex, int element, int ion);
 double calculate_iongamma_per_ionpop(
