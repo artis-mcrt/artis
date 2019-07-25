@@ -14,7 +14,7 @@
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
 static const double nu_lower_first_initial = (CLIGHT / (40000e-8)); // CLIGHT / ([lambda Angstroms]e-8)
-static const double nu_upper_last_initial = (CLIGHT /  (1085-8));  // not including the very top super bin
+static const double nu_upper_last_initial = (CLIGHT /  (1085e-8));  // not including the very top super bin
 
 static double J_normfactor[MMODELGRID + 1];
 
