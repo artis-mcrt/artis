@@ -39,12 +39,10 @@ typedef struct
 
 typedef struct
 {
-  int modelgridindex;
   double nu_edge;
-  int element;
-  int ion;
-  int level;
-  // double Te_TR_factor;
+  int modelgridindex;
+  float T_R;
+  float *photoion_xs;
 } gsl_integral_paras_bfheating;
 
 static char adatafile_hash[33];
@@ -1503,14 +1501,14 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *restrict
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
+  const double T_R = params->T_R;
   // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
 
-  const float sigma_bf = photoionization_crosssection(params->element, params->ion, params->level, nu_edge, nu);
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   // const float T_e = get_Te(modelgridindex);
   // return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
 
-  const double T_R = get_TR(modelgridindex);
   return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - exp(-HOVERKB*nu/T_R));
 }
 
@@ -1536,9 +1534,8 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   gsl_integral_paras_bfheating intparas;
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
-  intparas.element = element;
-  intparas.ion = ion;
-  intparas.level = level;
+  intparas.T_R = get_TR(modelgridindex);
+  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
   double bfheating = 0.0;
