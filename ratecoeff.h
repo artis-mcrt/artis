@@ -5,7 +5,7 @@
 
 void ratecoefficients_init(void);
 
-double select_continuum_nu(int element, int ion, int level, float T_e, double nu_threshold);
+double select_continuum_nu(int element, int ion, int level, int upperionlevel, float T_e);
 
 double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
 

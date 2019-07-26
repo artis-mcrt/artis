@@ -46,8 +46,8 @@ static double get_cooling_ion_coll_exc(const int modelgridindex, const int eleme
 
 
 void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *heatingcoolingrates)
-/// Calculate the cooling rates for a given cell. Results are returned
-/// via the elements of the global coolingrates data structure.
+// Calculate the cooling rates for a given cell and store them for each ion
+// optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 {
   const float nne = get_nne(modelgridindex);
   const float T_e = get_Te(modelgridindex);
@@ -556,9 +556,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       const int level = cellhistory[tid].coolinglist[i].level;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
       // const double nu_threshold = get_phixs_threshold(element, ion, level, phixstargetindex)
-      const int phixstargetindex = get_phixtargetindex(element, ion, level, upper);
-      const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-      const double nu_threshold = ONEOVERH * E_threshold;
 
       #ifdef DEBUG_ON
         // printout("[debug] do_kpkt: k-pkt -> free-bound\n");
@@ -576,7 +573,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       //zrand = gsl_rng_uniform(rng);
       //if (zrand < 0.5)
       {
-        pkt_ptr->nu_cmf = select_continuum_nu(element, ion, level, T_e, nu_threshold);
+        pkt_ptr->nu_cmf = select_continuum_nu(element, ion, level, upper, T_e);
       }
       // else
       // {
