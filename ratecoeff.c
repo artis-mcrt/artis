@@ -712,11 +712,15 @@ static void precalculate_rate_coefficient_integrals(void)
 }
 
 
-double select_continuum_nu(int element, int ion, int level, float T_e, double nu_threshold)
+double select_continuum_nu(int element, int ion, int level, int upperionlevel, float T_e)
 {
   const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
 
   const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
+
+  const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
+  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+  const double nu_threshold = ONEOVERH * E_threshold;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   gslintegration_paras intparas;
@@ -1345,6 +1349,8 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
   intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
+  const float T_e = get_Te(modelgridindex);
+  intparas.T_e = T_e;
 
 #if SEPARATE_STIMRECOMB
   intparas.departure_ratio = 0.; // zero the stimulated recomb contribution
@@ -1355,8 +1361,6 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   // {
   //   return 0.;
   // }
-  const float T_e = get_Te(modelgridindex);
-  intparas.T_e = T_e;
   const double nne = get_nne(modelgridindex);
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
@@ -1411,31 +1415,32 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   /// The correction factor for stimulated emission in gammacorr is set to its
   /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
   /// correction may be evaluated at T_R!
-  double gammacorr;
+  double gammacorr = -1;
+
+  // if (DETAILED_BF_ESTIMATORS_ON)
+  // {
+  //   gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+  //   //gammacorr will be -1 if no estimators available
+  //   if (gammacorr > 0)
+  //     return gammacorr;
+  // }
+
   if (use_cellhist)
     gammacorr = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
 
   if (!use_cellhist || gammacorr < 0)
   {
   #ifdef FORCE_LTE
-    /// Interpolate gammacorr out of precalculated values
-    const double T_R = get_TR(modelgridindex);
-    gammacorr = interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
-  #else
-  if (DETAILED_BF_ESTIMATORS_ON)
-  {
-    gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
-    // will be -1 if no estimators available
-    // gammacorr = -1;
-  }
-  if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0)
-  {
-    #if (NO_LUT_PHOTOION)
     {
-      gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+      /// Interpolate gammacorr out of precalculated values
+      const double T_R = get_TR(modelgridindex);
+      gammacorr = interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
     }
-    #else
+  #else
     {
+    #if (NO_LUT_PHOTOION)
+      gammacorr = calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, modelgridindex);
+    #else
       const double W = get_W(modelgridindex);
       const double T_R = get_TR(modelgridindex);
 
@@ -1443,12 +1448,13 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
       const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
       if (index_in_groundlevelcontestimator >= 0)
         gammacorr *= corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimator];
-    }
     #endif
-  }
+    }
   #endif
-  if (use_cellhist)
-    cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
+    if (use_cellhist)
+    {
+      cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = gammacorr;
+    }
   }
 
   return gammacorr;
@@ -1730,14 +1736,24 @@ double calculate_iongamma_per_ionpop(
       }
       else
       {
-        gamma_coeff_integral += calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
-        gamma_coeff_bfest += get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
         gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, modelgridindex); // whatever ARTIS uses internally
+        gamma_coeff_bfest += get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+
+        // use the cellhistory but not the detailed bf estimators
+        double gamma_coeff_integral_level_ch = cellhistory[tid].chelements[element].chions[lowerion].chlevels[lower].chphixstargets[phixstargetindex].corrphotoioncoeff;
+        if (gamma_coeff_integral_level_ch >= 0)
+        {
+          gamma_coeff_integral += gamma_coeff_integral_level_ch;
+        }
+        else
+        {
+          gamma_coeff_integral += calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+        }
       }
 
-      const double gamma_ion_contribution_integral = gamma_coeff_integral * nnlowerlevel / nnlowerion;
-      const double gamma_ion_contribution_bfest = gamma_coeff_bfest * nnlowerlevel / nnlowerion;
       const double gamma_ion_contribution_used = gamma_coeff_used * nnlowerlevel / nnlowerion;
+      const double gamma_ion_contribution_bfest = gamma_coeff_bfest * nnlowerlevel / nnlowerion;
+      const double gamma_ion_contribution_integral = gamma_coeff_integral * nnlowerlevel / nnlowerion;
       gamma_ion_used += gamma_ion_contribution_used;
       if (use_bfest)
       {

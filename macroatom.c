@@ -294,10 +294,6 @@ static void do_macroatom_radrecomb(
   *ion -= 1;
   *level = lower;
 
-  const int phixstargetindex = get_phixtargetindex(element, upperion - 1, lower, upperionlevel);
-  const double E_threshold = get_phixs_threshold(element, upperion - 1, lower, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
-
   /// Then randomly sample the packets frequency according to the continuums
   /// energy distribution and set some flags
   //zrand = gsl_rng_uniform(rng);
@@ -305,8 +301,11 @@ static void do_macroatom_radrecomb(
   //pkt_ptr->nu_cmf = nu_threshold * (1 - KB*T_e/H/nu_threshold*log(zrand));
   //pkt_ptr->nu_cmf = nu_threshold;
 
-  pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, T_e, nu_threshold);
+  pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
 
+  const int phixstargetindex = get_phixtargetindex(element, upperion - 1, lower, upperionlevel);
+  const double E_threshold = get_phixs_threshold(element, upperion - 1, lower, phixstargetindex);
+  const double nu_threshold = ONEOVERH * E_threshold;
   printout("emitted bf photoion Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g last_event %d emissiontype %d trueemissiontype %d activatingline %d\n",
      get_element(element), get_ionstage(element, upperion), get_ionstage(element, upperion - 1), upperionlevel, lower, 1e8 * CLIGHT / pkt_ptr->nu_cmf, 1e8 * CLIGHT / nu_threshold, pkt_ptr->nu_cmf / nu_threshold, zrand, pkt_ptr->last_event, pkt_ptr->emissiontype, pkt_ptr->trueemissiontype, mastate[tid].activatingline);
 
