@@ -838,7 +838,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         sdist = sdist / 2.;
         t_current += sdist / CLIGHT_PROP;
         move_pkt(pkt_ptr, sdist, t_current);
-        update_estimators(pkt_ptr, sdist * 2);
+        update_estimators(pkt_ptr, sdist * 2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           sdist = sdist * 2.;
@@ -881,7 +881,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         tdist = tdist / 2.;
         t_current += tdist / CLIGHT_PROP;
         move_pkt(pkt_ptr, tdist, t_current);
-        update_estimators(pkt_ptr, tdist * 2);
+        update_estimators(pkt_ptr, tdist * 2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           tdist = tdist * 2.;
@@ -909,7 +909,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         edist = edist / 2.;
         t_current += edist / CLIGHT_PROP;
         move_pkt(pkt_ptr, edist, t_current);
-        update_estimators(pkt_ptr, edist * 2);
+        update_estimators(pkt_ptr, edist * 2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           edist = edist * 2.;
@@ -1063,7 +1063,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
 }
 
 
-static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
+void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
 // bound-free opacity
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)

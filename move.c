@@ -6,7 +6,7 @@
 #include "vectors.h"
 
 
-void update_estimators(const PKT *pkt_ptr, const double distance)
+void update_estimators(const PKT *pkt_ptr, const double distance, const double t_current)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -104,8 +104,4 @@ void move_pkt(PKT *restrict pkt_ptr, const double distance, const double time)
   const double dopplerfactor = doppler_packetpos(pkt_ptr, time);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
-
-  // this is a very slow way to ensure the cross sections are take
-  // at the current red shifted packet frequency
-  // calculate_kappa_rpkt_cont(pkt_ptr, time);
 }

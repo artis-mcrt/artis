@@ -800,6 +800,12 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
   if (distance_e_cmf == 0)
     return;
 
+  // this is a very slow way to ensure the cross sections are take
+  // at the current red shifted packet frequency
+  double kappa_bf;
+  double kappa_fb;
+  calculate_kappa_bf_fb_gammacontr(modelgridindex, nu_cmf, &kappa_bf, &kappa_fb);
+
   // const double deltaV = vol_init_modelcell(modelgridindex) * pow(time_step[nts_global].mid / tmin, 3);
   // const double deltat = time_step[nts_global].width;
   // const double estimator_normfactor_over_H = 1 / deltaV / deltat / nprocs / H;
