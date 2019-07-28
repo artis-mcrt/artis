@@ -1335,6 +1335,14 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         {
           T_R_bin = find_T_R(modelgridindex, binindex);
 
+          // if (binindex == RADFIELDBINCOUNT - 1)
+          // {
+          //   const float T_e = get_Te(modelgridindex);
+          //   printout("    replacing bin %d T_R %71.f with cell T_e = %7.1f\n",
+          //            binindex, radfieldbins[modelgridindex][binindex].T_R, T_e);
+          //   T_R_bin = T_e;
+          // }
+
           double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
 //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower, nu_upper, planck_integral_result);
 
@@ -1399,13 +1407,6 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
 
       printout("bin %4d (lambda %7.1f Å to %7.1f Å): contribcount %5d J %7.1e T_R %8.1f W %12.5e lambdabar %7.1f Å\n",
              binindex, 1e8 * CLIGHT / prev_nu_upper, 1e8 * CLIGHT / bin_nu_upper, contribcount, J_bin, T_R_bin, W_bin, 1e8 * CLIGHT / nubar);
-
-     if (binindex == RADFIELDBINCOUNT - 1)
-     {
-       printout("    replacing bin %d T_R %71.f with cell T_e = %7.1f\n",
-                binindex, radfieldbins[modelgridindex][binindex].T_R, get_Te(modelgridindex));
-       radfieldbins[modelgridindex][binindex].T_R = get_Te(modelgridindex);
-     }
 
      prev_nu_upper = get_bin_nu_upper(binindex);
     }
