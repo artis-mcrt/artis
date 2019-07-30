@@ -13,30 +13,30 @@
 
 // Material for handing r-packet propagation.
 
-double closest_transition(PKT *restrict pkt_ptr)
+int closest_transition(const double nu_cmf, const int next_trans)
 /// for the propagation through non empty cells
+// find the next transition lineindex redder than nu_cmf
+// return -1 if no transition can be reached
 {
   int match;
 
   //int left = 0;
-  int left = pkt_ptr->next_trans;
+  int left = next_trans;
   //printout("[debug] closest_transition: initial left %d\n",left);
   int right = nlines - 1;
   int middle = 1;
 
-  //printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,pkt_ptr->nu_cmf);
+  //printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,nu_cmf);
   //printout("[debug] ___closest_transition___: nu_left %g, nu_right%g\n",linelist[left].nu,linelist[right].nu);
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
-  if (pkt_ptr->nu_cmf < linelist[right].nu)
+  if (nu_cmf < linelist[right].nu)
   {
-    pkt_ptr->next_trans   = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
     return -1;
   }
   if (left > right)
   {
     //printout("[debug] pp should have no line interaction anymore\n");
-    pkt_ptr->next_trans   = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
     return -1;
   }
 
@@ -46,7 +46,7 @@ double closest_transition(PKT *restrict pkt_ptr)
     /// current nu_cmf which might be smaller than linelist[left].nu due to propagation errors
     match = left;
   }
-  else if (pkt_ptr->nu_cmf >= linelist[0].nu)
+  else if (nu_cmf >= linelist[0].nu)
   {
     /// if nu_cmf is larger than the highest frequency in the the linelist,
     /// interaction with the first line occurs - no search
@@ -60,19 +60,19 @@ double closest_transition(PKT *restrict pkt_ptr)
     /*
     if (left > 0)
     {
-      if ((linelist[left].nu-pkt_ptr->nu_cmf)/pkt_ptr->nu_cmf > 1e-8)
+      if ((linelist[left].nu-nu_cmf)/nu_cmf > 1e-8)
       {
         printout("[warning] closest_transition: search was executed for initial left > 0\n");
         printout("[warning] closest_transition:   left %d, right %d\n",left,right);
-        //printf("[warning] closest_transition:   pkt_ptr->nu_cmf %25.16e, linelist[left].nu %25.16e,\n",pkt_ptr->nu_cmf, linelist[left].nu);
-        printout("[warning] closest_transition:   pkt_ptr->nu_cmf %g, linelist[left].nu %g,\n",pkt_ptr->nu_cmf, linelist[left].nu);
-        printout("[warning] closest_transition:   (linelist[left].nu-pkt_ptr->nu_cmf)/pkt_ptr->nu_cmf %g,\n",(linelist[left].nu-pkt_ptr->nu_cmf)/pkt_ptr->nu_cmf);
+        //printf("[warning] closest_transition:   nu_cmf %25.16e, linelist[left].nu %25.16e,\n",nu_cmf, linelist[left].nu);
+        printout("[warning] closest_transition:   nu_cmf %g, linelist[left].nu %g,\n",nu_cmf, linelist[left].nu);
+        printout("[warning] closest_transition:   (linelist[left].nu-nu_cmf)/nu_cmf %g,\n",(linelist[left].nu-nu_cmf)/nu_cmf);
         printout("[warning] closest_transition:   linelist[left-1].nu %g, linelist[left+1].nu %g,\n",linelist[left-1].nu, linelist[left+1].nu);
         printout("[warning] closest_transition:   linelist[right].nu %g,\n",linelist[right].nu);
         //printout("[warning] closest_transition:   propagationcounter %d,\n",propagationcounter);
         printout("[warning] closest_transition:   pkt_ptr->last_event %d,\n",pkt_ptr->last_event);
         printout("[warning] closest_transition:   pkt_ptr->number %d,\n",pkt_ptr->number);
-        if (pkt_ptr->nu_cmf >= linelist[left+1].nu) printout("[warning] closest_transition:   nu_cmf larger than next line\n");
+        if (nu_cmf >= linelist[left+1].nu) printout("[warning] closest_transition:   nu_cmf larger than next line\n");
         else printout("[warning] closest_transition:   jump over several lines\n");
       }
     }
@@ -84,12 +84,18 @@ double closest_transition(PKT *restrict pkt_ptr)
 
       //printout("[debug] middle %d, left %d, right %d, nlines %d\n",middle,left,right,nlines);
       //printout("[debug] linelist[middle].nu %g, linelist[middle-1].nu %g\n",linelist[middle].nu,linelist[middle-1].nu);
-      if (pkt_ptr->nu_cmf >= linelist[middle].nu && pkt_ptr->nu_cmf < linelist[middle - 1].nu) break;
-
-      if (pkt_ptr->nu_cmf >= linelist[middle].nu)
+      if (nu_cmf >= linelist[middle].nu && nu_cmf < linelist[middle - 1].nu)
+      {
+        break;
+      }
+      else if (nu_cmf >= linelist[middle].nu)
+      {
         right = middle - 1;
+      }
       else
+      {
         left = middle + 1;
+      }
     }
     match = middle;
   }
@@ -98,20 +104,12 @@ double closest_transition(PKT *restrict pkt_ptr)
   /// next transition for this packet. To save memory it is stored
   /// to the macro atoms state variables. This has no influence until
   /// the macro atom becomes activated by rpkt_event.
-  const double nu_trans = linelist[match].nu;
-  mastate[tid].element = linelist[match].elementindex;
-  mastate[tid].ion     = linelist[match].ionindex;
-  mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
-  mastate[tid].activatingline = match;
-  pkt_ptr->next_trans   = match + 1;  ///helper variable to overcome numerical problems after line scattering
-                                      ///further scattering events should be located at lower frequencies to prevent
-                                      ///multiple scattering events of one pp in a single line
   //printout("[debug] closest_transition: next_trans %d\n",pkt_ptr->next_trans);
   //printout("[debug] closest_transition: linelistindex %d corresponds to transition from level %d to level %d of ion %d of element %d\n",match,mastate[tid].level,pkt_ptr->nextrans_lower,mastate[tid].ion,mastate[tid].element);
   //printout("[debug] closest_transition:   frequency of this transiton %g\n",nu_trans);
 
   /// return the transitions frequency
-  return nu_trans;
+  return match;
 }
 
 
@@ -135,24 +133,17 @@ static double get_event(
   PKT *dummypkt_ptr = &dummypkt;
   //propagationcounter = 0;
   bool endloop = false;
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+  const double kap_cont = kappa_rpkt_cont[tid].total;
   while (!endloop)
   {
     /// calculate distance to next line encounter ldist
     /// first select the closest transition in frequency
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
     /// create therefore new variables in packet, which contain next_lowerlevel, ...
-    const double nu_trans = closest_transition(dummypkt_ptr);  ///returns negative value if nu_cmf > nu_trans
-    #ifdef DEBUG_ON
-      //if (debuglevel == 2) printout("[debug] get_event: propagationcounter %d\n",propagationcounter);
-      if (debuglevel == 2)
-      {
-        const int next_trans = dummypkt_ptr->next_trans;
-        printout("[debug] get_event:   dummypkt_ptr->nu_cmf %g, dummypkt_ptr->nu_rf %g, dummypkt_ptr->where %d\n", dummypkt_ptr->nu_cmf,dummypkt_ptr->nu_rf,dummypkt_ptr->where);
-        printout("[debug] get_event:   closest_transition %g, pkt_ptr->next_trans %d, nu_next_trans %g\n",nu_trans,next_trans,linelist[next_trans].nu);
-      }
-    #endif
+    const int lineindex = closest_transition(dummypkt_ptr->nu_cmf, dummypkt_ptr->next_trans);  ///returns negative value if nu_cmf > nu_trans
 
-    if (nu_trans > 0)
+    if (lineindex >= 0)
     {
       /// line interaction in principle possible (nu_cmf > nu_trans)
       #ifdef DEBUG_ON
@@ -160,7 +151,14 @@ static double get_event(
       #endif
 
       // const int lineindex = mastate[tid].activatingline;
-      const int lineindex = dummypkt_ptr->next_trans - 1;
+      // const int lineindex = dummypkt_ptr->next_trans - 1;
+      const double nu_trans = linelist[lineindex].nu;
+
+      // helper variable to overcome numerical problems after line scattering
+      // further scattering events should be located at lower frequencies to prevent
+      // multiple scattering events of one pp in a single line
+      dummypkt_ptr->next_trans = lineindex + 1;
+
       const int element = linelist[lineindex].elementindex;
       const int ion = linelist[lineindex].ionindex;
       const int upper = linelist[lineindex].upperlevelindex;
@@ -188,7 +186,6 @@ static double get_event(
       //mastate[tid].element = element;
       //mastate[tid].ion = ion;
       //mastate[tid].level = upper;
-      const double kap_cont = kappa_rpkt_cont[tid].total;
       const double tau_cont = kap_cont * ldist;
 
       #ifdef DEBUG_ON
@@ -271,6 +268,11 @@ static double get_event(
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
           #endif
+          mastate[tid].element = element;
+          mastate[tid].ion     = ion;
+          mastate[tid].level   = upper;  ///if the MA will be activated it must be in the transitions upper level
+          mastate[tid].activatingline = lineindex;
+
           edist = dist + ldist;
           if (edist > abort_dist)
           {
@@ -306,13 +308,13 @@ static double get_event(
     }
     else
     {
+      dummypkt_ptr->next_trans   = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
       /// no line interaction possible - check whether continuum process occurs in cell
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     line interaction impossible\n");
       #endif
       //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
       ///no need to restore values set by closest_transition, as nothing was set in this case
-      const double kap_cont = kappa_rpkt_cont[tid].total;
       const double tau_cont = kap_cont * (abort_dist - dist);
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
       #ifdef DEBUG_ON
@@ -367,7 +369,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
   /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
   double zrand = gsl_rng_uniform(rng);
   #ifdef DEBUG_ON
-    if (debuglevel == 2)
+    // if (debuglevel == 2)
     {
       printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
       printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont, sigma, kappa_ff, kappa_bf);
@@ -816,9 +818,12 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
       {
         // get distance to the next physical event (continuum or bound-bound)
         edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
-        const int next_trans = pkt_ptr->next_trans;
         #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
+          if (debuglevel == 2)
+          {
+            const int next_trans = pkt_ptr->next_trans;
+            printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
+          }
         #endif
       }
       if (edist < 0)
@@ -1039,7 +1044,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
     for (int ion = 0; ion < nions; ion++)
     {
       ///calculate population of ionstage ...
-      const double nnion = ionstagepop(modelgridindex, element, ion); // TODO: nnetot should be get_tot_nions???
+      const double nnion = ionstagepop(modelgridindex, element, ion);
       //Z = get_element(element);  ///atomic number
       //if (get_ionstage(element,ion) > 1)
       /// Z is ionic charge in the following formula
@@ -1063,7 +1068,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
 }
 
 
-void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
+static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
 // bound-free opacity
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
@@ -1081,7 +1086,7 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
     const int level = phixslist[tid].allcont[i].level;
     /// The bf process happens only if the current cell contains
     /// the involved atomic species
-    if ((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6) || (level < 100)))
+    if ((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
     {
       const double nu_edge = phixslist[tid].allcont[i].nu_edge;
       const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
@@ -1114,6 +1119,7 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
           double corrfactor = 1 - stimfactor; // photoionisation minus stimulated recombination
           if (corrfactor < 0)
             corrfactor = 0.;
+          // const double corrfactor = 1.; // no subtraction of stimulated recombination
         #endif
 
         const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
@@ -1203,22 +1209,24 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 }
 
 
-void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current)
+void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current, const int modelgridindex)
 {
+  const float nne = get_nne(modelgridindex);
+  const double nu_cmf = pkt_ptr->nu_cmf;
+  if ((!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
+  {
+    // calculated values are a match already
+    return;
+  }
+
   double sigma = 0.0;
   double kappa_ff = 0.;
   double kappa_bf = 0.;
   double kappa_fb = 0.;
   double kappa_ffheating = 0.;
 
-  const int cellindex = pkt_ptr->where;
-  const int modelgridindex = cell[cellindex].modelgridindex;
-
   if (do_r_lc)
   {
-    const float nne = get_nne(modelgridindex);
-    const double nu_cmf = pkt_ptr->nu_cmf;
-
     if (opacity_case == 4)
     {
       /// First contribution: Thomson scattering on free electrons
@@ -1271,7 +1279,8 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
     kappa_fb *= dopplerfactor;
   }
 
-
+  kappa_rpkt_cont[tid].nu = nu_cmf;
+  kappa_rpkt_cont[tid].recalculate_required = false;
   kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_fb + kappa_ff;
   #ifdef DEBUG_ON
     //if (debuglevel == 2)

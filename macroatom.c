@@ -117,7 +117,8 @@ static void get_macroatom_transitionrates(
     double individ_internal_up_same = 0.;
     const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
-    const double NT = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+    // const double NT = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+    const double NT = 0.;
 
     individ_internal_up_same = (R + C + NT) * epsilon_current;
 
@@ -158,7 +159,7 @@ static void get_macroatom_transitionrates(
 
 
 static void do_macroatom_raddeexcitation(
-  PKT *restrict pkt_ptr, const int element, const int ion, const int level, const double rad_deexc,
+  PKT *restrict pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
   const double total_transitions, const double t_current, const int activatingline)
 {
   ///radiative deexcitation of MA: emitt rpkt
@@ -234,7 +235,7 @@ static void do_macroatom_raddeexcitation(
     resonancescatterings++;
   else
   {
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
   }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
@@ -264,10 +265,9 @@ static void do_macroatom_radrecomb(
   double rate = 0;
   const int nlevels = get_ionisinglevels(element, upperion - 1);
   int lower = 0;
-  double epsilon_trans;
   for (lower = 0; lower < nlevels; lower++)
   {
-    epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lower);
+    const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lower);
     const double R = rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lower, modelgridindex);
     rate += R * epsilon_trans;
     #ifdef DEBUG_ON
@@ -303,11 +303,6 @@ static void do_macroatom_radrecomb(
 
   pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
 
-  const int phixstargetindex = get_phixtargetindex(element, upperion - 1, lower, upperionlevel);
-  const double E_threshold = get_phixs_threshold(element, upperion - 1, lower, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
-  printout("emitted bf photoion Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g last_event %d emissiontype %d trueemissiontype %d activatingline %d\n",
-     get_element(element), get_ionstage(element, upperion), get_ionstage(element, upperion - 1), upperionlevel, lower, 1e8 * CLIGHT / pkt_ptr->nu_cmf, 1e8 * CLIGHT / nu_threshold, pkt_ptr->nu_cmf / nu_threshold, zrand, pkt_ptr->last_event, pkt_ptr->emissiontype, pkt_ptr->trueemissiontype, mastate[tid].activatingline);
 
   #ifndef FORCE_LTE
     //mabfcount[pkt_ptr->where] += pkt_ptr->e_cmf;
@@ -342,7 +337,7 @@ static void do_macroatom_radrecomb(
 
   /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
   emitt_rpkt(pkt_ptr, t_current);
-  calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
@@ -633,7 +628,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             printout("[debug] do_ma:   jumps = %d\n",jumps);
           }
         #endif
-        do_macroatom_raddeexcitation(pkt_ptr, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline);
+        do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline);
 
         if (LOG_MACROATOM)
         {

@@ -21,7 +21,7 @@ void update_estimators(const PKT *pkt_ptr, const double distance, const double t
     const double nu = pkt_ptr->nu_cmf;
     //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
 
-    radfield_update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr);
+    radfield_update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, t_current);
 
     #ifndef FORCE_LTE
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.

@@ -6,6 +6,7 @@
 #include "atomic.h"
 #include "grid_init.h"
 #include "ltepop.h"
+#include "vectors.h"
 #include "radfield.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -796,26 +797,25 @@ void radfield_zero_estimators(int modelgridindex)
 
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-static void radfield_increment_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf, const PKT *const pkt_ptr)
+static void radfield_increment_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf, const PKT *const pkt_ptr, const double t_current)
 {
   if (distance_e_cmf == 0)
     return;
 
-  // this is a very slow way to ensure the cross sections are take
-  // at the current red shifted packet frequency
-  double kappa_bf;
-  double kappa_fb;
-  calculate_kappa_bf_fb_gammacontr(modelgridindex, nu_cmf, &kappa_bf, &kappa_fb);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+  // const double dopplerfactor = 1.;
 
   // const double deltaV = vol_init_modelcell(modelgridindex) * pow(time_step[nts_global].mid / tmin, 3);
   // const double deltat = time_step[nts_global].width;
   // const double estimator_normfactor_over_H = 1 / deltaV / deltat / nprocs / H;
 
-  const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf;
+  const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
   {
     const double nu_edge = phixslist[tid].allcont[allcontindex].nu_edge;
-    if (nu_cmf >= nu_edge)
+    const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+
+    if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs)
     {
       #ifdef _OPENMP
         #pragma omp atomic
@@ -860,7 +860,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
       }
       #endif
     }
-    else
+    else if (nu_cmf < nu_edge)
     {
       // list is sorted by nu_edge, so all remaining will have nu_cmf < nu_edge
       break;
@@ -871,7 +871,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
 
 
 inline
-void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr)
+void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
 {
   #ifdef _OPENMP
     #pragma omp atomic
@@ -899,7 +899,7 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
   #endif
 
   #if (DETAILED_BF_ESTIMATORS_ON)
-  radfield_increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr);
+  radfield_increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current);
   #endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
@@ -1335,13 +1335,13 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
         {
           T_R_bin = find_T_R(modelgridindex, binindex);
 
-          // if (binindex == RADFIELDBINCOUNT - 1)
-          // {
-          //   const float T_e = get_Te(modelgridindex);
-          //   printout("    replacing bin %d T_R %71.f with cell T_e = %7.1f\n",
-          //            binindex, radfieldbins[modelgridindex][binindex].T_R, T_e);
-          //   T_R_bin = T_e;
-          // }
+          if (binindex == RADFIELDBINCOUNT - 1)
+          {
+            const float T_e = get_Te(modelgridindex);
+            printout("    replacing bin %d T_R %71.f with cell T_e = %7.1f\n",
+                     binindex, radfieldbins[modelgridindex][binindex].T_R, T_e);
+            T_R_bin = T_e;
+          }
 
           double planck_integral_result = planck_integral(T_R_bin, nu_lower, nu_upper, ONE);
 //          printout("planck_integral(T_R=%g, nu_lower=%g, nu_upper=%g) = %g\n", T_R_bin, nu_lower, nu_upper, planck_integral_result);

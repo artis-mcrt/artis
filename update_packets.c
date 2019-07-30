@@ -267,7 +267,7 @@ void update_packets(const int nts, PKT *pkt)
         /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
         if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr,ts);
+          calculate_kappa_rpkt_cont(pkt_ptr, ts, mgi);
         }
       }
 
@@ -316,9 +316,9 @@ void update_packets(const int nts, PKT *pkt)
           abort();
       }
 
-      if (debuglevel == 10 || debuglevel == 2)
-        printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",
-                 n, pkt_ptr->interactions, nts);
+      // if (debuglevel == 10 || debuglevel == 2)
+      //   printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",
+      //            n, pkt_ptr->interactions, nts);
 
     }
     printout("last packet updated at %d\n",time(NULL));

@@ -37,14 +37,6 @@ typedef struct
   int modelgridindex;
 } gsl_integral_paras_gammacorr;
 
-typedef struct
-{
-  double nu_edge;
-  int modelgridindex;
-  float T_R;
-  float *photoion_xs;
-} gsl_integral_paras_bfheating;
-
 static char adatafile_hash[33];
 static char compositionfile_hash[33];
 static char phixsfile_hash[33];
@@ -712,60 +704,88 @@ static void precalculate_rate_coefficient_integrals(void)
 }
 
 
-double select_continuum_nu(int element, int ion, int level, int upperionlevel, float T_e)
+static int get_index_from_partialsums(double *partialsums, size_t listsize, double targetsum)
+// e.g. given a list of [0.25, 0.75, 1.00],
+// returns 0 for targetsum [0., 0.25], 1 for (0.25, 0.75], 2 for (0.75, 1.00]
+{
+  for (size_t i = 0; i < listsize; i++)
+  {
+    assert((i == 0) || partialsums[i] >= partialsums[i - 1]); // ensure cumulative probabilties are ordered ascending
+    if (partialsums[i] >= targetsum)
+    {
+      return i;
+    }
+  }
+  assert(false);
+}
+
+
+static double get_x_of_integralfrac(gsl_function *F_integrand, double xmin, double xmax, int npieces, double targetintegralfrac)
+// find the x such that that integral of f(s)ds from xmin to x is a given fraction
+// of the integral from xmin to xmax
+// done by breaking the integral into npieces intervals
 {
   const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
 
-  const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
-
-  const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
-  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
+  const double deltax = (xmax - xmin) / npieces;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  double partialsums[npieces];
+  for (int i = 0; i < npieces; i++)
+  {
+    const double xlow = xmin + i * deltax;
+    const double xhigh = xmin + (i + 1) * deltax;
+    // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+    double error;
+    double piece = 0.;
+    gsl_integration_qag(F_integrand, xlow, xhigh, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &piece, &error);
+    partialsums[i] = (i == 0 ? 0 : partialsums[i - 1]) + piece;
+  }
+
+  gsl_set_error_handler(previous_handler);
+
+  const double total = partialsums[npieces - 1];
+
+  const double targetintegral = targetintegralfrac * total;
+
+  const int index = get_index_from_partialsums(partialsums, npieces, targetintegral);
+
+  const double xlow = xmin + index * deltax;
+  const double xhigh = xmin + (index + 1) * deltax;
+  const double intlow = index == 0 ? 0. : partialsums[index - 1];
+  const double inthigh = partialsums[index];
+
+  return xlow + (targetintegral - intlow) / (inthigh - intlow) * (xhigh - xlow);
+  // return 2 * nulow;
+}
+
+
+double select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e)
+{
+  const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
+
+  const int phixstargetindex = get_phixtargetindex(element, lowerion, lower, upperionlevel);
+  const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+  const double nu_threshold = ONEOVERH * E_threshold;
+
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge * 100; //nu of the uppermost point in the phixs table
+
+  const int npieces = NPHIXSPOINTS * 100;
+
   gslintegration_paras intparas;
   intparas.T = T_e;
   intparas.nu_edge = nu_threshold;
-  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
+  intparas.photoion_xs = elements[element].ions[lowerion].levels[lower].photoion_xs;
   gsl_function F_alpha_sp;
-  //F_alpha_sp.function = &alpha_sp_integrand_gsl;
+  // F_alpha_sp.function = &alpha_sp_integrand_gsl;
   F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
   F_alpha_sp.params = &intparas;
-  const double deltanu = nu_threshold * NPHIXSNUINCREMENT;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-  double error;
-  double total_alpha_sp;
-  gsl_integration_qag(&F_alpha_sp, nu_threshold, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &total_alpha_sp, &error);
-  double alpha_sp_old = total_alpha_sp;
-  double nu_lower = nu_threshold;
 
-  double alpha_sp = total_alpha_sp;
-  int i = 0;
-  for (i = 0; i < NPHIXSPOINTS; i++)
-  {
-    alpha_sp_old = alpha_sp;
-    if (i > 0)
-    {
-      nu_lower = nu_threshold + i * deltanu;
-      /// Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-      gsl_integration_qag(&F_alpha_sp, nu_lower, nu_max_phixs, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &alpha_sp, &error);
-    }
-    if (zrand >= alpha_sp / total_alpha_sp)
-    {
-      break;
-    }
-  }
-  gsl_set_error_handler(previous_handler);
-  double nu_selected;
-  if (i > 0)
-  {
-    const double nuoffset = (total_alpha_sp * zrand - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu;
-    nu_selected = nu_threshold + (i - 1) * deltanu + nuoffset;
-  }
-  else
-  {
-    nu_selected = nu_threshold;
-  }
+  const double nu_selected = get_x_of_integralfrac(&F_alpha_sp, nu_threshold, nu_max_phixs, npieces, zrand);
+
+  printout("emitted bf photoion Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
+     get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel, lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
   return nu_selected;
 }
@@ -1047,9 +1067,9 @@ static void read_recombrate_file(void)
           printout("  input_rrc_low_n: %10.3e\n", input_rrc_low_n);
 
           const double phixs_multiplier = input_rrc_low_n / rrc;
-          if (phixs_multiplier < 0.05 || phixs_multiplier >= 1.0)
+          if (phixs_multiplier < 0.05 || phixs_multiplier >= 2.0)
           {
-            printout("    Not scaling phixs of all levels by %.3f (because < 0.05 or >= 1.0)\n", phixs_multiplier);
+            printout("    Not scaling phixs of all levels by %.3f (because < 0.05 or >= 2.0)\n", phixs_multiplier);
           }
           else
           {
@@ -1402,7 +1422,6 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
 
-
   return gammacorr;
 }
 
@@ -1417,7 +1436,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   /// correction may be evaluated at T_R!
   double gammacorr = -1;
 
-  // if (DETAILED_BF_ESTIMATORS_ON)
+  // if (DETAILED_BF_ESTIMATORS_ON && nts_global >= 20)
   // {
   //   gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
   //   //gammacorr will be -1 if no estimators available
@@ -1458,154 +1477,6 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   }
 
   return gammacorr;
-}
-
-
-#if (!NO_LUT_BFHEATING)
-  static double interpolate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, double T) // double T_e, double T_R)
-  {
-  /*  int lowerindex = floor((T-MINTEMP)/T_step);
-    int upperindex = lowerindex + 1;
-    double T_upper =  MINTEMP + upperindex*T_step;
-    double T_lower =  MINTEMP + lowerindex*T_step;*/
-    const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
-    if (lowerindex < TABLESIZE - 1)
-    {
-      const int upperindex = lowerindex + 1;
-      const double T_lower =  MINTEMP * exp(lowerindex*T_step_log);
-      const double T_upper =  MINTEMP * exp(upperindex*T_step_log);
-
-      const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[upperindex];
-      const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[lowerindex];
-
-      return (f_lower + (f_upper - f_lower)/(T_upper - T_lower) * (T - T_lower));
-    }
-    else
-      return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[TABLESIZE-1];
-  }
-
-
-  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-  {
-    /// The correction factor for stimulated emission in gammacorr is set to its
-    /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-    /// correction may be evaluated at T_R!
-    const double T_R = get_TR(modelgridindex);
-    const double W = get_W(modelgridindex);
-
-    /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
-    bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);*/
-    return W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
-  }
-#endif
-
-
-static double integrand_bfheatingcoeff_custom_radfield(double nu, void *restrict voidparas)
-/// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
-{
-  const gsl_integral_paras_bfheating *restrict const params = (gsl_integral_paras_bfheating *) voidparas;
-
-  const int modelgridindex = params->modelgridindex;
-  const double nu_edge = params->nu_edge;
-  const double T_R = params->T_R;
-  // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
-
-  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
-
-  // const float T_e = get_Te(modelgridindex);
-  // return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
-
-  return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - exp(-HOVERKB*nu/T_R));
-}
-
-
-static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-{
-  double error = 0.0;
-  const double epsrel = 1e-3;
-  const double epsabs = 0.;
-
-  // const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-  // const double E_threshold = epsilon(element, ion + 1, upperionlevel) - epsilon(element, ion, level);
-  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-
-  const double nu_threshold = ONEOVERH * E_threshold;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; // nu of the uppermost point in the phixs table
-
-  // const float T_e = get_Te(modelgridindex);
-  // const double T_R = get_TR(modelgridindex);
-  // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
-  // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
-
-  gsl_integral_paras_bfheating intparas;
-  intparas.nu_edge = nu_threshold;
-  intparas.modelgridindex = modelgridindex;
-  intparas.T_R = get_TR(modelgridindex);
-  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
-  // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
-
-  double bfheating = 0.0;
-  gsl_function F_bfheating;
-  F_bfheating.function = &integrand_bfheatingcoeff_custom_radfield;
-  F_bfheating.params = &intparas;
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-  const int status = gsl_integration_qag(
-    &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-     GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating, &error);
-  // const int status = gsl_integration_qags(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //   GSLWSIZE, workspace_bfheating, &bfheating, &error);
-  // const int status = radfield_integrate(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //    GSLWSIZE, GSL_INTEG_GAUSS61, workspace_bfheating, &bfheating, &error);
-
-  if (status != 0)
-  {
-    printout("bf_heating integrator status %d. Integral value %g.\n", status, bfheating);
-  }
-  gsl_set_error_handler(previous_handler);
-
-  bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-
-  return bfheating;
-}
-
-
-double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
-{
-  double bfheatingcoeff;
-  bfheatingcoeff = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff;
-  // depends on the radiation temperature, not the electron temperature,
-  // so we can keep the old value during T_e finder, even if use_cellhist is false
-
-  if (bfheatingcoeff < 0)
-  {
-    #if NO_LUT_BFHEATING
-      bfheatingcoeff = calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
-    #else
-      /// The correction factor for stimulated emission in gammacorr is set to its
-      /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
-      /// correction may be evaluated at T_R!
-      const double T_R = get_TR(modelgridindex);
-      const double W = get_W(modelgridindex);
-      bfheatingcoeff = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
-      const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-      if (index_in_groundlevelcontestimator >= 0)
-        bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
-
-      if (!isfinite(bfheatingcoeff))
-      {
-        printout("[fatal] get_bfheatingcoeff returns a NaN! W %g interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
-                 W,interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
-        abort();
-      }
-    #endif
-
-    cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = bfheatingcoeff;
-  }
-  return bfheatingcoeff;
 }
 
 

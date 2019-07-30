@@ -7,6 +7,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
+#include "radfield.h"
 #include "ratecoeff.h"
 #include "thermalbalance.h"
 #include "update_grid.h"
@@ -18,6 +19,168 @@ typedef struct Te_solution_paras
   int modelgridindex;
   heatingcoolingrates_t *heatingcoolingrates;
 } Te_solution_paras;
+
+typedef struct
+{
+  double nu_edge;
+  int modelgridindex;
+  float T_R;
+  float *photoion_xs;
+} gsl_integral_paras_bfheating;
+
+
+#if (!NO_LUT_BFHEATING)
+  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+  {
+    /// The correction factor for stimulated emission in gammacorr is set to its
+    /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+    /// correction may be evaluated at T_R!
+    const double T = get_TR(modelgridindex);
+    const double W = get_W(modelgridindex);
+
+    /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
+    bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);*/
+    const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
+    if (lowerindex < TABLESIZE - 1)
+    {
+      const int upperindex = lowerindex + 1;
+      const double T_lower =  MINTEMP * exp(lowerindex*T_step_log);
+      const double T_upper =  MINTEMP * exp(upperindex*T_step_log);
+
+      const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[upperindex];
+      const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[lowerindex];
+
+      bfheatingcoeff = (f_lower + (f_upper - f_lower)/(T_upper - T_lower) * (T - T_lower));
+    }
+    else
+      bfheatingcoeff = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfheating_coeff[TABLESIZE-1];
+
+    return W * bfheatingcoeff;
+  }
+#endif
+
+
+static double integrand_bfheatingcoeff_custom_radfield(double nu, void *restrict voidparas)
+/// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
+{
+  const gsl_integral_paras_bfheating *restrict const params = (gsl_integral_paras_bfheating *) voidparas;
+
+  const int modelgridindex = params->modelgridindex;
+  const double nu_edge = params->nu_edge;
+  const double T_R = params->T_R;
+  // const double Te_TR_factor = params->Te_TR_factor; // = sqrt(T_e/T_R) * sahafac(Te) / sahafac(TR)
+
+  const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
+
+  // const float T_e = get_Te(modelgridindex);
+  // return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
+
+  return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - exp(-HOVERKB*nu/T_R));
+}
+
+
+static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+{
+  double error = 0.0;
+  const double epsrel = 1e-3;
+  const double epsabs = 0.;
+
+  // const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  // const double E_threshold = epsilon(element, ion + 1, upperionlevel) - epsilon(element, ion, level);
+  const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+
+  const double nu_threshold = ONEOVERH * E_threshold;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; // nu of the uppermost point in the phixs table
+
+  // const float T_e = get_Te(modelgridindex);
+  // const double T_R = get_TR(modelgridindex);
+  // const double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
+  // const double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
+
+  gsl_integral_paras_bfheating intparas;
+  intparas.nu_edge = nu_threshold;
+  intparas.modelgridindex = modelgridindex;
+  intparas.T_R = get_TR(modelgridindex);
+  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
+  // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
+
+  double bfheating = 0.0;
+  gsl_function F_bfheating;
+  F_bfheating.function = &integrand_bfheatingcoeff_custom_radfield;
+  F_bfheating.params = &intparas;
+
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  const int status = gsl_integration_qag(
+    &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
+     GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating, &error);
+  // const int status = gsl_integration_qags(
+  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
+  //   GSLWSIZE, workspace_bfheating, &bfheating, &error);
+  // const int status = radfield_integrate(
+  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
+  //    GSLWSIZE, GSL_INTEG_GAUSS61, workspace_bfheating, &bfheating, &error);
+
+  if (status != 0)
+  {
+    printout("bf_heating integrator status %d. Integral value %g.\n", status, bfheating);
+  }
+  gsl_set_error_handler(previous_handler);
+
+  bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+
+  return bfheating;
+}
+
+
+void calculate_bfheatingcoeffs(int modelgridindex)
+{
+  cellhistory[tid].bfheating_mgi = modelgridindex;
+  for (int element = 0; element < nelements; element++)
+  {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++)
+    {
+      const int nlevels = get_nlevels(element,ion);
+      for (int level = 0; level < nlevels; level++)
+      {
+        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+        {
+        #if NO_LUT_BFHEATING
+          const double bfheatingcoeff = calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
+        #else
+          /// The correction factor for stimulated emission in gammacorr is set to its
+          /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
+          /// correction may be evaluated at T_R!
+          const double T_R = get_TR(modelgridindex);
+          const double W = get_W(modelgridindex);
+          double bfheatingcoeff = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
+          const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+          if (index_in_groundlevelcontestimator >= 0)
+            bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
+
+          if (!isfinite(bfheatingcoeff))
+          {
+            printout("[fatal] get_bfheatingcoeff returns a NaN! W %g interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
+                     W,interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
+            abort();
+          }
+        #endif
+
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = bfheatingcoeff;
+        }
+      }
+    }
+  }
+}
+
+
+static double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex)
+// depends only the radifeld field
+// no dependence on T_e or populations
+{
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff;
+}
 
 
 static double get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e, const double nne)
@@ -68,6 +231,8 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   //double C_recomb = 0.;
   double bfheating = 0.;
   double ffheating = 0.;
+
+  assert(cellhistory[tid].bfheating_mgi = modelgridindex);
 
   //int nlevels_lowerion = 0;
   for (int element = 0; element < nelements; element++)

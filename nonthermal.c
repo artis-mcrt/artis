@@ -2116,7 +2116,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   {
     const int Z = get_element(element);
     const int nions = get_nions(element);
-    for (int ion = 0; ion < get_nions(element); ion++)
+    for (int ion = 0; ion < nions; ion++)
     {
       calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
 
