@@ -197,7 +197,7 @@ static double get_event(
 
       if (tau_rnd - tau > tau_cont)
       {
-        const double A_ul = einstein_spontaneous_emission(dummypkt_ptr->next_trans - 1);
+        const double A_ul = einstein_spontaneous_emission(lineindex);
         const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
