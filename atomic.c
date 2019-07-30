@@ -1,6 +1,8 @@
 #include "sn3d.h"
 #include "atomic.h"
+#include "grid_init.h"
 #include "ltepop.h"
+#include "update_grid.h"
 
 extern inline int get_element(int element);
 extern inline int get_elementindex(int Z);
@@ -94,6 +96,19 @@ int get_tot_nions(void)
   return nions;
 }
 
+
+double get_nntot(int modelgridindex)
+// total ion (nuclei) density
+{
+  const double rho = get_rho(modelgridindex);
+  int nntot = 0.;
+  for (int element = 0; element < nelements; element++)
+  {
+    nntot += get_abundance(modelgridindex, element) / elements[element].mass * rho;
+  }
+
+  return nntot;
+}
 
 bool is_nlte(int element, int ion, int level)
 // Returns true if (element,ion,level) is to be treated in nlte.
