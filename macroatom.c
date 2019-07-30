@@ -908,9 +908,6 @@ double rad_deexcitation_ratecoeff(
   }
   #endif
 
-  const double statweight_target = statw_lower(lineindex);
-  const double statweight = statw_upper(lineindex);
-
   const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
   const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
 
@@ -922,7 +919,7 @@ double rad_deexcitation_ratecoeff(
 
     const double A_ul = einstein_spontaneous_emission(lineindex);
     const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
-    const double B_lu = statweight / statweight_target * B_ul;
+    const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
@@ -977,9 +974,6 @@ double rad_excitation_ratecoeff(
   }
   #endif
 
-  const double statweight = statw_lower(lineindex);
-  const double statweight_target = statw_upper(lineindex);
-
   const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
   const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
   double R = 0.0;
@@ -988,7 +982,7 @@ double rad_excitation_ratecoeff(
     const double nu_trans = epsilon_trans / H;
     const double A_ul = einstein_spontaneous_emission(lineindex);
     const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
-    const double B_lu = statweight_target / statweight * B_ul;
+    const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
