@@ -409,7 +409,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+          calculate_kappa_rpkt_cont(pkt_ptr, t_current, mgi);
         }
       }
     }

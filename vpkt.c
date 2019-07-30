@@ -177,9 +177,9 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
           //printout("next_trans = %d \t nutrans = %g \t",dummy_ptr->next_trans,nutrans);
 
-          nutrans = closest_transition(dummy_ptr);
+          const int lineindex = closest_transition(dummy_ptr->nu_cmf, dummy_ptr->next_trans);
 
-          const int lineindex = mastate[tid].activatingline;
+          const double nutrans = linelist[lineindex].nu;
 
           element = linelist[lineindex].elementindex;
           ion = linelist[lineindex].ionindex;
@@ -189,7 +189,9 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
           anumber = get_element(element);
 
-          if (nutrans > 0) {
+          if (nutrans > 0)
+          {
+              dummypkt_ptr->next_trans = lineindex + 1;
 
               if (dummy_ptr->nu_cmf < nutrans) ldist = 0;
               else ldist = CLIGHT * t_current * (dummy_ptr->nu_cmf/nutrans - 1);
@@ -226,7 +228,10 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
               tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
               if (tau_flag == 0 ) return ;
 
-
+          }
+          else
+          {
+            dummypkt_ptr->next_trans   = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
           }
 
       }

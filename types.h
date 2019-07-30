@@ -506,6 +506,7 @@ typedef struct gslintegration_paras
 
 typedef struct rpkt_cont_opacity_struct
 {
+  double nu; // frequency at which opacity was calculated
   double total;
   double es;
   double ff;
@@ -515,6 +516,7 @@ typedef struct rpkt_cont_opacity_struct
   double fb_inrest;
   double ffheating;
   //double bfheating;
+  bool recalculate_required; // e.g. when cell or timestep has changed
 } rpkt_cont_opacity_struct;
 
 
@@ -561,6 +563,7 @@ typedef struct cellhistory_struct
   chelements_struct *restrict chelements;            /// Pointer to a nested list which helds compositional
                                             /// information for all the elements=0,1,...,nelements-1
   int cellnumber;                           /// Identifies the cell the data is valid for.
+  int bfheating_mgi;
 } cellhistory_struct;
 
 

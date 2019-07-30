@@ -324,7 +324,8 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
 {
   //double nne = cell[pkt_ptr->where].nne ;
   int cellindex = pkt_ptr->where;
-  const float T_e = get_Te(cell[cellindex].modelgridindex);
+  const int modelgridindex = cell[cellindex].modelgridindex;
+  const float T_e = get_Te(modelgridindex);
   double t_current = t1;
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
@@ -338,8 +339,8 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
   if (debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
-  if (modelgrid[cell[cellindex].modelgridindex].thick != 1)
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+  if (modelgrid[modelgridindex].thick != 1)
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb++;
   k_stat_to_r_bb++;
@@ -532,7 +533,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr,t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_ff++;
       k_stat_to_r_ff++;
@@ -607,7 +608,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr, t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by fb\n");
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current);
+      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_fb++;
       k_stat_to_r_fb++;

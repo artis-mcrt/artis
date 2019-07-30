@@ -12,7 +12,7 @@ void radfield_init(int my_rank);
 void initialise_photoionestimators(void);
 void radfield_write_to_file(int modelgridindex, int timestep);
 void radfield_close_file(void);
-void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr);
+void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr, double t_current);
 void radfield_increment_lineestimator(int modelgridindex, int lineindex, double increment);
 double radfield(double nu, int modelgridindex);
 double radfield_dbb_mgi(double nu, int modelgridindex);

@@ -263,8 +263,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        // const bool printdebug = false;
-        const bool printdebug = (get_element(element) >= 26);
+        const bool printdebug = false;
+        // const bool printdebug = (get_element(element) >= 26);
 
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
@@ -299,13 +299,13 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       // }
       // fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "gamma_R        Z=%2d", get_element(element));
+      fprintf(estimators_file, "gamma_R_integ  Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
       {
-        const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
-        // const bool printdebug_gammar = false;
+        // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
+        const bool printdebug_gammar = false;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
                 calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
@@ -405,9 +405,11 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
   /// cell given by cellnumber. (-99 if invalid)
   if ((modelgridindex == cellhistory[tid].cellnumber) && !new_timestep)
   {
-    // printout("redundant reset in cell %d\n", modelgridindex);
-    return; //TODO: does this break anything?
+    return;
   }
+
+  // force rpkt opacities to be recalculated next time they are accessed
+  kappa_rpkt_cont[tid].recalculate_required = true;
 
   cellhistory[tid].cellnumber = modelgridindex;
   //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
@@ -422,7 +424,6 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
       {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = -99.;
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
 #if (SEPARATE_STIMRECOMB)
           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
@@ -461,6 +462,8 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 
 static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates_t *heatingcoolingrates)
 {
+  calculate_bfheatingcoeffs(n);
+
   const double covergence_tolerance = 0.02;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
   {
@@ -474,7 +477,6 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
     const time_t sys_time_start_partfuncs_or_gamma = time(NULL);
     if (!NLTE_POPS_ON)
     {
-      /// These don't depend on T_e, therefore take them out of the T_e iteration
       precalculate_partfuncts(n);
     }
 #if (!NO_LUT_PHOTOION)
@@ -1131,7 +1133,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       max_path_step = wid_init(0) / 10. * trat;
     }
   }
-  //printout("max_path_step %g\n", max_path_step);
+  max_path_step = fmin(max_path_step, rmax / 10.);
+  printout("max_path_step %g\n", max_path_step);
 
   //#ifndef FORCE_LTE
   //  fclose(heating_file);
