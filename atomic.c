@@ -168,7 +168,6 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
     }
     else
     {
-      return 0.;
       /// use a parameterization of sigma_bf by the Kramers formula
       /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
       /// so far the highest grid point, otherwise the cross-section is not continuous
