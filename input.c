@@ -2047,37 +2047,6 @@ static void read_3d_model(void)
   npts_model = mgi;
 
   fclose(model_input);
-
-
-  ///Opacity treatment moved to grid_init & update_grid
-//    if (opacity_case == 0)
-//      {
-//        for (n = 0; n < npts_model; n++)
-// 	 {
-// 	   cell[n].kappa_grey = GREY_OP;
-// 	 }
-//      }
-//    else if (opacity_case == 1)
-//      {
-//        for (n = 0; n < npts_model; n++)
-// 	 {
-// 	   cell[n].kappa_grey = ((0.9 * cell[n].f_fe) + 0.1) * GREY_OP / ((0.9 *  mfeg / mtot) + 0.1);
-// 	 }
-//      }
-//    else if (opacity_case == 2)
-//      {
-//        for (n = 0; n < npts_model; n++)
-// 	 {
-// //           cell[n].kappa_grey = ((0.9 * cell[n].f_fe) + 0.1)/cell[n].rho_init * GREY_OP*rhotot / ((0.9 *  mfeg / mtot) + 0.1);
-// //           cell[n].kappa_grey = ((0.9 * cell[n].f_fe) + 0.1)/cell[n].rho_init * GREY_OP*rhom / ((0.9 *  mfeg) + (0.1 * mtot));
-//            cell[n].kappa_grey = ((0.9 * cell[n].f_fe) + 0.1)/cell[n].rho_init * GREY_OP*rho_sum / ((0.9 *  ni56_sum) + (0.1 * npts_model));
-// 	 }
-//      }
-//    else
-//      {
-//        printout("Unknown opacity case. Abort.\n");
-//        abort();
-//      }
 }
 
 
