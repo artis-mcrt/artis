@@ -44,7 +44,7 @@ else
  # CC = icc
   INCLUDE = #-I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
   LIB = #-L/usr/local/lib/gsl #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-  CFLAGS = -std=c17 -march=native -O3 -fstrict-aliasing -ftree-vectorize -fvectorize -flto -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing $(INCLUDE) # -fopenmp-simd
+  CFLAGS = -std=c17 -O3 -fstrict-aliasing -ftree-vectorize -fvectorize -flto -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing $(INCLUDE) # -fopenmp-simd
 
 	# enable OpenMP (for Clang)
 	# CFLAGS += -Xpreprocessor -fopenmp -lomp
