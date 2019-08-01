@@ -460,7 +460,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         modelgridindex, element, ion, level, t_mid, processrates,
         &cellhistory[tid].chelements[element].chions[ion].chlevels[level]);
 
-
     // for debugging the transition rates:
     // {
     //   printout("macroatom element %d ion %d level %d\n", element, ion, level);
@@ -473,12 +472,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     //   for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
     //     printout("actions: %30s %g\n", actionlabel[action], processrates[action]);
     // }
-
-    // processrates[MA_ACTION_INTERNALDOWNLOWER] = 0.;
-    // processrates[MA_ACTION_INTERNALUPHIGHER] = 0.;
-    // processrates[MA_ACTION_INTERNALUPHIGHERNT] = 0.;
-    // processrates[MA_ACTION_RADRECOMB] = 0.;
-    // processrates[MA_ACTION_COLRECOMB] = 0.;
 
     // select transition according to probabilities
     double total_transitions = 0.;
