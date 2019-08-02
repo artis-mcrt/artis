@@ -1122,7 +1122,8 @@ int main(int argc, char** argv)
             /** The master thread has normalised the rpkt and compton estimators and printed out a bunch of stuff. Now redistribute the estimators ready for the next run. */
 
             MPI_Barrier(MPI_COMM_WORLD);
-            MPI_Bcast(&J, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    MPI_Bcast(&J, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&energy_deposition, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
             #ifndef FORCE_LTE
               MPI_Bcast(&nuJ, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
               MPI_Bcast(&ffheatingestimator, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
