@@ -1,5 +1,5 @@
 # files not in the artis folder, so move them
-if [! -f packets00_0000.out* ]; then
+if [ ! -f packets00_0000.out* ]; then
   mv packets/packets*.out* .
 fi
 
