@@ -135,7 +135,6 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
 void calculate_bfheatingcoeffs(int modelgridindex)
 {
-  cellhistory[tid].bfheating_mgi = modelgridindex;
   for (int element = 0; element < nelements; element++)
   {
     const int nions = get_nions(element);
@@ -172,6 +171,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
       }
     }
   }
+  cellhistory[tid].bfheating_mgi = modelgridindex;
 }
 
 
@@ -232,7 +232,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   double bfheating = 0.;
   double ffheating = 0.;
 
-  assert(cellhistory[tid].bfheating_mgi = modelgridindex);
+  assert(cellhistory[tid].bfheating_mgi == modelgridindex);
 
   //int nlevels_lowerion = 0;
   for (int element = 0; element < nelements; element++)
