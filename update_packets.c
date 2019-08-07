@@ -129,6 +129,7 @@ static void update_pellet(
   else if (tdecay > ts)
   {
     // The packet decays in the current timestep.
+    time_step[nts].pellet_decays++;
     if (decay_to_kpkt)
     {
       vec_scale(pkt_ptr->pos, tdecay / ts);

@@ -229,7 +229,6 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
-  time_step[nts].pellet_decays++;
 
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
