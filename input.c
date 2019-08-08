@@ -625,16 +625,17 @@ static int get_lineindex(const int lelement, const int lion, const int llowerlev
 
 static int calculate_nlevels_groundterm(int element, int ion)
 {
-  int nlevels_groundterm = 1;
   const int nlevels = get_nlevels(element, ion);
+  if (nlevels == 1)
+  {
+    return 1;
+  }
+
+  int nlevels_groundterm = 1;
   // detect single-level ground term
   const double endiff10 = epsilon(element, ion, 1) - epsilon(element, ion, 0);
   const double endiff21 = epsilon(element, ion, 2) - epsilon(element, ion, 1);
-  if (nlevels == 1)
-  {
-    nlevels_groundterm = 1;
-  }
-  else if (endiff10 > 2. * endiff21)
+  if (endiff10 > 2. * endiff21)
   {
     nlevels_groundterm = 1;
   }
