@@ -1958,6 +1958,15 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int element, cons
 
 void do_ntlepton(PKT *pkt_ptr)
 {
+  if (!NT_ON)
+  {
+    pkt_ptr->last_event = 22;
+    pkt_ptr->type = TYPE_KPKT;
+    nt_stat_to_kpkt++;
+
+    return;
+  }
+
   const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   double zrand = gsl_rng_uniform(rng);
