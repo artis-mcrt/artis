@@ -788,6 +788,7 @@ static void read_atomicdata_files(void)
           int ntransitions;
           fscanf(adata, "%d %lg %lg %d%*[^\n]\n", &levelindex, &levelenergy, &statweight, &ntransitions);
         }
+
         const int fscanfadata = fscanf(adata, "%d %d %d %lg\n", &adata_Z_in, &ionstage, &nlevels, &ionpot);
 
         if (fscanfadata == EOF)
@@ -1043,7 +1044,8 @@ static void read_atomicdata_files(void)
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
-      elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
+      if (elements[element].ions[ion].nlevels_groundterm <= 0)
+        elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
     }
   }
 
@@ -1077,8 +1079,13 @@ static void read_atomicdata_files(void)
 
           if (nlevels_groundterm != phixstargetlevels)
           {
-            printout("WARNING: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d\n",
+            printout("WARNING: Z=%d ion_stage %d nlevels_groundterm %d phixstargetlevels(ion-1) %d.\n",
                      get_element(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
+            // if (nlevels_groundterm < phixstargetlevels)
+            // {
+            //   printout("  -> setting to %d\n", phixstargetlevels);
+            //   elements[element].ions[ion].nlevels_groundterm = phixstargetlevels;
+            // }
           }
         }
       }
