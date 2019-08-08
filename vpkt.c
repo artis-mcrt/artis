@@ -2,7 +2,6 @@
 #include "vpkt.h"
 #include "rpkt.h"
 #include "boundary.h"
-#include "move.h"
 #include "ltepop.h"
 #include "vectors.h"
 #include "atomic.h"

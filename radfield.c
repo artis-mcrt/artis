@@ -1900,9 +1900,9 @@ void radfield_read_restart_data(FILE *gridsave_file)
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    int gridave_nbf_in;
-    fscanf(gridsave_file, "%d\n", &gridave_nbf_in);
-    assert(gridave_nbf_in == nbfcontinua);
+    int gridsave_nbf_in;
+    fscanf(gridsave_file, "%d\n", &gridsave_nbf_in);
+    assert(gridsave_nbf_in == nbfcontinua);
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {

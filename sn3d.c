@@ -19,7 +19,6 @@
 #include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
-#include "move.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet_init.h"
