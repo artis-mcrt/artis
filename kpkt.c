@@ -45,6 +45,25 @@ static double get_cooling_ion_coll_exc(const int modelgridindex, const int eleme
 }
 
 
+static double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
+{
+  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
+  if (lowerindex < TABLESIZE-1)
+  {
+    const int upperindex = lowerindex + 1;
+    const double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
+    const double T_upper =  MINTEMP * exp(upperindex * T_step_log);
+
+    const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[upperindex];
+    const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[lowerindex];
+
+    return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
+  }
+  else
+    return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[TABLESIZE-1];
+}
+
+
 void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *heatingcoolingrates)
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
