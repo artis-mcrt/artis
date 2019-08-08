@@ -26,7 +26,7 @@
 // } gslintegration_bfheatingparas;
 
 static double T_step;
-static double T_step_log;
+double T_step_log;
 
 typedef struct
 {
