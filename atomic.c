@@ -135,53 +135,52 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
 {
+  // if (nu < nu_edge || nu > nu_edge * 1.05)
+  //   return 0;
+  // else
+  //   return 1.;
+  // return 1. * pow(nu_edge / nu, 3);
+
   float sigma_bf;
-  if (nu == nu_edge)
+  const double ireal = (nu / nu_edge - 1.0) / NPHIXSNUINCREMENT;
+  const int i = floor(ireal);
+
+  if (i < 0)
   {
-    sigma_bf = photoion_xs[0];
+    sigma_bf = 0.0;
+    //printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
+    //printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
+    //printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
+    //printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
+    //abort();
+  }
+  else if (i < NPHIXSPOINTS - 1)
+  {
+    // sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
+
+    const double sigma_bf_a = photoion_xs[i];
+    const double sigma_bf_b = photoion_xs[i + 1];
+    const double factor_b = ireal - i;
+    sigma_bf = ((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b);
   }
   else
   {
-    const double ireal = (nu / nu_edge - 1.0) / NPHIXSNUINCREMENT;
-    const int i = floor(ireal);
-
-    if (i < 0)
-    {
-      sigma_bf = 0.0;
-      //printout("[warning] photoionization_crosssection was called with nu=%g < nu_edge=%g\n",nu,nu_edge);
-      //printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
-      //printout("[warning]   element %d, ion+1 %d, level %d epsilon %g, ionpot %g\n",element,ion+1,0,epsilon(element,ion+1,0),elements[element].ions[ion].ionpot);
-      //printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
-      //abort();
-    }
-    else if (i < NPHIXSPOINTS - 1)
-    {
-      // sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
-
-      const double sigma_bf_a = photoion_xs[i];
-      const double sigma_bf_b = photoion_xs[i + 1];
-      const double factor_b = ireal - i;
-      sigma_bf = ((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b);
-    }
-    else
-    {
-      /// use a parameterization of sigma_bf by the Kramers formula
-      /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
-      /// so far the highest grid point, otherwise the cross-section is not continuous
-      const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-      sigma_bf = photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs / nu, 3);
-    }
+    /// use a parameterization of sigma_bf by the Kramers formula
+    /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
+    /// so far the highest grid point, otherwise the cross-section is not continuous
+    const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+    sigma_bf = photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs / nu, 3);
   }
 
-  #ifdef DEBUG_ON
-    if (sigma_bf < 0)
-    {
-      //printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
-      //printout("[warning]   nu=%g,  nu_edge=%g\n",nu,nu_edge);
-      //printout("[warning]   xs@edge=%g, xs@maxfreq\n",elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
-      //printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
-    }
-  #endif
+#ifdef DEBUG_ON
+  // if (sigma_bf < 0)
+  // {
+  //   printout("[warning] photoionization_crosssection returns negative cross-section %g\n",sigma_bf);
+  //   printout("[warning]   nu=%g,  nu_edge=%g\n",nu,nu_edge);
+  //   printout("[warning]   xs@edge=%g, xs@maxfreq\n",elements[element].ions[ion].levels[level].photoion_xs[0],elements[element].ions[ion].levels[level].photoion_xs[NPHIXSPOINTS-1]);
+  //   printout("[warning]   element %d, ion %d, level %d, epsilon %g, ionpot %g\n",element,ion,level,epsilon(element,ion,level),elements[element].ions[ion].ionpot);
+  // }
+#endif
 
   return sigma_bf;
 }
