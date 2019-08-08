@@ -105,3 +105,23 @@ void get_rand_isotropic_unitvec(double vecout[3])
   vecout[1] = sintheta * sin(phi);
   vecout[2] = mu;
 }
+
+
+void move_pkt(PKT *restrict pkt_ptr, const double distance, const double time)
+/// Subroutine to move a packet along a straight line (specified by currect
+/// dir vector). The distance moved is in the rest frame. Time must be the
+/// time at the end of distance travelled.
+{
+  /// First update pos.
+  assert(distance >= 0);
+
+  pkt_ptr->pos[0] += (pkt_ptr->dir[0] * distance);
+  pkt_ptr->pos[1] += (pkt_ptr->dir[1] * distance);
+  pkt_ptr->pos[2] += (pkt_ptr->dir[2] * distance);
+
+  /// During motion, rest frame energy and frequency are conserved.
+  /// But need to update the co-moving ones.
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, time);
+  pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
+  pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
+}

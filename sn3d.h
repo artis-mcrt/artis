@@ -11,29 +11,29 @@
 // #define FORCE_LTE
 
 /// non-thermal ionisation
-static const bool NT_ON = true;
+static const bool NT_ON = false;
 
 /// use the detailed Spencer-Fano solver instead of the work function approximation
-static const bool NT_SOLVE_SPENCERFANO = true;
+static const bool NT_SOLVE_SPENCERFANO = false;
 
 // non-LTE population solver
-static const bool NLTE_POPS_ON = true;
+static const bool NLTE_POPS_ON = false;
 
 // solve the NLTE population matrix equation simultaneously for levels of all ions of an element
-static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
+static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = false;
 
 // maximum number of NLTE/Te/Spencer-Fano iterations
 static const int NLTEITER = 30;
 
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
-static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
+static const bool MULTIBIN_RADFIELD_MODEL_ON = false;
 
 // store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
 #define DETAILED_LINE_ESTIMATORS_ON false
 
 // store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
+#define DETAILED_BF_ESTIMATORS_ON false
 
 // extremely slow and memory consuming - for debugging only
 // not safe for MPI or OpenMP - single process and single thread only!
@@ -58,7 +58,7 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 ///============================================================================
 #define TABLESIZE 100 //200 //100
 #define MINTEMP 1000.
-#define MAXTEMP 50000. //1000000.
+#define MAXTEMP 30000. //1000000.
 
 // Polarisation for real packets
 // #define DIPOLE
@@ -393,6 +393,8 @@ int ma_stat_activation_ntcollexc;
 int ma_stat_activation_ntcollion;
 int ma_stat_activation_bb;
 int ma_stat_activation_bf;
+double stat_bf_photon_absorptions;
+double stat_bf_photon_emissions;
 int ma_stat_activation_fb;
 int ma_stat_deactivation_colldeexc;
 int ma_stat_deactivation_collrecomb;
