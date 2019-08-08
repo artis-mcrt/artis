@@ -29,4 +29,6 @@ double calculate_ionrecombcoeff(
 
 double interpolate_ions_spontrecombcoeff(int element, int ion, double T);
 
+extern double T_step_log;
+
 #endif //RATECOEFF_H
