@@ -649,11 +649,12 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
           /// Now convert bfheatingestimator into the bfheating renormalisation coefficient used in get_bfheating
           /// in the remaining part of update_grid. Later on it's reset and new contributions are added up.
 
-          bfheatingestimator[ionestimindex] = bfheatingestimator[ionestimindex] / get_bfheatingcoeff_ana(element,ion,0,0,n);
+          const double bfheatingcoeff_ana = get_bfheatingcoeff_ana(element, ion, 0, 0, get_TR(n), get_W(n));
+          bfheatingestimator[ionestimindex] = bfheatingestimator[ionestimindex] / bfheatingcoeff_ana;
 
           if (!isfinite(bfheatingestimator[ionestimindex]))
           {
-            printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[ionestimindex],get_bfheatingcoeff_ana(element,ion,0,0,n));
+            printout("[fatal] about to set bfheatingestimator = NaN = bfheatingestimator / get_bfheatingcoeff_ana(%d,%d,%d,%d,%d)=%g/%g",element,ion,0,0,n,bfheatingestimator[ionestimindex],bfheatingcoeff_ana);
             abort();
           }
 
