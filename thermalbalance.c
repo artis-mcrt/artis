@@ -161,7 +161,6 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           /// The correction factor for stimulated emission in gammacorr is set to its
           /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
           /// correction may be evaluated at T_R!
-          const double T_R = get_TR(modelgridindex);
           const double W = get_W(modelgridindex);
           double bfheatingcoeff = W * get_bfheatingcoeff(element,ion,level,phixstargetindex);
           const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
@@ -170,7 +169,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
 
           if (!isfinite(bfheatingcoeff))
           {
-            printout("[fatal] get_bfheatingcoeff returns a NaN! W %g interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
+            printout("[fatal] get_bfheatingcoeff returns a NaN! W %g interpolate_bfheatingcoeff(element,ion,level,phixstargetindex) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
                      W,get_bfheatingcoeff(element,ion,level,phixstargetindex),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
             abort();
           }
