@@ -4,7 +4,6 @@
 #include "grey_emissivities.h"
 #include "grid_init.h"
 #include "ltepop.h"
-#include "move.h"
 #include "polarization.h"
 #include "radfield.h"
 #include "rpkt.h"
