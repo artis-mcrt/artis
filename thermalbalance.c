@@ -30,14 +30,11 @@ typedef struct
 
 
 #if (!NO_LUT_BFHEATING)
-  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+  double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, float T, double W)
   {
     /// The correction factor for stimulated emission in gammacorr is set to its
     /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
     /// correction may be evaluated at T_R!
-    const double T = get_TR(modelgridindex);
-    const double W = get_W(modelgridindex);
-
     double bfheatingcoeff = 0.;
 
     /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
@@ -136,7 +133,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
 
 static double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex)
-// depends only the radifeld field
+// depends only the radiation field
 // no dependence on T_e or populations
 {
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff;
@@ -161,15 +158,16 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           /// The correction factor for stimulated emission in gammacorr is set to its
           /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
           /// correction may be evaluated at T_R!
+          const double T_R = get_TR(modelgridindex);
           const double W = get_W(modelgridindex);
-          double bfheatingcoeff = W * get_bfheatingcoeff(element,ion,level,phixstargetindex);
+          double bfheatingcoeff = W * get_bfheatingcoeff_ana(element,ion,level,phixstargetindex, T_R, W);
           const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
             bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
 
           if (!isfinite(bfheatingcoeff))
           {
-            printout("[fatal] get_bfheatingcoeff returns a NaN! W %g interpolate_bfheatingcoeff(element,ion,level,phixstargetindex) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
+            printout("[fatal] get_bfheatingcoeff returns a NaN! W %g get_bfheatingcoeff(element,ion,level,phixstargetindex) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
                      W,get_bfheatingcoeff(element,ion,level,phixstargetindex),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
             abort();
           }
