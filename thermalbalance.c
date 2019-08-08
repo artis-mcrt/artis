@@ -38,6 +38,8 @@ typedef struct
     const double T = get_TR(modelgridindex);
     const double W = get_W(modelgridindex);
 
+    double bfheatingcoeff = 0.;
+
     /*double nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
     bfheating = nnlevel * W * interpolate_bfheatingcoeff_below(element,ion,level,T_R);*/
     const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
@@ -133,6 +135,14 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 }
 
 
+static double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex)
+// depends only the radifeld field
+// no dependence on T_e or populations
+{
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff;
+}
+
+
 void calculate_bfheatingcoeffs(int modelgridindex)
 {
   for (int element = 0; element < nelements; element++)
@@ -153,7 +163,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           /// correction may be evaluated at T_R!
           const double T_R = get_TR(modelgridindex);
           const double W = get_W(modelgridindex);
-          double bfheatingcoeff = W * interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R);
+          double bfheatingcoeff = W * get_bfheatingcoeff(element,ion,level,phixstargetindex);
           const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
             bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
@@ -161,7 +171,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           if (!isfinite(bfheatingcoeff))
           {
             printout("[fatal] get_bfheatingcoeff returns a NaN! W %g interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
-                     W,interpolate_bfheatingcoeff(element,ion,level,phixstargetindex,T_R),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
+                     W,get_bfheatingcoeff(element,ion,level,phixstargetindex),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
             abort();
           }
         #endif
@@ -172,14 +182,6 @@ void calculate_bfheatingcoeffs(int modelgridindex)
     }
   }
   cellhistory[tid].bfheating_mgi = modelgridindex;
-}
-
-
-static double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex)
-// depends only the radifeld field
-// no dependence on T_e or populations
-{
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff;
 }
 
 
@@ -329,7 +331,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
           //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           //double epsilon_upper = epsilon(element,ion+1,upper);
           //double epsilon_trans = epsilon_upper - epsilon_current;
-          bfheating += nnlevel * get_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
+          bfheating += nnlevel * get_bfheatingcoeff(element, ion, level, phixstargetindex);
         }
       }
     }
