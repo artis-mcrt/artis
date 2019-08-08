@@ -607,6 +607,7 @@ static void precalculate_rate_coefficient_integrals(void)
                 printout("alpha_sp integrator status %d. Integral value %9.3e +/- %9.3e\n",status,alpha_sp,error);
             }
             alpha_sp *= FOURPI * sfac * phixstargetprobability;
+
             if (!isfinite(alpha_sp) || alpha_sp < 0)
             {
               printout("WARNING: alpha_sp was negative or non-finite for level %d. alpha_sp %g sfac %g phixstargetindex %d phixstargetprobability %g\n",
@@ -747,6 +748,8 @@ static double get_x_of_integralfrac(gsl_function *F_integrand, double xmin, doub
 
   const double total = partialsums[npieces - 1];
 
+  assert(total > 0);
+
   const double targetintegral = targetintegralfrac * total;
 
   const int index = get_index_from_partialsums(partialsums, npieces, targetintegral);
@@ -763,15 +766,14 @@ static double get_x_of_integralfrac(gsl_function *F_integrand, double xmin, doub
 
 double select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e)
 {
-  const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
 
   const int phixstargetindex = get_phixtargetindex(element, lowerion, lower, upperionlevel);
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
 
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge * 100; //nu of the uppermost point in the phixs table
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
-  const int npieces = NPHIXSPOINTS * 100;
+  const int npieces = NPHIXSPOINTS;
 
   gslintegration_paras intparas;
   intparas.T = T_e;
@@ -782,7 +784,21 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
   F_alpha_sp.params = &intparas;
 
-  const double nu_selected = get_x_of_integralfrac(&F_alpha_sp, nu_threshold, nu_max_phixs, npieces, zrand);
+  const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
+  double nu_selected = get_x_of_integralfrac(&F_alpha_sp, nu_threshold, nu_max_phixs, npieces, zrand);
+
+  // TODO: remove
+  // while (1e8 * CLIGHT / nu_selected < 771.)
+  // {
+  //   nu_selected = nu_selected / 2;
+  // }
+  // if (1e8 * CLIGHT / nu_selected < 771.)
+  // {
+  //   // nu_selected = nu_threshold * last_phixs_nuovernuedge * 2;
+  //   nu_selected = fmax(phixslist[tid].allcont[nbfcontinua - 1].nu_edge, linelist[0].nu) * 100;
+  //   // nu_selected = phixslist[tid].allcont[0].nu_edge / 100.;
+  // }
+  // const double nu_selected = nu_threshold / 1.2;
 
   printout("emitted bf photoion Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
      get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel, lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
@@ -825,7 +841,7 @@ double calculate_ionrecombcoeff(
   const int element, const int upperion,
   const bool assume_lte, const bool collisional_not_radiative, const bool printdebug,
   const bool lower_superlevel_only, const bool per_groundmultipletpop, const bool stimonly)
-// multiply by upper ion population (or ground population if per_groundmultipletpop is true) if and nne to get a rate
+// multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
 {
   const int lowerion = upperion - 1;
   if (lowerion < 0)
