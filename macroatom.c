@@ -61,9 +61,10 @@ static void get_macroatom_transitionrates(
     const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
+    const double individ_internal_down_same = (R + C) * epsilon_target;
+
     const double individ_rad_deexc = R * epsilon_trans;
     const double individ_col_deexc = C * epsilon_trans;
-    const double individ_internal_down_same = (R + C) * epsilon_target;
 
     chlevel->individ_rad_deexc[i] = individ_rad_deexc;
     chlevel->individ_internal_down_same[i] = individ_internal_down_same;
@@ -97,10 +98,10 @@ static void get_macroatom_transitionrates(
       //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
       const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
 
+      processrates[MA_ACTION_INTERNALDOWNLOWER] += (R + C) * epsilon_target;
+
       processrates[MA_ACTION_RADRECOMB] += R * epsilon_trans;
       processrates[MA_ACTION_COLRECOMB] += C * epsilon_trans;
-
-      processrates[MA_ACTION_INTERNALDOWNLOWER] += (R + C) * epsilon_target;
     }
   }
 
@@ -167,32 +168,28 @@ static void do_macroatom_raddeexcitation(
   const double zrand = gsl_rng_uniform(rng);
   double rate = 0.;
   int linelistindex = -99;
-  int i;
-  int lower = -1;
   const int ndowntrans = get_ndowntrans(element, ion, level);
-  double epsilon_trans = -100;
-  for (i = 0; i < ndowntrans; i++)
+  for (int i = 0; i < ndowntrans; i++)
   {
     rate += get_individ_rad_deexc(element, ion, level, i);
     if (zrand * rad_deexc < rate)
     {
       linelistindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
-      lower = linelist[linelistindex].lowerlevelindex;
-      #ifdef DEBUG_ON
-        if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
-      #endif
-      epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
-
-      //linelistindex = elements[element].ions[ion].levels[level].transitions[level-lower-1].linelistindex;
-      #ifdef RECORD_LINESTAT
-        if (tid == 0) ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
-                                                    /// With an atomic pragma or a thread-private structure with subsequent
-                                                    /// reduction this could be extended to all threads. However, I'm not
-                                                    /// sure if this is worth the additional computational expenses.
-      #endif
       break;
     }
   }
+  assert(linelistindex >= 0);
+  #ifdef RECORD_LINESTAT
+    if (tid == 0) ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
+                                                /// With an atomic pragma or a thread-private structure with subsequent
+                                                /// reduction this could be extended to all threads. However, I'm not
+                                                /// sure if this is worth the additional computational expenses.
+  #endif
+  const int lower = linelist[linelistindex].lowerlevelindex;
+  #ifdef DEBUG_ON
+    if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
+  #endif
+  const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
   double oldnucmf;
   if (pkt_ptr->last_event == 1)
     oldnucmf = pkt_ptr->nu_cmf;
@@ -214,9 +211,9 @@ static void do_macroatom_raddeexcitation(
       printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
       abort();
     }
-    if (i > ndowntrans)
+    if (linelistindex < 0)
     {
-      printout("[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, i %d, ndowntrans %d\n", zrand, rate, rad_deexc, i, ndowntrans);
+      printout("[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, ndowntrans %d\n", zrand, rate, rad_deexc, ndowntrans);
       printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
       abort();
     }
@@ -269,6 +266,7 @@ static void do_macroatom_radrecomb(
   {
     const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, lower);
     const double R = rad_recombination_ratecoeff(T_e, nne, element, upperion, upperionlevel, lower, modelgridindex);
+
     rate += R * epsilon_trans;
     #ifdef DEBUG_ON
       if (debuglevel == 2)
@@ -294,15 +292,13 @@ static void do_macroatom_radrecomb(
   *ion -= 1;
   *level = lower;
 
-  /// Then randomly sample the packets frequency according to the continuums
-  /// energy distribution and set some flags
-  //zrand = gsl_rng_uniform(rng);
-  //zrand = 1. - zrand;  /// Make sure that 0 < zrand <= 1
-  //pkt_ptr->nu_cmf = nu_threshold * (1 - KB*T_e/H/nu_threshold*log(zrand));
-  //pkt_ptr->nu_cmf = nu_threshold;
-
   pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
+  stat_bf_photon_emissions += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
 
+  const double vol = vol_init_modelcell(modelgridindex) * pow(t_current / tmin, 3);
+
+  printout("  bf pkt last_event %d emissiontype %d trueemissiontype %d activatingline %d E/Hnu/V %g\n",
+     pkt_ptr->last_event, pkt_ptr->emissiontype, pkt_ptr->trueemissiontype, mastate[tid].activatingline, pkt_ptr->e_cmf/H/pkt_ptr->nu_cmf/vol);
 
   #ifndef FORCE_LTE
     //mabfcount[pkt_ptr->where] += pkt_ptr->e_cmf;
@@ -404,6 +400,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   int level = mastate[tid].level;
 
   const int activatingline = mastate[tid].activatingline;
+  if (pkt_ptr->absorptiontype > 0 && activatingline > 0 && activatingline != pkt_ptr->absorptiontype)
+  {
+    printout("error: mismatched absorptiontype %d != activatingline = %d pkt last_event %d emissiontype %d\n",
+             pkt_ptr->absorptiontype, activatingline, pkt_ptr->last_event, pkt_ptr->emissiontype);
+  }
 
   const int ion_in = ion;
   const int level_in = level;
@@ -615,11 +616,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     {
       case MA_ACTION_RADDEEXC:
         #ifdef DEBUG_ON
-          if (debuglevel == 2)
-          {
-            printout("[debug] do_ma:   radiative deexcitation\n");
-            printout("[debug] do_ma:   jumps = %d\n",jumps);
-          }
+        // if (debuglevel == 2)
+        // {
+        //   printout("[debug] do_ma:   radiative deexcitation\n");
+        //   printout("[debug] do_ma:   jumps = %d\n",jumps);
+        // }
         #endif
         do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline);
 
@@ -701,12 +702,12 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       case MA_ACTION_RADRECOMB:
         /// Radiative recombination of MA: emitt a continuum-rpkt
         #ifdef DEBUG_ON
-          if (debuglevel == 2)
-          {
-            printout("[debug] do_ma:   radiative recombination\n");
-            printout("[debug] do_ma:   jumps = %d\n",jumps);
-            printout("[debug] do_ma:   element %d, ion %d, level %d\n",element,ion,level);
-          }
+          // if (debuglevel == 2)
+          // {
+          //   printout("[debug] do_ma:   radiative recombination\n");
+          //   printout("[debug] do_ma:   jumps = %d\n",jumps);
+          //   printout("[debug] do_ma:   element %d, ion %d, level %d\n",element,ion,level);
+          // }
         #endif
         do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current);
         end_packet = true;
