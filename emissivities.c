@@ -151,9 +151,6 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 
 void zero_estimators(void)
 {
-  stat_bf_photon_absorptions = 0.;
-  stat_bf_photon_emissions = 0.;
-
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {

@@ -296,10 +296,8 @@ static void do_macroatom_radrecomb(
 
   const double n_photons_emitted = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
   ionstats[modelgridindex][element][upperion][ION_COUNTER_RADRECOMB_MACROATOM] += n_photons_emitted;
-  stat_bf_photon_emissions += n_photons_emitted;
 
-  const double vol = vol_init_modelcell(modelgridindex) * pow(t_current / tmin, 3);
-
+  // const double vol = vol_init_modelcell(modelgridindex) * pow(t_current / tmin, 3);
   // printout("  bf pkt last_event %d emissiontype %d trueemissiontype %d activatingline %d E/Hnu/V %g\n",
   //    pkt_ptr->last_event, pkt_ptr->emissiontype, pkt_ptr->trueemissiontype, mastate[tid].activatingline, pkt_ptr->e_cmf/H/pkt_ptr->nu_cmf/vol);
 

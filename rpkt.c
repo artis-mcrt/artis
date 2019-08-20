@@ -422,7 +422,6 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
       if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free transition\n");
     #endif
     pkt_ptr->absorptiontype = -2;
-    stat_bf_photon_absorptions += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
 
     /// Update the bf-opacity for the packets current frequency
     //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
