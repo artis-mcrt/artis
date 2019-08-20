@@ -141,6 +141,7 @@ static void update_pellet(
     else if (decay_to_ntlepton)
     {
       vec_scale(pkt_ptr->pos, tdecay / ts);
+      time_step[nts].positron_dep += pkt_ptr->e_cmf;
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;
@@ -247,6 +248,16 @@ void update_packets(const int nts, PKT *pkt)
 
       PKT *restrict pkt_ptr = &pkt[n];
       pkt_ptr->interactions = 0;
+
+      // if (pkt_ptr->type == TYPE_ESCAPE)
+      // {
+      //   printout("packet index %d already escaped. Skipping rest of packets (which are all escaped).\n", n);
+      //   // for (int n2 = n; n2 < npkts; n2++)
+      //   // {
+      //   //   assert(pkt[n2].type == TYPE_ESCAPE);
+      //   // }
+      //   break;
+      // }
       //pkt_ptr->timestep = nts;
 
 //        if (pkt_ptr->number == debug_packet) debuglevel = 2;

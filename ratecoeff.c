@@ -918,7 +918,7 @@ double calculate_ionrecombcoeff(
       nnupperlevel_so_far += nnupperlevel;
       for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
       {
-        if (lower_superlevel_only && (is_nlte(element, lowerion, lower) || lower == 0))
+        if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower)))
           continue;
 
         double recomb_coeff = 0.;
@@ -955,26 +955,6 @@ double calculate_ionrecombcoeff(
              get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), alpha);
   }
   return alpha;
-}
-
-
-double interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T)
-{
-  assert(T >= MINTEMP);
-  int lowerindex = floor(log(T / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE - 1)
-  {
-    int upperindex = lowerindex + 1;
-    double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
-    double T_upper =  MINTEMP * exp(upperindex * T_step_log);
-
-    double f_upper = elements[element].ions[ion].Alpha_sp[upperindex];
-    double f_lower = elements[element].ions[ion].Alpha_sp[lowerindex];
-
-    return f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower);
-  }
-  else
-    return elements[element].ions[ion].Alpha_sp[TABLESIZE-1];
 }
 
 
@@ -1452,13 +1432,13 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   /// correction may be evaluated at T_R!
   double gammacorr = -1;
 
-  // if (DETAILED_BF_ESTIMATORS_ON && nts_global >= 20)
-  // {
-  //   gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
-  //   //gammacorr will be -1 if no estimators available
-  //   if (gammacorr > 0)
-  //     return gammacorr;
-  // }
+  if (DETAILED_BF_ESTIMATORS_ON && nts_global >= 13)
+  {
+    gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+    //gammacorr will be -1 if no estimators available
+    if (gammacorr > 0)
+      return gammacorr;
+  }
 
   if (use_cellhist)
     gammacorr = cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff;
@@ -1493,25 +1473,6 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   }
 
   return gammacorr;
-}
-
-
-double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
-{
-  const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
-  if (lowerindex < TABLESIZE-1)
-  {
-    const int upperindex = lowerindex + 1;
-    const double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper =  MINTEMP * exp(upperindex * T_step_log);
-
-    const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[upperindex];
-    const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[lowerindex];
-
-    return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
-  }
-  else
-    return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[TABLESIZE-1];
 }
 
 

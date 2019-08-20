@@ -44,6 +44,7 @@ static void calculate_double_decay_chain(
 {
   // calculate abundances from double decay, e.g., Ni56 -> Co56 -> Fe56
   // initabund3 is assumed to be zero, so the abundance of species 3 is only from decays of species 2
+
   const double lambda1 = 1 / meanlife1;
   const double lambda2 = 1 / meanlife2;
 
@@ -193,35 +194,36 @@ static void update_abundances(const int modelgridindex, const int timestep, cons
 }
 
 
-static void write_to_estimators_file(FILE *estimators_file, const int n, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates)
+static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates)
 {
-  if (get_numassociatedcells(n) > 0)
+  if (get_numassociatedcells(mgi) > 0)
   {
+    const float T_e = get_Te(mgi);
+    const float nne = get_nne(mgi);
     //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
     //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
-    fprintf(estimators_file, "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g nne %g\n",
-            timestep, n, titer, get_TR(n), get_Te(n), get_W(n), get_TJ(n), modelgrid[n].grey_depth, get_nne(n));
+    fprintf(estimators_file, "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g nne %g tdays %7.2f\n",
+            timestep, mgi, titer, get_TR(mgi), T_e, get_W(mgi), get_TJ(mgi), modelgrid[mgi].grey_depth, nne, time_step[timestep].mid / DAY);
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
     if (NLTE_POPS_ON)  //  && timestep % 2 == 0
-      nltepop_write_to_file(n, timestep);
-
-    const float T_e = get_Te(n);
-    const float nne = get_nne(n);
+    {
+      nltepop_write_to_file(mgi, timestep);
+    }
 
     for (int element = 0; element < nelements; element++)
     {
-      if (get_abundance(n, element) <= 0.) // skip elements with no abundance
+      if (get_abundance(mgi, element) <= 0.) // skip elements with no abundance
         continue;
 
-      fprintf(estimators_file, "populations    Z=%2d", get_element(element));
+      fprintf(estimators_file, "populations        Z=%2d", get_element(element));
       const int nions = get_nions(element);
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(n, element, ion));
+        fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(mgi, element, ion));
       }
       fprintf(estimators_file, "\n");
 
@@ -231,7 +233,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       bool per_gmpop = true;
       const bool lower_superlevel_only = false;
 
-      fprintf(estimators_file, "RRC_LTE_Nahar  Z=%2d", get_element(element));
+      fprintf(estimators_file, "RRC_LTE_Nahar      Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
@@ -258,7 +260,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       assume_lte = false;
 
       // spontaneous radiative recombination rate coefficient (may or may not include stim. recomb)
-      fprintf(estimators_file, "Alpha_R*nne    Z=%2d", get_element(element));
+      fprintf(estimators_file, "AlphaR*nne         Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
@@ -268,12 +270,53 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
 
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_ionrecombcoeff(n, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop, false) * nne);
+                calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, false, printdebug, lower_superlevel_only, per_gmpop, false) * nne);
       }
       fprintf(estimators_file, "\n");
 
+      fprintf(estimators_file, "AlphaR_toSL*nne    Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        const bool printdebug = false;
+        // const bool printdebug = (get_element(element) >= 26);
+
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                calculate_ionrecombcoeff(mgi, T_e, element, ion, assume_lte, false, printdebug, true, per_gmpop, false) * nne);
+      }
+      fprintf(estimators_file, "\n");
+
+      #if (TRACK_ION_STATS)
+      fprintf(estimators_file, "AlphaR_MC*nne      Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        const double alpha_r_mc = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_MACROATOM] + ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_KPKT];
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                alpha_r_mc);
+      }
+      fprintf(estimators_file, "\n");
+
+      fprintf(estimators_file, "BF_escfrac         Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        const double alpha_r_mc = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_MACROATOM] + ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_KPKT];
+        const double alpha_r_mc_abs = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_ABSORBED];
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                1. - alpha_r_mc_abs / alpha_r_mc);
+      }
+      fprintf(estimators_file, "\n");
+      #endif
+
       // stimulated recombination rate coefficient
-      // fprintf(estimators_file, "Alpha_stim*nne Z=%2d", get_element(element));
+      // fprintf(estimators_file, "Alpha_stim*nne   Z=%2d", get_element(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions; ion++)
@@ -288,7 +331,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       // fprintf(estimators_file, "\n");
 
       // thermal collisional recombination rate coefficient
-      // fprintf(estimators_file, "Alpha_C*nne    Z=%2d", get_element(element));
+      // fprintf(estimators_file, "Alpha_C*nne      Z=%2d", get_element(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions; ion++)
@@ -299,7 +342,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
       // }
       // fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "gamma_R_integ  Z=%2d", get_element(element));
+      fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
@@ -308,27 +351,95 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
         const bool printdebug_gammar = false;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
+                calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
       }
       fprintf(estimators_file, "\n");
 
       #if (DETAILED_BF_ESTIMATORS_ON)
-      fprintf(estimators_file, "gamma_R_bfest  Z=%2d", get_element(element));
+      fprintf(estimators_file, "gamma_R_bfest      Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions - 1; ion++)
       {
-        // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
+        // const bool printdebug_gammar = ((get_element(element) == 26 || get_element(element) == 28) && get_ionstage(element, ion) >= 2);
         // const bool printdebug_gammar = (get_element(element) >= 26);
         const bool printdebug_gammar = false;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(n, T_e, element, ion, assume_lte, false, printdebug_gammar, true));
+                calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true));
       }
       fprintf(estimators_file, "\n");
       #endif
 
-      // fprintf(estimators_file, "gamma_C        Z=%2d", get_element(element));
+      #if (TRACK_ION_STATS)
+      fprintf(estimators_file, "gamma_R_MC         Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION]);
+      }
+      fprintf(estimators_file, "\n");
+
+      fprintf(estimators_file, "gamma_R_MC_BF      Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDFREE]);
+      }
+      fprintf(estimators_file, "\n");
+
+      fprintf(estimators_file, "gamma_R_MC_BFsameZ Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT]);
+      }
+      fprintf(estimators_file, "\n");
+
+      fprintf(estimators_file, "gamma_R_MC_BF_i+1  Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSONE]);
+      }
+      fprintf(estimators_file, "\n");
+
+      fprintf(estimators_file, "gamma_R_MC_BFtoSL  Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL]);
+      }
+      fprintf(estimators_file, "\n");
+
+      fprintf(estimators_file, "gamma_R_MC_BB      Z=%2d", get_element(element));
+      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+        fprintf(estimators_file, "              ");
+      for (int ion = 0; ion < nions; ion++)
+      {
+        fprintf(estimators_file, "  %d: %9.3e",
+                get_ionstage(element, ion),
+                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUND]);
+      }
+      fprintf(estimators_file, "\n");
+      #endif
+
+      // fprintf(estimators_file, "gamma_C          Z=%2d", get_element(element));
       // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
       //   fprintf(estimators_file, "              ");
       // for (int ion = 0; ion < nions - 1; ion++)
@@ -341,18 +452,30 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
 
       if (NT_ON)
       {
-        fprintf(estimators_file, "gamma_NT       Z=%2d", get_element(element));
+        fprintf(estimators_file, "gamma_NT           Z=%2d", get_element(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
           fprintf(estimators_file, "              ");
         for (int ion = 0; ion < nions - 1; ion++)
         {
-          const double Y_nt = nt_ionization_ratecoeff(n, element, ion);
+          const double Y_nt = nt_ionization_ratecoeff(mgi, element, ion);
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), Y_nt);
         }
         fprintf(estimators_file, "\n");
+
+        #if (TRACK_ION_STATS)
+        fprintf(estimators_file, "gamma_NT_MC        Z=%2d", get_element(element));
+        for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+          fprintf(estimators_file, "              ");
+        for (int ion = 0; ion < nions - 1; ion++)
+        {
+          fprintf(estimators_file, "  %d: %9.3e",
+                  get_ionstage(element, ion),
+                  ionstats[mgi][element][ion][ION_COUNTER_NTION]);
+        }
+        fprintf(estimators_file, "\n");
+        #endif
       }
     }
-
 
     #ifndef FORCE_LTE
       #if (!NO_LUT_PHOTOION)
@@ -362,7 +485,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
-            fprintf(estimators_file,"%g ", corrphotoionrenorm[n*nelements*maxion+element*maxion+ion]);
+            fprintf(estimators_file,"%g ", corrphotoionrenorm[mgi*nelements*maxion+element*maxion+ion]);
           }
         }
         fprintf(estimators_file, "\n");
@@ -372,7 +495,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
-            fprintf(estimators_file,"%g ", gammaestimator[n*nelements*maxion+element*maxion+ion]);
+            fprintf(estimators_file,"%g ", gammaestimator[mgi*nelements*maxion+element*maxion+ion]);
           }
         }
         fprintf(estimators_file,"\n");
@@ -387,7 +510,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int n, const i
   else
   {
     // modelgrid cells which are not represented in the simulation grid
-    fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n", timestep, n);
+    fprintf(estimators_file, "timestep %d modelgridindex %d EMPTYCELL\n", timestep, mgi);
   }
   fprintf(estimators_file,"\n");
 
@@ -462,9 +585,10 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 
 static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates_t *heatingcoolingrates)
 {
+  // needed for the T_e solver, but only depends on the radiation field, which is fixed during the iterations below
   calculate_bfheatingcoeffs(n);
 
-  const double covergence_tolerance = 0.02;
+  const double covergence_tolerance = 0.04;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
   {
     const time_t sys_time_start_spencerfano = time(NULL);
@@ -579,11 +703,27 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
 }
 
 
+#if (TRACK_ION_STATS)
+static void normalise_ion_estimators(const int mgi, const double deltat, const double deltaV)
+{
+  for (int element = 0; element < nelements; element++)
+  {
+    for (int ion = 0; ion < get_nions(element); ion++)
+    {
+      for (int i = 0; i < ION_COUNTER_COUNT; i++)
+      {
+        // convert photon event counter into a rate coefficient
+        ionstats[mgi][element][ion][i] *= 1. / deltat / (deltaV * ionstagepop(mgi, element, ion));
+      }
+    }
+  }
+}
+#endif
+
+
+#if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
 static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, const double estimator_normfactor)
 {
-  #if (DETAILED_BF_ESTIMATORS_ON)
-  radfield_normalise_bf_estimators(n, estimator_normfactor / H);
-  #endif
   #if (!NO_LUT_PHOTOION)
     for (int element = 0; element < nelements; element++)
     {
@@ -664,6 +804,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
     }
   #endif
 }
+#endif
 
 
 #ifdef DO_TITER
@@ -799,6 +940,10 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
           radfield_titer_J(n);
         #endif
 
+        #if (TRACK_ION_STATS)
+        normalise_ion_estimators(n, deltat, deltaV);
+        #endif
+
         #ifndef FORCE_LTE
         if (initial_iteration || modelgrid[n].thick == 1)
         #endif
@@ -836,7 +981,13 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
           // Get radiation field parameters out of the full-spectrum and binned J and nuJ estimators
           radfield_fit_parameters(n, nts);
 
+          #if (DETAILED_BF_ESTIMATORS_ON)
+          radfield_normalise_bf_estimators(n, estimator_normfactor / H);
+          #endif
+
+          #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
           update_gamma_corrphotoionrenorm_bfheating_estimators(n, estimator_normfactor);
+          #endif
 
           solve_Te_nltepops(n, nts, titer, heatingcoolingrates);
         }

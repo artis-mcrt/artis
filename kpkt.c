@@ -600,7 +600,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       //   ///Emitt like a BB
       //   pkt_ptr->nu_cmf = sample_planck(T_e);
       // }
-
+      const double n_photons_emitted = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+      ionstats[modelgridindex][element][ion + 1][ION_COUNTER_RADRECOMB_KPKT] += n_photons_emitted;
         //if (pkt_ptr->last_event == 4)
         #ifndef FORCE_LTE
           //kbfcount[pkt_ptr->where] += pkt_ptr->e_cmf;

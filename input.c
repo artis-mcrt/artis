@@ -73,7 +73,6 @@ static void read_phixs_data(void)
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       const int lowerlevel = lowerlevel_in - groundstate_index_in;
-      assert(upperion >= 0);
       assert(lowerionstage >= 0);
       assert(lowerlevel >= 0);
       /// store only photoionization crosssections for ions that are part of the current model atom
@@ -849,6 +848,33 @@ static void read_atomicdata_files(void)
         tottransitions = 0;
       }
 
+      //TODO: REMOVE
+      // if (adata_Z_in == 26 && ionstage == 1)
+      // {
+      //   nlevelsmax = 5;
+      // }
+      // if (adata_Z_in == 26 && ionstage == 2)
+      // {
+      //   nlevelsmax = 5;
+      // }
+      // if (adata_Z_in == 26 && ionstage == 3)
+      // {
+      //   nlevelsmax = 5;
+      // }
+      // if (adata_Z_in == 26 && ionstage >= 4)
+      // {
+      //   nlevelsmax = 80;
+      // }
+      // else if (adata_Z_in == 26 && ionstage == 5)
+      // {
+      //   nlevelsmax = 5;
+      // }
+      // nlevelsmax = 1;
+      // if (nlevelsmax > 50)
+      // {
+      //   nlevelsmax = 50;
+      // }
+
       assert(transdata_Z_in == Z);
       assert(transdata_ionstage_in == ionstage);
 
@@ -869,16 +895,16 @@ static void read_atomicdata_files(void)
       // use 0 to disable adding extra transitions
       int nlevels_requiretransitions;
       int nlevels_requiretransitions_upperlevels;
-      // if (((Z == 26 || Z == 28) && ionstage >= 1))
+      if (((Z == 26 || Z == 28) && ionstage >= 1))
       {
         nlevels_requiretransitions = 80;
         nlevels_requiretransitions_upperlevels = nlevelsmax;
       }
-      // else
-      // {
-      //   nlevels_requiretransitions = 0;
-      //   nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
-      // }
+      else
+      {
+        nlevels_requiretransitions = 0;
+        nlevels_requiretransitions_upperlevels = nlevelsmax; // no effect if previous line is zero
+      }
       if (nlevels_requiretransitions > nlevelsmax)
         nlevels_requiretransitions = nlevelsmax;
       if (nlevels_requiretransitions_upperlevels > nlevelsmax)
@@ -893,6 +919,8 @@ static void read_atomicdata_files(void)
       elements[element].ions[ion].ionisinglevels = 0;
       elements[element].ions[ion].maxrecombininglevel = 0;
       elements[element].ions[ion].ionpot = ionpot * EV;
+      elements[element].ions[ion].nlevels_groundterm = 0;
+
 //           if ((elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
 //           {
 //             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
@@ -1580,9 +1608,9 @@ static void read_atomicdata(void)
       int photoiontransitions = 0;
       for (int level = 0; level < get_nlevels(element,ion); level++)
         photoiontransitions += get_nphixstargets(element,ion,level);
-      printout("[input.c]     ion_stage %d with %4d levels (%d in groundterm, %4d ionising) and %d photoionisation transitions\n",
+      printout("[input.c]     ion_stage %d with %4d levels (%d in groundterm, %4d ionising) and %d photoionisation transitions (epsilon_ground %7.2f eV)\n",
                get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_groundterm(element, ion),
-               get_ionisinglevels(element, ion), photoiontransitions);
+               get_ionisinglevels(element, ion), photoiontransitions, epsilon(element, ion, 0) / EV);
       includedlevels += get_nlevels(element,ion);
       includedionisinglevels += get_ionisinglevels(element,ion);
       includedphotoiontransitions += photoiontransitions;

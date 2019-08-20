@@ -151,10 +151,14 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 
 void zero_estimators(void)
 {
+  stat_bf_photon_absorptions = 0.;
+  stat_bf_photon_emissions = 0.;
+
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
     radfield_zero_estimators(n);
+
     #ifndef FORCE_LTE
       ffheatingestimator[n] = 0.;
       colheatingestimator[n] = 0.;
@@ -174,6 +178,12 @@ void zero_estimators(void)
       {
         for (int ion = 0; ion < maxion; ion++)
         {
+          #if (TRACK_ION_STATS)
+          for (int i = 0; i < ION_COUNTER_COUNT; i++)
+          {
+            ionstats[n][element][ion][i] = 0.;
+          }
+          #endif
           #if (!NO_LUT_PHOTOION)
             gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
           #endif

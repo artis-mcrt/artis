@@ -356,7 +356,7 @@ static double get_event(
 }
 
 
-static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread)
+static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
 {
   const double nu = pkt_ptr->nu_cmf;
 
@@ -368,7 +368,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
   /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
   double zrand = gsl_rng_uniform(rng);
   #ifdef DEBUG_ON
-    // if (debuglevel == 2)
+    if (debuglevel == 2)
     {
       printout("[debug] rpkt_event:   r-pkt undergoes a continuum transition\n");
       printout("[debug] rpkt_event:   zrand*kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n", zrand * kappa_cont, sigma, kappa_ff, kappa_bf);
@@ -422,6 +422,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
       if (debuglevel == 2) printout("[debug] rpkt_event:   bound-free transition\n");
     #endif
     pkt_ptr->absorptiontype = -2;
+    stat_bf_photon_absorptions += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
 
     /// Update the bf-opacity for the packets current frequency
     //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
@@ -450,6 +451,39 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
           printout("[debug] rpkt_event:   bound-free: nu_edge %g, nu %g\n", nu_edge, nu);
         }
 #endif
+        #if (TRACK_ION_STATS)
+        const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+
+        ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION] += n_photons_absorbed;
+
+        const int et = pkt_ptr->emissiontype;
+        if (et >= 0)
+        {
+          ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUND] += n_photons_absorbed;
+        }
+        else
+        {
+          ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDFREE] += n_photons_absorbed;
+
+          const int bfindex = -1*et - 1;
+          const int emissionelement = bflist[bfindex].elementindex;
+          const int emissionlowerion = bflist[bfindex].ionindex;
+          const int emissionlowerlevel = bflist[bfindex].levelindex;
+          ionstats[modelgridindex][emissionelement][emissionlowerion + 1][ION_COUNTER_RADRECOMB_ABSORBED] += n_photons_absorbed;
+          if (emissionelement == element)
+          {
+            ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT] += n_photons_absorbed;
+            if (emissionlowerion == ion)
+            {
+              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSONE] += n_photons_absorbed;
+            }
+          }
+          if (level_isinsuperlevel(emissionelement, emissionlowerion, emissionlowerlevel))
+          {
+            ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL] += n_photons_absorbed;
+          }
+        }
+        #endif
 
         /// and decide whether we go to ionisation energy
         const double zrand3 = gsl_rng_uniform(rng);
@@ -1012,7 +1046,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
         {
-          rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont[tid]);
+          rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont[tid], mgi);
         }
         else
         {

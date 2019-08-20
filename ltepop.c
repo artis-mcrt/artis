@@ -99,6 +99,26 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
 }
 
 
+static double interpolate_ions_spontrecombcoeff(const int element, const int ion, const double T)
+{
+  assert(T >= MINTEMP);
+  int lowerindex = floor(log(T / MINTEMP) / T_step_log);
+  if (lowerindex < TABLESIZE - 1)
+  {
+    int upperindex = lowerindex + 1;
+    double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
+    double T_upper =  MINTEMP * exp(upperindex * T_step_log);
+
+    double f_upper = elements[element].ions[ion].Alpha_sp[upperindex];
+    double f_lower = elements[element].ions[ion].Alpha_sp[lowerindex];
+
+    return f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T - T_lower);
+  }
+  else
+    return elements[element].ions[ion].Alpha_sp[TABLESIZE-1];
+}
+
+
 double phi(const int element, const int ion, const int modelgridindex)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
