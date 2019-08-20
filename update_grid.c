@@ -375,7 +375,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "gamma_R_MC         Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions; ion++)
+      for (int ion = 0; ion < nions - 1; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
@@ -386,7 +386,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "gamma_R_MC_BF      Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions; ion++)
+      for (int ion = 0; ion < nions - 1; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
@@ -394,21 +394,21 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
       fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "gamma_R_MC_BFsameZ Z=%2d", get_element(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions; ion++)
-      {
-        fprintf(estimators_file, "  %d: %9.3e",
-                get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT]);
-      }
-      fprintf(estimators_file, "\n");
+      // fprintf(estimators_file, "gamma_R_MC_BFsameZ Z=%2d", get_element(element));
+      // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+      //   fprintf(estimators_file, "              ");
+      // for (int ion = 0; ion < nions; ion++)
+      // {
+      //   fprintf(estimators_file, "  %d: %9.3e",
+      //           get_ionstage(element, ion),
+      //           ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT]);
+      // }
+      // fprintf(estimators_file, "\n");
 
       fprintf(estimators_file, "gamma_R_MC_BF_i+1  Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions; ion++)
+      for (int ion = 0; ion < nions - 1; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
@@ -419,7 +419,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "gamma_R_MC_BFtoSL  Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions; ion++)
+      for (int ion = 0; ion < nions - 1; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
@@ -430,7 +430,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "gamma_R_MC_BB      Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions; ion++)
+      for (int ion = 0; ion < nions - 1; ion++)
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
