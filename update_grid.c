@@ -12,6 +12,7 @@
 #include "ratecoeff.h"
 #include "thermalbalance.h"
 #include "update_grid.h"
+#include "omp_timer.h"
 
 
 extern inline double get_abundance(int modelgridindex, int element);
@@ -1041,25 +1042,27 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 //     setvbuf(bfcount_file, NULL, _IOLBF, 1);
 //   #endif
 
-  #ifdef _OPENMP
-  #pragma omp parallel
-    //copyin(nuJ,J,rhosum,T_Rsum,T_esum,Wsum,associatedcells)
-  #endif
-  {
+  //#ifdef _OPENMP
+  //#pragma omp parallel
+  //  //copyin(nuJ,J,rhosum,T_Rsum,T_esum,Wsum,associatedcells)
+  //#endif
+  OMP_PARALLEL(
+  //{
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
     use_cellhist = false;
     cellhistory_reset(-99, true);
 
     /// Updating cell information
-    #ifdef _OPENMP
-      #pragma omp for schedule(dynamic)
-      //T_D,W_D,nne,deltarho_old,deltaT_R_old,deltaT_e_old, deltarho,deltaT_R,deltaT_e,i,rhoindex,T_Rindex,T_eindex,ncl)
-    #endif
+    //#ifdef _OPENMP
+    //  #pragma omp for schedule(dynamic)
+    //  //T_D,W_D,nne,deltarho_old,deltaT_R_old,deltaT_e_old, deltarho,deltaT_R,deltaT_e,i,rhoindex,T_Rindex,T_eindex,ncl)
+    //#endif
     //for (n = nstart; n < nstart+nblock; n++)
     //for (ncl = 0; ncl < nblock; ncl++)
     //for (ncl = nstart; ncl < nstart+nblock; ncl++)
     //for (n = nstart; n < nstart+nblock; n++)
+    OMP_FOR_DYNAMIC
     for (int mgi = 0; mgi < npts_model; mgi++)
     {
       /// Check if this task should work on the current model grid cell.
@@ -1069,12 +1072,12 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps);
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
-        #ifdef _OPENMP
-        #pragma omp critical(estimators_file)
-        #endif
-        {
-          write_to_estimators_file(estimators_file, mgi, nts, titer);
-        }
+        // #ifdef _OPENMP
+        // #pragma omp critical(estimators_file)
+        // #endif
+        // {
+        //   write_to_estimators_file(estimators_file, mgi, nts, titer);
+        // }
       }
       else
       {
@@ -1091,7 +1094,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// the use of the cellhistory for all OpenMP tasks, in what follows (update_packets)
     use_cellhist = true;
 
-  } /// end OpenMP parallel section
+  //} /// end OpenMP parallel section
+  )
 
   // alterative way to write out estimators. this keeps the modelgrid cells in order but heatingrates are not valid.
   // #ifdef _OPENMP

@@ -2148,7 +2148,7 @@ void input(int rank)
   }
 
   /// Set number of packets, outer and middle iterations
-  npkts = MPKTS;
+  npkts = MPKTS * omp_get_max_threads();
   n_out_it = 10;
   n_middle_it = 1;
 /*  #ifdef FORCE_LTE

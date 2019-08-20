@@ -8,6 +8,7 @@
 #include "update_packets.h"
 #include "rpkt.h"
 #include "vectors.h"
+#include "omp_timer.h"
 
 
 extern void update_cell(const int mgi);
@@ -226,15 +227,17 @@ void update_packets(const int nts, PKT *pkt)
 
   printout("start of parallel update_packets loop %d\n",time(NULL));
   /// Initialise the OpenMP reduction target to zero
-  #ifdef _OPENMP
-    #pragma omp parallel
-    //copyin(debuglevel,nuJ,J)
-  #endif
-  {
+  //#ifdef _OPENMP
+  //  #pragma omp parallel
+  //  //copyin(debuglevel,nuJ,J)
+  //#endif
+  OMP_PARALLEL(
+  //{
     // time_t time_of_last_packet_printout = 0;
-    #ifdef _OPENMP
-    #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_ntcollexc,ma_stat_activation_ntcollion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_activation_fb,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,nt_stat_from_gamma,k_stat_from_earlierdecay)
-    #endif
+    //#ifdef _OPENMP
+    //#pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_ntcollexc,ma_stat_activation_ntcollion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_activation_fb,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,nt_stat_from_gamma,k_stat_from_earlierdecay)
+    _Pragma("omp for schedule(dynamic) nowait reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_ntcollexc,ma_stat_activation_ntcollion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_activation_fb,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,nt_stat_from_gamma,k_stat_from_earlierdecay)")
+    //#endif
     for (int n = 0; n < npkts; n++)
     {
       // if ((time(NULL) - time_of_last_packet_printout > 1) || n == npkts - 1)
@@ -322,7 +325,8 @@ void update_packets(const int nts, PKT *pkt)
 
     }
     printout("last packet updated at %d\n",time(NULL));
-  }
+  //}
+  )
 
   printout("end of update_packets parallel for loop %d\n",time(NULL));
 }

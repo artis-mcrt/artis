@@ -11,6 +11,7 @@
    explosions. */
 
 #include <unistd.h>
+#include <omp.h>
 #include "sn3d.h"
 #include "threadprivate.h"
 #include "emissivities.h"
@@ -531,7 +532,7 @@ int main(int argc, char** argv)
   const time_t real_time_start = time(NULL);
   printout("time at start %d\n", real_time_start);
 
-  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
+  PKT *const packets = (PKT *) calloc(MPKTS * omp_get_max_threads(), sizeof(PKT));
   assert(packets != NULL);
 
   #ifndef GIT_BRANCH

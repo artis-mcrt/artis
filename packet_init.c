@@ -235,7 +235,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   }
   cont[ngrid] = norm;
 
-  if (npkts > MPKTS)
+  if (npkts > MPKTS * omp_get_max_threads())
   {
     printout("Too many packets. Abort.\n");
     abort();
@@ -328,7 +328,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
 
 void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 {
-  printout("mem_usage: packets occupy %.1f MB\n", MPKTS * (sizeof(PKT *) + sizeof(PKT)) / 1024. / 1024.);
+  printout("mem_usage: packets occupy %.1f MB\n", MPKTS * omp_get_max_threads() * (sizeof(PKT *) + sizeof(PKT)) / 1024. / 1024.);
   if (simulation_continued_from_saved)
     return;
 
@@ -336,7 +336,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   setup_packets(pktnumberoffset, pkt);
 
   /* Consistency check to debug read/write
-  PKT testpkt[MPKTS];
+  PKT testpkt[MPKTS * omp_get_max_threads()];
   int n;
   if (i > 0)
   {

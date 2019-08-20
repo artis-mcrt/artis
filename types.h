@@ -15,11 +15,11 @@
 
 // Max number of input grid cells
 //125000 //12800 //12800 //125 //3200 //200 //200 //200 //8192 //125 //125000 //200 //125000 //8200 //200 //8200 //200 //125000
-#define MMODELGRID 177
+#define MMODELGRID 125000
 
 // Maximum number of energy packets in calculation.
 //25000 //40000 //4000 //10000 //10000 //1250 //10000 //100000 //5000 //15625 //15625
-#define MPKTS 3000000
+#define MPKTS 10000
 
 //26 //27 //9
 #define MELEMENTS 17
@@ -28,7 +28,7 @@
 #define MIONS 5
 
 // Max number of OpenMP threads
-#define MTHREADS 8
+#define MTHREADS 36
 
 
 /// Coolinglist
