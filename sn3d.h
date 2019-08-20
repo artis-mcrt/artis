@@ -11,29 +11,29 @@
 // #define FORCE_LTE
 
 /// non-thermal ionisation
-static const bool NT_ON = false;
+static const bool NT_ON = true;
 
 /// use the detailed Spencer-Fano solver instead of the work function approximation
-static const bool NT_SOLVE_SPENCERFANO = false;
+static const bool NT_SOLVE_SPENCERFANO = true;
 
 // non-LTE population solver
-static const bool NLTE_POPS_ON = false;
+static const bool NLTE_POPS_ON = true;
 
 // solve the NLTE population matrix equation simultaneously for levels of all ions of an element
-static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = false;
+static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 
 // maximum number of NLTE/Te/Spencer-Fano iterations
 static const int NLTEITER = 30;
 
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
-static const bool MULTIBIN_RADFIELD_MODEL_ON = false;
+static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 // store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
 #define DETAILED_LINE_ESTIMATORS_ON false
 
 // store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON false
+#define DETAILED_BF_ESTIMATORS_ON true
 
 // extremely slow and memory consuming - for debugging only
 // not safe for MPI or OpenMP - single process and single thread only!
@@ -440,6 +440,26 @@ int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
 
+#define TRACK_ION_STATS true
+
+#if TRACK_ION_STATS
+enum ionstatscounters {
+  ION_COUNTER_RADRECOMB_MACROATOM = 0,
+  ION_COUNTER_RADRECOMB_KPKT = 1,
+  ION_COUNTER_RADRECOMB_ABSORBED = 2,
+  ION_COUNTER_NTION = 3,
+  ION_COUNTER_PHOTOION = 4,
+  ION_COUNTER_PHOTOION_FROMBOUNDFREE = 5,
+  ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT = 6,
+  ION_COUNTER_PHOTOION_FROMBFIONPLUSONE = 7,
+  ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL = 8,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUND = 9,
+  ION_COUNTER_COUNT = 10
+};
+
+double ionstats[MMODELGRID][MELEMENTS][MIONS][ION_COUNTER_COUNT];
+#endif
+
 int maxion;
 // FILE *restrict tau_file;
 // FILE *restrict tb_file;
@@ -459,6 +479,8 @@ extern FILE *restrict output_file;
 #ifdef _OPENMP
   #pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
 #endif
+
+
 
 inline int printout(const char *restrict format, ...)
 {

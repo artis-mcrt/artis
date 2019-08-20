@@ -75,6 +75,7 @@ static FILE *initialise_linestat_file(void)
   return linestat_file;
 }
 
+
 static void pkt_action_counters_reset(void)
 {
   ma_stat_activation_collexc = 0;
@@ -637,6 +638,7 @@ int main(int argc, char** argv)
 
   /// As a precaution, explicitly zero all the estimators here
   zero_estimators();
+
   printout("time after zero estimators %d\n",time(NULL));
 
   /// Record the chosen syn_dir
