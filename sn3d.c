@@ -99,11 +99,10 @@ static void pkt_action_counters_reset(void)
   k_stat_to_r_bb = 0;
   k_stat_from_ff = 0;
   k_stat_from_bf = 0;
-  nt_stat_from_gamma = 0;
   k_stat_from_earlierdecay = 0;
-  nt_stat_to_ionization = 0;
-  nt_stat_to_excitation = 0;
-  nt_stat_to_kpkt = 0;
+
+  nt_reset_stats();
+
   escounter = 0;
   cellcrossings = 0;
   updatecellcounter = 0;
@@ -114,7 +113,7 @@ static void pkt_action_counters_reset(void)
 }
 
 
-static void pkt_action_counters_printout(const PKT *const pkt)
+static void pkt_action_counters_printout(const PKT *const pkt, const int nts)
 {
   int allpktinteractions = 0;
   for (int i = 0; i < npkts; i++)
@@ -123,6 +122,13 @@ static void pkt_action_counters_printout(const PKT *const pkt)
   }
   const double meaninteractions = (double) allpktinteractions / npkts;
   printout("mean number of interactions per packet = %g\n", meaninteractions);
+
+  const double deltat = time_step[nts].width;
+  double modelvolume = 0.;
+  for (int mgi = 0; mgi < npts_model; mgi++)
+  {
+    modelvolume += vol_init_modelcell(mgi) * pow(time_step[nts].mid / tmin, 3);
+  }
 
   /// Printout packet statistics
   printout("ma_stat_activation_collexc = %d\n", ma_stat_activation_collexc);
@@ -149,10 +155,7 @@ static void pkt_action_counters_printout(const PKT *const pkt)
   printout("k_stat_from_bf = %d\n", k_stat_from_bf);
   printout("k_stat_from_earlierdecay = %d\n", k_stat_from_earlierdecay);
 
-  printout("nt_stat_from_gamma = %d\n", nt_stat_from_gamma);
-  printout("nt_stat_to_ionization = %d\n", nt_stat_to_ionization);
-  printout("nt_stat_to_excitation = %d\n", nt_stat_to_excitation);
-  printout("nt_stat_to_kpkt = %d\n", nt_stat_to_kpkt);
+  nt_print_stats(nts, modelvolume, deltat);
 
   printout("escounter = %d\n", escounter);
   printout("cellcrossing  = %d\n", cellcrossings);
@@ -1017,7 +1020,7 @@ int main(int argc, char** argv)
           }
           */
 
-          pkt_action_counters_printout(packets);
+          pkt_action_counters_printout(packets, nts);
 
           #ifdef MPI_ON
             MPI_Barrier(MPI_COMM_WORLD); // hold all processes once the packets are updated
