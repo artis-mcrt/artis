@@ -484,6 +484,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
     // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
 
   //  #ifdef DEBUG_ON
+      int abort_flag = 0;
       if (element >= nelements || ion >= get_nions(element))
       {
         printout("do_kpkt: problem selecting a cooling process ... abort\n");
@@ -498,8 +499,10 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
             printout("do_kpkt: element %d, ion %d, coolingcontr %g\n",element,ion,modelgrid[modelgridindex].cooling[element].contrib[ion]);
           }
         }
-        abort();
+        fflush(stdout);
+        abort_flag = 1;
       }
+      if(abort_flag) abort();
   //  #endif
 
     // debuglevel = 2;

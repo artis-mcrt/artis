@@ -950,7 +950,9 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
 }
 
 
-void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer)
+//void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer)
+// ALEXEI: try rearranging order of which grid cells are evaluated
+void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, int *grid_rank_array, const int titer)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 /// m timestep
@@ -1067,7 +1069,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     {
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
-      if (mgi >= nstart && mgi < nstart + ndo)
+      //if (mgi >= nstart && mgi < nstart + ndo)
+      if (grid_rank_array[mgi] == my_rank)
       {
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps);
 

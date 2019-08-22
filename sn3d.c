@@ -473,6 +473,15 @@ static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, i
   }
 }
 
+static void assign_grid_index_array(int *indices, int n_cells, int n_ranks, int timestep)
+{
+  // Seed a basic random number generator and generate sequence of random numbers
+  srand(timestep);
+  for (int i = 0; i < n_cells; i++) {
+    indices[i] = i < n_cells/2 ? 0 : 1;
+    //indices[i] = rand() % n_ranks;
+  }
+}
 
 int main(int argc, char** argv)
 // Main - top level routine.
@@ -610,6 +619,10 @@ int main(int argc, char** argv)
   /// Get input stuff
   input(my_rank);
 
+  // ALEXEI: Allocate array of grid indices
+  int *indices;
+  indices = malloc(npts_model*sizeof(int));
+
   /// Initialise linestat file
   #ifdef RECORD_LINESTAT
   FILE *linestat_file;
@@ -703,7 +716,7 @@ int main(int argc, char** argv)
         abort();
       }
     #endif
-
+      
 
     /** That's the end of the initialisation. */
     /** *******************************************/
@@ -769,6 +782,16 @@ int main(int argc, char** argv)
 //        const time_t time_after_barrier = time(NULL);
 //        printout("timestep %d: time before barrier %d, time after barrier %d\n", nts, time_before_barrier, time_after_barrier);
       #endif
+
+
+      // Generate array determining which ranks do which cells
+      if (my_rank == 0) {
+        assign_grid_index_array(indices, npts_model, nprocs, nts);
+        for (int j = 0; j < npts_model; j++) printout("grid index array %d %d \n", j, indices[j]);
+      }
+
+      // Communicate grid index array to all ranks
+      MPI_Bcast(indices, npts_model, MPI_INT, 0, MPI_COMM_WORLD);
 
       #ifdef DO_TITER
         // The first time step must solve the ionisation balance in LTE
@@ -847,7 +870,9 @@ int main(int argc, char** argv)
           #endif
         #endif
 
-        update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer);
+        //update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer);
+        // ALEXEI: try rearranging order of grid cells computed
+        update_grid(estimators_file, nts, nts_prev, my_rank, indices, titer);
 
         const time_t sys_time_finish_update_grid = time(NULL);
         printout("timestep %d: update_grid: process %d finished update_grid at %d (took %d seconds)\n",
@@ -1303,6 +1328,9 @@ int main(int argc, char** argv)
   #endif
 
   free(packets);
+
+  // ALEXEI: clean up
+  free(indices);
 
   return 0;
 }
