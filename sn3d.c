@@ -381,6 +381,20 @@ static void mpi_reduce_estimators(int my_rank)
   {
     MPI_Allreduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
   }
+
+  /// Communicate gamma and positron deposition and write to file
+  for (int i = 0; i < ntstep; i++)
+  {
+    MPI_Allreduce(MPI_IN_PLACE, &time_step[i].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &time_step[i].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    if (my_rank == 0)
+    {
+      time_step[i].gamma_dep /= nprocs;
+      time_step[i].positron_dep /= nprocs;
+    }
+  }
+
   MPI_Barrier(MPI_COMM_WORLD);
 }
 #endif
@@ -1054,6 +1068,19 @@ int main(int argc, char** argv)
             }
           }
 
+          if (my_rank == 0)
+          {
+            FILE *dep_file = fopen_required("deposition.out", "w");
+            for (int i = 0; i <= nts; i++)
+            {
+              fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid / DAY,
+                      time_step[i].gamma_dep / time_step[i].width / LSUN,
+                      time_step[i].positron_dep / time_step[i].width / LSUN,
+                      (time_step[i].gamma_dep + time_step[i].positron_dep) / time_step[i].width / LSUN);
+            }
+            fclose(dep_file);
+          }
+
           #ifdef MPI_ON
             printout("timestep %d: time after estimators have been communicated %d (took %d seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);
           #endif
@@ -1251,35 +1278,6 @@ int main(int argc, char** argv)
     printout("No need for restart\n");
   }
 
-
-  #ifdef MPI_ON
-    /// Communicate gamma and positron deposition and write to file
-    for (int i = 0; i < ntstep; i++)
-    {
-      double depvalue = 0.;
-      MPI_Reduce(&time_step[i].gamma_dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0)
-        time_step[i].gamma_dep = depvalue / nprocs;
-      MPI_Reduce(&time_step[i].positron_dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0)
-        time_step[i].positron_dep = depvalue / nprocs;
-      MPI_Reduce(&time_step[i].dep, &depvalue, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-      if (my_rank == 0)
-        time_step[i].dep = depvalue / nprocs;
-    }
-  #endif
-  if (my_rank == 0)
-  {
-    FILE *dep_file = fopen_required("deposition.out", "w");
-    for (int i = 0; i < ntstep; i++)
-    {
-      fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid / DAY,
-              time_step[i].gamma_dep / time_step[i].width / LSUN,
-              time_step[i].positron_dep / time_step[i].width / LSUN,
-              time_step[i].dep / time_step[i].width / LSUN);
-    }
-    fclose(dep_file);
-  }
 
   printout("simulation finished at %d\n", time(NULL));
   //fclose(tb_file);

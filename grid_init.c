@@ -826,6 +826,15 @@ static void read_grid_restart_data(const int timestep)
   printout("READIN GRID SNAPSHOT from %s\n", filename);
   FILE *restrict gridsave_file = fopen_required(filename, "r");
 
+  int ntstep_in;
+  fscanf(gridsave_file, "%d ", &ntstep_in);
+  assert(ntstep_in = ntstep);
+
+  for (int nts = 0; nts < ntstep; nts++)
+  {
+    fscanf(gridsave_file, "%lg %lg ", &time_step[nts].gamma_dep, &time_step[nts].positron_dep);
+  }
+
   int timestep_in;
   fscanf(gridsave_file, "%d ", &timestep_in);
   assert(timestep_in = timestep);

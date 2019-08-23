@@ -1730,6 +1730,13 @@ void write_grid_restart_data(const int timestep)
 
   FILE *restrict gridsave_file = fopen_required(filename, "w");
 
+  fprintf(gridsave_file, "%d ", ntstep);
+
+  for (int i = 0; i < ntstep; i++)
+  {
+    fprintf(gridsave_file, "%lg %lg ", time_step[i].gamma_dep, time_step[i].positron_dep);
+  }
+
   fprintf(gridsave_file, "%d ", timestep);
 
   for (int mgi = 0; mgi < npts_model; mgi++)
