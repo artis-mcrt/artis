@@ -44,7 +44,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
           #ifdef _OPENMP
             #pragma omp atomic
           #endif
-          time_step[nts].gamma_dep += pkt_ptr->e_cmf; ///***??
+          time_step[nts].gamma_dep += pkt_ptr->e_cmf;
         }
         break;
 

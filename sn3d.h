@@ -246,7 +246,6 @@ struct time
   double mid; // Mid time in step - computed logarithmically.
   double gamma_dep; // cmf gamma ray energy deposition rate             ///ATOMIC
   double positron_dep; // cmf positron energy deposition rate           ///ATOMIC
-  double dep; // instantaneous energy deposition rate in all decays     ///ATOMIC
   double cmf_lum; // cmf luminosity light curve                         ///ATOMIC
   int pellet_decays; // Number of pellets that decay in this time step. ///ATOMIC
 } time_step[MTSTEP];
