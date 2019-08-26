@@ -82,6 +82,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 {
   double error = 0.0;
   const double epsrel = 1e-3;
+  const double epsrelwarning = 1e-1;
   const double epsabs = 0.;
 
   // const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -120,9 +121,10 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
   //    GSLWSIZE, GSL_INTEG_GAUSS61, workspace_bfheating, &bfheating, &error);
 
-  if (status != 0)
+  if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning))
   {
-    printout("bf_heating integrator status %d. Integral value %g.\n", status, bfheating);
+    printout("bf_heating integrator gsl warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
+             status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, bfheating, error);
   }
   gsl_set_error_handler(previous_handler);
 
