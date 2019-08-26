@@ -1230,7 +1230,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
   }
 
-  *tau_lines_out = tot_tau_cont;
+  *tau_lines_out = tot_tau_lines;
   *tau_cont_out = tot_tau_cont;
   const double tau_escape = tot_tau_cont + tot_tau_lines;
   const double escape_prob = exp(-tau_escape);
