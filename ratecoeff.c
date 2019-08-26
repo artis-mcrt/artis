@@ -1352,6 +1352,7 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 static double calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   const double epsrel = 1e-3;
+  const double epsrelwarning = 1e-1;
   const double epsabs = 0.;
 
   // const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -1398,25 +1399,13 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 
   gsl_set_error_handler(previous_handler);
 
-  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-
-  // if (get_element(element) == 26 && get_ionstage(element, ion) == 3) //  && level >= get_nlevels_groundterm(element, ion)
-  // {
-  //   gammacorr *= 0.5;
-  // }
-
-  // if (gammacorr < 0)
-  // {
-  //   printout("corrphotoioncoeff negative modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d gamma %g\n",
-  //            modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr);
-  // }
-
-  if (status != 0)
+  if (status != 0 && (status != 18 || (error / gammacorr > epsrelwarning))
   {
-    error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-    printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d gamma %g error %g\n",
+    printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
+
+  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
   return gammacorr;
 }
