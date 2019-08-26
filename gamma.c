@@ -284,6 +284,7 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   //printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 }
 
+
 static double sigma_compton_partial(const double x, const double f)
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
@@ -702,7 +703,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
           return t_current;
         }
       }
-      else if ((kap_compton + kap_photo_electric) > (zrand*kap_tot))
+      else if ((kap_compton + kap_photo_electric) > (zrand * kap_tot))
       {
         // Photo electric effect - makes it a k-packet for sure.
         pkt_ptr->type = TYPE_NTLEPTON;
@@ -716,7 +717,7 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
         nt_stat_from_gamma++;
         return t_current;
       }
-      else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand*kap_tot))
+      else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
       {
         // It's a pair production
         pair_prod(pkt_ptr, t_current);

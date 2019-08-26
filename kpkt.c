@@ -600,24 +600,14 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       //   ///Emitt like a BB
       //   pkt_ptr->nu_cmf = sample_planck(T_e);
       // }
-      const double n_photons_emitted = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
-      ionstats[modelgridindex][element][ion + 1][ION_COUNTER_RADRECOMB_KPKT] += n_photons_emitted;
-        //if (pkt_ptr->last_event == 4)
-        #ifndef FORCE_LTE
-          //kbfcount[pkt_ptr->where] += pkt_ptr->e_cmf;
-          //kbfcount_ion[pkt_ptr->where] += pkt_ptr->e_cmf*nu_threshold/pkt_ptr->nu_cmf;
-        #endif
 
-      //printout("nu_lower %g, nu_threshold %g, nu_left %g, nu_right %g\n",nu_lower,nu_threshold,nu_threshold+(ii-1)*deltanu,nu_threshold+(ii)*deltanu);
+      #if (TRACK_ION_STATS)
+      ionstats[modelgridindex][element][ion + 1][ION_COUNTER_RADRECOMB_KPKT] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+      const double escape_prob = get_rpkt_escape_prob(pkt_ptr->pos, pkt_ptr->nu_cmf, pkt_ptr->where, t_current, pkt_ptr->last_cross);
+      ionstats[modelgridindex][element][ion + 1][ION_COUNTER_RADRECOMB_ESCAPED] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob;
+      #endif
 
-  //     if (element == 6)
-  //     {
-  //       //printout("%g, %g, %g\n",pkt_ptr->e_cmf,nu_threshold,pkt_ptr->e_cmf/nu_threshold/H);
-  //       cell[pkt_ptr->where].bfem[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-  //     }
-
-
-      // /// Sample the packets comoving frame frequency according to paperII 4.2.2
+      // Sample the packets comoving frame frequency according to paperII 4.2.2
       if (debuglevel == 2) printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
       //pkt_ptr->nu_cmf = 3.7474058e+14;
       if (!isfinite(pkt_ptr->nu_cmf))
@@ -625,7 +615,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
         abort();
       }
-      /// and then emitt the packet randomly in the comoving frame
+      // and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr, t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by fb\n");
       calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
@@ -651,6 +641,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       mastate[tid].ion = ion;
       mastate[tid].level = upper;
       mastate[tid].activatingline = -99;
+
+      #if (TRACK_ION_STATS)
+      ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC] += pkt_ptr->e_cmf;
+      #endif
+
       pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collexc++;
       ma_stat_activation_collexc++;
@@ -676,6 +671,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       mastate[tid].ion = ion;
       mastate[tid].level = upper;
       mastate[tid].activatingline = -99;
+
+      #if (TRACK_ION_STATS)
+      ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_COLLION] += pkt_ptr->e_cmf;
+      #endif
+
       pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collion++;
       ma_stat_activation_collion++;

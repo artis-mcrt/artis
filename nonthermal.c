@@ -1988,16 +1988,23 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
 
 static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion)
 {
-  double epsilon_trans_avg = 0.;
+  const double nnlowerion = ionstagepop(modelgridindex, element, lowerion);
+  double enrate = 0.;
   for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++)
   {
+    const double upperionprobfrac = nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, false);
+    // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
+    // {
+    //   const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, lower);
+    //   const double nnlower = calculate_exclevelpop(modelgridindex, element, lowerion, lower);
+    //   enrate += nnlower * upperionprobfrac * epsilon_trans;
+    // }
     const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
-    epsilon_trans_avg += epsilon_trans * nt_ionization_upperion_probability(modelgridindex, element, lowerion, upperion, false);
+    enrate += nnlowerion * upperionprobfrac * epsilon_trans;
   }
 
-  const double nnlowerion = ionstagepop(modelgridindex, element, lowerion);
   const double gamma_nt = nt_ionization_ratecoeff(modelgridindex, element, lowerion);
-  return gamma_nt * nnlowerion * epsilon_trans_avg;
+  return gamma_nt * enrate;
 }
 
 
@@ -2093,6 +2100,7 @@ void do_ntlepton(PKT *pkt_ptr)
     #if (TRACK_ION_STATS)
     const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
     ionstats[modelgridindex][element][lowerion][ION_COUNTER_NTION] += pkt_ptr->e_cmf / epsilon_trans;
+    ionstats[modelgridindex][element][upperion][ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION] += pkt_ptr->e_cmf;
     #endif
 
     // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
