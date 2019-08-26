@@ -456,25 +456,56 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
         ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION] += n_photons_absorbed;
 
         const int et = pkt_ptr->emissiontype;
-        if (et >= 0)
+        if (et >= 0)  // r-packet is from bound-bound emission
         {
           ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUND] += n_photons_absorbed;
+          const int emissionelement = linelist[et].elementindex;
+          const int emissionion = linelist[et].ionindex;
+
+          ionstats[modelgridindex][emissionelement][emissionion][ION_COUNTER_BOUNDBOUND_ABSORBED] += n_photons_absorbed;
+
+          if (emissionelement == element)
+          {
+            if (emissionion == ion + 1)
+            {
+              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE] += n_photons_absorbed;
+            }
+            else if (emissionion == ion + 2)
+            {
+              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO] += n_photons_absorbed;
+            }
+            else if (emissionion == ion + 3)
+            {
+              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE] += n_photons_absorbed;
+            }
+          }
         }
-        else
+        else // r-pkt is from bound-free emission
         {
           ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDFREE] += n_photons_absorbed;
 
           const int bfindex = -1*et - 1;
           const int emissionelement = bflist[bfindex].elementindex;
           const int emissionlowerion = bflist[bfindex].ionindex;
+          const int emissionupperion = emissionlowerion + 1;
           const int emissionlowerlevel = bflist[bfindex].levelindex;
-          ionstats[modelgridindex][emissionelement][emissionlowerion + 1][ION_COUNTER_RADRECOMB_ABSORBED] += n_photons_absorbed;
+
+            ionstats[modelgridindex][emissionelement][emissionupperion][ION_COUNTER_RADRECOMB_ABSORBED] += n_photons_absorbed;
+
           if (emissionelement == element)
           {
             ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT] += n_photons_absorbed;
-            if (emissionlowerion == ion)
+            if (emissionupperion == ion + 1)
             {
               ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSONE] += n_photons_absorbed;
+            }
+            else if (emissionupperion == ion + 2)
+            {
+              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO] += n_photons_absorbed;
+            }
+            else if (emissionupperion == ion + 3)
+            {
+              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE] += n_photons_absorbed;
             }
           }
           if (level_isinsuperlevel(emissionelement, emissionlowerion, emissionlowerlevel))
@@ -493,6 +524,9 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
             ma_stat_activation_bf++;
             pkt_ptr->interactions += 1;
             pkt_ptr->last_event = 3;
+          #endif
+          #if (TRACK_ION_STATS)
+          ionstats[modelgridindex][element][ion + 1][ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION] += pkt_ptr->e_cmf;
           #endif
           pkt_ptr->type = TYPE_MA;
           #ifndef FORCE_LTE
@@ -588,7 +622,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
 }
 
 
-static void rpkt_event_boundbound(PKT *restrict pkt_ptr)
+static void rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi)
 {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
@@ -608,6 +642,21 @@ static void rpkt_event_boundbound(PKT *restrict pkt_ptr)
   pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
   pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];
   pkt_ptr->type = TYPE_MA;
+
+  #if (TRACK_ION_STATS)
+  const int element = mastate[tid].element;
+  const int ion = mastate[tid].ion;
+  ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_RADEXC] += pkt_ptr->e_cmf;
+
+  const int et = pkt_ptr->emissiontype;
+  if (et >= 0)
+  {
+    const int emissionelement = linelist[et].elementindex;
+    const int emissionion = linelist[et].ionindex;
+    ionstats[mgi][emissionelement][emissionion][ION_COUNTER_BOUNDBOUND_ABSORBED] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+  }
+  #endif
+
   #ifndef FORCE_LTE
     //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
   #endif
@@ -1041,7 +1090,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
         {
-          rpkt_event_boundbound(pkt_ptr);
+          rpkt_event_boundbound(pkt_ptr, mgi);
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
         {
@@ -1068,6 +1117,158 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
   }
 
   return PACKET_SAME;
+}
+
+
+static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex, double tstart, double dirvec[3], enum cell_boundary last_cross, double *tau_lines_out, double *tau_cont_out)
+{
+  PKT vpkt;
+  vpkt.nu_cmf = start_nu_cmf;
+  vpkt.where = startcellindex;
+  vpkt.next_trans = 0;
+  vpkt.last_cross = last_cross;
+
+  vec_copy(vpkt.dir, dirvec);
+  vec_copy(vpkt.pos, startpos);
+
+  const double dopplerfactor = doppler_packetpos(&vpkt, tstart);
+  vpkt.nu_rf = vpkt.nu_cmf / dopplerfactor;
+
+  double t_future = tstart;
+
+  int snext = -99;
+  double tot_tau_cont = 0.;
+  double tot_tau_lines = 0.;
+  bool end_packet = false;
+  while (end_packet == false)
+  {
+    const int cellindex = vpkt.where;
+    const int mgi = cell[cellindex].modelgridindex;
+    if (modelgrid[mgi].thick == 1)
+    {
+      return 0.;
+    }
+
+    // distance to the next cell
+    const double sdist = boundary_cross(&vpkt, t_future, &snext);
+
+    if (snext >= 0)
+    {
+      const int nextmgi = cell[snext].modelgridindex;
+      if (modelgrid[nextmgi].thick == 1)
+      {
+        return 0.;
+      }
+    }
+
+    calculate_kappa_rpkt_cont(&vpkt, t_future, mgi);
+
+    const double kappa_cont = kappa_rpkt_cont[tid].total;
+
+    tot_tau_cont += kappa_cont * sdist;
+
+    if ((tot_tau_lines + tot_tau_cont) > 50.)
+    {
+      // printout("reached tau limit of %g\n", (tot_tau_lines + tot_tau_cont));
+      return 0.;
+    }
+
+    double ldist = 0.;
+    while (ldist < sdist)
+    {
+      const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans);
+
+      if (lineindex >= 0)
+      {
+        const double nutrans = linelist[lineindex].nu;
+
+        vpkt.next_trans = lineindex + 1;
+
+        if (vpkt.nu_cmf < nutrans)
+        {
+          ldist = 0;
+        }
+        else
+        {
+          ldist = CLIGHT * t_future * (vpkt.nu_cmf / nutrans - 1);
+        }
+
+        assert(ldist >= 0.);
+
+        if (ldist > sdist)
+        {
+          // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with the excluded line
+
+          vpkt.next_trans -= 1;
+          break;
+        }
+
+        const double t_line = t_future + ldist / CLIGHT;
+
+        const double tau_line = get_tau_sobolev(mgi, lineindex, t_line);
+
+        tot_tau_lines += tau_line;
+      }
+      else
+      {
+        vpkt.next_trans = nlines + 1;
+        break;
+      }
+    }
+
+    if (snext < 0 || cell[snext].modelgridindex == MMODELGRID)
+    {
+      break;
+    }
+
+    t_future += (sdist / CLIGHT_PROP);
+    move_pkt(&vpkt, sdist, t_future);
+
+    if (snext != vpkt.where)
+    {
+      change_cell(&vpkt, snext, &end_packet, t_future);
+    }
+  }
+
+  *tau_lines_out = tot_tau_cont;
+  *tau_cont_out = tot_tau_cont;
+  const double tau_escape = tot_tau_cont + tot_tau_lines;
+  const double escape_prob = exp(-tau_escape);
+  // printout("  tot_tau_lines %g tot_tau_cont %g escape_prob %g\n",
+  //          tot_tau_lines, tot_tau_cont, escape_prob);
+  return escape_prob;
+}
+
+
+double get_rpkt_escape_prob(const double startpos[3], const double start_nu_cmf, const int startcellindex, const double tstart, const enum cell_boundary last_cross)
+{
+  const int mgi = cell[startcellindex].modelgridindex;
+  if (modelgrid[mgi].thick == 1)
+  {
+    printout("get_rpkt_escape_prob in thick cell is zero\n");
+    return 0.;
+  }
+
+  const double pkt_radius = vec_len(startpos);
+  const double rmaxnow = rmax * tstart / tmin;
+  printout("get_rpkt_escape_prob pkt_radius %g rmax %g r/rmax %g tstart %g\n", pkt_radius, rmaxnow, pkt_radius / rmaxnow, tstart);
+  // assert(pkt_radius <= rmaxnow);
+  double escape_prob_sum = 0.;
+  const int ndirs = 1000; // number of random directions to sample
+  for (int n = 0; n < ndirs; n++)
+  {
+    double dirvec[3];
+    get_rand_isotropic_unitvec(dirvec);
+    double tau_lines = 0.;
+    double tau_cont = 0.;
+    const double escape_prob = get_rpkt_escapeprob_fromdirection(startpos, start_nu_cmf, startcellindex, tstart, dirvec, last_cross, &tau_lines, &tau_cont);
+    printout("randomdir no. %d (dir dot pos) %g dir %g %g %g tau_lines %g tau_cont %g escape_prob %g\n",
+             n, dot(startpos, dirvec), dirvec[0], dirvec[1], dirvec[2], tau_lines, tau_cont, escape_prob);
+    escape_prob_sum += escape_prob;
+  }
+  const double escape_prob_avg = escape_prob_sum / ndirs;
+  printout("from %d random directions, average escape probability is %g\n", ndirs, escape_prob_avg);
+  return escape_prob_avg;
 }
 
 
@@ -1139,6 +1340,7 @@ void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
 static double calculate_kappa_ff(const int modelgridindex, const double nu)
 /// free-free opacity
 {
+  assert(nu > 0.);
   const double g_ff = 1;
 
   const float nne = get_nne(modelgridindex);
@@ -1167,17 +1369,24 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
         //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1 - exp(-HOVERKB*nu/T_e));
         /// heating without level dependence
         //kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
+        assert(isfinite(kappa_ff));
       }
     }
   }
   kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+
+  if (!isfinite(kappa_ff))
+  {
+    printout("ERRORL: kappa_ff is non-infinite mgi %d nne %g nu %g T_e %g\n", modelgridindex, nne, nu, T_e);
+    abort();
+  }
   //kappa_ffheating *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * nne * (1 - exp(-HOVERKB*nu/T_e));
   //kappa_ff *= 1e5;
   return kappa_ff;
 }
 
 
-static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
+void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
 // bound-free opacity
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
@@ -1320,13 +1529,16 @@ static void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const dou
 
 void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current, const int modelgridindex)
 {
-  const float nne = get_nne(modelgridindex);
+  assert(modelgridindex < npts_model);
+  // assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
-  if ((!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
+  if ((modelgridindex == kappa_rpkt_cont[tid].modelgridindex) && (!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
   {
     // calculated values are a match already
     return;
   }
+
+  const float nne = get_nne(modelgridindex);
 
   double sigma = 0.0;
   double kappa_ff = 0.;
@@ -1389,6 +1601,7 @@ void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t
   }
 
   kappa_rpkt_cont[tid].nu = nu_cmf;
+  kappa_rpkt_cont[tid].modelgridindex = modelgridindex;
   kappa_rpkt_cont[tid].recalculate_required = false;
   kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_fb + kappa_ff;
   #ifdef DEBUG_ON

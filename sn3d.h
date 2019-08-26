@@ -392,8 +392,6 @@ int ma_stat_activation_ntcollexc;
 int ma_stat_activation_ntcollion;
 int ma_stat_activation_bb;
 int ma_stat_activation_bf;
-double stat_bf_photon_absorptions;
-double stat_bf_photon_emissions;
 int ma_stat_activation_fb;
 int ma_stat_deactivation_colldeexc;
 int ma_stat_deactivation_collrecomb;
@@ -439,22 +437,46 @@ int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
 
-#define TRACK_ION_STATS true
+#define TRACK_ION_STATS false
 
 #if TRACK_ION_STATS
 enum ionstatscounters {
   ION_COUNTER_RADRECOMB_MACROATOM = 0,
   ION_COUNTER_RADRECOMB_KPKT = 1,
   ION_COUNTER_RADRECOMB_ABSORBED = 2,
-  ION_COUNTER_NTION = 3,
-  ION_COUNTER_PHOTOION = 4,
-  ION_COUNTER_PHOTOION_FROMBOUNDFREE = 5,
-  ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT = 6,
-  ION_COUNTER_PHOTOION_FROMBFIONPLUSONE = 7,
-  ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL = 8,
-  ION_COUNTER_PHOTOION_FROMBOUNDBOUND = 9,
-  ION_COUNTER_COUNT = 10
+  ION_COUNTER_RADRECOMB_ESCAPED = 3,
+  ION_COUNTER_BOUNDBOUND_MACROATOM = 4,
+  ION_COUNTER_BOUNDBOUND_ABSORBED = 5,
+  ION_COUNTER_NTION = 6,
+  ION_COUNTER_PHOTOION = 7,
+  ION_COUNTER_PHOTOION_FROMBOUNDFREE = 8,
+  ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT = 9,
+  ION_COUNTER_PHOTOION_FROMBFIONPLUSONE = 10,
+  ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO = 11,
+  ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE = 12,
+  ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL = 13,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUND = 14,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE = 15,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO = 16,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE = 17,
+  ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC = 18,
+  ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB = 19,
+  ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC = 20,
+  ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB = 21,
+  ION_COUNTER_MACROATOM_ENERGYIN_RADEXC = 22,
+  ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION = 23,
+  ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC = 24,
+  ION_COUNTER_MACROATOM_ENERGYIN_COLLION = 25,
+  ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION = 27,
+  ION_COUNTER_MACROATOM_ENERGYIN_TOTAL = 28,
+  ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL = 29,
+  ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL = 30,
+  ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL = 31,
+  ION_COUNTER_COUNT = 32
 };
+
+// number of ion stats counters that should be divided by the ion populations
+#define nstatcounters_ratecoeff 18
 
 double ionstats[MMODELGRID][MELEMENTS][MIONS][ION_COUNTER_COUNT];
 #endif
@@ -501,8 +523,11 @@ inline int printout(const char *restrict format, ...)
 
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno)
 {
-  printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
-  // abort();
+  if (gsl_errno != 18) // roundoff error
+  {
+    printout("WARNING: gsl (%s:%d): %s (Error code %d)\n", file, line, reason, gsl_errno);
+    // abort();
+  }
 }
 
 

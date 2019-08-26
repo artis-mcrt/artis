@@ -180,16 +180,16 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
           const double nutrans = linelist[lineindex].nu;
 
-          element = linelist[lineindex].elementindex;
-          ion = linelist[lineindex].ionindex;
-          upper = linelist[lineindex].upperlevelindex;
-          lower = linelist[lineindex].lowerlevelindex;
-          A_ul = linelist[lineindex].einstein_A;
-
-          anumber = get_element(element);
-
-          if (nutrans > 0)
+          if (lineindex >= 0)
           {
+              element = linelist[lineindex].elementindex;
+              ion = linelist[lineindex].ionindex;
+              upper = linelist[lineindex].upperlevelindex;
+              lower = linelist[lineindex].lowerlevelindex;
+              A_ul = linelist[lineindex].einstein_A;
+
+              anumber = get_element(element);
+
               dummypkt_ptr->next_trans = lineindex + 1;
 
               if (dummy_ptr->nu_cmf < nutrans) ldist = 0;
@@ -254,8 +254,6 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
       /* kill vpkt with pass through a thick cell */
       if (modelgrid[mgi].thick == 1) return;
-
-
   }
 
 

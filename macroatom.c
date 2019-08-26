@@ -190,6 +190,7 @@ static void do_macroatom_raddeexcitation(
     if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
   #endif
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
+
   double oldnucmf;
   if (pkt_ptr->last_event == 1)
     oldnucmf = pkt_ptr->nu_cmf;
@@ -294,9 +295,6 @@ static void do_macroatom_radrecomb(
 
   pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
 
-  const double n_photons_emitted = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
-  ionstats[modelgridindex][element][upperion][ION_COUNTER_RADRECOMB_MACROATOM] += n_photons_emitted;
-
   // const double vol = vol_init_modelcell(modelgridindex) * pow(t_current / tmin, 3);
   // printout("  bf pkt last_event %d emissiontype %d trueemissiontype %d activatingline %d E/Hnu/V %g\n",
   //    pkt_ptr->last_event, pkt_ptr->emissiontype, pkt_ptr->trueemissiontype, mastate[tid].activatingline, pkt_ptr->e_cmf/H/pkt_ptr->nu_cmf/vol);
@@ -335,6 +333,14 @@ static void do_macroatom_radrecomb(
   /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
   emitt_rpkt(pkt_ptr, t_current);
   calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+
+  #if (TRACK_ION_STATS)
+  ionstats[modelgridindex][element][*ion + 1][ION_COUNTER_RADRECOMB_MACROATOM] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+
+  const double escape_prob = get_rpkt_escape_prob(pkt_ptr->pos, pkt_ptr->nu_cmf, pkt_ptr->where, t_current, pkt_ptr->last_cross);
+  ionstats[modelgridindex][element][*ion + 1][ION_COUNTER_RADRECOMB_ESCAPED] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob;
+  #endif
+
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
@@ -411,6 +417,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   const int level_in = level;
   const double nu_cmf_in = pkt_ptr->nu_cmf;
   const double nu_rf_in = pkt_ptr->nu_rf;
+
+  #if (TRACK_ION_STATS)
+  ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_TOTAL] += pkt_ptr->e_cmf;
+  #endif
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
   /// initialization we should see errors
@@ -623,7 +633,14 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         //   printout("[debug] do_ma:   jumps = %d\n",jumps);
         // }
         #endif
+
         do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline);
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC] += pkt_ptr->e_cmf;
+        ionstats[modelgridindex][element][ion][ION_COUNTER_BOUNDBOUND_MACROATOM] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL] += pkt_ptr->e_cmf;
+        #endif
 
         if (LOG_MACROATOM)
         {
@@ -648,6 +665,12 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 10;
         #endif
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC] += pkt_ptr->e_cmf;
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL] += pkt_ptr->e_cmf;
+        #endif
+
         pkt_ptr->type = TYPE_KPKT;
         end_packet = true;
         #ifndef FORCE_LTE
@@ -710,6 +733,12 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           //   printout("[debug] do_ma:   element %d, ion %d, level %d\n",element,ion,level);
           // }
         #endif
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB] += pkt_ptr->e_cmf;
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL] += pkt_ptr->e_cmf;
+        #endif
+
         do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current);
         end_packet = true;
         break;
@@ -727,6 +756,12 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 11;
         #endif
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB] += pkt_ptr->e_cmf;
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL] += pkt_ptr->e_cmf;
+        #endif
+
         pkt_ptr->type = TYPE_KPKT;
         end_packet = true;
         #ifndef FORCE_LTE
@@ -767,8 +802,17 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
             break;
         }
         /// and set the macroatom's new state
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL] += pkt_ptr->e_cmf;
+        #endif
+
         ion -= 1;
         level = lower;
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL] += pkt_ptr->e_cmf;
+        #endif
 
         #ifdef DEBUG_ON
           if (lower >= nlevels)
@@ -824,15 +868,33 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         #endif
 
         ma_stat_internaluphigher++;
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL] += pkt_ptr->e_cmf;
+        #endif
+
         do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL] += pkt_ptr->e_cmf;
+        #endif
+
         break;
 
       case MA_ACTION_INTERNALUPHIGHERNT:
         pkt_ptr->interactions += 1;
         // ion += 1;
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL] += pkt_ptr->e_cmf;
+        #endif
+
         ion = nt_random_upperion(modelgridindex, element, ion, false);
         level = 0;
         ma_stat_internaluphighernt++;
+
+        #if (TRACK_ION_STATS)
+        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL] += pkt_ptr->e_cmf;
+        #endif
         // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion, level);
         break;
 
