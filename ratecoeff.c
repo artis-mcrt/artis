@@ -1399,7 +1399,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 
   gsl_set_error_handler(previous_handler);
 
-  if (status != 0 && (status != 18 || (error / gammacorr > epsrelwarning))
+  if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning))
   {
     printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
