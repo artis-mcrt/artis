@@ -1254,7 +1254,7 @@ double get_rpkt_escape_prob(const double startpos[3], const double start_nu_cmf,
   printout("get_rpkt_escape_prob pkt_radius %g rmax %g r/rmax %g tstart %g\n", pkt_radius, rmaxnow, pkt_radius / rmaxnow, tstart);
   // assert(pkt_radius <= rmaxnow);
   double escape_prob_sum = 0.;
-  const int ndirs = 1000; // number of random directions to sample
+  const int ndirs = 50; // number of random directions to sample
   for (int n = 0; n < ndirs; n++)
   {
     double dirvec[3];
