@@ -1167,7 +1167,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
     tot_tau_cont += kappa_cont * sdist;
 
-    if ((tot_tau_lines + tot_tau_cont) > 50.)
+    if ((tot_tau_lines + tot_tau_cont) > 10.)
     {
       // printout("reached tau limit of %g\n", (tot_tau_lines + tot_tau_cont));
       return 0.;
@@ -1230,7 +1230,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
   }
 
-  *tau_lines_out = tot_tau_lines;
+  *tau_lines_out = tot_tau_cont;
   *tau_cont_out = tot_tau_cont;
   const double tau_escape = tot_tau_cont + tot_tau_lines;
   const double escape_prob = exp(-tau_escape);
