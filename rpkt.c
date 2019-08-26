@@ -1120,7 +1120,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
 }
 
 
-static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex, double tstart, double dirvec[3], enum cell_boundary last_cross, double *tau_cont_out, double *tau_lines_out)
+static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex, double tstart, double dirvec[3], enum cell_boundary last_cross, double *tot_tau_cont, double *tot_tau_lines)
 {
   PKT vpkt;
   vpkt.nu_cmf = start_nu_cmf;
@@ -1137,8 +1137,6 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
   double t_future = tstart;
 
   int snext = -99;
-  double tot_tau_cont = 0.;
-  double tot_tau_lines = 0.;
   bool end_packet = false;
   while (end_packet == false)
   {
@@ -1165,9 +1163,9 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
     const double kappa_cont = kappa_rpkt_cont[tid].total;
 
-    tot_tau_cont += kappa_cont * sdist;
+    *tot_tau_cont += kappa_cont * sdist;
 
-    if ((tot_tau_lines + tot_tau_cont) > 10.)
+    if ((*tot_tau_lines + *tot_tau_cont) > 10.)
     {
       // printout("reached tau limit of %g\n", (tot_tau_lines + tot_tau_cont));
       return 0.;
@@ -1207,7 +1205,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
         const double tau_line = get_tau_sobolev(mgi, lineindex, t_line);
 
-        tot_tau_lines += tau_line;
+        *tot_tau_lines += tau_line;
       }
       else
       {
@@ -1230,9 +1228,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
   }
 
-  *tau_cont_out = tot_tau_cont;
-  *tau_lines_out = tot_tau_lines;
-  const double tau_escape = tot_tau_cont + tot_tau_lines;
+  const double tau_escape = *tot_tau_cont + *tot_tau_lines;
   const double escape_prob = exp(-tau_escape);
   // printout("  tot_tau_lines %g tot_tau_cont %g escape_prob %g\n",
   //          tot_tau_lines, tot_tau_cont, escape_prob);
@@ -1262,9 +1258,10 @@ double get_rpkt_escape_prob(const double startpos[3], const double start_nu_cmf,
     double tau_cont = 0.;
     double tau_lines = 0.;
     const double escape_prob = get_rpkt_escapeprob_fromdirection(startpos, start_nu_cmf, startcellindex, tstart, dirvec, last_cross, &tau_cont, &tau_lines);
-    printout("randomdir no. %d (dir dot pos) %g dir %g %g %g tau_lines %g tau_cont %g escape_prob %g\n",
-             n, dot(startpos, dirvec), dirvec[0], dirvec[1], dirvec[2], tau_cont, tau_lines, escape_prob);
     escape_prob_sum += escape_prob;
+
+    printout("randomdir no. %d (dir dot pos) %g dir %g %g %g tau_lines %g tau_cont %g escape_prob %g escape_prob_avg %g\n",
+             n, dot(startpos, dirvec), dirvec[0], dirvec[1], dirvec[2], tau_cont, tau_lines, escape_prob, escape_prob_sum / (n + 1));
   }
   const double escape_prob_avg = escape_prob_sum / ndirs;
   printout("from %d random directions, average escape probability is %g\n", ndirs, escape_prob_avg);
