@@ -516,6 +516,7 @@ typedef struct rpkt_cont_opacity_struct
   double fb_inrest;
   double ffheating;
   //double bfheating;
+  int modelgridindex;
   bool recalculate_required; // e.g. when cell or timestep has changed
 } rpkt_cont_opacity_struct;
 
