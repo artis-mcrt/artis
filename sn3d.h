@@ -48,7 +48,10 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 // as above for bound-free heating
 #define NO_LUT_BFHEATING true
 
-#define SEPARATE_STIMRECOMB false // if false, then stimulated recombination is treated as negative photoionisation
+// if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
+#define SEPARATE_STIMRECOMB false
+
+#define TRACK_ION_STATS true
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
@@ -436,8 +439,6 @@ bool initial_iteration;
 int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
-
-#define TRACK_ION_STATS false
 
 #if TRACK_ION_STATS
 enum ionstatscounters {
