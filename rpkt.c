@@ -1120,7 +1120,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
 }
 
 
-static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex, double tstart, double dirvec[3], enum cell_boundary last_cross, double *tau_lines_out, double *tau_cont_out)
+static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex, double tstart, double dirvec[3], enum cell_boundary last_cross, double *tau_cont_out, double *tau_lines_out)
 {
   PKT vpkt;
   vpkt.nu_cmf = start_nu_cmf;
@@ -1230,8 +1230,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
   }
 
-  *tau_lines_out = tot_tau_cont;
   *tau_cont_out = tot_tau_cont;
+  *tau_lines_out = tot_tau_lines;
   const double tau_escape = tot_tau_cont + tot_tau_lines;
   const double escape_prob = exp(-tau_escape);
   // printout("  tot_tau_lines %g tot_tau_cont %g escape_prob %g\n",
@@ -1259,11 +1259,11 @@ double get_rpkt_escape_prob(const double startpos[3], const double start_nu_cmf,
   {
     double dirvec[3];
     get_rand_isotropic_unitvec(dirvec);
-    double tau_lines = 0.;
     double tau_cont = 0.;
-    const double escape_prob = get_rpkt_escapeprob_fromdirection(startpos, start_nu_cmf, startcellindex, tstart, dirvec, last_cross, &tau_lines, &tau_cont);
+    double tau_lines = 0.;
+    const double escape_prob = get_rpkt_escapeprob_fromdirection(startpos, start_nu_cmf, startcellindex, tstart, dirvec, last_cross, &tau_cont, &tau_lines);
     printout("randomdir no. %d (dir dot pos) %g dir %g %g %g tau_lines %g tau_cont %g escape_prob %g\n",
-             n, dot(startpos, dirvec), dirvec[0], dirvec[1], dirvec[2], tau_lines, tau_cont, escape_prob);
+             n, dot(startpos, dirvec), dirvec[0], dirvec[1], dirvec[2], tau_cont, tau_lines, escape_prob);
     escape_prob_sum += escape_prob;
   }
   const double escape_prob_avg = escape_prob_sum / ndirs;
