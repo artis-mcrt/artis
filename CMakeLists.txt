@@ -20,7 +20,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 set(SN3D_SOURCES sn3d.c atomic.c boundary.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c ltepop.c macroatom.c nltepop.c nonthermal.c packet_init.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c update_grid.c update_packets.c vectors.c vpkt.c md5.c)
 add_executable(sn3d ${SN3D_SOURCES})
 
-set(EXSPEC_SOURCES exspec.c grid_init.c input.c vectors.c packet_init.c time_init.c update_grid.c update_packets.c gamma.c boundary.c compton.c macroatom.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c)
+set(EXSPEC_SOURCES exspec.c grid_init.c input.c vectors.c packet_init.c update_grid.c update_packets.c gamma.c boundary.c macroatom.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c)
 
 add_executable(exspec ${EXSPEC_SOURCES})
 add_executable(exgamma ${EXSPEC_SOURCES})
