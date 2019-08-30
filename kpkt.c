@@ -603,7 +603,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
       #if (TRACK_ION_STATS)
       ionstats[modelgridindex][element][ion + 1][ION_COUNTER_RADRECOMB_KPKT] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
-      const double escape_prob = get_rpkt_escape_prob(pkt_ptr->pos, pkt_ptr->nu_cmf, pkt_ptr->where, t_current, pkt_ptr->last_cross);
+      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
       ionstats[modelgridindex][element][ion + 1][ION_COUNTER_RADRECOMB_ESCAPED] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob;
       #endif
 

@@ -816,11 +816,12 @@ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetinde
   double T_lower =  MINTEMP + lowerindex*T_step;*/
   double Alpha_sp;
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
+  assert(lowerindex >= 0);
   if (lowerindex < TABLESIZE - 1)
   {
     const int upperindex = lowerindex + 1;
-    const double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper =  MINTEMP * exp(upperindex * T_step_log);
+    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
+    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
 
     const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[upperindex];
     const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].spontrecombcoeff[lowerindex];

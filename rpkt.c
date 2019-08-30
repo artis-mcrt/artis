@@ -1236,8 +1236,13 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 }
 
 
-double get_rpkt_escape_prob(const double startpos[3], const double start_nu_cmf, const int startcellindex, const double tstart, const enum cell_boundary last_cross)
+double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
 {
+  const int startcellindex = pkt_ptr->where;
+  double startpos[3];
+  vec_copy(startpos, pkt_ptr->pos);
+  const double start_nu_cmf = pkt_ptr->nu_cmf;
+  const enum cell_boundary last_cross = pkt_ptr->last_cross;
   const int mgi = cell[startcellindex].modelgridindex;
   if (modelgrid[mgi].thick == 1)
   {
@@ -1250,7 +1255,7 @@ double get_rpkt_escape_prob(const double startpos[3], const double start_nu_cmf,
   printout("get_rpkt_escape_prob pkt_radius %g rmax %g r/rmax %g tstart %g\n", pkt_radius, rmaxnow, pkt_radius / rmaxnow, tstart);
   // assert(pkt_radius <= rmaxnow);
   double escape_prob_sum = 0.;
-  const int ndirs = 50; // number of random directions to sample
+  const int ndirs = 30; // number of random directions to sample
   for (int n = 0; n < ndirs; n++)
   {
     double dirvec[3];
@@ -1265,6 +1270,11 @@ double get_rpkt_escape_prob(const double startpos[3], const double start_nu_cmf,
   }
   const double escape_prob_avg = escape_prob_sum / ndirs;
   printout("from %d random directions, average escape probability is %g\n", ndirs, escape_prob_avg);
+
+  // reset the cell history and rpkt opacities back to values for the start point
+  bool end_packet;
+  change_cell(pkt_ptr, startcellindex, &end_packet, tstart);
+
   return escape_prob_avg;
 }
 
