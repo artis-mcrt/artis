@@ -394,7 +394,9 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
-          update_cell(mgi);
+          updatecellcounter++;
+
+          cellhistory_reset(mgi, false);
         }
       }
 

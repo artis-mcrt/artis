@@ -1238,6 +1238,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
 double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
 {
+  // return -1.; // disable this functionality and speed up the code
+
   const int startcellindex = pkt_ptr->where;
   double startpos[3];
   vec_copy(startpos, pkt_ptr->pos);
@@ -1246,9 +1248,10 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
   const int mgi = cell[startcellindex].modelgridindex;
   if (modelgrid[mgi].thick == 1)
   {
-    printout("get_rpkt_escape_prob in thick cell is zero\n");
+    // escape prob in thick cell is zero
     return 0.;
   }
+  const time_t sys_time_start_escape_prob = time(NULL);
 
   const double pkt_radius = vec_len(startpos);
   const double rmaxnow = rmax * tstart / tmin;
@@ -1269,11 +1272,15 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
              n, dot(startpos, dirvec), dirvec[0], dirvec[1], dirvec[2], tau_cont, tau_lines, escape_prob, escape_prob_sum / (n + 1));
   }
   const double escape_prob_avg = escape_prob_sum / ndirs;
-  printout("from %d random directions, average escape probability is %g\n", ndirs, escape_prob_avg);
+  printout("from %d random directions, average escape probability is %g (took %d s)\n", ndirs, escape_prob_avg, time(NULL) - sys_time_start_escape_prob);
 
   // reset the cell history and rpkt opacities back to values for the start point
-  bool end_packet;
-  change_cell(pkt_ptr, startcellindex, &end_packet, tstart);
+  cellhistory_reset(mgi, false);
+
+  if (pkt_ptr->type == TYPE_RPKT)
+  {
+    calculate_kappa_rpkt_cont(pkt_ptr, tstart, mgi);
+  }
 
   return escape_prob_avg;
 }
@@ -1536,8 +1543,7 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 
 void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current, const int modelgridindex)
 {
-  assert(modelgridindex < npts_model);
-  // assert(modelgrid[modelgridindex].thick != 1);
+  assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
   if ((modelgridindex == kappa_rpkt_cont[tid].modelgridindex) && (!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
   {
