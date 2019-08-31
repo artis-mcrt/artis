@@ -397,6 +397,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
 
+  assert(modelgrid[modelgridindex].thick != 1); // macroatom should not be used in thick cells
+
   /// calculate occupation number for active MA level ////////////////////////////////////
   /// general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
   /// U_ionstage) here where we need them or once in update_grid for each grid cell
@@ -464,6 +466,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     #ifdef DEBUG_ON
       if (debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
     #endif
+
+    assert(cellhistory[tid].cellnumber == modelgridindex)
 
     double *restrict processrates = cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
 
@@ -790,6 +794,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         //zrand = 1. - 1e-14;
         rate = 0.;
         //nlevels = get_nlevels(element,ion-1);
+
         const int nlevels = get_ionisinglevels(element, ion - 1);
         //nlevels = get_ionisinglevels(element,ion-1);
         for (lower = 0; lower < nlevels; lower++)

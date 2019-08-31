@@ -1965,7 +1965,8 @@ double nt_excitation_ratecoeff(const int modelgridindex, const int element, cons
 static void select_nt_ionization(int modelgridindex, int *element, int *lowerion)
 // select based on stored frac_deposition for each ion
 {
-  double zrand = gsl_rng_uniform(rng);
+  const double zrand = gsl_rng_uniform(rng);
+  double frac_deposition_ion_sum = 0.;
   // zrand is between zero and frac_ionization
   // keep subtracting off deposition fractions of ionizations transitions until we hit the right one
   // e.g. if zrand was less than frac_dep_trans1, then use the first transition
@@ -1973,16 +1974,16 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
   const int frac_ionizations_list_size = nt_solution[modelgridindex].frac_ionizations_list_size;
   for (int allionindex = 0; allionindex < frac_ionizations_list_size; allionindex++)
   {
-    const double frac_deposition_ion = nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition;
-    if (zrand < frac_deposition_ion)
+    frac_deposition_ion_sum += nt_solution[modelgridindex].frac_ionizations_list[allionindex].frac_deposition;
+    if (frac_deposition_ion_sum >= zrand)
     {
       *element = nt_solution[modelgridindex].frac_ionizations_list[allionindex].element;
       *lowerion = nt_solution[modelgridindex].frac_ionizations_list[allionindex].ion;
 
       return;
     }
-    zrand -= frac_deposition_ion;
   }
+  assert(false); // should not reach here
 }
 
 
@@ -2043,110 +2044,110 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
       }
     }
   }
+  assert(false);
 }
 
 
 void do_ntlepton(PKT *pkt_ptr)
 {
   nt_energy_deposited += pkt_ptr->e_cmf;
-  if (!NT_ON)
-  {
-    pkt_ptr->last_event = 22;
-    pkt_ptr->type = TYPE_KPKT;
-    nt_stat_to_kpkt++;
-
-    return;
-  }
 
   const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
-  double zrand = gsl_rng_uniform(rng);
-  // zrand is initially between [0, 1), but we will subtract off each
-  // component of the deposition fractions
-  // until we end and select transition_ij when zrand < dep_frac_transition_ij
-
-  // const double frac_heating = get_nt_frac_heating(modelgridindex);
-
-  // const double frac_ionization = get_nt_frac_ionization(modelgridindex);
-  const double frac_ionization = get_ntion_energyrate(modelgridindex) / get_deposition_rate_density(modelgridindex);
-  // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(modelgridindex));
-  // const double frac_ionization = 0.;
-
-  // const double frac_excitation = get_nt_frac_excitation(modelgridindex);
-  const double frac_excitation = 0.;
-
-  if (zrand < frac_ionization)
+  // macroatom should not be activated in thick cells
+  if (NT_ON && modelgrid[modelgridindex].thick != 1)
   {
-    int element;
-    int lowerion;
-    // select_nt_ionization(modelgridindex, &element, &lowerion);
-    select_nt_ionization2(modelgridindex, &element, &lowerion);
-    const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
-    // const int upperion = lowerion + 1;
+    // here there is some probability to cause ionisation or excitation to a macroatom packet
+    // instead of converting directly to k-packet (unless the heating channel is selected)
 
-    mastate[tid].element = element;
-    mastate[tid].ion = upperion;
-    mastate[tid].level = 0;
-    mastate[tid].activatingline = -99;
-    pkt_ptr->type = TYPE_MA;
-    ma_stat_activation_ntcollion++;
-    pkt_ptr->interactions += 1;
-    pkt_ptr->last_event = 20;
-    pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
-    pkt_ptr->trueemissionvelocity = -1;
+    double zrand = gsl_rng_uniform(rng);
+    // zrand is initially between [0, 1), but we will subtract off each
+    // component of the deposition fractions
+    // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    nt_stat_to_ionization++;
+    // const double frac_heating = get_nt_frac_heating(modelgridindex);
 
-    #if (TRACK_ION_STATS)
-    const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
-    ionstats[modelgridindex][element][lowerion][ION_COUNTER_NTION] += pkt_ptr->e_cmf / epsilon_trans;
-    ionstats[modelgridindex][element][upperion][ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION] += pkt_ptr->e_cmf;
-    #endif
+    // const double frac_ionization = get_nt_frac_ionization(modelgridindex);
+    const double frac_ionization = get_ntion_energyrate(modelgridindex) / get_deposition_rate_density(modelgridindex);
+    // printout("frac_ionization compare %g and %g\n", frac_ionization, get_nt_frac_ionization(modelgridindex));
+    // const double frac_ionization = 0.;
 
-    // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
-    //          modelgridindex, get_element(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
+    // const double frac_excitation = get_nt_frac_excitation(modelgridindex);
+    const double frac_excitation = 0.;
 
-    return;
-  }
-  else if (NT_EXCITATION_ON && zrand < frac_ionization + frac_excitation)
-  {
-    zrand -= frac_ionization;
-    // now zrand is between zero and frac_excitation
-    // the selection algorithm is the same as for the ionization transitions
-    const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
-    for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
+    if (zrand < frac_ionization)
     {
-      const double frac_deposition_exc = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
-      if (zrand < frac_deposition_exc)
-      {
-        const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-        const int element = linelist[lineindex].elementindex;
-        const int ion = linelist[lineindex].ionindex;
-        // const int lower = linelist[lineindex].lowerlevelindex;
-        const int upper = linelist[lineindex].upperlevelindex;
+      int element;
+      int lowerion;
+      // select_nt_ionization(modelgridindex, &element, &lowerion);
+      select_nt_ionization2(modelgridindex, &element, &lowerion);
+      const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
+      // const int upperion = lowerion + 1;
 
-        mastate[tid].element = element;
-        mastate[tid].ion = ion;
-        mastate[tid].level = upper;
-        mastate[tid].activatingline = -99;
-        pkt_ptr->type = TYPE_MA;
-        ma_stat_activation_ntcollexc++;
-        pkt_ptr->interactions += 1;
-        pkt_ptr->last_event = 21;
-        pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
-        pkt_ptr->trueemissionvelocity = -1;
+      mastate[tid].element = element;
+      mastate[tid].ion = upperion;
+      mastate[tid].level = 0;
+      mastate[tid].activatingline = -99;
+      pkt_ptr->type = TYPE_MA;
+      ma_stat_activation_ntcollion++;
+      pkt_ptr->interactions += 1;
+      pkt_ptr->last_event = 20;
+      pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
+      pkt_ptr->trueemissionvelocity = -1;
 
-        nt_stat_to_excitation++;
+      nt_stat_to_ionization++;
 
-        // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
-        //          modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
+      #if (TRACK_ION_STATS)
+      const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
+      ionstats[modelgridindex][element][lowerion][ION_COUNTER_NTION] += pkt_ptr->e_cmf / epsilon_trans;
+      ionstats[modelgridindex][element][upperion][ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION] += pkt_ptr->e_cmf;
+      #endif
 
-        return;
-      }
-      zrand -= frac_deposition_exc;
+      // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
+      //          modelgridindex, get_element(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
+
+      return;
     }
-    // in case we reached here because the excitation reactions that were stored didn't add up to frac_excitation_ion
-    // then just convert it to a kpkt
+    else if (NT_EXCITATION_ON && zrand < frac_ionization + frac_excitation)
+    {
+      zrand -= frac_ionization;
+      // now zrand is between zero and frac_excitation
+      // the selection algorithm is the same as for the ionization transitions
+      const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
+      for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
+      {
+        const double frac_deposition_exc = nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition;
+        if (zrand < frac_deposition_exc)
+        {
+          const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
+          const int element = linelist[lineindex].elementindex;
+          const int ion = linelist[lineindex].ionindex;
+          // const int lower = linelist[lineindex].lowerlevelindex;
+          const int upper = linelist[lineindex].upperlevelindex;
+
+          mastate[tid].element = element;
+          mastate[tid].ion = ion;
+          mastate[tid].level = upper;
+          mastate[tid].activatingline = -99;
+          pkt_ptr->type = TYPE_MA;
+          ma_stat_activation_ntcollexc++;
+          pkt_ptr->interactions += 1;
+          pkt_ptr->last_event = 21;
+          pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
+          pkt_ptr->trueemissionvelocity = -1;
+
+          nt_stat_to_excitation++;
+
+          // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
+          //          modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
+
+          return;
+        }
+        zrand -= frac_deposition_exc;
+      }
+      // in case we reached here because the excitation reactions that were stored didn't add up to frac_excitation_ion
+      // then just convert it to a kpkt
+    }
   }
 
   pkt_ptr->last_event = 22;

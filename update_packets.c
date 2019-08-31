@@ -10,9 +10,6 @@
 #include "vectors.h"
 
 
-extern void update_cell(const int mgi);
-
-
 static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, const int nts)
 // Master routine for moving packets around. When it called,
 //   it is given the time at start of inverval and at end - when it finishes,
@@ -274,7 +271,11 @@ void update_packets(const int nts, PKT *pkt)
         //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
         /// Reset cellhistory if packet starts up in another than the last active cell
         if (cellhistory[tid].cellnumber != mgi)
-          update_cell(mgi);
+        {
+          updatecellcounter++;
+
+          cellhistory_reset(mgi, false);
+        }
 
         /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
         if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
