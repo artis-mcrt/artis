@@ -1123,6 +1123,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
 static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex, double tstart, double dirvec[3], enum cell_boundary last_cross, double *tot_tau_cont, double *tot_tau_lines)
 {
   PKT vpkt;
+  vpkt.type = TYPE_RPKT;
   vpkt.nu_cmf = start_nu_cmf;
   vpkt.where = startcellindex;
   vpkt.next_trans = 0;
