@@ -950,7 +950,7 @@ int main(int argc, char** argv)
           #endif
           // time is measured from just before packet propagation from one timestep to the next
           const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
-          printout("TIME: time between timesteps is %d seconds (measured after upgrade grid of ts %d and before packet prop of ts %d)\n", estimated_time_per_timestep, nts_prev, nts);
+          printout("TIME: time between timesteps is %d seconds (measured packet prop of ts %d and update grid of ts %d)\n", estimated_time_per_timestep, nts_prev, nts);
 
           #ifdef WALLTIMELIMITSECONDS
             const int wallclock_used_seconds = time(NULL) - real_time_start;
