@@ -3163,7 +3163,7 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
       //          modelgridindex, logged_element_z, logged_ion_stage,
       //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
       //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
-      // MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_COMM_WORLD);
       if (STORE_NT_SPECTRUM)
       {
         // printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
