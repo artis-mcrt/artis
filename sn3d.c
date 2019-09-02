@@ -463,6 +463,9 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
   assert(ion_counter_type < ION_COUNTER_COUNT);
   const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
+  #ifdef _OPENMP
+    #pragma omp atomic
+  #endif
   ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
 }
 
@@ -495,6 +498,9 @@ void set_ion_stats(const int modelgridindex, const int element, const int ion, e
   assert(ion_counter_type < ION_COUNTER_COUNT);
   const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
+  #ifdef _OPENMP
+    #pragma omp atomic
+  #endif
   ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
 }
 
