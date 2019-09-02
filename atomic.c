@@ -12,6 +12,7 @@ extern inline int get_nlevels(int element, int ion);
 extern inline int get_nlevels_nlte(int element, int ion);
 extern inline int get_nlevels_groundterm(int element, int ion);
 extern inline int get_ionisinglevels(int element, int ion);
+extern inline int get_tot_nions(void);
 extern inline int get_uniqueionindex(int element, int ion);
 extern inline void get_ionfromuniqueionindex(int allionsindex, int *element, int *ion);
 extern inline double epsilon(int element, int ion, int level);
@@ -79,18 +80,6 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 
   const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
   return tau_sobolev;
-}
-
-
-int get_tot_nions(void)
-{
-  int nions = 0.;
-  for (int element = 0; element < nelements; element++)
-  {
-    nions += get_nions(element);
-  }
-
-  return nions;
 }
 
 
