@@ -293,7 +293,6 @@ static void do_macroatom_radrecomb(
   *ion = upperion - 1;
   *level = lower;
 
-  printout("macroatom\n");
   pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
 
   #ifndef FORCE_LTE
