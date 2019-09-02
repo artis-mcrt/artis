@@ -391,7 +391,7 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   time_step[nts].gamma_dep /= nprocs;
   time_step[nts].positron_dep /= nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &ionstats, npts_model * get_tot_nions() * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &ionstats, npts_model * includedions * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -455,12 +455,11 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
 {
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
-  const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
-  ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
+  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
 }
 
 
@@ -468,9 +467,8 @@ double get_ion_stats(const int modelgridindex, const int element, const int ion,
 {
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
-  const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
+  return ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
 }
 
 
@@ -478,12 +476,11 @@ void set_ion_stats(const int modelgridindex, const int element, const int ion, e
 {
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
-  const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
-  ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
+  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
 }
 
 
@@ -687,7 +684,7 @@ int main(int argc, char** argv)
 //    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
 //  #endif
 
-  ionstats = calloc(npts_model * get_tot_nions() * ION_COUNTER_COUNT, sizeof(double));
+  ionstats = calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
 
   /// As a precaution, explicitly zero all the estimators here
   zero_estimators();
