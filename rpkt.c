@@ -1250,7 +1250,7 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
   printout("get_rpkt_escape_prob pkt_radius %g rmax %g r/rmax %g tstart %g\n", pkt_radius, rmaxnow, pkt_radius / rmaxnow, tstart);
   // assert(pkt_radius <= rmaxnow);
   double escape_prob_sum = 0.;
-  const int ndirs = 40; // number of random directions to sample
+  const int ndirs = 30; // number of random directions to sample
   for (int n = 0; n < ndirs; n++)
   {
     double dirvec[3];
@@ -1260,8 +1260,8 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
     const double escape_prob = get_rpkt_escapeprob_fromdirection(startpos, start_nu_cmf, startcellindex, tstart, dirvec, last_cross, &tau_cont, &tau_lines);
     escape_prob_sum += escape_prob;
 
-    printout("randomdir no. %d (dir dot pos) %g dir %g %g %g tau_lines %g tau_cont %g escape_prob %g escape_prob_avg %g\n",
-             n, dot(startpos, dirvec), dirvec[0], dirvec[1], dirvec[2], tau_cont, tau_lines, escape_prob, escape_prob_sum / (n + 1));
+    printout("  randomdir no. %d (dir dot pos) %g tau_lines %g tau_cont %g escape_prob %g escape_prob_avg %g\n",
+             n, dot(startpos, dirvec), tau_cont, tau_lines, escape_prob, escape_prob_sum / (n + 1));
   }
   const double escape_prob_avg = escape_prob_sum / ndirs;
   printout("from %d random directions, average escape probability is %g (took %d s)\n", ndirs, escape_prob_avg, time(NULL) - sys_time_start_escape_prob);
