@@ -1000,19 +1000,15 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
           if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
         #endif
         /** Move it into the new cell. */
-        sdist = sdist / 2.;
-        t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, sdist, t_current);
-        update_estimators(pkt_ptr, sdist * 2, t_current);
+        t_current += sdist / 2 / CLIGHT_PROP;
+        move_pkt(pkt_ptr, sdist / 2, t_current);
+        update_estimators(pkt_ptr, sdist, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
-          sdist = sdist * 2.;
           rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
-          sdist = sdist / 2.;
         }
-        t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, sdist, t_current);
-        sdist = sdist * 2.;
+        t_current += sdist / 2 / CLIGHT_PROP;
+        move_pkt(pkt_ptr, sdist / 2, t_current);
 
         if (snext != pkt_ptr->where)
         {
@@ -1043,19 +1039,16 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
           if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
         #endif
         // Doesn't reach boundary
-        tdist = tdist / 2.;
-        t_current += tdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, tdist, t_current);
-        update_estimators(pkt_ptr, tdist * 2, t_current);
+        t_current += tdist / 2 / CLIGHT_PROP;
+        move_pkt(pkt_ptr, tdist / 2, t_current);
+        update_estimators(pkt_ptr, tdist, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
-          tdist = tdist * 2.;
           rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
-          tdist = tdist / 2.;
         }
         t_current = t2;
-        move_pkt(pkt_ptr, tdist, t_current);
-        tdist = tdist * 2.;
+        move_pkt(pkt_ptr, tdist / 2, t_current);
+
         #ifdef DEBUG_ON
           pkt_ptr->last_event = pkt_ptr->last_event + 1000;
         #endif
@@ -1071,19 +1064,15 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
         #endif
-        edist = edist / 2.;
-        t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, edist, t_current);
-        update_estimators(pkt_ptr, edist * 2, t_current);
+        t_current += edist / 2 / CLIGHT_PROP;
+        move_pkt(pkt_ptr, edist / 2, t_current);
+        update_estimators(pkt_ptr, edist, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
-          edist = edist * 2.;
           rlc_emiss_rpkt(pkt_ptr, edist, t_current);
-          edist = edist / 2.;
         }
-        t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, edist, t_current);
-        edist = edist * 2.;
+        t_current += edist / 2 / CLIGHT_PROP;
+        move_pkt(pkt_ptr, edist / 2, t_current);
 
         /** The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event*/
         if (modelgrid[mgi].thick == 1)
