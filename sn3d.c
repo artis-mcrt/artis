@@ -283,7 +283,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 }
 
 
-static void mpi_reduce_estimators(int my_rank)
+static void mpi_reduce_estimators(int my_rank, int nts)
 {
   radfield_reduce_estimators();
   #ifndef FORCE_LTE
@@ -385,17 +385,13 @@ static void mpi_reduce_estimators(int my_rank)
   }
 
   /// Communicate gamma and positron deposition and write to file
-  for (int i = 0; i < ntstep; i++)
-  {
-    MPI_Allreduce(MPI_IN_PLACE, &time_step[i].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &time_step[i].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    if (my_rank == 0)
-    {
-      time_step[i].gamma_dep /= nprocs;
-      time_step[i].positron_dep /= nprocs;
-    }
-  }
+  time_step[nts].gamma_dep /= nprocs;
+  time_step[nts].positron_dep /= nprocs;
+
+  MPI_Allreduce(MPI_IN_PLACE, &ionstats, npts_model * get_tot_nions() * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

@@ -1061,7 +1061,7 @@ static void normalise_ion_estimators(const int mgi, const double deltat, const d
       for (int i = 0; i < ION_COUNTER_COUNT; i++)
       {
         // energy or event count per volume per second
-        const double ratedensity = get_ion_stats(mgi, element, ion, i) / deltaV / deltat;
+        const double ratedensity = get_ion_stats(mgi, element, ion, i) / deltaV / deltat / nprocs;
 
         if (i < nstatcounters_ratecoeff)
         {
