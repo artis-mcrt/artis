@@ -281,6 +281,8 @@ static void print_level_rates_summary(
 
 static void print_element_rates_summary(
   const int element,
+  const int timestep,
+  const int nlte_iter,
   const gsl_vector *restrict popvec,
   const gsl_matrix *rate_matrix_rad_bb,
   const gsl_matrix *rate_matrix_coll_bb,
@@ -304,8 +306,9 @@ static void print_element_rates_summary(
     {
       if (level == 0)
       {
-        printout("  Z=%2d ion_stage %2d      pop       rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n",
-                 atomic_number, ionstage);
+        printout("  timestep %d NLTE iteration %d: NLTE summary stats for Z=%d ion_stage %d:\n",
+                 timestep, nlte_iter, atomic_number, ionstage);
+        printout("                           pop       rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n");
       }
 
       print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
@@ -879,7 +882,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   const double t_mid = time_step[timestep].mid;
   const int nions = get_nions(element);
 
-  printout("Solving for NLTE populations in cell %d at timestep %d iteration %d for element Z=%d (mass fraction %.2e, population %.2e)\n",
+  printout("Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, population %.2e)\n",
            modelgridindex, timestep, nlte_iter, atomic_number, get_abundance(modelgridindex, element),
            get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex));
 
@@ -1109,9 +1112,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       set_element_pops_lte(modelgridindex, element);
     }
 
-    if (individual_process_matricies)
+    if (individual_process_matricies && (timestep % 5 == 0)) // output NLTE stats every nth timestep
     {
-      print_element_rates_summary(element, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_element_rates_summary(element, timestep, nlte_iter, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     // if (individual_process_matricies && (atomic_number == 26 && timestep % 2 == 0))
