@@ -290,14 +290,11 @@ static void do_macroatom_radrecomb(
   }
 
   /// set the new state
-  *ion -= 1;
+  *ion = upperion - 1;
   *level = lower;
 
+  printout("macroatom\n");
   pkt_ptr->nu_cmf = select_continuum_nu(element, upperion - 1, lower, upperionlevel, T_e);
-
-  // const double vol = vol_init_modelcell(modelgridindex) * pow(t_current / tmin, 3);
-  // printout("  bf pkt last_event %d emissiontype %d trueemissiontype %d activatingline %d E/Hnu/V %g\n",
-  //    pkt_ptr->last_event, pkt_ptr->emissiontype, pkt_ptr->trueemissiontype, mastate[tid].activatingline, pkt_ptr->e_cmf/H/pkt_ptr->nu_cmf/vol);
 
   #ifndef FORCE_LTE
     //mabfcount[pkt_ptr->where] += pkt_ptr->e_cmf;
@@ -330,16 +327,17 @@ static void do_macroatom_radrecomb(
     if (debuglevel == 2) printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA recombination\n");
   #endif
 
+  /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
+  emitt_rpkt(pkt_ptr, t_current);
+
   #if (TRACK_ION_STATS)
-  ionstats[modelgridindex][element][*ion + 1][ION_COUNTER_RADRECOMB_MACROATOM] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+  increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
 
   const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
 
-  ionstats[modelgridindex][element][*ion + 1][ION_COUNTER_RADRECOMB_ESCAPED] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob;
+  increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   #endif
 
-  /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
-  emitt_rpkt(pkt_ptr, t_current);
   calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
 
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
@@ -422,7 +420,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   const double nu_rf_in = pkt_ptr->nu_rf;
 
   #if (TRACK_ION_STATS)
-  ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_TOTAL] += pkt_ptr->e_cmf;
+  increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_TOTAL, pkt_ptr->e_cmf);
   #endif
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
@@ -642,9 +640,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline);
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC] += pkt_ptr->e_cmf;
-        ionstats[modelgridindex][element][ion][ION_COUNTER_BOUNDBOUND_MACROATOM] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC, pkt_ptr->e_cmf);
+
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_BOUNDBOUND_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
         if (LOG_MACROATOM)
@@ -672,8 +672,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         #endif
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC] += pkt_ptr->e_cmf;
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC, pkt_ptr->e_cmf);
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
         pkt_ptr->type = TYPE_KPKT;
@@ -740,8 +740,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         #endif
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB] += pkt_ptr->e_cmf;
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL] += pkt_ptr->e_cmf;
+        // increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB, pkt_ptr->e_cmf);
+        // increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
         do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current);
@@ -763,8 +763,8 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         #endif
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB] += pkt_ptr->e_cmf;
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB, pkt_ptr->e_cmf);
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
         pkt_ptr->type = TYPE_KPKT;
@@ -810,14 +810,14 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         /// and set the macroatom's new state
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         ion -= 1;
         level = lower;
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         #ifdef DEBUG_ON
@@ -876,13 +876,13 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         ma_stat_internaluphigher++;
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         break;
@@ -891,7 +891,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         pkt_ptr->interactions += 1;
         // ion += 1;
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         ion = nt_random_upperion(modelgridindex, element, ion, false);
@@ -899,7 +899,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         ma_stat_internaluphighernt++;
 
         #if (TRACK_ION_STATS)
-        ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL] += pkt_ptr->e_cmf;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
         #endif
         // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion, level);
         break;

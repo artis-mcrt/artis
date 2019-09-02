@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include <string.h>
+#include "atomic.h"
 #include "grid_init.h"
 #include "emissivities.h"
 #include "packet_init.h"
@@ -173,14 +174,17 @@ void zero_estimators(void)
 
       for (int element = 0; element < nelements; element++)
       {
-        for (int ion = 0; ion < maxion; ion++)
+        #if (TRACK_ION_STATS)
+        for (int ion = 0; ion < get_nions(element); ion++)
         {
-          #if (TRACK_ION_STATS)
           for (int i = 0; i < ION_COUNTER_COUNT; i++)
           {
-            ionstats[n][element][ion][i] = 0.;
+            set_ion_stats(n, element, ion, i, 0.);
           }
-          #endif
+        }
+        #endif
+        for (int ion = 0; ion < maxion; ion++)
+        {
           #if (!NO_LUT_PHOTOION)
             gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
           #endif

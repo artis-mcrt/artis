@@ -440,7 +440,6 @@ int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
 
-#if TRACK_ION_STATS
 enum ionstatscounters {
   ION_COUNTER_RADRECOMB_MACROATOM = 0,
   ION_COUNTER_RADRECOMB_KPKT = 1,
@@ -479,8 +478,11 @@ enum ionstatscounters {
 // number of ion stats counters that should be divided by the ion populations
 #define nstatcounters_ratecoeff 18
 
-double ionstats[MMODELGRID][MELEMENTS][MIONS][ION_COUNTER_COUNT];
-#endif
+void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment);
+
+double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type);
+
+void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue);
 
 int maxion;
 // FILE *restrict tau_file;
