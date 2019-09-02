@@ -85,12 +85,6 @@ inline int get_ionisinglevels(int element, int ion)
 }
 
 
-inline int get_tot_nions(void)
-{
-  return includedions;
-}
-
-
 inline int get_uniqueionindex(const int element, const int ion)
 // Get an index for an ionstage of an element that is unique for every ions of every element
 {
