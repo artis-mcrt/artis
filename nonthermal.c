@@ -530,22 +530,31 @@ void nt_init(const int my_rank)
       nt_solution[modelgridindex].nneperion_when_solved = -1.;
       nt_solution[modelgridindex].timestep_last_solved = -1;
 
-      if (STORE_NT_SPECTRUM && get_numassociatedcells(modelgridindex) > 0)
+      if (get_numassociatedcells(modelgridindex) > 0)
       {
-        nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
-        assert(nt_solution[modelgridindex].yfunc != NULL);
-        mem_usage_yfunc += SFPTS * sizeof(double);
+        nt_solution[modelgridindex].eff_ionpot = calloc(includedions, sizeof(float));
+        nt_solution[modelgridindex].fracdep_ionization_ion = calloc(includedions, sizeof(double));
+
+        nt_solution[modelgridindex].prob_num_auger = calloc(includedions * (MAX_AUGER_ELECTRONS + 1), sizeof(float));
+        nt_solution[modelgridindex].ionenfrac_num_auger = calloc(includedions * (MAX_AUGER_ELECTRONS + 1), sizeof(float));
+
+        if (STORE_NT_SPECTRUM)
+        {
+          nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
+          assert(nt_solution[modelgridindex].yfunc != NULL);
+          mem_usage_yfunc += SFPTS * sizeof(double);
+        }
       }
       else
       {
+        nt_solution[modelgridindex].eff_ionpot = NULL;
+        nt_solution[modelgridindex].fracdep_ionization_ion = NULL;
+
+        nt_solution[modelgridindex].prob_num_auger = NULL;
+        nt_solution[modelgridindex].ionenfrac_num_auger = NULL;
+
         nt_solution[modelgridindex].yfunc = NULL;
       }
-
-      nt_solution[modelgridindex].eff_ionpot = calloc(includedions, sizeof(float));
-      nt_solution[modelgridindex].fracdep_ionization_ion = calloc(includedions, sizeof(double));
-
-      nt_solution[modelgridindex].prob_num_auger = calloc(includedions * (MAX_AUGER_ELECTRONS + 1), sizeof(float));
-      nt_solution[modelgridindex].ionenfrac_num_auger = calloc(includedions * (MAX_AUGER_ELECTRONS + 1), sizeof(float));
 
       nt_solution[modelgridindex].frac_excitations_list = NULL;
       nt_solution[modelgridindex].frac_excitations_list_size = 0;
