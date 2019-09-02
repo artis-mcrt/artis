@@ -608,31 +608,25 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
 
     if ((sdist < tdist) && (sdist < edist))
     {
-      sdist = sdist / 2.;
-      t_current += sdist / CLIGHT_PROP;
-      move_pkt(pkt_ptr, sdist, t_current);
+      t_current += sdist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist / 2, t_current);
 
       // Move it into the new cell.
       if (kap_tot > 0)
       {
         if (do_comp_est)
         {
-          sdist = sdist * 2.;
           compton_emiss_cont(pkt_ptr, sdist, t_current);
           pp_emiss_cont(pkt_ptr, sdist, t_current);
-          sdist = sdist / 2.;
         }
         if (do_rlc_est != 0)
         {
-          sdist = sdist * 2.;
           rlc_emiss_gamma(pkt_ptr, sdist, t_current);
-          sdist = sdist / 2.;
         }
       }
 
-      t_current += sdist / CLIGHT_PROP;
-      move_pkt(pkt_ptr, sdist, t_current);
-      sdist = sdist * 2.;
+      t_current += sdist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist / 2, t_current);
       if (snext != pkt_ptr->where)
       {
         change_cell(pkt_ptr, snext, &end_packet, t_current);
@@ -641,55 +635,43 @@ double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
     else if ((tdist < sdist) && (tdist < edist))
     {
       // Doesn't reach boundary.
-      tdist = tdist / 2.;
-      t_current += tdist  / CLIGHT_PROP;
-      move_pkt(pkt_ptr, tdist, t_current);
+      t_current += tdist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, tdist / 2, t_current);
 
       if (kap_tot > 0)
       {
         if (do_comp_est)
         {
-          tdist = tdist * 2.;
           compton_emiss_cont(pkt_ptr, tdist, t_current);
           pp_emiss_cont(pkt_ptr, tdist, t_current);
-          tdist = tdist / 2.;
         }
         if (do_rlc_est != 0)
         {
-          tdist = tdist * 2.;
           rlc_emiss_gamma(pkt_ptr, tdist, t_current);
-          tdist = tdist / 2.;
         }
       }
       t_current = t2;
-      move_pkt(pkt_ptr, tdist, t_current);
-      tdist = tdist * 2.;
+      move_pkt(pkt_ptr, tdist / 2, t_current);
       end_packet = true;
     }
     else if ((edist < sdist) && (edist < tdist))
     {
-      edist = edist / 2.;
-      t_current += edist / CLIGHT_PROP;
-      move_pkt(pkt_ptr, edist, t_current);
+      t_current += edist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist / 2, t_current);
       if (kap_tot > 0)
       {
         if (do_comp_est)
         {
-          edist = edist * 2.;
           compton_emiss_cont(pkt_ptr, edist, t_current);
           pp_emiss_cont(pkt_ptr, edist, t_current);
-          edist = edist / 2.;
         }
         if (do_rlc_est != 0)
         {
-          edist = edist * 2.;
           rlc_emiss_gamma(pkt_ptr, edist, t_current);
-          edist = edist / 2.;
         }
       }
-      t_current += edist / CLIGHT_PROP;
-      move_pkt(pkt_ptr, edist, t_current);
-      edist = edist * 2.;
+      t_current += edist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist / 2, t_current);
 
       // event occurs. Choose which event and call the appropriate subroutine.
       zrand = gsl_rng_uniform(rng);
