@@ -453,12 +453,6 @@ static void remove_grid_restart_data(const int timestep)
 
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment)
 {
-  assert(modelgridindex < npts_model);
-  assert(element >= 0);
-  assert(ion >= 0);
-  assert(element < MELEMENTS);
-  assert(element < nelements);
-  assert(ion < MIONS);
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
   const int totnions = get_tot_nions();
@@ -472,12 +466,6 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
 
 double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type)
 {
-  assert(modelgridindex < npts_model);
-  assert(element >= 0);
-  assert(ion >= 0);
-  assert(element < MELEMENTS);
-  assert(element < nelements);
-  assert(ion < MIONS);
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
   const int totnions = get_tot_nions();
@@ -488,12 +476,6 @@ double get_ion_stats(const int modelgridindex, const int element, const int ion,
 
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue)
 {
-  assert(modelgridindex < npts_model);
-  assert(element >= 0);
-  assert(ion >= 0);
-  assert(element < MELEMENTS);
-  assert(element < nelements);
-  assert(ion < MIONS);
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
   const int totnions = get_tot_nions();
