@@ -87,17 +87,9 @@ inline int get_ionisinglevels(int element, int ion)
 
 
 inline int get_uniqueionindex(const int element, const int ion)
-// Get an index for an ion that is unique for every ion of every element
+// Get an index for an ionstage of an element that is unique for every ions of every element
 {
-  int index = 0;
-  for (int e = 0; e < element; e++)
-  {
-    index += get_nions(element);
-  }
-  index += ion;
-
-  // assert(index < get_tot_nions());
-  return index;
+  return elements[element].ions[ion].uniqueionindex;
 }
 
 
@@ -108,7 +100,7 @@ inline void get_ionfromuniqueionindex(const int allionsindex, int *element, int 
   {
     if ((allionsindex - allionsindex_thiselementfirstion) >= get_nions(e))
     {
-      allionsindex_thiselementfirstion += get_nions(e);
+      allionsindex_thiselementfirstion += get_nions(e); // skip this element
     }
     else
     {
