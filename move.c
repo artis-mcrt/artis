@@ -2,12 +2,14 @@
 
 
 ///****************************************************************************
-void update_estimators(PKT *pkt_ptr, double distance)
+void update_estimators(PKT *pkt_ptr, double distance, double t_current)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
 {
   double get_abundance(int modelgridindex, int element);
+  double vel_vec[3], cmf_dir[3];
+  int get_velocity(), angle_ab();
   double dot(), vec_len();
   int element,ion,level,i;
   double nu_edge;
@@ -76,14 +78,17 @@ void update_estimators(PKT *pkt_ptr, double distance)
 
 
     #ifdef EXTRA_DIAG
+	get_velocity(pkt_ptr->pos, vel_vec, t_current);
+	angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
+	helper2 = helper * dot(pkt_ptr->pos, cmf_dir) / vec_len(pkt_ptr->pos);
         #ifdef _OPENMP 
            #pragma omp atomic
         #endif
-	fluxH_1[modelgridindex] += helper * dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos);
+	fluxH_1[modelgridindex] += helper2;
 	#ifdef _OPENMP 
            #pragma omp atomic
         #endif
-	kappa_fluxH_1_cont[modelgridindex] += helper * dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * kappa_rpkt_cont[tid].total;
+	kappa_fluxH_1_cont[modelgridindex] += helper2 * kappa_rpkt_cont[tid].total;
     #endif
     
     ///Heating estimators. These are only applicable for pure H. Other elements

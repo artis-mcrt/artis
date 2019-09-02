@@ -17,7 +17,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
   double min(double a, double b);
   double boundary_cross();
   int move_pkt(PKT *pkt_ptr, double distance, double time);
-  void update_estimators(PKT *pkt_ptr, double distance);
+  void update_estimators(PKT *pkt_ptr, double distance, double t_current);
   int locate();
   int change_cell();
   int rlc_emiss_rpkt();
@@ -180,7 +180,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         sdist = sdist / 2.;
         t_current += sdist / CLIGHT_PROP;
         move_pkt(pkt_ptr,sdist,t_current);
-        update_estimators(pkt_ptr,sdist*2);
+        update_estimators(pkt_ptr,sdist*2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           sdist = sdist * 2.;
@@ -222,7 +222,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         tdist = tdist / 2.;
         t_current += tdist / CLIGHT_PROP;
         move_pkt(pkt_ptr,tdist,t_current);
-        update_estimators(pkt_ptr,tdist*2);
+        update_estimators(pkt_ptr,tdist*2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           tdist = tdist * 2.;
@@ -248,7 +248,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         edist = edist / 2.;
         t_current += edist / CLIGHT_PROP;
         move_pkt(pkt_ptr,edist,t_current);
-        update_estimators(pkt_ptr,edist*2);
+        update_estimators(pkt_ptr,edist*2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           edist = edist * 2.;
@@ -306,7 +306,7 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
   //double vec_len();
   double doppler();
   double vel_vec[3];
-  int get_velocity();
+  int get_velocity(), angle_ab();
 
   
   
@@ -436,7 +436,9 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
 	  
 	  #ifdef EXTRA_DIAG
 	  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
-	  kappa_fluxH_1_lines[modelgridindex] += tau_line * pkt_ptr->e_cmf * dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos);
+	  double cmf_dir[3];
+	  angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
+	  kappa_fluxH_1_lines[modelgridindex] += tau_line * pkt_ptr->e_cmf * dot(pkt_ptr->pos, cmf_dir) / vec_len(pkt_ptr->pos);
 	  #endif
 
           //dummypkt_ptr->next_trans += 1; 
@@ -1752,7 +1754,7 @@ double do_rpkt_thickcell(pkt_ptr, t1, t2)
   double min(double a, double b);
   double boundary_cross();
   int move_pkt(PKT *pkt_ptr, double distance, double time);
-  void update_estimators(PKT *pkt_ptr, double distance);
+  void update_estimators(PKT *pkt_ptr, double distance, double t_current);
   void emitt_rpkt(PKT *pkt_ptr, double t_current);
   int locate();
   int change_cell();
@@ -1874,7 +1876,7 @@ double do_rpkt_thickcell(pkt_ptr, t1, t2)
         sdist = sdist / 2.;
         t_current += sdist / CLIGHT_PROP;
         move_pkt(pkt_ptr,sdist,t_current);
-        update_estimators(pkt_ptr,sdist*2);
+        update_estimators(pkt_ptr,sdist*2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           sdist = sdist * 2.;
@@ -1905,7 +1907,7 @@ double do_rpkt_thickcell(pkt_ptr, t1, t2)
         tdist = tdist / 2.;
         t_current += tdist / CLIGHT_PROP;
         move_pkt(pkt_ptr,tdist,t_current);
-        update_estimators(pkt_ptr,tdist*2);
+        update_estimators(pkt_ptr,tdist*2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           tdist = tdist * 2.;
@@ -1928,7 +1930,7 @@ double do_rpkt_thickcell(pkt_ptr, t1, t2)
         edist = edist / 2.;
         t_current += edist / CLIGHT_PROP;
         move_pkt(pkt_ptr,edist,t_current);
-        update_estimators(pkt_ptr,edist*2);
+        update_estimators(pkt_ptr,edist*2, t_current);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           edist = edist * 2.;
