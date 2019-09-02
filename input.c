@@ -1339,6 +1339,8 @@ static void write_bflist_file(int includedphotoiontransitions)
             fprintf(bflist_file,"%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
 
           assert(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
+
+          assert(i != 9999999 - 1); // would cause the same packet emission type as the special value for free-free scattering
           i++;
         }
       }
