@@ -3107,18 +3107,11 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
       MPI_Bcast(&nt_solution[modelgridindex].E_0, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
       MPI_Bcast(&nt_solution[modelgridindex].deposition_rate_density, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
-      MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, includedions, MPI_FLOAT, root, MPI_COMM_WORLD);
       MPI_Bcast(nt_solution[modelgridindex].fracdep_ionization_ion, includedions, MPI_DOUBLE, root, MPI_COMM_WORLD);
+      MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, includedions, MPI_FLOAT, root, MPI_COMM_WORLD);
 
-      for (int uniqueionindex = 0; uniqueionindex < includedions; uniqueionindex++)
-      {
-        for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
-        {
-          MPI_Bcast(nt_solution[modelgridindex].prob_num_auger, includedelements * (MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
-          MPI_Bcast(nt_solution[modelgridindex].ionenfrac_num_auger, includedelements * (MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
-        }
-      }
-
+      MPI_Bcast(nt_solution[modelgridindex].prob_num_auger, includedelements * (MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
+      MPI_Bcast(nt_solution[modelgridindex].ionenfrac_num_auger, includedelements * (MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
 
       // communicate NT excitations
       const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list_size;
