@@ -237,6 +237,19 @@ extern inline void gsl_error_handler_printout(const char *reason, const char *fi
 extern inline FILE *fopen_required(const char *filename, const char *mode);
 
 
+// define these functions since sn3d.c is not included when compiling exspec
+void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment)
+{
+}
+
+double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type)
+{
+}
+
+void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue)
+{
+}
+
 /*void *my_malloc(size_t size)
 {
   char *adr;

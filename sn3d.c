@@ -45,6 +45,10 @@ static inline omp_int_t omp_get_thread_num(void) { return 0; }
 static inline omp_int_t omp_get_num_threads(void) { return 1; }
 #endif
 
+#if TRACK_ION_STATS
+static double *ionstats = NULL;
+#endif
+
 static FILE *initialise_linestat_file(void)
 {
   FILE *restrict linestat_file = fopen_required("linestat.out", "w");
@@ -173,7 +177,6 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
   int position = 0;
   for (int root = 0; root < p; root++)
   {
-    MPI_Barrier(MPI_COMM_WORLD);
     int root_nstart = nstart;
     MPI_Bcast(&root_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
     int root_ndo = ndo;
@@ -229,7 +232,6 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       printout("mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position, mpi_grid_buffer_size);
       assert(position <= mpi_grid_buffer_size);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
 
     position = 0;
@@ -453,6 +455,54 @@ static void remove_grid_restart_data(const int timestep)
 }
 
 
+void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment)
+{
+  assert(modelgridindex < npts_model);
+  assert(element >= 0);
+  assert(ion >= 0);
+  assert(element < MELEMENTS);
+  assert(element < nelements);
+  assert(ion < MIONS);
+  assert(ion < get_nions(element));
+  assert(ion_counter_type < ION_COUNTER_COUNT);
+  const int totnions = get_tot_nions();
+  const int uniqueionindex = get_uniqueionindex(element, ion);
+  ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
+}
+
+
+double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type)
+{
+  assert(modelgridindex < npts_model);
+  assert(element >= 0);
+  assert(ion >= 0);
+  assert(element < MELEMENTS);
+  assert(element < nelements);
+  assert(ion < MIONS);
+  assert(ion < get_nions(element));
+  assert(ion_counter_type < ION_COUNTER_COUNT);
+  const int totnions = get_tot_nions();
+  const int uniqueionindex = get_uniqueionindex(element, ion);
+  return ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
+}
+
+
+void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue)
+{
+  assert(modelgridindex < npts_model);
+  assert(element >= 0);
+  assert(ion >= 0);
+  assert(element < MELEMENTS);
+  assert(element < nelements);
+  assert(ion < MIONS);
+  assert(ion < get_nions(element));
+  assert(ion_counter_type < ION_COUNTER_COUNT);
+  const int totnions = get_tot_nions();
+  const int uniqueionindex = get_uniqueionindex(element, ion);
+  ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
+}
+
+
 static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *maxndo)
 {
   #ifndef MPI_ON
@@ -652,6 +702,8 @@ int main(int argc, char** argv)
 //    const time_t time_after_barrier = time(NULL);
 //    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
 //  #endif
+
+  ionstats = calloc(npts_model * get_tot_nions() * ION_COUNTER_COUNT, sizeof(double));
 
   /// As a precaution, explicitly zero all the estimators here
   zero_estimators();
@@ -1309,6 +1361,9 @@ int main(int argc, char** argv)
   #endif
 
   free(packets);
+  #if TRACK_ION_STATS
+  free(ionstats);
+  #endif
 
   return 0;
 }

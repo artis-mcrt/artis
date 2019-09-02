@@ -1,4 +1,4 @@
-#include<unistd.h>
+#include <unistd.h>
 #include <gsl/gsl_roots.h>
 #include "sn3d.h"
 #include "atomic.h"
@@ -272,7 +272,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       double ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_RADEXC];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_RADEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -289,7 +289,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -306,7 +306,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -323,7 +323,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -340,7 +340,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -357,7 +357,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -374,7 +374,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_COLLION];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -391,7 +391,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -408,7 +408,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -425,7 +425,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_in_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_TOTAL];
+        const double ma_in_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_TOTAL);
         ma_el += ma_in_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_in_ion);
@@ -441,7 +441,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -457,7 +457,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -474,7 +474,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       ma_el = 0.;
       for (int ion = 0; ion < nions; ion++)
       {
-        const double ma_ion = ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL];
+        const double ma_ion = get_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL);
         ma_el += ma_ion;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
@@ -519,7 +519,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        const double alpha_r_mc = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_MACROATOM];
+        const double alpha_r_mc = get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_MACROATOM);
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
                 alpha_r_mc);
@@ -533,7 +533,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        const double alpha_r_mc = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_KPKT];
+        const double alpha_r_mc = get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_KPKT);
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
                 alpha_r_mc);
@@ -547,7 +547,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        const double alpha_r_mc = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_MACROATOM] + ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_KPKT];
+        const double alpha_r_mc = get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_MACROATOM) + get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_KPKT);
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
                 alpha_r_mc);
@@ -561,8 +561,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        const double alpha_r_mc = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_MACROATOM] + ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_KPKT];
-        const double alpha_r_mc_abs = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_ABSORBED];
+        const double alpha_r_mc = get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_MACROATOM) + get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_KPKT);
+        const double alpha_r_mc_abs = get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_ABSORBED);
         fprintf(estimators_file, "  %d: %9.3f",
                 get_ionstage(element, ion),
                 1. - alpha_r_mc_abs / alpha_r_mc);
@@ -576,8 +576,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        const double alpha_r_mc = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_MACROATOM] + ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_KPKT];
-        const double alpha_r_mc_escaped = ionstats[mgi][element][ion][ION_COUNTER_RADRECOMB_ESCAPED];
+        const double alpha_r_mc = get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_MACROATOM) + get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_KPKT);
+        const double alpha_r_mc_escaped = get_ion_stats(mgi, element, ion, ION_COUNTER_RADRECOMB_ESCAPED);
         fprintf(estimators_file, "  %d: %9.3f",
                 get_ionstage(element, ion),
                 alpha_r_mc_escaped / alpha_r_mc);
@@ -592,8 +592,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "              ");
       for (int ion = 0; ion < nions; ion++)
       {
-        const double bb_emitted = ionstats[mgi][element][ion][ION_COUNTER_BOUNDBOUND_MACROATOM];
-        const double bb_abs = ionstats[mgi][element][ion][ION_COUNTER_BOUNDBOUND_ABSORBED];
+        const double bb_emitted = get_ion_stats(mgi, element, ion, ION_COUNTER_BOUNDBOUND_MACROATOM);
+        const double bb_abs = get_ion_stats(mgi, element, ion, ION_COUNTER_BOUNDBOUND_ABSORBED);
         fprintf(estimators_file, "  %d: %9.3f",
                 get_ionstage(element, ion),
                 1. - bb_abs / bb_emitted);
@@ -681,7 +681,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -694,7 +694,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDFREE]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDFREE));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -706,7 +706,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // {
       //   fprintf(estimators_file, "  %d: %9.3e",
       //           get_ionstage(element, ion),
-      //           ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT]);
+      //           get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT]);
       // }
       // fprintf(estimators_file, "\n");
 
@@ -718,7 +718,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSONE]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSONE));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -731,7 +731,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -744,7 +744,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -757,7 +757,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -770,7 +770,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUND]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUND));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -783,7 +783,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -796,7 +796,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -809,7 +809,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       {
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                ionstats[mgi][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE]);
+                get_ion_stats(mgi, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -845,7 +845,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         {
           fprintf(estimators_file, "  %d: %9.3e",
                   get_ionstage(element, ion),
-                  ionstats[mgi][element][ion][ION_COUNTER_NTION]);
+                  get_ion_stats(mgi, element, ion, ION_COUNTER_NTION));
         }
         fprintf(estimators_file, "\n");
         #endif
@@ -1087,14 +1087,17 @@ static void normalise_ion_estimators(const int mgi, const double deltat, const d
     {
       for (int i = 0; i < ION_COUNTER_COUNT; i++)
       {
+        // energy or event count per volume per second
+        const double ratedensity = get_ion_stats(mgi, element, ion, i) / deltaV / deltat;
+
         if (i < nstatcounters_ratecoeff)
         {
           // convert photon event counters into rate coefficients
-          ionstats[mgi][element][ion][i] *= 1. / deltat / (deltaV * ionstagepop(mgi, element, ion));
+          set_ion_stats(mgi, element, ion, i, ratedensity / ionstagepop(mgi, element, ion));
         }
         else
         {
-          ionstats[mgi][element][ion][i] *= 1. / deltat / deltaV;
+          set_ion_stats(mgi, element, ion, i, ratedensity);
         }
       }
     }

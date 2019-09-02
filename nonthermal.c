@@ -2077,8 +2077,8 @@ void do_ntlepton(PKT *pkt_ptr)
 
     if (zrand < frac_ionization)
     {
-      int element;
-      int lowerion;
+      int element = -1;
+      int lowerion = -1;
       // select_nt_ionization(modelgridindex, &element, &lowerion);
       select_nt_ionization2(modelgridindex, &element, &lowerion);
       const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
@@ -2098,9 +2098,11 @@ void do_ntlepton(PKT *pkt_ptr)
       nt_stat_to_ionization++;
 
       #if (TRACK_ION_STATS)
+      assert(upperion < get_nions(element));
+      assert(lowerion >= 0);
       const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
-      ionstats[modelgridindex][element][lowerion][ION_COUNTER_NTION] += pkt_ptr->e_cmf / epsilon_trans;
-      ionstats[modelgridindex][element][upperion][ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION] += pkt_ptr->e_cmf;
+      increment_ion_stats(modelgridindex, element, lowerion, ION_COUNTER_NTION, pkt_ptr->e_cmf / epsilon_trans);
+      increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION, pkt_ptr->e_cmf);
       #endif
 
       // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
@@ -3163,7 +3165,6 @@ void nt_MPI_Bcast(const int my_rank, const int root, const int root_nstart, cons
       //          modelgridindex, logged_element_z, logged_ion_stage,
       //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
       //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
-      MPI_Barrier(MPI_COMM_WORLD);
       if (STORE_NT_SPECTRUM)
       {
         // printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);

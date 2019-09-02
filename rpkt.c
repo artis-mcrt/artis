@@ -453,64 +453,66 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
         #if (TRACK_ION_STATS)
         const double n_photons_absorbed = pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
 
-        ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION] += n_photons_absorbed;
+        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION, n_photons_absorbed);
 
         const int et = pkt_ptr->emissiontype;
         if (et >= 0)  // r-packet is from bound-bound emission
         {
-          ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUND] += n_photons_absorbed;
+          increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUND, n_photons_absorbed);
           const int emissionelement = linelist[et].elementindex;
           const int emissionion = linelist[et].ionindex;
 
-          ionstats[modelgridindex][emissionelement][emissionion][ION_COUNTER_BOUNDBOUND_ABSORBED] += n_photons_absorbed;
+          increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_BOUNDBOUND_ABSORBED, n_photons_absorbed);
 
           if (emissionelement == element)
           {
             if (emissionion == ion + 1)
             {
-              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE] += n_photons_absorbed;
+              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE, n_photons_absorbed);
             }
             else if (emissionion == ion + 2)
             {
-              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO] += n_photons_absorbed;
+              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO, n_photons_absorbed);
             }
             else if (emissionion == ion + 3)
             {
-              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE] += n_photons_absorbed;
+              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE, n_photons_absorbed);
             }
           }
         }
-        else // r-pkt is from bound-free emission
+        else if (et != -9999999) // r-pkt is from bound-free emission (not free-free scattering
         {
-          ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBOUNDFREE] += n_photons_absorbed;
+          increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
 
           const int bfindex = -1*et - 1;
+          assert(bfindex >= 0);
+          assert(bfindex <= nbfcontinua);
           const int emissionelement = bflist[bfindex].elementindex;
           const int emissionlowerion = bflist[bfindex].ionindex;
           const int emissionupperion = emissionlowerion + 1;
           const int emissionlowerlevel = bflist[bfindex].levelindex;
 
-            ionstats[modelgridindex][emissionelement][emissionupperion][ION_COUNTER_RADRECOMB_ABSORBED] += n_photons_absorbed;
+          increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_RADRECOMB_ABSORBED, n_photons_absorbed);
 
           if (emissionelement == element)
           {
-            ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT] += n_photons_absorbed;
+            increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT, n_photons_absorbed);
             if (emissionupperion == ion + 1)
             {
-              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSONE] += n_photons_absorbed;
+              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSONE, n_photons_absorbed);
             }
             else if (emissionupperion == ion + 2)
             {
-              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO] += n_photons_absorbed;
+              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO, n_photons_absorbed);
             }
             else if (emissionupperion == ion + 3)
             {
-              ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE] += n_photons_absorbed;
+              increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE, n_photons_absorbed);
             }
           }
           if (level_isinsuperlevel(emissionelement, emissionlowerion, emissionlowerlevel))
           {
-            ionstats[modelgridindex][element][ion][ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL] += n_photons_absorbed;
+            increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL, n_photons_absorbed);
           }
         }
         #endif
@@ -526,7 +528,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
             pkt_ptr->last_event = 3;
           #endif
           #if (TRACK_ION_STATS)
-          ionstats[modelgridindex][element][ion + 1][ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION] += pkt_ptr->e_cmf;
+          increment_ion_stats(modelgridindex, element, ion + 1, ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION, pkt_ptr->e_cmf);
           #endif
           pkt_ptr->type = TYPE_MA;
           #ifndef FORCE_LTE
@@ -646,14 +648,14 @@ static void rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi)
   #if (TRACK_ION_STATS)
   const int element = mastate[tid].element;
   const int ion = mastate[tid].ion;
-  ionstats[mgi][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_RADEXC] += pkt_ptr->e_cmf;
+  increment_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
 
   const int et = pkt_ptr->emissiontype;
   if (et >= 0)
   {
     const int emissionelement = linelist[et].elementindex;
     const int emissionion = linelist[et].ionindex;
-    ionstats[mgi][emissionelement][emissionion][ION_COUNTER_BOUNDBOUND_ABSORBED] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
+    increment_ion_stats(mgi, emissionelement, emissionion, ION_COUNTER_BOUNDBOUND_ABSORBED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
   }
   #endif
 
@@ -1259,7 +1261,7 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
   printout("get_rpkt_escape_prob pkt_radius %g rmax %g r/rmax %g tstart %g\n", pkt_radius, rmaxnow, pkt_radius / rmaxnow, tstart);
   // assert(pkt_radius <= rmaxnow);
   double escape_prob_sum = 0.;
-  const int ndirs = 30; // number of random directions to sample
+  const int ndirs = 40; // number of random directions to sample
   for (int n = 0; n < ndirs; n++)
   {
     double dirvec[3];
@@ -1278,10 +1280,7 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
   // reset the cell history and rpkt opacities back to values for the start point
   cellhistory_reset(mgi, false);
 
-  if (pkt_ptr->type == TYPE_RPKT)
-  {
-    calculate_kappa_rpkt_cont(pkt_ptr, tstart, mgi);
-  }
+  // calculate_kappa_rpkt_cont(pkt_ptr, tstart, mgi);
 
   return escape_prob_avg;
 }

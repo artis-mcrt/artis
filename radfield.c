@@ -1677,7 +1677,6 @@ void radfield_reduce_estimators(void)
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
       if (get_numassociatedcells(modelgridindex) > 0)
       {
-        // MPI_Barrier(MPI_COMM_WORLD);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
           // printout("MPI: pre-MPI_Allreduce, process %d modelgrid %d binindex %d has a individual contribcount of %d\n",my_rank,modelgridindex,binindex,radfieldbins[modelgridindex][binindex].contribcount);
@@ -1703,7 +1702,6 @@ void radfield_reduce_estimators(void)
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
       if (get_numassociatedcells(modelgridindex) > 0)
       {
-        MPI_Barrier(MPI_COMM_WORLD);
         for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
         {
           MPI_Allreduce(MPI_IN_PLACE, &Jb_lu_raw[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -1736,13 +1734,11 @@ void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart
 
   for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
   {
-    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
     if (get_numassociatedcells(modelgridindex) > 0)
     {
       if (MULTIBIN_RADFIELD_MODEL_ON)
       {
-        MPI_Barrier(MPI_COMM_WORLD);
         for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
         {
           // printout("radfield_MPI_Bcast bin %d T_R before: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);

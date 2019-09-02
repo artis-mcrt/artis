@@ -572,7 +572,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       /// Need to select the r-packets frequency and a random direction in the
       /// co-moving frame.
       const int element = cellhistory[tid].coolinglist[i].element;
-      const int ion = cellhistory[tid].coolinglist[i].ion;
+      const int lowerion = cellhistory[tid].coolinglist[i].ion;
       const int level = cellhistory[tid].coolinglist[i].level;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
       // const double nu_threshold = get_phixs_threshold(element, ion, level, phixstargetindex)
@@ -590,10 +590,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       //pkt_ptr->nu_cmf = nu_threshold * (1+sqrt(1+(4*KB*T_e/H/nu_threshold)))/2 * (1 - KB*T_e/H/nu_threshold*log(zrand));
       //pkt_ptr->nu_cmf = nu_threshold;
 
+      // Sample the packets comoving frame frequency according to paperII 4.2.2
       //zrand = gsl_rng_uniform(rng);
       //if (zrand < 0.5)
       {
-        pkt_ptr->nu_cmf = select_continuum_nu(element, ion, level, upper, T_e);
+        pkt_ptr->nu_cmf = select_continuum_nu(element, lowerion, level, upper, T_e);
       }
       // else
       // {
@@ -601,30 +602,24 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       //   pkt_ptr->nu_cmf = sample_planck(T_e);
       // }
 
-      #if (TRACK_ION_STATS)
-      ionstats[modelgridindex][element][ion + 1][ION_COUNTER_RADRECOMB_KPKT] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf;
-      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
-      ionstats[modelgridindex][element][ion + 1][ION_COUNTER_RADRECOMB_ESCAPED] += pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob;
-      #endif
+      printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
 
-      // Sample the packets comoving frame frequency according to paperII 4.2.2
-      if (debuglevel == 2) printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
-      //pkt_ptr->nu_cmf = 3.7474058e+14;
-      if (!isfinite(pkt_ptr->nu_cmf))
-      {
-        printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
-        abort();
-      }
       // and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr, t_current);
-      if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by fb\n");
+
+      #if (TRACK_ION_STATS)
+      increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_KPKT, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
+      increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
+      #endif
+
       calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_fb++;
       k_stat_to_r_fb++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
-      pkt_ptr->emissiontype = get_continuumindex(element, ion, level, upper);
+      pkt_ptr->emissiontype = get_continuumindex(element, lowerion, level, upper);
       pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = t_current;
@@ -643,7 +638,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       mastate[tid].activatingline = -99;
 
       #if (TRACK_ION_STATS)
-      ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC] += pkt_ptr->e_cmf;
+      increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
       #endif
 
       pkt_ptr->type = TYPE_MA;
@@ -673,7 +668,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       mastate[tid].activatingline = -99;
 
       #if (TRACK_ION_STATS)
-      ionstats[modelgridindex][element][ion][ION_COUNTER_MACROATOM_ENERGYIN_COLLION] += pkt_ptr->e_cmf;
+      increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLION, pkt_ptr->e_cmf);
       #endif
 
       pkt_ptr->type = TYPE_MA;

@@ -705,7 +705,7 @@ static void precalculate_rate_coefficient_integrals(void)
 }
 
 
-static int get_index_from_partialsums(double *partialsums, size_t listsize, double targetsum)
+static int get_index_from_cumulativesums(double *partialsums, size_t listsize, double targetsum)
 // e.g. given a list of [0.25, 0.75, 1.00],
 // returns 0 for targetsum [0., 0.25], 1 for (0.25, 0.75], 2 for (0.75, 1.00]
 {
@@ -721,10 +721,10 @@ static int get_index_from_partialsums(double *partialsums, size_t listsize, doub
 }
 
 
-static double get_x_of_integralfrac(gsl_function *F_integrand, double xmin, double xmax, int npieces, double targetintegralfrac)
-// find the x such that that integral of f(s)ds from xmin to x is a given fraction
-// of the integral from xmin to xmax
-// done by breaking the integral into npieces intervals
+static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, double xmax, int npieces, double targetintegralfrac)
+// find the x such that that integral f(s) ds from xmin to x is the fraction targetintegralfrac
+// of the total integral from xmin to xmax
+// this is done by breaking the integral into npieces intervals
 {
   const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
 
@@ -752,7 +752,7 @@ static double get_x_of_integralfrac(gsl_function *F_integrand, double xmin, doub
 
   const double targetintegral = targetintegralfrac * total;
 
-  const int index = get_index_from_partialsums(partialsums, npieces, targetintegral);
+  const int index = get_index_from_cumulativesums(partialsums, npieces, targetintegral);
 
   const double xlow = xmin + index * deltax;
   const double xhigh = xmin + (index + 1) * deltax;
@@ -760,7 +760,6 @@ static double get_x_of_integralfrac(gsl_function *F_integrand, double xmin, doub
   const double inthigh = partialsums[index];
 
   return xlow + (targetintegral - intlow) / (inthigh - intlow) * (xhigh - xlow);
-  // return 2 * nulow;
 }
 
 
@@ -785,24 +784,12 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   F_alpha_sp.params = &intparas;
 
   const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
-  double nu_selected = get_x_of_integralfrac(&F_alpha_sp, nu_threshold, nu_max_phixs, npieces, zrand);
+  double nu_selected = get_x_at_integralfrac(&F_alpha_sp, nu_threshold, nu_max_phixs, npieces, zrand);
 
-  // TODO: remove
-  // while (1e8 * CLIGHT / nu_selected < 771.)
-  // {
-  //   nu_selected = nu_selected / 2;
-  // }
-  // if (1e8 * CLIGHT / nu_selected < 771.)
-  // {
-  //   // nu_selected = nu_threshold * last_phixs_nuovernuedge * 2;
-  //   nu_selected = fmax(phixslist[tid].allcont[nbfcontinua - 1].nu_edge, linelist[0].nu) * 100;
-  //   // nu_selected = phixslist[tid].allcont[0].nu_edge / 100.;
-  // }
-  // const double nu_selected = nu_threshold / 1.2;
-
-  printout("emitted bf photoion Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
+  printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
      get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel, lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
+  assert(isfinite(nu_selected));
   return nu_selected;
 }
 
