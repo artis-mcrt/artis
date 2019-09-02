@@ -285,13 +285,6 @@ enum radionuclides {
   RADIONUCLIDE_COUNT = 8,
 };
 
-typedef struct gamma_ll
-{
-  enum radionuclides *nuclidetype; // is it a Ni56, Co56, a fake line, etc
-  int *index;               // which of the lines of that element is it */
-  int total;                // the total number of lines in the list */
-} LIST;
-
 typedef struct modelgrid_t
 {
   float Te;
@@ -452,6 +445,7 @@ typedef struct ionlist_entry
   int nlevels_groundterm;
   int coolingoffset;
   int ncoolingterms;
+  int uniqueionindex;
   float *Alpha_sp;
   double ionpot;                             /// Ionisation threshold to the next ionstage
   //int nbfcontinua;
