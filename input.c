@@ -1616,10 +1616,12 @@ static void read_atomicdata(void)
       includedphotoiontransitions += photoiontransitions;
     }
   }
-  printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
-           includedions, includedlevels, includedionisinglevels, nlines, includedphotoiontransitions);
+  assert(includedphotoiontransitions == nbfcontinua);
 
-  write_bflist_file(includedphotoiontransitions);
+  printout("[input.c]   in total %d ions, %d levels (%d ionising), %d lines, %d photoionisation transitions\n",
+           includedions, includedlevels, includedionisinglevels, nlines, nbfcontinua);
+
+  write_bflist_file(nbfcontinua);
 
   setup_phixs_list();
 
@@ -1638,17 +1640,17 @@ static void read_atomicdata(void)
       {
         elements[element].ions[ion].first_nlte = total_nlte_levels;
         const int nlevels = get_nlevels(element,ion);
-        int count = 0;
+        int fullnlteexcitedlevelcount = 0;
         for (int level = 1; level < nlevels; level++)
         {
           if (is_nlte(element,ion,level))
           {
-            count++;
+            fullnlteexcitedlevelcount++;
             total_nlte_levels++;
           }
         }
 
-        const bool has_superlevel = (nlevels > (count + 1));
+        const bool has_superlevel = (nlevels > (fullnlteexcitedlevelcount + 1));
         if (has_superlevel)
         {
           // If there are more levels that the ground state + the number of NLTE levels then we need an extra
@@ -1658,13 +1660,13 @@ static void read_atomicdata(void)
           n_super_levels++;
         }
 
-        elements[element].ions[ion].nlevels_nlte = count;
+        elements[element].ions[ion].nlevels_nlte = fullnlteexcitedlevelcount;
 
         assert(has_superlevel == ion_has_superlevel(element, ion));
 
         printout("[input.c]  element %2d Z=%2d ion_stage %2d has %5d NLTE excited levels%s. Starting at %d\n",
                  element, get_element(element), get_ionstage(element, ion),
-                 get_nlevels_nlte(element, ion),
+                 fullnlteexcitedlevelcount,
                  has_superlevel ? " plus a superlevel" : "",
                  elements[element].ions[ion].first_nlte);
       }
