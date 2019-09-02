@@ -3172,5 +3172,5 @@ void nt_print_stats(const int timestep, const double modelvolume, const double d
   {
     total_deposition_rate_density += get_deposition_rate_density(mgi) / EV;
   }
-  printout("nt_energy_deposited = %9.2f eV/s/cm^3 (= %.2f * expected)\n", deposition_rate_density_montecarlo, deposition_rate_density_montecarlo / total_deposition_rate_density);
+  printout("nt_energy_deposited = %9.2f eV/s/cm^3 (= %.3f * expected)\n", deposition_rate_density_montecarlo, deposition_rate_density_montecarlo / total_deposition_rate_density);
 }
