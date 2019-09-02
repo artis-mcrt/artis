@@ -1652,7 +1652,6 @@ static void read_atomicdata(void)
     for (int element = 0; element < nelements; element++)
     {
       const int nions = get_nions(element);
-      //includedions += nions;
       for (int ion = 0; ion < nions; ion++)
       {
         elements[element].ions[ion].first_nlte = total_nlte_levels;
