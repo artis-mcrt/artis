@@ -228,8 +228,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         elpop += ionstagepop(mgi, element, ion);
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(mgi, element, ion));
       }
-      fprintf(estimators_file, "  SUM: %9.3e", elpop);
-      fprintf(estimators_file, "\n");
+      fprintf(estimators_file, "  SUM: %9.3e\n", elpop);
 
       const bool printdebug = false;
 
@@ -264,8 +263,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       assume_lte = false;
 
       #if (TRACK_ION_STATS)
-      double ma_in_sum = 0.;
-      double ma_out_sum = 0.;
       fprintf(estimators_file, "MA_IN_RADEXC       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -277,9 +274,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_in_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -294,9 +289,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_out_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -311,9 +304,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_in_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -328,9 +319,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_out_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -345,9 +334,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_in_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -362,9 +349,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_out_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -379,9 +364,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_in_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -396,9 +379,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_out_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -413,9 +394,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      ma_in_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -430,8 +409,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_in_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e (or %9.3e)", ma_el, ma_in_sum);
-      fprintf(estimators_file, "\n");
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -446,8 +424,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e (or %9.3e)", ma_el, ma_out_sum);
-      fprintf(estimators_file, "\n");
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -462,9 +439,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      // ma_in_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       #if (TRACK_ION_STATS)
@@ -479,9 +454,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
-      fprintf(estimators_file, "\n");
-      // ma_in_sum += ma_el;
+      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
       // spontaneous radiative recombination rate coefficient (may or may not include stim. recomb)
