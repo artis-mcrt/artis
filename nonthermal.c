@@ -3173,10 +3173,11 @@ void nt_print_stats(const int timestep, const double modelvolume, const double d
   printout("nt_stat_to_ionization = %d\n", nt_stat_to_ionization);
   printout("nt_stat_to_excitation = %d\n", nt_stat_to_excitation);
   printout("nt_stat_to_kpkt = %d\n", nt_stat_to_kpkt);
+  const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;
   double total_deposition_rate_density = 0.;
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    total_deposition_rate_density += get_deposition_rate_density(mgi);
+    total_deposition_rate_density += get_deposition_rate_density(mgi) / EV;
   }
-  printout("nt_energy_deposited = %9.2f eV/s/cm^3 (= %.2f * expected)\n", nt_energy_deposited / EV / modelvolume / deltat, total_deposition_rate_density);
+  printout("nt_energy_deposited = %9.2f eV/s/cm^3 (= %.2f * expected)\n", deposition_rate_density_montecarlo, deposition_rate_density_montecarlo / total_deposition_rate_density);
 }
