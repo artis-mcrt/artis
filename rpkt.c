@@ -319,6 +319,8 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
 
   double A_ul,B_ul,B_lu;
   double n_u,n_l;
+
+  double dot(), vec_len();
   
   /// initialize loop variables
   tau = 0.;        ///initial optical depth along path
@@ -420,6 +422,7 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         dist %g, abort_dist %g, dist-abort_dist %g\n", dist, abort_dist, dist-abort_dist);
           #endif
+	    
           if (dist > abort_dist) 
           {
             dummypkt_ptr->next_trans -= 1; 
@@ -430,6 +433,12 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
             return abort_dist+1e20;
           }
           tau = tau + tau_cont + tau_line;
+	  
+	  #ifdef EXTRA_DIAG
+	  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+	  kappa_fluxH_1_lines[modelgridindex] += tau_line * pkt_ptr->e_cmf * dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos);
+	  #endif
+
           //dummypkt_ptr->next_trans += 1; 
           t_current += ldist / CLIGHT_PROP;
           move_pkt(dummypkt_ptr,ldist,t_current);
@@ -457,6 +466,12 @@ double get_event(PKT *pkt_ptr, int *rpkt_eventtype, double t_current, double tau
           #endif
           edist = dist+ldist;
           if (edist > abort_dist) dummypkt_ptr->next_trans -= 1;
+	  
+	  #ifdef EXTRA_DIAG
+	  int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+	  if (edist < abort_dist) kappa_fluxH_1_lines[modelgridindex] += tau_line * pkt_ptr->e_cmf * dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos);
+	  #endif
+
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
           /// the line and its parameters were already selected by closest_transition!
           endloop = 1;

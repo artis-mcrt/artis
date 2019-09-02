@@ -302,6 +302,17 @@ int main(int argc, char** argv)
   printout("timesteps %d\n",ntstep);
 
 
+  /// Initialise extra diagnostics file
+  #ifdef EXTRA_DIAG
+  sprintf(filename,"extra_diag_%.4d.out",my_rank);
+  if ((extra_diag_file = fopen(filename, "w")) == NULL)
+  {
+    printout("Cannot open %s.\n",filename);
+    exit(0);
+  }
+  setvbuf(extra_diag_file, NULL, _IOLBF, 1);
+  #endif
+
 
   /// Precalculate the rate coefficients for spontaneous and stimulated recombination
   /// and for photoionisation. With the nebular approximation they only depend on T_e
@@ -1047,6 +1058,38 @@ int main(int argc, char** argv)
               }*/
             #endif
 
+            #ifdef EXTRA_DIAG
+              MPI_Reduce(&fluxH_1, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+              if (my_rank == 0)
+              {
+                for (i = 0; i < MMODELGRID; i++)
+                {
+                  fluxH_1[i] = redhelper[i];
+                }
+              }
+	      MPI_Barrier(MPI_COMM_WORLD);
+              MPI_Reduce(&kappa_fluxH_1_cont, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+              if (my_rank == 0)
+              {
+                for (i = 0; i < MMODELGRID; i++)
+                {
+                  kappa_fluxH_1_cont[i] = redhelper[i];
+                }
+              }
+	      MPI_Barrier(MPI_COMM_WORLD);
+              MPI_Reduce(&kappa_fluxH_1_lines, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+              if (my_rank == 0)
+              {
+                for (i = 0; i < MMODELGRID; i++)
+                {
+                  kappa_fluxH_1_lines[i] = redhelper[i];
+                }
+              }
+	      MPI_Barrier(MPI_COMM_WORLD);
+
+	    #endif
+
+	      
             #ifdef RECORD_LINESTAT
               MPI_Reduce(ecounter, linestat_reduced, nlines, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
               if (my_rank == 0)
@@ -1145,6 +1188,11 @@ int main(int argc, char** argv)
               MPI_Bcast(&kgammadep, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
               */
             #endif
+	    #ifdef EXTRA_DIAG
+	      MPI_Bcast(&fluxH_1, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	      MPI_Bcast(&kappa_fluxH_1_cont, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	      MPI_Bcast(&kappa_fluxH_1_lines, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    #endif
             if (do_rlc_est != 0)
             {
               MPI_Bcast(&rpkt_emiss, MMODELGRID, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -1459,6 +1507,10 @@ int main(int argc, char** argv)
       fclose(output_file);
   #endif
 
+  #ifdef EXTRA_DIAG
+      fclose(extra_diag_file);
+  #endif
+      
   #ifdef MPI_ON
     MPI_Finalize();
   #endif

@@ -14,6 +14,7 @@
 //#define DO_TITER
 //#define FORCE_LTE
 #define RECORD_LINESTAT
+#define EXTRA_DIAG
 
 // Polarisation for r-packets
 #define DIPOLE
@@ -73,7 +74,7 @@
 #define MYGRID 100     /* Max number of grid cells in y-direction.*/
 #define MZGRID 100     /* Max number of grid cells in z-direction.*/
 //#define MGRID 1000000  /* Max number of grid cells.*/
-#define MTSTEP 200     /* Max number of time steps. */
+#define MTSTEP 201     /* Max number of time steps. */
 #define MLINES 500000  /// Increase linelist by this blocksize
 
 #define GRID_UNIFORM 1 /* Simple cuboidal cells. */
@@ -420,6 +421,13 @@ double energy_deposition[MMODELGRID+1];
   int *ecounter,*acounter,*linestat_reduced;
 #endif
 
+#ifdef EXTRA_DIAG
+  double fluxH_1[MMODELGRID+1];
+  double kappa_fluxH_1_cont[MMODELGRID+1];
+  double kappa_fluxH_1_lines[MMODELGRID+1];
+#endif
+
+
 
 int do_comp_est; /* 1 = compute compton emissivity estimators. 0 = don't */
 int do_r_lc;     /* If not set to 1 then the opacity for r-packets is 0. */
@@ -600,6 +608,9 @@ FILE *tau_file;
 FILE *tb_file;
 FILE *heating_file;
 FILE *estimators_file;
+#ifdef EXTRA_DIAG
+FILE *extra_diag_file;
+#endif
 
 //double *J_below_table,*J_above_table,*nuJ_below_table,*nuJ_above_table;
 extern short neutral_flag;

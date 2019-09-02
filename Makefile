@@ -2,6 +2,16 @@ SHELL = /bin/sh
 GIT_HASH = $(shell git rev-parse HEAD)
 GIT_BRANCH = $(shell git branch | sed -n '/\* /s///p')
 
+CC = mpicc
+CFLAGS = -O3 -DMPI_ON
+LDFLAGS= -lgsl -lgslcblas -lm
+
+exspec: override CFLAGS =  -O3  -DDO_EXSPEC
+exspec_dd: override CFLAGS =  -O3  -DDO_EXSPEC
+exgamma: override CFLAGS =  -O3  -DDO_EXSPEC
+
+
+
 ### Settings for the miner
 ifeq ($(SYSTYPE),Haswell)
   CC = mpicc

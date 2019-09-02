@@ -374,6 +374,11 @@ int zero_estimators()
           }
         }
       #endif
+      #ifdef EXTRA_DIAG
+	fluxH_1[n]=0.;
+	kappa_fluxH_1_cont[n]=0.;
+	kappa_fluxH_1_lines[n]=0.;	
+      #endif
       // cell[n].heating_ff = 0.;
       // cell[n].heating_bf = 0.;
       for (m=0; m < emiss_max; m++)

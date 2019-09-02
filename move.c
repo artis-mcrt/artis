@@ -8,6 +8,7 @@ void update_estimators(PKT *pkt_ptr, double distance)
 /// packets which do not contribute to the radiation field.
 {
   double get_abundance(int modelgridindex, int element);
+  double dot(), vec_len();
   int element,ion,level,i;
   double nu_edge;
   
@@ -71,6 +72,18 @@ void update_estimators(PKT *pkt_ptr, double distance)
           abort();
         }
       #endif
+    #endif
+
+
+    #ifdef EXTRA_DIAG
+        #ifdef _OPENMP 
+           #pragma omp atomic
+        #endif
+	fluxH_1[modelgridindex] += helper * dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos);
+	#ifdef _OPENMP 
+           #pragma omp atomic
+        #endif
+	kappa_fluxH_1_cont[modelgridindex] += helper * dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * kappa_rpkt_cont[tid].total;
     #endif
     
     ///Heating estimators. These are only applicable for pure H. Other elements

@@ -445,6 +445,11 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     abort();
                   }
                   J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		  #ifdef EXTRA_DIAG
+		  fluxH_1[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		  kappa_fluxH_1_cont[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		  kappa_fluxH_1_lines[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		  #endif
                   
                   #ifdef DO_TITER
                     if (J_reduced_save[n] >= 0)
@@ -527,6 +532,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                       abort();
                     }
                     J[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		    #ifdef EXTRA_DIAG
+		    fluxH_1[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		    kappa_fluxH_1_cont[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		    kappa_fluxH_1_lines[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+                    #endif       
+
                     
                     #ifdef DO_TITER
                       if (J_reduced_save[n] >= 0)
@@ -617,6 +628,12 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
                     nuJ[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
                     ffheatingestimator[n] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
                     colheatingestimator[n] *= 1/(deltaV*deltat)/nprocs/assoc_cells;
+		    #ifdef EXTRA_DIAG
+		    fluxH_1[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		    kappa_fluxH_1_cont[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		    kappa_fluxH_1_lines[n] *= ONEOVER4PI/(deltaV*deltat)/nprocs/assoc_cells;
+		    #endif
+
                     
                     #ifdef DO_TITER
                       if (J_reduced_save[n] >= 0)
@@ -1049,7 +1066,25 @@ int update_grid(int m, int my_rank, int nstart, int nblock, int titer)
       }
     }
   #endif
-    
+
+
+
+    //Write out extra diagnostic information files
+ #ifdef EXTRA_DIAG
+    for (n = nstart; n < nstart+nblock; n++)
+    {
+      if (modelgrid[n].associated_cells > 0)
+      {
+        fprintf(extra_diag_file,"%d %g %g %g %g \n ",n, J[n], fluxH_1[n], kappa_fluxH_1_cont[n], kappa_fluxH_1_lines[n]);
+      }
+      else
+      {
+	fprintf(extra_diag_file,"%d %g %g %g %g \n ",0, 0.0, 0.0, 0.0, 0.0);
+      }
+    }
+  #endif
+
+   
     
   /// Move that check to outside the update grid routine. These numbers
   /// must be the same as they were during grid_init, but on the
