@@ -404,9 +404,8 @@ static double thomson_angle(void)
 }
 
 
-static bool compton_scatter(PKT *pkt_ptr, double t_current)
+static void compton_scatter(PKT *pkt_ptr, double t_current)
 // Routine to deal with physical Compton scattering event.
-// returns true if the packet is still a gamma ray
 {
   double f;
 
@@ -520,217 +519,220 @@ static bool compton_scatter(PKT *pkt_ptr, double t_current)
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
     pkt_ptr->last_cross = NONE; // allow it to re-cross a boundary
-    return true; // still a gamma packet
   }
   else
   {
     // It's converted to an e-minus packet.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -3;
-    return false; // not a gamma packet
   }
 }
 
 
-double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
+double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
 {
   double t_current = t1; //this will keep track of time in the calculation
 
-  // Assign optical depth to next physical event. And start counter of
-  // optical depth for this path.
-  double zrand = gsl_rng_uniform(rng);
-  const double tau_next = -1. * log(zrand);
-  const double tau_current = 0.0;
-
-  // Start by finding the distance to the crossing of the grid cell
-  // boundaries. sdist is the boundary distance and snext is the
-  // grid cell into which we pass.
-
-  int snext;
-  double sdist = boundary_cross(pkt_ptr, t_current, &snext);
-
-  const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
-  if (sdist > maxsdist)
+  bool end_packet = false; //tells us when to stop working on this packet
+  while (!end_packet)
   {
-    printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
-    abort();
-  }
+    // Assign optical depth to next physical event. And start counter of
+    // optical depth for this path.
+    double zrand = gsl_rng_uniform(rng);
+    const double tau_next = -1. * log(zrand);
+    const double tau_current = 0.0;
 
-  if (sdist < 1)
-  {
-    printout("Negative distance (sdist). Abort?\n");
-    sdist = 0;
-  }
+    // Start by finding the distance to the crossing of the grid cell
+    // boundaries. sdist is the boundary distance and snext is the
+    // grid cell into which we pass.
 
-  if (((snext < 0) && (snext != -99)) || (snext >= ngrid))
-  {
-    printout("Heading for inappropriate grid cell. Abort.\n");
-    printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-    abort();
-  }
+    int snext;
+    double sdist = boundary_cross(pkt_ptr, t_current, &snext);
 
-  if (sdist > max_path_step)
-  {
-    sdist = max_path_step;
-    snext = pkt_ptr->where;
-  }
-
-  /* Now consider the scattering/destruction processes. */
-  /* Compton scattering - need to determine the scattering co-efficient.*/
-  /* Routine returns the value in the rest frame. */
-
-  double kap_compton = 0.0;
-  if (gamma_grey < 0)
-  {
-    kap_compton = sig_comp(pkt_ptr, t_current);
-  }
-
-  const double kap_photo_electric = sig_photo_electric(pkt_ptr, t_current);
-  const double kap_pair_prod = sig_pair_prod(pkt_ptr, t_current);
-  const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
-
-  // So distance before physical event is...
-
-  double edist = (tau_next - tau_current) / kap_tot;
-
-  if (edist < 0)
-  {
-    printout("Negative distance (edist). Abort. \n");
-    abort();
-  }
-
-  // Find how far it can travel during the time inverval.
-
-  double tdist = (t2 - t_current) * CLIGHT_PROP;
-
-  if (tdist < 0)
-  {
-    printout("Negative distance (tdist). Abort. \n");
-    abort();
-  }
-
-  //printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
-
-  if ((sdist < tdist) && (sdist < edist))
-  {
-    t_current += sdist / 2 / CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist / 2, t_current);
-
-    // Move it into the new cell.
-    if (kap_tot > 0)
+    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
+    if (sdist > maxsdist)
     {
-      if (do_comp_est)
-      {
-        compton_emiss_cont(pkt_ptr, sdist, t_current);
-        pp_emiss_cont(pkt_ptr, sdist, t_current);
-      }
-      if (do_rlc_est != 0)
-      {
-        rlc_emiss_gamma(pkt_ptr, sdist, t_current);
-      }
+      printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
+      abort();
     }
 
-    t_current += sdist / 2 / CLIGHT_PROP;
-    move_pkt(pkt_ptr, sdist / 2, t_current);
-    if (snext != pkt_ptr->where)
+    if (sdist < 1)
     {
-      bool end_packet = false;
-      change_cell(pkt_ptr, snext, &end_packet, t_current);
-      if (end_packet)
-        return PACKET_SAME;
+      printout("Negative distance (sdist). Abort?\n");
+      sdist = 0;
     }
-  }
-  else if ((tdist < sdist) && (tdist < edist))
-  {
-    // Doesn't reach boundary.
-    t_current += tdist / 2 / CLIGHT_PROP;
-    move_pkt(pkt_ptr, tdist / 2, t_current);
 
-    if (kap_tot > 0)
+    if (((snext < 0) && (snext != -99)) || (snext >= ngrid))
     {
-      if (do_comp_est)
-      {
-        compton_emiss_cont(pkt_ptr, tdist, t_current);
-        pp_emiss_cont(pkt_ptr, tdist, t_current);
-      }
-      if (do_rlc_est != 0)
-      {
-        rlc_emiss_gamma(pkt_ptr, tdist, t_current);
-      }
+      printout("Heading for inappropriate grid cell. Abort.\n");
+      printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
+      abort();
     }
-    t_current = t2;
-    move_pkt(pkt_ptr, tdist / 2, t_current);
-    return PACKET_SAME;
-  }
-  else if ((edist < sdist) && (edist < tdist))
-  {
-    t_current += edist / 2 / CLIGHT_PROP;
-    move_pkt(pkt_ptr, edist / 2, t_current);
-    if (kap_tot > 0)
-    {
-      if (do_comp_est)
-      {
-        compton_emiss_cont(pkt_ptr, edist, t_current);
-        pp_emiss_cont(pkt_ptr, edist, t_current);
-      }
-      if (do_rlc_est != 0)
-      {
-        rlc_emiss_gamma(pkt_ptr, edist, t_current);
-      }
-    }
-    t_current += edist / 2 / CLIGHT_PROP;
-    move_pkt(pkt_ptr, edist / 2, t_current);
 
-    // event occurs. Choose which event and call the appropriate subroutine.
-    zrand = gsl_rng_uniform(rng);
-    if (kap_compton > (zrand * kap_tot))
+    if (sdist > max_path_step)
     {
-      // Compton scattering.
-      if (!compton_scatter(pkt_ptr, t_current))
+      sdist = max_path_step;
+      snext = pkt_ptr->where;
+    }
+
+    /* Now consider the scattering/destruction processes. */
+    /* Compton scattering - need to determine the scattering co-efficient.*/
+    /* Routine returns the value in the rest frame. */
+
+    double kap_compton = 0.0;
+    if (gamma_grey < 0)
+    {
+      kap_compton = sig_comp(pkt_ptr, t_current);
+    }
+
+    const double kap_photo_electric = sig_photo_electric(pkt_ptr, t_current);
+    const double kap_pair_prod = sig_pair_prod(pkt_ptr, t_current);
+    const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
+
+    // So distance before physical event is...
+
+    double edist = (tau_next - tau_current) / kap_tot;
+
+    if (edist < 0)
+    {
+      printout("Negative distance (edist). Abort. \n");
+      abort();
+    }
+
+    // Find how far it can travel during the time inverval.
+
+    double tdist = (t2 - t_current) * CLIGHT_PROP;
+
+    if (tdist < 0)
+    {
+      printout("Negative distance (tdist). Abort. \n");
+      abort();
+    }
+
+    //printout("sdist, tdist, edist %g %g %g\n",sdist, tdist, edist);
+
+    if ((sdist < tdist) && (sdist < edist))
+    {
+      t_current += sdist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist / 2, t_current);
+
+      // Move it into the new cell.
+      if (kap_tot > 0)
       {
+        if (do_comp_est)
+        {
+          compton_emiss_cont(pkt_ptr, sdist, t_current);
+          pp_emiss_cont(pkt_ptr, sdist, t_current);
+        }
+        if (do_rlc_est != 0)
+        {
+          rlc_emiss_gamma(pkt_ptr, sdist, t_current);
+        }
+      }
+
+      t_current += sdist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist / 2, t_current);
+      if (snext != pkt_ptr->where)
+      {
+        change_cell(pkt_ptr, snext, &end_packet, t_current);
+      }
+    }
+    else if ((tdist < sdist) && (tdist < edist))
+    {
+      // Doesn't reach boundary.
+      t_current += tdist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, tdist / 2, t_current);
+
+      if (kap_tot > 0)
+      {
+        if (do_comp_est)
+        {
+          compton_emiss_cont(pkt_ptr, tdist, t_current);
+          pp_emiss_cont(pkt_ptr, tdist, t_current);
+        }
+        if (do_rlc_est != 0)
+        {
+          rlc_emiss_gamma(pkt_ptr, tdist, t_current);
+        }
+      }
+      t_current = t2;
+      move_pkt(pkt_ptr, tdist / 2, t_current);
+      end_packet = true;
+    }
+    else if ((edist < sdist) && (edist < tdist))
+    {
+      t_current += edist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist / 2, t_current);
+      if (kap_tot > 0)
+      {
+        if (do_comp_est)
+        {
+          compton_emiss_cont(pkt_ptr, edist, t_current);
+          pp_emiss_cont(pkt_ptr, edist, t_current);
+        }
+        if (do_rlc_est != 0)
+        {
+          rlc_emiss_gamma(pkt_ptr, edist, t_current);
+        }
+      }
+      t_current += edist / 2 / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist / 2, t_current);
+
+      // event occurs. Choose which event and call the appropriate subroutine.
+      zrand = gsl_rng_uniform(rng);
+      if (kap_compton > (zrand * kap_tot))
+      {
+        // Compton scattering.
+        compton_scatter(pkt_ptr, t_current);
+        if (pkt_ptr->type != TYPE_GAMMA)
+        {
+          // It's not a gamma ray any more - return.
+          return t_current;
+        }
+      }
+      else if ((kap_compton + kap_photo_electric) > (zrand * kap_tot))
+      {
+        // Photo electric effect - makes it a k-packet for sure.
+        pkt_ptr->type = TYPE_NTLEPTON;
+        pkt_ptr->absorptiontype = -4;
+        #ifndef FORCE_LTE
+          //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
+        #endif
+        //pkt_ptr->type = TYPE_PRE_KPKT;
+        //pkt_ptr->type = TYPE_GAMMA_KPKT;
+        //if (tid == 0) nt_stat_from_gamma++;
+        nt_stat_from_gamma++;
         return t_current;
       }
-    }
-    else if ((kap_compton + kap_photo_electric) > (zrand * kap_tot))
-    {
-      // Photo electric effect - makes it a k-packet for sure.
-      pkt_ptr->type = TYPE_NTLEPTON;
-      pkt_ptr->absorptiontype = -4;
-      #ifndef FORCE_LTE
-        //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
-      #endif
-      //pkt_ptr->type = TYPE_PRE_KPKT;
-      //pkt_ptr->type = TYPE_GAMMA_KPKT;
-      //if (tid == 0) nt_stat_from_gamma++;
-      nt_stat_from_gamma++;
-      return t_current;
-    }
-    else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
-    {
-      // It's a pair production
-      if (!pair_prod(pkt_ptr, t_current))
+      else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
       {
-        return t_current;
+        // It's a pair production
+        pair_prod(pkt_ptr, t_current);
+        if (pkt_ptr->type != TYPE_GAMMA)
+        {
+          // It's not a gamma ray any more - return.
+          return t_current;
+        }
+      }
+      else
+      {
+        printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n", kap_compton, kap_photo_electric, kap_tot, zrand);
+        const int cellindex = pkt_ptr->where;
+        printout(" /*cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(cell[cellindex].modelgridindex), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
+
+        abort();
       }
     }
     else
     {
-      printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n", kap_compton, kap_photo_electric, kap_tot, zrand);
-      const int cellindex = pkt_ptr->where;
-      printout(" /*cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(cell[cellindex].modelgridindex), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
-
+      printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
       abort();
     }
   }
-  else
-  {
-    printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-    abort();
-  }
-  return do_gamma(pkt_ptr, t_current, t2);
+  return PACKET_SAME;
 }
 
 
