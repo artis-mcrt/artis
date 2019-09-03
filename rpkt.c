@@ -921,10 +921,11 @@ static double get_event(
   PKT *dummypkt_ptr = &dummypkt;
   //propagationcounter = 0;
   bool endloop = false;
-  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, kappa_continuum);
-  const double kap_cont = kappa_continuum->total;
   while (!endloop)
   {
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, kappa_continuum);
+    const double kap_cont = kappa_continuum->total;
+
     /// calculate distance to next line encounter ldist
     /// first select the closest transition in frequency
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
