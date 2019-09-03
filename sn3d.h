@@ -33,7 +33,7 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 #define DETAILED_LINE_ESTIMATORS_ON false
 
 // store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
+#define DETAILED_BF_ESTIMATORS_ON false
 
 // extremely slow and memory consuming - for debugging only
 // not safe for MPI or OpenMP - single process and single thread only!
