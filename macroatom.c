@@ -461,9 +461,11 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
     /// If there are no precalculated rates available then calculate them
     if (processrates[MA_ACTION_COLDEEXC] < 0)
+    {
       get_macroatom_transitionrates(
         modelgridindex, element, ion, level, t_mid, processrates,
         &cellhistory[tid].chelements[element].chions[ion].chlevels[level]);
+    }
 
     // for debugging the transition rates:
     // {

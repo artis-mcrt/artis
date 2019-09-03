@@ -71,27 +71,33 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
     phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
   }
 
-  const double T_e = get_Te(modelgridindex);
-  const double nne = get_nne(modelgridindex);
-  const double nnetot = get_nnetot(modelgridindex);
+  *kappa_bf = 0.;
+  *kappa_fb = 0.;
+
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const float nnetot = get_nnetot(modelgridindex);
+  const double boltzmannfactor = exp(-HOVERKB * nu / T_e);;
   for (int i = 0; i < nbfcontinua; i++)
   {
-    const int element = phixslist[tid].allcont[i].element;
-    const int ion = phixslist[tid].allcont[i].ion;
-    const int level = phixslist[tid].allcont[i].level;
-    /// The bf process happens only if the current cell contains
-    /// the involved atomic species
-    if ((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
+    const double nu_edge = phixslist[tid].allcont[i].nu_edge;
+
+    if (nu >= nu_edge)
     {
-      const double nu_edge = phixslist[tid].allcont[i].nu_edge;
+      const int element = phixslist[tid].allcont[i].element;
+      const int ion = phixslist[tid].allcont[i].ion;
+      const int level = phixslist[tid].allcont[i].level;
       const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
-      const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-      //printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
-      if (nu >= nu_edge && nu <= nu_max_phixs)
+      /// The bf process happens only if the current cell contains
+      /// the involved atomic species
+      if (nu <= nu_max_phixs && (get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
       {
-        //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
+        const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
+        const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+        const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+        const double nnionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
 
         //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
         //if (fabs(nnlevel - phixslist[tid].allcont[i].nnlevel) > 0)
@@ -99,13 +105,10 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
         //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);
         //  printout("pkt_ptr->number %d\n",pkt_ptr->number);
         //}
-        const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
-        const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
-        const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const double nnionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
         const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
         const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
-        const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
+        const double stimfactor = departure_ratio * boltzmannfactor;
+        const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
 
         #if (SEPARATE_STIMRECOMB)
           const double corrfactor = 1.; // no subtraction of stimulated recombination
@@ -149,32 +152,10 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
           phixslist[tid].allcont[i].kappa_fb_contr = kappa_fb_contr;
           *kappa_fb = *kappa_fb + kappa_fb_contr;
         #endif
-
-      }
-      else if (nu < nu_edge) // nu < nu_edge
-      {
-        /// The phixslist is sorted by nu_edge in ascending order
-        /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
-        /// is possible, therefore leave the loop.
-
-        // the rest of the list shouldn't be accessed
-        // but set them to zero to be safe. This is a fast operation anyway.
-        // if the packet's nu increases, this function must re-run to re-calculate kappa_bf_contr
-        // a slight red-shifting is ignored
-        for (int j = i; j < nbfcontinua; j++)
-        {
-          phixslist[tid].allcont[j].kappa_bf_contr = 0.;
-          #if (SEPARATE_STIMRECOMB)
-          phixslist[tid].allcont[j].kappa_fb_contr = 0.;
-          #endif
-          #if (DETAILED_BF_ESTIMATORS_ON)
-          phixslist[tid].allcont[j].gamma_contr = 0.;
-          #endif
-        }
-        break; // all further processes in the list will have larger nu_edge, so stop here
       }
       else
       {
+        // no element present or not an important level
         // ignore this particular process but continue through the list
         phixslist[tid].allcont[i].kappa_bf_contr = 0.;
         #if (SEPARATE_STIMRECOMB)
@@ -183,22 +164,34 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
         #if (DETAILED_BF_ESTIMATORS_ON)
         phixslist[tid].allcont[i].gamma_contr = 0.;
         #endif
+        if (phixslist[tid].allcont[i].level == 0)
+        {
+          const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+          phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
+        }
       }
     }
-    else // no element present or not an important level
+    else
     {
-      phixslist[tid].allcont[i].kappa_bf_contr = 0.;
-      #if (SEPARATE_STIMRECOMB)
-      phixslist[tid].allcont[i].kappa_fb_contr = 0.;
-      #endif
-      #if (DETAILED_BF_ESTIMATORS_ON)
-      phixslist[tid].allcont[i].gamma_contr = 0.;
-      #endif
-      if (phixslist[tid].allcont[i].level == 0)
+      /// The phixslist is sorted by nu_edge in ascending order
+      /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
+      /// is possible, therefore leave the loop.
+
+      // the rest of the list shouldn't be accessed
+      // but set them to zero to be safe. This is a fast operation anyway.
+      // if the packet's nu increases, this function must re-run to re-calculate kappa_bf_contr
+      // a slight red-shifting is ignored
+      for (int j = i; j < nbfcontinua; j++)
       {
-        const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
-        phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
+        phixslist[tid].allcont[j].kappa_bf_contr = 0.;
+        #if (SEPARATE_STIMRECOMB)
+        phixslist[tid].allcont[j].kappa_fb_contr = 0.;
+        #endif
+        #if (DETAILED_BF_ESTIMATORS_ON)
+        phixslist[tid].allcont[j].gamma_contr = 0.;
+        #endif
       }
+      break; // all further processes in the list will have larger nu_edge, so stop here
     }
   }
 }
@@ -208,7 +201,7 @@ static void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const d
 {
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
-  if ((modelgridindex == kappa_continuum->modelgridindex) && (nts_global == kappa_continuum->timestep) && (fabs(kappa_continuum->nu / nu_cmf - 1.0) < 1e-4))
+  if ((modelgridindex == kappa_continuum->modelgridindex) && (nts_global == kappa_continuum->timestep) && (fabs(kappa_continuum->nu / nu_cmf - 1.0) < 1e-3))
   {
     // calculated values are a match already
     return;
