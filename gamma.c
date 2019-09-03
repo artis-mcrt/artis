@@ -640,7 +640,7 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
       bool end_packet = false;
       change_cell(pkt_ptr, snext, &end_packet, t_current);
       if (end_packet)
-        return PACKET_SAME;
+        return TIME_END_OF_TIMESTEP;
     }
   }
   else if ((tdist < sdist) && (tdist < edist))
@@ -663,7 +663,7 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
     }
     t_current = t2;
     move_pkt(pkt_ptr, tdist / 2, t_current);
-    return PACKET_SAME;
+    return TIME_END_OF_TIMESTEP;
   }
   else if ((edist < sdist) && (edist < tdist))
   {
