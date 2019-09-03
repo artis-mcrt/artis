@@ -566,6 +566,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       #ifndef FORCE_LTE
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+
+      return t_current;
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
     {
@@ -624,6 +626,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
+
+      return t_current;
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
     {
@@ -696,12 +700,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       printout("[fatal] do_kpkt: pkt_ptr->where %d, mgi %d\n",pkt_ptr->where,modelgridindex);
       abort();
     }
-
-    return t_current;
   }
   else
   {
     vec_scale(pkt_ptr->pos, t2 / t1);
+    pkt_ptr->type = TYPE_KPKT;
     return TIME_END_OF_TIMESTEP;
   }
 }
