@@ -129,13 +129,15 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 }
 
 /* Routine to deal with pair production. */
-void pair_prod(PKT *restrict pkt_ptr, double t_current)
+bool pair_prod(PKT *restrict pkt_ptr, double t_current)
 {
   /* In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
      gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
      the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
      at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
      immediately and the remainder goes into gamma-rays at 0.511 MeV. */
+
+  // return true if still a gamma packet, and false if becomes an NTLEPTON
 
   const double prob_gamma = 1.022 * MEV / (H * pkt_ptr->nu_cmf);
 
@@ -153,6 +155,7 @@ void pair_prod(PKT *restrict pkt_ptr, double t_current)
     // for consistency with compton_scatter.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -5;
+    return false;
   }
   else
   {
@@ -180,6 +183,6 @@ void pair_prod(PKT *restrict pkt_ptr, double t_current)
 
     pkt_ptr->type = TYPE_GAMMA;
     pkt_ptr->last_cross = NONE;
-
+    return true;
   }
 }

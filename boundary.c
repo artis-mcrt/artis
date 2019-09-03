@@ -382,7 +382,6 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
     /// as we do it on the rpkts way through a cell
     //if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
-    //if (pkt_ptr->type == TYPE_RPKT) calculate_kappa_rpkt_cont(pkt_ptr,t_current);
 
     /// check for empty cells
     if (mgi != MMODELGRID)
@@ -411,7 +410,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr, t_current, mgi);
+          calculate_kappa_rpkt_cont(pkt_ptr, t_current, mgi, &kappa_rpkt_cont[tid]);
         }
       }
     }
