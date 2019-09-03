@@ -118,7 +118,8 @@ static double get_event(
   int *rpkt_eventtype,
   double t_current,         // current time
   const double tau_rnd,     // random optical depth until which the packet travels
-  const double abort_dist   // maximal travel distance before packet leaves cell or time step ends
+  const double abort_dist,   // maximal travel distance before packet leaves cell or time step ends
+  rpkt_cont_opacity_struct *kappa_rpkt_cont_thisthread
 )
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
@@ -132,8 +133,8 @@ static double get_event(
   PKT *dummypkt_ptr = &dummypkt;
   //propagationcounter = 0;
   bool endloop = false;
-  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, &kappa_rpkt_cont[tid]);
-  const double kap_cont = kappa_rpkt_cont[tid].total;
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, kappa_rpkt_cont_thisthread);
+  const double kap_cont = kappa_rpkt_cont_thisthread->total;
   while (!endloop)
   {
     /// calculate distance to next line encounter ldist
@@ -972,7 +973,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
       else
       {
         // get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_rpkt_cont[tid]); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         #ifdef DEBUG_ON
           if (debuglevel == 2)
           {
