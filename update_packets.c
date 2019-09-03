@@ -10,10 +10,82 @@
 #include "vectors.h"
 
 
-static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, const int nts)
-// Master routine for moving packets around. When it called,
-//   it is given the time at start of inverval and at end - when it finishes,
-//   everything the packet does during this time should be sorted out.
+static double update_pellet(
+  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double t_current, const double t2)
+{
+  // Handle inactive pellets. Need to do two things (a) check if it
+  // decays in this time step and if it does handle that. (b) if it doesn't decay in
+  // this time step then just move the packet along with the matter for the
+  // start of the next time step.
+
+  assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
+
+  const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
+  if (tdecay > t2)
+  {
+    // It won't decay in this timestep, so just need to move it on with the flow.
+    vec_scale(pkt_ptr->pos, t2 / t_current);
+
+    // That's all that needs to be done for the inactive pellet.
+    return PACKET_SAME;
+  }
+  else if (tdecay > t_current)
+  {
+    // The packet decays in the current timestep.
+    time_step[nts].pellet_decays++;
+    if (decay_to_kpkt)
+    {
+      vec_scale(pkt_ptr->pos, tdecay / t_current);
+
+      pkt_ptr->type = TYPE_KPKT;
+      pkt_ptr->absorptiontype = -6;
+      return tdecay;
+    }
+    else if (decay_to_ntlepton)
+    {
+      vec_scale(pkt_ptr->pos, tdecay / t_current);
+      time_step[nts].positron_dep += pkt_ptr->e_cmf;
+
+      pkt_ptr->absorptiontype = -10;
+
+      return do_ntlepton(pkt_ptr, tdecay, t2, nts);
+    }
+    else
+    {
+      // decay to gamma ray
+      pellet_decay(nts, pkt_ptr);
+      //printout("pellet to photon packet and propagation by packet_prop\n");
+      return tdecay;
+    }
+  }
+  else if ((tdecay > 0) && (nts == 0))
+  {
+    // These are pellets whose decay times were before the first time step
+    // They will be made into r-packets with energy reduced for doing work on the
+    // ejecta following Lucy 2004.
+    // The position is already set at tmin so don't need to move it. Assume
+    // that it is fixed in place from decay to tmin - i.e. short mfp.
+
+    pkt_ptr->e_cmf *= tdecay / tmin;
+    //pkt_ptr->type = TYPE_KPKT;
+    pkt_ptr->type = TYPE_PRE_KPKT;
+    pkt_ptr->absorptiontype = -7;
+    //if (tid == 0) k_stat_from_earlierdecay++;
+    k_stat_from_earlierdecay++;
+
+    //printout("already decayed packets and propagation by packet_prop\n");
+    return tmin;
+  }
+  else
+  {
+    printout("ERROR: Something gone wrong with decaying pellets. tdecay %g t_current %g t2 %g\n", tdecay, t_current, t2);
+    abort();
+  }
+}
+
+
+static void update_packet(PKT *restrict const pkt_ptr, const double t1, const double t2, const int nts)
+// handle a packet for the timestep nts from time t1 to t2
 {
   double t_current = t1;
 
@@ -29,6 +101,32 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
 
     switch (pkt_type)
     {
+      case TYPE_56NI_PELLET:
+      case TYPE_56CO_PELLET:
+      case TYPE_57NI_PELLET:
+      case TYPE_57CO_PELLET:
+      case TYPE_48CR_PELLET:
+      case TYPE_48V_PELLET:
+        // check for decay to gamma ray
+        t_current = update_pellet(pkt_ptr, false, false, nts, t_current, t2);
+        break;
+
+      case TYPE_52FE_PELLET:
+      case TYPE_52MN_PELLET:
+        // check for decay to kpkts
+        t_current = update_pellet(pkt_ptr, true, false, nts, t_current, t2);
+        break;
+
+      case TYPE_57NI_POSITRON_PELLET:
+      case TYPE_56CO_POSITRON_PELLET:
+        // check for decay to non-thermal leptons
+        t_current = update_pellet(pkt_ptr, false, true, nts, t_current, t2);
+        break;
+
+      case TYPE_ESCAPE:
+        t_current = PACKET_SAME;
+        break;
+
       case TYPE_GAMMA:
         //printout("gamma propagation\n");
         t_current = do_gamma(pkt_ptr, t_current, t2);
@@ -60,10 +158,6 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
           #endif
           time_step[nts].cmf_lum += pkt_ptr->e_cmf;
         }
-        break;
-
-      case TYPE_NTLEPTON:
-        t_current = do_ntlepton(pkt_ptr, t_current, t2, nts);
         break;
 
       case TYPE_KPKT:
@@ -102,79 +196,6 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
     }
   }
   assert(t_current == PACKET_SAME);
-}
-
-
-static void update_pellet(
-  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double ts, const double tw)
-{
-  // Handle inactive pellets. Need to do two things (a) check if it
-  // decays in this time step and if it does handle that. (b) if it doesn't decay in
-  // this time step then just move the packet along with the matter for the
-  // start of the next time step.
-
-  assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
-
-  const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
-  if (tdecay > (ts + tw))
-  {
-    // It won't decay in this timestep, so just need to move it on with the flow.
-    vec_scale(pkt_ptr->pos, (ts + tw) / ts);
-
-    // That's all that needs to be done for the inactive pellet.
-  }
-  else if (tdecay > ts)
-  {
-    // The packet decays in the current timestep.
-    time_step[nts].pellet_decays++;
-    if (decay_to_kpkt)
-    {
-      vec_scale(pkt_ptr->pos, tdecay / ts);
-
-      pkt_ptr->type = TYPE_KPKT;
-      pkt_ptr->absorptiontype = -6;
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
-    }
-    else if (decay_to_ntlepton)
-    {
-      vec_scale(pkt_ptr->pos, tdecay / ts);
-      time_step[nts].positron_dep += pkt_ptr->e_cmf;
-
-      pkt_ptr->type = TYPE_NTLEPTON;
-      pkt_ptr->absorptiontype = -10;
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
-    }
-    else
-    {
-      // decay to gamma ray
-      pellet_decay(nts, pkt_ptr);
-      //printout("pellet to photon packet and propagation by packet_prop\n");
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
-    }
-  }
-  else if ((tdecay > 0) && (nts == 0))
-  {
-    // These are pellets whose decay times were before the first time step
-    // They will be made into r-packets with energy reduced for doing work on the
-    // ejecta following Lucy 2004.
-    // The position is already set at tmin so don't need to move it. Assume
-    // that it is fixed in place from decay to tmin - i.e. short mfp.
-
-    pkt_ptr->e_cmf *= tdecay / tmin;
-    //pkt_ptr->type = TYPE_KPKT;
-    pkt_ptr->type = TYPE_PRE_KPKT;
-    pkt_ptr->absorptiontype = -7;
-    //if (tid == 0) k_stat_from_earlierdecay++;
-    k_stat_from_earlierdecay++;
-
-    //printout("already decayed packets and propagation by packet_prop\n");
-    packet_prop(pkt_ptr, tmin, ts + tw, nts);
-  }
-  else
-  {
-    printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g tw %g (ts + tw) %g\n", tdecay, ts, tw, ts + tw);
-    abort();
-  }
 }
 
 
@@ -277,46 +298,7 @@ void update_packets(const int nts, PKT *pkt)
       //printout("[debug] update_packets: target position of homologous flow (%g, %g, %g)\n",pkt_ptr->pos[0]*(ts + tw)/ts,pkt_ptr->pos[1]*(ts + tw)/ts,pkt_ptr->pos[2]*(ts + tw)/ts);
       //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
-      switch (pkt_ptr->type)
-      {
-        case TYPE_56NI_PELLET:
-        case TYPE_56CO_PELLET:
-        case TYPE_57NI_PELLET:
-        case TYPE_57CO_PELLET:
-        case TYPE_48CR_PELLET:
-        case TYPE_48V_PELLET:
-          // decay to gamma ray
-          update_pellet(pkt_ptr, false, false, nts, ts, tw);
-          break;
-
-        case TYPE_52FE_PELLET:
-        case TYPE_52MN_PELLET:
-          // convert to kpkts
-          update_pellet(pkt_ptr, true, false, nts, ts, tw);
-          break;
-
-        case TYPE_57NI_POSITRON_PELLET:
-        case TYPE_56CO_POSITRON_PELLET:
-          // convert to to non-thermal leptons
-          update_pellet(pkt_ptr, false, true, nts, ts, tw);
-          break;
-
-        case TYPE_GAMMA:
-        case TYPE_RPKT:
-        case TYPE_KPKT:
-          /**Stuff for processing photons. */
-          //printout("further propagate a photon packet via packet_prop\n");
-
-          packet_prop(pkt_ptr, ts, ts + tw, nts);
-          break;
-
-        case TYPE_ESCAPE:
-          break;
-
-        default:
-          printout("update_packets: Unknown packet type %d for pkt number %d. Abort.\n", pkt_ptr->type, n);
-          abort();
-      }
+      update_packet(pkt_ptr, ts, ts + tw, nts);
 
       // if (debuglevel == 10 || debuglevel == 2)
       //   printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",

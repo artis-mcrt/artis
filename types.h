@@ -161,7 +161,6 @@ enum packet_type {
   TYPE_RPKT = 11,
   TYPE_KPKT = 12,
   TYPE_MA = 13,
-  TYPE_NTLEPTON = 20,
   TYPE_PRE_KPKT = 120,
   TYPE_GAMMA_KPKT = 121,
 };
