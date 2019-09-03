@@ -145,7 +145,7 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
 
       case TYPE_RPKT:
         //printout("r-pkt propagation\n");
-        t_current = do_rpkt(pkt_ptr, t_current, t2);
+        t_current = do_rpkt(pkt_ptr, t_current, t2, nts);
   //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
   //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
   //       else
@@ -161,33 +161,12 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
         break;
 
       case TYPE_KPKT:
-      case TYPE_PRE_KPKT:
-      case TYPE_GAMMA_KPKT:
         /*It's a k-packet - convert to r-packet (low freq).*/
-        //printout("k-packet propagation\n");
-
-        //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
-        if (pkt_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
-        {
-          t_current = do_kpkt_bb(pkt_ptr, t_current);
-        }
-        else if (pkt_type == TYPE_KPKT)
-        {
-          t_current = do_kpkt(pkt_ptr, t_current, t2, nts);
-        }
-        else
-        {
-          printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
-          abort();
-          //t_change_type = do_kpkt_ffonly(pkt_ptr, t_current, t2);
-        }
+        t_current = do_kpkt(pkt_ptr, t_current, t2, nts);
         break;
 
-      case TYPE_MA:
-        // It's an active macroatom - apply transition probabilities
-        //printout("MA-packet handling\n");
-
-        t_current = do_macroatom(pkt_ptr, t_current, t2, nts);
+      case TYPE_PRE_KPKT:
+        t_current = do_kpkt_bb(pkt_ptr, t_current);
         break;
 
       default:
