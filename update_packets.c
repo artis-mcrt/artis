@@ -10,7 +10,7 @@
 #include "vectors.h"
 
 
-static double update_pellet(
+static double do_pellet(
   PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double t_current, const double t2)
 {
   // Handle inactive pellets. Need to do two things (a) check if it
@@ -21,6 +21,10 @@ static double update_pellet(
   assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
 
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
+  if (nts > 0 && tdecay < time_step[nts].start)
+  {
+    printout("weird pellet should have already decayed in previous timestep at time %g t_current %g ts %g prev(ts + tw) %g\n", tdecay, t_current, time_step[nts].start, time_step[nts-1].start + time_step[nts-1].width);
+  }
   if (tdecay > t2)
   {
     // It won't decay in this timestep, so just need to move it on with the flow.
@@ -29,7 +33,7 @@ static double update_pellet(
     // That's all that needs to be done for the inactive pellet.
     return TIME_END_OF_TIMESTEP;
   }
-  else if (tdecay > t_current)
+  else if (tdecay >= t_current)
   {
     // The packet decays in the current timestep.
     time_step[nts].pellet_decays++;
@@ -37,9 +41,8 @@ static double update_pellet(
     {
       vec_scale(pkt_ptr->pos, tdecay / t_current);
 
-      pkt_ptr->type = TYPE_KPKT;
       pkt_ptr->absorptiontype = -6;
-      return tdecay;
+      return do_kpkt(pkt_ptr, tdecay, t2, nts);
     }
     else if (decay_to_ntlepton)
     {
@@ -67,7 +70,6 @@ static double update_pellet(
     // that it is fixed in place from decay to tmin - i.e. short mfp.
 
     pkt_ptr->e_cmf *= tdecay / tmin;
-    //pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
     //if (tid == 0) k_stat_from_earlierdecay++;
@@ -78,7 +80,7 @@ static double update_pellet(
   }
   else
   {
-    printout("ERROR: Something gone wrong with decaying pellets. tdecay %g t_current %g t2 %g\n", tdecay, t_current, t2);
+    printout("ERROR: Something gone wrong with decaying pellets at timestep %d. tdecay %g ts %g t_current %g t2 %g\n", nts, tdecay, time_step[nts].start, t_current, t2);
     abort();
   }
 }
@@ -108,19 +110,19 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
       case TYPE_48CR_PELLET:
       case TYPE_48V_PELLET:
         // check for decay to gamma ray
-        t_current = update_pellet(pkt_ptr, false, false, nts, t_current, t2);
+        t_current = do_pellet(pkt_ptr, false, false, nts, t_current, t2);
         break;
 
       case TYPE_52FE_PELLET:
       case TYPE_52MN_PELLET:
         // check for decay to kpkts
-        t_current = update_pellet(pkt_ptr, true, false, nts, t_current, t2);
+        t_current = do_pellet(pkt_ptr, true, false, nts, t_current, t2);
         break;
 
       case TYPE_57NI_POSITRON_PELLET:
       case TYPE_56CO_POSITRON_PELLET:
         // check for decay to non-thermal leptons
-        t_current = update_pellet(pkt_ptr, false, true, nts, t_current, t2);
+        t_current = do_pellet(pkt_ptr, false, true, nts, t_current, t2);
         break;
 
       case TYPE_ESCAPE:
@@ -161,7 +163,6 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
         break;
 
       case TYPE_KPKT:
-        /*It's a k-packet - convert to r-packet (low freq).*/
         t_current = do_kpkt(pkt_ptr, t_current, t2, nts);
         break;
 
@@ -217,7 +218,7 @@ void update_packets(const int nts, PKT *pkt)
   a direction.*/
 
   const double ts = time_step[nts].start;
-  const double tw = time_step[nts].width;
+  const double t2 = (nts < ntstep - 1) ? time_step[nts + 1].start : ts + time_step[nts].width;
 
   //qsort(pkt,npkts,sizeof(PKT),compare_packets_bymodelgridposition);
   /// For 2D and 3D models sorting by the modelgrid cell's density should be most efficient
@@ -277,7 +278,7 @@ void update_packets(const int nts, PKT *pkt)
       //printout("[debug] update_packets: target position of homologous flow (%g, %g, %g)\n",pkt_ptr->pos[0]*(ts + tw)/ts,pkt_ptr->pos[1]*(ts + tw)/ts,pkt_ptr->pos[2]*(ts + tw)/ts);
       //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
-      update_packet(pkt_ptr, ts, ts + tw, nts);
+      update_packet(pkt_ptr, ts, t2, nts);
 
       // if (debuglevel == 10 || debuglevel == 2)
       //   printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",

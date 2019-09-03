@@ -8,6 +8,7 @@
 #include <gsl/gsl_linalg.h>
 #include "atomic.h"
 #include "grid_init.h"
+#include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
@@ -2144,10 +2145,9 @@ double do_ntlepton(PKT *pkt_ptr, const double t_current, const double t2, const 
   }
 
   pkt_ptr->last_event = 22;
-  pkt_ptr->type = TYPE_KPKT;
   nt_stat_to_kpkt++;
 
-  return t_current;
+  return do_kpkt(pkt_ptr, t_current, t2, timestep);
 }
 
 

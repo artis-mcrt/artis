@@ -2,6 +2,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
+#include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
@@ -668,8 +669,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
-        pkt_ptr->type = TYPE_KPKT;
-        end_packet = true;
         #ifndef FORCE_LTE
           //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
           #ifdef _OPENMP
@@ -677,6 +676,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           #endif
           colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
         #endif
+        return do_kpkt(pkt_ptr, t_current, t2, timestep);
         break;
 
       case MA_ACTION_INTERNALDOWNSAME:
@@ -759,8 +759,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
-        pkt_ptr->type = TYPE_KPKT;
-        end_packet = true;
         #ifndef FORCE_LTE
           //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
           #ifdef _OPENMP
@@ -768,6 +766,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           #endif
           colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
         #endif
+        return do_kpkt(pkt_ptr, t_current, t2, timestep);
         break;
 
       case MA_ACTION_INTERNALDOWNLOWER:

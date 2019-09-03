@@ -3,6 +3,7 @@
 #include "boundary.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
+#include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "polarization.h"
@@ -908,7 +909,8 @@ static double get_event(
   double t_current,         // current time
   const double tau_rnd,     // random optical depth until which the packet travels
   const double abort_dist,   // maximal travel distance before packet leaves cell or time step ends
-  struct rpkt_cont_opacity_struct *kappa_continuum
+  struct rpkt_cont_opacity_struct *kappa_continuum,
+  struct mastate_t *mastate_thisthread
 )
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
@@ -940,8 +942,6 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:   line interaction possible\n");
       #endif
 
-      // const int lineindex = mastate[tid].activatingline;
-      // const int lineindex = dummypkt_ptr->next_trans - 1;
       const double nu_trans = linelist[lineindex].nu;
 
       // helper variable to overcome numerical problems after line scattering
@@ -1053,10 +1053,10 @@ static double get_event(
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
           #endif
-          mastate[tid].element = element;
-          mastate[tid].ion     = ion;
-          mastate[tid].level   = upper;  ///if the MA will be activated it must be in the transitions upper level
-          mastate[tid].activatingline = lineindex;
+          mastate_thisthread->element = element;
+          mastate_thisthread->ion     = ion;
+          mastate_thisthread->level   = upper;  ///if the MA will be activated it must be in the transitions upper level
+          mastate_thisthread->activatingline = lineindex;
 
           edist = dist + ldist;
           if (edist > abort_dist)
@@ -1197,11 +1197,11 @@ static double rpkt_event_continuum(
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 5;
     #endif
-    pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->absorptiontype = -1;
     #ifndef FORCE_LTE
       //kffabs[pkt_ptr->where] += pkt_ptr->e_cmf;
     #endif
+    return do_kpkt(pkt_ptr, t_current, t2, timestep);
   }
   else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf)
   {
@@ -1338,11 +1338,7 @@ static double rpkt_event_continuum(
             pkt_ptr->interactions += 1;
             pkt_ptr->last_event = 4;
           #endif
-          pkt_ptr->type = TYPE_KPKT;
-          #ifndef FORCE_LTE
-            //kbfabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-          #endif
-          //if (element == 6) cell[pkt_ptr->where].bfabs[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
+          return do_kpkt(pkt_ptr, t_current, t2, timestep);
         }
         break;
       }
@@ -1767,7 +1763,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
       else
       {
         // get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_continuum); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_continuum, &mastate[tid]); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         #ifdef DEBUG_ON
           if (debuglevel == 2)
           {
