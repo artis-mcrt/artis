@@ -2081,7 +2081,6 @@ double do_ntlepton(PKT *pkt_ptr, const double t_current, const double t2, const 
       mastate[tid].ion = upperion;
       mastate[tid].level = 0;
       mastate[tid].activatingline = -99;
-      pkt_ptr->type = TYPE_MA;
       ma_stat_activation_ntcollion++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 20;
@@ -2124,7 +2123,6 @@ double do_ntlepton(PKT *pkt_ptr, const double t_current, const double t2, const 
           mastate[tid].ion = ion;
           mastate[tid].level = upper;
           mastate[tid].activatingline = -99;
-          pkt_ptr->type = TYPE_MA;
           ma_stat_activation_ntcollexc++;
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 21;

@@ -4,6 +4,7 @@
 #include "grey_emissivities.h"
 #include "grid_init.h"
 #include "ltepop.h"
+#include "macroatom.h"
 #include "polarization.h"
 #include "radfield.h"
 #include "rpkt.h"
@@ -1141,7 +1142,9 @@ static double get_event(
 }
 
 
-static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, struct rpkt_cont_opacity_struct *kappa_continuum, int modelgridindex)
+static double rpkt_event_continuum(
+  PKT *restrict pkt_ptr, const double t_current, const double t2, const int timestep,
+  struct rpkt_cont_opacity_struct *kappa_continuum, int modelgridindex)
 {
   const double nu = pkt_ptr->nu_cmf;
 
@@ -1314,10 +1317,6 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
           #if (TRACK_ION_STATS)
           increment_ion_stats(modelgridindex, element, ion + 1, ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION, pkt_ptr->e_cmf);
           #endif
-          pkt_ptr->type = TYPE_MA;
-          #ifndef FORCE_LTE
-            //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-          #endif
           mastate[tid].element = element;
           mastate[tid].ion     = ion + 1;
           const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -1325,6 +1324,8 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
           // mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
           mastate[tid].activatingline = -99;
           //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
+          // return t_current;
+          return do_macroatom(pkt_ptr, t_current, t2, timestep);
         }
         /// or to the thermal pool
         else
@@ -1383,7 +1384,6 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 3;
         #endif
-        pkt_ptr->type = TYPE_MA;
         #ifndef FORCE_LTE
           //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         #endif
@@ -1392,7 +1392,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
         mastate[tid].level   = level;
         mastate[tid].activatingline = -99;
         //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-        return;
+        return do_macroatom(pkt_ptr, t_current, t2, timestep);
       }
     }
     printout("ERROR: could not select stimulated recombination process\n");
@@ -1404,10 +1404,11 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
     printout("ERROR: could not continuum process\n");
     abort();
   }
+  return t_current;
 }
 
 
-static void rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi)
+static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const double t_current, const double t2, const int timestep)
 {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
@@ -1426,7 +1427,6 @@ static void rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi)
   pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
   pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
   pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];
-  pkt_ptr->type = TYPE_MA;
 
   #if (TRACK_ION_STATS)
   const int element = mastate[tid].element;
@@ -1454,6 +1454,8 @@ static void rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi)
   //mastate[tid].element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
   //mastate[tid].ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
   //mastate[tid].level   = pkt_ptr->nextrans_uppper;
+
+  return do_macroatom(pkt_ptr, t_current, t2, timestep);
 }
 
 
@@ -1640,7 +1642,7 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
 }
 
 
-double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
+double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
   const int cellindex = pkt_ptr->where;
@@ -1679,6 +1681,9 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
     if (sdist == 0)
     {
       change_cell(pkt_ptr, snext, &end_packet, t_current);
+      if (end_packet)
+        return PACKET_SAME;
+
       const int cellindexnew = pkt_ptr->where;
       mgi = cell[cellindexnew].modelgridindex;
     }
@@ -1841,7 +1846,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         /// find the next possible line interaction.
         if (find_nextline)
           closest_transition_empty(pkt_ptr);
-        end_packet = true;
+        return PACKET_SAME;
       }
       else if ((edist < sdist) && (edist < tdist))
       {
@@ -1866,11 +1871,11 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
         {
-          rpkt_event_boundbound(pkt_ptr, mgi);
+          return rpkt_event_boundbound(pkt_ptr, mgi, t_current, t2, timestep);
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
         {
-          rpkt_event_continuum(pkt_ptr, t_current, &kappa_continuum, mgi);
+          return rpkt_event_continuum(pkt_ptr, t_current, t2, timestep, &kappa_continuum, mgi);
         }
         else
         {

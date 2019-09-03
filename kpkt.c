@@ -382,6 +382,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
 
+  if (modelgrid[modelgridindex].thick == 1)
+  {
+    return do_kpkt_bb(pkt_ptr, t1);
+  }
+
   /// don't calculate cooling rates after each cell crossings anylonger
   /// but only if we really get a kpkt and they hadn't been calculated already
   //if (cellhistory[tid].totalcooling == COOLING_UNDEFINED)
@@ -636,7 +641,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
       #endif
 
-      pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collexc++;
       ma_stat_activation_collexc++;
       //if (tid == 0) k_stat_to_ma_collexc++;
@@ -668,7 +672,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLION, pkt_ptr->e_cmf);
       #endif
 
-      pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collion++;
       ma_stat_activation_collion++;
       //if (tid == 0) k_stat_to_ma_collion++;
