@@ -359,7 +359,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
   if (modelgrid[modelgridindex].thick != 1)
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, &kappa_rpkt_cont[tid]);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb++;
   k_stat_to_r_bb++;
@@ -552,7 +552,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr,t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, &kappa_rpkt_cont[tid]);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_ff++;
       k_stat_to_r_ff++;
@@ -613,7 +613,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
       #endif
 
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, &kappa_rpkt_cont[tid]);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_fb++;
       k_stat_to_r_fb++;
@@ -654,6 +654,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+
+      return do_macroatom(pkt_ptr, t_current, t2, nts);
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLION)
     {
@@ -684,6 +686,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+
+      return do_macroatom(pkt_ptr, t_current, t2, nts);
     }
     else
     {
