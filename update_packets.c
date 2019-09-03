@@ -27,7 +27,7 @@ static double update_pellet(
     vec_scale(pkt_ptr->pos, t2 / t_current);
 
     // That's all that needs to be done for the inactive pellet.
-    return PACKET_SAME;
+    return TIME_END_OF_TIMESTEP;
   }
   else if (tdecay > t_current)
   {
@@ -92,7 +92,7 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
   /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
 
-  // t_current == PACKET_SAME which is < 0 after t2 has been reached;
+  // t_current == TIME_END_OF_TIMESTEP which is < 0 after t2 has been reached;
   while (t_current >= 0)
   {
     /* Start by sorting out what sort of packet it is.*/
@@ -124,7 +124,7 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
         break;
 
       case TYPE_ESCAPE:
-        t_current = PACKET_SAME;
+        t_current = TIME_END_OF_TIMESTEP;
         break;
 
       case TYPE_GAMMA:
@@ -174,7 +174,7 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
         abort();
     }
   }
-  assert(t_current == PACKET_SAME);
+  assert(t_current == TIME_END_OF_TIMESTEP);
 }
 
 

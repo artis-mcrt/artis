@@ -797,7 +797,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current, struc
 //     }
 //   }
 //
-//   return PACKET_SAME;
+//   return TIME_END_OF_TIMESTEP;
 // }
 
 
@@ -1682,7 +1682,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
     {
       change_cell(pkt_ptr, snext, &end_packet, t_current);
       if (end_packet)
-        return PACKET_SAME;
+        return TIME_END_OF_TIMESTEP;
 
       const int cellindexnew = pkt_ptr->where;
       mgi = cell[cellindexnew].modelgridindex;
@@ -1846,7 +1846,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
         /// find the next possible line interaction.
         if (find_nextline)
           closest_transition_empty(pkt_ptr);
-        return PACKET_SAME;
+        return TIME_END_OF_TIMESTEP;
       }
       else if ((edist < sdist) && (edist < tdist))
       {
@@ -1897,7 +1897,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
     }
   }
 
-  return PACKET_SAME;
+  return TIME_END_OF_TIMESTEP;
 }
 
 

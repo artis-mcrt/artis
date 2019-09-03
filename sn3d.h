@@ -172,7 +172,7 @@ double E48V;
 #define RPKT_EVENTTYPE_BB 550
 #define RPKT_EVENTTYPE_CONT 551
 
-#define PACKET_SAME -929 //MUST be negative
+#define TIME_END_OF_TIMESTEP -929 //MUST be negative
 
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40

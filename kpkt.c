@@ -702,7 +702,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
   else
   {
     vec_scale(pkt_ptr->pos, t2 / t1);
-    return PACKET_SAME;
+    return TIME_END_OF_TIMESTEP;
   }
 }
 
