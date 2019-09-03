@@ -218,8 +218,6 @@ static void do_macroatom_raddeexcitation(
       printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
       abort();
     }
-    if (debuglevel == 2)
-      printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA deactivation\n");
     //if (tid == 0) ma_stat_deactivation_bb++;
     ma_stat_deactivation_bb++;
     pkt_ptr->interactions += 1;
@@ -457,7 +455,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       if (debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
     #endif
 
-    assert(cellhistory[tid].cellnumber == modelgridindex)
+    assert(cellhistory[tid].modelgridindex == modelgridindex)
 
     double *restrict processrates = cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
 

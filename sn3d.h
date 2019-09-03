@@ -359,8 +359,6 @@ elementlist_entry *restrict elements;
 linelist_entry *restrict linelist;
 bflist_t *restrict bflist;
 
-rpkt_cont_opacity_struct *restrict kappa_rpkt_cont;
-
 
 /// Coolinglist
 ///============================================================================

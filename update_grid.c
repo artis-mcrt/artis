@@ -866,23 +866,24 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 }
 
 
-void cellhistory_reset(const int modelgridindex, const bool new_timestep)
+void cellhistory_validate_or_reset(const int modelgridindex, const int timestep)
 {
-  /// All entries of the cellhistory stack must be flagged as empty at the
-  /// onset of the new timestep. Also, boundary crossing?
-  /// Calculate the level populations for this cell, and flag the other entries
-  /// as empty.
-  /// Make known that cellhistory[tid] contains information about the
-  /// cell given by cellnumber. (-99 if invalid)
-  if ((modelgridindex == cellhistory[tid].cellnumber) && !new_timestep)
+  // ensure that if cell history data is not relevant for this cell and time_step
+  // then it has been reset and flagged as empty (ready to populate with new values)
+
+  if ((modelgridindex == cellhistory[tid].modelgridindex) && (timestep == cellhistory[tid].timestep))
+  {
+    return;
+  }
+  else if (modelgridindex == MMODELGRID || modelgrid[modelgridindex].thick == 1)
   {
     return;
   }
 
-  // force rpkt opacities to be recalculated next time they are accessed
-  kappa_rpkt_cont[tid].recalculate_required = true;
+  updatecellcounter++;
 
-  cellhistory[tid].cellnumber = modelgridindex;
+  cellhistory[tid].modelgridindex = modelgridindex;
+  cellhistory[tid].timestep = timestep;
   //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   for (int element = 0; element < nelements; element++)
   {
@@ -1557,7 +1558,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
     use_cellhist = false;
-    cellhistory_reset(-99, true);
+    cellhistory_validate_or_reset(-99, nts);
 
     /// Updating cell information
     #ifdef _OPENMP

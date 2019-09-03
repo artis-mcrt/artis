@@ -1227,7 +1227,7 @@ static void setup_cellhistory(void)
       mem_usage_cellhistory += sizeof(cellhistory_struct);;
       printout("[info] input: initializing cellhistory for thread %d ...\n", tid);
 
-      cellhistory[tid].cellnumber = -99;
+      cellhistory[tid].modelgridindex = -99;
 
       mem_usage_cellhistory += ncoolingterms * sizeof(cellhistorycoolinglist_t);
       cellhistory[tid].coolinglist = (cellhistorycoolinglist_t *) malloc(ncoolingterms * sizeof(cellhistorycoolinglist_t));
