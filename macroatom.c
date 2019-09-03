@@ -233,7 +233,7 @@ static void do_macroatom_raddeexcitation(
     resonancescatterings++;
   else
   {
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, &kappa_rpkt_cont[tid]);
   }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
@@ -337,7 +337,7 @@ static void do_macroatom_radrecomb(
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   #endif
 
-  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, &kappa_rpkt_cont[tid]);
 
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
