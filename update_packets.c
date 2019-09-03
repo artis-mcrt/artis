@@ -270,18 +270,7 @@ void update_packets(const int nts, PKT *pkt)
       {
         //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
         /// Reset cellhistory if packet starts up in another than the last active cell
-        if (cellhistory[tid].cellnumber != mgi)
-        {
-          updatecellcounter++;
-
-          cellhistory_reset(mgi, false);
-        }
-
-        /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
-        if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
-        {
-          calculate_kappa_rpkt_cont(pkt_ptr, ts, mgi, &kappa_rpkt_cont[tid]);
-        }
+        cellhistory_validate_or_reset(mgi, nts);
       }
 
       //printout("[debug] update_packets: current position of packet %d (%g, %g, %g)\n",n,pkt_ptr->pos[0],pkt_ptr->pos[1],pkt_ptr->pos[2]);

@@ -371,8 +371,6 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
   else
   {
     // Just need to update "where".
-    const int cellnum = pkt_ptr->where;
-    const int old_mgi = cell[cellnum].modelgridindex;
     pkt_ptr->where = snext;
     const int mgi = cell[snext].modelgridindex;
 
@@ -383,22 +381,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
     /// as we do it on the rpkts way through a cell
     //if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
 
-    /// check for empty cells
-    if (mgi != MMODELGRID)
-    {
-      if (mgi != old_mgi)
-      {
-        /// Update the level populations and reset the precalculated rate coefficients
-        //printout("change cell: cellnumber %d\n",pkt_ptr->where);
-        /// This only needs to be done for non-grey cells
-        if (modelgrid[mgi].thick != 1)
-        {
-          updatecellcounter++;
-
-          cellhistory_reset(mgi, false);
-        }
-      }
-    }
+    cellhistory_validate_or_reset(mgi, nts_global);
   }
 }
 

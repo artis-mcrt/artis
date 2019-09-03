@@ -498,22 +498,6 @@ typedef struct gslintegration_paras
   float *photoion_xs;
 } gslintegration_paras;
 
-typedef struct rpkt_cont_opacity_struct
-{
-  double nu; // frequency at which opacity was calculated
-  double total;
-  double es;
-  double ff;
-  double bf;
-  double fb;
-  double bf_inrest;
-  double fb_inrest;
-  double ffheating;
-  //double bfheating;
-  int modelgridindex;
-  bool recalculate_required; // e.g. when cell or timestep has changed
-} rpkt_cont_opacity_struct;
-
 
 
 /// Cell history
@@ -557,8 +541,9 @@ typedef struct cellhistory_struct
   cellhistorycoolinglist_t *restrict coolinglist;    /// Cooling contributions by the different processes.
   chelements_struct *restrict chelements;            /// Pointer to a nested list which helds compositional
                                             /// information for all the elements=0,1,...,nelements-1
-  int cellnumber;                           /// Identifies the cell the data is valid for.
+  int modelgridindex;                           /// Identifies the cell the data is valid for.
   int bfheating_mgi;
+  int timestep;
 } cellhistory_struct;
 
 
