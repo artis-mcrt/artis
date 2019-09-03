@@ -285,7 +285,7 @@ void write_grey(int nts)
   if (do_rlc_est == 1)
   {
 
-    kap_tot = calculate_kappa_rpkt_cont(&dummy, single_t);
+    kap_tot = calculate_kappa_rpkt_cont(&dummy, single_t, kappa_rpkt_cont[tid]);
     tau_cont = kap_tot * ldist;
     ray_ptr->e_rf[nray] = ray_ptr->e_rf[nray] * exp(-1. * tau_cont);
 
