@@ -4,6 +4,7 @@
 #include "gamma.h"
 #include "grey_emissivities.h"
 #include "grid_init.h"
+#include "nonthermal.h"
 #include "photo_electric.h"
 #include "vectors.h"
 
@@ -525,7 +526,6 @@ static bool compton_scatter(PKT *pkt_ptr, double t_current)
   else
   {
     // It's converted to an e-minus packet.
-    pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -3;
     return false; // not a gamma packet
   }
@@ -691,13 +691,12 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
       // Compton scattering.
       if (!compton_scatter(pkt_ptr, t_current))
       {
-        return t_current;
+        return do_ntlepton(pkt_ptr, t_current, t2, nts_global);
       }
     }
     else if ((kap_compton + kap_photo_electric) > (zrand * kap_tot))
     {
       // Photo electric effect - makes it a k-packet for sure.
-      pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -4;
       #ifndef FORCE_LTE
         //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
@@ -706,14 +705,14 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
       //pkt_ptr->type = TYPE_GAMMA_KPKT;
       //if (tid == 0) nt_stat_from_gamma++;
       nt_stat_from_gamma++;
-      return t_current;
+      return do_ntlepton(pkt_ptr, t_current, t2, nts_global);;
     }
     else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
     {
       // It's a pair production
       if (!pair_prod(pkt_ptr, t_current))
       {
-        return t_current;
+        return do_ntlepton(pkt_ptr, t_current, t2, nts_global);
       }
     }
     else

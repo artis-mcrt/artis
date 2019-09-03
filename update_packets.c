@@ -63,7 +63,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
         break;
 
       case TYPE_NTLEPTON:
-        do_ntlepton(pkt_ptr);
+        t_current = do_ntlepton(pkt_ptr, t_current, t2, nts);
         break;
 
       case TYPE_KPKT:
