@@ -246,7 +246,7 @@ static void do_macroatom_raddeexcitation(
 
 static void do_macroatom_radrecomb(
   PKT *restrict pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
-  const double rad_recomb, const double t_current)
+  const double rad_recomb, const double t_current, const int timestep)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -326,7 +326,7 @@ static void do_macroatom_radrecomb(
   #if (TRACK_ION_STATS)
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
 
-  const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
+  const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current, timestep);
 
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   #endif
@@ -421,11 +421,14 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     int jump = -99;
   #endif
 
-  bool end_packet = false;
-  while (!end_packet)
+
+  /// procedure ends only after a change to r or k packets has taken place and
+  /// returns then the actual time, which is the same as the input t1
+  /// internal transitions are carried out until a type change occurs
+
+  while (true)
   {
     //ionisinglevels = get_ionisinglevels(element,ion);
-
     /// Set this here to 1 to overcome problems in cells which have zero population
     /// in some ionisation stage. This is possible because the dependence on the
     /// originating levels population cancels out in the macroatom transition probabilities
@@ -433,7 +436,6 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
     #ifdef DEBUG_ON
       const int ionstage = get_ionstage(element,ion);
-      // if (Z == 26 && ionstage == 1) debuglevel = 2000;
 
       if (debuglevel == 2000)
         printout("[debug] %s Z=%d ionstage %d level %d, jumps %d\n", __func__, get_element(element), ionstage, level, jumps);
@@ -643,7 +645,13 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
                   level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
         }
 
-        end_packet = true;
+        if (pkt_ptr->trueemissiontype < 0)
+        {
+          pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
+          pkt_ptr->trueemissionvelocity = vec_len(pkt_ptr->em_pos) / pkt_ptr->em_time;
+        }
+
+        return do_rpkt(pkt_ptr, t_current, t2, timestep);
         break;
 
       case MA_ACTION_COLDEEXC:
@@ -732,8 +740,15 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         // increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
-        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current);
-        end_packet = true;
+        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current, timestep);
+
+        if (pkt_ptr->trueemissiontype < 0)
+        {
+          pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
+          pkt_ptr->trueemissionvelocity = vec_len(pkt_ptr->em_pos) / pkt_ptr->em_time;
+        }
+
+        return do_rpkt(pkt_ptr, t_current, t2, timestep);
         break;
 
       case MA_ACTION_COLRECOMB:
@@ -891,31 +906,16 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion, level);
         break;
 
-      case MA_ACTION_COUNT:
-        printout("ERROR: Somehow selected MA_ACTION_COUNT\n");
+      default:
+        printout("ERROR: Unhandled action type in macroatom\n");
         abort();
-    }
-  }///endwhile
+    } // end of switch (selected_action)
 
-  #ifdef DEBUG_ON
-    //debuglevel = 4;
-    //debuglevel = 2;
-  #endif
+  } // end of while (true)
 
-  if (pkt_ptr->trueemissiontype < 0)
-  {
-    pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
-    pkt_ptr->trueemissionvelocity = vec_len(pkt_ptr->em_pos) / pkt_ptr->em_time;
-  }
-
-  /// procedure ends only after a change to r or k packets has taken place and
-  /// returns then the actual time, which is the same as the input t1
-  /// internal transitions are carried out until a type change occurs
-  return t_current;
+  // should not reach here. devativation should have occured earlier via tail calls to do_kpkt() or do_rpt() to deactivate
+  assert(false);
 }
-
-
-/// Calculation of radiative rates ///////////////////////////////////////////////////////
 
 
 void macroatom_open_file(const int my_rank)

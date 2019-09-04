@@ -346,7 +346,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 }
 
 
-void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_current)
+void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_current, const int timestep)
 /// Routine to take a packet across a boundary.
 {
   #ifdef DEBUG_ON
@@ -381,7 +381,7 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
     /// as we do it on the rpkts way through a cell
     //if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
 
-    cellhistory_validate_or_reset(mgi, nts_global);
+    cellhistory_validate_or_reset(mgi, timestep);
   }
 }
 

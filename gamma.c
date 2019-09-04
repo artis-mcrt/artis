@@ -532,7 +532,7 @@ static bool compton_scatter(PKT *pkt_ptr, double t_current)
 }
 
 
-double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
+double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -638,7 +638,7 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
     if (snext != pkt_ptr->where)
     {
       bool end_packet = false;
-      change_cell(pkt_ptr, snext, &end_packet, t_current);
+      change_cell(pkt_ptr, snext, &end_packet, t_current, timestep);
       if (end_packet)
         return TIME_END_OF_TIMESTEP;
     }
@@ -691,7 +691,7 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
       // Compton scattering.
       if (!compton_scatter(pkt_ptr, t_current))
       {
-        return do_ntlepton(pkt_ptr, t_current, t2, nts_global);
+        return do_ntlepton(pkt_ptr, t_current, t2, timestep);
       }
     }
     else if ((kap_compton + kap_photo_electric) > (zrand * kap_tot))
@@ -705,14 +705,14 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
       //pkt_ptr->type = TYPE_GAMMA_KPKT;
       //if (tid == 0) nt_stat_from_gamma++;
       nt_stat_from_gamma++;
-      return do_ntlepton(pkt_ptr, t_current, t2, nts_global);;
+      return do_ntlepton(pkt_ptr, t_current, t2, timestep);
     }
     else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
     {
       // It's a pair production
       if (!pair_prod(pkt_ptr, t_current))
       {
-        return do_ntlepton(pkt_ptr, t_current, t2, nts_global);
+        return do_ntlepton(pkt_ptr, t_current, t2, timestep);
       }
     }
     else
@@ -729,7 +729,8 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2)
     printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
     abort();
   }
-  return do_gamma(pkt_ptr, t_current, t2);
+
+  return do_gamma(pkt_ptr, t_current, t2, timestep);
 }
 
 
