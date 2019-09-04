@@ -15,3 +15,4 @@ sn3d.dSYM
 .tags_swap
 .vscode
 build
+.DS_Store
