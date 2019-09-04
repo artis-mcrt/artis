@@ -11,7 +11,7 @@
 
 
 static double do_pellet(
-  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double t_current, const double t2)
+  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double t1, const double t2)
 {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
@@ -23,30 +23,30 @@ static double do_pellet(
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
   if (nts > 0 && tdecay < time_step[nts].start)
   {
-    printout("weird pellet should have already decayed in previous timestep at time %g t_current %g ts %g prev(ts + tw) %g\n", tdecay, t_current, time_step[nts].start, time_step[nts-1].start + time_step[nts-1].width);
+    printout("weird pellet should have already decayed in previous timestep at time %g t1 %g ts %g prev(ts + tw) %g\n", tdecay, t1, time_step[nts].start, time_step[nts-1].start + time_step[nts-1].width);
   }
   if (tdecay > t2)
   {
     // It won't decay in this timestep, so just need to move it on with the flow.
-    vec_scale(pkt_ptr->pos, t2 / t_current);
+    vec_scale(pkt_ptr->pos, t2 / t1);
 
     // That's all that needs to be done for the inactive pellet.
     return TIME_END_OF_TIMESTEP;
   }
-  else if (tdecay >= t_current)
+  else if (tdecay >= t1)
   {
     // The packet decays in the current timestep.
     time_step[nts].pellet_decays++;
+
+    vec_scale(pkt_ptr->pos, tdecay / t1);
+
     if (decay_to_kpkt)
     {
-      vec_scale(pkt_ptr->pos, tdecay / t_current);
-
       pkt_ptr->absorptiontype = -6;
       return do_kpkt(pkt_ptr, tdecay, t2, nts);
     }
     else if (decay_to_ntlepton)
     {
-      vec_scale(pkt_ptr->pos, tdecay / t_current);
       time_step[nts].positron_dep += pkt_ptr->e_cmf;
 
       pkt_ptr->absorptiontype = -10;
@@ -56,9 +56,7 @@ static double do_pellet(
     else
     {
       // decay to gamma ray
-      pellet_decay(nts, pkt_ptr);
-      //printout("pellet to photon packet and propagation by packet_prop\n");
-      return tdecay;
+      return pellet_decay_gamma(pkt_ptr, tdecay, t2,  nts);
     }
   }
   else if ((tdecay > 0) && (nts == 0))
@@ -70,17 +68,16 @@ static double do_pellet(
     // that it is fixed in place from decay to tmin - i.e. short mfp.
 
     pkt_ptr->e_cmf *= tdecay / tmin;
-    pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
     //if (tid == 0) k_stat_from_earlierdecay++;
     k_stat_from_earlierdecay++;
 
     //printout("already decayed packets and propagation by packet_prop\n");
-    return tmin;
+    return do_kpkt_bb(pkt_ptr, tmin, t2, nts);
   }
   else
   {
-    printout("ERROR: Something gone wrong with decaying pellets at timestep %d. tdecay %g ts %g t_current %g t2 %g\n", nts, tdecay, time_step[nts].start, t_current, t2);
+    printout("ERROR: Something gone wrong with decaying pellets at timestep %d. tdecay %g ts %g t1 %g t2 %g\n", nts, tdecay, time_step[nts].start, t1, t2);
     abort();
   }
 }
@@ -170,10 +167,6 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
 
       case TYPE_KPKT:
         t_current = do_kpkt(pkt_ptr, t_current, t2, nts);
-        break;
-
-      case TYPE_PRE_KPKT:
-        t_current = do_kpkt_bb(pkt_ptr, t_current);
         break;
 
       default:

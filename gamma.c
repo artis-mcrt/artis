@@ -227,20 +227,14 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 }
 
 
-void pellet_decay(const int nts, PKT *pkt_ptr)
+double pellet_decay_gamma(PKT *pkt_ptr, const double tdecay, const double t2, const int nts)
 {
   // Subroutine to convert a pellet to a gamma ray.
   // nts defines the time step we are in. pkt_ptr is a pointer to the packet
   // that is decaying.
-  // Record decay.
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
 
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
-
-  vec_scale(pkt_ptr->pos, pkt_ptr->tdecay / time_step[nts].start);
 
   // Now let's give the gamma ray a direction.
 
@@ -291,6 +285,8 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   vec_norm(pkt_ptr->pol_dir, pkt_ptr->pol_dir);
   //printout("initialise pol state of packet %g, %g, %g, %g, %g\n",pkt_ptr->stokes_qu[0],pkt_ptr->stokes_qu[1],pkt_ptr->pol_dir[0],pkt_ptr->pol_dir[1],pkt_ptr->pol_dir[2]);
   //printout("pkt direction %g, %g, %g\n",pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
+
+  return do_gamma(pkt_ptr, tdecay, t2, nts);
 }
 
 
@@ -539,6 +535,8 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2, const i
 {
   double t_current = t1; //this will keep track of time in the calculation
 
+  pkt_ptr->type = TYPE_GAMMA;
+
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
   double zrand = gsl_rng_uniform(rng);
@@ -701,7 +699,6 @@ double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2, const i
       #ifndef FORCE_LTE
         //kgammadep[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
-      //pkt_ptr->type = TYPE_PRE_KPKT;
       //pkt_ptr->type = TYPE_GAMMA_KPKT;
       //if (tid == 0) nt_stat_from_gamma++;
       nt_stat_from_gamma++;
