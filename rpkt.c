@@ -1154,7 +1154,7 @@ static double get_event(
 
 static double rpkt_event_continuum(
   PKT *restrict pkt_ptr, const double t_current, const double t2, const int timestep,
-  struct rpkt_cont_opacity_struct *kappa_continuum, int modelgridindex)
+  struct rpkt_cont_opacity_struct *kappa_continuum, const int modelgridindex)
 {
   const double nu = pkt_ptr->nu_cmf;
 
@@ -1644,6 +1644,8 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
 double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
+  pkt_ptr->type = TYPE_RPKT;
+
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
 

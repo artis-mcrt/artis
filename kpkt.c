@@ -338,7 +338,7 @@ static double sample_planck(const double T)
 }
 
 
-double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
+double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1, const double t2, const int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   //double nne = cell[pkt_ptr->where].nne ;
@@ -368,7 +368,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
   pkt_ptr->em_time = t_current;
   pkt_ptr->nscatterings = 0;
 
-  return t_current;
+  return do_rpkt(pkt_ptr, t1, t2, nts);
 }
 
 
@@ -384,7 +384,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
   if (modelgrid[modelgridindex].thick == 1)
   {
-    return do_kpkt_bb(pkt_ptr, t1);
+    return do_kpkt_bb(pkt_ptr, t1, t2, nts);
   }
 
   /// don't calculate cooling rates after each cell crossings anylonger
