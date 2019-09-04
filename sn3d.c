@@ -185,10 +185,11 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
     {
       radfield_MPI_Bcast(modelgridindex, root);
+      if (NT_ON && NT_SOLVE_SPENCERFANO)
+      {
+        nt_MPI_Bcast(modelgridindex, root);
+      }
     }
-
-    if (NT_ON && NT_SOLVE_SPENCERFANO)
-      nt_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
 
     if (NLTE_POPS_ON)
     {
