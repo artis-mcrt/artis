@@ -1317,15 +1317,8 @@ static double rpkt_event_continuum(
           #if (TRACK_ION_STATS)
           increment_ion_stats(modelgridindex, element, ion + 1, ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION, pkt_ptr->e_cmf);
           #endif
-          mastate[tid].element = element;
-          mastate[tid].ion     = ion + 1;
           const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-          mastate[tid].level   = upper;
-          // mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
-          mastate[tid].activatingline = -99;
-          //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-          // return t_current;
-          return do_macroatom(pkt_ptr, t_current, t2, timestep);
+          return do_macroatom(pkt_ptr, t_current, t2, timestep, element, ion + 1, upper, -99);
         }
         /// or to the thermal pool
         else
@@ -1383,12 +1376,7 @@ static double rpkt_event_continuum(
         #ifndef FORCE_LTE
           //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         #endif
-        mastate[tid].element = element;
-        mastate[tid].ion     = ion;
-        mastate[tid].level   = level;
-        mastate[tid].activatingline = -99;
-        //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-        return do_macroatom(pkt_ptr, t_current, t2, timestep);
+        return do_macroatom(pkt_ptr, t_current, t2, timestep, element, ion, level, -99);
       }
     }
     printout("ERROR: could not select stimulated recombination process\n");
@@ -1404,7 +1392,7 @@ static double rpkt_event_continuum(
 }
 
 
-static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const double t_current, const double t2, const int timestep)
+static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const double t_current, const double t2, const int timestep, mastate_t mastate_thisthread)
 {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
@@ -1418,15 +1406,18 @@ static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const 
     pkt_ptr->last_event = 1;
   #endif
 
-  pkt_ptr->absorptiontype = mastate[tid].activatingline;
+  const int element = mastate_thisthread.element;
+  const int ion = mastate_thisthread.ion;
+  const int level = mastate_thisthread.level;
+  const int activatingline = mastate_thisthread.activatingline;
+
+  pkt_ptr->absorptiontype = activatingline;
   pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
   pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
   pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
   pkt_ptr->absorptiondir[2] = pkt_ptr->dir[2];
 
   #if (TRACK_ION_STATS)
-  const int element = mastate[tid].element;
-  const int ion = mastate[tid].ion;
   increment_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
 
   const int et = pkt_ptr->emissiontype;
@@ -1451,7 +1442,7 @@ static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const 
   //mastate[tid].ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
   //mastate[tid].level   = pkt_ptr->nextrans_uppper;
 
-  return do_macroatom(pkt_ptr, t_current, t2, timestep);
+  return do_macroatom(pkt_ptr, t_current, t2, timestep, element, ion, level, activatingline);
 }
 
 
@@ -1649,6 +1640,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
   double t_current = t1; ///this will keep track of time in the calculation
 
   struct rpkt_cont_opacity_struct kappa_continuum;
+  mastate_t mastate_thisthread;
 
   bool end_packet = false;
   while (!end_packet)
@@ -1762,7 +1754,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
       else
       {
         // get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_continuum, &mastate[tid]); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_continuum, &mastate_thisthread); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         #ifdef DEBUG_ON
           if (debuglevel == 2)
           {
@@ -1866,7 +1858,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
         {
-          return rpkt_event_boundbound(pkt_ptr, mgi, t_current, t2, timestep);
+          return rpkt_event_boundbound(pkt_ptr, mgi, t_current, t2, timestep, mastate_thisthread);
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
         {

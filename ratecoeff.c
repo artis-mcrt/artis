@@ -296,30 +296,6 @@ static double alpha_sp_E_integrand_gsl(double nu, void *restrict voidparas)
 }
 
 
-/*static double gamma_integrand_gsl(double nu, void *paras)
-/// Integrand to calculate the rate coefficient for photoionization
-/// using gsl integrators.
-{
-  double T = ((gslintegration_paras *) paras)->T;
-  double nu_edge = ((gslintegration_paras *) paras)->nu_edge;
-
-  /// Information about the current level is passed via the global variable
-  /// mastate[tid] and its child values element, ion, level
-  /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
-  double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
-
-  /// Dependence on dilution factor W is linear. This allows to set it here to
-  /// 1. and scale to its actual value later on.
-  double x = sigma_bf / H / nu * radfield_dbb(nu,T,1.);
-  //x = sigma_bf/H/nu * radfield_dbb(nu,T,1.);
-  //if (HOVERKB*nu/T < 1e-2) x = sigma_bf * pow(nu,2)/(HOVERKB*nu/T);
-  //else if (HOVERKB*nu/T >= 1e2) x = sigma_bf * pow(nu,2)*exp(-HOVERKB*nu/T);
-  //else x = sigma_bf * pow(nu,2)/(exp(HOVERKB*nu/T)-1);
-
-  return x;
-}*/
-
-
 #if (!NO_LUT_PHOTOION)
 static double gammacorr_integrand_gsl(double nu, void *restrict voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
@@ -549,8 +525,6 @@ static void precalculate_rate_coefficient_integrals(void)
 
       gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
-      mastate[tid].element = element;   /// Global variable which passes the current element to all subfunctions of macroatom.c
-      mastate[tid].ion = ion;   /// Global variable which passes the current ion to all subfunctions of macroatom.c
       for (int level = 0; level < nlevels; level++)
       {
         if ((level > 0) && (level % 10 == 0))
@@ -564,7 +538,6 @@ static void precalculate_rate_coefficient_integrals(void)
 
           //printout("element %d, ion %d, level %d, upperlevel %d, epsilon %g, continuum %g, nlevels %d\n",element,ion,level,upperlevel,epsilon(element,ion,level),epsilon(element,ion+1,upperlevel),nlevels);
 
-          mastate[tid].level = level;                   // Global variable which passes the current level to all subfunctions of macroatom.c
           // const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
           const double nu_threshold = E_threshold / H;
@@ -1687,11 +1660,8 @@ void check_interpolation(double T_min, double T_max)
   setvbuf(gamma_file, NULL, _IOLBF, 1);
 
   /// Works so far only for hydrogen or the first ionisation stage of any element!
-  mastate[tid].element = 0;
-  mastate[tid].ion = 0;
   for (level = 0; level < get_nlevels(0,0); level++)
   {
-    mastate[tid].level = level;
     double E_threshold = epsilon(0,1,0) - epsilon(0,0,level);
     double nu_threshold = E_threshold/H;
     intparas.nu_edge = nu_threshold;

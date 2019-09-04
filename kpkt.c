@@ -636,10 +636,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       const int element = cellhistory[tid].coolinglist[i].element;
       const int ion = cellhistory[tid].coolinglist[i].ion;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
-      mastate[tid].element = element;
-      mastate[tid].ion = ion;
-      mastate[tid].level = upper;
-      mastate[tid].activatingline = -99;
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
@@ -658,7 +654,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
 
-      return do_macroatom(pkt_ptr, t_current, t2, nts);
+      return do_macroatom(pkt_ptr, t_current, t2, nts, element, ion, upper, -99);
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLION)
     {
@@ -667,10 +663,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       const int element = cellhistory[tid].coolinglist[i].element;
       const int ion = cellhistory[tid].coolinglist[i].ion + 1;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
-      mastate[tid].element = element;
-      mastate[tid].ion = ion;
-      mastate[tid].level = upper;
-      mastate[tid].activatingline = -99;
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLION, pkt_ptr->e_cmf);
@@ -689,7 +681,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
 
-      return do_macroatom(pkt_ptr, t_current, t2, nts);
+      return do_macroatom(pkt_ptr, t_current, t2, nts, element, ion, upper, -99);
     }
     else
     {

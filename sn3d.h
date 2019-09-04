@@ -235,8 +235,6 @@ int n_middle_it;
 int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;
 
-mastate_t *restrict mastate;
-
 CELL cell[MGRID+1];
 //int *nonemptycells;  /// Array which contains all the non-empty cells cellnumbers
 //int nnonemptycells;  /// Total number of non-empty cells

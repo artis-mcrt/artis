@@ -609,12 +609,6 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)
-  {
-    printout("[fatal] input: error initializing macro atom state variables ... abort\n");
-    abort();
-  }
-
   /// Using this and the global variable output_file opens and closes the output_file
   /// only once, which speeds up the simulation with a lots of output switched on (debugging).
   /// The downside is that while the simulation runs, its output is only readable on that
