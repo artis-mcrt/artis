@@ -373,7 +373,7 @@ static void do_macroatom_ionisation(
 }
 
 
-double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep)
+double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep, int element, int ion, int level, int activatingline)
 /// Material for handling activated macro atoms.
 {
   double t_current = t1; // this will keep track of time in the calculation
@@ -394,11 +394,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
   /// not sure whether this reduces the number of calculations, as number of grid cells
   /// is much larger than number of pellets (next question: connection to number of
   /// photons)
-  const int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
 
-  const int activatingline = mastate[tid].activatingline;
   if (pkt_ptr->absorptiontype > 0 && activatingline > 0 && activatingline != pkt_ptr->absorptiontype)
   {
     printout("error: mismatched absorptiontype %d != activatingline = %d pkt last_event %d emissiontype %d\n",

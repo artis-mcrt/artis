@@ -1271,10 +1271,6 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
           lower = linelist[lineindex].lowerlevelindex;
 
-          mastate[tid].element = element;
-          mastate[tid].ion = ion;
-          mastate[tid].level = level;
-
           R = rad_deexcitation_ratecoeff(modelgridindex,element,ion,level,lower,epsilon_trans,lineindex,t_mid);
           C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
@@ -1311,10 +1307,6 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
           const int upper = linelist[lineindex].upperlevelindex;
           epsilon_trans = epsilon(ion, level, upper) - epsilon_current;
-
-          mastate[tid].element = element;
-          mastate[tid].ion = ion;
-          mastate[tid].level = level;
 
           R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
           C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
@@ -1380,9 +1372,6 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           }
 
           // ionization
-          mastate[tid].element = element;
-          mastate[tid].ion = ion;
-          mastate[tid].level = level;
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
@@ -1397,12 +1386,9 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           }
 
           // recombination
-          mastate[tid].element = element;
-          mastate[tid].ion = ion+1;
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
             int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-            mastate[tid].level = upper;
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
             R = rad_recombination_ratecoeff(T_e, nne, element, ion+1, upper, level, modelgridindex);
             //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g (ne %g and Te %g)\n",element,ion,mastate[tid].level,level,R/nne,nne,T_e);
