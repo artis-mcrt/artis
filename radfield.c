@@ -1715,50 +1715,31 @@ void radfield_reduce_estimators(void)
 }
 
 
-void radfield_MPI_Bcast(const int my_rank, const int root, const int root_nstart, const int root_ndo)
+void radfield_MPI_Bcast(const int modelgridindex, const int root)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 {
-  // double nu_lower_first;
-  if (root_ndo > 0)
+  MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  if (get_numassociatedcells(modelgridindex) > 0)
   {
-    // if (root == my_rank)
-    // {
-    //   printout("radfield_MPI_Bcast root process %d will send data for cells %d to %d\n", my_rank, root_nstart, root_nstart + root_ndo - 1);
-    // }
-    // else
-    // {
-    //   printout("radfield_MPI_Bcast process %d will receive data for cells %d to %d\n", my_rank, root_nstart, root_nstart + root_ndo - 1);
-    // }
-  }
-
-  for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
-  {
-    MPI_Bcast(&J_normfactor[modelgridindex], 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    if (get_numassociatedcells(modelgridindex) > 0)
+    if (MULTIBIN_RADFIELD_MODEL_ON)
     {
-      if (MULTIBIN_RADFIELD_MODEL_ON)
+      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
       {
-        for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-        {
-          // printout("radfield_MPI_Bcast bin %d T_R before: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
-          MPI_Bcast(&radfieldbins[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-          MPI_Bcast(&radfieldbins[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-          MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-          MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-          MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
-          // printout("radfield_MPI_Bcast MPI_Bcast radfield bin %d for cell %d from process %d to %d\n", binindex, modelgridindex, root, my_rank);
-          // printout("radfield_MPI_Bcast bin %d T_R after: %g\n", binindex, radfieldbins[modelgridindex][binindex].T_R);
-        }
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].W, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].T_R, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].J_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
       }
+    }
 
-      if (DETAILED_LINE_ESTIMATORS_ON)
+    if (DETAILED_LINE_ESTIMATORS_ON)
+    {
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
       {
-        for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++)
-        {
-          MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-          MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
-        }
+        MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].value, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(&prev_Jb_lu_normed[modelgridindex][jblueindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
       }
     }
   }

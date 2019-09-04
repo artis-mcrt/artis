@@ -182,7 +182,10 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     int root_ndo = ndo;
     MPI_Bcast(&root_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    radfield_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
+    for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
+    {
+      radfield_MPI_Bcast(modelgridindex, root);
+    }
 
     if (NT_ON && NT_SOLVE_SPENCERFANO)
       nt_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
@@ -1212,6 +1215,7 @@ int main(int argc, char** argv)
     /// code.
 
     #ifdef MPI_ON
+      MPI_Barrier(MPI_COMM_WORLD);
       free(mpi_grid_buffer);
     #endif
   }
