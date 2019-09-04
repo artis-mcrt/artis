@@ -1699,7 +1699,7 @@ void nltepop_write_restart_data(FILE *restart_file)
   fprintf(restart_file, "%d\n", 75618527); // special number marking the beginning of nlte data
   fprintf(restart_file, "%d\n", total_nlte_levels);
 
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -1748,7 +1748,7 @@ void nltepop_read_restart_data(FILE *restart_file)
     abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
