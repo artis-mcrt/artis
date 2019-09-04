@@ -94,14 +94,20 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
   /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
 
-  // t_current == TIME_END_OF_TIMESTEP which is < 0 after t2 has been reached;
+  const int cellindex = pkt_ptr->where;
+  const int mgi = cell[cellindex].modelgridindex;
+  /// for non empty cells update the global available level populations and cooling terms
+  if (mgi != MMODELGRID)
+  {
+    //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
+    /// Reset cellhistory if packet starts up in another than the last active cell
+    cellhistory_validate_or_reset(mgi, nts);
+  }
+
+  // after t2 has been reached, t_current = TIME_END_OF_TIMESTEP which is < 0
   while (t_current >= 0)
   {
-    /* Start by sorting out what sort of packet it is.*/
-    //printout("start of packet_prop loop %d\n", pkt_ptr->type );
-    const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
-
-    switch (pkt_type)
+    switch (pkt_ptr->type)
     {
       case TYPE_56NI_PELLET:
       case TYPE_56CO_PELLET:
@@ -263,16 +269,6 @@ void update_packets(const int nts, PKT *pkt)
       //if (n % 10000 == 0) debuglevel = 2;
 
       if (debuglevel == 2) printout("[debug] update_packets: updating packet %d for timestep %d __________________________\n",n,nts);
-
-      const int cellindex = pkt_ptr->where;
-      const int mgi = cell[cellindex].modelgridindex;
-      /// for non empty cells update the global available level populations and cooling terms
-      if (mgi != MMODELGRID)
-      {
-        //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
-        /// Reset cellhistory if packet starts up in another than the last active cell
-        cellhistory_validate_or_reset(mgi, nts);
-      }
 
       //printout("[debug] update_packets: current position of packet %d (%g, %g, %g)\n",n,pkt_ptr->pos[0],pkt_ptr->pos[1],pkt_ptr->pos[2]);
       //printout("[debug] update_packets: target position of homologous flow (%g, %g, %g)\n",pkt_ptr->pos[0]*(ts + tw)/ts,pkt_ptr->pos[1]*(ts + tw)/ts,pkt_ptr->pos[2]*(ts + tw)/ts);

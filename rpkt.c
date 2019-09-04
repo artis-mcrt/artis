@@ -1455,7 +1455,7 @@ static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const 
 }
 
 
-static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
+static double rpkt_event_thickcell(PKT *pkt_ptr, const double t_current, const double t2, const int timestep)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
@@ -1475,6 +1475,8 @@ static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
   /// but it updates the last emission position
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = t_current;
+
+  return do_rpkt(pkt_ptr, t_current, t2, timestep);
 }
 
 
@@ -1645,12 +1647,10 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
   int mgi = cell[cellindex].modelgridindex;
 
   double t_current = t1; ///this will keep track of time in the calculation
-  //printout("[debug] r-pkt propagation init\n");
-  //int it = 1;
 
   struct rpkt_cont_opacity_struct kappa_continuum;
 
-  bool end_packet = false; ///means "keep working"
+  bool end_packet = false;
   while (!end_packet)
   {
     #ifdef DEBUG_ON
@@ -1662,7 +1662,6 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
     #endif
 
     //printout("[debug] r-pkt propagation iteration %d\n",it);
-    //it++;
     // Assign optical depth to next physical event. And start counter of
     // optical depth for this path.
     double zrand = gsl_rng_uniform(rng);
@@ -1863,7 +1862,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
         /** The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event*/
         if (modelgrid[mgi].thick == 1)
         {
-          rpkt_event_thickcell(pkt_ptr, t_current);
+          return rpkt_event_thickcell(pkt_ptr, t_current, t2, timestep);
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
         {
@@ -1877,16 +1876,10 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
         {
           assert(false);
         }
-
-        if (pkt_ptr->type != TYPE_RPKT)
-        {
-          /** It's not an r-packet any more - return.*/
-          return t_current;
-        }
       }
       else
       {
-        printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
+        printout("[fatal] do_rpkt: Failed to identify event. Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
         printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
         abort();
       }
