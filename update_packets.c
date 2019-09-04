@@ -137,7 +137,7 @@ static void update_packet(PKT *restrict const pkt_ptr, const double t1, const do
 
       case TYPE_GAMMA:
         //printout("gamma propagation\n");
-        t_current = do_gamma(pkt_ptr, t_current, t2);
+        t_current = do_gamma(pkt_ptr, t_current, t2, nts);
   	    /* This returns a flag if the packet gets to t2 without
         changing to something else. If the packet does change it
         returns the time of change and sets everything for the

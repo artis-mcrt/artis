@@ -567,7 +567,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
 
-      return t_current;
+      return do_rpkt(pkt_ptr, t1, t2, nts);
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
     {
@@ -612,7 +612,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_KPKT, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
-      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
+      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current, nts);
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
       #endif
 
@@ -627,7 +627,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
 
-      return t_current;
+      return do_rpkt(pkt_ptr, t1, t2, nts);
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
     {

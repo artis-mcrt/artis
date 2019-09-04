@@ -15,6 +15,15 @@
 // Material for handing r-packet propagation.
 
 
+struct mastate_t
+{
+  int element;              /// macro atom of type element (this is an element index)
+  int ion;                  /// in ionstage ion (this is an ion index)
+  int level;                /// and level=level (this is a level index)
+  int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
+};
+
+
 static double calculate_kappa_ff(const int modelgridindex, const double nu)
 /// free-free opacity
 {
@@ -199,11 +208,11 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 }
 
 
-static void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current, const int modelgridindex, struct rpkt_cont_opacity_struct *kappa_continuum)
+static void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current, const int modelgridindex, const int timestep, struct rpkt_cont_opacity_struct *kappa_continuum)
 {
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
-  if ((modelgridindex == kappa_continuum->modelgridindex) && (nts_global == kappa_continuum->timestep) && (fabs(kappa_continuum->nu / nu_cmf - 1.0) < 1e-3))
+  if ((modelgridindex == kappa_continuum->modelgridindex) && (timestep == kappa_continuum->timestep) && (fabs(kappa_continuum->nu / nu_cmf - 1.0) < 1e-3))
   {
     // calculated values are a match already
     return;
@@ -903,14 +912,15 @@ int closest_transition(const double nu_cmf, const int next_trans)
 
 
 static double get_event(
-  const int modelgridindex,
   PKT *pkt_ptr,             // pointer to packet object
+  const int modelgridindex,
+  const int timestep,
   int *rpkt_eventtype,
   double t_current,         // current time
   const double tau_rnd,     // random optical depth until which the packet travels
   const double abort_dist,   // maximal travel distance before packet leaves cell or time step ends
   struct rpkt_cont_opacity_struct *kappa_continuum,
-  struct mastate_t *mastate_thisthread
+  struct mastate_t *mastate
 )
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
@@ -926,7 +936,7 @@ static double get_event(
   bool endloop = false;
   while (!endloop)
   {
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, kappa_continuum);
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, timestep, kappa_continuum);
     const double kap_cont = kappa_continuum->total;
 
     /// calculate distance to next line encounter ldist
@@ -1053,10 +1063,10 @@ static double get_event(
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
           #endif
-          mastate_thisthread->element = element;
-          mastate_thisthread->ion     = ion;
-          mastate_thisthread->level   = upper;  ///if the MA will be activated it must be in the transitions upper level
-          mastate_thisthread->activatingline = lineindex;
+          mastate->element = element;
+          mastate->ion     = ion;
+          mastate->level   = upper;  ///if the MA will be activated it must be in the transitions upper level
+          mastate->activatingline = lineindex;
 
           edist = dist + ldist;
           if (edist > abort_dist)
@@ -1392,7 +1402,7 @@ static double rpkt_event_continuum(
 }
 
 
-static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const double t_current, const double t2, const int timestep, mastate_t mastate_thisthread)
+static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const double t_current, const double t2, const int timestep, struct mastate_t mastate)
 {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
@@ -1406,10 +1416,10 @@ static double rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi, const 
     pkt_ptr->last_event = 1;
   #endif
 
-  const int element = mastate_thisthread.element;
-  const int ion = mastate_thisthread.ion;
-  const int level = mastate_thisthread.level;
-  const int activatingline = mastate_thisthread.activatingline;
+  const int element = mastate.element;
+  const int ion = mastate.ion;
+  const int level = mastate.level;
+  const int activatingline = mastate.activatingline;
 
   pkt_ptr->absorptiontype = activatingline;
   pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
@@ -1640,7 +1650,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
   double t_current = t1; ///this will keep track of time in the calculation
 
   struct rpkt_cont_opacity_struct kappa_continuum;
-  mastate_t mastate_thisthread;
+  struct mastate_t mastate;
 
   bool end_packet = false;
   while (!end_packet)
@@ -1667,7 +1677,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
 
     if (sdist == 0)
     {
-      change_cell(pkt_ptr, snext, &end_packet, t_current);
+      change_cell(pkt_ptr, snext, &end_packet, t_current, timestep);
       if (end_packet)
         return TIME_END_OF_TIMESTEP;
 
@@ -1754,7 +1764,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
       else
       {
         // get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_continuum, &mastate_thisthread); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = get_event(pkt_ptr, mgi, timestep, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_continuum, &mastate); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         #ifdef DEBUG_ON
           if (debuglevel == 2)
           {
@@ -1789,7 +1799,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
 
         if (snext != pkt_ptr->where)
         {
-          change_cell(pkt_ptr, snext, &end_packet, t_current);
+          change_cell(pkt_ptr, snext, &end_packet, t_current, timestep);
           const int cellindexnew = pkt_ptr->where;
           mgi = cell[cellindexnew].modelgridindex;
         }
@@ -1858,7 +1868,7 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
         {
-          return rpkt_event_boundbound(pkt_ptr, mgi, t_current, t2, timestep, mastate_thisthread);
+          return rpkt_event_boundbound(pkt_ptr, mgi, t_current, t2, timestep, mastate);
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
         {
@@ -1882,7 +1892,9 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
 }
 
 
-static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double start_nu_cmf, int startcellindex, double tstart, double dirvec[3], enum cell_boundary last_cross, double *tot_tau_cont, double *tot_tau_lines)
+static double get_rpkt_escapeprob_fromdirection(
+  const double startpos[3], const double start_nu_cmf, const int startcellindex, const double tstart, double dirvec[3],
+  enum cell_boundary last_cross, double *tot_tau_cont, double *tot_tau_lines, const int timestep)
 {
   PKT vpkt;
   vpkt.type = TYPE_RPKT;
@@ -1924,7 +1936,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
       }
     }
 
-    calculate_kappa_rpkt_cont(&vpkt, t_future, mgi, &kappa_continuum);
+    calculate_kappa_rpkt_cont(&vpkt, t_future, mgi, timestep, &kappa_continuum);
 
     const double kappa_cont = kappa_continuum.total;
 
@@ -1989,7 +2001,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
     if (snext != vpkt.where)
     {
-      change_cell(&vpkt, snext, &end_packet, t_future);
+      change_cell(&vpkt, snext, &end_packet, t_future, timestep);
     }
   }
 
@@ -2001,7 +2013,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 }
 
 
-double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
+double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart, const int timestep)
 {
   // return -1.; // disable this functionality and speed up the code
 
@@ -2030,7 +2042,7 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
     get_rand_isotropic_unitvec(dirvec);
     double tau_cont = 0.;
     double tau_lines = 0.;
-    const double escape_prob = get_rpkt_escapeprob_fromdirection(startpos, start_nu_cmf, startcellindex, tstart, dirvec, last_cross, &tau_cont, &tau_lines);
+    const double escape_prob = get_rpkt_escapeprob_fromdirection(startpos, start_nu_cmf, startcellindex, tstart, dirvec, last_cross, &tau_cont, &tau_lines, timestep);
     escape_prob_sum += escape_prob;
 
     printout("  randomdir no. %d (dir dot pos) %g tau_lines %g tau_cont %g escape_prob %g escape_prob_avg %g\n",

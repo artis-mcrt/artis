@@ -197,6 +197,7 @@ static void update_abundances(const int modelgridindex, const int timestep, cons
 
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates)
 {
+  // return; disable for better performance (if estimators files are not needed)
   if (get_numassociatedcells(mgi) > 0)
   {
     const float T_e = get_Te(mgi);
