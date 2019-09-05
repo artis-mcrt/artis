@@ -11,10 +11,10 @@
 // #define FORCE_LTE
 
 /// non-thermal ionisation
-static const bool NT_ON = true;
+static const bool NT_ON = false;
 
 /// use the detailed Spencer-Fano solver instead of the work function approximation
-static const bool NT_SOLVE_SPENCERFANO = true;
+static const bool NT_SOLVE_SPENCERFANO = false;
 
 // non-LTE population solver
 static const bool NLTE_POPS_ON = true;
@@ -43,7 +43,7 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 // dynamically calculate photoionization rates for the current radiation field
 // instead of interpolating values from a lookup table for a blackbody radiation field
-#define NO_LUT_PHOTOION true
+#define NO_LUT_PHOTOION true // false = use table
 
 // as above for bound-free heating
 #define NO_LUT_BFHEATING true
@@ -61,8 +61,8 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 /// Rate coefficients
 ///============================================================================
 #define TABLESIZE 100 //200 //100
-#define MINTEMP 1000.
-#define MAXTEMP 30000. //1000000.
+#define MINTEMP 3000.
+#define MAXTEMP 140000. //1000000.
 
 // Polarisation for real packets
 // #define DIPOLE
