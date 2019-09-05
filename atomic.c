@@ -104,10 +104,11 @@ bool is_nlte(int element, int ion, int level)
   {
     return false;
   }
-  else if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
-    return (level <= 197);
-  else
-    return (level <= 80);
+    /// Number of levels to be treated in NLTE
+//  else if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
+//    return (level <= 197);
+//  else
+  return (level <= 300);
 }
 
 
