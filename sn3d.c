@@ -456,6 +456,12 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
 {
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
+
+  if (!TRACK_ION_MASTATS && (ion_counter_type >=  18))
+  {
+    return;
+  }
+
   const int uniqueionindex = get_uniqueionindex(element, ion);
   #ifdef _OPENMP
     #pragma omp atomic

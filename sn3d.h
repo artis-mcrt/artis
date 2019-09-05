@@ -52,6 +52,7 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 #define SEPARATE_STIMRECOMB false
 
 #define TRACK_ION_STATS true
+#define TRACK_ION_MASTATS false
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
@@ -467,7 +468,7 @@ enum ionstatscounters {
   ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL = 29,
   ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL = 30,
   ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL = 31,
-  ION_COUNTER_COUNT = 32
+  ION_COUNTER_COUNT = 32,
 };
 
 // number of ion stats counters that should be divided by the ion populations
