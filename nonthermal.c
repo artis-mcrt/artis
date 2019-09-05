@@ -3056,65 +3056,58 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
   if (!nonthermal_initialized)
     return;
 
-  if (get_numassociatedcells(modelgridindex) > 0)
+  // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
+  //          modelgridindex, logged_element_z, logged_ion_stage,
+  //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
+  //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
+  if (STORE_NT_SPECTRUM)
   {
-    // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-    //          modelgridindex, logged_element_z, logged_ion_stage,
-    //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
-    //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
-    if (STORE_NT_SPECTRUM)
-    {
-      // printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
-      assert(nt_solution[modelgridindex].yfunc != NULL);
-      MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    }
-    MPI_Bcast(&nt_solution[modelgridindex].deposition_at_timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[modelgridindex].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[modelgridindex].timestep_last_solved, 1, MPI_INT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[modelgridindex].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[modelgridindex].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
-
-    MPI_Bcast(&nt_solution[modelgridindex].E_0, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nt_solution[modelgridindex].deposition_rate_density, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-
-    MPI_Bcast(nt_solution[modelgridindex].fracdep_ionization_ion, includedions, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, includedions, MPI_FLOAT, root, MPI_COMM_WORLD);
-
-    MPI_Bcast(nt_solution[modelgridindex].prob_num_auger, includedelements * (MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(nt_solution[modelgridindex].ionenfrac_num_auger, includedelements * (MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
-
-    // communicate NT excitations
-    const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list_size;
-    MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
-
-    if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_old)
-    {
-      assert(realloc_frac_excitations_list(modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size));
-    }
-
-    const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
-    for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
-    {
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-      MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root, MPI_COMM_WORLD);
-    }
-
-    if (STORE_NT_SPECTRUM)
-    {
-      MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    }
-
-    // printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
-    //          modelgridindex, logged_element_z, logged_ion_stage,
-    //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
-    //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
+    // printout("nonthermal_MPI_Bcast Bcast y vector for cell %d from process %d to %d\n", modelgridindex, root, my_rank);
+    assert(nt_solution[modelgridindex].yfunc != NULL);
+    MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
   }
-  else
+  MPI_Bcast(&nt_solution[modelgridindex].deposition_at_timestep, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nt_solution[modelgridindex].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nt_solution[modelgridindex].timestep_last_solved, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nt_solution[modelgridindex].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nt_solution[modelgridindex].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
+
+  MPI_Bcast(&nt_solution[modelgridindex].E_0, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nt_solution[modelgridindex].deposition_rate_density, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+
+  MPI_Bcast(nt_solution[modelgridindex].fracdep_ionization_ion, includedions, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, includedions, MPI_FLOAT, root, MPI_COMM_WORLD);
+
+  MPI_Bcast(nt_solution[modelgridindex].prob_num_auger, includedelements * (MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
+  MPI_Bcast(nt_solution[modelgridindex].ionenfrac_num_auger, includedelements * (MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
+
+  // communicate NT excitations
+  const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list_size;
+  MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list_size, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+  if (nt_solution[modelgridindex].frac_excitations_list_size != frac_excitations_list_size_old)
   {
-    // printout("nonthermal_MPI_Bcast Skipping empty grid cell %d.\n", modelgridindex);
+    assert(realloc_frac_excitations_list(modelgridindex, nt_solution[modelgridindex].frac_excitations_list_size));
   }
+
+  const int frac_excitations_list_size = nt_solution[modelgridindex].frac_excitations_list_size;
+  for (int excitationindex = 0; excitationindex < frac_excitations_list_size; excitationindex++)
+  {
+    MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].frac_deposition, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+    MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+    MPI_Bcast(&nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex, 1, MPI_INT, root, MPI_COMM_WORLD);
+  }
+
+  if (STORE_NT_SPECTRUM)
+  {
+    MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  }
+
+  // printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
+  //          modelgridindex, logged_element_z, logged_ion_stage,
+  //          nt_ionization_ratecoeff_sf(modelgridindex, logged_element_index, logged_ion_index),
+  //          get_eff_ionpot(modelgridindex, logged_element_index, logged_ion_index) / EV);
 }
 #endif
 
