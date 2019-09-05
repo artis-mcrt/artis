@@ -278,7 +278,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_OUT_RADEEXC     Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -293,7 +293,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_IN_COLEXC       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -308,7 +308,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_OUT_COLDEEXC    Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -323,7 +323,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_IN_PHOTOION     Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -338,7 +338,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_OUT_RADRECOMB   Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -353,7 +353,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_IN_COLION       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -368,7 +368,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_OUT_COLRECOMB   Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -383,7 +383,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_IN_NTCOLION     Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -398,7 +398,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_IN_TOTAL        Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -413,7 +413,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_OUT_TOTAL       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -428,7 +428,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_IN_INTERNAL     Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -443,7 +443,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
       #endif
 
-      #if (TRACK_ION_STATS)
+      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
       fprintf(estimators_file, "MA_OUT_INTERNAL    Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
