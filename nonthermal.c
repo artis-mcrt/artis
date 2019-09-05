@@ -545,6 +545,8 @@ void nt_init(const int my_rank)
           assert(nt_solution[modelgridindex].yfunc != NULL);
           mem_usage_yfunc += SFPTS * sizeof(double);
         }
+
+        zero_all_effionpot(modelgridindex);
       }
       else
       {
@@ -559,8 +561,6 @@ void nt_init(const int my_rank)
 
       nt_solution[modelgridindex].frac_excitations_list = NULL;
       nt_solution[modelgridindex].frac_excitations_list_size = 0;
-
-      zero_all_effionpot(modelgridindex);
     }
 
     if (STORE_NT_SPECTRUM)
