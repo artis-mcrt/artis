@@ -392,7 +392,9 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   time_step[nts].gamma_dep /= nprocs;
   time_step[nts].positron_dep /= nprocs;
 
-  MPI_Allreduce(MPI_IN_PLACE, &ionstats, npts_model * includedions * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  #if TRACK_ION_STATS
+  MPI_Allreduce(MPI_IN_PLACE, ionstats, npts_model * includedions * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  #endif
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -680,7 +682,9 @@ int main(int argc, char** argv)
 //    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
 //  #endif
 
+  #if TRACK_ION_STATS
   ionstats = calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
+  #endif
 
   /// As a precaution, explicitly zero all the estimators here
   zero_estimators();
