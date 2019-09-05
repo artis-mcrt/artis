@@ -1070,7 +1070,7 @@ int main(int argc, char** argv)
             // Since these are going to be needed in the next time step, we will gather all the
             // estimators together now, sum them, and distribute the results
 
-            mpi_reduce_estimators(my_rank);
+            mpi_reduce_estimators(my_rank, nts);
           #endif
 
           // The estimators have been summed across all proceses and distributed.
