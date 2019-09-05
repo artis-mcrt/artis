@@ -993,12 +993,42 @@ double radfield(double nu, int modelgridindex)
       const struct radfieldbin *restrict const bin = &radfieldbins[modelgridindex][binindex];
       if (bin->W >= 0.)
       {
+        // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
+        {
           const double J_nu = radfield_dbb(nu, bin->T_R, bin->W);
-
           return J_nu;
+        }
+        // else
+        // {
+        //   return bin->W;
+        // }
+      }
+      else //W < 0
+      {
+        //printout("WARNING: Radfield modelgridindex %d binindex %d has W_bin=%g<0, using W %g T_R %g nu %g\n",
+        //         modelgridindex, binindex, W_bin, W_fullspec, T_R_fullspec, nu);
       }
     }
+    else //binindex < 0
+    {
+      // if (nu > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
+      // {
+      //   // undiluted LTE blueward of the bins
+      //   const double J_nu_LTE = radfield_dbb(nu, get_Te(modelgridindex), 1.0);
+      //   return J_nu_LTE;
+      // }
+      // else
+      //   return 0; // no radfield redwards of the bins
+      //printout("WARNING: Radfield modelgridindex %d binindex %d nu %g nu_lower_first %g nu_upper_last %g \n",
+      //         modelgridindex, binindex, nu, nu_lower_first, nu_upper_last);
+    }
+    return 0.;
   }
+  /*else
+  {
+    printout("radfield: WARNING: Radfield called before initialized. Using global T_R %g W %g nu %g modelgridindex %d\n",
+             W_fullspec, T_R_fullspec, nu, modelgridindex);
+  }*/
 
   const float T_R_fullspec = get_TR(modelgridindex);
   const float W_fullspec   = get_W(modelgridindex);
