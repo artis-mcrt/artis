@@ -258,6 +258,10 @@ static void read_ion_levels(
   FILE* adata, const int element, const int ion, const int nions, const int nlevels, const int nlevelsmax,
   const double energyoffset, const double ionpot)
 {
+  // ALEXEI: allocate epsilon array
+  elements[element].ions[ion].epsilon_array = malloc(nlevels*sizeof(double));
+  if (elements[element].ions[ion].epsilon_array == NULL) {printout("couldn't allocate epsilon array. aborting\n"); abort();}
+
   for (int level = 0; level < nlevels; level++)
   {
     int levelindex_in;
@@ -268,6 +272,7 @@ static void read_ion_levels(
     assert(levelindex_in == level + groundstate_index_in);
     // assert((ion < nions - 1) || (ntransitions > 0) || (nlevels == 1));
     //if (element == 1 && ion == 0) printf("%d %16.10f %g %d\n",levelindex,levelenergy,statweight,ntransitions);
+    
     if (level < nlevelsmax)
     {
       //elements[element].ions[ion].levels[level].epsilon = (energyoffset + levelenergy) * EV;
@@ -275,6 +280,7 @@ static void read_ion_levels(
       //if (element == 1 && ion == 0) printf("%d %16.10e\n",levelindex,currentlevelenergy);
       //printout("energy for level %d of ionstage %d of element %d is %g\n",level,ionstage,element,currentlevelenergy/EV);
       elements[element].ions[ion].levels[level].epsilon = currentlevelenergy;
+      elements[element].ions[ion].epsilon_array[level] = currentlevelenergy;
       //printout("epsilon(%d,%d,%d)=%g",element,ion,level,elements[element].ions[ion].levels[level].epsilon);
 
       //if (level == 0 && ion == 0) energyoffset = levelenergy;

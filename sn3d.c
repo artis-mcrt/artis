@@ -1304,6 +1304,11 @@ int main(int argc, char** argv)
 
   free(packets);
 
+  // ALEXEI: free epsilon array. probably should be moved elsewhere
+  for (int elem = 0; elem < nelements; elem++) 
+    for (int ion = 0; ion < get_nions(elem); ion++)
+      free(elements[elem].ions[ion].epsilon_array);
+
   return 0;
 }
 

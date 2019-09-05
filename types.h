@@ -464,6 +464,9 @@ typedef struct ionlist_entry
   double ionpot;                             /// Ionisation threshold to the next ionstage
   //int nbfcontinua;
   //ionsphixslist_t *phixslist;
+  
+  // ALEXEI: add array to store all epsilons for this ion
+  double *epsilon_array;
 } ionlist_entry;
 
 typedef struct elementlist_entry

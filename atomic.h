@@ -124,7 +124,8 @@ inline void get_ionfromuniqueionindex(const int allionsindex, int *element, int 
 inline double epsilon(int element, int ion, int level)
 /// Returns the energy of (element,ion,level).
 {
-  return elements[element].ions[ion].levels[level].epsilon;
+  //return elements[element].ions[ion].levels[level].epsilon;
+  return elements[element].ions[ion].epsilon_array[level];
 }
 
 
