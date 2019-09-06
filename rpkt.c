@@ -1352,7 +1352,7 @@ static double rpkt_event_continuum(
     #endif
   }
 #if (SEPARATE_STIMRECOMB)
-  else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf + kappa_continuum.fb)
+  else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf + kappa_continuum->fb)
   {
     /// fb: stimulated recombination
     #ifdef DEBUG_ON
@@ -1395,7 +1395,7 @@ static double rpkt_event_continuum(
 #endif
   else
   {
-    printout("ERROR: could not continuum process\n");
+    printout("ERROR: could not select continuum process. zrand %g kappa_cont %g sigma %g kappa_ff %g kappa_bf %g kappa_fb %g mgi %d timestep %d\n", zrand, kappa_cont, sigma, kappa_ff, kappa_bf, kappa_continuum->fb, kappa_continuum->modelgridindex, kappa_continuum->timestep);
     abort();
   }
   return t_current;
@@ -1641,7 +1641,7 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
 }
 
 
-double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep)
+double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const int timestep)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
   pkt_ptr->type = TYPE_RPKT;
@@ -1649,10 +1649,8 @@ double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const in
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
 
-  double t_current = t1; ///this will keep track of time in the calculation
-
-  struct rpkt_cont_opacity_struct kappa_continuum;
-  struct mastate_t mastate;
+  struct rpkt_cont_opacity_struct kappa_continuum = {0};
+  struct mastate_t mastate = {0};
 
   bool end_packet = false;
   while (!end_packet)
@@ -1913,7 +1911,7 @@ static double get_rpkt_escapeprob_fromdirection(
 
   double t_future = tstart;
 
-  struct rpkt_cont_opacity_struct kappa_continuum;
+  struct rpkt_cont_opacity_struct kappa_continuum = {0};
 
   int snext = -99;
   bool end_packet = false;

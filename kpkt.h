@@ -1,6 +1,9 @@
 #ifndef KPKT_H
 #define KPKT_H
 
+#include "sn3d.h"
+#include "types.h"
+
 void calculate_cooling_rates(int modelgridindex, heatingcoolingrates_t *heatingcoolingrates);
 double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1, const double t2, const int nts);
 double do_kpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const int nts);

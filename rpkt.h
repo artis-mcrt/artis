@@ -19,7 +19,7 @@ struct rpkt_cont_opacity_struct
   int timestep;
 };
 
-double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep);
+double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const int timestep);
 void emitt_rpkt(PKT *restrict pkt_ptr, double t_current);
 int closest_transition(double nu_cmf, int next_trans);
 double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart, const int timestep);
