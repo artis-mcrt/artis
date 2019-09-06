@@ -528,13 +528,11 @@ static bool compton_scatter(PKT *pkt_ptr, double t_current)
 }
 
 
-double do_gamma(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep)
+double do_gamma(PKT *restrict pkt_ptr, double t_current, const double t2, const int timestep)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
 {
-  double t_current = t1; //this will keep track of time in the calculation
-
   pkt_ptr->type = TYPE_GAMMA;
 
   // Assign optical depth to next physical event. And start counter of
