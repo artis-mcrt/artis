@@ -2020,16 +2020,17 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart, const in
   // return -1.; // disable this functionality and speed up the code
 
   const int startcellindex = pkt_ptr->where;
-  double startpos[3];
-  vec_copy(startpos, pkt_ptr->pos);
-  const double start_nu_cmf = pkt_ptr->nu_cmf;
-  const enum cell_boundary last_cross = pkt_ptr->last_cross;
   const int mgi = cell[startcellindex].modelgridindex;
   if (modelgrid[mgi].thick == 1)
   {
     // escape prob in thick cell is zero
     return 0.;
   }
+
+  double startpos[3];
+  vec_copy(startpos, pkt_ptr->pos);
+  const double start_nu_cmf = pkt_ptr->nu_cmf;
+  const enum cell_boundary last_cross = pkt_ptr->last_cross;
   const time_t sys_time_start_escape_prob = time(NULL);
 
   const double pkt_radius = vec_len(startpos);

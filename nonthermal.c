@@ -1624,11 +1624,10 @@ static void calculate_eff_ionpot_auger_rates(
     const int nions = get_nions(element);
     if (ion < nions - 1) // don't try to ionise the top ion
     {
-      const int amax = nions - 1 - ion - 1; // number of Auger electrons to reach the top ion of this element
       for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
       {
         // printout("test2 Z=%d ion %d a %d probability %g\n", get_element(element), get_ionstage(element, ion), a, eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum);
-        if (a <= amax)
+        if (ion + 1 + a < nions) // not too many Auger electrons to exceed the top ion of this element
         {
           nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + a] = eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
           nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + a] = eta_nauger_ionize_sum[a] / eta_sum;
@@ -1638,8 +1637,8 @@ static void calculate_eff_ionpot_auger_rates(
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in the model
           // could send it to the top one with a = nions - 1 - ion - 1
 
-          nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + amax] += eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
-          nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + amax] += eta_nauger_ionize_sum[a] / eta_sum;
+          nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + nions - 1 - ion - 1] += eta_nauger_ionize_over_ionpot_sum[a] / eta_over_ionpot_sum;
+          nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + nions - 1 - ion - 1] += eta_nauger_ionize_sum[a] / eta_sum;
 
           // printout("test2b going to Z=%d ion %d a %d with new probability %g\n", get_element(element), get_ionstage(element, ion), nions - 1 - ion - 1,  nt_solution[modelgridindex].prob_num_auger[element][ion][nions - 1 - ion - 1]);
 
