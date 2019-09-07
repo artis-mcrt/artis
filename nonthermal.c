@@ -1744,7 +1744,15 @@ double nt_ionization_upperion_probability(
       }
       else
       {
-        assert(fabs(prob_remaining - nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + numaugerelec]) < 0.001);
+        if (fabs(prob_remaining - nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + numaugerelec]) >= 0.001)
+        {
+          printout("Auger probabilities issue for cell %d Z=%02d ionstage %d to %d\n", modelgridindex, get_element(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
+          for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
+          {
+            printout("  a %d prob %g\n", a, nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + a]);
+          }
+          abort();
+        }
       }
       return prob_remaining;
     }
@@ -1809,16 +1817,8 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
 
 double nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion)
 {
-  if (!NT_ON)
-  {
-    printout("ERROR: NT_ON is false, but nt_ionization_ratecoeff has been called.\n");
-    abort();
-  }
-  if (get_numassociatedcells(modelgridindex) <= 0)
-  {
-    printout("ERROR: nt_ionization_ratecoeff called on empty cell %d\n", modelgridindex);
-    abort();
-  }
+  assert(NT_ON);
+  assert(get_numassociatedcells(modelgridindex) > 0);
 
   if (NT_SOLVE_SPENCERFANO)
   {
@@ -2314,22 +2314,28 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       if (ion < nions - 1)
       {
         printout("    probability to ionstage:");
+        double prob_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++)
         {
           const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
+          prob_sum += probability;
           if (probability > 0.)
-            printout(" %d: %.2f", get_ionstage(element, upperion), probability);
+            printout(" %d: %.3f", get_ionstage(element, upperion), probability);
         }
         printout("\n");
+        assert(fabs(prob_sum - 1.0) <= 1e-2);
 
         printout("         enfrac to ionstage:");
+        double enfrac_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++)
         {
           const double probability = nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, true);
+          enfrac_sum += probability;
           if (probability > 0.)
-            printout(" %d: %.2f", get_ionstage(element, upperion), probability);
+            printout(" %d: %.3f", get_ionstage(element, upperion), probability);
         }
         printout("\n");
+        assert(fabs(enfrac_sum - 1.0) <= 1e-2);
       }
     }
   }
