@@ -274,6 +274,66 @@ static void read_binding_energies(void)
   fclose(binding);
 }
 
+static double get_auger_probability(int modelgridindex, int element, int ion, int naugerelec)
+{
+  assert(naugerelec <= MAX_AUGER_ELECTRONS);
+  const int uniqueionindex = get_uniqueionindex(element, ion);
+  return nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + naugerelec];
+}
+
+
+static double get_ion_auger_enfrac(int modelgridindex, int element, int ion, int naugerelec)
+{
+  assert(naugerelec <= MAX_AUGER_ELECTRONS);
+  const int uniqueionindex = get_uniqueionindex(element, ion);
+  return nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + naugerelec];
+}
+
+
+static void check_auger_probabilities(int modelgridindex)
+{
+  bool problem_found = false;
+
+  for (int element = 0; element < nelements; element++)
+  {
+    for (int ion = 0; ion < get_nions(element) - 1; ion++)
+    {
+      double prob_sum = 0.;
+      double ionenfrac_sum = 0.;
+      for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
+      {
+        prob_sum += get_auger_probability(modelgridindex, element, ion, a);
+        ionenfrac_sum += get_ion_auger_enfrac(modelgridindex, element, ion, a);
+      }
+
+      if (fabs(prob_sum - 1.0) > 0.001)
+      {
+        printout("Problem with Auger probabilities for cell %d Z=%d ionstage %d prob_sum %g\n", modelgridindex, get_element(element), get_ionstage(element, ion), prob_sum);
+        for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
+        {
+          printout("%d: %g\n", a, get_auger_probability(modelgridindex, element, ion, a));
+        }
+        problem_found = true;
+      }
+
+      if (fabs(ionenfrac_sum - 1.0) > 0.001)
+      {
+        printout("Problem with Auger energy frac sum for cell %d Z=%d ionstage %d ionenfrac_sum %g\n", modelgridindex, get_element(element), get_ionstage(element, ion), ionenfrac_sum);
+        for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
+        {
+          printout("%d: %g\n", a, get_ion_auger_enfrac(modelgridindex, element, ion, a));
+        }
+        problem_found = true;
+      }
+    }
+  }
+
+  if (problem_found)
+  {
+    abort();
+  }
+}
+
 
 static void read_auger_data(void)
 {
@@ -365,10 +425,14 @@ static void read_auger_data(void)
           printout("Z=%2d ionstage %2d shellnum %d n %d l %d ionpot %7.2f E_A %8.1f E_A' %8.1f epsilon %6d <n_Auger> %5.1f P(n_Auger)",
                    Z, ionstage, shellnum, n, l, ionpot_ev, en_auger_ev_total_nocorrection, en_auger_ev, epsilon_e3, n_auger_elec_avg);
 
+          double prob_sum = 0.;
           for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
           {
+            prob_sum += prob_num_auger[a];
             printout(" %d: %4.2f", a, prob_num_auger[a]);
           }
+          assert(fabs(prob_sum - 1.0) < 0.001);
+
           printout("\n");
           // printout("ionpot %g %g, g %d\n", colliondata[i].ionpot_ev, ionpot_ev, g);
           bool found_existing_data = (colliondata[i].auger_g_accumulated > 0.);
@@ -382,10 +446,13 @@ static void read_auger_data(void)
           colliondata[i].en_auger_ev = oldweight * colliondata[i].en_auger_ev + newweight * en_auger_ev;
           colliondata[i].n_auger_elec_avg = oldweight * colliondata[i].n_auger_elec_avg + newweight * n_auger_elec_avg;
 
+          prob_sum = 0.;
           for (int a = 0; a <= MAX_AUGER_ELECTRONS; a++)
           {
             colliondata[i].prob_num_auger[a] = oldweight * colliondata[i].prob_num_auger[a] + newweight * prob_num_auger[a];
+            prob_sum += colliondata[i].prob_num_auger[a];
           }
+          assert(fabs(prob_sum - 1.0) < 0.001);
 
           if (found_existing_data)
           {
@@ -468,6 +535,9 @@ static void read_collion_data(void)
 
 static void zero_all_effionpot(const int modelgridindex)
 {
+  assert(nt_solution[modelgridindex].prob_num_auger);
+  assert(nt_solution[modelgridindex].ionenfrac_num_auger);
+
   for (int uniqueionindex = 0; uniqueionindex < includedions; uniqueionindex++)
   {
     nt_solution[modelgridindex].eff_ionpot[uniqueionindex] = 0.;
@@ -480,6 +550,7 @@ static void zero_all_effionpot(const int modelgridindex)
       nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (MAX_AUGER_ELECTRONS + 1) + a] = 0.;
     }
   }
+  check_auger_probabilities(modelgridindex);
 }
 
 
@@ -2916,6 +2987,8 @@ void nt_write_restart_data(FILE *gridsave_file)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
+      check_auger_probabilities(modelgridindex);
+
       fprintf(gridsave_file, "%d %d %g %lg %g %g %g %lg\n",
               modelgridindex,
               nt_solution[modelgridindex].deposition_at_timestep,
@@ -3025,6 +3098,8 @@ void nt_read_restart_data(FILE *gridsave_file)
         }
       }
 
+      check_auger_probabilities(modelgridindex);
+
       // read NT excitations
       int frac_excitations_list_size_in;
       fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in);
@@ -3108,6 +3183,10 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
   {
     MPI_Bcast(nt_solution[modelgridindex].yfunc, SFPTS, MPI_DOUBLE, root, MPI_COMM_WORLD);
   }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  check_auger_probabilities(modelgridindex);
 
   // printout("nonthermal_MPI_Bcast cell %d after: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
   //          modelgridindex, logged_element_z, logged_ion_stage,
