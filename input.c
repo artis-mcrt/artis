@@ -1306,7 +1306,7 @@ static void setup_cellhistory(void)
 }
 
 
-static void write_bflist_file(int includedphotoiontransitions)
+static void write_bflist_file(unsigned int includedphotoiontransitions)
 {
   if ((bflist = (bflist_t *) malloc(includedphotoiontransitions * sizeof(bflist_t))) == NULL)
   {
@@ -1320,7 +1320,7 @@ static void write_bflist_file(int includedphotoiontransitions)
     bflist_file = fopen_required("bflist.dat", "w");
     fprintf(bflist_file,"%d\n", includedphotoiontransitions);
   }
-  int i = 0;
+  unsigned int i = 0;
   for (int element = 0; element < nelements; element++)
   {
     const int nions = get_nions(element);
