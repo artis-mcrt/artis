@@ -346,7 +346,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 }
 
 
-void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_current, const int timestep)
+void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_current)
 /// Routine to take a packet across a boundary.
 {
   #ifdef DEBUG_ON
@@ -371,6 +371,8 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
   else
   {
     // Just need to update "where".
+    const int cellnum = pkt_ptr->where;
+    const int old_mgi = cell[cellnum].modelgridindex;
     pkt_ptr->where = snext;
     const int mgi = cell[snext].modelgridindex;
 
@@ -380,8 +382,39 @@ void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_cu
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
     /// as we do it on the rpkts way through a cell
     //if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
+    //if (pkt_ptr->type == TYPE_RPKT) calculate_kappa_rpkt_cont(pkt_ptr,t_current);
 
-    cellhistory_validate_or_reset(mgi, timestep);
+    /// check for empty cells
+    if (mgi != MMODELGRID)
+    {
+      if (mgi != old_mgi)
+      {
+        /// Update the level populations and reset the precalculated rate coefficients
+        //printout("change cell: cellnumber %d\n",pkt_ptr->where);
+        /// This only needs to be done for non-grey cells
+        if (modelgrid[mgi].thick != 1)
+        {
+          updatecellcounter++;
+
+          cellhistory_reset(mgi, false);
+        }
+      }
+
+      //copy_populations_to_phixslist();
+      /// the rpkt's continuum opacity must be updated in any case as it depends on nu
+      /// and nu changed after propagation
+      if (pkt_ptr->type == TYPE_RPKT)
+      {
+        #ifdef DEBUG_ON
+          if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
+        #endif
+        /// This only needs to be done for non-grey cells
+        if (modelgrid[mgi].thick != 1)
+        {
+          calculate_kappa_rpkt_cont(pkt_ptr, t_current, mgi);
+        }
+      }
+    }
   }
 }
 

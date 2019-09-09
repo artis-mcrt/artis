@@ -160,6 +160,10 @@ enum packet_type {
   TYPE_GAMMA = 10,
   TYPE_RPKT = 11,
   TYPE_KPKT = 12,
+  TYPE_MA = 13,
+  TYPE_NTLEPTON = 20,
+  TYPE_PRE_KPKT = 120,
+  TYPE_GAMMA_KPKT = 121,
 };
 
 enum cell_boundary {
@@ -235,6 +239,14 @@ enum ma_action {
   MA_ACTION_COUNT = 9,
 };
 
+typedef struct mastate_t
+{
+  int element;              /// macro atom of type element (this is an element index)
+  int ion;                  /// in ionstage ion (this is an ion index)
+  int level;                /// and level=level (this is a level index)
+  int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
+} mastate_t;
+
 
 /// GRID
 ///============================================================================
@@ -272,6 +284,13 @@ enum radionuclides {
   NUCLIDE_FE52 = 7,
   RADIONUCLIDE_COUNT = 8,
 };
+
+typedef struct gamma_ll
+{
+  enum radionuclides *nuclidetype; // is it a Ni56, Co56, a fake line, etc
+  int *index;               // which of the lines of that element is it */
+  int total;                // the total number of lines in the list */
+} LIST;
 
 typedef struct modelgrid_t
 {
@@ -386,7 +405,7 @@ typedef struct levellist_entry
   int nphixstargets;                         /// length of phixstargets array:
   int stat_weight;                           /// Statistical weight of this level.
 
-  unsigned int cont_index;                            /// Index of the continuum associated to this level. Negative number.
+  long cont_index;                            /// Index of the continuum associated to this level. Negative number.
 #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
   int closestgroundlevelcont;
 #endif
@@ -433,7 +452,6 @@ typedef struct ionlist_entry
   int nlevels_groundterm;
   int coolingoffset;
   int ncoolingterms;
-  int uniqueionindex;
   float *Alpha_sp;
   double ionpot;                             /// Ionisation threshold to the next ionstage
   //int nbfcontinua;
@@ -486,6 +504,22 @@ typedef struct gslintegration_paras
   float *photoion_xs;
 } gslintegration_paras;
 
+typedef struct rpkt_cont_opacity_struct
+{
+  double nu; // frequency at which opacity was calculated
+  double total;
+  double es;
+  double ff;
+  double bf;
+  double fb;
+  double bf_inrest;
+  double fb_inrest;
+  double ffheating;
+  //double bfheating;
+  int modelgridindex;
+  bool recalculate_required; // e.g. when cell or timestep has changed
+} rpkt_cont_opacity_struct;
+
 
 
 /// Cell history
@@ -529,9 +563,8 @@ typedef struct cellhistory_struct
   cellhistorycoolinglist_t *restrict coolinglist;    /// Cooling contributions by the different processes.
   chelements_struct *restrict chelements;            /// Pointer to a nested list which helds compositional
                                             /// information for all the elements=0,1,...,nelements-1
-  int modelgridindex;                           /// Identifies the cell the data is valid for.
+  int cellnumber;                           /// Identifies the cell the data is valid for.
   int bfheating_mgi;
-  int timestep;
 } cellhistory_struct;
 
 

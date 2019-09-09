@@ -16,11 +16,11 @@ void calculate_deposition_rate_density(int modelgridindex, int timestep);
 double get_deposition_rate_density(int modelgridindex);
 float get_nt_frac_heating(int modelgridindex);
 double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex);
-double do_ntlepton(PKT *pkt_ptr, const double t_current, const double t2, const int timestep);
+void do_ntlepton(PKT *pkt_ptr);
 void nt_write_restart_data(FILE *gridsave_file);
 void nt_read_restart_data(FILE *gridsave_file);
-void nt_MPI_Bcast(const int modelgridindex, const int root);
+void nt_MPI_Bcast(int my_rank, int root, int root_nstart, int root_ndo);
 void nt_reset_stats(void);
-void nt_print_stats(const int timestep, const double modelvolume, const double deltat);
+void nt_print_stats(int nts, double modelvolume, double deltat);
 
 #endif //NONTHERMAL_H
