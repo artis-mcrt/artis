@@ -21,10 +21,6 @@ static double do_pellet(
   assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
 
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
-  if (nts > 0 && tdecay < time_step[nts].start)
-  {
-    printout("weird pellet should have already decayed in previous timestep at time %g t1 %g ts %g prev(ts + tw) %g\n", tdecay, t1, time_step[nts].start, time_step[nts-1].start + time_step[nts-1].width);
-  }
   if (tdecay > t2)
   {
     // It won't decay in this timestep, so just need to move it on with the flow.
