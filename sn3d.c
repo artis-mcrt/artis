@@ -619,6 +619,12 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
+  if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
+  {
+    printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
+    abort();
+  }
+
   /// Using this and the global variable output_file opens and closes the output_file
   /// only once, which speeds up the simulation with a lots of output switched on (debugging).
   /// The downside is that while the simulation runs, its output is only readable on that

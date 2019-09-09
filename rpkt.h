@@ -3,22 +3,6 @@
 
 #include "types.h"
 
-struct rpkt_cont_opacity_struct
-{
-  double nu; // frequency at which opacity was calculated
-  double total;
-  double es;
-  double ff;
-  double bf;
-  double fb;
-  double bf_inrest;
-  double fb_inrest;
-  double ffheating;
-  //double bfheating;
-  int modelgridindex;
-  int timestep;
-};
-
 double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const int timestep);
 void emitt_rpkt(PKT *restrict pkt_ptr, double t_current);
 int closest_transition(double nu_cmf, int next_trans);

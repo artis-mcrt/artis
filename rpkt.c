@@ -217,7 +217,8 @@ static void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const d
 {
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
-  if ((modelgridindex == kappa_continuum->modelgridindex) && (timestep == kappa_continuum->timestep) && (fabs(kappa_continuum->nu / nu_cmf - 1.0) < 1e-3))
+  //&& (timestep == kappa_continuum->timestep)
+  if ((modelgridindex == kappa_continuum->modelgridindex) && (!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_continuum->nu / nu_cmf - 1.0) < 1e-4))
   {
     // calculated values are a match already
     return;
@@ -287,6 +288,7 @@ static void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const d
 
   kappa_continuum->nu = nu_cmf;
   kappa_continuum->modelgridindex = modelgridindex;
+  kappa_continuum->recalculate_required = false;
   kappa_continuum->timestep = nts_global;
   kappa_continuum->total = sigma + kappa_bf + kappa_fb + kappa_ff;
   #ifdef DEBUG_ON
@@ -939,11 +941,11 @@ static double get_event(
   PKT *dummypkt_ptr = &dummypkt;
   //propagationcounter = 0;
   bool endloop = false;
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, timestep, kappa_continuum);
+  const double kap_cont = kappa_continuum->total;
+  assert(kap_cont < 1e-5);
   while (!endloop)
   {
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, timestep, kappa_continuum);
-    const double kap_cont = kappa_continuum->total;
-
     /// calculate distance to next line encounter ldist
     /// first select the closest transition in frequency
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
@@ -1644,7 +1646,6 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
 {
   int mgi = cell[pkt_ptr->where].modelgridindex;
 
-  struct rpkt_cont_opacity_struct kappa_continuum = {0};
   struct mastate_t mastate = {0};
 
   bool end_packet = false;
@@ -1758,7 +1759,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
       else
       {
         // get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(pkt_ptr, mgi, timestep, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_continuum, &mastate); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = get_event(pkt_ptr, mgi, timestep, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_rpkt_cont[tid], &mastate); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         assert(edist >= 0);
         assert(isfinite(edist));
         #ifdef DEBUG_ON
@@ -1780,7 +1781,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
         /** Move it into the new cell. */
         t_current += sdist / 2 / CLIGHT_PROP;
         move_pkt(pkt_ptr, sdist / 2, t_current);
-        update_estimators(pkt_ptr, sdist, t_current, &kappa_continuum);
+        update_estimators(pkt_ptr, sdist, t_current, &kappa_rpkt_cont[tid]);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
@@ -1819,7 +1820,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
         // Doesn't reach boundary
         t_current += tdist / 2 / CLIGHT_PROP;
         move_pkt(pkt_ptr, tdist / 2, t_current);
-        update_estimators(pkt_ptr, tdist, t_current, &kappa_continuum);
+        update_estimators(pkt_ptr, tdist, t_current, &kappa_rpkt_cont[tid]);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
@@ -1844,7 +1845,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
         #endif
         t_current += edist / 2 / CLIGHT_PROP;
         move_pkt(pkt_ptr, edist / 2, t_current);
-        update_estimators(pkt_ptr, edist, t_current, &kappa_continuum);
+        update_estimators(pkt_ptr, edist, t_current, &kappa_rpkt_cont[tid]);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           rlc_emiss_rpkt(pkt_ptr, edist, t_current);
@@ -1863,7 +1864,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
         {
-          return rpkt_event_continuum(pkt_ptr, t_current, t2, timestep, &kappa_continuum, mgi);
+          return rpkt_event_continuum(pkt_ptr, t_current, t2, timestep, &kappa_rpkt_cont[tid], mgi);
         }
         else
         {
@@ -1903,6 +1904,7 @@ static double get_rpkt_escapeprob_fromdirection(
   double t_future = tstart;
 
   struct rpkt_cont_opacity_struct kappa_continuum = {0};
+  kappa_continuum.recalculate_required = true;
 
   int snext = -99;
   bool end_packet = false;
