@@ -173,7 +173,7 @@ double E48V;
 #define RPKT_EVENTTYPE_BB 550
 #define RPKT_EVENTTYPE_CONT 551
 
-#define PACKET_SAME -929 //MUST be negative
+#define TIME_END_OF_TIMESTEP -929 //MUST be negative
 
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40
@@ -235,8 +235,6 @@ int n_middle_it;
 
 int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;
-
-mastate_t *restrict mastate;
 
 CELL cell[MGRID+1];
 //int *nonemptycells;  /// Array which contains all the non-empty cells cellnumbers

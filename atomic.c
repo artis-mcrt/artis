@@ -54,7 +54,7 @@ int get_phixtargetindex(const int element, const int ion, const int level, const
 }
 
 
-long get_continuumindex(int element, int ion, int level, int upperionlevel)
+unsigned int get_continuumindex(int element, int ion, int level, int upperionlevel)
 /// Returns the index of the continuum associated to the given level.
 {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);

@@ -1712,6 +1712,7 @@ void radfield_reduce_estimators(void)
     const int duration_reduction = time(NULL) - sys_time_start_reduction;
     printout(" (took %d s)\n", duration_reduction);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 

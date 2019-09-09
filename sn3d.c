@@ -177,7 +177,6 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
   int position = 0;
   for (int root = 0; root < p; root++)
   {
-    MPI_Barrier(MPI_COMM_WORLD);
     int root_nstart = nstart;
     MPI_Bcast(&root_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
     int root_ndo = ndo;
@@ -619,17 +618,6 @@ int main(int argc, char** argv)
   #else
     printout("MPI disabled\n");
   #endif
-
-  if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)
-  {
-    printout("[fatal] input: error initializing macro atom state variables ... abort\n");
-    abort();
-  }
-  if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
-  {
-    printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
-    abort();
-  }
 
   /// Using this and the global variable output_file opens and closes the output_file
   /// only once, which speeds up the simulation with a lots of output switched on (debugging).

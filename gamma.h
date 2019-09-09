@@ -4,8 +4,8 @@
 #include "types.h"
 
 void init_gamma_linelist(void);
-void pellet_decay(int nts, PKT *pkt_ptr);
-double do_gamma(PKT *pkt_ptr, double t1, double t2);
+double pellet_decay_gamma(PKT *pkt_ptr, const double tdecay, const double t2, const int nts);
+double do_gamma(PKT *pkt_ptr, double t_current, const double t2, const int timestep);
 double get_gam_freq(int n);
 int get_nul(double freq);
 

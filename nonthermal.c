@@ -2118,7 +2118,7 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
 }
 
 
-void do_ntlepton(PKT *pkt_ptr)
+double do_ntlepton(PKT *pkt_ptr, const double t_current, const double t2, const int timestep)
 {
   nt_energy_deposited += pkt_ptr->e_cmf;
 
@@ -2154,11 +2154,6 @@ void do_ntlepton(PKT *pkt_ptr)
       const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
-      mastate[tid].element = element;
-      mastate[tid].ion = upperion;
-      mastate[tid].level = 0;
-      mastate[tid].activatingline = -99;
-      pkt_ptr->type = TYPE_MA;
       ma_stat_activation_ntcollion++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 20;
@@ -2178,7 +2173,7 @@ void do_ntlepton(PKT *pkt_ptr)
       // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
       //          modelgridindex, get_element(element), get_ionstage(element, lowerion), get_ionstage(element, upperion));
 
-      return;
+      return do_macroatom(pkt_ptr, t_current, t2, timestep, element, upperion, 0, -99);
     }
     else if (NT_EXCITATION_ON && zrand < frac_ionization + frac_excitation)
     {
@@ -2197,11 +2192,6 @@ void do_ntlepton(PKT *pkt_ptr)
           // const int lower = linelist[lineindex].lowerlevelindex;
           const int upper = linelist[lineindex].upperlevelindex;
 
-          mastate[tid].element = element;
-          mastate[tid].ion = ion;
-          mastate[tid].level = upper;
-          mastate[tid].activatingline = -99;
-          pkt_ptr->type = TYPE_MA;
           ma_stat_activation_ntcollexc++;
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 21;
@@ -2213,7 +2203,7 @@ void do_ntlepton(PKT *pkt_ptr)
           // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
           //          modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
 
-          return;
+          return do_macroatom(pkt_ptr, t_current, t2, timestep, element, ion, upper, -99);
         }
         zrand -= frac_deposition_exc;
       }
@@ -2223,8 +2213,9 @@ void do_ntlepton(PKT *pkt_ptr)
   }
 
   pkt_ptr->last_event = 22;
-  pkt_ptr->type = TYPE_KPKT;
   nt_stat_to_kpkt++;
+
+  return do_kpkt(pkt_ptr, t_current, t2, timestep);
 }
 
 

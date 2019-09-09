@@ -506,13 +506,12 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 }*/
 
 
-double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
+double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level, double T_exc)
 /// Calculates occupation population of a level assuming LTE excitation
 {
   if (level == 0)
     return get_groundlevelpop(modelgridindex, element, ion);
 
-  const double T_exc = get_Te(modelgridindex);
   const double W = 1.;
 
   const double E_level = epsilon(element, ion, level);
@@ -547,6 +546,8 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
     }
   }*/
 
+  const float T_e = get_Te(modelgridindex);
+
   if (level == 0)
   {
     nn = get_groundlevelpop(modelgridindex,element,ion);
@@ -560,7 +561,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       if (nltepop_over_rho < -0.9)
       {
         // Case for when no NLTE level information is available yet
-        nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
+        nn = calculate_levelpop_lte(modelgridindex, element, ion, level, T_e);
       }
       else
       {
@@ -587,12 +588,12 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       if (superlevelpop_over_rho < -0.9) //TODO: should change this to less than zero?
       {
         // Case for when no NLTE level information is available yet
-        nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
+        nn = calculate_levelpop_lte(modelgridindex, element, ion, level, T_e);
       }
       else
       {
         //printout("Using a superlevel population!\n");
-        nn = superlevelpop_over_rho * get_rho(modelgridindex) * superlevel_boltzmann(modelgridindex, element, ion, level);
+        nn = superlevelpop_over_rho * get_rho(modelgridindex) * superlevel_boltzmann(element, ion, level, T_e);
         if (!isfinite(nn))
         {
           printout("[fatal] NLTE population failure.\n");
@@ -607,7 +608,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }
   else
   {
-    nn = calculate_levelpop_lte(modelgridindex, element, ion, level);
+    nn = calculate_levelpop_lte(modelgridindex, element, ion, level, T_e);
   }
 
   if (nn < MINPOP)

@@ -338,7 +338,7 @@ static double sample_planck(const double T)
 }
 
 
-double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
+double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1, const double t2, const int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   //double nne = cell[pkt_ptr->where].nne ;
@@ -358,8 +358,6 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
   if (debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
-  if (modelgrid[modelgridindex].thick != 1)
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb++;
   k_stat_to_r_bb++;
@@ -370,11 +368,11 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
   pkt_ptr->em_time = t_current;
   pkt_ptr->nscatterings = 0;
 
-  return t_current;
+  return do_rpkt(pkt_ptr, t1, t2, nts);
 }
 
 
-double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
+double do_kpkt(PKT *restrict pkt_ptr, const double t1, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 //{
 //  double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2);
@@ -383,6 +381,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
 {
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
+
+  if (modelgrid[modelgridindex].thick == 1)
+  {
+    return do_kpkt_bb(pkt_ptr, t1, t2, nts);
+  }
 
   /// don't calculate cooling rates after each cell crossings anylonger
   /// but only if we really get a kpkt and they hadn't been calculated already
@@ -551,8 +554,6 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       }
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr,t_current);
-      if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_ff++;
       k_stat_to_r_ff++;
@@ -565,6 +566,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       #ifndef FORCE_LTE
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+
+      return do_rpkt(pkt_ptr, t1, t2, nts);
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
     {
@@ -602,18 +605,17 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       //   pkt_ptr->nu_cmf = sample_planck(T_e);
       // }
 
-      printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
+      // printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
 
       // and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr, t_current);
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_KPKT, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
-      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
+      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current, nts);
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
       #endif
 
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_fb++;
       k_stat_to_r_fb++;
@@ -624,6 +626,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = t_current;
       pkt_ptr->nscatterings = 0;
+
+      return do_rpkt(pkt_ptr, t1, t2, nts);
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
     {
@@ -632,16 +636,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       const int element = cellhistory[tid].coolinglist[i].element;
       const int ion = cellhistory[tid].coolinglist[i].ion;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
-      mastate[tid].element = element;
-      mastate[tid].ion = ion;
-      mastate[tid].level = upper;
-      mastate[tid].activatingline = -99;
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
       #endif
 
-      pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collexc++;
       ma_stat_activation_collexc++;
       //if (tid == 0) k_stat_to_ma_collexc++;
@@ -654,6 +653,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+
+      return do_macroatom(pkt_ptr, t_current, t2, nts, element, ion, upper, -99);
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLION)
     {
@@ -662,16 +663,11 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       const int element = cellhistory[tid].coolinglist[i].element;
       const int ion = cellhistory[tid].coolinglist[i].ion + 1;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
-      mastate[tid].element = element;
-      mastate[tid].ion = ion;
-      mastate[tid].level = upper;
-      mastate[tid].activatingline = -99;
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLION, pkt_ptr->e_cmf);
       #endif
 
-      pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collion++;
       ma_stat_activation_collion++;
       //if (tid == 0) k_stat_to_ma_collion++;
@@ -684,6 +680,8 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
         //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+
+      return do_macroatom(pkt_ptr, t_current, t2, nts, element, ion, upper, -99);
     }
     else
     {
@@ -694,13 +692,12 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       printout("[fatal] do_kpkt: pkt_ptr->where %d, mgi %d\n",pkt_ptr->where,modelgridindex);
       abort();
     }
-
-    return t_current;
   }
   else
   {
     vec_scale(pkt_ptr->pos, t2 / t1);
-    return PACKET_SAME;
+    pkt_ptr->type = TYPE_KPKT;
+    return TIME_END_OF_TIMESTEP;
   }
 }
 
