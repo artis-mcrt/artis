@@ -201,6 +201,11 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
         #if (DETAILED_BF_ESTIMATORS_ON)
         phixslist[tid].allcont[j].gamma_contr = 0.;
         #endif
+        if (phixslist[tid].allcont[j].level == 0)
+        {
+          const int gphixsindex = phixslist[tid].allcont[j].index_in_groundphixslist;
+          phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
+        }
       }
       break; // all further processes in the list will have larger nu_edge, so stop here
     }
@@ -1140,13 +1145,6 @@ static double get_event(
   }
 
   pkt_ptr->next_trans = dummypkt_ptr->next_trans;
-  #ifdef DEBUG_ON
-    if (!isfinite(edist))
-    {
-      printout("edist NaN %g... abort\n",edist);
-      abort();
-    }
-  #endif
 
   return edist;
 }
@@ -1644,10 +1642,7 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
 double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const int timestep)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
-  pkt_ptr->type = TYPE_RPKT;
-
-  const int cellindex = pkt_ptr->where;
-  int mgi = cell[cellindex].modelgridindex;
+  int mgi = cell[pkt_ptr->where].modelgridindex;
 
   struct rpkt_cont_opacity_struct kappa_continuum = {0};
   struct mastate_t mastate = {0};
@@ -1655,6 +1650,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
   bool end_packet = false;
   while (!end_packet)
   {
+    assert(pkt_ptr->type == TYPE_RPKT);
     #ifdef DEBUG_ON
       if (pkt_ptr->next_trans > 0)
       {
@@ -1666,8 +1662,8 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
     //printout("[debug] r-pkt propagation iteration %d\n",it);
     // Assign optical depth to next physical event. And start counter of
     // optical depth for this path.
-    double zrand = gsl_rng_uniform(rng);
-    double tau_next = -1. * log(zrand);
+    const double zrand = gsl_rng_uniform(rng);
+    const double tau_next = -1. * log(zrand);
 
     // Start by finding the distance to the crossing of the grid cell
     // boundaries. sdist is the boundary distance and snext is the
@@ -1689,7 +1685,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
       const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
       if (sdist > maxsdist)
       {
-        printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
+        printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. rmax %g t/tmin %g sdist %g\n", rmax, t_current/tmin, sdist);
         abort();
       }
 
@@ -1726,13 +1722,9 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
 
       // Find how far it can travel during the time inverval.
 
-      double tdist = (t2 - t_current) * CLIGHT_PROP;
+      const double tdist = (t2 - t_current) * CLIGHT_PROP;
 
-      if (tdist < 0)
-      {
-        printout("[fatal] do_rpkt: Negative distance (tdist). Abort. \n");
-        abort();
-      }
+      assert(tdist >= 0);
 
       //if (cell[pkt_ptr->where].nne < 1e-40)
       //if (get_nne(cell[pkt_ptr->where].modelgridindex) < 1e-40)
@@ -1756,6 +1748,8 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
         const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr, t_current);
         const double tau_current = 0.0;
         edist = (tau_next - tau_current) / kappa;
+        assert(edist >= 0);
+        assert(isfinite(edist));
         find_nextline = true;
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
@@ -1765,23 +1759,20 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
       {
         // get distance to the next physical event (continuum or bound-bound)
         edist = get_event(pkt_ptr, mgi, timestep, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), &kappa_continuum, &mastate); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        assert(edist >= 0);
+        assert(isfinite(edist));
         #ifdef DEBUG_ON
-          if (debuglevel == 2)
-          {
-            const int next_trans = pkt_ptr->next_trans;
-            printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
-          }
+        if (debuglevel == 2)
+        {
+          const int next_trans = pkt_ptr->next_trans;
+          printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
+        }
         #endif
       }
-      if (edist < 0)
-      {
-        printout("[fatal] do_rpkt: Negative distance (edist). Abort. \n");
-        printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-        abort();
-      }
+
       //printout("[debug] do_rpkt: sdist, tdist, edist %g, %g, %g\n",sdist,tdist,edist);
 
-      if ((sdist < tdist) && (sdist < edist))
+      if ((sdist < tdist) && (sdist < edist)) // reaches a cell boundary first
       {
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
@@ -1820,7 +1811,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
           }
         }
       }
-      else if ((tdist < sdist) && (tdist < edist))
+      else if ((tdist < sdist) && (tdist < edist)) // end of timestep happens first
       {
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
@@ -1845,7 +1836,7 @@ double do_rpkt(PKT *restrict pkt_ptr, double t_current, const double t2, const i
           closest_transition_empty(pkt_ptr);
         return TIME_END_OF_TIMESTEP;
       }
-      else if ((edist < sdist) && (edist < tdist))
+      else if ((edist < sdist) && (edist < tdist)) // line or continuum interaction happens first
       {
         // bound-bound or continuum event
         #ifdef DEBUG_ON
@@ -2013,9 +2004,9 @@ static double get_rpkt_escapeprob_fromdirection(
 }
 
 
-double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart, const int timestep)
+double get_rpkt_escape_prob(const PKT *const pkt_ptr, const double tstart, const int timestep)
 {
-  // return -1.; // disable this functionality and speed up the code
+  return 0.; // disable this functionality and speed up the code
 
   const int startcellindex = pkt_ptr->where;
   const int mgi = cell[startcellindex].modelgridindex;
