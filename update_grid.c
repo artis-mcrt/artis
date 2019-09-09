@@ -197,7 +197,6 @@ static void update_abundances(const int modelgridindex, const int timestep, cons
 
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates)
 {
-  // return; disable for better performance (if estimators files are not needed)
   if (get_numassociatedcells(mgi) > 0)
   {
     const float T_e = get_Te(mgi);
@@ -229,7 +228,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         elpop += ionstagepop(mgi, element, ion);
         fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), ionstagepop(mgi, element, ion));
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", elpop);
+      fprintf(estimators_file, "  SUM: %9.3e", elpop);
+      fprintf(estimators_file, "\n");
 
       const bool printdebug = false;
 
@@ -264,6 +264,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       assume_lte = false;
 
       #if (TRACK_ION_STATS)
+      double ma_in_sum = 0.;
+      double ma_out_sum = 0.;
       fprintf(estimators_file, "MA_IN_RADEXC       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -275,10 +277,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_in_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_OUT_RADEEXC     Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -290,10 +294,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_out_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_IN_COLEXC       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -305,10 +311,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_in_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_OUT_COLDEEXC    Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -320,10 +328,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_out_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_IN_PHOTOION     Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -335,10 +345,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_in_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_OUT_RADRECOMB   Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -350,10 +362,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_out_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_IN_COLION       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -365,10 +379,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_in_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_OUT_COLRECOMB   Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -380,10 +396,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_out_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_IN_NTCOLION     Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -395,10 +413,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      ma_in_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_IN_TOTAL        Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -410,10 +430,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_in_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e (or %9.3e)", ma_el, ma_in_sum);
+      fprintf(estimators_file, "\n");
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_OUT_TOTAL       Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -425,10 +446,11 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e (or %9.3e)", ma_el, ma_out_sum);
+      fprintf(estimators_file, "\n");
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_IN_INTERNAL     Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -440,10 +462,12 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      // ma_in_sum += ma_el;
       #endif
 
-      #if (TRACK_ION_STATS && TRACK_ION_MASTATS)
+      #if (TRACK_ION_STATS)
       fprintf(estimators_file, "MA_OUT_INTERNAL    Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
         fprintf(estimators_file, "              ");
@@ -455,7 +479,9 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion), ma_ion);
       }
-      fprintf(estimators_file, "  SUM: %9.3e\n", ma_el);
+      fprintf(estimators_file, "  SUM: %9.3e", ma_el);
+      fprintf(estimators_file, "\n");
+      // ma_in_sum += ma_el;
       #endif
 
       // spontaneous radiative recombination rate coefficient (may or may not include stim. recomb)
@@ -850,7 +876,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         fprintf(estimators_file,"\n");
       #endif
 
-      fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e       dep %11.5e heating_dep/total_dep %.2f\n",
+      fprintf(estimators_file, "heating: ff %11.5e bf %11.5e coll %11.5e     dep %11.5e heating_dep/total_dep %.2f\n",
               heatingcoolingrates->heating_ff, heatingcoolingrates->heating_bf, heatingcoolingrates->heating_collisional, heatingcoolingrates->heating_gamma, heatingcoolingrates->nt_frac_heating);
       fprintf(estimators_file, "cooling: ff %11.5e fb %11.5e coll %11.5e adiabatic %11.5e\n",
               heatingcoolingrates->cooling_ff, heatingcoolingrates->cooling_fb, heatingcoolingrates->cooling_collisional, heatingcoolingrates->cooling_adiabatic);
@@ -867,24 +893,23 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 }
 
 
-void cellhistory_validate_or_reset(const int modelgridindex, const int timestep)
+void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 {
-  // ensure that if cell history data is not relevant for this cell and time_step
-  // then it has been reset and flagged as empty (ready to populate with new values)
-
-  if ((modelgridindex == cellhistory[tid].modelgridindex) && (timestep == cellhistory[tid].timestep))
+  /// All entries of the cellhistory stack must be flagged as empty at the
+  /// onset of the new timestep. Also, boundary crossing?
+  /// Calculate the level populations for this cell, and flag the other entries
+  /// as empty.
+  /// Make known that cellhistory[tid] contains information about the
+  /// cell given by cellnumber. (-99 if invalid)
+  if ((modelgridindex == cellhistory[tid].cellnumber) && !new_timestep)
   {
     return;
   }
-  else if (modelgridindex == MMODELGRID || modelgrid[modelgridindex].thick == 1)
-  {
-    return;
-  }
 
-  updatecellcounter++;
+  // force rpkt opacities to be recalculated next time they are accessed
+  kappa_rpkt_cont[tid].recalculate_required = true;
 
-  cellhistory[tid].modelgridindex = modelgridindex;
-  cellhistory[tid].timestep = timestep;
+  cellhistory[tid].cellnumber = modelgridindex;
   //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   for (int element = 0; element < nelements; element++)
   {
@@ -1062,17 +1087,14 @@ static void normalise_ion_estimators(const int mgi, const double deltat, const d
     {
       for (int i = 0; i < ION_COUNTER_COUNT; i++)
       {
-        // energy or event count per volume per second
-        const double ratedensity = get_ion_stats(mgi, element, ion, i) / deltaV / deltat / nprocs;
-
         if (i < nstatcounters_ratecoeff)
         {
           // convert photon event counters into rate coefficients
-          set_ion_stats(mgi, element, ion, i, ratedensity / ionstagepop(mgi, element, ion));
+          set_ion_stats(mgi, element, ion, i, get_ion_stats(mgi, element, ion, i) / deltat / (deltaV * ionstagepop(mgi, element, ion)));
         }
         else
         {
-          set_ion_stats(mgi, element, ion, i, ratedensity);
+          set_ion_stats(mgi, element, ion, i, get_ion_stats(mgi, element, ion, i) / deltat / deltaV);
         }
       }
     }
@@ -1559,7 +1581,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
     use_cellhist = false;
-    cellhistory_validate_or_reset(-99, nts);
+    cellhistory_reset(-99, true);
 
     /// Updating cell information
     #ifdef _OPENMP

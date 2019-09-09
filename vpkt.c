@@ -144,7 +144,6 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   // --------- compute the optical depth to boundary ----------------
 
   mgi = cell[dummy_ptr->where].modelgridindex;
-  rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread;
 
   while (end_packet == false) {
 
@@ -154,7 +153,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
       sdist = boundary_cross(dummy_ptr, t_future, &snext);
       s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
 
-      calculate_kappa_vpkt_cont(dummy_ptr, t_future, &kappa_rpkt_cont_thisthread);
+      calculate_kappa_vpkt_cont(dummy_ptr, t_future);
 
       kap_cont = kappa_rpkt_cont[tid].total;
       kap_cont_nobf = kap_cont - kappa_rpkt_cont[tid].bf;

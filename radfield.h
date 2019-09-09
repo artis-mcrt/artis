@@ -27,7 +27,7 @@ int radfield_get_Jb_lu_contribcount(int modelgridindex, int jblueindex);
 void radfield_titer_J(int modelgridindex);
 void radfield_titer_nuJ(int modelgridindex);
 void radfield_reduce_estimators(void);
-void radfield_MPI_Bcast(int modelgridindex, int root);
+void radfield_MPI_Bcast(int my_rank, int root, int root_nstart, int root_ndo);
 void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);
 void radfield_normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);

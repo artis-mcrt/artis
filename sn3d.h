@@ -52,7 +52,6 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 #define SEPARATE_STIMRECOMB false
 
 #define TRACK_ION_STATS true
-#define TRACK_ION_MASTATS false
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
@@ -173,7 +172,7 @@ double E48V;
 #define RPKT_EVENTTYPE_BB 550
 #define RPKT_EVENTTYPE_CONT 551
 
-#define TIME_END_OF_TIMESTEP -929 //MUST be negative
+#define PACKET_SAME -929 //MUST be negative
 
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40
@@ -235,6 +234,8 @@ int n_middle_it;
 
 int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;
+
+mastate_t *restrict mastate;
 
 CELL cell[MGRID+1];
 //int *nonemptycells;  /// Array which contains all the non-empty cells cellnumbers
@@ -351,12 +352,15 @@ double dlogt;
 
 /// ATOMIC DATA
 ///============================================================================
-int nelements;
-int nlines;
-int includedions;
+int nelements,nlines,includedions;
 elementlist_entry *restrict elements;
 linelist_entry *restrict linelist;
 bflist_t *restrict bflist;
+
+
+
+rpkt_cont_opacity_struct *restrict kappa_rpkt_cont;
+
 
 
 /// Coolinglist
@@ -468,7 +472,7 @@ enum ionstatscounters {
   ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL = 29,
   ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL = 30,
   ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL = 31,
-  ION_COUNTER_COUNT = 32,
+  ION_COUNTER_COUNT = 32
 };
 
 // number of ion stats counters that should be divided by the ion populations

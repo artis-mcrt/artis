@@ -46,7 +46,7 @@ static inline omp_int_t omp_get_num_threads(void) { return 1; }
 #endif
 
 #if TRACK_ION_STATS
-static double *ionstats = NULL;
+static double *ionstats;
 #endif
 
 static FILE *initialise_linestat_file(void)
@@ -177,22 +177,23 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
   int position = 0;
   for (int root = 0; root < p; root++)
   {
+    MPI_Barrier(MPI_COMM_WORLD);
     int root_nstart = nstart;
     MPI_Bcast(&root_nstart, 1, MPI_INT, root, MPI_COMM_WORLD);
     int root_ndo = ndo;
     MPI_Bcast(&root_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
-    {
-      radfield_MPI_Bcast(modelgridindex, root); // TODO: check if this is needed for empty model cells
+    radfield_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
 
-      if (get_numassociatedcells(modelgridindex) > 0)
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (NT_ON && NT_SOLVE_SPENCERFANO)
+      nt_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
+
+    if (NLTE_POPS_ON)
+    {
+      for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
       {
-        if (NT_ON && NT_SOLVE_SPENCERFANO)
-        {
-          nt_MPI_Bcast(modelgridindex, root);
-        }
-        if (NLTE_POPS_ON)
+        if (get_numassociatedcells(modelgridindex) > 0)
         {
           MPI_Bcast(modelgrid[modelgridindex].nlte_pops, total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
         }
@@ -284,7 +285,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 }
 
 
-static void mpi_reduce_estimators(int my_rank, int nts)
+static void mpi_reduce_estimators(int my_rank)
 {
   radfield_reduce_estimators();
   #ifndef FORCE_LTE
@@ -386,15 +387,17 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   }
 
   /// Communicate gamma and positron deposition and write to file
-  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  for (int i = 0; i < ntstep; i++)
+  {
+    MPI_Allreduce(MPI_IN_PLACE, &time_step[i].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &time_step[i].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  time_step[nts].gamma_dep /= nprocs;
-  time_step[nts].positron_dep /= nprocs;
-
-  #if TRACK_ION_STATS
-  MPI_Allreduce(MPI_IN_PLACE, ionstats, npts_model * includedions * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  #endif
+    if (my_rank == 0)
+    {
+      time_step[i].gamma_dep /= nprocs;
+      time_step[i].positron_dep /= nprocs;
+    }
+  }
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -456,40 +459,49 @@ static void remove_grid_restart_data(const int timestep)
 
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment)
 {
+  assert(modelgridindex < npts_model);
+  assert(element >= 0);
+  assert(ion >= 0);
+  assert(element < MELEMENTS);
+  assert(element < nelements);
+  assert(ion < MIONS);
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
-
-  if (!TRACK_ION_MASTATS && (ion_counter_type >=  18))
-  {
-    return;
-  }
-
+  const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
+  ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
 }
 
 
 double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type)
 {
+  assert(modelgridindex < npts_model);
+  assert(element >= 0);
+  assert(ion >= 0);
+  assert(element < MELEMENTS);
+  assert(element < nelements);
+  assert(ion < MIONS);
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
+  const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
+  return ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
 }
 
 
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue)
 {
+  assert(modelgridindex < npts_model);
+  assert(element >= 0);
+  assert(ion >= 0);
+  assert(element < MELEMENTS);
+  assert(element < nelements);
+  assert(ion < MIONS);
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
+  const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
+  ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
 }
 
 
@@ -618,6 +630,17 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
+  if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)
+  {
+    printout("[fatal] input: error initializing macro atom state variables ... abort\n");
+    abort();
+  }
+  if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
+  {
+    printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
+    abort();
+  }
+
   /// Using this and the global variable output_file opens and closes the output_file
   /// only once, which speeds up the simulation with a lots of output switched on (debugging).
   /// The downside is that while the simulation runs, its output is only readable on that
@@ -682,9 +705,7 @@ int main(int argc, char** argv)
 //    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
 //  #endif
 
-  #if TRACK_ION_STATS
-  ionstats = calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
-  #endif
+  ionstats = calloc(npts_model * get_tot_nions() * ION_COUNTER_COUNT, sizeof(double));
 
   /// As a precaution, explicitly zero all the estimators here
   zero_estimators();
@@ -1080,16 +1101,16 @@ int main(int argc, char** argv)
             // Since these are going to be needed in the next time step, we will gather all the
             // estimators together now, sum them, and distribute the results
 
-            mpi_reduce_estimators(my_rank, nts);
+            mpi_reduce_estimators(my_rank);
           #endif
 
           // The estimators have been summed across all proceses and distributed.
           // They will now be normalised independently on all processes
           if (do_comp_est)
           {
-            normalise_compton_estimators(nts);
+            normalise_estimators(nts);
             if (my_rank == 0)
-              write_compton_estimators(nts);
+              write_estimators(nts);
           }
 
           if (do_rlc_est != 0)
@@ -1216,6 +1237,70 @@ int main(int argc, char** argv)
     }
     */
 
+    /// Furthermore we need to update the grids quantities for tmax
+    /// (indicated by ftstep) and write them to _one_ file using the
+    /// master process. titer is here 0
+    //if (ftstep < ntstep) update_grid(ftstep,my_rank,nstart,ndo,0);
+
+    /*
+    #ifdef MPI_ON
+      /// Each process has now updated its own set of cells.
+      /// The results now need to be communicated between processes.
+      MPI_Barrier(MPI_COMM_WORLD);
+      printout("time before final grid comm %d\n",time(NULL));
+      for (n = 0; n < p; n++)
+      {
+        if (my_rank == n)
+        {
+          position = 0;
+          MPI_Pack(&ndo, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          for (mgi = nstart; mgi < (nstart+ndo); mgi++)
+          {
+            MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            if (get_numassociatedcells(mgi) > 0)
+            {
+              MPI_Pack(&modelgrid[mgi].Te, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].TR, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+              MPI_Pack(&modelgrid[mgi].W, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            }
+          }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, n, MPI_COMM_WORLD);
+
+        position = 0;
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &nlp, 1, MPI_INT, MPI_COMM_WORLD);
+        for (int nn = 0; nn < nlp; nn++)
+        {
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
+          if (get_numassociatedcells(mgi) > 0)
+          {
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].Te, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TJ, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TR, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].W, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+          }
+        }
+      }
+      printout("time after final grid comm %d\n",time(NULL));
+    #endif
+
+    if (my_rank == 0)
+    {
+      temperature_file = fopen_required("final_temperatures.dat", "w");
+      for (n = 0; n < ngrid; n++)
+      {
+        int mgi = cell[n].modelgridindex;
+        if (get_rho(mgi)  > MINDENSITY)  /// plot only nonempty cells
+        {
+          fprintf(temperature_file,"%d %g %g %g %g\n",n,get_TR(mgi),get_Te(mgi),get_W(mgi),get_TJ(mgi));
+        }
+      }
+      fclose(temperature_file);
+    }
+    */
+
 
     /// The main calculation is now over. The packets now have all stored the time, place and direction
     /// at which they left the grid. Also their rest frame energies and frequencies.
@@ -1279,9 +1364,6 @@ int main(int argc, char** argv)
   #endif
 
   free(packets);
-  #if TRACK_ION_STATS
-  free(ionstats);
-  #endif
 
   return 0;
 }

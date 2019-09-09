@@ -54,7 +54,7 @@ int get_phixtargetindex(const int element, const int ion, const int level, const
 }
 
 
-unsigned int get_continuumindex(int element, int ion, int level, int upperionlevel)
+long get_continuumindex(int element, int ion, int level, int upperionlevel)
 /// Returns the index of the continuum associated to the given level.
 {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
@@ -79,6 +79,18 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 
   const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
   return tau_sobolev;
+}
+
+
+int get_tot_nions(void)
+{
+  int nions = 0.;
+  for (int element = 0; element < nelements; element++)
+  {
+    nions += get_nions(element);
+  }
+
+  return nions;
 }
 
 
