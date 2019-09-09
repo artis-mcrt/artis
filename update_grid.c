@@ -881,6 +881,9 @@ void cellhistory_validate_or_reset(const int modelgridindex, const int timestep)
     return;
   }
 
+  // force rpkt opacities to be recalculated next time they are accessed
+  kappa_rpkt_cont[tid].recalculate_required = true;
+
   updatecellcounter++;
 
   cellhistory[tid].modelgridindex = modelgridindex;

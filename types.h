@@ -486,7 +486,22 @@ typedef struct gslintegration_paras
   float *photoion_xs;
 } gslintegration_paras;
 
-
+typedef struct rpkt_cont_opacity_struct
+{
+  double nu; // frequency at which opacity was calculated
+  double total;
+  double es;
+  double ff;
+  double bf;
+  double fb;
+  double bf_inrest;
+  double fb_inrest;
+  double ffheating;
+  //double bfheating;
+  int modelgridindex;
+  int timestep;
+  bool recalculate_required; // e.g. when cell or timestep has changed
+} rpkt_cont_opacity_struct;
 
 /// Cell history
 ///============================================================================
