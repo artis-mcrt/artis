@@ -356,6 +356,8 @@ static transitiontable_entry *read_ion_transitions(
       fscanf(transitiondata, "%d %d %lg %lg %d\n", &lower_in, &upper_in, &A, &coll_str, &intforbidden);
       const int lower = lower_in - groundstate_index_in;
       const int upper = upper_in - groundstate_index_in;
+      assert(lower >= 0);
+      assert(upper >= 0);
 
       // this entire block can be removed if we don't want to add in extra collisonal
       // transitions between levels
@@ -391,6 +393,8 @@ static transitiontable_entry *read_ion_transitions(
             printout("Could not reallocate transitiontable\n");
             abort();
           }
+          assert(prev_lower >= 0);
+          assert(tmplevel >= 0);
           transitiontable[i].lower = prev_lower;
           transitiontable[i].upper = tmplevel;
           transitiontable[i].A = 0.;
@@ -501,7 +505,10 @@ static void add_transitions_to_linelist(
 
     const int level = transitiontable[ii].upper;
     const int targetlevel = transitiontable[ii].lower;
-    if (targetlevel < nlevelsmax && level < nlevelsmax)
+    assert(targetlevel >= 0);
+    assert(level > targetlevel);
+    const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
+    if (targetlevel < nlevelsmax && level < nlevelsmax && nu_trans > 0.)
     {
 
       //if (level == transitiontable[ii].upper && level-i-1 == transitiontable[ii].lower)
@@ -517,8 +524,6 @@ static void add_transitions_to_linelist(
         const double coll_str = transitiontable[ii].coll_str;
         //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
-        const double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
-        assert(nu_trans > 0);
         const double g = stat_weight(element,ion,level) / stat_weight(element,ion,targetlevel);
         const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
         //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
@@ -578,7 +583,6 @@ static void add_transitions_to_linelist(
         const double coll_str = transitiontable[ii].coll_str;
         //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
-        const double nu_trans = (epsilon(element, ion, level) - epsilon(element, ion, targetlevel)) / H;
         const double g = stat_weight(element, ion, level) / stat_weight(element, ion, targetlevel);
         const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
         //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
