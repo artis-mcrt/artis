@@ -518,6 +518,7 @@ static void add_transitions_to_linelist(
         //elements[element].ions[ion].levels[level].transitions[level-targetlevel-1].einstein_A = A_ul;
 
         const double nu_trans = (epsilon(element,ion,level) - epsilon(element,ion,targetlevel)) / H;
+        assert(nu_trans > 0);
         const double g = stat_weight(element,ion,level) / stat_weight(element,ion,targetlevel);
         const double f_ul = g * ME * pow(CLIGHT,3) / (8 * pow(QE * nu_trans * PI, 2)) * A_ul;
         //f_ul = g * OSCSTRENGTHCONVERSION / pow(nu_trans,2) * A_ul;
