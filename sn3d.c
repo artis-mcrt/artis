@@ -46,7 +46,7 @@ static inline omp_int_t omp_get_num_threads(void) { return 1; }
 #endif
 
 #if TRACK_ION_STATS
-static double *ionstats;
+static double *ionstats = NULL;
 #endif
 
 static FILE *initialise_linestat_file(void)
@@ -285,7 +285,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 }
 
 
-static void mpi_reduce_estimators(int my_rank)
+static void mpi_reduce_estimators(int my_rank, int nts)
 {
   radfield_reduce_estimators();
   #ifndef FORCE_LTE
@@ -387,17 +387,15 @@ static void mpi_reduce_estimators(int my_rank)
   }
 
   /// Communicate gamma and positron deposition and write to file
-  for (int i = 0; i < ntstep; i++)
-  {
-    MPI_Allreduce(MPI_IN_PLACE, &time_step[i].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &time_step[i].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    if (my_rank == 0)
-    {
-      time_step[i].gamma_dep /= nprocs;
-      time_step[i].positron_dep /= nprocs;
-    }
-  }
+  time_step[nts].gamma_dep /= nprocs;
+  time_step[nts].positron_dep /= nprocs;
+
+  #if TRACK_ION_STATS
+  MPI_Allreduce(MPI_IN_PLACE, ionstats, npts_model * includedions * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  #endif
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -457,53 +455,45 @@ static void remove_grid_restart_data(const int timestep)
 }
 
 
+#if (TRACK_ION_STATS)
 void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment)
 {
-  assert(modelgridindex < npts_model);
-  assert(element >= 0);
-  assert(ion >= 0);
-  assert(element < MELEMENTS);
-  assert(element < nelements);
-  assert(ion < MIONS);
+  if (!TRACK_ION_MASTATS && (ion_counter_type >= 18))
+  {
+    return;
+  }
+
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
-  const int totnions = get_tot_nions();
+
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
+  #ifdef _OPENMP
+    #pragma omp atomic
+  #endif
+  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
 }
 
 
 double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type)
 {
-  assert(modelgridindex < npts_model);
-  assert(element >= 0);
-  assert(ion >= 0);
-  assert(element < MELEMENTS);
-  assert(element < nelements);
-  assert(ion < MIONS);
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
-  const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
+  return ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
 }
 
 
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue)
 {
-  assert(modelgridindex < npts_model);
-  assert(element >= 0);
-  assert(ion >= 0);
-  assert(element < MELEMENTS);
-  assert(element < nelements);
-  assert(ion < MIONS);
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
-  const int totnions = get_tot_nions();
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  ionstats[modelgridindex * totnions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
+  #ifdef _OPENMP
+    #pragma omp atomic
+  #endif
+  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
 }
-
+#endif
 
 static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, int *maxndo)
 {
@@ -705,7 +695,9 @@ int main(int argc, char** argv)
 //    printout("barrier after tabulation of rate coefficients: time before barrier %d, time after barrier %d\n", time_before_barrier, time_after_barrier);
 //  #endif
 
-  ionstats = calloc(npts_model * get_tot_nions() * ION_COUNTER_COUNT, sizeof(double));
+  #if TRACK_ION_STATS
+  ionstats = calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
+  #endif
 
   /// As a precaution, explicitly zero all the estimators here
   zero_estimators();
@@ -1101,7 +1093,7 @@ int main(int argc, char** argv)
             // Since these are going to be needed in the next time step, we will gather all the
             // estimators together now, sum them, and distribute the results
 
-            mpi_reduce_estimators(my_rank);
+            mpi_reduce_estimators(my_rank, nts);
           #endif
 
           // The estimators have been summed across all proceses and distributed.
@@ -1364,6 +1356,9 @@ int main(int argc, char** argv)
   #endif
 
   free(packets);
+  #if TRACK_ION_STATS
+  free(ionstats);
+  #endif
 
   return 0;
 }
