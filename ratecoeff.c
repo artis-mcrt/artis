@@ -90,10 +90,11 @@ static bool read_ratecoeff_dat(void)
     {
       float T_min,T_max;
       int in_tablesize;
-      fscanf(ratecoeff_file,"%g %g %d\n",&T_min,&T_max,&in_tablesize);
-      printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d ", T_min, T_max, in_tablesize);
+      int in_nlines;
+      fscanf(ratecoeff_file, "%g %g %d %d\n", &T_min, &T_max, &in_tablesize, &in_nlines);
+      printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d", T_min, T_max, in_tablesize, in_nlines);
 
-      if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE)
+      if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == nlines)
       {
         printout("(pass)\n");
         // this is redundant if the adata and composition data matches, but have
@@ -207,13 +208,13 @@ static void write_ratecoeff_dat(void)
   fprintf(ratecoeff_file, "%32s\n", adatafile_hash);
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
   fprintf(ratecoeff_file, "%32s\n", phixsfile_hash);
-  fprintf(ratecoeff_file, "%g %g %d\n", MINTEMP, MAXTEMP, TABLESIZE);
+  fprintf(ratecoeff_file, "%g %g %d %d\n", MINTEMP, MAXTEMP, TABLESIZE, nlines);
   for (int element = 0; element < nelements; element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
-      fprintf(ratecoeff_file,"%d %d %d %d\n",get_element(element), get_ionstage(element,ion), get_nlevels(element,ion),  get_ionisinglevels(element,ion));
+      fprintf(ratecoeff_file,"%d %d %d %d\n",get_element(element), get_ionstage(element,ion), get_nlevels(element,ion), get_ionisinglevels(element,ion));
     }
   }
 
