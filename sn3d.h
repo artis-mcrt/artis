@@ -52,7 +52,6 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 #define SEPARATE_STIMRECOMB false
 
 #define TRACK_ION_STATS false
-#define TRACK_ION_MASTATS false
 
 #define DIRECT_COL_HEAT
 #define NO_INITIAL_PACKETS
