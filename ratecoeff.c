@@ -554,7 +554,7 @@ static void precalculate_rate_coefficient_integrals(void)
       mastate[tid].ion = ion;   /// Global variable which passes the current ion to all subfunctions of macroatom.c
       for (int level = 0; level < nlevels; level++)
       {
-        if ((level > 0) && (level % 10 == 0))
+        if ((level > 0) && (level % 50 == 0))
           printout("  completed up to level %d of %d\n",level,nlevels);
 
         const int nphixstargets = get_nphixstargets(element,ion,level);
