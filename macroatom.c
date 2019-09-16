@@ -373,10 +373,9 @@ static void do_macroatom_ionisation(
 }
 
 
-double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep, int element, int ion, int level, int activatingline)
+double do_macroatom(PKT *restrict pkt_ptr, const double t_current, const double t2, const int timestep, int element, int ion, int level, int activatingline)
 /// Material for handling activated macro atoms.
 {
-  double t_current = t1; // this will keep track of time in the calculation
   const double t_mid = time_step[timestep].mid;
 
   //printout("[debug] do MA\n");

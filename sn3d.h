@@ -515,7 +515,7 @@ inline int printout(const char *restrict format, ...)
 }
 
 #ifdef DEBUG_ON
-  #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+  #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); fflush(output_file); sleep(10); abort(); }
 #else
   #define	assert(e)	((void)0)
 #endif
