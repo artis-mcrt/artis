@@ -1239,12 +1239,12 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   //   return 0.;
   // }
 
-  const double epsrel = 1e-3;
-  const double epsabs = 0.;
+//  const double epsrel = 1e-3;
+//  const double epsabs = 0.;
 
   const double E_threshold = get_phixs_threshold(element, lowerion, level, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+//  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
   gsl_integral_paras_gammacorr intparas;
   intparas.nu_edge = nu_threshold;
@@ -1258,12 +1258,12 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   gsl_function F_stimrecomb;
   F_stimrecomb.function = &integrand_stimrecombination_custom_radfield;
   F_stimrecomb.params = &intparas;
-  double error = 0.0;
+//  double error = 0.0;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   double stimrecombcoeff = 0.0;
-  const int status = gsl_integration_qag(
-    &F_stimrecomb, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &stimrecombcoeff, &error);
+//  const int status = gsl_integration_qag(
+//    &F_stimrecomb, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &stimrecombcoeff, &error);
 
   gsl_set_error_handler(previous_handler);
 
