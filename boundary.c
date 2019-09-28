@@ -156,15 +156,15 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
     vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * CLIGHT_PROP; // radial velocity
   }
 
-  // for (int d = 0; d < ndim; d++)
-  // {
-  //   if (initpos[d] < get_cellcoordmin(cellindex, d) || initpos[d] > cellcoordmax[d])
-  //   {
-  //     printout("WARNING: packet should have already escaped.\n");
-  //     *snext = -99;
-  //     return 0;
-  //   }
-  // }
+  for (int d = 0; d < ndim; d++)
+  {
+    if (initpos[d] < get_cellcoordmin(cellindex, d) || initpos[d] > cellcoordmax[d])
+    {
+      printout("WARNING: packet should have already escaped.\n");
+      *snext = -99;
+      return 0;
+    }
+  }
 
   //printout("boundary.c: x0 %g, y0 %g, z0 %g\n", initpos[0] initpos[1] initpos[2]);
 
