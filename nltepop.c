@@ -882,9 +882,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   const double t_mid = time_step[timestep].mid;
   const int nions = get_nions(element);
 
-  printout("Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, population %.2e)\n",
-           modelgridindex, timestep, nlte_iter, atomic_number, get_abundance(modelgridindex, element),
-           get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex));
+//  printout("Solving for NLTE populations in cell %d at timestep %d NLTE iteration %d for element Z=%d (mass fraction %.2e, population %.2e)\n",
+//           modelgridindex, timestep, nlte_iter, atomic_number, get_abundance(modelgridindex, element),
+//           get_abundance(modelgridindex, element) / elements[element].mass * get_rho(modelgridindex));
 
   // LTE test, make sure binned radfield is off
   //set_TR(modelgridindex,3000);

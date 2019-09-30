@@ -127,7 +127,7 @@ static const size_t GSLWSIZE = 16384;
 
 #define H_ionpot (13.5979996 * EV)
 
-#define MTSTEP 200       // Max number of time steps.
+#define MTSTEP 201       // Max number of time steps.
 #define MLINES 500000    // Increase linelist by this blocksize
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.

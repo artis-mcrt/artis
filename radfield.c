@@ -1398,15 +1398,15 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
     double prev_nu_upper = nu_lower_first_initial;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      const double J_bin = get_bin_J(modelgridindex,binindex);
-      const double T_R_bin = get_bin_T_R(modelgridindex,binindex);
-      const double W_bin = get_bin_W(modelgridindex,binindex);
-      const int contribcount = get_bin_contribcount(modelgridindex, binindex);
-      const double bin_nu_upper = get_bin_nu_upper(binindex);
-      const double nubar = get_bin_nu_bar(modelgridindex, binindex);
-
-      printout("bin %4d (lambda %7.1f Å to %7.1f Å): contribcount %5d J %7.1e T_R %8.1f W %12.5e lambdabar %7.1f Å\n",
-             binindex, 1e8 * CLIGHT / prev_nu_upper, 1e8 * CLIGHT / bin_nu_upper, contribcount, J_bin, T_R_bin, W_bin, 1e8 * CLIGHT / nubar);
+//      const double J_bin = get_bin_J(modelgridindex,binindex);
+//      const double T_R_bin = get_bin_T_R(modelgridindex,binindex);
+//      const double W_bin = get_bin_W(modelgridindex,binindex);
+//      const int contribcount = get_bin_contribcount(modelgridindex, binindex);
+//      const double bin_nu_upper = get_bin_nu_upper(binindex);
+//      const double nubar = get_bin_nu_bar(modelgridindex, binindex);
+//
+//      printout("bin %4d (lambda %7.1f Å to %7.1f Å): contribcount %5d J %7.1e T_R %8.1f W %12.5e lambdabar %7.1f Å\n",
+//             binindex, 1e8 * CLIGHT / prev_nu_upper, 1e8 * CLIGHT / bin_nu_upper, contribcount, J_bin, T_R_bin, W_bin, 1e8 * CLIGHT / nubar);
 
      prev_nu_upper = get_bin_nu_upper(binindex);
     }
