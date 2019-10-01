@@ -92,7 +92,7 @@ inline int get_uniqueionindex(const int element, const int ion)
   int index = 0;
   for (int e = 0; e < element; e++)
   {
-    index += get_nions(element);
+    index += get_nions(e);
   }
   index += ion;
 
