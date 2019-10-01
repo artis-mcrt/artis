@@ -787,8 +787,8 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
   double nu_selected = get_x_at_integralfrac(&F_alpha_sp, nu_threshold, nu_max_phixs, npieces, zrand);
 
-  printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
-     get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel, lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
+  // printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
+  //    get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel, lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
 
   assert(isfinite(nu_selected));
   return nu_selected;
@@ -1263,7 +1263,7 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
   double stimrecombcoeff = 0.0;
 
-  // const int status = 
+  // const int status =
   gsl_integration_qag(
     &F_stimrecomb, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &stimrecombcoeff, &error);
 
