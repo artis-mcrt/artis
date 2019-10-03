@@ -1108,9 +1108,9 @@ int main(int argc, char** argv)
           // They will now be normalised independently on all processes
           if (do_comp_est)
           {
-            normalise_estimators(nts);
+            normalise_compton_estimators(nts);
             if (my_rank == 0)
-              write_estimators(nts);
+              write_compton_estimators(nts);
           }
 
           if (do_rlc_est != 0)
