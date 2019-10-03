@@ -19,7 +19,7 @@ double nt_excitation_ratecoeff(int modelgridindex, int element, int ion, int low
 void do_ntlepton(PKT *pkt_ptr);
 void nt_write_restart_data(FILE *gridsave_file);
 void nt_read_restart_data(FILE *gridsave_file);
-void nt_MPI_Bcast(int my_rank, int root, int root_nstart, int root_ndo);
+void nt_MPI_Bcast(const int modelgridindex, const int root);
 void nt_reset_stats(void);
 void nt_print_stats(int nts, double modelvolume, double deltat);
 
