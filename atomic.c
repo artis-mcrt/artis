@@ -82,18 +82,6 @@ double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 }
 
 
-int get_tot_nions(void)
-{
-  int nions = 0.;
-  for (int element = 0; element < nelements; element++)
-  {
-    nions += get_nions(element);
-  }
-
-  return nions;
-}
-
-
 double get_nntot(int modelgridindex)
 // total ion (nuclei) density
 {
