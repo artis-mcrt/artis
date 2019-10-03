@@ -452,6 +452,7 @@ typedef struct ionlist_entry
   int nlevels_groundterm;
   int coolingoffset;
   int ncoolingterms;
+  int uniqueionindex;
   float *Alpha_sp;
   double ionpot;                             /// Ionisation threshold to the next ionstage
   //int nbfcontinua;

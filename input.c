@@ -721,6 +721,7 @@ static void read_atomicdata_files(void)
   FILE *restrict transitiondata = fopen_required("transitiondata.txt", "r");
 
   int lineindex = 0;  ///counter to determine the total number of lines, initialisation
+  int uniqueionindex = -1; // index into list of all ions of all elements
 
   /// readin
   int nbfcheck = 0;
@@ -767,6 +768,7 @@ static void read_atomicdata_files(void)
     double ionpot = 0.;
     for (int ion = 0; ion < nions; ion++)
     {
+      uniqueionindex++;
       int nlevelsmax = nlevelsmax_readin;
       printout("element %d ion %d\n", element, ion);
       /// calculate the current levels ground level energy
@@ -925,6 +927,7 @@ static void read_atomicdata_files(void)
       elements[element].ions[ion].maxrecombininglevel = 0;
       elements[element].ions[ion].ionpot = ionpot * EV;
       elements[element].ions[ion].nlevels_groundterm = 0;
+      elements[element].ions[ion].uniqueionindex = uniqueionindex;
 
 //           if ((elements[element].ions[ion].zeta = calloc(TABLESIZE, sizeof(float))) == NULL)
 //           {
@@ -1331,6 +1334,8 @@ static void write_bflist_file(int includedphotoiontransitions)
             fprintf(bflist_file,"%d %d %d %d %d\n", i, element, ion, level, upperionlevel);
 
           assert(-1 - i == get_continuumindex(element, ion, level, upperionlevel));
+          
+          assert(i != 9999999 - 1); // would cause the same packet emission type as the special value for free-free scattering
           i++;
         }
       }
