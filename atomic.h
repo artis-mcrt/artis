@@ -8,7 +8,6 @@ double last_phixs_nuovernuedge; // last photoion cross section point as a factor
 long get_continuumindex(int element, int ion, int level, int upperionlevel);
 int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel);
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current);
-int get_tot_nions(void);
 double get_nntot(int modelgridindex);
 bool is_nlte(int element, int ion, int level);
 bool level_isinsuperlevel(int element, int ion, int level);
@@ -96,7 +95,7 @@ inline int get_uniqueionindex(const int element, const int ion)
   }
   index += ion;
 
-  // assert(index < get_tot_nions());
+  // assert(index < includedions);
   return index;
 }
 
