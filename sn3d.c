@@ -187,7 +187,15 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (NT_ON && NT_SOLVE_SPENCERFANO)
-      nt_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
+    {
+      for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
+      {
+        if (get_numassociatedcells(modelgridindex) > 0)
+        {
+          nt_MPI_Bcast(modelgridindex, root);
+        }
+      }
+    }
 
     if (NLTE_POPS_ON)
     {
