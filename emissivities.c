@@ -209,7 +209,7 @@ void zero_estimators(void)
 }
 
 
-void normalise_estimators(int nts)
+void normalise_compton_estimators(int nts)
 {
   double dfreq[EMISS_MAX];
 
@@ -244,7 +244,7 @@ void normalise_estimators(int nts)
 }
 
 
-void write_estimators(int nts)
+void write_compton_estimators(int nts)
 {
   FILE *est_file, *dummy;
   char chch;
