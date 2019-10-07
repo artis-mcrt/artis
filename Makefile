@@ -7,12 +7,12 @@ GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 SYSNAME := $(shell uname -s)
 
 ifeq ($(SYSNAME),Darwin)
-	# macOS laptop
+	# macOS
 
-	# CC = clang
+	CC = clang
 	# CC = clang-3.8
 	# CC = clang-omp
-	CC = gcc-9
+	# CC = gcc-9
 	# CC = mpicc
 	# CC = icc
 	INCLUDE = -I/usr/local/include/
@@ -62,48 +62,6 @@ else ifneq (, $(shell which mpicc))
 
   sn3d: CFLAGS += -DMPI_ON
 endif
-
-
-### Settings for the miner
-# ifeq ($(OSTYPE),linux)
-#   CC = cc
-#   INCLUDE = /home/ssim/gsl/include
-#   LIB = /home/ssim/gsl/lib
-#   CFLAGS = -O3 -g -I$(INCLUDE)
-#   LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-#   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-#   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-# endif
-
-
-### Settings for Coala
-# ifeq ($(OSTYPE),linux)
-#   CC = /pkg/linux/SS12/sunstudio12/bin/cc
-# #  CC = gcc
-#   INCLUDE = /home/ssim/gsl/include
-#   INCLUDE2 = /usr/local/openmpi/include
-#   LIB2 = /usr/local/openmpi/lib
-#   LIB = /home/ssim/gsl/lib
-# #  CFLAGS = -O3 -I$(INCLUDE) -I$(INCLUDE2) -fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
-#   CFLAGS = -O3 -I$(INCLUDE) -I$(INCLUDE2)  -pthread -DMPI_ON
-# #-fast -xtarget=nehalem -xipo=2 -xvector=simd -DMPI_ON
-#   LDFLAGS= -L$(LIB) -L$(LIB2) -R$(LIB2) -lgsl -lgslcblas -lm -pthread -L/usr/local/openmpi/lib -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
-# #  LDFLAGS= -L$(LIB) -L$(LIB2) -L$(LIB3) -lgsl -lgslcblas -lm -pthread
-#   exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-#   exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-# endif
-
-
-### Settings for mime
-ifeq ($(HOST),mime)
-  CC = mpicc
-  CFLAGS = -O3 -m64 -DMPI_ON
-  LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm -m64
-#-pthread -lmpi_cxx -lmpi -lopen-rte -lopen-pal -ldl -Wl,--export-dynamic -lnsl -lutil -lm -ldl
-  exspec: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-  exgamma: override CFLAGS =  -g -O3 -I$(INCLUDE) -DDO_EXSPEC
-endif
-
 
 
 
