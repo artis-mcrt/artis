@@ -4,18 +4,47 @@ GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
 #RAIJINDIRAC := $(or $(or $(findstring dirac,$(HOSTNAME)), $(findstring raijin,$(HOSTNAME))), $(findstring juwels,$(HOSTNAME)))
+SYSNAME := $(shell uname -s)
 
-ifneq (,$(findstring kelvin,$(HOSTNAME)))
- # needs
- #  mpi/openmpi/1.8.5/gcc-4.4.7
- #  compilers/gcc/system(default)
- #  libs/gsl/1.16/gcc-4.4.7
+ifeq ($(SYSNAME),Darwin)
+	# macOS laptop
 
-  CC = mpicc
-  CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c11 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
-  LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
+	# CC = clang
+	# CC = clang-3.8
+	# CC = clang-omp
+	CC = gcc-9
+	# CC = mpicc
+	# CC = icc
+	INCLUDE = -I/usr/local/include/
+	#-I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
+	LIB = #-L/usr/local/lib/gsl #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
+	CFLAGS = -std=c17 -O3 -fstrict-aliasing -ftree-vectorize -flto -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing $(INCLUDE) # -fopenmp-simd
 
-  sn3d: CFLAGS += -DMPI_ON
+	# CFLAGS += -fvectorize
+
+	# enable OpenMP (for Clang)
+	# CFLAGS += -Xpreprocessor -fopenmp -lomp
+
+	# in GCC6, -Wmisleading-indentation will be useful
+	# also -fopenmp after -I$(INCLUDE)
+	# maybe  -fopt-info-vec-missed
+	#  -fwhole-program
+	# add -lprofiler for gperftools
+
+	LDFLAGS = $(LIB) -lgsl -lgslcblas
+	# sn3d: CFLAGS += -fopenmp
+
+else ifneq (,$(findstring kelvin,$(HOSTNAME)))
+	# needs
+	#  mpi/openmpi/1.8.5/gcc-4.4.7
+	#  compilers/gcc/system(default)
+	#  libs/gsl/1.16/gcc-4.4.7
+
+	CC = mpicc
+	CFLAGS = -DWALLTIMELIMITSECONDS=\($(WALLTIMEHOURS)\*3600\) -mcmodel=medium -O3 -std=c11 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -I$(GSLINCLUDE) #-fopenmp=libomp
+	LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
+
+	sn3d: CFLAGS += -DMPI_ON
 
 else ifneq (, $(shell which mpicc))
 	# recommended for NCI Raijin cluster:
@@ -32,32 +61,6 @@ else ifneq (, $(shell which mpicc))
 	endif
 
   sn3d: CFLAGS += -DMPI_ON
-
-else
-	# macOS laptop
-
-  CC = clang
- # CC = clang-3.8
- # CC = clang-omp
- # CC = gcc-8
- # CC = mpicc
- # CC = icc
-  INCLUDE = #-I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
-  LIB = #-L/usr/local/lib/gsl #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-  CFLAGS = -std=c17 -O3 -fstrict-aliasing -ftree-vectorize -fvectorize -flto -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing $(INCLUDE) # -fopenmp-simd
-
-	# enable OpenMP (for Clang)
-	# CFLAGS += -Xpreprocessor -fopenmp -lomp
-
-# in GCC6, -Wmisleading-indentation will be useful
-# also -fopenmp after -I$(INCLUDE)
-# maybe  -fopt-info-vec-missed
-#  -fwhole-program
-# add -lprofiler for gperftools
-
-  LDFLAGS = $(LIB) -lgsl -lgslcblas
- # sn3d: CFLAGS += -fopenmp
-
 endif
 
 
