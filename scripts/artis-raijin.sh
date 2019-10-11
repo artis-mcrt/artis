@@ -2,9 +2,9 @@
 
 #PBS -P fm5
 #PBS -q normal
-#PBS -l walltime=24:00:00
+#PBS -l walltime=10:00:00
 #PBS -l mem=768GB
-#PBS -l ncpus=496
+#PBS -l ncpus=960
 #PBS -l wd
 #PBS -m abe
 #PBS -M luke.shingles@gmail.com

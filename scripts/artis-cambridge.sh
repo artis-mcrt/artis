@@ -14,10 +14,10 @@
 #! Which project should be charged:
 #SBATCH -A DIRAC-DP033-CPU
 #! How many whole nodes should be allocated?
-#SBATCH --nodes=1
+#SBATCH --nodes=30
 #! How many (MPI) tasks will there be in total? (<= nodes*32)
 #! The skylake/skylake-himem nodes have 32 CPUs (cores) each.
-#SBATCH --ntasks=32
+#SBATCH --ntasks=960
 #! How much wallclock time will be required?
 #SBATCH --time=36:00:00
 #! What types of email messages do you wish to receive?
