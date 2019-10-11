@@ -1,5 +1,5 @@
 #!/bin/bash -x
-#SBATCH --ntasks=480
+#SBATCH --ntasks=960
 #SBATCH --ntasks-per-node=48
 #SBATCH --time=24:00:00
 #SBATCH --partition=batch
