@@ -244,6 +244,7 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
 
 double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type)
 {
+  return 0.;
 }
 
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue)
