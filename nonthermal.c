@@ -3139,7 +3139,7 @@ void nt_read_restart_data(FILE *gridsave_file)
 #ifdef MPI_ON
 void nt_MPI_Bcast(const int modelgridindex, const int root)
 {
-  if (!nonthermal_initialized)
+  if (!nonthermal_initialized || (get_numassociatedcells(modelgridindex) == 0))
     return;
 
   // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
