@@ -36,7 +36,7 @@ module load intel-cc/2018.3.222
 
 ulimit -l 2097152
 
-mpirun ./sn3d > out.txt
+mpirun ./sn3d -w 10 > out.txt
 
 mkdir ${PBS_JOBID}
 ./artis/scripts/movefiles.sh ${PBS_JOBID}
