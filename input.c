@@ -1103,7 +1103,7 @@ static void read_atomicdata_files(void)
   ///finally read in photoionisation cross sections and store them to the atomic data structure
   read_phixs_data();
 
-  long cont_index = -1;
+  int cont_index = -1;
   for (int element = 0; element < nelements; element++)
   {
     const int nions = get_nions(element);
