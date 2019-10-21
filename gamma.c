@@ -24,11 +24,12 @@ static const int RED_OF_LIST = -956;  // must be negative
 struct gamma_ll
 {
   enum radionuclides *nuclidetype; // is it a Ni56, Co56, a fake line, etc
-  int *index;               // which of the lines of that element is it */
-  int total;                // the total number of lines in the list */
+  int *index;               // which of the lines of that element is it
+  int total;                // the total number of lines in the list
 };
 
 static struct gamma_ll gam_line_list;
+
 
 static double read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
@@ -161,7 +162,8 @@ void init_gamma_linelist(void)
 
 static void choose_gamma_ray(PKT *pkt_ptr)
 {
-  /* Routine to choose which gamma ray line it'll be. */
+  // Routine to choose which gamma ray line it'll be.
+
   enum radionuclides iso;
   double E_gamma;  // Average energy per gamma line of a decay
   switch (pkt_ptr->type)
@@ -247,9 +249,9 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   double dir_cmf[3];
   get_rand_isotropic_unitvec(dir_cmf);
 
-  /* This direction is in the cmf - we want to convert it to the rest
-  frame - use aberation of angles. We want to convert from cmf to
-  rest so need -ve velocity. */
+  // This direction is in the cmf - we want to convert it to the rest
+  // frame - use aberation of angles. We want to convert from cmf to
+  // rest so need -ve velocity.
 
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->tdecay);
@@ -257,12 +259,12 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
 
   angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
-  /* Now need to assign the frequency of the packet in the co-moving frame.*/
+  // Now need to assign the frequency of the packet in the co-moving frame.
 
   choose_gamma_ray(pkt_ptr);
 
-  /* Finally we want to put in the rest frame energy and frequency. And record
-  that it's now a gamma ray.*/
+  // Finally we want to put in the rest frame energy and frequency. And record
+  // that it's now a gamma ray.
 
   const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->tdecay);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
@@ -338,7 +340,7 @@ static double sig_comp(const PKT *pkt_ptr, double t_current)
 
 static double choose_f(double xx, double zrand)
 // To choose the value of f to integrate to - idea is we want
-//   sigma_compton_partial(xx,f) = zrand. */
+//   sigma_compton_partial(xx,f) = zrand.
 {
   double f_max = 1 + (2 * xx);
   double f_min = 1;
@@ -412,18 +414,18 @@ static void compton_scatter(PKT *pkt_ptr, double t_current)
 
   const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
-  /* It is known that a Compton scattering event is going to take place.
-     We need to do two things - (1) decide whether to convert energy
-     to electron or leave as gamma (2) decide properties of new packet.*/
+  // It is known that a Compton scattering event is going to take place.
+  // We need to do two things - (1) decide whether to convert energy
+  // to electron or leave as gamma (2) decide properties of new packet.
 
-  /* The probability of giving energy to electron is related to the
-     energy change of the gamma ray. This is equivalent to the choice of
-     scattering angle. Probability of scattering into particular angle
-     (i.e. final energy) is related to the partial cross-section.*/
+  // The probability of giving energy to electron is related to the
+  // energy change of the gamma ray. This is equivalent to the choice of
+  // scattering angle. Probability of scattering into particular angle
+  // (i.e. final energy) is related to the partial cross-section.
 
-  /* Choose a random number to get the energy. Want to find the
-   factor by which the energy changes "f" such that
-   sigma_partial/sigma_tot = zrand */
+  // Choose a random number to get the energy. Want to find the
+  // factor by which the energy changes "f" such that
+  // sigma_partial/sigma_tot = zrand
 
   bool stay_gamma;
   if (xx < THOMSON_LIMIT)
@@ -436,7 +438,7 @@ static void compton_scatter(PKT *pkt_ptr, double t_current)
     const double zrand = gsl_rng_uniform(rng);
     f = choose_f(xx, zrand);
 
-    /* Check that f lies between 1.0 and (2xx  + 1) */
+    // Check that f lies between 1.0 and (2xx  + 1)
 
     if ((f < 1) || (f > (2 * xx + 1)))
     {
