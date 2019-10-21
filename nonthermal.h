@@ -21,6 +21,6 @@ void nt_write_restart_data(FILE *gridsave_file);
 void nt_read_restart_data(FILE *gridsave_file);
 void nt_MPI_Bcast(const int modelgridindex, const int root);
 void nt_reset_stats(void);
-void nt_print_stats(int nts, double modelvolume, double deltat);
+void nt_print_stats(const int timestep, const double modelvolume, const double deltat);
 
 #endif //NONTHERMAL_H
