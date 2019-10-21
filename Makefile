@@ -1,4 +1,5 @@
-WALLTIMEHOURS := 24  # DEPRECATED: use command line argument e.g. "./sn3d -h 24" in the future
+WALLTIMEHOURS := 24
+# WALLTIMEHOURS IS DEPRECATED: use command line argument e.g. "./sn3d -w 24" in the future
 GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
