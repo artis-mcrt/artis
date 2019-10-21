@@ -183,25 +183,17 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     int root_ndo = ndo;
     MPI_Bcast(&root_ndo, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    radfield_MPI_Bcast(my_rank, root, root_nstart, root_ndo);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (NT_ON && NT_SOLVE_SPENCERFANO)
+    for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
     {
-      for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
+      radfield_MPI_Bcast(modelgridindex, root); // TODO: check if this is needed for empty model cells
+
+      if (get_numassociatedcells(modelgridindex) > 0)
       {
-        if (get_numassociatedcells(modelgridindex) > 0)
+        if (NT_ON && NT_SOLVE_SPENCERFANO)
         {
           nt_MPI_Bcast(modelgridindex, root);
         }
-      }
-    }
-
-    if (NLTE_POPS_ON)
-    {
-      for (int modelgridindex = root_nstart; modelgridindex < root_nstart + root_ndo; modelgridindex++)
-      {
-        if (get_numassociatedcells(modelgridindex) > 0)
+        if (NLTE_POPS_ON)
         {
           MPI_Bcast(modelgrid[modelgridindex].nlte_pops, total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
         }
