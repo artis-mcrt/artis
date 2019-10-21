@@ -305,9 +305,9 @@ double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpk
 #endif
 
 #ifdef RECORD_LINESTAT
-  int *restrict ecounter;
-  int *restrict acounter;
-  int *restrict linestat_reduced;
+  int *ecounter;
+  int *acounter;
+  int *linestat_reduced;
 #endif
 
 
@@ -411,9 +411,6 @@ int k_stat_from_ff;
 int k_stat_from_bf;
 int nt_stat_from_gamma;
 int k_stat_from_earlierdecay;
-int nt_stat_to_ionization;
-int nt_stat_to_excitation;
-int nt_stat_to_kpkt;
 int escounter;
 int resonancescatterings;
 int cellcrossings;
@@ -484,9 +481,9 @@ double get_ion_stats(const int modelgridindex, const int element, const int ion,
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue);
 
 int maxion;
-// FILE *restrict tau_file;
-// FILE *restrict tb_file;
-// FILE *restrict heating_file;
+// FILE *tau_file;
+// FILE *tb_file;
+// FILE *heating_file;
 
 short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid

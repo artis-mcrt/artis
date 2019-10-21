@@ -218,7 +218,7 @@ void radfield_jblue_init(void)
 
 static void realloc_detailed_lines(const int new_size)
 {
-  detailed_lineindicies = realloc(detailed_lineindicies, new_size * sizeof(int));
+  detailed_lineindicies = (int *) realloc(detailed_lineindicies, new_size * sizeof(int));
   if (detailed_lineindicies == NULL)
   {
     printout("ERROR: Not enough memory to reallocate detailed Jblue estimator line list\n");
@@ -229,10 +229,10 @@ static void realloc_detailed_lines(const int new_size)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
-      prev_Jb_lu_normed[modelgridindex] = realloc(
+      prev_Jb_lu_normed[modelgridindex] = (struct Jb_lu_estimator *) realloc(
         prev_Jb_lu_normed[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
 
-      Jb_lu_raw[modelgridindex] = realloc(
+      Jb_lu_raw[modelgridindex] = (struct Jb_lu_estimator *) realloc(
         Jb_lu_raw[modelgridindex], new_size * sizeof(struct Jb_lu_estimator));
 
       if (prev_Jb_lu_normed[modelgridindex] == NULL || Jb_lu_raw[modelgridindex] == NULL)
@@ -371,8 +371,8 @@ void radfield_init(int my_rank)
     {
       #if (DETAILED_BF_ESTIMATORS_ON)
       {
-        bfrate_raw[modelgridindex] = calloc(nbfcontinua, sizeof(double));
-        prev_bfrate_normed[modelgridindex] = calloc(nbfcontinua, sizeof(float));
+        bfrate_raw[modelgridindex] = (double *) calloc(nbfcontinua, sizeof(double));
+        prev_bfrate_normed[modelgridindex] = (float *) calloc(nbfcontinua, sizeof(float));
 
         #if (DETAILED_BF_ESTIMATORS_BYTYPE)
         bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(nbfcontinua, sizeof(struct bfratecontrib *));
@@ -453,7 +453,6 @@ void initialise_photoionestimators(void)
 }
 
 
-inline
 int radfield_get_Jblueindex(const int lineindex)
 // returns -1 if the line does not have a Jblue estimator
 {
@@ -499,7 +498,6 @@ int radfield_get_Jblueindex(const int lineindex)
 }
 
 
-inline
 double radfield_get_Jb_lu(const int modelgridindex, const int jblueindex)
 {
   assert(jblueindex >= 0);
@@ -508,7 +506,6 @@ double radfield_get_Jb_lu(const int modelgridindex, const int jblueindex)
 }
 
 
-inline
 int radfield_get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex)
 {
   assert(jblueindex >= 0);
@@ -832,7 +829,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
         const int oldlistsize = bfrate_raw_bytype_size[modelgridindex][allcontindex];
         if (oldlistsize % 16 == 0)
         {
-          bfrate_raw_bytype[modelgridindex][allcontindex] = realloc(
+          bfrate_raw_bytype[modelgridindex][allcontindex] = (struct bfratecontrib *) realloc(
             bfrate_raw_bytype[modelgridindex][allcontindex], (oldlistsize + 16) * sizeof(struct bfratecontrib));
 
           assert(bfrate_raw_bytype[modelgridindex][allcontindex] != NULL);
@@ -1981,7 +1978,7 @@ int radfield_integrate(
 {
   if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {
-    double *pts = malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
+    double *pts = (double *) malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
     int binindex_a = select_bin(nu_a);
     int binindex_b = select_bin(nu_b);
     int npts = 0;

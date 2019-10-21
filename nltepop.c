@@ -1210,12 +1210,12 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
     //      if (get_groundlevelpop(modelgridindex,element,ion) > (1.2*MINPOP))
     if (get_abundance(modelgridindex, element) > 0.0)
     {
-      if ((rate_matrix = calloc((nlte_size)*(nlte_size), sizeof(double))) == NULL)
+      if ((rate_matrix = (double *) calloc((nlte_size)*(nlte_size), sizeof(double))) == NULL)
       {
         printout("Cannot allocate NLTE rate matrix memory.\n");
       }
 
-      if ((balance_vector = calloc((nlte_size), sizeof(double))) == NULL)
+      if ((balance_vector = (double *) calloc((nlte_size), sizeof(double))) == NULL)
       {
         printout("Cannot allocate NLTE vector memory.\n");
       }
