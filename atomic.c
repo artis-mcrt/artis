@@ -35,7 +35,7 @@ extern inline double photoionization_crosssection(int element, int ion, int leve
 extern inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
 
-static long get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
+static int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
 /// Returns the index of the continuum associated to the given level.
 {
   return elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
@@ -54,7 +54,7 @@ int get_phixtargetindex(const int element, const int ion, const int level, const
 }
 
 
-long get_continuumindex(int element, int ion, int level, int upperionlevel)
+int get_continuumindex(int element, int ion, int level, int upperionlevel)
 /// Returns the index of the continuum associated to the given level.
 {
   const int phixstargetindex = get_phixtargetindex(element, ion, level, upperionlevel);
