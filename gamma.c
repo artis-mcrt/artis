@@ -24,12 +24,11 @@ static const int RED_OF_LIST = -956;  // must be negative
 struct gamma_ll
 {
   enum radionuclides *nuclidetype; // is it a Ni56, Co56, a fake line, etc
-  int *index;               // which of the lines of that element is it
-  int total;                // the total number of lines in the list
+  int *index;               // which of the lines of that element is it */
+  int total;                // the total number of lines in the list */
 };
 
 static struct gamma_ll gam_line_list;
-
 
 static double read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay

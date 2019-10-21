@@ -514,8 +514,6 @@ typedef struct rpkt_cont_opacity_struct
   bool recalculate_required; // e.g. when cell or timestep has changed
 } rpkt_cont_opacity_struct;
 
-
-
 /// Cell history
 ///============================================================================
 // typedef struct coolinglist_contributions
