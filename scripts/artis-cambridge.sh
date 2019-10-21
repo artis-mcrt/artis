@@ -65,7 +65,7 @@ module load gsl/2.4
 application="./sn3d"
 
 #! Run options for the application:
-options=""
+options="-w 36"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory

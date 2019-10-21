@@ -598,6 +598,35 @@ int main(int argc, char** argv)
   const time_t real_time_start = time(NULL);
   printout("time at start %d\n", real_time_start);
 
+  #ifdef WALLTIMELIMITSECONDS
+  int walltimelimitseconds = WALLTIMELIMITSECONDS;
+  #else
+  int walltimelimitseconds = -1;
+  #endif
+
+  int opt;
+  while ((opt = getopt(argc, argv, "w:")) != -1) {
+    switch (opt)
+    {
+      case 'w':
+        printout("Command line argument specifies wall time hours '%s', setting ", optarg);
+        const float walltimehours = strtof(optarg, NULL);
+        walltimelimitseconds = walltimehours * 60;
+        printout("walltimelimitseconds = %d\n", walltimelimitseconds);
+        break;
+
+      // case 'p':
+      //   printout("Command line argument specifies number of packets '%s', setting ", optarg);
+      //   npkts = (int) strtol(optarg, NULL, 10);
+      //   printout("npkts = %d\n", npkts);
+      //   break;
+
+      default:
+        fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+  }
+
   PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
   assert(packets != NULL);
 
@@ -998,10 +1027,11 @@ int main(int argc, char** argv)
           const int estimated_time_per_timestep = time(NULL) - time_timestep_start;
           printout("TIME: time between timesteps is %d seconds (measured packet prop of ts %d and update grid of ts %d)\n", estimated_time_per_timestep, nts_prev, nts);
 
-          #ifdef WALLTIMELIMITSECONDS
+          if (walltimelimitseconds > 0)
+          {
             const int wallclock_used_seconds = time(NULL) - real_time_start;
-            const int wallclock_remaining_seconds = WALLTIMELIMITSECONDS - wallclock_used_seconds;
-            printout("TIMED_RESTARTS: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, WALLTIMELIMITSECONDS);
+            const int wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
+            printout("TIMED_RESTARTS: Used %d of %d seconds of wall time.\n", wallclock_used_seconds, walltimelimitseconds);
 
             if (wallclock_remaining_seconds < (1.5 * estimated_time_per_timestep))
             {
@@ -1016,7 +1046,7 @@ int main(int argc, char** argv)
               printout("TIMED_RESTARTS: Going to continue since remaining time %d s >= 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
             else
               printout("TIMED_RESTARTS: Going to terminate since remaining time %d s < 1.5 * time_per_timestep\n", wallclock_remaining_seconds);
-          #endif
+          }
         }
         time_timestep_start = time(NULL);
 

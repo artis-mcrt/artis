@@ -13,7 +13,7 @@ module load intel/mpi/18.0.3
 
 cd $PBS_O_WORKDIR
 
-mpirun ./sn3d > out.txt
+mpirun ./sn3d -w 24 > out.txt
 
 mkdir ${PBS_JOBID}
 ./artis/scripts/movefiles.sh ${PBS_JOBID}
