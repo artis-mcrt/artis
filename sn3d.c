@@ -51,7 +51,7 @@ static double *ionstats = NULL;
 
 static FILE *initialise_linestat_file(void)
 {
-  FILE *restrict linestat_file = fopen_required("linestat.out", "w");
+  FILE *linestat_file = fopen_required("linestat.out", "w");
 
   for (int i = 0; i < nlines; i++)
     fprintf(linestat_file, "%g ", CLIGHT/linelist[i].nu);
@@ -705,7 +705,7 @@ int main(int argc, char** argv)
   printout("time after zero estimators %d\n",time(NULL));
 
   /// Record the chosen syn_dir
-  FILE *restrict syn_file = fopen_required("syn_dir.txt", "w");
+  FILE *syn_file = fopen_required("syn_dir.txt", "w");
   fprintf(syn_file, "%g %g %g", syn_dir[0], syn_dir[1], syn_dir[2]);
   fclose(syn_file);
   printout("time read syn file %d\n",time(NULL));

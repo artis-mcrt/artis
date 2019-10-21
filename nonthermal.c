@@ -199,8 +199,8 @@ static struct nt_solution_struct *nt_solution;
 // for descending sort
 static int compare_excitation_fractions(const void *p1, const void *p2)
 {
-  const struct nt_excitation_struct *elem1 = p1;
-  const struct nt_excitation_struct *elem2 = p2;
+  const struct nt_excitation_struct *elem1 = (struct nt_excitation_struct *) p1;
+  const struct nt_excitation_struct *elem2 = (struct nt_excitation_struct *) p2;
 
  if (elem1->frac_deposition < elem2->frac_deposition)
     return 1;
@@ -214,8 +214,8 @@ static int compare_excitation_fractions(const void *p1, const void *p2)
 // for ascending sort
 static int compare_excitation_lineindicies(const void *p1, const void *p2)
 {
-  const struct nt_excitation_struct *elem1 = p1;
-  const struct nt_excitation_struct *elem2 = p2;
+  const struct nt_excitation_struct *elem1 = (struct nt_excitation_struct *) p1;
+  const struct nt_excitation_struct *elem2 = (struct nt_excitation_struct *) p2;
 
  if (elem1->lineindex > elem2->lineindex)
     return 1;
@@ -481,7 +481,7 @@ static void read_collion_data(void)
 
   fscanf(cifile, "%d", &colliondatacount);
   printout("Reading %d collisional transition rows\n", colliondatacount);
-  colliondata = calloc(colliondatacount, sizeof(struct collionrow));
+  colliondata = (struct collionrow *) calloc(colliondatacount, sizeof(struct collionrow));
   int n = 0; // the index of kept rows, skipping rows that aren't in the simulation
   for (int i = 0; i < colliondatacount; i++)
   {
@@ -517,7 +517,7 @@ static void read_collion_data(void)
   }
   printout("Stored %d of %d input shell cross sections\n", n, colliondatacount);
   colliondatacount = n;
-  colliondata = realloc(colliondata, colliondatacount * sizeof(struct collionrow));
+  colliondata = (struct collionrow *) realloc(colliondata, colliondatacount * sizeof(struct collionrow));
   if (colliondata == NULL)
   {
     printout("Could not reallocate colliondata.\n");
@@ -591,7 +591,7 @@ void nt_init(const int my_rank)
             "timestep","modelgridindex","index","energy_ev","source","y");
     fflush(nonthermalfile);
 
-    nt_solution = calloc(npts_model, sizeof(struct nt_solution_struct));
+    nt_solution = (struct nt_solution_struct *) calloc(npts_model, sizeof(struct nt_solution_struct));
 
     long mem_usage_yfunc = 0;
     for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
@@ -610,15 +610,15 @@ void nt_init(const int my_rank)
 
       if (get_numassociatedcells(modelgridindex) > 0)
       {
-        nt_solution[modelgridindex].eff_ionpot = calloc(includedions, sizeof(float));
-        nt_solution[modelgridindex].fracdep_ionization_ion = calloc(includedions, sizeof(double));
+        nt_solution[modelgridindex].eff_ionpot = (float *) calloc(includedions, sizeof(float));
+        nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(includedions, sizeof(double));
 
-        nt_solution[modelgridindex].prob_num_auger = calloc(includedions * (MAX_AUGER_ELECTRONS + 1), sizeof(float));
-        nt_solution[modelgridindex].ionenfrac_num_auger = calloc(includedions * (MAX_AUGER_ELECTRONS + 1), sizeof(float));
+        nt_solution[modelgridindex].prob_num_auger = (float *) calloc(includedions * (MAX_AUGER_ELECTRONS + 1), sizeof(float));
+        nt_solution[modelgridindex].ionenfrac_num_auger = (float *) calloc(includedions * (MAX_AUGER_ELECTRONS + 1), sizeof(float));
 
         if (STORE_NT_SPECTRUM)
         {
-          nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
+          nt_solution[modelgridindex].yfunc = (double *) calloc(SFPTS, sizeof(double));
           assert(nt_solution[modelgridindex].yfunc != NULL);
           mem_usage_yfunc += SFPTS * sizeof(double);
         }
@@ -2230,7 +2230,7 @@ void do_ntlepton(PKT *pkt_ptr)
 
 static bool realloc_frac_excitations_list(const int modelgridindex, const int newsize)
 {
-  struct nt_excitation_struct *newptr = realloc(
+  struct nt_excitation_struct *newptr = (struct nt_excitation_struct *) realloc(
     nt_solution[modelgridindex].frac_excitations_list,
     newsize * sizeof(struct nt_excitation_struct));
 
@@ -2961,7 +2961,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 
   if (!STORE_NT_SPECTRUM)
   {
-    nt_solution[modelgridindex].yfunc = calloc(SFPTS, sizeof(double));
+    nt_solution[modelgridindex].yfunc = (double *) calloc(SFPTS, sizeof(double));
   }
 
   gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);

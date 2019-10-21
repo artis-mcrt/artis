@@ -120,14 +120,15 @@ void init_gamma_linelist(void)
 
   double energy_last = 0.0;
   int next = -99;
-  enum radionuclides next_type = -99;
+  enum radionuclides next_type;
 
   for (int i = 0; i < total_lines; i++)
   {
     double energy_try = 1.e50;
 
-    for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
     {
+      enum radionuclides iso = (enum radionuclides) isoint;
       // printout("iso %d nlines %d\n", iso, gamma_spectra[iso].nlines);
       for (int j = 0; j < gamma_spectra[iso].nlines; j++)
       {
@@ -141,6 +142,7 @@ void init_gamma_linelist(void)
       }
     }
 
+    assert(next >= 0);
     gam_line_list.nuclidetype[i] = next_type;
     gam_line_list.index[i] = next;
     energy_last = energy_try;
@@ -530,7 +532,7 @@ static void compton_scatter(PKT *pkt_ptr, double t_current)
 }
 
 
-double do_gamma(PKT *restrict pkt_ptr, double t1, double t2)
+double do_gamma(PKT *pkt_ptr, double t1, double t2)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -798,15 +800,15 @@ int get_nul(double freq)
 
     while (too_high != too_low + 1)
   	{
-  	  const int try = (too_high + too_low)/2;
-  	  const double freq_try = get_gam_freq(try);
+  	  const int tryindex = (too_high + too_low) / 2;
+  	  const double freq_try = get_gam_freq(tryindex);
   	  if (freq_try >= freq)
 	    {
-	      too_high = try;
+	      too_high = tryindex;
 	    }
   	  else
 	    {
-	      too_low = try;
+	      too_low = tryindex;
 	    }
   	}
 

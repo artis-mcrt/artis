@@ -361,8 +361,9 @@ static void allocate_nonemptycells(void)
   set_rho(MMODELGRID, 0.);
   set_nne(MMODELGRID, 0.);
   set_ffegrp(MMODELGRID, 0.);
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
   {
+    const enum radionuclides iso = (enum radionuclides) isoint;
     set_modelinitradioabund(MMODELGRID, iso, 0.);
   }
   set_Te(MMODELGRID, MINTEMP);
@@ -402,8 +403,9 @@ static void allocate_nonemptycells(void)
     {
       set_rhoinit(mgi, 0.);
       set_rho(mgi, 0.);
-      for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+      for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
       {
+        const enum radionuclides iso = (enum radionuclides) isoint;
         set_modelinitradioabund(mgi, iso, 0.);
       }
     }
@@ -824,7 +826,7 @@ static void read_grid_restart_data(const int timestep)
   sprintf(filename, "gridsave_ts%d.tmp", timestep);
 
   printout("READIN GRID SNAPSHOT from %s\n", filename);
-  FILE *restrict gridsave_file = fopen_required(filename, "r");
+  FILE *gridsave_file = fopen_required(filename, "r");
 
   int ntstep_in;
   fscanf(gridsave_file, "%d ", &ntstep_in);

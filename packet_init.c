@@ -417,7 +417,7 @@ void write_packets(char filename[], PKT *pkt)
 void read_packets(char filename[], PKT *pkt)
 {
   FILE *packets_file = fopen_required(filename, "r");
-  char *line = malloc(sizeof(char) * 4096);
+  char *line = (char *) malloc(sizeof(char) * 4096);
 
   int packets_read = 0;
   while (!feof(packets_file))
@@ -441,7 +441,7 @@ void read_packets(char filename[], PKT *pkt)
     int pkt_type_in;
     sscanf(linepos, "%d %d %d%n", &pkt[i].number, &pkt[i].where, &pkt_type_in, &offset);
     linepos += offset;
-    pkt[i].type = pkt_type_in;
+    pkt[i].type = (enum packet_type) pkt_type_in;
 
     sscanf(linepos, "%lg %lg %lg%n", &pkt[i].pos[0], &pkt[i].pos[1], &pkt[i].pos[2], &offset);
     linepos += offset;
@@ -452,7 +452,7 @@ void read_packets(char filename[], PKT *pkt)
     int last_cross_in;
     sscanf(linepos, "%d%n", &last_cross_in, &offset);
     linepos += offset;
-    pkt[i].last_cross = last_cross_in;
+    pkt[i].last_cross = (enum cell_boundary) last_cross_in;
 
     sscanf(linepos, "%lg%n", &pkt[i].tdecay, &offset);
     linepos += offset;
@@ -463,7 +463,7 @@ void read_packets(char filename[], PKT *pkt)
     int escape_type;
     sscanf(linepos, "%d %d %d%n", &escape_type, &pkt[i].escape_time, &pkt[i].scat_count, &offset);
     linepos += offset;
-    pkt[i].escape_type = escape_type;
+    pkt[i].escape_type = (enum packet_type) escape_type;
 
     sscanf(linepos, "%d %d %d%n", &pkt[i].next_trans, &pkt[i].interactions, &pkt[i].last_event, &offset);
     linepos += offset;

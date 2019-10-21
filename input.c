@@ -49,7 +49,7 @@ static void read_phixs_data_table(
     assert(upperlevel >= 0);
     elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
     mem_usage_phixs += sizeof(phixstarget_entry);
-    if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
+    if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
       abort();
@@ -96,7 +96,7 @@ static void read_phixs_data_table(
     {
       elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
       mem_usage_phixs += sizeof(phixstarget_entry);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = calloc(1, sizeof(phixstarget_entry))) == NULL)
+      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
         abort();
@@ -126,14 +126,14 @@ static void read_phixs_data_table(
         elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
 
       mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff = calloc(TABLESIZE, sizeof(double))) == NULL)
+      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize spontrecombcoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
       }
       #if (!NO_LUT_PHOTOION)
       mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff = calloc(TABLESIZE, sizeof(double))) == NULL)
+      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
@@ -141,14 +141,14 @@ static void read_phixs_data_table(
       #endif
       #if (!NO_LUT_BFHEATING)
       mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff = calloc(TABLESIZE, sizeof(double))) == NULL)
+      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
       }
       #endif
       mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff = calloc(TABLESIZE, sizeof(double))) == NULL)
+      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize bfcooling table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
@@ -190,7 +190,7 @@ static void read_phixs_data(void)
   long mem_usage_phixsderivedcoeffs = 0;
   printout("readin phixs data\n");
 
-  FILE *restrict phixsdata = fopen_required("phixsdata_v2.txt", "r");
+  FILE *phixsdata = fopen_required("phixsdata_v2.txt", "r");
 
   fscanf(phixsdata,"%d\n",&NPHIXSPOINTS);
   assert(NPHIXSPOINTS > 0);
@@ -311,7 +311,7 @@ static void read_ion_levels(
       /// store the possible downward transitions from the current level in following order to memory
       ///     A_level,level-1; A_level,level-2; ... A_level,1
       /// entries which are not explicitly set are zero (the zero is set/initialized by calloc!)
-      if ((transitions[level].to = calloc(level, sizeof(int))) == NULL)
+      if ((transitions[level].to = (int *) calloc(level, sizeof(int))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize transitionlist ... abort\n");
         abort();
@@ -384,7 +384,7 @@ static transitiontable_entry *read_ion_transitions(
           if (stoplevel >= nlevels_requiretransitions_upperlevels)
             stoplevel = nlevels_requiretransitions_upperlevels - 1;
         }
-        else if (lower > prev_lower && prev_upper < nlevels_requiretransitions_upperlevels - 1)
+        else if ((lower > prev_lower) && prev_upper < (nlevels_requiretransitions_upperlevels - 1))
         {
           // we've moved onto another lower level, but the previous one was missing some required transitions
           stoplevel = nlevels_requiretransitions_upperlevels - 1;
@@ -400,7 +400,7 @@ static transitiontable_entry *read_ion_transitions(
             continue;
           // printout("+adding transition index %d Z=%02d ionstage %d lower %d upper %d\n", i, Z, ionstage, prev_lower, tmplevel);
           (*tottransitions)++;
-          transitiontable = realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
+          transitiontable = (transitiontable_entry *) realloc(transitiontable, *tottransitions * sizeof(transitiontable_entry));
           if (transitiontable == NULL)
           {
             printout("Could not reallocate transitiontable\n");
@@ -556,7 +556,7 @@ static void add_transitions_to_linelist(
         if (*lineindex % MLINES == 0)
         {
           printout("[info] read_atomicdata: increase linelistsize from %d to %d\n", *lineindex, *lineindex + MLINES);
-          if ((linelist = realloc(linelist, (*lineindex + MLINES) * sizeof(linelist_entry))) == NULL)
+          if ((linelist = (linelist_entry *) realloc(linelist, (*lineindex + MLINES) * sizeof(linelist_entry))) == NULL)
           {
             printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
             abort();
@@ -569,7 +569,7 @@ static void add_transitions_to_linelist(
         const int nupperdowntrans = get_ndowntrans(element, ion, level) + 1;
         set_ndowntrans(element, ion, level, nupperdowntrans);
         if ((elements[element].ions[ion].levels[level].downtrans_lineindicies
-            = realloc(elements[element].ions[ion].levels[level].downtrans_lineindicies, nupperdowntrans * sizeof(int))) == NULL)
+            = (int *) realloc(elements[element].ions[ion].levels[level].downtrans_lineindicies, nupperdowntrans * sizeof(int))) == NULL)
         {
           printout("[fatal] input: not enough memory to reallocate downtranslist ... abort\n");
           abort();
@@ -581,7 +581,7 @@ static void add_transitions_to_linelist(
         const int nloweruptrans = get_nuptrans(element, ion, targetlevel) + 1;
         set_nuptrans(element, ion, targetlevel, nloweruptrans);
         if ((elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies
-            = realloc(elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies, nloweruptrans * sizeof(int))) == NULL)
+            = (int *) realloc(elements[element].ions[ion].levels[targetlevel].uptrans_lineindicies, nloweruptrans * sizeof(int))) == NULL)
         {
           printout("[fatal] input: not enough memory to reallocate uptranslist ... abort\n");
           abort();
@@ -696,9 +696,9 @@ static void read_atomicdata_files(void)
   int totaldowntrans = 0;
 
   ///open atomic data file
-  FILE *restrict compositiondata = fopen_required("compositiondata.txt", "r");
+  FILE *compositiondata = fopen_required("compositiondata.txt", "r");
 
-  FILE *restrict adata = fopen_required("adata.txt", "r");
+  FILE *adata = fopen_required("adata.txt", "r");
 
   /// initialize atomic data structure to number of elements
   fscanf(compositiondata,"%d",&nelements);
@@ -707,7 +707,7 @@ static void read_atomicdata_files(void)
     printout("ERROR: nelements = %d > %d MELEMENTS", nelements, MELEMENTS);
     abort();
   }
-  if ((elements = calloc(nelements, sizeof(elementlist_entry))) == NULL)
+  if ((elements = (elementlist_entry *) calloc(nelements, sizeof(elementlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
     abort();
@@ -715,7 +715,7 @@ static void read_atomicdata_files(void)
   //printout("elements initialized\n");
 
   /// Initialize the linelist
-  if ((linelist = calloc(MLINES, sizeof(linelist_entry))) == NULL)
+  if ((linelist = (linelist_entry *) calloc(MLINES, sizeof(linelist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize linelist ... abort\n");
     abort();
@@ -731,7 +731,7 @@ static void read_atomicdata_files(void)
     printout("[info] read_atomicdata: homogeneous abundances as defined in compositiondata.txt are active\n");
 
   /// open transition data file
-  FILE *restrict transitiondata = fopen_required("transitiondata.txt", "r");
+  FILE *transitiondata = fopen_required("transitiondata.txt", "r");
 
   int lineindex = 0;  ///counter to determine the total number of lines, initialisation
   int uniqueionindex = -1; // index into list of all ions of all elements
@@ -899,7 +899,7 @@ static void read_atomicdata_files(void)
       assert(transdata_ionstage_in == ionstage);
 
       /// read in the level and transition data for this ion
-      transitiontable_entry *transitiontable = calloc(tottransitions, sizeof(transitiontable_entry));
+      transitiontable_entry *transitiontable = (transitiontable_entry *) calloc(tottransitions, sizeof(transitiontable_entry));
 
       /// load transition table for the CURRENT ion to temporary memory
       if (transitiontable == NULL)
@@ -947,12 +947,12 @@ static void read_atomicdata_files(void)
 //             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
 //             abort();
 //           }
-      if ((elements[element].ions[ion].Alpha_sp = calloc(TABLESIZE, sizeof(float))) == NULL)
+      if ((elements[element].ions[ion].Alpha_sp = (float *) calloc(TABLESIZE, sizeof(float))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
         abort();
       }
-      if ((elements[element].ions[ion].levels = calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
+      if ((elements[element].ions[ion].levels = (levellist_entry *) calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n",element,ion);
         abort();
@@ -961,7 +961,7 @@ static void read_atomicdata_files(void)
 
       /// now we need to readout the data for all those levels, write them to memory
       /// and set up the list of possible transitions for each level
-      if ((transitions = calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
+      if ((transitions = (transitions_t *) calloc(nlevelsmax, sizeof(transitions_t))) == NULL)
       {
         printout("[fatal] input: not enough memory to allocate transitions ... abort\n");
         abort();
@@ -1008,7 +1008,7 @@ static void read_atomicdata_files(void)
   if (nlines > 0)
   {
     /// and release empty memory from the linelist
-    if ((linelist = realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
+    if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
     {
       printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
       abort();
@@ -1041,7 +1041,7 @@ static void read_atomicdata_files(void)
   /// Save sorted linelist into a file
   // if (rank_global == 0)
   // {
-  //   FILE *restrict linelist_file = fopen_required("linelist.dat", "w");
+  //   FILE *linelist_file = fopen_required("linelist.dat", "w");
   //   fprintf(linelist_file,"%d\n",nlines);
   //   for (int i = 0; i < nlines; i++)
   //   {
@@ -1332,7 +1332,7 @@ static void write_bflist_file(int includedphotoiontransitions)
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
-      const int nlevels = get_ionisinglevels(element,ion);
+      const int nlevels = get_ionisinglevels(element, ion);
       for (int level = 0; level < nlevels; level++)
       {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
@@ -1423,11 +1423,11 @@ static void setup_coolinglist(void)
 }
 
 
-static int compare_phixslistentry_bynuedge(const void *restrict p1, const void *restrict p2)
+static int compare_phixslistentry_bynuedge(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  const fullphixslist_t *restrict a1 = (fullphixslist_t *)(p1);
-  const fullphixslist_t *restrict a2 = (fullphixslist_t *)(p2);
+  const fullphixslist_t *a1 = (fullphixslist_t *)(p1);
+  const fullphixslist_t *a2 = (fullphixslist_t *)(p2);
 
   double edge_diff = a1->nu_edge - a2->nu_edge;
   if (edge_diff < 0)
@@ -1439,11 +1439,11 @@ static int compare_phixslistentry_bynuedge(const void *restrict p1, const void *
 }
 
 
-static int compare_groundphixslistentry_bynuedge(const void *restrict p1, const void *restrict p2)
+static int compare_groundphixslistentry_bynuedge(const void *p1, const void *p2)
 /// Helper function to sort the groundphixslist by ascending threshold frequency.
 {
-  const groundphixslist_t *restrict a1 = (groundphixslist_t *)(p1);
-  const groundphixslist_t *restrict a2 = (groundphixslist_t *)(p2);
+  const groundphixslist_t *a1 = (groundphixslist_t *)(p1);
+  const groundphixslist_t *a2 = (groundphixslist_t *)(p2);
 
   double edge_diff = a1->nu_edge - a2->nu_edge;
   if (edge_diff < 0)
@@ -1741,8 +1741,11 @@ static void show_totmassradionuclides(void)
 
     mtot += mass_in_shell;
 
-    for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+    for (int isoint = 0; isoint < RADIONUCLIDE_COUNT; isoint++)
+    {
+      const enum radionuclides iso = (enum radionuclides) isoint;
       totmassradionuclide[iso] += mass_in_shell * get_modelinitradioabund(mgi, iso);
+    }
 
     mfeg += mass_in_shell * get_ffegrp(mgi);
   }
