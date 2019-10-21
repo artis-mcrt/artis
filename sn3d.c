@@ -12,6 +12,7 @@
 
 #include <unistd.h>
 #include <stdbool.h>
+#include <getopt.h>
 #include "sn3d.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
