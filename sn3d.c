@@ -612,7 +612,7 @@ int main(int argc, char** argv)
       case 'w':
         printout("Command line argument specifies wall time hours '%s', setting ", optarg);
         const float walltimehours = strtof(optarg, NULL);
-        walltimelimitseconds = walltimehours * 60;
+        walltimelimitseconds = walltimehours * 3600;
         printout("walltimelimitseconds = %d\n", walltimelimitseconds);
         break;
 
