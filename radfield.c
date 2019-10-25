@@ -405,7 +405,7 @@ void radfield_init(int my_rank)
 
 /// Initialise estimator arrays which hold the last time steps values (used to damp out
 /// fluctuations over timestep iterations if DO_TITER is defined) to -1.
-void initialise_photoionestimators(void)
+void initialise_prev_titer_photoionestimators(void)
 {
   //for (n = 0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
