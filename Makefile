@@ -4,23 +4,25 @@ GIT_VERSION := $(shell git describe --dirty --always --tags)
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_BRANCH := $(shell git branch | sed -n '/\* /s///p')
 
-#RAIJINDIRAC := $(or $(or $(findstring dirac,$(HOSTNAME)), $(findstring raijin,$(HOSTNAME))), $(findstring juwels,$(HOSTNAME)))
 SYSNAME := $(shell uname -s)
 
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
-	CC = clang
-	# CC = clang-3.8
-	# CC = clang-omp
-	# CC = gcc-9
-	# CC = mpicc
-	# CC = icc
-	INCLUDE = -I/usr/local/include/
-	#-I/usr/local/opt/libiomp/include/libiomp # -I/usr/local/Cellar/gsl/2.4/include  -I/usr/local/opt/gperftools/include
-	LIB = #-L/usr/local/lib/gsl #-L/usr/local/opt/libiomp/lib # -L/usr/local/opt/gperftools/lib
-	CFLAGS = -std=c17 -O3 -fstrict-aliasing -ftree-vectorize -flto -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing $(INCLUDE) # -fopenmp-simd
+	#if using homebrew gsl, gperftools, etc, you might need to add:
+	# export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/local/include/
+	# export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/lib/
+	# to your .zshrc/.bashrc startup script
 
+	CC = clang
+	# CC = gcc-9
+	# CC = icc
+	# CC = mpicc
+	CFLAGS = -std=c17 -O3 -fstrict-aliasing -ftree-vectorize -flto -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF
+
+	CFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
+
+	# CFLAGS += -fopenmp-simd
 	# CFLAGS += -fvectorize
 
 	# enable OpenMP (for Clang)
@@ -31,8 +33,8 @@ ifeq ($(SYSNAME),Darwin)
 	# maybe  -fopt-info-vec-missed
 	#  -fwhole-program
 	# add -lprofiler for gperftools
-
-	LDFLAGS = $(LIB) -lgsl -lgslcblas
+#-Wl
+	LDFLAGS = $(LIB) -lgsl -lgslcblas -lprofiler
 	# sn3d: CFLAGS += -fopenmp
 
 else ifneq (,$(findstring kelvin,$(HOSTNAME)))
@@ -122,31 +124,6 @@ endif
 
 
 
-### Settings for the OPA cluster
-ifeq ($(DOMAIN),opt.rzg.mpg.de)
-  CC    = mpiicc
-  #this requires a
-  #  module load intel
-  #  module load impi
-  #  module load gsl
-  #check available module with module avail
-  #Read gsl now from system wide installation
-  #INCLUDE=/afs/ipp-garching.mpg.de/home/m/mkromer/lib/opa/include/
-  #LIB=/afs/ipp-garching.mpg.de/home/m/mkromer/lib/opa/lib
-  #INCLUDE=/afs/ipp-garching.mpg.de/home/s/ssim/gsl-opa/include/
-  #LIB=/afs/ipp-garching.mpg.de/home/s/ssim/gsl-opa/lib
-  #CFLAGS = -O2 -openmp -I$(INCLUDE)
-  #CFLAGS = -m64 -O2 -mcmodel medium -shared-intel -I$(INCLUDE) -DMPI_ON
-  CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DMPI_ON
-  #"-mcmodel medium -shared-intel" are needed to hold > 2GB static data
-  #in memory http://software.intel.com/en-us/forums/showthread.php?t=43717#18089
-  #LDFLAGS= -L$(LIB) -lgsl -lgslcblas -lm
-  LDFLAGS= $(GSL_LDFLAGS) -lgsl -lgslcblas -lm
-  exspec exgamma: override CFLAGS = -m64 -O2 -mcmodel medium -shared-intel $(GSL_CFLAGS) -DDO_EXSPEC
-endif
-
-
-
 ### Settings for the RZG BlueGene
 ifeq ($(HOSTNAME),genius1.rzg.mpg.de)
   CC     = mpixlc_r
@@ -211,7 +188,7 @@ sn3d: clean version
 	$(CC) $(CFLAGS) $(sn3d_files) $(LDFLAGS) -o sn3d
 
 sn3ddebug: clean version $(sn3d_objects)
-	$(CC) -Wall -O0 -g -std=c11 $(INCLUDE) $(sn3d_objects) $(LDFLAGS) -o sn3d
+	$(CC) $(CFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
 exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c update_grid.c update_packets.c gamma.c boundary.c macroatom.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
 
