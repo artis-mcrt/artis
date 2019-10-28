@@ -628,6 +628,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
     switch (selected_action)
     {
       case MA_ACTION_RADDEEXC:
+      {
         #ifdef DEBUG_ON
         // if (debuglevel == 2)
         // {
@@ -655,8 +656,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
         end_packet = true;
         break;
+      }
 
       case MA_ACTION_COLDEEXC:
+      {
         ///collisional deexcitation of macro atom => convert the packet into a k-packet
         #ifdef DEBUG_ON
           if (debuglevel == 2)
@@ -685,8 +688,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
         #endif
         break;
+      }
 
       case MA_ACTION_INTERNALDOWNSAME:
+      {
         #ifdef DEBUG_ON
           if (debuglevel == 2)
             printout("[debug] do_ma:   internal downward jump within current ionstage\n");
@@ -726,8 +731,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           }
         #endif
         break;
+      }
 
       case MA_ACTION_RADRECOMB:
+      {
         /// Radiative recombination of MA: emitt a continuum-rpkt
         #ifdef DEBUG_ON
           // if (debuglevel == 2)
@@ -746,8 +753,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current);
         end_packet = true;
         break;
+      }
 
       case MA_ACTION_COLRECOMB:
+      {
         ///collisional recombination of macro atom => convert the packet into a k-packet
         #ifdef DEBUG_ON
           if (debuglevel == 2)
@@ -776,8 +785,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
         #endif
         break;
+      }
 
       case MA_ACTION_INTERNALDOWNLOWER:
+      {
         #ifdef DEBUG_ON
           if (debuglevel == 2)
             printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
@@ -796,6 +807,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
 
         const int nlevels = get_ionisinglevels(element, ion - 1);
         //nlevels = get_ionisinglevels(element,ion-1);
+        int lower;
         for (lower = 0; lower < nlevels; lower++)
         {
           const double epsilon_target = epsilon(element, ion - 1, lower);
@@ -837,8 +849,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
           }
         #endif
         break;
+      }
 
       case MA_ACTION_INTERNALUPSAME:
+      {
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_ma:   internal upward jump within current ionstage\n");
           pkt_ptr->interactions += 1;
@@ -863,8 +877,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         ///and set the macroatom's new state
         level = upper;
         break;
+      }
 
       case MA_ACTION_INTERNALUPHIGHER:
+      {
         #ifdef DEBUG_ON
           if (debuglevel == 2) printout("[debug] do_ma:   internal upward jump to next ionstage\n");
           pkt_ptr->interactions += 1;
@@ -885,8 +901,10 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         #endif
 
         break;
+      }
 
       case MA_ACTION_INTERNALUPHIGHERNT:
+      {
         pkt_ptr->interactions += 1;
         // ion += 1;
         #if (TRACK_ION_STATS)
@@ -902,10 +920,13 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
         #endif
         // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion, level);
         break;
+      }
 
       case MA_ACTION_COUNT:
+      {
         printout("ERROR: Somehow selected MA_ACTION_COUNT\n");
         abort();
+      }
     }
   }///endwhile
 
