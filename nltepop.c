@@ -1112,7 +1112,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       set_element_pops_lte(modelgridindex, element);
     }
 
-    if (individual_process_matricies && (timestep % 5 == 0)) // output NLTE stats every nth timestep
+    if (individual_process_matricies && (timestep % 5 == 0) && (nlte_iter == 0)) // output NLTE stats every nth timestep for the first NLTE iteration only
     {
       print_element_rates_summary(element, timestep, nlte_iter, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
