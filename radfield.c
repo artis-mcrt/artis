@@ -1767,7 +1767,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
   {
     fprintf(gridsave_file, "%d\n", nbfcontinua);
 
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
@@ -1791,7 +1791,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
     }
   }
 
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -1882,7 +1882,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
     fscanf(gridsave_file, "%d\n", &gridsave_nbf_in);
     assert(gridsave_nbf_in == nbfcontinua);
 
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
@@ -1892,6 +1892,10 @@ void radfield_read_restart_data(FILE *gridsave_file)
         for (int i = 0; i < nbfcontinua; i++)
         {
           fscanf(gridsave_file, "%g ", &prev_bfrate_normed[modelgridindex][i]);
+          if (!normed_bfrates_available && prev_bfrate_normed[modelgridindex][i] > 0.)
+          {
+            normed_bfrates_available = true;
+          }
         }
       }
     }
@@ -1916,7 +1920,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
     }
   }
 
-  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
