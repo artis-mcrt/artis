@@ -602,7 +602,7 @@ double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
       //   pkt_ptr->nu_cmf = sample_planck(T_e);
       // }
 
-      printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
+      // printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
 
       // and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr, t_current);
