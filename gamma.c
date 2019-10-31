@@ -31,7 +31,7 @@ struct gamma_ll
 static struct gamma_ll gam_line_list;
 
 
-static double read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
+static void read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
 // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
 {
   assert(isotope < RADIONUCLIDE_COUNT);
@@ -42,8 +42,8 @@ static double read_gamma_spectrum(enum radionuclides isotope, const char filenam
 
   gamma_spectra[isotope].nlines = nlines;
 
-  gamma_spectra[isotope].energy = (double *) malloc(nlines * sizeof(double));
-  gamma_spectra[isotope].probability = (double *) malloc(nlines * sizeof(double));
+  gamma_spectra[isotope].energy = (double *) calloc(nlines, sizeof(double));
+  gamma_spectra[isotope].probability = (double *) calloc(nlines, sizeof(double));
 
   double E_gamma_avg = 0.0;
   for (int n = 0; n < nlines; n++)
@@ -57,7 +57,7 @@ static double read_gamma_spectrum(enum radionuclides isotope, const char filenam
   }
   fclose(filein);
 
-  return E_gamma_avg;
+  set_nucdecayenergygamma(isotope, E_gamma_avg);
 }
 
 
@@ -68,23 +68,23 @@ static void read_decaydata(void)
     gamma_spectra[iso].nlines = 0;
     gamma_spectra[iso].energy = NULL;
     gamma_spectra[iso].probability = NULL;
+    set_nucdecayenergygamma(iso, 0.);
   }
 
-  E56NI = read_gamma_spectrum(NUCLIDE_NI56, "ni_lines.txt");
+  read_gamma_spectrum(NUCLIDE_NI56, "ni_lines.txt");
 
-  E56CO_GAMMA = read_gamma_spectrum(NUCLIDE_CO56, "co_lines.txt");
-  /// Average energy per gamma line of Co56 decay and positron annihilation
-  /// For total deposited energy we need to add the kinetic energy per emitted positron
-  E56CO = E56CO_GAMMA + 0.63 * MEV * 0.19;
+  read_gamma_spectrum(NUCLIDE_CO56, "co_lines.txt");
 
-  E48V = read_gamma_spectrum(NUCLIDE_V48, "v48_lines.txt");
+  read_gamma_spectrum(NUCLIDE_V48, "v48_lines.txt");
 
-  E48CR = read_gamma_spectrum(NUCLIDE_CR48, "cr48_lines.txt");
+  read_gamma_spectrum(NUCLIDE_CR48, "cr48_lines.txt");
 
-  E57NI_GAMMA = read_gamma_spectrum(NUCLIDE_NI57, "ni57_lines.txt");
-  E57NI = E57NI_GAMMA + 0.354 * MEV * 0.436;
+  read_gamma_spectrum(NUCLIDE_NI57, "ni57_lines.txt");
 
-  E57CO = read_gamma_spectrum(NUCLIDE_CO57, "co57_lines.txt");
+  read_gamma_spectrum(NUCLIDE_CO57, "co57_lines.txt");
+
+  set_nucdecayenergygamma(NUCLIDE_FE52, 0.86 * MEV);
+  set_nucdecayenergygamma(NUCLIDE_MN52, 3.415 * MEV);
 }
 
 
@@ -167,43 +167,38 @@ static void choose_gamma_ray(PKT *pkt_ptr)
   // Routine to choose which gamma ray line it'll be.
 
   enum radionuclides iso;
-  double E_gamma;  // Average energy per gamma line of a decay
   switch (pkt_ptr->type)
   {
     case TYPE_56NI_PELLET:
       iso = NUCLIDE_NI56;
-      E_gamma = E56NI;
       break;
 
     case TYPE_56CO_PELLET:
       iso = NUCLIDE_CO56;
-      E_gamma = E56CO_GAMMA;
       break;
 
     case TYPE_57NI_PELLET:
       iso = NUCLIDE_NI57;
-      E_gamma = E57NI_GAMMA;
       break;
 
     case TYPE_57CO_PELLET:
       iso = NUCLIDE_CO57;
-      E_gamma = E57CO;
       break;
 
     case TYPE_48CR_PELLET:
       iso = NUCLIDE_CR48;
-      E_gamma = E48CR;
       break;
 
     case TYPE_48V_PELLET:
       iso = NUCLIDE_V48;
-      E_gamma = E48V;
       break;
 
     default:
       printout("Unrecognised pellet. Abort.\n");
       abort();
   }
+
+  double E_gamma = nucdecayenergygamma(iso); // Average energy per gamma line of a decay
 
   const double zrand = gsl_rng_uniform(rng);
   int nselected = -1;
