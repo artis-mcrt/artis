@@ -2119,6 +2119,7 @@ static void read_ejecta_model(enum model_types model_type)
   {
     case RHO_UNIFORM:
     {
+      assert(false); // needs to be reimplemented using spherical coordinate mode
       mtot = 1.39 * MSUN;
       totmassradionuclide[NUCLIDE_NI56] = 0.625 * MSUN;
       vmax = 1.e9;

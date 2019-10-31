@@ -417,17 +417,17 @@ bool estim_switch(int nts)
 //
 //   if (gam_line_list.type[lindex] == NUCLIDE_NI56)
 //   {
-//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
-//         * exp(-single_t/T56NI) / T56NI *
+//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / nucmass(NUCLIDE_NI56) / 4. / PI
+//         * exp(-single_t/meanlife(NUCLIDE_NI56)) / meanlife(NUCLIDE_NI56) *
 //         ni56_spec.probability[gam_line_list.index[lindex]]
 //         * ni56_spec.energy[gam_line_list.index[lindex]]
 //          * f56ni(grid_ptr)*tfact;
 //   }
 //   else if (gam_line_list.type[lindex] == NUCLIDE_CO56)
 //   {
-//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MNI56 / 4. / PI
-//       * (exp(-single_t/T56NI) - exp(-single_t/T56CO))
-//       / (T56NI - T56CO)
+//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / nucmass(NUCLIDE_NI56) / 4. / PI
+//       * (exp(-single_t/meanlife(NUCLIDE_NI56)) - exp(-single_t/meanlife(NUCLIDE_CO56)))
+//       / (meanlife(NUCLIDE_NI56) - meanlife(NUCLIDE_CO56))
 //       * co56_spec.probability[gam_line_list.index[lindex]]
 //       * co56_spec.energy[gam_line_list.index[lindex]]
 //       * f56ni(grid_ptr) * tfact;
@@ -439,8 +439,8 @@ bool estim_switch(int nts)
 //   }
 //   else if (gam_line_list.type[lindex] == NUCLIDE_CR48)
 //   {
-//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
-//         * exp(-single_t/T48CR) / T48CR
+//     emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / nucmass(NUCLIDE_CR48) / 4. / PI
+//         * exp(-single_t/meanlife(NUCLIDE_CR48)) / meanlife(NUCLIDE_CR48)
 //         * cr48_spec.probability[gam_line_list.index[lindex]]
 //         * cr48_spec.energy[gam_line_list.index[lindex]]
 //         * f48cr(grid_ptr)*tfact;
@@ -448,9 +448,9 @@ bool estim_switch(int nts)
 //   else if (gam_line_list.type[lindex] == NUCLIDE_V48)
 //   {
 //
-//       emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / MCR48 / 4. / PI
-//           * (exp(-single_t/T48CR) - exp(-single_t/T48V))
-//           / (T48CR - T48V)
+//       emitt_energy = get_rhoinit(grid_ptr->modelgridindex) / nucmass(NUCLIDE_CR48) / 4. / PI
+//           * (exp(-single_t/meanlife(NUCLIDE_CR48)) - exp(-single_t/meanlife(NUCLIDE_V48)))
+//           / (meanlife(NUCLIDE_CR48) - meanlife(NUCLIDE_V48))
 //           * v48_spec.probability[gam_line_list.index[lindex]]
 //           * v48_spec.energy[gam_line_list.index[lindex]]
 //           * f48cr(grid_ptr)*tfact;

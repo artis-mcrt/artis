@@ -128,42 +128,11 @@ static const size_t GSLWSIZE = 16384;
 
 #define H_ionpot (13.5979996 * EV)
 
-
-// warning! when these are lower case, the variables represent total masses in the ejecta
-// in upper case, these constants are the masses of each nucleus
-#define MNI57 (57 * MH)                            /// Mass of Ni57
-#define MCO57 (57 * MH)                            /// Mass of Co57
-#define MNI56 (56 * MH)                            /// Mass of Ni56
-#define MCO56 (56 * MH)                            /// Mass of Co56
-#define MFE52 (52 * MH)                            /// Mass of Fe52
-#define MCR48 (48 * MH)                            /// Mass of Cr48
-
 #define MTSTEP 200       // Max number of time steps.
 #define MLINES 500000    // Increase linelist by this blocksize
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
 #define GRID_SPHERICAL1D 2 // radial shells
-
-double E56NI;
-double E56CO;
-double E56CO_GAMMA;
-double E57NI;
-double E57NI_GAMMA;
-double E57CO;
-double E48CR;
-double E48V;
-#define E52FE (0.86*MEV)
-#define E52MN (3.415*MEV)
-
-/* mean lifetimes */
-#define T56NI   (8.80*DAY)
-#define T56CO   (113.7*DAY)
-#define T57NI   (51.36*60)
-#define T57CO   (392.03*DAY)
-#define T48CR   (1.29602*DAY)
-#define T48V    (23.0442*DAY)
-#define T52FE   (0.497429*DAY)
-#define T52MN   (0.0211395*DAY)
 
 #define COOLING_UNDEFINED       -99
 

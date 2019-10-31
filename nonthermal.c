@@ -12,6 +12,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
+#include "nuclear.h"
 #include "update_grid.h"
 #include "sn3d.h"
 
@@ -724,30 +725,6 @@ void nt_init(const int my_rank)
   }
   else
     printout("Tried to initialize the non-thermal solver more than once!\n");
-}
-
-
-static double get_positroninjection_rate_density(const int modelgridindex, const double t)
-// in erg / s / cm^3
-{
-  const double rho = get_rho(modelgridindex);
-
-  // Co56 from Ni56 decays plus what remains of the initial Co56
-  const double co56_positron_dep = (E56CO - E56CO_GAMMA) *
-        (((exp(-t / T56CO) - exp(-t / T56NI)) / (T56CO - T56NI) * get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) / MNI56) +
-         (exp(-t / T56CO) / T56CO * get_modelinitradioabund(modelgridindex, NUCLIDE_CO56) / MCO56)) * rho;
-
-  const double ni57_positron_dep = (E57NI - E57NI_GAMMA) * exp(-t / T57NI) / T57NI * get_modelinitradioabund(modelgridindex, NUCLIDE_NI57) / MNI57 * rho;
-
-  const double v48_positron_dep = (0.290 * 0.499 * MEV) *
-        (exp(-t / T48V) - exp(-t / T48CR)) /
-        (T48V - T48CR) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / MCR48 * rho;
-
-  const double pos_dep_sum = co56_positron_dep + ni57_positron_dep + v48_positron_dep;
-  printout("positroninjection_rate_density(mgi %d time %g): %g erg/s/cm3 = co56 %g + ni57 %g + v48 %g\n",
-          modelgridindex, t, pos_dep_sum, co56_positron_dep, ni57_positron_dep, v48_positron_dep);
-
-  return pos_dep_sum;
 }
 
 

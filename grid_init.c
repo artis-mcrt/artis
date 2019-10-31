@@ -3,6 +3,7 @@
 #include "grid_init.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "nuclear.h"
 #include "radfield.h"
 #include "rpkt.h"
 #include "vectors.h"
@@ -52,12 +53,6 @@ int get_numassociatedcells(const int modelgridindex)
 float get_modelinitradioabund(const int modelgridindex, const enum radionuclides nuclide_type)
 {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
-  if (model_type == RHO_UNIFORM)
-  {
-    // Ni 56 must be handled separate based on a grid pointer instead of a modelgridindex
-    assert(nuclide_type != NUCLIDE_NI56);
-    return 0.;
-  }
 
   if (nuclide_type >= RADIONUCLIDE_COUNT)
   {
@@ -906,57 +901,21 @@ static void assign_temperature(void)
 
   const double tstart = time_step[0].mid;
 
-  const double factor56ni = 1. / 56 / MH * (-1. / (tstart * (- T56CO + T56NI)))
-    * (- E56NI * exp(- tstart / T56NI) * tstart * T56CO - E56NI * exp(- tstart / T56NI) * T56NI * T56CO
-       + E56NI * exp(- tstart / T56NI) * tstart * T56NI + pow(T56NI, 2) * E56NI * exp(- tstart / T56NI)
-       - T56CO * tstart * E56CO * exp(- tstart / T56CO) - pow(T56CO, 2) * E56CO * exp(- tstart / T56CO)
-       + E56CO * tstart * T56NI * exp(- tstart / T56NI) + pow(T56NI, 2) * E56CO * exp(- tstart / T56NI)
-       + E56NI * T56CO * T56NI - E56NI * pow(T56NI, 2) - pow(T56NI, 2) * E56CO + E56CO * pow(T56CO, 2));
-
-  const double factor56co = 1. / 56 / MH * (1. / (tstart * T56CO))
-    * (T56CO * tstart * E56CO * exp(- tstart / T56CO) + pow(T56CO, 2) * E56CO * exp(- tstart / T56CO));
-
-  const double factor57ni = 1. / 57 / MH * (-1. / (tstart * (- T57CO + T57NI)))
-    * (- E57NI * exp(- tstart / T57NI) * tstart * T57CO - E57NI * exp(- tstart / T57NI) * T57NI * T57CO
-       + E57NI * exp(- tstart / T57NI) * tstart * T57NI + pow(T57NI, 2) * E57NI * exp(- tstart / T57NI)
-       - T57CO * tstart * E57CO * exp(- tstart / T57CO) - pow(T57CO, 2) * E57CO * exp(- tstart / T57CO)
-       + E57CO * tstart * T57NI * exp(- tstart / T57NI) + pow(T57NI, 2) * E57CO * exp(- tstart / T57NI)
-       + E57NI * T57CO * T57NI - E57NI * pow(T57NI, 2) - pow(T57NI, 2) * E57CO + E57CO * pow(T57CO, 2));
-
-  const double factor52fe = 1. / 52 / MH * (-1. / (tstart * (- T52MN + T52FE)))
-    * (- E52FE * exp(- tstart / T52FE) * tstart * T52MN - E52FE * exp(- tstart / T52FE) * T52FE * T52MN
-       + E52FE * exp(- tstart / T52FE) * tstart * T52FE + pow(T52FE, 2) * E52FE * exp(- tstart / T52FE)
-       - T52MN * tstart * E52MN * exp(- tstart / T52MN) - pow(T52MN, 2) * E52MN * exp(- tstart / T52MN)
-       + E52MN * tstart * T52FE * exp(- tstart / T52FE) + pow(T52FE, 2) * E52MN * exp(- tstart / T52FE)
-       + E52FE * T52MN * T52FE - E52FE * pow(T52FE, 2) - pow(T52FE, 2) * E52MN + E52MN * pow(T52MN, 2));
-
-  const double factor48cr = 1. / 48 / MH * (-1. / (tstart * (- T48V + T48CR)))
-    * (- E48CR * exp(- tstart / T48CR) * tstart * T48V - E48CR * exp(- tstart / T48CR) * T48CR * T48V
-       + E48CR * exp(- tstart / T48CR) * tstart * T48CR + pow(T48CR, 2) * E48CR * exp(- tstart / T48CR)
-       - T48V * tstart * E48V * exp(- tstart / T48V) - pow(T48V, 2) * E48V * exp(- tstart / T48V)
-       + E48V * tstart * T48CR * exp(- tstart / T48CR) + pow(T48CR, 2) * E48V * exp(- tstart / T48CR)
-       + E48CR * T48V * T48CR - E48CR * pow(T48CR, 2) - pow(T48CR, 2) * E48V + E48V * pow(T48V, 2));
-
   // printout("factor56ni %g\n", factor56ni);
   // printout("factor56co %g\n", factor56co);
   // printout("factor57ni %g\n", factor57ni);
-  //factor56ni = CLIGHT/4/STEBO * E56NI/56/MH;
+  //factor56ni = CLIGHT/4/STEBO * nucdecayenergy(NUCLIDE_NI56)/56/MH;
   /// This works only for the inbuilt Lucy model
-  //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * E56NI/56/MH  / pow(vmax,3);
+  //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * nucdecayenergy(NUCLIDE_NI56)/56/MH  / pow(vmax,3);
   //for (n = 0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
     //mgi = cell[n].modelgridindex;
-    double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(n) * (
-         (factor56ni * get_modelinitradioabund(n, NUCLIDE_NI56)) +
-         (factor56co * get_modelinitradioabund(n, NUCLIDE_CO56)) +
-         (factor57ni * get_modelinitradioabund(n, NUCLIDE_NI57)) +
-         // (factor57co * get_modelinitradioabund(n, NUCLIDE_CO57)) +
-         (factor52fe * get_modelinitradioabund(n, NUCLIDE_FE52)) +
-         (factor48cr * get_modelinitradioabund(n, NUCLIDE_CR48))), 1. / 4.);
+    const double decayedenergy_per_mass = get_decayedenergy_per_ejectamass(n, tstart);
+    double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(n) * decayedenergy_per_mass, 1. / 4.);
 
-    //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/T56NI)), 1./4.);
-    //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/T56NI))/pow(tmin,3), 1./4.);
+    //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/meanlife(NUCLIDE_NI56))), 1./4.);
+    //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/meanlife(NUCLIDE_NI56)))/pow(tmin,3), 1./4.);
     //T_initial = 30615.5;
     if (T_initial < MINTEMP)
     {
@@ -1112,8 +1071,8 @@ void grid_init(int my_rank)
     // Calculate the critical opacity at which opacity_case 3 switches from a
     // regime proportional to the density to a regime independent of the density
     // This is done by solving for tau_sobolev == 1
-    // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
-    rho_crit = ME * CLIGHT * MNI56 / (PI * QE * QE * rho_crit_para * 3000e-8 * tmin);
+    // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * time_step[m].mid;
+    rho_crit = ME * CLIGHT * nucmass(NUCLIDE_NI56) / (PI * QE * QE * rho_crit_para * 3000e-8 * tmin);
     printout("grid_init: rho_crit = %g\n", rho_crit);
 
     if (model_type == RHO_1D_READ)

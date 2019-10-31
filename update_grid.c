@@ -7,6 +7,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
+#include "nuclear.h"
 #include "nltepop.h"
 #include "radfield.h"
 #include "ratecoeff.h"
@@ -36,164 +37,6 @@ void precalculate_partfuncts(int modelgridindex)
     }
   }
 }
-
-static void calculate_double_decay_chain(
-  double initabund1, double meanlife1,
-  double initabund2, double meanlife2,
-  double t_current,
-  double *abund1, double *abund2, double *abund3)
-{
-  // calculate abundances from double decay, e.g., Ni56 -> Co56 -> Fe56
-  // initabund3 is assumed to be zero, so the abundance of species 3 is only from decays of species 2
-
-  const double lambda1 = 1 / meanlife1;
-  const double lambda2 = 1 / meanlife2;
-
-  *abund1 = initabund1 * exp(-lambda1 * t_current);
-
-  *abund2 = (
-    initabund2 * exp(-lambda2 * t_current) +
-    initabund1 * lambda1 / (lambda1 - lambda2) * (exp(-lambda2 * t_current) - exp(-lambda1 * t_current)));
-
-  *abund3 = (
-    (initabund2 + initabund1) * (lambda1 - lambda2) -
-    initabund2 * lambda1 * exp(-lambda2 * t_current) +
-    initabund2 * lambda2 * exp(-lambda2 * t_current) -
-    initabund1 * lambda1 * exp(-lambda2 * t_current) +
-    initabund1 * lambda2 * exp(-lambda1 * t_current)) / (lambda1 - lambda2);
-
-  // printout("calculate_double_decay_chain: initabund1 %g, initabund2 %g\n", initabund1, initabund2);
-  // printout("calculate_double_decay_chain: abund1 %g, abund2 %g abund3 %g\n", abund1, abund2, abund3);
-
-  // ensure that the decays haven't altered the total abundance of all three species
-  assert(fabs((initabund1 + initabund2) - (*abund1 + *abund2 + *abund3)) < 0.001);
-}
-
-
-static void update_abundances(const int modelgridindex, const int timestep, const double t_current)
-/// Updates the mass fractions of elements associated with the decay sequence
-/// (56)Ni -> (56)Co -> (56)Fe at the onset of each timestep
-/// Parameters: - modelgridindex: the grid cell for which to update the abundances
-///             - t_current: current time (here mid of current timestep)
-{
-  const double timediff = t_current - t_model;
-  if (homogeneous_abundances)
-  {
-    const double ni56_in = elements[get_elementindex(28)].abundance; // assume all ni56
-    const double co56_in = elements[get_elementindex(27)].abundance; // assume all co56
-    const double fe_in = elements[get_elementindex(26)].abundance;
-
-    double ni56frac = 0.;
-    double co56frac = 0.;
-    double fe56frac_fromdecay = 0.;
-    calculate_double_decay_chain(ni56_in, T56NI, co56_in, T56CO, timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
-
-    //fe_in = cell[modelgridindex].f_fe_init;
-    for (int element = nelements - 1; element >= 0; element--)
-    {
-      const int atomic_number = get_element(element);
-      if (atomic_number == 28)
-      {
-        const double nifrac = get_stable_abund(modelgridindex, atomic_number) + ni56frac;
-        modelgrid[modelgridindex].composition[element].abundance = nifrac;
-      }
-      else if (atomic_number == 27)
-      {
-        const double cofrac = get_stable_abund(modelgridindex, atomic_number) + co56frac;
-        modelgrid[modelgridindex].composition[element].abundance = cofrac;
-      }
-      else if (atomic_number == 26)
-      {
-        const double fefrac = fe_in + fe56frac_fromdecay;
-        modelgrid[modelgridindex].composition[element].abundance = fefrac;
-      }
-    }
-  }
-  else
-  {
-    // Ni56 -> Co56 -> Fe56
-    // abundances from the input model
-    const double ni56_in = get_modelinitradioabund(modelgridindex, NUCLIDE_NI56);
-    const double co56_in = get_modelinitradioabund(modelgridindex, NUCLIDE_CO56);
-    double ni56frac = 0.;
-    double co56frac = 0.;
-    double fe56frac_fromdecay = 0.;
-    calculate_double_decay_chain(ni56_in, T56NI, co56_in, T56CO, timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
-
-    // Ni57 -> Co57 -> Fe57
-    const double ni57_in = get_modelinitradioabund(modelgridindex, NUCLIDE_NI57);
-    const double co57_in = get_modelinitradioabund(modelgridindex, NUCLIDE_CO57);
-    double ni57frac = 0.;
-    double co57frac = 0.;
-    double fe57frac_fromdecay = 0.;
-    calculate_double_decay_chain(ni57_in, T57NI, co57_in, T57CO, timediff, &ni57frac, &co57frac, &fe57frac_fromdecay);
-
-    // Fe52 -> Mn52 -> Cr52
-    const double fe52_in = get_modelinitradioabund(modelgridindex, NUCLIDE_FE52);
-    double fe52frac = 0.;
-    double mn52frac = 0.;
-    double cr52frac_fromdecay = 0.;
-    calculate_double_decay_chain(fe52_in, T52FE, 0., T52MN, timediff, &fe52frac, &mn52frac, &cr52frac_fromdecay);
-
-    // Cr48 -> V48 -> Ti48
-    const double cr48_in = get_modelinitradioabund(modelgridindex, NUCLIDE_CR48);
-    double cr48frac = 0.;
-    double v48frac = 0.;
-    double ti48frac_fromdecay = 0.;
-    calculate_double_decay_chain(cr48_in, T48CR, 0., T48V, timediff, &cr48frac, &v48frac, &ti48frac_fromdecay);
-
-    // printout("model cell %d, has input radioactive ni56_in %g, co56_in %g, fe52_in %g\n",modelgridindex,ni56_in,co56_in,fe52_in);
-
-    for (int element = nelements-1; element >= 0; element--)
-    {
-      const int atomic_number = get_element(element);
-      if (atomic_number == 28)
-      {
-        const double nifrac = get_stable_abund(modelgridindex, atomic_number) + ni56frac + ni57frac;
-        modelgrid[modelgridindex].composition[element].abundance = nifrac;
-      }
-      else if (atomic_number == 27)
-      {
-        const double cofrac = get_stable_abund(modelgridindex, atomic_number) + co56frac + co57frac;
-        modelgrid[modelgridindex].composition[element].abundance = cofrac;
-      }
-      else if (atomic_number == 26)
-      {
-        const double fefrac = get_stable_abund(modelgridindex, atomic_number) + fe52frac + fe56frac_fromdecay + fe57frac_fromdecay;
-        modelgrid[modelgridindex].composition[element].abundance = fefrac;
-      }
-      else if (atomic_number == 25)
-      {
-        const double mnfrac = get_stable_abund(modelgridindex, atomic_number) + mn52frac;
-        modelgrid[modelgridindex].composition[element].abundance = mnfrac;
-      }
-      else if (atomic_number == 24)
-      {
-        const double crfrac = get_stable_abund(modelgridindex, atomic_number) + cr48frac + cr52frac_fromdecay;
-        modelgrid[modelgridindex].composition[element].abundance = crfrac;
-      }
-      else if (atomic_number == 23)
-      {
-        const double vfrac = get_stable_abund(modelgridindex, atomic_number) + v48frac;
-        modelgrid[modelgridindex].composition[element].abundance = vfrac;
-      }
-      else if (atomic_number == 22)
-      {
-        const double tifrac = get_stable_abund(modelgridindex, atomic_number) + ti48frac_fromdecay;
-        modelgrid[modelgridindex].composition[element].abundance = tifrac;
-      }
-    }
-    // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
-    //          modelgridindex, t_current,
-    //          modelgrid[modelgridindex].composition[get_elementindex(28)].abundance,
-    //          modelgrid[modelgridindex].composition[get_elementindex(27)].abundance,
-    //          modelgrid[modelgridindex].composition[get_elementindex(26)].abundance,
-    //          get_fnistabel(modelgridindex), get_fcostable(modelgridindex), get_ffestable(modelgridindex));
-  }
-
-  calculate_deposition_rate_density(modelgridindex, timestep);
-}
-
 
 static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates)
 {
@@ -1239,6 +1082,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
       //printout("call update abundances for timestep %d in model cell %d\n",m,n);
       const time_t sys_time_start_update_abundances = time(NULL);
       update_abundances(n, nts, time_step[nts].mid);
+      calculate_deposition_rate_density(n, nts);
       printout("update_abundances for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_update_abundances);
 
       /// For timestep 0 we calculate the level populations straight forward wihout
@@ -1493,8 +1337,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   ///Calculate the critical opacity at which opacity_case 3 switches from a
   ///regime proportional to the density to a regime independent of the density
   ///This is done by solving for tau_sobolev == 1
-  ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/MNI56 * 3000e-8 * time_step[m].mid;
-  rho_crit = ME * CLIGHT * MNI56 / (PI * QE * QE * rho_crit_para * 3000e-8 * time_step[nts].mid);
+  ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * time_step[m].mid;
+  rho_crit = ME * CLIGHT * nucmass(NUCLIDE_NI56) / (PI * QE * QE * rho_crit_para * 3000e-8 * time_step[nts].mid);
   printout("update_grid: rho_crit = %g\n", rho_crit);
   //printf("time %ld\n",time(NULL));
 

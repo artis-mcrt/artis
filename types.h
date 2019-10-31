@@ -8,6 +8,7 @@
 #include <time.h>
 #include <gsl/gsl_rng.h>
 //#include <gsl/gsl_sf_expint.h>
+#include "nuclear.h"
 
 // Max number of propagation grid cells
 //125000 //1000000 //1000000//262144 //2100000 //125000 //1000000
@@ -273,17 +274,6 @@ typedef struct mgicooling_t
   double *contrib;
 } mgicooling_t;
 
-enum radionuclides {
-  NUCLIDE_NI57 = 0,
-  NUCLIDE_NI56 = 1,
-  NUCLIDE_CO56 = 2,
-  FAKE_GAM_LINE_ID = 3,
-  NUCLIDE_CR48 = 4,
-  NUCLIDE_V48 = 5,
-  NUCLIDE_CO57 = 6,
-  NUCLIDE_FE52 = 7,
-  RADIONUCLIDE_COUNT = 8,
-};
 
 typedef struct modelgrid_t
 {
