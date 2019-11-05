@@ -98,9 +98,9 @@ double nucmass(enum radionuclides nuclide_type)
 
 
 static void calculate_double_decay_chain(
-  double initabund1, double meanlife1,
-  double initabund2, double meanlife2,
-  double t_current,
+  const double initabund1, const double meanlife1,
+  const double initabund2, const double meanlife2,
+  const double t_current,
   double *abund1, double *abund2, double *abund3)
 {
   // calculate abundances from double decay, e.g., Ni56 -> Co56 -> Fe56
@@ -109,13 +109,13 @@ static void calculate_double_decay_chain(
   const double lambda1 = 1 / meanlife1;
   const double lambda2 = 1 / meanlife2;
 
-  *abund1 = initabund1 * exp(-lambda1 * t_current);
+  const double newabund1 = initabund1 * exp(-lambda1 * t_current);
 
-  *abund2 = (
+  const double newabund2 = (
     initabund2 * exp(-lambda2 * t_current) +
     initabund1 * lambda1 / (lambda1 - lambda2) * (exp(-lambda2 * t_current) - exp(-lambda1 * t_current)));
 
-  *abund3 = (
+  const double newabund3 = (
     (initabund2 + initabund1) * (lambda1 - lambda2) -
     initabund2 * lambda1 * exp(-lambda2 * t_current) +
     initabund2 * lambda2 * exp(-lambda2 * t_current) -
@@ -123,6 +123,13 @@ static void calculate_double_decay_chain(
     initabund1 * lambda2 * exp(-lambda1 * t_current)) / (lambda1 - lambda2);
 
   // printout("calculate_double_decay_chain: initabund1 %g, initabund2 %g\n", initabund1, initabund2);
+
+  // update the pointed to values after calculating all threedimensional
+  // to ensure no aliasing problems, e.g. if abund1 = &initabund1
+  *abund1 = newabund1;
+  *abund2 = newabund2;
+  *abund3 = newabund3;
+
   // printout("calculate_double_decay_chain: abund1 %g, abund2 %g abund3 %g\n", abund1, abund2, abund3);
 
   // ensure that the decays haven't altered the total abundance of all three species
@@ -180,16 +187,23 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
 {
   const double rho = get_rho(modelgridindex);
 
-  // Co56 from Ni56 decays plus what remains of the initial Co56
-  const double co56_positron_dep = nucdecayenergypositrons(NUCLIDE_CO56) *
-        (((exp(-t / meanlife(NUCLIDE_CO56)) - exp(-t / meanlife(NUCLIDE_NI56))) / (meanlife(NUCLIDE_CO56) - meanlife(NUCLIDE_NI56)) * get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) / nucmass(NUCLIDE_NI56)) +
-         (exp(-t / meanlife(NUCLIDE_CO56)) / meanlife(NUCLIDE_CO56) * get_modelinitradioabund(modelgridindex, NUCLIDE_CO56) / nucmass(NUCLIDE_CO56))) * rho;
+  // Ni56 -> Co56 -> Fe56
+  // abundances from the input model
+  const double ni56_init = get_modelinitradioabund(modelgridindex, NUCLIDE_NI56);
+  const double co56_init = get_modelinitradioabund(modelgridindex, NUCLIDE_CO56);
+  double ni56frac = 0.;
+  double co56frac = 0.;
+  double fe56frac_fromdecay = 0.;
+  calculate_double_decay_chain(ni56_init, meanlife(NUCLIDE_NI56), co56_init, meanlife(NUCLIDE_CO56), t, &ni56frac, &co56frac, &fe56frac_fromdecay);
 
-  const double ni57_positron_dep = nucdecayenergypositrons(NUCLIDE_NI57) * exp(-t / meanlife(NUCLIDE_NI57)) / meanlife(NUCLIDE_NI57) * get_modelinitradioabund(modelgridindex, NUCLIDE_NI57) / nucmass(NUCLIDE_NI57) * rho;
+  const double co56_positron_dep = nucdecayenergypositrons(NUCLIDE_CO56) * co56frac / meanlife(NUCLIDE_CO56) / nucmass(NUCLIDE_CO56) * rho;
+
+  const double ni57frac = get_modelinitradioabund(modelgridindex, NUCLIDE_NI57)  * exp(-t / meanlife(NUCLIDE_NI57));
+  const double ni57_positron_dep = nucdecayenergypositrons(NUCLIDE_NI57) * ni57frac / meanlife(NUCLIDE_NI57) / nucmass(NUCLIDE_NI57) * rho;
 
   const double v48_positron_dep = nucdecayenergypositrons(NUCLIDE_V48)  *
-        (exp(-t / meanlife(NUCLIDE_V48)) - exp(-t / meanlife(NUCLIDE_CR48))) /
-        (meanlife(NUCLIDE_V48) - meanlife(NUCLIDE_CR48)) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / nucmass(NUCLIDE_CR48) * rho;
+    (exp(-t / meanlife(NUCLIDE_V48)) - exp(-t / meanlife(NUCLIDE_CR48))) /
+    (meanlife(NUCLIDE_V48) - meanlife(NUCLIDE_CR48)) * get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) / nucmass(NUCLIDE_CR48) * rho;
 
   const double pos_dep_sum = co56_positron_dep + ni57_positron_dep + v48_positron_dep;
   printout("positroninjection_rate_density(mgi %d time %g): %g erg/s/cm3 = co56 %g + ni57 %g + v48 %g\n",
@@ -207,16 +221,15 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   const double timediff = t_current - t_model;
   if (homogeneous_abundances)
   {
-    const double ni56_in = elements[get_elementindex(28)].abundance; // assume all ni56
-    const double co56_in = elements[get_elementindex(27)].abundance; // assume all co56
-    const double fe_in = elements[get_elementindex(26)].abundance;
+    const double ni56_init = elements[get_elementindex(28)].abundance; // assume all ni56
+    const double co56_init = elements[get_elementindex(27)].abundance; // assume all co56
+    const double fe_init = elements[get_elementindex(26)].abundance;
 
     double ni56frac = 0.;
     double co56frac = 0.;
     double fe56frac_fromdecay = 0.;
-    calculate_double_decay_chain(ni56_in, meanlife(NUCLIDE_NI56), co56_in, meanlife(NUCLIDE_CO56), timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
+    calculate_double_decay_chain(ni56_init, meanlife(NUCLIDE_NI56), co56_init, meanlife(NUCLIDE_CO56), timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
 
-    //fe_in = cell[modelgridindex].f_fe_init;
     for (int element = nelements - 1; element >= 0; element--)
     {
       const int atomic_number = get_element(element);
@@ -232,7 +245,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
       }
       else if (atomic_number == 26)
       {
-        const double fefrac = fe_in + fe56frac_fromdecay;
+        const double fefrac = fe_init + fe56frac_fromdecay;
         modelgrid[modelgridindex].composition[element].abundance = fefrac;
       }
     }
@@ -241,36 +254,36 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   {
     // Ni56 -> Co56 -> Fe56
     // abundances from the input model
-    const double ni56_in = get_modelinitradioabund(modelgridindex, NUCLIDE_NI56);
-    const double co56_in = get_modelinitradioabund(modelgridindex, NUCLIDE_CO56);
+    const double ni56_init = get_modelinitradioabund(modelgridindex, NUCLIDE_NI56);
+    const double co56_init = get_modelinitradioabund(modelgridindex, NUCLIDE_CO56);
     double ni56frac = 0.;
     double co56frac = 0.;
     double fe56frac_fromdecay = 0.;
-    calculate_double_decay_chain(ni56_in, meanlife(NUCLIDE_NI56), co56_in, meanlife(NUCLIDE_CO56), timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
+    calculate_double_decay_chain(ni56_init, meanlife(NUCLIDE_NI56), co56_init, meanlife(NUCLIDE_CO56), timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
 
     // Ni57 -> Co57 -> Fe57
-    const double ni57_in = get_modelinitradioabund(modelgridindex, NUCLIDE_NI57);
-    const double co57_in = get_modelinitradioabund(modelgridindex, NUCLIDE_CO57);
+    const double ni57_init = get_modelinitradioabund(modelgridindex, NUCLIDE_NI57);
+    const double co57_init = get_modelinitradioabund(modelgridindex, NUCLIDE_CO57);
     double ni57frac = 0.;
     double co57frac = 0.;
     double fe57frac_fromdecay = 0.;
-    calculate_double_decay_chain(ni57_in, meanlife(NUCLIDE_NI57), co57_in, meanlife(NUCLIDE_CO57), timediff, &ni57frac, &co57frac, &fe57frac_fromdecay);
+    calculate_double_decay_chain(ni57_init, meanlife(NUCLIDE_NI57), co57_init, meanlife(NUCLIDE_CO57), timediff, &ni57frac, &co57frac, &fe57frac_fromdecay);
 
     // Fe52 -> Mn52 -> Cr52
-    const double fe52_in = get_modelinitradioabund(modelgridindex, NUCLIDE_FE52);
+    const double fe52_init = get_modelinitradioabund(modelgridindex, NUCLIDE_FE52);
     double fe52frac = 0.;
     double mn52frac = 0.;
     double cr52frac_fromdecay = 0.;
-    calculate_double_decay_chain(fe52_in, meanlife(NUCLIDE_FE52), 0., meanlife(NUCLIDE_MN52), timediff, &fe52frac, &mn52frac, &cr52frac_fromdecay);
+    calculate_double_decay_chain(fe52_init, meanlife(NUCLIDE_FE52), 0., meanlife(NUCLIDE_MN52), timediff, &fe52frac, &mn52frac, &cr52frac_fromdecay);
 
     // Cr48 -> V48 -> Ti48
-    const double cr48_in = get_modelinitradioabund(modelgridindex, NUCLIDE_CR48);
+    const double cr48_init = get_modelinitradioabund(modelgridindex, NUCLIDE_CR48);
     double cr48frac = 0.;
     double v48frac = 0.;
     double ti48frac_fromdecay = 0.;
-    calculate_double_decay_chain(cr48_in, meanlife(NUCLIDE_CR48), 0., meanlife(NUCLIDE_V48), timediff, &cr48frac, &v48frac, &ti48frac_fromdecay);
+    calculate_double_decay_chain(cr48_init, meanlife(NUCLIDE_CR48), 0., meanlife(NUCLIDE_V48), timediff, &cr48frac, &v48frac, &ti48frac_fromdecay);
 
-    // printout("model cell %d, has input radioactive ni56_in %g, co56_in %g, fe52_in %g\n",modelgridindex,ni56_in,co56_in,fe52_in);
+    // printout("model cell %d, has input radioactive ni56_init %g, co56_init %g, fe52_init %g\n",modelgridindex,ni56_init,co56_init,fe52_in);
 
     for (int element = nelements-1; element >= 0; element--)
     {

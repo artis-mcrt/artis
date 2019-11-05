@@ -60,7 +60,7 @@ float get_modelinitradioabund(const int modelgridindex, const enum radionuclides
     abort();
   }
 
-  return modelgrid[modelgridindex].fradionuclides[nuclide_type];
+  return modelgrid[modelgridindex].initradioabund[nuclide_type];
 }
 
 
@@ -74,7 +74,7 @@ void set_modelinitradioabund(const int modelgridindex, const enum radionuclides 
     abort();
   }
 
-  modelgrid[modelgridindex].fradionuclides[nuclide_type] = abund;
+  modelgrid[modelgridindex].initradioabund[nuclide_type] = abund;
 }
 
 

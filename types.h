@@ -287,7 +287,7 @@ typedef struct modelgrid_t
   float rho;
   //modelgrid nn_tot
   float nnetot;           // total electron density (free + bound).
-  float fradionuclides[RADIONUCLIDE_COUNT];
+  float initradioabund[RADIONUCLIDE_COUNT];
   float ffegrp;
   float fnistable;
   float fcostable;
