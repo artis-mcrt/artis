@@ -901,38 +901,31 @@ static void assign_temperature(void)
 
   const double tstart = time_step[0].mid;
 
-  // printout("factor56ni %g\n", factor56ni);
-  // printout("factor56co %g\n", factor56co);
-  // printout("factor57ni %g\n", factor57ni);
   //factor56ni = CLIGHT/4/STEBO * nucdecayenergy(NUCLIDE_NI56)/56/MH;
   /// This works only for the inbuilt Lucy model
   //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * nucdecayenergy(NUCLIDE_NI56)/56/MH  / pow(vmax,3);
-  //for (n = 0; n < ngrid; n++)
-  for (int n = 0; n < npts_model; n++)
+  for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    //mgi = cell[n].modelgridindex;
-    const double decayedenergy_per_mass = get_decayedenergy_per_ejectamass(n, tstart);
-    double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(n) * decayedenergy_per_mass, 1. / 4.);
+    const double decayedenergy_per_mass = get_decayedenergy_per_ejectamass(mgi, tstart);
 
-    //T_initial = pow(factor56ni * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/meanlife(NUCLIDE_NI56))), 1./4.);
-    //T_initial = pow(factor56ni * cell[n].f_ni * (1.-exp(-tmin/meanlife(NUCLIDE_NI56)))/pow(tmin,3), 1./4.);
-    //T_initial = 30615.5;
+    double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
+
     if (T_initial < MINTEMP)
     {
-      printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", n, T_initial, MINTEMP);
+      printout("mgi %d: T_initial of %g is below MINTEMP %g K, setting to MINTEMP.\n", mgi, T_initial, MINTEMP);
       T_initial = MINTEMP;
     }
     else if (T_initial > MAXTEMP)
     {
-      printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", n, T_initial, MAXTEMP);
+      printout("mgi %d: T_initial of %g is above MAXTEMP %g K, setting to MAXTEMP.\n", mgi, T_initial, MAXTEMP);
       T_initial = MAXTEMP;
     }
 
-    set_Te(n, T_initial);
-    set_TJ(n, T_initial);
-    set_TR(n, T_initial);
+    set_Te(mgi, T_initial);
+    set_TJ(mgi, T_initial);
+    set_TR(mgi, T_initial);
 
-    set_W(n, 1.);
+    set_W(mgi, 1.);
   }
 }
 
