@@ -247,19 +247,19 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   double ni57frac = 0.;
   double co57frac = 0.;
   double fe57frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_NI57, NUCLIDE_CO57, timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
+  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_NI57, NUCLIDE_CO57, timediff, &ni57frac, &co57frac, &fe57frac_fromdecay);
 
   // Fe52 -> Mn52 -> Cr52
   double fe52frac = 0.;
   double mn52frac = 0.;
   double cr52frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_FE52, NUCLIDE_MN52, timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
+  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_FE52, NUCLIDE_MN52, timediff, &fe52frac, &mn52frac, &cr52frac_fromdecay);
 
   // Cr48 -> V48 -> Ti48
   double cr48frac = 0.;
   double v48frac = 0.;
   double ti48frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_CR48, NUCLIDE_V48, timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
+  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_CR48, NUCLIDE_V48, timediff, &cr48frac, &v48frac, &ti48frac_fromdecay);
 
   // printout("model cell %d, has input radioactive ni56_init %g, co56_init %g, fe52_init %g\n",modelgridindex,ni56_init,co56_init,fe52_in);
 
