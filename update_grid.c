@@ -54,7 +54,10 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
     if (NLTE_POPS_ON)  //  && timestep % 2 == 0
     {
+      const time_t sys_time_start_write_nlte_pops = time(NULL);
       nltepop_write_to_file(mgi, timestep);
+      printout("writing nlte pops (within write estimators) cell %d timestep %d took %d seconds\n", mgi,
+               timestep, time(NULL) - sys_time_start_write_nlte_pops);
     }
 
     for (int element = 0; element < nelements; element++)
@@ -1425,7 +1428,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
         const time_t sys_time_start_write_estimators = time(NULL);
-        printout("writing to estimators file cell %d timestep %d...", mgi, nts);
+        printout("writing to estimators file cell %d timestep %d...\n", mgi, nts);
 
         #ifdef _OPENMP
         #pragma omp critical(estimators_file)
@@ -1434,7 +1437,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
           write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates);
         }
 
-        printout("writing estimators took %d seconds\n", time(NULL) - sys_time_start_write_estimators);
+        printout("writing to estimators cell %d timestep %d took %d seconds\n", mgi, nts, time(NULL) - sys_time_start_write_estimators);
       }
       else
       {
