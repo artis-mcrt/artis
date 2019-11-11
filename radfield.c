@@ -1325,7 +1325,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       double W_bin = -1.0;
       const int contribcount = get_bin_contribcount(modelgridindex, binindex);
 
-      if (contribcount > 0 || binindex == RADFIELDBINCOUNT - 1)
+      if (contribcount > 0)
       {
         // // enum_bin_fit_type bin_fit_type = radfieldbins[modelgridindex][binindex].fit_type;
         // if (bin_fit_type == FIT_DILUTE_BLACKBODY)
