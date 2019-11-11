@@ -1428,10 +1428,8 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
       //printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
-      if (nu >= nu_edge && nu <= nu_max_phixs)
+      if (nu >= nu_edge && nu <= nu_max_phixs && nnlevel > 0)
       {
-        //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
-
         //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
         //if (fabs(nnlevel - phixslist[tid].allcont[i].nnlevel) > 0)
         //{
@@ -1749,7 +1747,6 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
                     {
                         //ion = phixslist[tid].allcont[i].ion;
                         //level = phixslist[tid].allcont[i].level;
-                        //nnlevel = samplegrid[samplecell].phixslist[i].nnlevel;
                         //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
 
                         nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
