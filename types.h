@@ -34,25 +34,6 @@
 
 /// Coolinglist
 ///============================================================================
-/*typedef struct
-{
-  double contribution;
-  short type;
-  short level;
-  short upperlevel;
-  int lineindex;
-} ionscoolinglist_t;
-
-typedef struct
-{
-  short type;
-  short element;
-  short ion;
-  short level;
-  short upperlevel;
-  int lineindex;
-} samplegridcoolinglist_t;*/
-
 enum coolingtype {
   COOLINGTYPE_FF         = 880,
   COOLINGTYPE_FB         = 881,
@@ -99,14 +80,6 @@ typedef struct heatingcoolingrates
 //   double tau_at_edge;
 //   short level;          ///limited to 32767 levels
 // } ionsphixslist_t;
-//
-// typedef struct
-// {
-//   double nu_edge;
-//   short element;
-//   short ion;
-//   short level;          ///limited to 32767 levels
-// } samplegridphixslist_t;
 
 
 typedef struct fullphixslist_t
@@ -311,23 +284,6 @@ typedef struct modelgrid_t
   mgicooling_t *cooling;
   short thick;
 } modelgrid_t;
-
-/// Type definition for the sampling grid
-/*
-#define SAMPLEGRIDSIZE 3
-#define SAMPLEGRIDSIZESQUARED 9
-#define MSAMPLEGRID 27
-typedef struct
-{
-  float rho;
-  float T_R;
-  float T_e;
-  float W;
-  //samplegridcoolinglist_t *coolinglist;
-  //samplegridcoolinglist_t *heatinglist;
-  samplegridphixslist_t *phixslist;
-} samplegrid_t;
-*/
 
 
 #define NSYN 1 /* number of frequency points in syn calculation */
