@@ -54,11 +54,7 @@ float get_modelinitradioabund(const int modelgridindex, const enum radionuclides
 {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
 
-  if (nuclide_type >= RADIONUCLIDE_COUNT)
-  {
-    printout("get_initfracradio called with invalid nuclide_type type %d\n", nuclide_type);
-    abort();
-  }
+  assert(nuclide_type < RADIONUCLIDE_COUNT);
 
   return modelgrid[modelgridindex].initradioabund[nuclide_type];
 }
