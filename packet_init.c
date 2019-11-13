@@ -45,138 +45,26 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   }
 
   const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[DECAYPATH_COUNT - 1];
-  enum decaypathways selected_chain = DECAYPATH_COUNT;
+  enum decaypathways decaypath = DECAYPATH_COUNT;
   for (int i = 0; i < DECAYPATH_COUNT; i++)
   {
     if (zrand_chain <= cumulative_decay_energy_per_mass[i])
     {
-      selected_chain = i;
+      decaypath = i;
       break;
     }
   }
-  assert(selected_chain != DECAYPATH_COUNT) // Failed to select pellet
+  assert(decaypath != DECAYPATH_COUNT) // Failed to select pellet
 
   pkt_ptr->tdecay = -1.; // ensure we enter the following loop
+
   #ifdef NO_INITIAL_PACKETS
-  while (pkt_ptr->tdecay <= tmin || pkt_ptr->tdecay >= tmax)
+  const double tdecaymin = tmin;
   #else
-  while (pkt_ptr->tdecay < 0. || pkt_ptr->tdecay >= tmax)
+  const double tdecaymin = 0.; // allow decays before the first timestep
   #endif
-  {
-    double zrand = gsl_rng_uniform(rng);
-    double zrand2;
-    switch (selected_chain)
-    {
-      case DECAY_NI56:  // Ni56 pellet
-      {
-        pkt_ptr->type = TYPE_56NI_PELLET;
-        pkt_ptr->tdecay = -meanlife(NUCLIDE_NI56) * log(zrand);
-        break;
-      }
 
-      case DECAY_NI56_CO56: // Ni56 -> Co56 pellet
-      {
-        if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
-        {
-          pkt_ptr->type = TYPE_56CO_PELLET;
-        }
-        else
-        {
-          pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
-          pkt_ptr->originated_from_positron = true;
-        }
-
-        zrand = gsl_rng_uniform(rng);
-        zrand2 = gsl_rng_uniform(rng);
-        pkt_ptr->tdecay = (-meanlife(NUCLIDE_NI56) * log(zrand)) + (-meanlife(NUCLIDE_CO56) * log(zrand2));
-        break;
-      }
-
-      case DECAY_FE52: // Fe52 pellet
-      {
-        pkt_ptr->type = TYPE_52FE_PELLET;
-        pkt_ptr->tdecay = -meanlife(NUCLIDE_FE52) * log(zrand);
-        break;
-      }
-
-      case DECAY_FE52_MN52: // Fe52 -> Mn52 pellet
-      {
-        pkt_ptr->type = TYPE_52MN_PELLET;
-        zrand2 = gsl_rng_uniform(rng);
-        pkt_ptr->tdecay = (-meanlife(NUCLIDE_FE52) * log(zrand)) + (-meanlife(NUCLIDE_MN52) * log(zrand2));
-        break;
-      }
-
-      case DECAY_CR48: // Cr48 pellet
-      {
-        pkt_ptr->type = TYPE_48CR_PELLET;
-        pkt_ptr->tdecay = -meanlife(NUCLIDE_CR48) * log(zrand);
-        break;
-      }
-
-      case DECAY_CR48_V48: // Cr48 -> V48 pellet
-      {
-        pkt_ptr->type = TYPE_48V_PELLET;
-        zrand2 = gsl_rng_uniform(rng);
-        pkt_ptr->tdecay = (-meanlife(NUCLIDE_CR48) * log(zrand)) + (-meanlife(NUCLIDE_V48) * log(zrand2));
-        break;
-      }
-
-      case DECAY_CO56: // Co56 pellet
-      {
-        /// Now it is a 56Co pellet, choose whether it becomes a positron
-        if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
-        {
-          pkt_ptr->type = TYPE_56CO_PELLET;
-        }
-        else
-        {
-          pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
-          pkt_ptr->originated_from_positron = true;
-        }
-
-        zrand = gsl_rng_uniform(rng);
-        pkt_ptr->tdecay = -meanlife(NUCLIDE_CO56) * log(zrand);
-        break;
-      }
-
-      case DECAY_NI57: // Ni57 pellet
-      {
-        if (zrand < nucdecayenergygamma(NUCLIDE_NI57) / nucdecayenergy(NUCLIDE_NI57))
-        {
-          pkt_ptr->type = TYPE_57NI_PELLET;
-        }
-        else
-        {
-          pkt_ptr->type = TYPE_57NI_POSITRON_PELLET;
-          pkt_ptr->originated_from_positron = true;
-        }
-
-        zrand = gsl_rng_uniform(rng);
-        pkt_ptr->tdecay = -meanlife(NUCLIDE_NI57) * log(zrand);
-        break;
-      }
-
-      case DECAY_NI57_CO57: // Ni57 -> Co57 pellet
-      {
-        pkt_ptr->type = TYPE_57CO_PELLET;
-        zrand2 = gsl_rng_uniform(rng);
-        pkt_ptr->tdecay = (-meanlife(NUCLIDE_NI57) * log(zrand)) + (-meanlife(NUCLIDE_CO57) * log(zrand2));
-        break;
-      }
-
-      case DECAY_CO57: // Co57 pellet
-        pkt_ptr->type = TYPE_57CO_PELLET;
-        pkt_ptr->tdecay = -meanlife(NUCLIDE_CO57) * log(zrand);
-        break;
-
-      case DECAYPATH_COUNT:
-      {
-        printout("Problem selecting pellet type\n");
-        abort();
-      }
-    }
-  }
+  set_random_pellet(decaypath, pkt_ptr, tdecaymin, tmax); // set the packet tdecay and type
 
   /// Now assign the energy to the pellet.
   pkt_ptr->e_cmf = e0;

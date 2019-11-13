@@ -1,3 +1,5 @@
+#include "nuclear.h"
+
 #ifndef TYPES_H
 #define TYPES_H
 
@@ -8,7 +10,6 @@
 #include <time.h>
 #include <gsl/gsl_rng.h>
 //#include <gsl/gsl_sf_expint.h>
-#include "nuclear.h"
 
 // Max number of propagation grid cells
 //125000 //1000000 //1000000//262144 //2100000 //125000 //1000000
