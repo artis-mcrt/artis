@@ -6,6 +6,7 @@
 
 // if uniform pellet energies are not used, a uniform decay time disitribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
+#define UNIFORM_PELLET_ENERGIES false
 
 
 static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
@@ -77,7 +78,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // uniform decay time distribution (scale the packet energies instead)
     const double zrand = gsl_rng_uniform(rng);
     pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * tmax;
-    pkt_ptr->e_cmf = get_decay_power_density(decaypath, mgi, pkt_ptr->tdecay); // TODO: should this only be for the selected decaypath?
+    pkt_ptr->e_cmf = get_decay_power_density(decaypath, mgi, pkt_ptr->tdecay);
   }
 
   bool from_positron;
@@ -114,7 +115,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   const double e0_tinf = etot_tinf / npkts / n_out_it / n_middle_it;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
-  // scale up the radioactive abundances to account for model cells that not associated with any propagation cells
+  // scale up the radioactive abundances to account for the missing masses in the model cells that are not associated with any propagation cells
   for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     if (totmassradionuclide[iso] <= 0)
@@ -127,7 +128,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     const double ratio = totmassradionuclide[iso] / totmassradionuclide_actual;
     if (totmassradionuclide_actual <= 0.)
       continue;
-    printout("nuclide %d ratio %g\n", iso, ratio);
+    // printout("nuclide %d ratio %g\n", iso, ratio);
     for (int mgi = 0; mgi < npts_model; mgi++)
     {
       if (get_numassociatedcells(mgi) > 0)
@@ -236,14 +237,14 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     e_cmf_total += pkt[n].e_cmf;
   }
   const double e_ratio = etot / e_cmf_total;
-  printout("packet energy correction factor: %g\n", e_ratio);
+  printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot, e_ratio);
   e_cmf_total *= e_ratio;
   for (int n = 0; n < npkts; n++)
   {
     pkt[n].e_cmf *= e_ratio;
     pkt[n].e_rf *= e_ratio;
   }
-  printout("radioactive energy which will be freed during simulation time: %g erg\n", printout);
+  printout("radioactive energy which will be freed during simulation time: %g erg\n", e_cmf_total);
 }
 
 
