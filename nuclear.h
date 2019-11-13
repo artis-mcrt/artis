@@ -37,8 +37,10 @@ double nucdecayenergypositrons(enum radionuclides nuclide_type);
 double nucdecayenergy(enum radionuclides nuclide_type);
 double meanlife(enum radionuclides nuclide_type);
 double nucmass(enum radionuclides nuclide_type);
+enum radionuclides decaynuc1(enum decaypathways selected_chain);
+enum radionuclides decaynuc2(enum decaypathways selected_chain);
 void update_abundances(const int modelgridindex, const int timestep, const double t_current);
-double get_decay_energy_per_ejectamass(const int mgi, enum decaypathways decaypath);
+double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath);
 double get_positroninjection_rate_density(const int modelgridindex, const double t);
 double get_decayedenergy_per_ejectamass(const int n, const double tstart);
 
