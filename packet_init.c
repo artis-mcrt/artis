@@ -4,6 +4,9 @@
 #include "packet_init.h"
 #include "vectors.h"
 
+// if uniform pellet energies are not used, a uniform decay time disitribution is used with scaled packet energies
+#define UNIFORM_PELLET_ENERGIES true
+
 
 static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
@@ -64,13 +67,24 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   const double tdecaymin = 0.; // allow decays before the first timestep
   #endif
 
+  if (UNIFORM_PELLET_ENERGIES)
+  {
+    pkt_ptr->tdecay = sample_decaytime(decaypath, tdecaymin, tmax);
+    pkt_ptr->e_cmf = e0;
+  }
+  else
+  {
+    // uniform decay time distribution (scale the packet energies instead)
+    const double zrand = gsl_rng_uniform(rng);
+    pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * tmax;
+    pkt_ptr->e_cmf = get_decay_power_density(decaypath, mgi, pkt_ptr->tdecay); // TODO: should this only be for the selected decaypath?
+  }
+
   bool from_positron;
   pkt_ptr->type = get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
-  pkt_ptr->tdecay = sample_decaytime(decaypath, tdecaymin, tmax);
   pkt_ptr->originated_from_positron = from_positron;
 
   /// Now assign the energy to the pellet.
-  pkt_ptr->e_cmf = e0;
   const double dopplerfactor = doppler_packetpos(pkt_ptr, tmin);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
   pkt_ptr->trueemissiontype = -1;
@@ -91,14 +105,14 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     nucdecayenergy(NUCLIDE_CO57) * totmassradionuclide[NUCLIDE_CO57] / nucmass(NUCLIDE_CO57) +
     (nucdecayenergy(NUCLIDE_V48) + nucdecayenergy(NUCLIDE_CR48)) * totmassradionuclide[NUCLIDE_CR48] / nucmass(NUCLIDE_CR48) +
     (nucdecayenergy(NUCLIDE_FE52) + nucdecayenergy(NUCLIDE_MN52)) * totmassradionuclide[NUCLIDE_FE52] / nucmass(NUCLIDE_FE52));
-  printout("etot %g\n", etot_tinf);
+  printout("etot %g (t_0 ot t_inf)\n", etot_tinf);
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI56) / MEV, nucdecayenergy(NUCLIDE_CO56) / MEV, nucdecayenergygamma(NUCLIDE_CO56) / MEV);
   printout("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI57) / MEV, nucdecayenergygamma(NUCLIDE_NI57) / MEV, nucdecayenergy(NUCLIDE_CO57) / MEV);
   printout("decayenergy(CR48), decayenergy(V48): %g %g\n", nucdecayenergy(NUCLIDE_CR48) / MEV, nucdecayenergy(NUCLIDE_V48) / MEV);
   printout("decayenergy(FE52), decayenergy(MN52): %g %g\n", nucdecayenergy(NUCLIDE_FE52) / MEV, nucdecayenergy(NUCLIDE_MN52) / MEV);
 
   const double e0_tinf = etot_tinf / npkts / n_out_it / n_middle_it;
-  printout("e0 (t_0 to t_inf) %g\n", e0_tinf);
+  printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
   // scale up the radioactive abundances to account for model cells that not associated with any propagation cells
   for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
@@ -149,7 +163,9 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   const double etot = norm / MH;
   /// So energy per pellet is
   const double e0 = etot / npkts / n_out_it / n_middle_it;
-  printout("e0 (in time range) %g\n", e0);
+  printout("packet e0 (in time range) %g\n", e0);
+
+  printout("etot %g erg (in time range)\n", etot);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
@@ -213,11 +229,21 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     place_pellet(e0, cellindex, n + pktnumberoffset, &pkt[n]);
   }
 
+  double e_cmf_total = 0.;
   for (int n = 0; n < npkts; n++)
   {
     pkt[n].interactions = 0;
+    e_cmf_total += pkt[n].e_cmf;
   }
-  printout("radioactive energy which will be freed during simulation time %g\n", e0 * npkts);
+  const double e_ratio = etot / e_cmf_total;
+  printout("packet energy correction factor: %g\n", e_ratio);
+  e_cmf_total *= e_ratio;
+  for (int n = 0; n < npkts; n++)
+  {
+    pkt[n].e_cmf *= e_ratio;
+    pkt[n].e_rf *= e_ratio;
+  }
+  printout("radioactive energy which will be freed during simulation time: %g erg\n", printout);
 }
 
 
