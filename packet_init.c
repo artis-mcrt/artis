@@ -41,7 +41,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   for (int i = 0; i < DECAYPATH_COUNT; i++)
   {
     const double lower_sum = ((i > 0) ? cumulative_decay_energy_per_mass[i - 1] : 0);
-    cumulative_decay_energy_per_mass[i] = lower_sum + get_decay_energy_per_ejectamass(mgi, i);
+    cumulative_decay_energy_per_mass[i] = lower_sum + get_simtime_endecay_per_ejectamass(mgi, i);
   }
 
   const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[DECAYPATH_COUNT - 1];
@@ -56,117 +56,125 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   }
   assert(selected_chain != DECAYPATH_COUNT) // Failed to select pellet
 
-  double zrand = gsl_rng_uniform(rng);
-  double zrand2;
-  switch (selected_chain)
+  pkt_ptr->tdecay = -1.; // ensure we enter the following loop
+  #ifdef NO_INITIAL_PACKETS
+  while (pkt_ptr->tdecay <= tmin || pkt_ptr->tdecay >= tmax)
+  #else
+  while (pkt_ptr->tdecay < 0. || pkt_ptr->tdecay >= tmax)
+  #endif
   {
-    case DECAY_NI56:  // Ni56 pellet
+    double zrand = gsl_rng_uniform(rng);
+    double zrand2;
+    switch (selected_chain)
     {
-      pkt_ptr->type = TYPE_56NI_PELLET;
-      pkt_ptr->tdecay = -meanlife(NUCLIDE_NI56) * log(zrand);
-      break;
-    }
-
-    case DECAY_NI56_CO56: // Ni56 -> Co56 pellet
-    {
-      if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
+      case DECAY_NI56:  // Ni56 pellet
       {
-        pkt_ptr->type = TYPE_56CO_PELLET;
-      }
-      else
-      {
-        pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
-        pkt_ptr->originated_from_positron = true;
+        pkt_ptr->type = TYPE_56NI_PELLET;
+        pkt_ptr->tdecay = -meanlife(NUCLIDE_NI56) * log(zrand);
+        break;
       }
 
-      zrand = gsl_rng_uniform(rng);
-      zrand2 = gsl_rng_uniform(rng);
-      pkt_ptr->tdecay = (-meanlife(NUCLIDE_NI56) * log(zrand)) + (-meanlife(NUCLIDE_CO56) * log(zrand2));
-      break;
-    }
-
-    case DECAY_FE52: // Fe52 pellet
-    {
-      pkt_ptr->type = TYPE_52FE_PELLET;
-      pkt_ptr->tdecay = -meanlife(NUCLIDE_FE52) * log(zrand);
-      break;
-    }
-
-    case DECAY_FE52_MN52: // Fe52 -> Mn52 pellet
-    {
-      pkt_ptr->type = TYPE_52MN_PELLET;
-      zrand2 = gsl_rng_uniform(rng);
-      pkt_ptr->tdecay = (-meanlife(NUCLIDE_FE52) * log(zrand)) + (-meanlife(NUCLIDE_MN52) * log(zrand2));
-      break;
-    }
-
-    case DECAY_CR48: // Cr48 pellet
-    {
-      pkt_ptr->type = TYPE_48CR_PELLET;
-      pkt_ptr->tdecay = -meanlife(NUCLIDE_CR48) * log(zrand);
-      break;
-    }
-
-    case DECAY_CR48_V48: // Cr48 -> V48 pellet
-    {
-      pkt_ptr->type = TYPE_48V_PELLET;
-      zrand2 = gsl_rng_uniform(rng);
-      pkt_ptr->tdecay = (-meanlife(NUCLIDE_CR48) * log(zrand)) + (-meanlife(NUCLIDE_V48) * log(zrand2));
-      break;
-    }
-
-    case DECAY_CO56: // Co56 pellet
-    {
-      /// Now it is a 56Co pellet, choose whether it becomes a positron
-      if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
+      case DECAY_NI56_CO56: // Ni56 -> Co56 pellet
       {
-        pkt_ptr->type = TYPE_56CO_PELLET;
-      }
-      else
-      {
-        pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
-        pkt_ptr->originated_from_positron = true;
+        if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
+        {
+          pkt_ptr->type = TYPE_56CO_PELLET;
+        }
+        else
+        {
+          pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
+          pkt_ptr->originated_from_positron = true;
+        }
+
+        zrand = gsl_rng_uniform(rng);
+        zrand2 = gsl_rng_uniform(rng);
+        pkt_ptr->tdecay = (-meanlife(NUCLIDE_NI56) * log(zrand)) + (-meanlife(NUCLIDE_CO56) * log(zrand2));
+        break;
       }
 
-      zrand = gsl_rng_uniform(rng);
-      pkt_ptr->tdecay = -meanlife(NUCLIDE_CO56) * log(zrand);
-      break;
-    }
-
-    case DECAY_NI57: // Ni57 pellet
-    {
-      if (zrand < nucdecayenergygamma(NUCLIDE_NI57) / nucdecayenergy(NUCLIDE_NI57))
+      case DECAY_FE52: // Fe52 pellet
       {
-        pkt_ptr->type = TYPE_57NI_PELLET;
-      }
-      else
-      {
-        pkt_ptr->type = TYPE_57NI_POSITRON_PELLET;
-        pkt_ptr->originated_from_positron = true;
+        pkt_ptr->type = TYPE_52FE_PELLET;
+        pkt_ptr->tdecay = -meanlife(NUCLIDE_FE52) * log(zrand);
+        break;
       }
 
-      zrand = gsl_rng_uniform(rng);
-      pkt_ptr->tdecay = -meanlife(NUCLIDE_NI57) * log(zrand);
-      break;
-    }
+      case DECAY_FE52_MN52: // Fe52 -> Mn52 pellet
+      {
+        pkt_ptr->type = TYPE_52MN_PELLET;
+        zrand2 = gsl_rng_uniform(rng);
+        pkt_ptr->tdecay = (-meanlife(NUCLIDE_FE52) * log(zrand)) + (-meanlife(NUCLIDE_MN52) * log(zrand2));
+        break;
+      }
 
-    case DECAY_NI57_CO57: // Ni57 -> Co57 pellet
-    {
-      pkt_ptr->type = TYPE_57CO_PELLET;
-      zrand2 = gsl_rng_uniform(rng);
-      pkt_ptr->tdecay = (-meanlife(NUCLIDE_NI57) * log(zrand)) + (-meanlife(NUCLIDE_CO57) * log(zrand2));
-      break;
-    }
+      case DECAY_CR48: // Cr48 pellet
+      {
+        pkt_ptr->type = TYPE_48CR_PELLET;
+        pkt_ptr->tdecay = -meanlife(NUCLIDE_CR48) * log(zrand);
+        break;
+      }
 
-    case DECAY_CO57: // Co57 pellet
-      pkt_ptr->type = TYPE_57CO_PELLET;
-      pkt_ptr->tdecay = -meanlife(NUCLIDE_CO57) * log(zrand);
-      break;
+      case DECAY_CR48_V48: // Cr48 -> V48 pellet
+      {
+        pkt_ptr->type = TYPE_48V_PELLET;
+        zrand2 = gsl_rng_uniform(rng);
+        pkt_ptr->tdecay = (-meanlife(NUCLIDE_CR48) * log(zrand)) + (-meanlife(NUCLIDE_V48) * log(zrand2));
+        break;
+      }
 
-    default:
-    {
-      printout("Problem selecting pellet type\n");
-      abort();
+      case DECAY_CO56: // Co56 pellet
+      {
+        /// Now it is a 56Co pellet, choose whether it becomes a positron
+        if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
+        {
+          pkt_ptr->type = TYPE_56CO_PELLET;
+        }
+        else
+        {
+          pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
+          pkt_ptr->originated_from_positron = true;
+        }
+
+        zrand = gsl_rng_uniform(rng);
+        pkt_ptr->tdecay = -meanlife(NUCLIDE_CO56) * log(zrand);
+        break;
+      }
+
+      case DECAY_NI57: // Ni57 pellet
+      {
+        if (zrand < nucdecayenergygamma(NUCLIDE_NI57) / nucdecayenergy(NUCLIDE_NI57))
+        {
+          pkt_ptr->type = TYPE_57NI_PELLET;
+        }
+        else
+        {
+          pkt_ptr->type = TYPE_57NI_POSITRON_PELLET;
+          pkt_ptr->originated_from_positron = true;
+        }
+
+        zrand = gsl_rng_uniform(rng);
+        pkt_ptr->tdecay = -meanlife(NUCLIDE_NI57) * log(zrand);
+        break;
+      }
+
+      case DECAY_NI57_CO57: // Ni57 -> Co57 pellet
+      {
+        pkt_ptr->type = TYPE_57CO_PELLET;
+        zrand2 = gsl_rng_uniform(rng);
+        pkt_ptr->tdecay = (-meanlife(NUCLIDE_NI57) * log(zrand)) + (-meanlife(NUCLIDE_CO57) * log(zrand2));
+        break;
+      }
+
+      case DECAY_CO57: // Co57 pellet
+        pkt_ptr->type = TYPE_57CO_PELLET;
+        pkt_ptr->tdecay = -meanlife(NUCLIDE_CO57) * log(zrand);
+        break;
+
+      case DECAYPATH_COUNT:
+      {
+        printout("Problem selecting pellet type\n");
+        abort();
+      }
     }
   }
 
@@ -185,25 +193,46 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
-  const double etot = (
+  const double etot_tinf = (
     (nucdecayenergy(NUCLIDE_NI56) + nucdecayenergy(NUCLIDE_CO56)) * totmassradionuclide[NUCLIDE_NI56] / nucmass(NUCLIDE_NI56) +
     nucdecayenergy(NUCLIDE_CO56) * totmassradionuclide[NUCLIDE_CO56] / nucmass(NUCLIDE_CO56) +
     (nucdecayenergy(NUCLIDE_NI57) + nucdecayenergy(NUCLIDE_CO57)) * totmassradionuclide[NUCLIDE_NI57] / nucmass(NUCLIDE_NI57) +
     nucdecayenergy(NUCLIDE_CO57) * totmassradionuclide[NUCLIDE_CO57] / nucmass(NUCLIDE_CO57) +
     (nucdecayenergy(NUCLIDE_V48) + nucdecayenergy(NUCLIDE_CR48)) * totmassradionuclide[NUCLIDE_CR48] / nucmass(NUCLIDE_CR48) +
     (nucdecayenergy(NUCLIDE_FE52) + nucdecayenergy(NUCLIDE_MN52)) * totmassradionuclide[NUCLIDE_FE52] / nucmass(NUCLIDE_FE52));
-  printout("etot %g\n", etot);
+  printout("etot %g\n", etot_tinf);
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI56) / MEV, nucdecayenergy(NUCLIDE_CO56) / MEV, nucdecayenergygamma(NUCLIDE_CO56) / MEV);
-  printout("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(NUCLIDE_CO57): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI57) / MEV, nucdecayenergygamma(NUCLIDE_NI57) / MEV, nucdecayenergy(NUCLIDE_CO57) / MEV);
+  printout("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI57) / MEV, nucdecayenergygamma(NUCLIDE_NI57) / MEV, nucdecayenergy(NUCLIDE_CO57) / MEV);
   printout("decayenergy(CR48), decayenergy(V48): %g %g\n", nucdecayenergy(NUCLIDE_CR48) / MEV, nucdecayenergy(NUCLIDE_V48) / MEV);
   printout("decayenergy(FE52), decayenergy(MN52): %g %g\n", nucdecayenergy(NUCLIDE_FE52) / MEV, nucdecayenergy(NUCLIDE_MN52) / MEV);
 
-  /// So energy per pellet is
-  const double e0 = etot / npkts / n_out_it / n_middle_it;
-  printout("e0 %g\n", e0);
+  const double e0_tinf = etot_tinf / npkts / n_out_it / n_middle_it;
+  printout("e0 (t_0 to t_inf) %g\n", e0_tinf);
 
-  /* Now place the pellets in the ejecta and decide at what time
-  they will decay. */
+  // scale up the radioactive abundances to account for model cells that not associated with any propagation cells
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
+  {
+    if (totmassradionuclide[iso] <= 0)
+      continue;
+    double totmassradionuclide_actual = 0.;
+    for (int mgi = 0; mgi < npts_model; mgi++)
+    {
+      totmassradionuclide_actual += get_modelinitradioabund(mgi, iso) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
+    }
+    const double ratio = totmassradionuclide[iso] / totmassradionuclide_actual;
+    if (totmassradionuclide_actual <= 0.)
+      continue;
+    printout("nuclide %d ratio %g\n", iso, ratio);
+    for (int mgi = 0; mgi < npts_model; mgi++)
+    {
+      if (get_numassociatedcells(mgi) > 0)
+      {
+        const double prev_abund = get_modelinitradioabund(mgi, iso);
+        const double new_abund = prev_abund * ratio;
+        set_modelinitradioabund(mgi, iso, new_abund);
+      }
+    }
+  }
 
   double modelcell_decay_energy_density[npts_model];
   for (int mgi = 0; mgi < npts_model; mgi++)
@@ -211,11 +240,11 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     modelcell_decay_energy_density[mgi] = 0.;
     for (int i = 0; i < DECAYPATH_COUNT; i++)
     {
-      modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * get_decay_energy_per_ejectamass(mgi, i) * MH;
+      modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, i) * MH;
     }
   }
 
-  /* Need to get a normalisation factor. */
+  // Need to get a normalisation factor.
   float norm = 0.0;
   for (int m = 0; m < ngrid; m++)
   {
@@ -226,18 +255,23 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   }
   cont[ngrid] = norm;
 
+  const double etot = norm / MH;
+  /// So energy per pellet is
+  const double e0 = etot / npkts / n_out_it / n_middle_it;
+  printout("e0 (in time range) %g\n", e0);
+
+  // Now place the pellets in the ejecta and decide at what time they will decay.
+
   if (npkts > MPKTS)
   {
     printout("Too many packets. Abort.\n");
     abort();
   }
 
-  int n = 0;
-  int packet_reset = 0;
   printout("Placing pellets...\n");
-  while (n < npkts)
+  for (int n = 0; n < npkts; n++)
   {
-    /// Get random number.
+    // Get random number.
     int mabove = ngrid;
     int mbelow = 0;
     double zrand = gsl_rng_uniform(rng);
@@ -283,40 +317,16 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     m = m - 1;
     */
 
-    if (cellindex >= ngrid)
-    {
-      printout("Failed to place pellet. Abort.\n");
-      abort();
-    }
+    assert(cellindex < ngrid);
 
-    /// Pellet is in cell m, pointer is grid_ptr.
-    //  printout("Pellet in cell %d\n",m);
     place_pellet(e0, cellindex, n + pktnumberoffset, &pkt[n]);
-
-    #ifdef NO_INITIAL_PACKETS
-    if (pkt[n].tdecay < tmax && pkt[n].tdecay > tmin)
-    #else
-    if (pkt[n].tdecay < tmax)
-    #endif
-      n++;
-    else
-    {
-      packet_reset++;
-      // printout("reset at packet no %d tdecay %g\n", n, pkt[n].tdecay);
-    }
   }
 
-  /// Some fraction of the packets we reassigned because they were not going
-  /// to activate in the time of interest so need to renormalise energies
-  /// to account for this.
   for (int n = 0; n < npkts; n++)
   {
-    pkt[n].e_cmf = pkt[n].e_cmf * npkts / (npkts + packet_reset);
-    pkt[n].e_rf = pkt[n].e_rf * npkts / (npkts + packet_reset);
-
     pkt[n].interactions = 0;
   }
-  printout("radioactive energy which will be freed during simulation time %g\n", etot * npkts / (npkts + packet_reset));
+  printout("radioactive energy which will be freed during simulation time %g\n", e0 * npkts);
 }
 
 
