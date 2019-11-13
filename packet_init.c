@@ -4,7 +4,7 @@
 #include "packet_init.h"
 #include "vectors.h"
 
-// if uniform pellet energies are not used, a uniform decay time disitribution is used with scaled packet energies
+// if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
 
 
