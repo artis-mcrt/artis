@@ -6,7 +6,6 @@
 
 // if uniform pellet energies are not used, a uniform decay time disitribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
-#define UNIFORM_PELLET_ENERGIES false
 
 
 static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
