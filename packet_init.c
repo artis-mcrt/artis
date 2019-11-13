@@ -64,7 +64,10 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   const double tdecaymin = 0.; // allow decays before the first timestep
   #endif
 
-  set_random_pellet(decaypath, pkt_ptr, tdecaymin, tmax); // set the packet tdecay and type
+  bool from_positron;
+  pkt_ptr->type = get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
+  pkt_ptr->tdecay = sample_decaytime(decaypath, tdecaymin, tmax);
+  pkt_ptr->originated_from_positron = from_positron;
 
   /// Now assign the energy to the pellet.
   pkt_ptr->e_cmf = e0;

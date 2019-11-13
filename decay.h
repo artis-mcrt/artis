@@ -39,11 +39,13 @@ double nucdecayenergypositrons(enum radionuclides nuclide_type);
 double nucdecayenergy(enum radionuclides nuclide_type);
 double meanlife(enum radionuclides nuclide_type);
 double nucmass(enum radionuclides nuclide_type);
-void set_random_pellet(enum decaypathways decaypath, PKT *pkt_ptr, const double tdecaymin, const double tmax);
+double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, const double tdecaymax);
+enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *originated_from_positron);
 enum radionuclides decayparent(enum decaypathways decaypath);
 enum radionuclides decaydaughter(enum decaypathways decaypath);
 void update_abundances(const int modelgridindex, const int timestep, const double t_current);
 double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath);
+double get_decay_power_density(const int modelgridindex, const double t);
 double get_positroninjection_rate_density(const int modelgridindex, const double t);
 double get_decayedenergy_per_ejectamass(const int n, const double tstart);
 
