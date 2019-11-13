@@ -1,6 +1,6 @@
 #include "sn3d.h"
 #include "grid_init.h"
-#include "nuclear.h"
+#include "decay.h"
 #include "packet_init.h"
 #include "vectors.h"
 

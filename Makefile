@@ -178,9 +178,9 @@ sn3dopenmp: sn3d
 
 ### use pg when you want to use gprof the profiler
 #CFLAGS = -g -pg -Wall -I$(INCLUDE)
-sn3d_files = sn3d.c atomic.c boundary.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c ltepop.c macroatom.c nltepop.c nonthermal.c nuclear.c packet_init.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c update_grid.c update_packets.c vectors.c vpkt.c md5.c
+sn3d_files = sn3d.c atomic.c boundary.c emissivities.c gamma.c grey_emissivities.c grid_init.c input.c kpkt.c ltepop.c macroatom.c nltepop.c nonthermal.c decay.c packet_init.c photo_electric.c polarization.c radfield.c ratecoeff.c rpkt.c thermalbalance.c update_grid.c update_packets.c vectors.c vpkt.c md5.c
 
-sn3d_objects = sn3d.o atomic.o boundary.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o ltepop.o macroatom.o nltepop.o nonthermal.o nuclear.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
+sn3d_objects = sn3d.o atomic.o boundary.o emissivities.o gamma.o grey_emissivities.o grid_init.o input.o kpkt.o ltepop.o macroatom.o nltepop.o nonthermal.o decay.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
 
 all: sn3d exspec
 
@@ -190,7 +190,7 @@ sn3d: clean version
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) $(CFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
-exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c update_grid.c update_packets.c gamma.c boundary.c macroatom.c nuclear.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
+exspec_files = exspec.c grid_init.c input.c vectors.c packet_init.c update_grid.c update_packets.c gamma.c boundary.c macroatom.c decay.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
 
 exspec: clean version
 	$(CC) $(CFLAGS) $(exspec_files) $(LDFLAGS) -o exspec

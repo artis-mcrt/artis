@@ -7,7 +7,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
-#include "nuclear.h"
+#include "decay.h"
 #include "nltepop.h"
 #include "radfield.h"
 #include "ratecoeff.h"
