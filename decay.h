@@ -1,5 +1,5 @@
-#ifndef NUCLEAR_H
-#define NUCLEAR_H
+#ifndef DECAY_H
+#define DECAY_H
 
 // #include <stdio.h>
 
@@ -50,4 +50,4 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
 double get_decayedenergy_per_ejectamass(const int n, const double tstart);
 
 
-#endif //NUCLEAR_H
+#endif //DECAY_H
