@@ -2,7 +2,6 @@
 #define NUCLEAR_H
 
 // #include <stdio.h>
-// #include "types.h"
 
 enum radionuclides {
   NUCLIDE_NI57 = 0,
@@ -31,14 +30,18 @@ enum decaypathways {
   DECAYPATH_COUNT = 10,
 };
 
+#include "types.h"
+
+
 double nucdecayenergygamma(enum radionuclides nuclide_type);
 void set_nucdecayenergygamma(enum radionuclides nuclide_type, double value);
 double nucdecayenergypositrons(enum radionuclides nuclide_type);
 double nucdecayenergy(enum radionuclides nuclide_type);
 double meanlife(enum radionuclides nuclide_type);
 double nucmass(enum radionuclides nuclide_type);
-enum radionuclides decaynuc1(enum decaypathways selected_chain);
-enum radionuclides decaynuc2(enum decaypathways selected_chain);
+void set_random_pellet(enum decaypathways decaypath, PKT *pkt_ptr, const double tdecaymin, const double tmax);
+enum radionuclides decayparent(enum decaypathways decaypath);
+enum radionuclides decaydaughter(enum decaypathways decaypath);
 void update_abundances(const int modelgridindex, const int timestep, const double t_current);
 double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath);
 double get_positroninjection_rate_density(const int modelgridindex, const double t);
