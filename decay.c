@@ -1,7 +1,7 @@
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
-#include "nuclear.h"
+#include "decay.h"
 
 
 double arr_nucdecayenergygamma[RADIONUCLIDE_COUNT] = {0};

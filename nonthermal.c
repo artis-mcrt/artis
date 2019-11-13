@@ -12,7 +12,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
-#include "nuclear.h"
+#include "decay.h"
 #include "update_grid.h"
 #include "sn3d.h"
 

@@ -3,7 +3,7 @@
 #include "grid_init.h"
 #include "nltepop.h"
 #include "nonthermal.h"
-#include "nuclear.h"
+#include "decay.h"
 #include "radfield.h"
 #include "rpkt.h"
 #include "vectors.h"
