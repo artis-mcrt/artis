@@ -166,7 +166,7 @@ enum radionuclides decaynuc2(enum decaypathways selected_chain)
 }
 
 
-static bool decaypathisdouble(enum decaypathways selected_chain)
+static bool decaypath_is_chain(enum decaypathways selected_chain)
 // the second nucleus is radioactive
 {
   switch (selected_chain)
@@ -196,7 +196,7 @@ static enum radionuclides find_nucparent(enum radionuclides nuclide)
 {
   for (enum decaypathways d = 0; d < DECAYPATH_COUNT; d++)
   {
-    if (decaypathisdouble(d))
+    if (decaypath_is_chain(d))
     {
       enum radionuclides nuc2 = decaynuc2(d);
       if (nuc2 == nuclide)
@@ -306,7 +306,7 @@ static double get_endecay_per_ejectamass_at_time(const int mgi, enum decaypathwa
 // decay energy that would be released from time tstart to time infinity from each decaypath
 {
   const enum radionuclides nuc1 = decaynuc1(decaypath);
-  if (decaypathisdouble(decaypath))
+  if (decaypath_is_chain(decaypath))
   {
     // double decay, e.g. DECAY_NI56_CO56, the decay of Co56 nuclei that were produced from Ni56 decays
     // decays from the second nuclide (e.g. Co56) due to the initial abundance are not counted here
