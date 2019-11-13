@@ -65,7 +65,7 @@ double meanlife(enum radionuclides nuclide_type)
       return 0.0211395 * DAY;
     case FAKE_GAM_LINE_ID:
     case RADIONUCLIDE_COUNT:
-      assert(false);
+      return -1;
   }
 }
 
@@ -191,7 +191,7 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
 }
 
 
-static double get_random_decaytime(enum decaypathways decaypath, const double tdecaymin, const double tdecaymax)
+double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, const double tdecaymax)
 {
   double tdecay = -1;
   const bool ischain = decaypath_is_chain(decaypath);
@@ -221,63 +221,53 @@ static double get_random_decaytime(enum decaypathways decaypath, const double td
 }
 
 
-void set_random_pellet(enum decaypathways decaypath, PKT *pkt_ptr, const double tdecaymin, const double tmax)
+enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *originated_from_positron)
 {
-  pkt_ptr->tdecay = get_random_decaytime(decaypath, tdecaymin, tmax);
-
+  *originated_from_positron = false; // will be changed if necessary before returning
   switch (decaypath)
   {
     case DECAY_NI56:  // Ni56 pellet
-    {
-      pkt_ptr->type = TYPE_56NI_PELLET;
-      break;
-    }
+      return TYPE_56NI_PELLET;
 
     case DECAY_NI56_CO56: // Ni56 -> Co56 pellet
     {
       const double zrand = gsl_rng_uniform(rng);
       if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
       {
-        pkt_ptr->type = TYPE_56CO_PELLET;
+        return TYPE_56CO_PELLET;
       }
       else
       {
-        pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
-        pkt_ptr->originated_from_positron = true;
+        *originated_from_positron = true;
+        return TYPE_56CO_POSITRON_PELLET;
       }
-      break;
     }
 
-    case DECAY_FE52: // Fe52 pellet
-      pkt_ptr->type = TYPE_52FE_PELLET;
-      break;
+    case DECAY_FE52:
+      return TYPE_52FE_PELLET;
 
-    case DECAY_FE52_MN52: // Fe52 -> Mn52 pellet
-      pkt_ptr->type = TYPE_52MN_PELLET;
-      break;
+    case DECAY_FE52_MN52:
+      return TYPE_52MN_PELLET;
 
-    case DECAY_CR48: // Cr48 pellet
-      pkt_ptr->type = TYPE_48CR_PELLET;
-      break;
+    case DECAY_CR48:
+      return TYPE_48CR_PELLET;
 
-    case DECAY_CR48_V48: // Cr48 -> V48 pellet
-      pkt_ptr->type = TYPE_48V_PELLET;
-      break;
+    case DECAY_CR48_V48:
+      return TYPE_48V_PELLET;
 
-    case DECAY_CO56: // Co56 pellet
+    case DECAY_CO56:
     {
-      /// Now it is a 56Co pellet, choose whether it becomes a positron
+      // Now it is a 56Co pellet, choose whether it becomes a positron
       const double zrand = gsl_rng_uniform(rng);
       if (zrand < nucdecayenergygamma(NUCLIDE_CO56) / nucdecayenergy(NUCLIDE_CO56))
       {
-        pkt_ptr->type = TYPE_56CO_PELLET;
+        return TYPE_56CO_PELLET;
       }
       else
       {
-        pkt_ptr->type = TYPE_56CO_POSITRON_PELLET;
-        pkt_ptr->originated_from_positron = true;
+        *originated_from_positron = true;
+        return TYPE_56CO_POSITRON_PELLET;
       }
-      break;
     }
 
     case DECAY_NI57: // Ni57 pellet
@@ -285,23 +275,20 @@ void set_random_pellet(enum decaypathways decaypath, PKT *pkt_ptr, const double 
       const double zrand = gsl_rng_uniform(rng);
       if (zrand < nucdecayenergygamma(NUCLIDE_NI57) / nucdecayenergy(NUCLIDE_NI57))
       {
-        pkt_ptr->type = TYPE_57NI_PELLET;
+        return TYPE_57NI_PELLET;
       }
       else
       {
-        pkt_ptr->type = TYPE_57NI_POSITRON_PELLET;
-        pkt_ptr->originated_from_positron = true;
+        *originated_from_positron = true;
+        return TYPE_57NI_POSITRON_PELLET;
       }
-      break;
     }
 
     case DECAY_NI57_CO57: // Ni57 -> Co57 pellet
-      pkt_ptr->type = TYPE_57CO_PELLET;
-      break;
+      return TYPE_57CO_PELLET;
 
     case DECAY_CO57: // Co57 pellet
-      pkt_ptr->type = TYPE_57CO_PELLET;
-      break;
+      return TYPE_57CO_PELLET;
 
     case DECAYPATH_COUNT:
     {
@@ -473,24 +460,36 @@ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways deca
 }
 
 
-double get_positroninjection_rate_density(const int modelgridindex, const double t)
-// in erg / s / cm^3
+double get_decay_power_density(const int modelgridindex, const double t)
+// total decay energy injection rate in erg / s / cm^3
 {
   const double rho = get_rho(modelgridindex);
 
-  const double co56frac = get_modelradioabund_at_time(modelgridindex, NUCLIDE_CO56, t);
+  double deprate_sum = 0.;
+  for (enum radionuclides nuclide = 0; nuclide < RADIONUCLIDE_COUNT; nuclide++)
+  {
+    const double decayratefactor = get_modelradioabund_at_time(modelgridindex, nuclide, t) / meanlife(nuclide);
+    deprate_sum += decayratefactor * nucdecayenergy(nuclide) * rho / nucmass(nuclide);
+  }
 
-  const double co56_positron_dep = nucdecayenergypositrons(NUCLIDE_CO56) * co56frac / meanlife(NUCLIDE_CO56) / nucmass(NUCLIDE_CO56) * rho;
+  return deprate_sum;
+}
 
-  const double ni57frac = get_modelradioabund_at_time(modelgridindex, NUCLIDE_NI57, t);
-  const double ni57_positron_dep = nucdecayenergypositrons(NUCLIDE_NI57) * ni57frac / meanlife(NUCLIDE_NI57) / nucmass(NUCLIDE_NI57) * rho;
 
-  const double v48frac = get_modelradioabund_at_time(modelgridindex, NUCLIDE_V48, t);
-  const double v48_positron_dep = nucdecayenergypositrons(NUCLIDE_V48)  * v48frac * rho;
+double get_positroninjection_rate_density(const int modelgridindex, const double t)
+// energy injection rate from positrons in erg / s / cm^3
+{
+  const double rho = get_rho(modelgridindex);
 
-  const double pos_dep_sum = co56_positron_dep + ni57_positron_dep + v48_positron_dep;
-  printout("positroninjection_rate_density(mgi %d time %g): %g erg/s/cm3 = co56 %g + ni57 %g + v48 %g\n",
-          modelgridindex, t, pos_dep_sum, co56_positron_dep, ni57_positron_dep, v48_positron_dep);
+  double pos_dep_sum = 0.;
+  for (enum radionuclides nuclide = 0; nuclide < RADIONUCLIDE_COUNT; nuclide++)
+  {
+    if (nucdecayenergypositrons(nuclide) > 0.)
+    {
+      const double decayratefactor = get_modelradioabund_at_time(modelgridindex, nuclide, t) / meanlife(nuclide);
+      pos_dep_sum += decayratefactor * nucdecayenergypositrons(nuclide) * rho / nucmass(nuclide);
+    }
+  }
 
   return pos_dep_sum;
 }
