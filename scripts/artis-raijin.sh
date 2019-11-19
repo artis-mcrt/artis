@@ -30,8 +30,8 @@
 #    10 hours for 512-1023 cores
 #     5 hours for >=1024 cores
 
-module load gsl/2.5
-module load intel-mpi/2018.3.222
+module load gsl
+module load intel-mpi
 module load intel-cc/2018.3.222
 
 ulimit -l 2097152
