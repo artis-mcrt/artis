@@ -1,6 +1,13 @@
 ARTIS README FILE
 -----------------
 
+This branch is the version of ARTIS used for published works up to 2019.
+(I.e. previously the Master branch). This branch to be preserved
+but Master will soon be updates to incorporate new Shingles et al. 2020
+code modification. Intention is that this "classic" version will no longer
+be used for production simulations, but will be retained here for 
+references. SAS: 22/11/19.
+
 As of 2012-07-30 the code base of ARTIS will be maintained using the
 GIT (http://git-scm.com/) distributed version control system. To
 access the code checkout the latest snaphsot of the code in a local
