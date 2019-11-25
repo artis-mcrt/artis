@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Build test
 
 on:
   push:
@@ -15,10 +15,18 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: makesn3d
+    - name: "install gsl and prepare build folder"
       run: |
-        cp artisoptions_example.h artisoptions.h
         sudo apt-get install libgsl-dev
+        cp artisoptions_example.h artisoptions.h
+    - name: "diagnostic info"
+      run: |
         git status
+        which cc
         cc --version
-        make sn3d
+    - name: "compile"
+      run: make sn3d exspec
+    - name: "compile MPI version"
+      run: make sn3dmpi
+    - name: "compile OpenMP version"
+      run: make sn3dopenmp

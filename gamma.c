@@ -230,9 +230,6 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   // nts defines the time step we are in. pkt_ptr is a pointer to the packet
   // that is decaying.
   // Record decay.
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
 
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
