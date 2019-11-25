@@ -10,69 +10,6 @@
 // #define DO_TITER
 // #define FORCE_LTE
 
-/// non-thermal ionisation
-static const bool NT_ON = true;
-
-/// use the detailed Spencer-Fano solver instead of the work function approximation
-static const bool NT_SOLVE_SPENCERFANO = true;
-
-// non-LTE population solver
-static const bool NLTE_POPS_ON = true;
-
-// solve the NLTE population matrix equation simultaneously for levels of all ions of an element
-static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
-
-// maximum number of NLTE/Te/Spencer-Fano iterations
-static const int NLTEITER = 30;
-
-// if using this, avoid look up tables and switch on the direct integration options below
-// (since LUTs created with Planck function J_nu)
-static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
-
-// store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
-#define DETAILED_LINE_ESTIMATORS_ON false
-
-// store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
-
-// extremely slow and memory consuming - for debugging only
-// not safe for MPI or OpenMP - single process and single thread only!
-// this will output a list of contributions to each bound-free rate estimator
-// with each packet emission type ranked by their contribution to the rate
-#define DETAILED_BF_ESTIMATORS_BYTYPE false
-
-// dynamically calculate photoionization rates for the current radiation field
-// instead of interpolating values from a lookup table for a blackbody radiation field
-#define NO_LUT_PHOTOION true
-
-// as above for bound-free heating
-#define NO_LUT_BFHEATING true
-
-// if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
-#define SEPARATE_STIMRECOMB false
-
-#define TRACK_ION_STATS false
-#define TRACK_ION_MASTATS false
-
-#define DIRECT_COL_HEAT
-#define NO_INITIAL_PACKETS
-#define RECORD_LINESTAT
-
-/// Rate coefficients
-///============================================================================
-#define TABLESIZE 100 //200 //100
-#define MINTEMP 1000.
-#define MAXTEMP 30000. //1000000.
-
-// Polarisation for real packets
-// #define DIPOLE
-// #define POL_ON
-
-// Polarisation for virtual packets
-// #define VPKT_ON
-
-static const size_t GSLWSIZE = 16384;
-
 #include "types.h"
 
 #if (DETAILED_BF_ESTIMATORS_ON && !NO_LUT_PHOTOION)
@@ -92,44 +29,6 @@ static const size_t GSLWSIZE = 16384;
   #include "omp.h"
 #endif
 
-
-/// fundamental constants
-#define CLIGHT        2.99792458e+10    /// Speed of light [cm/s]
-#define H             6.6260755e-27     /// Planck constant [erg s]
-#define MSUN          1.98855e+33       /// Solar mass [g]
-#define LSUN          3.826e+33         /// Solar luminosity [erg/s]
-#define MH            1.67352e-24       /// Mass of hydrogen atom [g]
-#define ME            9.1093897e-28     /// Mass of free electron [g]
-#define QE            4.80325E-10       /// elementary charge in cgs units [statcoulomb]
-#define PI            3.1415926535987
-#define EV            1.6021772e-12     /// eV to ergs [eV/erg]
-#define MEV           1.6021772e-6      /// MeV to ergs [MeV/erg]
-#define DAY           86400.0           /// day to seconds [s/day]
-#define SIGMA_T       6.6524e-25        /// Thomson cross-section
-#define THOMSON_LIMIT 1e-2              /// Limit below which e-scattering is Thomson
-#define PARSEC        3.0857e+18        /// pc to cm [pc/cm]
-#define KB            1.38064852e-16    /// Boltzmann constant [erg/K]
-#define STEBO         5.670400e-5       /// Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
-                                        /// (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
-#define SAHACONST     2.0706659e-16     /// Saha constant
-
-/// numerical constants
-#define CLIGHTSQUARED         8.9875518e+20   /// Speed of light squared [cm^2/s^2]
-#define TWOOVERCLIGHTSQUARED  2.2253001e-21
-#define TWOHOVERCLIGHTSQUARED 1.4745007e-47
-#define CLIGHTSQUAREDOVERTWOH 6.7819570e+46
-
-#define ONEOVERH              1.509188961e+26
-#define HOVERKB               4.799243681748932e-11
-#define FOURPI                1.256637061600000e+01
-#define ONEOVER4PI            7.957747153555701e-02
-#define HCLIGHTOVERFOURPI     1.580764662876770e-17
-#define OSCSTRENGTHCONVERSION 1.3473837e+21
-
-#define H_ionpot (13.5979996 * EV)
-
-#define MTSTEP 200       // Max number of time steps.
-#define MLINES 500000    // Increase linelist by this blocksize
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
 #define GRID_SPHERICAL1D 2 // radial shells
@@ -199,8 +98,6 @@ double rho_crit;                 ///MK: critical opacity in opacity_case 3 (coul
 int debug_packet;                /// activate debug output for this packet if non negative
 //double global_threshold;         /// global variable to transfer a threshold frequency to another function
 int n_middle_it;
-#define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
-#define MINPOP 1e-40
 
 int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;
