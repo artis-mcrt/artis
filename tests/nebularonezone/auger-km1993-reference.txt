@@ -1,0 +1,91 @@
+J/A+AS/97/443     Fluorescence for Be to Zn                      (Kaastra+ 1993)
+================================================================================
+X-ray emission from thin plasmas. I.
+Multiple Auger ionisation and fluorescence processes for Be to Zn.
+     Kaastra J.S., Mewe R.
+    <Astron. Astrophys. Suppl. Ser. 97, 443 (1993)>
+    =1993A&AS...97..443K
+================================================================================
+ADC_Keywords: Atomic physics
+Keywords: atomic data
+
+Abstract:
+    The  basic physical processes responsible for X-ray emission from thin
+    plasmas  are considered.  Collisional ionization or photoionization of
+    inner shells of  neutral atoms  and ions  leads to  the creation  of a
+    vacancy in one of the inner shells of the ion or atom, which is filled
+    by a cascade of  radiative  (fluorescent)   and  nonradiative  (Auger)
+    transitions.   The net result is the ejection of several electrons and
+    photons, leaving the atom in a multiply ionized state.  In this paper,
+    the  distribution of the number of emitted photons and electrons after
+    the creation of a hole in  an  inner  shell  of  an  atom  or  ion  is
+    calculated for all  ions from  H to  Zn.  The  method consists  of two
+    stages:  the calculation of transition  rates  for  a  given  electron
+    configuration, and calculation of probabilities of the several cascade
+    sequences using these transition rates.
+
+
+File Summary:
+--------------------------------------------------------------------------------
+ FileName    Lrecl       Records    Explanations
+--------------------------------------------------------------------------------
+ReadMe          80             .    This file
+table2          76          1090    Electron distribution
+table3          30         11732    Fluorescence yields
+--------------------------------------------------------------------------------
+
+Byte-by-byte Description of file: table2
+--------------------------------------------------------------------------------
+   Bytes Format  Units   Label    Explanations
+--------------------------------------------------------------------------------
+   1-  2  I2     ---     Z        Atomic number
+   3-  5  I3     ---     st       Ionisation stage of ion BEFORE ionisation
+                                    (neutral=1 etc.)
+   6-  7  I2     ---     s        Shell number of primary vacancy
+                                    (1-7 correspond to K L1 L2 L3 M1 M2 M3)
+   8- 14  F7.1   eV      I        Ionisation energy of the primary vacancy 
+                                    in eV (from Lotz)
+  15- 21  F7.1   eV      EA       Energy that goes into Auger electrons, in eV
+  22- 25  I4     10-3    epsilon  Correction factor defined in equation 6 of
+                                    the paper
+  27- 31  I5     10-4    PrEj1    Probability that a photo-ionisation leads to
+                                    ejection of 1 electron (1)
+  32- 36  I5     10-4    PrEj2    Probability of 2 electrons photoionisation (1)
+  37- 41  I5     10-4    PrEj3    Probability of 3 electrons photoionisation (1)
+  42- 46  I5     10-4    PrEj4    Probability of 4 electrons photoionisation (1)
+  47- 51  I5     10-4    PrEj5    Probability of 5 electrons photoionisation (1)
+  52- 56  I5     10-4    PrEj6    Probability of 6 electrons photoionisation (1)
+  57- 61  I5     10-4    PrEj7    Probability of 7 electrons photoionisation (1)
+  62- 66  I5     10-4    PrEj8    Probability of 8 electrons photoionisation (1)
+  67- 71  I5     10-4    PrEj9    Probability of 9 electrons photoionisation (1)
+  72- 76  I5     10-4    PrEj10   Probability of 10 electrons photoionisation (1)
+--------------------------------------------------------------------------------
+Note (1): NOTE that the probabilities have been multiplied by 10000.
+--------------------------------------------------------------------------------
+
+Byte-by-byte Description of file: table3
+--------------------------------------------------------------------------------
+   Bytes Format  Units   Label    Explanations
+--------------------------------------------------------------------------------
+   1-  3  I3     ---     Z        Atomic number
+   4-  6  I3     ---     st       Ionisation stage of ion BEFORE ionisation
+                                    (neutral=1 etc.)
+   7-  9  I3     ---     s        Shell number of primary vacancy
+                                    (1-7 correspond to K L1 L2 L3 M1 M2 M3)
+  10- 12  I3     ---     Delta    Number of Auger electrons ejected before
+                                    emission of the line; the line therefore
+                                    occurs in the ion with ionisation stage
+                                    st+Delta+1 (the factor 1 corresponds to the
+                                    photo-electron)
+  13- 15  I3     ---     il       Line identification number; labels according
+                                    to table 1 of the paper. Note that il runs
+                                    from 1 to 22.
+  16- 23  F8.1   eV      E        Approximate line energy of the transition;
+                                    note that often more accurate energies can
+                                    be found in the literature.
+  24- 30  F7.4   ---     omega    The fluorescence yield omega for this line
+                                    (number of photons emitted
+                                     per primary vacancy)
+--------------------------------------------------------------------------------
+================================================================================
+(End)                                    Francois Ochsenbein [CDS]   13-Apr-1993

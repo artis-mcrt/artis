@@ -1,0 +1,8 @@
+output_*.txt
+estimators_*.txt
+*.out
+bflist.dat
+*.tmp
+ratecoeff.dat
+phixsdata_v2.txt
+transitiondata.txt

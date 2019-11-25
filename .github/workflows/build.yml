@@ -33,3 +33,33 @@ jobs:
       run: |
         sudo apt-get install libopenmpi-dev
         make sn3dmpi
+    - name: "Setup nebularonezone test"
+      run: |
+        cp tests/nebularonezone/artisoptions.h .
+        make sn3d exspec
+        cd tests/nebularonezone
+        cp ../../sn3d .
+        cp ../../exspec .
+    - name: "Run nebularonezone sn3d"
+      run: |
+        ./sn3d&
+        tail -f output*.txt
+    - name: Upload estimators
+      uses: actions/upload-artifact@v1
+      with:
+        name: test-nebularonezone-estimators
+        path: tests/nebularonezone/estimators_0000.out
+    - name: Upload output
+      uses: actions/upload-artifact@v1
+      with:
+        name: test-nebularonezone-output
+        path: tests/nebularonezone/output_0-0.txt
+    - name: "Run nebularonezone exspec"
+      run: |
+        ./exspec&
+        tail -f exspec.txt
+    - name: Upload spectrum
+      uses: actions/upload-artifact@v1
+      with:
+        name: test-nebularonezone-spec
+        path: tests/nebularonezone/spec.out

@@ -1,0 +1,1983 @@
+
+===========> Fe I input:
+Reading atomic-data-nahar/fe1.en.ls.txt
+Ionization potential = 7.7551 eV
+Core state id of 5De index 1 is invalid (=0, Ncorestates=53). Setting core state to 1 instead.
+Core state id of 1Se index 1 is invalid (=0, Ncorestates=53). Setting core state to 1 instead.
+Reading atomic-data-hillier/atomic/FE/I/07sep16/fei_osc
+File specifies 1579 levels
+File specifies 141928 transitions
+Read 1579 levels
+Read 141928 transitions
+Reading atomic-data-nahar/fe1.ptpx.txt
+
+Replacing Nahar configuration of 'Eqv st (0S ) 0s  a5D ' with '3d6_4s2_5De'
+Matched Nahar phixs for 5De index 1 '3d6_4s2_5De' (E = 0.000 eV, g = 25.0) to 
+<E> = 0.050 eV, g_sum = 25.0: 
+ENERGY DISCREPANCY WARNING
+3d6_4s2_a5De[4] (0.000 eV, g = 9.0, match_score = 97.5)
+3d6_4s2_a5De[3] (0.052 eV, g = 7.0, match_score = 97.5)
+3d6_4s2_a5De[2] (0.087 eV, g = 5.0, match_score = 97.5)
+3d6_4s2_a5De[1] (0.110 eV, g = 3.0, match_score = 97.5)
+3d6_4s2_a5De[0] (0.121 eV, g = 1.0, match_score = 97.5)
+
+Matched Nahar phixs for 5Fe index 1 '3d7    (4F ) 4s  a5F ' (E = 0.551 eV, g = 35.0) to 
+<E> = 0.925 eV, g_sum = 35.0: 
+3d7(4F)4s_a5Fe[5] (0.859 eV, g = 11.0, match_score = 88.8)
+3d7(4F)4s_a5Fe[4] (0.915 eV, g = 9.0, match_score = 88.8)
+3d7(4F)4s_a5Fe[3] (0.958 eV, g = 7.0, match_score = 88.8)
+3d7(4F)4s_a5Fe[2] (0.990 eV, g = 5.0, match_score = 88.8)
+3d7(4F)4s_a5Fe[1] (1.011 eV, g = 3.0, match_score = 88.8)
+
+Matched Nahar phixs for 5Pe index 1 '3d7    (4P ) 4s  a5P ' (E = 1.921 eV, g = 15.0) to 
+<E> = 2.193 eV, g_sum = 15.0: 
+3d7(4P)4s_a5Pe[3] (2.176 eV, g = 7.0, match_score = 91.9)
+3d7(4P)4s_a5Pe[2] (2.198 eV, g = 5.0, match_score = 91.9)
+3d7(4P)4s_a5Pe[1] (2.223 eV, g = 3.0, match_score = 91.9)
+
+Matched Nahar phixs for 7Do index 1 '3d64s  (6D ) 4p  z7Do' (E = 2.134 eV, g = 35.0) to 
+<E> = 2.433 eV, g_sum = 35.0: 
+3d6(5D)4s4p_z7Do[5] (2.399 eV, g = 11.0, match_score = 91.0)
+3d6(5D)4s4p_z7Do[4] (2.425 eV, g = 9.0, match_score = 91.0)
+3d6(5D)4s4p_z7Do[3] (2.450 eV, g = 7.0, match_score = 91.0)
+3d6(5D)4s4p_z7Do[2] (2.469 eV, g = 5.0, match_score = 91.0)
+3d6(5D)4s4p_z7Do[1] (2.482 eV, g = 3.0, match_score = 91.0)
+
+Matched Nahar phixs for 7Fo index 1 '3d64s  (6D ) 4p  z7Fo' (E = 2.515 eV, g = 49.0) to 
+<E> = 2.843 eV, g_sum = 49.0: 
+3d6(5D)4s4p_z7Fo[6] (2.808 eV, g = 13.0, match_score = 90.2)
+3d6(5D)4s4p_z7Fo[5] (2.833 eV, g = 11.0, match_score = 90.2)
+3d6(5D)4s4p_z7Fo[4] (2.851 eV, g = 9.0, match_score = 90.2)
+3d6(5D)4s4p_z7Fo[3] (2.865 eV, g = 7.0, match_score = 90.2)
+3d6(5D)4s4p_z7Fo[2] (2.876 eV, g = 5.0, match_score = 90.2)
+3d6(5D)4s4p_z7Fo[1] (2.882 eV, g = 3.0, match_score = 90.2)
+3d6(5D)4s4p_z7Fo[0] (2.885 eV, g = 1.0, match_score = 90.2)
+
+Matched Nahar phixs for 7Po index 1 '3d64s  (6D ) 4p  z7Po' (E = 2.650 eV, g = 21.0) to 
+<E> = 2.983 eV, g_sum = 21.0: 
+3d6(5D)4s4p_z7Po[4] (2.940 eV, g = 9.0, match_score = 90.0)
+3d6(5D)4s4p_z7Po[3] (2.998 eV, g = 7.0, match_score = 90.0)
+3d6(5D)4s4p_z7Po[2] (3.038 eV, g = 5.0, match_score = 90.0)
+
+Matched Nahar phixs for 5Do index 1 '3d64s  (6D ) 4p  z5Do' (E = 2.820 eV, g = 25.0) to 
+<E> = 3.242 eV, g_sum = 25.0: 
+3d6(5D)4s4p_z5Do[4] (3.211 eV, g = 9.0, match_score = 87.3)
+3d6(5D)4s4p_z5Do[3] (3.241 eV, g = 7.0, match_score = 87.3)
+3d6(5D)4s4p_z5Do[2] (3.266 eV, g = 5.0, match_score = 87.3)
+3d6(5D)4s4p_z5Do[1] (3.283 eV, g = 3.0, match_score = 87.3)
+3d6(5D)4s4p_z5Do[0] (3.292 eV, g = 1.0, match_score = 87.3)
+
+Matched Nahar phixs for 5Fo index 1 '3d64s  (6D ) 4p  z5Fo' (E = 3.028 eV, g = 35.0) to 
+<E> = 3.375 eV, g_sum = 35.0: 
+3d6(5D)4s4p_z5Fo[5] (3.332 eV, g = 11.0, match_score = 89.6)
+3d6(5D)4s4p_z5Fo[4] (3.368 eV, g = 9.0, match_score = 89.6)
+3d6(5D)4s4p_z5Fo[3] (3.397 eV, g = 7.0, match_score = 89.6)
+3d6(5D)4s4p_z5Fo[2] (3.417 eV, g = 5.0, match_score = 89.6)
+3d6(5D)4s4p_z5Fo[1] (3.430 eV, g = 3.0, match_score = 89.6)
+
+Matched Nahar phixs for 5Po index 1 '3d64s  (6D ) 4p  z5Po' (E = 3.225 eV, g = 15.0) to 
+<E> = 3.636 eV, g_sum = 15.0: 
+3d6(5D)4s4p_z5Po[3] (3.603 eV, g = 7.0, match_score = 87.7)
+3d6(5D)4s4p_z5Po[2] (3.654 eV, g = 5.0, match_score = 87.7)
+3d6(5D)4s4p_z5Po[1] (3.686 eV, g = 3.0, match_score = 87.7)
+
+Matched Nahar phixs for 5Do index 2 '3d7    (4F ) 4p  y5Do' (E = 3.928 eV, g = 25.0) to 
+<E> = 4.154 eV, g_sum = 25.0: 
+3d7(4F)4p_y5Do[4] (4.103 eV, g = 9.0, match_score = 93.2)
+3d7(4F)4p_y5Do[3] (4.154 eV, g = 7.0, match_score = 93.2)
+3d7(4F)4p_y5Do[2] (4.191 eV, g = 5.0, match_score = 93.2)
+3d7(4F)4p_y5Do[1] (4.218 eV, g = 3.0, match_score = 93.2)
+3d7(4F)4p_y5Do[0] (4.231 eV, g = 1.0, match_score = 93.2)
+
+Matched Nahar phixs for 5Fo index 2 '3d7    (4F ) 4p  y5Fo' (E = 3.975 eV, g = 35.0) to 
+<E> = 4.230 eV, g_sum = 35.0: 
+3d7(4F)4p_y5Fo[5] (4.178 eV, g = 11.0, match_score = 92.3)
+3d7(4F)4p_y5Fo[4] (4.220 eV, g = 9.0, match_score = 92.3)
+3d7(4F)4p_y5Fo[3] (4.256 eV, g = 7.0, match_score = 92.3)
+3d7(4F)4p_y5Fo[2] (4.283 eV, g = 5.0, match_score = 92.3)
+3d7(4F)4p_y5Fo[1] (4.301 eV, g = 3.0, match_score = 92.3)
+
+Matched Nahar phixs for 5Go index 1 '3d7    (4F ) 4p  z5Go' (E = 4.128 eV, g = 45.0) to 
+<E> = 4.357 eV, g_sum = 45.0: 
+3d7(4F)4p_z5Go[5] (4.312 eV, g = 11.0, match_score = 93.1)
+3d7(4F)4p_z5Go[6] (4.320 eV, g = 13.0, match_score = 93.1)
+3d7(4F)4p_z5Go[4] (4.371 eV, g = 9.0, match_score = 93.1)
+3d7(4F)4p_z5Go[3] (4.415 eV, g = 7.0, match_score = 93.1)
+3d7(4F)4p_z5Go[2] (4.446 eV, g = 5.0, match_score = 93.1)
+
+Matched Nahar phixs for 5Po index 2 '3d64s  (4D ) 4p  y5Po' (E = 4.462 eV, g = 15.0) to 
+<E> = 4.591 eV, g_sum = 15.0: 
+3d6(5D)4s4p_y5Po[3] (4.559 eV, g = 7.0, match_score = 96.1)
+3d6(5D)4s4p_y5Po[2] (4.607 eV, g = 5.0, match_score = 96.1)
+3d6(5D)4s4p_y5Po[1] (4.638 eV, g = 3.0, match_score = 96.1)
+
+Matched Nahar phixs for 5Do index 3 '3d64s  (4D ) 4p  x5Do' (E = 4.764 eV, g = 25.0) to 
+<E> = 4.956 eV, g_sum = 25.0: 
+3d6(5D)4s4p_x5Do[4] (4.913 eV, g = 9.0, match_score = 94.2)
+3d6(5D)4s4p_x5Do[3] (4.956 eV, g = 7.0, match_score = 94.2)
+3d6(5D)4s4p_x5Do[2] (4.988 eV, g = 5.0, match_score = 94.2)
+3d6(5D)4s4p_x5Do[1] (5.010 eV, g = 3.0, match_score = 94.2)
+3d6(5D)4s4p_x5Do[0] (5.020 eV, g = 1.0, match_score = 94.2)
+
+Matched Nahar phixs for 5Fo index 3 '3d64s  (4D ) 4p  x5Fo' (E = 4.775 eV, g = 35.0) to 
+<E> = 5.039 eV, g_sum = 35.0: 
+3d6(5D)4s4p_x5Fo[5] (4.991 eV, g = 11.0, match_score = 92.1)
+3d6(5D)4s4p_x5Fo[4] (5.033 eV, g = 9.0, match_score = 92.1)
+3d6(5D)4s4p_x5Fo[3] (5.064 eV, g = 7.0, match_score = 92.1)
+3d6(5D)4s4p_x5Fo[2] (5.086 eV, g = 5.0, match_score = 92.1)
+3d6(5D)4s4p_x5Fo[1] (5.100 eV, g = 3.0, match_score = 92.1)
+
+Matched Nahar phixs for 7Po index 2 '3d54s2 (6S ) 4p  y7Po' (E = 4.857 eV, g = 21.0) to 
+<E> = 4.992 eV, g_sum = 21.0: 
+3d5(6S)4s24p_y7Po[2] (4.966 eV, g = 5.0, match_score = 96.0)
+3d5(6S)4s24p_y7Po[3] (4.985 eV, g = 7.0, match_score = 96.0)
+3d5(6S)4s24p_y7Po[4] (5.012 eV, g = 9.0, match_score = 96.0)
+
+Matched Nahar phixs for 5So index 1 '3d64s  (4P ) 4p  z5So' (E = 5.024 eV, g = 5.0) to 
+3d6(3P)4s4p_z5So[2] (5.070 eV, g = 5.0, match_score = 98.6)
+
+Replacing Nahar configuration of '3d64s  (6D ) 5s  a7D ' with '3d6(5D)4s5s_e7De'
+Matched Nahar phixs for 7De index 1 '3d6(5D)4s5s_e7De' (E = 5.238 eV, g = 35.0) to 
+<E> = 5.359 eV, g_sum = 35.0: 
+3d6(5D)4s5s_e7De[5] (5.308 eV, g = 11.0, match_score = 96.4)
+3d6(5D)4s5s_e7De[4] (5.352 eV, g = 9.0, match_score = 96.4)
+3d6(5D)4s5s_e7De[3] (5.385 eV, g = 7.0, match_score = 96.4)
+3d6(5D)4s5s_e7De[2] (5.410 eV, g = 5.0, match_score = 96.4)
+3d6(5D)4s5s_e7De[1] (5.426 eV, g = 3.0, match_score = 96.4)
+
+Matched Nahar phixs for 5Po index 3 '3d64s  (4P ) 4p  x5Po' (E = 5.340 eV, g = 15.0) to 
+<E> = 5.300 eV, g_sum = 15.0: 
+3d6(3P)4s4p_x5Po[3] (5.273 eV, g = 7.0, match_score = 98.8)
+3d6(3P)4s4p_x5Po[2] (5.314 eV, g = 5.0, match_score = 98.8)
+3d6(3P)4s4p_x5Po[1] (5.341 eV, g = 3.0, match_score = 98.8)
+
+Matched Nahar phixs for 5Do index 4 '3d64s  (4P ) 4p  w5Do' (E = 5.396 eV, g = 25.0) to 
+<E> = 5.443 eV, g_sum = 25.0: 
+3d6(3P)4s4p_w5Do[4] (5.393 eV, g = 9.0, match_score = 98.6)
+3d6(3P)4s4p_w5Do[3] (5.446 eV, g = 7.0, match_score = 98.6)
+3d6(3P)4s4p_w5Do[2] (5.478 eV, g = 5.0, match_score = 98.6)
+3d6(3P)4s4p_w5Do[1] (5.506 eV, g = 3.0, match_score = 98.6)
+3d6(3P)4s4p_w5Do[0] (5.512 eV, g = 1.0, match_score = 98.6)
+
+Replacing Nahar configuration of '3d64s  (6D ) 5s  b5D ' with '3d6(5D)4s5s_e5De'
+Matched Nahar phixs for 5De index 2 '3d6(5D)4s5s_e5De' (E = 5.495 eV, g = 25.0) to 
+<E> = 5.586 eV, g_sum = 25.0: 
+3d6(5D)4s5s_e5De[4] (5.539 eV, g = 9.0, match_score = 97.3)
+3d6(5D)4s5s_e5De[3] (5.587 eV, g = 7.0, match_score = 97.3)
+3d6(5D)4s5s_e5De[2] (5.621 eV, g = 5.0, match_score = 97.3)
+3d6(5D)4s5s_e5De[1] (5.642 eV, g = 3.0, match_score = 97.3)
+3d6(5D)4s5s_e5De[0] (5.653 eV, g = 1.0, match_score = 97.3)
+
+Matched Nahar phixs for 5Go index 2 '3d64s  (4H ) 4p  y5Go' (E = 5.595 eV, g = 45.0) to 
+<E> = 5.327 eV, g_sum = 45.0: 
+3d6(3H)4s4p_y5Go[6] (5.305 eV, g = 13.0, match_score = 92.0)
+3d6(3H)4s4p_y5Go[5] (5.320 eV, g = 11.0, match_score = 92.0)
+3d6(3H)4s4p_y5Go[4] (5.334 eV, g = 9.0, match_score = 92.0)
+3d6(3H)4s4p_y5Go[3] (5.348 eV, g = 7.0, match_score = 92.0)
+3d6(3H)4s4p_y5Go[2] (5.357 eV, g = 5.0, match_score = 92.0)
+
+Matched Nahar phixs for 5Po index 4 '3d7    (4P ) 4p  w5Po' (E = 5.601 eV, g = 15.0) to 
+<E> = 5.734 eV, g_sum = 15.0: 
+3d7(4P)4p_w5Po[3] (5.720 eV, g = 7.0, match_score = 96.0)
+3d7(4P)4p_w5Po[2] (5.742 eV, g = 5.0, match_score = 96.0)
+3d7(4P)4p_w5Po[1] (5.754 eV, g = 3.0, match_score = 96.0)
+
+Matched Nahar phixs for 5So index 2 '3d7    (4P ) 4p  y5So' (E = 5.617 eV, g = 5.0) to 
+3d7(4P)4p_y5So[2] (5.519 eV, g = 5.0, match_score = 97.1)
+
+Matched Nahar phixs for 5Do index 5 '3d64s  (4F ) 4p  v5Do' (E = 5.652 eV, g = 25.0) to 
+<E> = 5.494 eV, g_sum = 25.0: 
+3d6(3F)4s4p_5Do[4] (5.458 eV, g = 9.0, match_score = 46.7)
+3d6(3F)4s4p_5Do[3] (5.476 eV, g = 7.0, match_score = 46.7)
+3d6(3F)4s4p_5Do[2] (5.538 eV, g = 5.0, match_score = 46.7)
+3d6(3F)4s4p_5Do[1] (5.550 eV, g = 3.0, match_score = 46.7)
+3d6(3F)4s4p_5Do[0] (5.558 eV, g = 1.0, match_score = 46.7)
+
+Matched Nahar phixs for 5Io index 1 '3d64s  (4H ) 4p  z5Io' (E = 5.671 eV, g = 65.0) to 
+<E> = 5.325 eV, g_sum = 65.0: 
+3d6(3H)4s4p_5Io[6] (5.313 eV, g = 13.0, match_score = 43.9)
+3d6(3H)4s4p_5Io[7] (5.314 eV, g = 15.0, match_score = 43.9)
+3d6(3H)4s4p_5Io[8] (5.329 eV, g = 17.0, match_score = 43.9)
+3d6(3H)4s4p_5Io[5] (5.330 eV, g = 11.0, match_score = 43.9)
+3d6(3H)4s4p_5Io[4] (5.345 eV, g = 9.0, match_score = 43.9)
+
+Matched Nahar phixs for 5Ho index 1 '3d64s  (4H ) 4p  z5Ho' (E = 5.691 eV, g = 55.0) to 
+<E> = 5.381 eV, g_sum = 55.0: 
+3d6(3H)4s4p_5Ho[6] (5.371 eV, g = 13.0, match_score = 44.4)
+3d6(3H)4s4p_5Ho[3] (5.372 eV, g = 7.0, match_score = 44.4)
+3d6(3H)4s4p_5Ho[7] (5.384 eV, g = 15.0, match_score = 44.4)
+3d6(3H)4s4p_5Ho[4] (5.386 eV, g = 9.0, match_score = 44.4)
+3d6(3H)4s4p_5Ho[5] (5.388 eV, g = 11.0, match_score = 44.4)
+
+Matched Nahar phixs for 5Fo index 4 '3d64s  (4F ) 4p  w5Fo' (E = 5.698 eV, g = 35.0) to 
+<E> = 5.501 eV, g_sum = 35.0: 
+3d6(3F)4s4p_5Fo[5] (5.486 eV, g = 11.0, match_score = 46.1)
+3d6(3F)4s4p_5Fo[2] (5.491 eV, g = 5.0, match_score = 46.1)
+3d6(3F)4s4p_5Fo[1] (5.502 eV, g = 3.0, match_score = 46.1)
+3d6(3F)4s4p_5Fo[4] (5.507 eV, g = 9.0, match_score = 46.1)
+3d6(3F)4s4p_5Fo[3] (5.524 eV, g = 7.0, match_score = 46.1)
+
+Replacing Nahar configuration of '3d7    (4F ) 5s  b5F ' with '3d7(4F)5s_e5Fe'
+Matched Nahar phixs for 5Fe index 2 '3d7(4F)5s_e5Fe' (E = 5.756 eV, g = 35.0) to 
+<E> = 5.890 eV, g_sum = 35.0: 
+3d7(4F)5s_e5Fe[5] (5.828 eV, g = 11.0, match_score = 96.0)
+3d7(4F)5s_e5Fe[4] (5.874 eV, g = 9.0, match_score = 96.0)
+3d7(4F)5s_e5Fe[3] (5.921 eV, g = 7.0, match_score = 96.0)
+3d7(4F)5s_e5Fe[2] (5.956 eV, g = 5.0, match_score = 96.0)
+3d7(4F)5s_e5Fe[1] (5.979 eV, g = 3.0, match_score = 96.0)
+
+Matched Nahar phixs for 5Go index 3 '3d64s  (4F ) 4p  x5Go' (E = 5.856 eV, g = 45.0) to 
+<E> = 5.675 eV, g_sum = 45.0: 
+3d6(3F)4s4p_x5Go[6] (5.655 eV, g = 13.0, match_score = 94.5)
+3d6(3F)4s4p_x5Go[5] (5.669 eV, g = 11.0, match_score = 94.5)
+3d6(3F)4s4p_x5Go[4] (5.683 eV, g = 9.0, match_score = 94.5)
+3d6(3F)4s4p_x5Go[3] (5.693 eV, g = 7.0, match_score = 94.5)
+3d6(3F)4s4p_x5Go[2] (5.699 eV, g = 5.0, match_score = 94.5)
+
+Matched Nahar phixs for 5Do index 6 '3d7    (4P ) 4p  u5Do' (E = 5.929 eV, g = 25.0) to 
+<E> = 5.813 eV, g_sum = 25.0: 
+3d7(4P)4p_5Do[4] (5.793 eV, g = 9.0, match_score = 95.5)
+3d7(4P)4p_5Do[3] (5.796 eV, g = 7.0, match_score = 95.5)
+3d7(4P)4p_5Do[2] (5.844 eV, g = 5.0, match_score = 95.5)
+3d7(4P)4p_5Do[0] (5.849 eV, g = 1.0, match_score = 95.5)
+3d7(4P)4p_5Do[1] (5.849 eV, g = 3.0, match_score = 95.5)
+
+Matched Nahar phixs for 5Po index 5 '3d64s  (6D ) 5p  v5Po' (E = 5.949 eV, g = 15.0) to 
+<E> = 5.963 eV, g_sum = 15.0: 
+v5Po[3] (5.947 eV, g = 7.0, match_score = 99.6)
+v5Po[2] (5.972 eV, g = 5.0, match_score = 99.6)
+v5Po[1] (5.987 eV, g = 3.0, match_score = 99.6)
+
+Replacing Nahar configuration of '3d64s  (6D ) 4d  c5D ' with '3d6(5D)4s4d_f5De'
+Matched Nahar phixs for 5De index 3 '3d6(5D)4s4d_f5De' (E = 6.031 eV, g = 25.0) to 
+<E> = 6.272 eV, g_sum = 25.0: 
+3d6(5D)4s4d_f5De[4] (6.252 eV, g = 9.0, match_score = 92.8)
+3d6(5D)4s4d_f5De[3] (6.265 eV, g = 7.0, match_score = 92.8)
+3d6(5D)4s4d_f5De[2] (6.286 eV, g = 5.0, match_score = 92.8)
+3d6(5D)4s4d_f5De[1] (6.308 eV, g = 3.0, match_score = 92.8)
+3d6(5D)4s4d_f5De[0] (6.321 eV, g = 1.0, match_score = 92.8)
+
+Matched Nahar phixs for 7Do index 2 '3d64s  (6D ) 5p  y7Do' (E = 6.039 eV, g = 35.0) to 
+<E> = 6.157 eV, g_sum = 35.0: 
+3d6(5D)4s5p_7Do[5] (6.119 eV, g = 11.0, match_score = 47.3)
+3d6(5D)4s5p_7Do[4] (6.144 eV, g = 9.0, match_score = 47.3)
+3d6(5D)4s5p_7Do[3] (6.175 eV, g = 7.0, match_score = 47.3)
+3d6(5D)4s5p_7Do[2] (6.200 eV, g = 5.0, match_score = 47.3)
+3d6(5D)4s5p_7Do[1] (6.218 eV, g = 3.0, match_score = 47.3)
+
+Replacing Nahar configuration of '3d64s  (6D ) 4d  a5G ' with '3d6(5D)4s4d_e5Ge'
+Matched Nahar phixs for 5Ge index 1 '3d6(5D)4s4d_e5Ge' (E = 6.061 eV, g = 45.0) to 
+<E> = 6.306 eV, g_sum = 45.0: 
+3d6(5D)4s4d_e5Ge[6] (6.264 eV, g = 13.0, match_score = 92.7)
+3d6(5D)4s4d_e5Ge[5] (6.286 eV, g = 11.0, match_score = 92.7)
+3d6(5D)4s4d_e5Ge[4] (6.321 eV, g = 9.0, match_score = 92.7)
+3d6(5D)4s4d_e5Ge[3] (6.350 eV, g = 7.0, match_score = 92.7)
+3d6(5D)4s4d_e5Ge[2] (6.369 eV, g = 5.0, match_score = 92.7)
+
+Matched Nahar phixs for 7Fo index 2 '3d64s  (6D ) 5p  y7Fo' (E = 6.085 eV, g = 49.0) to 
+<E> = 6.221 eV, g_sum = 49.0: 
+3d6(5D)4s5p_7Fo[6] (6.169 eV, g = 13.0, match_score = 47.0)
+3d6(5D)4s5p_7Fo[5] (6.206 eV, g = 11.0, match_score = 47.0)
+3d6(5D)4s5p_7Fo[4] (6.237 eV, g = 9.0, match_score = 47.0)
+3d6(5D)4s5p_7Fo[3] (6.253 eV, g = 7.0, match_score = 47.0)
+3d6(5D)4s5p_7Fo[2] (6.268 eV, g = 5.0, match_score = 47.0)
+3d6(5D)4s5p_7Fo[1] (6.277 eV, g = 3.0, match_score = 47.0)
+3d6(5D)4s5p_7Fo[0] (6.281 eV, g = 1.0, match_score = 47.0)
+
+Matched Nahar phixs for 7Fe index 1 '3d64s  (6D ) 4d  a7F ' (E = 6.090 eV, g = 49.0) to 
+3d6(5D)4s4d_7Fe[0] (6.339 eV, g = 1.0, match_score = 45.3)
+
+Matched Nahar phixs for 5Se index 1 '3d64s  (6D ) 4d  a5S ' (E = 6.107 eV, g = 5.0) to 
+3d6(5D)4s4d_5Se[2] (7.307 eV, g = 5.0, match_score = 31.4)
+
+Matched Nahar phixs for 7De index 2 '3d64s  (6D ) 4d  b7D ' (E = 6.108 eV, g = 35.0) to 
+<E> = 7.035 eV, g_sum = 28.0: 
+3d6(5D)4s5d_7De[4] (7.001 eV, g = 9.0, match_score = 23.1)
+3d6(5D)4s5d_7De[5] (7.045 eV, g = 11.0, match_score = 23.1)
+3d6(5D)4s5d_7De[2] (7.047 eV, g = 5.0, match_score = 23.1)
+3d6(5D)4s5d_7De[1] (7.073 eV, g = 3.0, match_score = 23.1)
+
+Matched Nahar phixs for 7Po index 3 '3d64s  (6D ) 5p  x7Po' (E = 6.117 eV, g = 21.0) to 
+<E> = 6.262 eV, g_sum = 21.0: 
+3d6(5D)4s5p_7Po[4] (6.222 eV, g = 9.0, match_score = 46.9)
+3d6(5D)4s5p_7Po[3] (6.277 eV, g = 7.0, match_score = 46.9)
+3d6(5D)4s5p_7Po[2] (6.311 eV, g = 5.0, match_score = 46.9)
+
+Matched Nahar phixs for 7Pe index 1 '3d64s  (6D ) 4d  a7P ' (E = 6.122 eV, g = 21.0) to 
+<E> = 6.275 eV, g_sum = 21.0: 
+3d6(5D)4s4d_7Pe[4] (6.258 eV, g = 9.0, match_score = 46.7)
+3d6(5D)4s4d_7Pe[3] (6.275 eV, g = 7.0, match_score = 46.7)
+3d6(5D)4s4d_7Pe[2] (6.306 eV, g = 5.0, match_score = 46.7)
+
+Matched Nahar phixs for 7Ge index 1 '3d64s  (6D ) 4d  a7G ' (E = 6.126 eV, g = 63.0) to 
+<E> = 7.094 eV, g_sum = 35.0: 
+3d6(5D)4s5d_7Ge[5] (7.078 eV, g = 11.0, match_score = 22.7)
+3d6(5D)4s5d_7Ge[4] (7.081 eV, g = 9.0, match_score = 22.7)
+3d6(5D)4s5d_7Ge[3] (7.109 eV, g = 7.0, match_score = 22.7)
+3d6(5D)4s5d_7Ge[2] (7.116 eV, g = 5.0, match_score = 22.7)
+3d6(5D)4s5d_7Ge[1] (7.119 eV, g = 3.0, match_score = 22.7)
+
+No matched Hillier levels for Nahar cross section of 7Se index 1 '3d64s  (6D ) 4d  a7S ' (E = 6.148 eV, g = 7.0)
+
+Matched Nahar phixs for 5Fe index 3 '3d64s  (6D ) 4d  c5F ' (E = 6.172 eV, g = 35.0) to 
+<E> = 7.206 eV, g_sum = 26.0: 
+3d6(5D)4s4d_5Fe[5] (7.170 eV, g = 11.0, match_score = 33.8)
+3d6(5D)4s4d_5Fe[3] (7.224 eV, g = 7.0, match_score = 33.8)
+3d6(5D)4s4d_5Fe[2] (7.234 eV, g = 5.0, match_score = 33.8)
+3d6(5D)4s4d_5Fe[1] (7.254 eV, g = 3.0, match_score = 33.8)
+
+Matched Nahar phixs for 5Fo index 5 '3d64s  (6D ) 5p  v5Fo' (E = 6.224 eV, g = 35.0) to 
+<E> = 5.945 eV, g_sum = 35.0: 
+3d6(3G)4s4p_v5Fo[5] (5.902 eV, g = 11.0, match_score = 91.6)
+3d6(3G)4s4p_v5Fo[4] (5.943 eV, g = 9.0, match_score = 91.6)
+3d6(3G)4s4p_v5Fo[3] (5.966 eV, g = 7.0, match_score = 91.6)
+3d6(3G)4s4p_v5Fo[2] (5.981 eV, g = 5.0, match_score = 91.6)
+3d6(3G)4s4p_v5Fo[1] (5.995 eV, g = 3.0, match_score = 91.6)
+
+Replacing Nahar configuration of '3d64s  (6D ) 4d  b5P ' with '3d6(5D)4s4d_e5Pe'
+Matched Nahar phixs for 5Pe index 2 '3d6(5D)4s4d_e5Pe' (E = 6.237 eV, g = 15.0) to 
+<E> = 6.441 eV, g_sum = 15.0: 
+3d6(5D)4s4d_e5Pe[3] (6.427 eV, g = 7.0, match_score = 93.9)
+3d6(5D)4s4d_e5Pe[1] (6.450 eV, g = 3.0, match_score = 93.9)
+3d6(5D)4s4d_e5Pe[2] (6.456 eV, g = 5.0, match_score = 93.9)
+
+Matched Nahar phixs for 5Do index 7 '3d64s  (6D ) 5p  t5Do' (E = 6.242 eV, g = 25.0) to 
+<E> = 6.372 eV, g_sum = 25.0: 
+3d6(5D)4s5p_t5Do[4] (6.333 eV, g = 9.0, match_score = 96.1)
+3d6(5D)4s5p_t5Do[3] (6.368 eV, g = 7.0, match_score = 96.1)
+3d6(5D)4s5p_t5Do[2] (6.401 eV, g = 5.0, match_score = 96.1)
+3d6(5D)4s5p_t5Do[1] (6.426 eV, g = 3.0, match_score = 96.1)
+3d6(5D)4s5p_t5Do[0] (6.440 eV, g = 1.0, match_score = 96.1)
+
+Matched Nahar phixs for 5De index 4 '3d64s  (4D ) 5s  d5D ' (E = 6.325 eV, g = 25.0) to 
+<E> = 6.855 eV, g_sum = 25.0: 
+3d6(5D)4s6s_5De[4] (6.810 eV, g = 9.0, match_score = 26.9)
+3d6(5D)4s6s_5De[3] (6.856 eV, g = 7.0, match_score = 26.9)
+3d6(5D)4s6s_5De[2] (6.889 eV, g = 5.0, match_score = 26.9)
+3d6(5D)4s6s_5De[1] (6.910 eV, g = 3.0, match_score = 26.9)
+3d6(5D)4s6s_5De[0] (6.920 eV, g = 1.0, match_score = 26.9)
+
+Matched Nahar phixs for 5Po index 6 '3d64s  (4D ) 4p  u5Po' (E = 6.390 eV, g = 15.0) to 
+<E> = 6.430 eV, g_sum = 15.0: 
+3d6(5D)4s5p_u5Po[3] (6.409 eV, g = 7.0, match_score = 98.8)
+3d6(5D)4s5p_u5Po[2] (6.440 eV, g = 5.0, match_score = 98.8)
+3d6(5D)4s5p_u5Po[1] (6.461 eV, g = 3.0, match_score = 98.8)
+
+Matched Nahar phixs for 5Fo index 6 '3d7    (4F ) 5p  u5Fo' (E = 6.444 eV, g = 35.0) to 
+<E> = 6.376 eV, g_sum = 35.0: 
+3d6(5D)4s5p_u5Fo[5] (6.325 eV, g = 11.0, match_score = 98.0)
+3d6(5D)4s5p_u5Fo[4] (6.370 eV, g = 9.0, match_score = 98.0)
+3d6(5D)4s5p_u5Fo[3] (6.400 eV, g = 7.0, match_score = 98.0)
+3d6(5D)4s5p_u5Fo[2] (6.426 eV, g = 5.0, match_score = 98.0)
+3d6(5D)4s5p_u5Fo[1] (6.440 eV, g = 3.0, match_score = 98.0)
+
+Matched Nahar phixs for 5Go index 4 '3d7    (4F ) 5p  w5Go' (E = 6.479 eV, g = 45.0) to 
+<E> = 6.638 eV, g_sum = 45.0: 
+3d7(4F)5p_5Go[6] (6.580 eV, g = 13.0, match_score = 94.3)
+3d7(4F)5p_5Go[5] (6.644 eV, g = 11.0, match_score = 94.3)
+3d7(4F)5p_5Go[4] (6.647 eV, g = 9.0, match_score = 94.3)
+3d7(4F)5p_5Go[3] (6.677 eV, g = 7.0, match_score = 94.3)
+3d7(4F)5p_5Go[2] (6.707 eV, g = 5.0, match_score = 94.3)
+
+Matched Nahar phixs for 5Do index 8 '3d7    (4F ) 5p  s5Do' (E = 6.527 eV, g = 25.0) to 
+<E> = 6.663 eV, g_sum = 25.0: 
+3d7(4F)5p_5Do[4] (6.612 eV, g = 9.0, match_score = 95.0)
+3d7(4F)5p_5Do[3] (6.662 eV, g = 7.0, match_score = 95.0)
+3d7(4F)5p_5Do[2] (6.700 eV, g = 5.0, match_score = 95.0)
+3d7(4F)5p_5Do[1] (6.723 eV, g = 3.0, match_score = 95.0)
+3d7(4F)5p_5Do[0] (6.761 eV, g = 1.0, match_score = 95.0)
+
+Replacing Nahar configuration of '3d64s  (6D ) 6s  c7D ' with '3d6(5D)4s6s_g7De'
+Matched Nahar phixs for 7De index 3 '3d6(5D)4s6s_g7De' (E = 6.550 eV, g = 35.0) to 
+<E> = 6.720 eV, g_sum = 35.0: 
+3d6(5D)4s6s_g7De[5] (6.670 eV, g = 11.0, match_score = 94.9)
+3d6(5D)4s6s_g7De[4] (6.711 eV, g = 9.0, match_score = 94.9)
+3d6(5D)4s6s_g7De[3] (6.745 eV, g = 7.0, match_score = 94.9)
+3d6(5D)4s6s_g7De[2] (6.771 eV, g = 5.0, match_score = 94.9)
+3d6(5D)4s6s_g7De[1] (6.788 eV, g = 3.0, match_score = 94.9)
+
+No matched Hillier levels for Nahar cross section of 5Go index 5 '3d64s  (4G ) 4p  v5Go' (E = 6.644 eV, g = 45.0)
+
+Matched Nahar phixs for 5De index 5 '3d64s  (6D ) 6s  e5D ' (E = 6.656 eV, g = 25.0) to 
+<E> = 6.997 eV, g_sum = 25.0: 
+3d6(5D)4s5d_5De[4] (6.973 eV, g = 9.0, match_score = 28.7)
+3d6(5D)4s5d_5De[3] (6.993 eV, g = 7.0, match_score = 28.7)
+3d6(5D)4s5d_5De[2] (7.011 eV, g = 5.0, match_score = 28.7)
+3d6(5D)4s5d_5De[1] (7.036 eV, g = 3.0, match_score = 28.7)
+3d6(5D)4s5d_5De[0] (7.051 eV, g = 1.0, match_score = 28.7)
+
+Replacing Nahar configuration of '3d64s  (4G ) 4p  t5Fo' with '3d6(3D)4s4p_5Fo'
+Matched Nahar phixs for 5Fo index 7 '3d6(3D)4s4p_5Fo' (E = 6.679 eV, g = 35.0) to 
+<E> = 6.656 eV, g_sum = 35.0: 
+3d6(3D)4s4p_5Fo[2] (6.605 eV, g = 5.0, match_score = 99.3)
+3d6(3D)4s4p_5Fo[1] (6.625 eV, g = 3.0, match_score = 99.3)
+3d6(3D)4s4p_5Fo[4] (6.646 eV, g = 9.0, match_score = 99.3)
+3d6(3D)4s4p_5Fo[3] (6.653 eV, g = 7.0, match_score = 99.3)
+3d6(3D)4s4p_5Fo[5] (6.697 eV, g = 11.0, match_score = 99.3)
+
+Matched Nahar phixs for 5Ge index 2 '3d7    (4F ) 4d  b5G ' (E = 6.691 eV, g = 45.0) to 
+<E> = 7.301 eV, g_sum = 45.0: 
+3d7(4F)5d_5Ge[6] (7.246 eV, g = 13.0, match_score = 40.0)
+3d7(4F)5d_5Ge[4] (7.292 eV, g = 9.0, match_score = 40.0)
+3d7(4F)5d_5Ge[5] (7.315 eV, g = 11.0, match_score = 40.0)
+3d7(4F)5d_5Ge[3] (7.340 eV, g = 7.0, match_score = 40.0)
+3d7(4F)5d_5Ge[2] (7.376 eV, g = 5.0, match_score = 40.0)
+
+Replacing Nahar configuration of '3d7    (4F ) 4d  c5P ' with '3d7(4F)4d_f5Pe'
+Matched Nahar phixs for 5Pe index 3 '3d7(4F)4d_f5Pe' (E = 6.693 eV, g = 15.0) to 
+<E> = 6.627 eV, g_sum = 15.0: 
+3d7(4F)4d_f5Pe[3] (6.591 eV, g = 7.0, match_score = 98.0)
+3d7(4F)4d_f5Pe[2] (6.642 eV, g = 5.0, match_score = 98.0)
+3d7(4F)4d_f5Pe[1] (6.686 eV, g = 3.0, match_score = 98.0)
+
+Matched Nahar phixs for 5Fe index 4 '3d7    (4F ) 4d  d5F ' (E = 6.694 eV, g = 35.0) to 
+<E> = 7.067 eV, g_sum = 10.0: 
+3d7(4F)6s_5Fe[3] (7.037 eV, g = 7.0, match_score = 43.5)
+3d7(4F)6s_5Fe[1] (7.136 eV, g = 3.0, match_score = 43.5)
+
+Matched Nahar phixs for 5De index 6 '3d7    (4F ) 4d  f5D ' (E = 6.694 eV, g = 25.0) to 
+3d7(4F)4d_5De[0] (6.738 eV, g = 1.0, match_score = 97.7)
+
+Matched Nahar phixs for 5He index 1 '3d7    (4F ) 4d  a5H ' (E = 6.695 eV, g = 55.0) to 
+<E> = 7.320 eV, g_sum = 55.0: 
+3d7(4F)5d_5He[7] (7.251 eV, g = 15.0, match_score = 39.8)
+3d7(4F)5d_5He[6] (7.319 eV, g = 13.0, match_score = 39.8)
+3d7(4F)5d_5He[5] (7.323 eV, g = 11.0, match_score = 39.8)
+3d7(4F)5d_5He[4] (7.369 eV, g = 9.0, match_score = 39.8)
+3d7(4F)5d_5He[3] (7.399 eV, g = 7.0, match_score = 39.8)
+
+Matched Nahar phixs for 5Ho index 2 '3d64s  (4G ) 4p  y5Ho' (E = 6.729 eV, g = 55.0) to 
+<E> = 5.960 eV, g_sum = 55.0: 
+3d6(3G)4s4p_5Ho[7] (5.922 eV, g = 15.0, match_score = 37.7)
+3d6(3G)4s4p_5Ho[6] (5.937 eV, g = 13.0, match_score = 37.7)
+3d6(3G)4s4p_5Ho[5] (5.980 eV, g = 11.0, match_score = 37.7)
+3d6(3G)4s4p_5Ho[4] (5.996 eV, g = 9.0, match_score = 37.7)
+3d6(3G)4s4p_5Ho[3] (6.010 eV, g = 7.0, match_score = 37.7)
+
+Matched Nahar phixs for 5De index 7 '3d64s  (6D ) 5d  g5D ' (E = 6.776 eV, g = 25.0) to 
+<E> = 6.416 eV, g_sum = 25.0: 
+3d6(5D)4s5s_g5De[4] (6.367 eV, g = 9.0, match_score = 89.2)
+3d6(5D)4s5s_g5De[3] (6.419 eV, g = 7.0, match_score = 89.2)
+3d6(5D)4s5s_g5De[2] (6.453 eV, g = 5.0, match_score = 89.2)
+3d6(5D)4s5s_g5De[1] (6.474 eV, g = 3.0, match_score = 89.2)
+3d6(5D)4s5s_g5De[0] (6.479 eV, g = 1.0, match_score = 89.2)
+
+Matched Nahar phixs for 5Fe index 5 '3d64s  (6D ) 5d  e5F ' (E = 6.787 eV, g = 35.0) to 
+<E> = 7.072 eV, g_sum = 17.0: 
+3d6(5D)4s5d_5Fe[2] (7.065 eV, g = 5.0, match_score = 44.8)
+3d6(5D)4s5d_5Fe[4] (7.073 eV, g = 9.0, match_score = 44.8)
+3d6(5D)4s5d_5Fe[1] (7.081 eV, g = 3.0, match_score = 44.8)
+
+Matched Nahar phixs for 5Ge index 3 '3d64s  (6D ) 5d  c5G ' (E = 6.799 eV, g = 45.0) to 
+<E> = 7.017 eV, g_sum = 45.0: 
+3d6(5D)4s5d_5Ge[6] (6.979 eV, g = 13.0, match_score = 45.8)
+3d6(5D)4s5d_5Ge[5] (7.002 eV, g = 11.0, match_score = 45.8)
+3d6(5D)4s5d_5Ge[4] (7.022 eV, g = 9.0, match_score = 45.8)
+3d6(5D)4s5d_5Ge[3] (7.057 eV, g = 7.0, match_score = 45.8)
+3d6(5D)4s5d_5Ge[2] (7.085 eV, g = 5.0, match_score = 45.8)
+
+Matched Nahar phixs for 5Se index 2 '3d64s  (6D ) 5d  b5S ' (E = 6.834 eV, g = 5.0) to 
+3d6(5D)4s5d_5Se[2] (7.035 eV, g = 5.0, match_score = 46.0)
+
+Matched Nahar phixs for 7Do index 3 '3d64s  (6D ) 6p  x7Do' (E = 6.837 eV, g = 35.0) to 
+<E> = 7.004 eV, g_sum = 35.0: 
+3d6(5D)4s6p_7Do[5] (6.954 eV, g = 11.0, match_score = 46.5)
+3d6(5D)4s6p_7Do[3] (7.002 eV, g = 7.0, match_score = 46.5)
+3d6(5D)4s6p_7Do[2] (7.033 eV, g = 5.0, match_score = 46.5)
+3d6(5D)4s6p_7Do[4] (7.035 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s6p_7Do[1] (7.056 eV, g = 3.0, match_score = 46.5)
+
+Matched Nahar phixs for 7Pe index 2 '3d64s  (6D ) 5d  b7P ' (E = 6.849 eV, g = 21.0) to 
+3d6(5D)4s5d_7Pe[3] (7.009 eV, g = 7.0, match_score = 46.7)
+
+Matched Nahar phixs for 7Fe index 2 '3d64s  (6D ) 5d  b7F ' (E = 6.850 eV, g = 49.0) to 
+<E> = 7.029 eV, g_sum = 49.0: 
+3d6(5D)4s5d_7Fe[6] (6.996 eV, g = 13.0, match_score = 46.4)
+3d6(5D)4s5d_7Fe[5] (6.997 eV, g = 11.0, match_score = 46.4)
+3d6(5D)4s5d_7Fe[4] (7.044 eV, g = 9.0, match_score = 46.4)
+3d6(5D)4s5d_7Fe[3] (7.047 eV, g = 7.0, match_score = 46.4)
+3d6(5D)4s5d_7Fe[2] (7.076 eV, g = 5.0, match_score = 46.4)
+3d6(5D)4s5d_7Fe[0] (7.092 eV, g = 1.0, match_score = 46.4)
+3d6(5D)4s5d_7Fe[1] (7.095 eV, g = 3.0, match_score = 46.4)
+
+Matched Nahar phixs for 7Fo index 3 '3d64s  (6D ) 6p  x7Fo' (E = 6.854 eV, g = 49.0) to 
+<E> = 7.058 eV, g_sum = 25.0: 
+3d6(5D)4s6p_7Fo[4] (7.038 eV, g = 9.0, match_score = 46.0)
+3d6(5D)4s6p_7Fo[3] (7.063 eV, g = 7.0, match_score = 46.0)
+3d6(5D)4s6p_7Fo[2] (7.068 eV, g = 5.0, match_score = 46.0)
+3d6(5D)4s6p_7Fo[1] (7.080 eV, g = 3.0, match_score = 46.0)
+3d6(5D)4s6p_7Fo[0] (7.082 eV, g = 1.0, match_score = 46.0)
+
+Matched Nahar phixs for 7De index 4 '3d64s  (6D ) 5d  d7D ' (E = 6.856 eV, g = 35.0) to 
+<E> = 7.246 eV, g_sum = 24.0: 
+3d6(5D)4s7s_7De[4] (7.214 eV, g = 9.0, match_score = 28.3)
+3d6(5D)4s7s_7De[3] (7.248 eV, g = 7.0, match_score = 28.3)
+3d6(5D)4s7s_7De[2] (7.274 eV, g = 5.0, match_score = 28.3)
+3d6(5D)4s7s_7De[1] (7.291 eV, g = 3.0, match_score = 28.3)
+
+Matched Nahar phixs for 7Ge index 2 '3d64s  (6D ) 5d  b7G ' (E = 6.863 eV, g = 63.0) to 
+<E> = 7.382 eV, g_sum = 36.0: 
+3d6(5D)4s5g_7Ge[6] (7.351 eV, g = 13.0, match_score = 27.0)
+3d6(5D)4s5g_7Ge[7] (7.396 eV, g = 15.0, match_score = 27.0)
+3d6(5D)4s5g_7Ge[2] (7.396 eV, g = 5.0, match_score = 27.0)
+3d6(5D)4s5g_7Ge[1] (7.430 eV, g = 3.0, match_score = 27.0)
+
+Matched Nahar phixs for 7Po index 4 '3d64s  (6D ) 6p  w7Po' (E = 6.865 eV, g = 21.0) to 
+<E> = 7.019 eV, g_sum = 21.0: 
+3d6(5D)4s6p_7Po[4] (6.964 eV, g = 9.0, match_score = 46.7)
+3d6(5D)4s6p_7Po[3] (7.042 eV, g = 7.0, match_score = 46.7)
+3d6(5D)4s6p_7Po[2] (7.085 eV, g = 5.0, match_score = 46.7)
+
+Replacing Nahar configuration of '3d64s  (6D ) 5d  d5P ' with '3d6(5D)4s5d_5Pe'
+Matched Nahar phixs for 5Pe index 4 '3d6(5D)4s5d_5Pe' (E = 6.867 eV, g = 15.0) to 
+<E> = 7.118 eV, g_sum = 15.0: 
+3d6(5D)4s5d_5Pe[3] (7.101 eV, g = 7.0, match_score = 92.5)
+3d6(5D)4s5d_5Pe[1] (7.130 eV, g = 3.0, match_score = 92.5)
+3d6(5D)4s5d_5Pe[2] (7.133 eV, g = 5.0, match_score = 92.5)
+
+No matched Hillier levels for Nahar cross section of 7Se index 2 '3d64s  (6D ) 5d  b7S ' (E = 6.871 eV, g = 7.0)
+
+Matched Nahar phixs for 7Go index 1 '3d64s  (6D ) 4f  z7Go' (E = 6.892 eV, g = 63.0) to 
+<E> = 7.073 eV, g_sum = 43.0: 
+3d6(5D)4s4f_7Go[6] (7.036 eV, g = 13.0, match_score = 46.3)
+3d6(5D)4s4f_7Go[5] (7.085 eV, g = 11.0, match_score = 46.3)
+3d6(5D)4s4f_7Go[4] (7.085 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s4f_7Go[3] (7.085 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s4f_7Go[1] (7.120 eV, g = 3.0, match_score = 46.3)
+
+Matched Nahar phixs for 5Fo index 8 '3d64s  (6D ) 4f  s5Fo' (E = 6.892 eV, g = 35.0) to 
+<E> = 7.068 eV, g_sum = 25.0: 
+3d6(5D)4s4f_5Fo[4] (7.037 eV, g = 9.0, match_score = 46.4)
+3d6(5D)4s4f_5Fo[5] (7.086 eV, g = 11.0, match_score = 46.4)
+3d6(5D)4s4f_5Fo[2] (7.086 eV, g = 5.0, match_score = 46.4)
+
+Matched Nahar phixs for 5Go index 6 '3d64s  (6D ) 4f  u5Go' (E = 6.893 eV, g = 45.0) to 
+<E> = 7.064 eV, g_sum = 45.0: 
+3d6(5D)4s4f_5Go[5] (7.037 eV, g = 11.0, match_score = 46.5)
+3d6(5D)4s4f_5Go[6] (7.037 eV, g = 13.0, match_score = 46.5)
+3d6(5D)4s4f_5Go[4] (7.086 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s4f_5Go[3] (7.086 eV, g = 7.0, match_score = 46.5)
+3d6(5D)4s4f_5Go[2] (7.121 eV, g = 5.0, match_score = 46.5)
+
+Matched Nahar phixs for 7Fo index 4 '3d64s  (6D ) 4f  w7Fo' (E = 6.893 eV, g = 49.0) to 
+<E> = 7.073 eV, g_sum = 33.0: 
+3d6(5D)4s4f_7Fo[5] (7.037 eV, g = 11.0, match_score = 46.3)
+3d6(5D)4s4f_7Fo[6] (7.085 eV, g = 13.0, match_score = 46.3)
+3d6(5D)4s4f_7Fo[2] (7.086 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s4f_7Fo[0] (7.120 eV, g = 1.0, match_score = 46.3)
+3d6(5D)4s4f_7Fo[1] (7.120 eV, g = 3.0, match_score = 46.3)
+
+Matched Nahar phixs for 7Do index 4 '3d64s  (6D ) 4f  w7Do' (E = 6.895 eV, g = 35.0) to 
+<E> = 7.080 eV, g_sum = 35.0: 
+3d6(5D)4s4f_7Do[4] (7.038 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s4f_7Do[3] (7.039 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s4f_7Do[1] (7.086 eV, g = 3.0, match_score = 46.3)
+3d6(5D)4s4f_7Do[2] (7.121 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s4f_7Do[5] (7.122 eV, g = 11.0, match_score = 46.3)
+
+Matched Nahar phixs for 5Do index 9 '3d64s  (6D ) 4f  r5Do' (E = 6.895 eV, g = 25.0) to 
+<E> = 7.051 eV, g_sum = 16.0: 
+3d6(5D)4s4f_5Do[3] (7.038 eV, g = 7.0, match_score = 46.7)
+3d6(5D)4s4f_5Do[2] (7.039 eV, g = 5.0, match_score = 46.7)
+3d6(5D)4s4f_5Do[1] (7.086 eV, g = 3.0, match_score = 46.7)
+3d6(5D)4s4f_5Do[0] (7.086 eV, g = 1.0, match_score = 46.7)
+
+Matched Nahar phixs for 5Ho index 3 '3d64s  (6D ) 4f  x5Ho' (E = 6.895 eV, g = 55.0) to 
+<E> = 7.089 eV, g_sum = 44.0: 
+3d6(5D)4s4f_5Ho[7] (7.039 eV, g = 15.0, match_score = 46.1)
+3d6(5D)4s4f_5Ho[6] (7.086 eV, g = 13.0, match_score = 46.1)
+3d6(5D)4s4f_5Ho[4] (7.122 eV, g = 9.0, match_score = 46.1)
+3d6(5D)4s4f_5Ho[3] (7.161 eV, g = 7.0, match_score = 46.1)
+
+Matched Nahar phixs for 7Ho index 1 '3d64s  (6D ) 4f  z7Ho' (E = 6.895 eV, g = 77.0) to 
+<E> = 7.100 eV, g_sum = 51.0: 
+3d6(5D)4s4f_7Ho[8] (7.039 eV, g = 17.0, match_score = 46.0)
+3d6(5D)4s4f_7Ho[6] (7.121 eV, g = 13.0, match_score = 46.0)
+3d6(5D)4s4f_7Ho[4] (7.122 eV, g = 9.0, match_score = 46.0)
+3d6(5D)4s4f_7Ho[2] (7.146 eV, g = 5.0, match_score = 46.0)
+3d6(5D)4s4f_7Ho[3] (7.147 eV, g = 7.0, match_score = 46.0)
+
+Matched Nahar phixs for 5Po index 7 '3d64s  (6D ) 4f  t5Po' (E = 6.897 eV, g = 15.0) to 
+<E> = 7.097 eV, g_sum = 10.0: 
+3d6(5D)4s4f_5Po[1] (7.040 eV, g = 3.0, match_score = 46.0)
+3d6(5D)4s4f_5Po[3] (7.122 eV, g = 7.0, match_score = 46.0)
+
+Matched Nahar phixs for 7Po index 5 '3d64s  (6D ) 4f  v7Po' (E = 6.897 eV, g = 21.0) to 
+3d6(5D)4s4f_7Po[2] (7.040 eV, g = 5.0, match_score = 46.9)
+
+Matched Nahar phixs for 5Fe index 6 '3d7    (4F ) 6s  f5F ' (E = 6.900 eV, g = 35.0) to 
+<E> = 6.377 eV, g_sum = 35.0: 
+3d6(5D)4s4d_f5Fe[5] (6.336 eV, g = 11.0, match_score = 84.3)
+3d6(5D)4s4d_f5Fe[4] (6.380 eV, g = 9.0, match_score = 84.3)
+3d6(5D)4s4d_f5Fe[3] (6.398 eV, g = 7.0, match_score = 84.3)
+3d6(5D)4s4d_f5Fe[2] (6.411 eV, g = 5.0, match_score = 84.3)
+3d6(5D)4s4d_f5Fe[1] (6.417 eV, g = 3.0, match_score = 84.3)
+
+Matched Nahar phixs for 5Do index 10 '3d64s  (6D ) 6p  q5Do' (E = 6.904 eV, g = 25.0) to 
+<E> = 7.086 eV, g_sum = 16.0: 
+3d6(5D)4s6p_5Do[3] (7.057 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s6p_5Do[2] (7.095 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s6p_5Do[1] (7.122 eV, g = 3.0, match_score = 46.3)
+3d6(5D)4s6p_5Do[0] (7.140 eV, g = 1.0, match_score = 46.3)
+
+Matched Nahar phixs for 5Fo index 9 '3d64s  (6D ) 6p  r5Fo' (E = 6.905 eV, g = 35.0) to 
+<E> = 7.078 eV, g_sum = 35.0: 
+3d6(5D)4s6p_5Fo[5] (7.031 eV, g = 11.0, match_score = 46.5)
+3d6(5D)4s6p_5Fo[4] (7.078 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s6p_5Fo[3] (7.091 eV, g = 7.0, match_score = 46.5)
+3d6(5D)4s6p_5Fo[2] (7.124 eV, g = 5.0, match_score = 46.5)
+3d6(5D)4s6p_5Fo[1] (7.140 eV, g = 3.0, match_score = 46.5)
+
+Matched Nahar phixs for 5Po index 8 '3d64s  (6D ) 6p  s5Po' (E = 6.916 eV, g = 15.0) to 
+<E> = 7.152 eV, g_sum = 8.0: 
+3d6(5D)4s6p_5Po[2] (7.144 eV, g = 5.0, match_score = 45.5)
+3d6(5D)4s6p_5Po[1] (7.166 eV, g = 3.0, match_score = 45.5)
+
+Matched Nahar phixs for 5Fe index 7 '3d64s  (4D ) 4d  g5F ' (E = 6.993 eV, g = 35.0) to 
+<E> = 6.644 eV, g_sum = 35.0: 
+3d7(4F)4d_g5Fe[5] (6.579 eV, g = 11.0, match_score = 89.5)
+3d7(4F)4d_g5Fe[4] (6.620 eV, g = 9.0, match_score = 89.5)
+3d7(4F)4d_g5Fe[3] (6.674 eV, g = 7.0, match_score = 89.5)
+3d7(4F)4d_g5Fe[2] (6.727 eV, g = 5.0, match_score = 89.5)
+3d7(4F)4d_g5Fe[1] (6.743 eV, g = 3.0, match_score = 89.5)
+
+Matched Nahar phixs for 7Pe index 3 '3d64s  (4H ) 0s  c7P ' (E = 6.997 eV, g = 21.0) to 
+<E> = 7.259 eV, g_sum = 21.0: 
+3d6(5D)4p2_7Pe[4] (7.210 eV, g = 9.0, match_score = 22.1)
+3d6(5D)4p2_7Pe[3] (7.276 eV, g = 7.0, match_score = 22.1)
+3d6(5D)4p2_7Pe[2] (7.322 eV, g = 5.0, match_score = 22.1)
+
+Matched Nahar phixs for 5De index 8 '3d64s  (4D ) 4d  h5D ' (E = 7.016 eV, g = 25.0) to 
+<E> = 6.641 eV, g_sum = 24.0: 
+3d7(4F)4d_h5De[4] (6.590 eV, g = 9.0, match_score = 88.7)
+3d7(4F)4d_h5De[3] (6.639 eV, g = 7.0, match_score = 88.7)
+3d7(4F)4d_h5De[2] (6.691 eV, g = 5.0, match_score = 88.7)
+3d7(4F)4d_h5De[1] (6.712 eV, g = 3.0, match_score = 88.7)
+
+Matched Nahar phixs for 5Ge index 4 '3d64s  (4D ) 4d  d5G ' (E = 7.040 eV, g = 45.0) to 
+<E> = 7.372 eV, g_sum = 45.0: 
+3d6(5D)4s6d_5Ge[6] (7.334 eV, g = 13.0, match_score = 28.8)
+3d6(5D)4s6d_5Ge[5] (7.351 eV, g = 11.0, match_score = 28.8)
+3d6(5D)4s6d_5Ge[4] (7.387 eV, g = 9.0, match_score = 28.8)
+3d6(5D)4s6d_5Ge[3] (7.418 eV, g = 7.0, match_score = 28.8)
+3d6(5D)4s6d_5Ge[2] (7.429 eV, g = 5.0, match_score = 28.8)
+
+Matched Nahar phixs for 7De index 5 '3d64s  (6D ) 7s  e7D ' (E = 7.043 eV, g = 35.0) to 
+<E> = 7.385 eV, g_sum = 30.0: 
+3d6(5D)4s6d_7De[4] (7.335 eV, g = 9.0, match_score = 28.7)
+3d6(5D)4s6d_7De[5] (7.379 eV, g = 11.0, match_score = 28.7)
+3d6(5D)4s6d_7De[1] (7.414 eV, g = 3.0, match_score = 28.7)
+3d6(5D)4s6d_7De[3] (7.448 eV, g = 7.0, match_score = 28.7)
+
+Replacing Nahar configuration of '3d64s  (4D ) 4d  e5P ' with '3d6(5D)4s4d_5Pe'
+Matched Nahar phixs for 5Pe index 5 '3d6(5D)4s4d_5Pe' (E = 7.046 eV, g = 15.0) to 
+3d6(5D)4s4d_5Pe[1] (7.276 eV, g = 3.0, match_score = 93.1)
+
+Matched Nahar phixs for 5De index 9 '3d64s  (6D ) 7s  i5D ' (E = 7.084 eV, g = 25.0) to 
+<E> = 7.167 eV, g_sum = 21.0: 
+3d6(5D)4s4d_i5De[4] (7.154 eV, g = 9.0, match_score = 97.5)
+3d6(5D)4s4d_i5De[3] (7.168 eV, g = 7.0, match_score = 97.5)
+3d6(5D)4s4d_i5De[2] (7.188 eV, g = 5.0, match_score = 97.5)
+
+Matched Nahar phixs for 5Do index 11 '3d64s  (4D ) 5p  p5Do' (E = 7.085 eV, g = 25.0) to 
+<E> = 7.282 eV, g_sum = 16.0: 
+3d6(5D)4s5p_5Do[3] (7.256 eV, g = 7.0, match_score = 46.1)
+3d6(5D)4s5p_5Do[2] (7.290 eV, g = 5.0, match_score = 46.1)
+3d6(5D)4s5p_5Do[1] (7.313 eV, g = 3.0, match_score = 46.1)
+3d6(5D)4s5p_5Do[0] (7.329 eV, g = 1.0, match_score = 46.1)
+
+Matched Nahar phixs for 5Se index 3 '3d64s  (4D ) 4d  c5S ' (E = 7.089 eV, g = 5.0) to 
+3d6(5D)4s6d_5Se[2] (7.366 eV, g = 5.0, match_score = 29.3)
+
+Matched Nahar phixs for 5Fo index 10 '3d64s  (4D ) 5p  q5Fo' (E = 7.122 eV, g = 35.0) to 
+<E> = 7.323 eV, g_sum = 32.0: 
+3d6(5D)4s5p_5Fo[5] (7.279 eV, g = 11.0, match_score = 46.0)
+3d6(5D)4s5p_5Fo[4] (7.324 eV, g = 9.0, match_score = 46.0)
+3d6(5D)4s5p_5Fo[3] (7.357 eV, g = 7.0, match_score = 46.0)
+3d6(5D)4s5p_5Fo[2] (7.367 eV, g = 5.0, match_score = 46.0)
+
+Matched Nahar phixs for 5Pe index 6 '3d7    (4P ) 5s  f5P ' (E = 7.144 eV, g = 15.0) to 
+<E> = 7.311 eV, g_sum = 15.0: 
+3d7(4P)5s_5Pe[3] (7.294 eV, g = 7.0, match_score = 94.0)
+3d7(4P)5s_5Pe[2] (7.315 eV, g = 5.0, match_score = 94.0)
+3d7(4P)5s_5Pe[1] (7.344 eV, g = 3.0, match_score = 94.0)
+
+Matched Nahar phixs for 5Po index 9 '3d7    (4F ) 4f  r5Po' (E = 7.148 eV, g = 15.0) to 
+<E> = 7.294 eV, g_sum = 15.0: 
+3d7(4F)4f_5Po[2] (7.247 eV, g = 5.0, match_score = 94.6)
+3d7(4F)4f_5Po[3] (7.317 eV, g = 7.0, match_score = 94.6)
+3d7(4F)4f_5Po[1] (7.321 eV, g = 3.0, match_score = 94.6)
+
+Matched Nahar phixs for 5Fo index 11 '3d7    (4F ) 6p  p5Fo' (E = 7.149 eV, g = 35.0) to 
+<E> = 7.272 eV, g_sum = 35.0: 
+3d7(4F)6p_5Fo[5] (7.222 eV, g = 11.0, match_score = 95.3)
+3d7(4F)6p_5Fo[4] (7.250 eV, g = 9.0, match_score = 95.3)
+3d7(4F)6p_5Fo[3] (7.293 eV, g = 7.0, match_score = 95.3)
+3d7(4F)6p_5Fo[2] (7.337 eV, g = 5.0, match_score = 95.3)
+3d7(4F)6p_5Fo[1] (7.369 eV, g = 3.0, match_score = 95.3)
+
+Matched Nahar phixs for 5Go index 7 '3d7    (4F ) 4f  t5Go' (E = 7.150 eV, g = 45.0) to 
+<E> = 7.280 eV, g_sum = 18.0: 
+3d7(4F)4f_5Go[6] (7.245 eV, g = 13.0, match_score = 95.1)
+3d7(4F)4f_5Go[2] (7.370 eV, g = 5.0, match_score = 95.1)
+
+Matched Nahar phixs for 5Ho index 4 '3d7    (4F ) 4f  w5Ho' (E = 7.150 eV, g = 55.0) to 
+<E> = 7.311 eV, g_sum = 42.0: 
+3d7(4F)4f_5Ho[7] (7.246 eV, g = 15.0, match_score = 94.2)
+3d7(4F)4f_5Ho[5] (7.317 eV, g = 11.0, match_score = 94.2)
+3d7(4F)4f_5Ho[4] (7.369 eV, g = 9.0, match_score = 94.2)
+3d7(4F)4f_5Ho[3] (7.369 eV, g = 7.0, match_score = 94.2)
+
+Matched Nahar phixs for 5Do index 12 '3d7    (4F ) 4f  o5Do' (E = 7.151 eV, g = 25.0) to 
+<E> = 7.302 eV, g_sum = 20.0: 
+3d7(4F)4f_5Do[3] (7.245 eV, g = 7.0, match_score = 94.5)
+3d7(4F)4f_5Do[4] (7.316 eV, g = 9.0, match_score = 94.5)
+3d7(4F)4f_5Do[1] (7.371 eV, g = 3.0, match_score = 94.5)
+3d7(4F)4f_5Do[0] (7.372 eV, g = 1.0, match_score = 94.5)
+
+Matched Nahar phixs for 5Io index 2 '3d7    (4F ) 4f  y5Io' (E = 7.151 eV, g = 65.0) to 
+<E> = 7.320 eV, g_sum = 65.0: 
+3d7(4F)4f_5Io[8] (7.247 eV, g = 17.0, match_score = 94.0)
+3d7(4F)4f_5Io[6] (7.317 eV, g = 13.0, match_score = 94.0)
+3d7(4F)4f_5Io[7] (7.318 eV, g = 15.0, match_score = 94.0)
+3d7(4F)4f_5Io[5] (7.369 eV, g = 11.0, match_score = 94.0)
+3d7(4F)4f_5Io[4] (7.406 eV, g = 9.0, match_score = 94.0)
+
+No matched Hillier levels for Nahar cross section of 5So index 3 '3d7    (4F ) 4f  x5So' (E = 7.151 eV, g = 5.0)
+
+Matched Nahar phixs for 5Fo index 12 '3d7    (4F ) 4f  o5Fo' (E = 7.152 eV, g = 35.0) to 
+<E> = 7.299 eV, g_sum = 35.0: 
+3d7(4F)4f_5Fo[4] (7.245 eV, g = 9.0, match_score = 94.7)
+3d7(4F)4f_5Fo[5] (7.245 eV, g = 11.0, match_score = 94.7)
+3d7(4F)4f_5Fo[2] (7.318 eV, g = 5.0, match_score = 94.7)
+3d7(4F)4f_5Fo[1] (7.372 eV, g = 3.0, match_score = 94.7)
+3d7(4F)4f_5Fo[3] (7.406 eV, g = 7.0, match_score = 94.7)
+
+Matched Nahar phixs for 5Go index 8 '3d7    (4F ) 6p  s5Go' (E = 7.154 eV, g = 45.0) to 
+<E> = 7.305 eV, g_sum = 45.0: 
+3d7(4F)6p_5Go[6] (7.234 eV, g = 13.0, match_score = 94.5)
+3d7(4F)6p_5Go[5] (7.290 eV, g = 11.0, match_score = 94.5)
+3d7(4F)6p_5Go[4] (7.332 eV, g = 9.0, match_score = 94.5)
+3d7(4F)6p_5Go[3] (7.365 eV, g = 7.0, match_score = 94.5)
+3d7(4F)6p_5Go[2] (7.391 eV, g = 5.0, match_score = 94.5)
+
+Matched Nahar phixs for 5Po index 10 '3d64s  (4D ) 5p  q5Po' (E = 7.155 eV, g = 15.0) to 
+<E> = 7.395 eV, g_sum = 8.0: 
+3d6(5D)4s5p_5Po[2] (7.385 eV, g = 5.0, match_score = 45.5)
+3d6(5D)4s5p_5Po[1] (7.410 eV, g = 3.0, match_score = 45.5)
+
+Matched Nahar phixs for 5Do index 13 '3d7    (4F ) 6p  n5Do' (E = 7.156 eV, g = 25.0) to 
+<E> = 7.291 eV, g_sum = 18.0: 
+3d7(4F)6p_5Do[4] (7.208 eV, g = 9.0, match_score = 95.0)
+3d7(4F)6p_5Do[2] (7.357 eV, g = 5.0, match_score = 95.0)
+3d7(4F)6p_5Do[1] (7.390 eV, g = 3.0, match_score = 95.0)
+3d7(4F)6p_5Do[0] (7.402 eV, g = 1.0, match_score = 95.0)
+
+Matched Nahar phixs for 5De index 10 '3d64s  (6D ) 6d  j5D ' (E = 7.179 eV, g = 25.0) to 
+<E> = 7.364 eV, g_sum = 25.0: 
+3d6(5D)4s6d_5De[4] (7.342 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s6d_5De[3] (7.358 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s6d_5De[2] (7.386 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s6d_5De[1] (7.394 eV, g = 3.0, match_score = 46.3)
+3d6(5D)4s6d_5De[0] (7.411 eV, g = 1.0, match_score = 46.3)
+
+Matched Nahar phixs for 7Do index 5 '3d64s  (6D ) 7p  v7Do' (E = 7.179 eV, g = 35.0) to 
+<E> = 7.367 eV, g_sum = 35.0: 
+3d6(5D)4s7p_7Do[5] (7.326 eV, g = 11.0, match_score = 46.2)
+3d6(5D)4s7p_7Do[4] (7.370 eV, g = 9.0, match_score = 46.2)
+3d6(5D)4s7p_7Do[3] (7.372 eV, g = 7.0, match_score = 46.2)
+3d6(5D)4s7p_7Do[2] (7.405 eV, g = 5.0, match_score = 46.2)
+3d6(5D)4s7p_7Do[1] (7.429 eV, g = 3.0, match_score = 46.2)
+
+Matched Nahar phixs for 5Ge index 5 '3d64s  (6D ) 6d  e5G ' (E = 7.184 eV, g = 45.0) to 
+<E> = 7.385 eV, g_sum = 29.0: 
+3d6(5D)4s5g_5Ge[5] (7.351 eV, g = 11.0, match_score = 30.1)
+3d6(5D)4s5g_5Ge[6] (7.396 eV, g = 13.0, match_score = 30.1)
+3d6(5D)4s5g_5Ge[2] (7.430 eV, g = 5.0, match_score = 30.1)
+
+Matched Nahar phixs for 7Fe index 3 '3d64s  (6D ) 6d  c7F ' (E = 7.184 eV, g = 49.0) to 
+<E> = 7.364 eV, g_sum = 49.0: 
+3d6(5D)4s6d_7Fe[6] (7.332 eV, g = 13.0, match_score = 46.3)
+3d6(5D)4s6d_7Fe[5] (7.333 eV, g = 11.0, match_score = 46.3)
+3d6(5D)4s6d_7Fe[4] (7.379 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s6d_7Fe[3] (7.383 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s6d_7Fe[2] (7.412 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s6d_7Fe[1] (7.430 eV, g = 3.0, match_score = 46.3)
+3d6(5D)4s6d_7Fe[0] (7.432 eV, g = 1.0, match_score = 46.3)
+
+Matched Nahar phixs for 7De index 6 '3d64s  (6D ) 6d  f7D ' (E = 7.186 eV, g = 35.0) to 
+<E> = 6.290 eV, g_sum = 35.0: 
+3d6(5D)4s4d_f7De[5] (6.246 eV, g = 11.0, match_score = 73.1)
+3d6(5D)4s4d_f7De[4] (6.299 eV, g = 9.0, match_score = 73.1)
+3d6(5D)4s4d_f7De[3] (6.306 eV, g = 7.0, match_score = 73.1)
+3d6(5D)4s4d_f7De[2] (6.323 eV, g = 5.0, match_score = 73.1)
+3d6(5D)4s4d_f7De[1] (6.329 eV, g = 3.0, match_score = 73.1)
+
+Matched Nahar phixs for 7Fo index 5 '3d64s  (6D ) 7p  v7Fo' (E = 7.188 eV, g = 49.0) to 
+<E> = 7.388 eV, g_sum = 49.0: 
+3d6(5D)4s7p_7Fo[6] (7.331 eV, g = 13.0, match_score = 46.1)
+3d6(5D)4s7p_7Fo[5] (7.370 eV, g = 11.0, match_score = 46.1)
+3d6(5D)4s7p_7Fo[4] (7.405 eV, g = 9.0, match_score = 46.1)
+3d6(5D)4s7p_7Fo[3] (7.431 eV, g = 7.0, match_score = 46.1)
+3d6(5D)4s7p_7Fo[2] (7.434 eV, g = 5.0, match_score = 46.1)
+3d6(5D)4s7p_7Fo[1] (7.447 eV, g = 3.0, match_score = 46.1)
+3d6(5D)4s7p_7Fo[0] (7.449 eV, g = 1.0, match_score = 46.1)
+
+Matched Nahar phixs for 5Se index 4 '3d64s  (6D ) 6d  d5S ' (E = 7.191 eV, g = 5.0) to 
+3d6(5D)4s7d_5Se[2] (7.527 eV, g = 5.0, match_score = 28.8)
+
+Matched Nahar phixs for 7Ge index 3 '3d64s  (6D ) 6d  c7G ' (E = 7.191 eV, g = 63.0) to 
+<E> = 7.424 eV, g_sum = 26.0: 
+3d6(5D)4s6d_7Ge[3] (7.406 eV, g = 7.0, match_score = 45.6)
+3d6(5D)4s6d_7Ge[5] (7.417 eV, g = 11.0, match_score = 45.6)
+3d6(5D)4s6d_7Ge[1] (7.449 eV, g = 3.0, match_score = 45.6)
+3d6(5D)4s6d_7Ge[2] (7.449 eV, g = 5.0, match_score = 45.6)
+
+Matched Nahar phixs for 7Pe index 4 '3d64s  (6D ) 6d  d7P ' (E = 7.191 eV, g = 21.0) to 
+3d6(5D)4s6d_7Pe[3] (7.339 eV, g = 7.0, match_score = 46.8)
+
+Matched Nahar phixs for 7Po index 6 '3d64s  (6D ) 7p  u7Po' (E = 7.193 eV, g = 21.0) to 
+<E> = 7.385 eV, g_sum = 21.0: 
+3d6(5D)4s7p_7Po[4] (7.331 eV, g = 9.0, match_score = 46.2)
+3d6(5D)4s7p_7Po[3] (7.408 eV, g = 7.0, match_score = 46.2)
+3d6(5D)4s7p_7Po[2] (7.449 eV, g = 5.0, match_score = 46.2)
+
+No matched Hillier levels for Nahar cross section of 7Se index 3 '3d64s  (6D ) 6d  c7S ' (E = 7.194 eV, g = 7.0)
+
+Matched Nahar phixs for 7Go index 2 '3d64s  (6D ) 5f  y7Go' (E = 7.203 eV, g = 63.0) to 
+<E> = 7.389 eV, g_sum = 58.0: 
+3d6(5D)4s5f_7Go[6] (7.357 eV, g = 13.0, match_score = 46.3)
+3d6(5D)4s5f_7Go[7] (7.357 eV, g = 15.0, match_score = 46.3)
+3d6(5D)4s5f_7Go[5] (7.405 eV, g = 11.0, match_score = 46.3)
+3d6(5D)4s5f_7Go[4] (7.405 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s5f_7Go[3] (7.441 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s5f_7Go[1] (7.465 eV, g = 3.0, match_score = 46.3)
+
+Matched Nahar phixs for 7Fo index 6 '3d64s  (6D ) 5f  u7Fo' (E = 7.204 eV, g = 49.0) to 
+<E> = 7.389 eV, g_sum = 49.0: 
+3d6(5D)4s5f_7Fo[5] (7.357 eV, g = 11.0, match_score = 46.3)
+3d6(5D)4s5f_7Fo[4] (7.358 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s5f_7Fo[6] (7.405 eV, g = 13.0, match_score = 46.3)
+3d6(5D)4s5f_7Fo[3] (7.405 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s5f_7Fo[2] (7.406 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s5f_7Fo[0] (7.440 eV, g = 1.0, match_score = 46.3)
+3d6(5D)4s5f_7Fo[1] (7.441 eV, g = 3.0, match_score = 46.3)
+
+Matched Nahar phixs for 5Fo index 13 '3d64s  (6D ) 5f  n5Fo' (E = 7.204 eV, g = 35.0) to 
+<E> = 7.375 eV, g_sum = 28.0: 
+3d6(5D)4s5f_5Fo[5] (7.358 eV, g = 11.0, match_score = 46.5)
+3d6(5D)4s5f_5Fo[4] (7.358 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s5f_5Fo[2] (7.406 eV, g = 5.0, match_score = 46.5)
+3d6(5D)4s5f_5Fo[1] (7.441 eV, g = 3.0, match_score = 46.5)
+
+Matched Nahar phixs for 5Fe index 8 '3d64s  (6D ) 6d  h5F ' (E = 7.204 eV, g = 35.0) to 
+<E> = 7.440 eV, g_sum = 35.0: 
+3d6(5D)4s6d_5Fe[5] (7.399 eV, g = 11.0, match_score = 45.5)
+3d6(5D)4s6d_5Fe[4] (7.449 eV, g = 9.0, match_score = 45.5)
+3d6(5D)4s6d_5Fe[3] (7.463 eV, g = 7.0, match_score = 45.5)
+3d6(5D)4s6d_5Fe[2] (7.464 eV, g = 5.0, match_score = 45.5)
+3d6(5D)4s6d_5Fe[1] (7.469 eV, g = 3.0, match_score = 45.5)
+
+Matched Nahar phixs for 5Go index 9 '3d64s  (6D ) 5f  r5Go' (E = 7.204 eV, g = 45.0) to 
+<E> = 7.393 eV, g_sum = 34.0: 
+3d6(5D)4s5f_5Go[6] (7.358 eV, g = 13.0, match_score = 46.2)
+3d6(5D)4s5f_5Go[3] (7.406 eV, g = 7.0, match_score = 46.2)
+3d6(5D)4s5f_5Go[4] (7.406 eV, g = 9.0, match_score = 46.2)
+3d6(5D)4s5f_5Go[2] (7.441 eV, g = 5.0, match_score = 46.2)
+
+Matched Nahar phixs for 7Do index 6 '3d64s  (6D ) 5f  u7Do' (E = 7.205 eV, g = 35.0) to 
+<E> = 7.427 eV, g_sum = 24.0: 
+3d6(5D)4s5f_7Do[3] (7.358 eV, g = 7.0, match_score = 45.7)
+3d6(5D)4s5f_7Do[1] (7.406 eV, g = 3.0, match_score = 45.7)
+3d6(5D)4s5f_7Do[2] (7.441 eV, g = 5.0, match_score = 45.7)
+3d6(5D)4s5f_7Do[4] (7.480 eV, g = 9.0, match_score = 45.7)
+
+Matched Nahar phixs for 5Do index 14 '3d64s  (6D ) 5f  m5Do' (E = 7.205 eV, g = 25.0) to 
+<E> = 7.376 eV, g_sum = 11.0: 
+3d6(5D)4s5f_5Do[3] (7.359 eV, g = 7.0, match_score = 46.5)
+3d6(5D)4s5f_5Do[1] (7.406 eV, g = 3.0, match_score = 46.5)
+3d6(5D)4s5f_5Do[0] (7.406 eV, g = 1.0, match_score = 46.5)
+
+Matched Nahar phixs for 5Ho index 5 '3d64s  (6D ) 5f  v5Ho' (E = 7.205 eV, g = 55.0) to 
+<E> = 7.415 eV, g_sum = 55.0: 
+3d6(5D)4s5f_5Ho[7] (7.359 eV, g = 15.0, match_score = 45.9)
+3d6(5D)4s5f_5Ho[6] (7.406 eV, g = 13.0, match_score = 45.9)
+3d6(5D)4s5f_5Ho[5] (7.441 eV, g = 11.0, match_score = 45.9)
+3d6(5D)4s5f_5Ho[4] (7.441 eV, g = 9.0, match_score = 45.9)
+3d6(5D)4s5f_5Ho[3] (7.481 eV, g = 7.0, match_score = 45.9)
+
+Matched Nahar phixs for 7Ho index 2 '3d64s  (6D ) 5f  y7Ho' (E = 7.205 eV, g = 77.0) to 
+<E> = 7.416 eV, g_sum = 64.0: 
+3d6(5D)4s5f_7Ho[8] (7.358 eV, g = 17.0, match_score = 45.9)
+3d6(5D)4s5f_7Ho[7] (7.406 eV, g = 15.0, match_score = 45.9)
+3d6(5D)4s5f_7Ho[5] (7.441 eV, g = 11.0, match_score = 45.9)
+3d6(5D)4s5f_7Ho[4] (7.441 eV, g = 9.0, match_score = 45.9)
+3d6(5D)4s5f_7Ho[2] (7.466 eV, g = 5.0, match_score = 45.9)
+3d6(5D)4s5f_7Ho[3] (7.466 eV, g = 7.0, match_score = 45.9)
+
+Matched Nahar phixs for 7Po index 7 '3d64s  (6D ) 5f  t7Po' (E = 7.206 eV, g = 21.0) to 
+3d6(5D)4s5f_7Po[2] (7.359 eV, g = 5.0, match_score = 46.8)
+
+Matched Nahar phixs for 5Po index 11 '3d64s  (6D ) 5f  p5Po' (E = 7.206 eV, g = 15.0) to 
+<E> = 7.417 eV, g_sum = 10.0: 
+3d6(5D)4s5f_5Po[1] (7.359 eV, g = 3.0, match_score = 45.9)
+3d6(5D)4s5f_5Po[3] (7.441 eV, g = 7.0, match_score = 45.9)
+
+Matched Nahar phixs for 7He index 1 '3d64s  (6D ) 5g  a7H ' (E = 7.210 eV, g = 77.0) to 
+<E> = 7.392 eV, g_sum = 77.0: 
+3d6(5D)4s5g_7He[7] (7.351 eV, g = 15.0, match_score = 46.3)
+3d6(5D)4s5g_7He[8] (7.351 eV, g = 17.0, match_score = 46.3)
+3d6(5D)4s5g_7He[5] (7.396 eV, g = 11.0, match_score = 46.3)
+3d6(5D)4s5g_7He[4] (7.396 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s5g_7He[2] (7.430 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s5g_7He[3] (7.430 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s5g_7He[6] (7.453 eV, g = 13.0, match_score = 46.3)
+
+Matched Nahar phixs for 5He index 2 '3d64s  (6D ) 5g  b5H ' (E = 7.210 eV, g = 55.0) to 
+<E> = 7.366 eV, g_sum = 35.0: 
+3d6(5D)4s5g_5He[6] (7.351 eV, g = 13.0, match_score = 46.7)
+3d6(5D)4s5g_5He[7] (7.351 eV, g = 15.0, match_score = 46.7)
+3d6(5D)4s5g_5He[3] (7.430 eV, g = 7.0, match_score = 46.7)
+
+Matched Nahar phixs for 7Ge index 4 '3d64s  (6D ) 5g  d7G ' (E = 7.210 eV, g = 63.0) to 
+<E> = 7.554 eV, g_sum = 54.0: 
+3d6(5D)4s7d_7Ge[7] (7.498 eV, g = 15.0, match_score = 28.7)
+3d6(5D)4s7d_7Ge[6] (7.542 eV, g = 13.0, match_score = 28.7)
+3d6(5D)4s7d_7Ge[5] (7.575 eV, g = 11.0, match_score = 28.7)
+3d6(5D)4s7d_7Ge[3] (7.600 eV, g = 7.0, match_score = 28.7)
+3d6(5D)4s7d_7Ge[1] (7.607 eV, g = 3.0, match_score = 28.7)
+3d6(5D)4s7d_7Ge[2] (7.611 eV, g = 5.0, match_score = 28.7)
+
+Matched Nahar phixs for 5Ge index 6 '3d64s  (6D ) 5g  f5G ' (E = 7.210 eV, g = 45.0) to 
+<E> = 6.646 eV, g_sum = 45.0: 
+3d7(4F)4d_f5Ge[6] (6.592 eV, g = 13.0, match_score = 83.1)
+3d7(4F)4d_f5Ge[5] (6.606 eV, g = 11.0, match_score = 83.1)
+3d7(4F)4d_f5Ge[4] (6.667 eV, g = 9.0, match_score = 83.1)
+3d7(4F)4d_f5Ge[3] (6.715 eV, g = 7.0, match_score = 83.1)
+3d7(4F)4d_f5Ge[2] (6.742 eV, g = 5.0, match_score = 83.1)
+
+Matched Nahar phixs for 7Fe index 4 '3d64s  (6D ) 5g  d7F ' (E = 7.210 eV, g = 49.0) to 
+<E> = 7.374 eV, g_sum = 42.0: 
+3d6(5D)4s5g_7Fe[5] (7.351 eV, g = 11.0, match_score = 46.6)
+3d6(5D)4s5g_7Fe[4] (7.351 eV, g = 9.0, match_score = 46.6)
+3d6(5D)4s5g_7Fe[6] (7.396 eV, g = 13.0, match_score = 46.6)
+3d6(5D)4s5g_7Fe[1] (7.396 eV, g = 3.0, match_score = 46.6)
+3d6(5D)4s5g_7Fe[2] (7.396 eV, g = 5.0, match_score = 46.6)
+3d6(5D)4s5g_7Fe[0] (7.396 eV, g = 1.0, match_score = 46.6)
+
+Matched Nahar phixs for 5Fe index 9 '3d64s  (6D ) 5g  i5F ' (E = 7.210 eV, g = 35.0) to 
+<E> = 7.372 eV, g_sum = 30.0: 
+3d6(5D)4s5g_5Fe[4] (7.351 eV, g = 9.0, match_score = 46.6)
+3d6(5D)4s5g_5Fe[3] (7.351 eV, g = 7.0, match_score = 46.6)
+3d6(5D)4s5g_5Fe[5] (7.396 eV, g = 11.0, match_score = 46.6)
+3d6(5D)4s5g_5Fe[1] (7.396 eV, g = 3.0, match_score = 46.6)
+
+Matched Nahar phixs for 7Ie index 1 '3d64s  (6D ) 5g  a7I ' (E = 7.210 eV, g = 91.0) to 
+<E> = 7.397 eV, g_sum = 52.0: 
+3d6(5D)4s5g_7Ie[9] (7.351 eV, g = 19.0, match_score = 46.3)
+3d6(5D)4s5g_7Ie[8] (7.396 eV, g = 17.0, match_score = 46.3)
+3d6(5D)4s5g_7Ie[3] (7.453 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s5g_7Ie[4] (7.454 eV, g = 9.0, match_score = 46.3)
+
+Matched Nahar phixs for 5Ie index 1 '3d64s  (6D ) 5g  a5I ' (E = 7.210 eV, g = 65.0) to 
+<E> = 7.390 eV, g_sum = 41.0: 
+3d6(5D)4s5g_5Ie[8] (7.351 eV, g = 17.0, match_score = 46.4)
+3d6(5D)4s5g_5Ie[7] (7.396 eV, g = 15.0, match_score = 46.4)
+3d6(5D)4s5g_5Ie[4] (7.453 eV, g = 9.0, match_score = 46.4)
+
+Matched Nahar phixs for 7De index 7 '3d64s  (6D ) 5g  g7D ' (E = 7.210 eV, g = 35.0) to 
+<E> = 7.387 eV, g_sum = 35.0: 
+3d6(5D)4s5g_7De[3] (7.351 eV, g = 7.0, match_score = 46.4)
+3d6(5D)4s5g_7De[2] (7.351 eV, g = 5.0, match_score = 46.4)
+3d6(5D)4s5g_7De[1] (7.351 eV, g = 3.0, match_score = 46.4)
+3d6(5D)4s5g_7De[4] (7.396 eV, g = 9.0, match_score = 46.4)
+3d6(5D)4s5g_7De[5] (7.430 eV, g = 11.0, match_score = 46.4)
+
+Matched Nahar phixs for 5De index 11 '3d64s  (6D ) 5g  k5D ' (E = 7.210 eV, g = 25.0) to 
+<E> = 7.392 eV, g_sum = 25.0: 
+3d6(5D)4s5g_5De[2] (7.351 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s5g_5De[1] (7.351 eV, g = 3.0, match_score = 46.3)
+3d6(5D)4s5g_5De[0] (7.351 eV, g = 1.0, match_score = 46.3)
+3d6(5D)4s5g_5De[3] (7.396 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s5g_5De[4] (7.430 eV, g = 9.0, match_score = 46.3)
+
+Matched Nahar phixs for 5Fo index 14 '3d64s  (6D ) 7p  m5Fo' (E = 7.229 eV, g = 35.0) to 
+<E> = 7.447 eV, g_sum = 35.0: 
+3d6(5D)4s7p_5Fo[5] (7.400 eV, g = 11.0, match_score = 45.8)
+3d6(5D)4s7p_5Fo[4] (7.447 eV, g = 9.0, match_score = 45.8)
+3d6(5D)4s7p_5Fo[3] (7.458 eV, g = 7.0, match_score = 45.8)
+3d6(5D)4s7p_5Fo[2] (7.494 eV, g = 5.0, match_score = 45.8)
+3d6(5D)4s7p_5Fo[1] (7.511 eV, g = 3.0, match_score = 45.8)
+
+Matched Nahar phixs for 5Do index 15 '3d64s  (6D ) 7p  l5Do' (E = 7.235 eV, g = 25.0) to 
+<E> = 7.445 eV, g_sum = 25.0: 
+3d6(5D)4s7p_5Do[4] (7.402 eV, g = 9.0, match_score = 45.9)
+3d6(5D)4s7p_5Do[3] (7.424 eV, g = 7.0, match_score = 45.9)
+3d6(5D)4s7p_5Do[1] (7.493 eV, g = 3.0, match_score = 45.9)
+3d6(5D)4s7p_5Do[0] (7.509 eV, g = 1.0, match_score = 45.9)
+3d6(5D)4s7p_5Do[2] (7.510 eV, g = 5.0, match_score = 45.9)
+
+Matched Nahar phixs for 5Po index 12 '3d64s  (6D ) 7p  o5Po' (E = 7.236 eV, g = 15.0) to 
+3d6(5D)4s7p_5Po[1] (7.532 eV, g = 3.0, match_score = 44.6)
+
+Matched Nahar phixs for 5Pe index 7 '3d64s  (6D ) 6d  g5P ' (E = 7.237 eV, g = 15.0) to 
+<E> = 7.466 eV, g_sum = 15.0: 
+3d6(5D)4s6d_5Pe[3] (7.454 eV, g = 7.0, match_score = 45.6)
+3d6(5D)4s6d_5Pe[2] (7.476 eV, g = 5.0, match_score = 45.6)
+3d6(5D)4s6d_5Pe[1] (7.481 eV, g = 3.0, match_score = 45.6)
+
+Matched Nahar phixs for 5De index 12 '3d7    (4F ) 5d  l5D ' (E = 7.251 eV, g = 25.0) to 
+<E> = 7.291 eV, g_sum = 13.0: 
+3d7(4F)5d_5De[4] (7.245 eV, g = 9.0, match_score = 97.8)
+3d7(4F)5d_5De[0] (7.377 eV, g = 1.0, match_score = 97.8)
+3d7(4F)5d_5De[1] (7.400 eV, g = 3.0, match_score = 97.8)
+
+Matched Nahar phixs for 5Ge index 7 '3d7    (4F ) 5d  g5G ' (E = 7.252 eV, g = 45.0) to 
+<E> = 7.237 eV, g_sum = 45.0: 
+3d6(5D)4s4d_g5Ge[6] (7.191 eV, g = 13.0, match_score = 99.6)
+3d6(5D)4s4d_g5Ge[5] (7.225 eV, g = 11.0, match_score = 99.6)
+3d6(5D)4s4d_g5Ge[4] (7.256 eV, g = 9.0, match_score = 99.6)
+3d6(5D)4s4d_g5Ge[3] (7.279 eV, g = 7.0, match_score = 99.6)
+3d6(5D)4s4d_g5Ge[2] (7.293 eV, g = 5.0, match_score = 99.6)
+
+Matched Nahar phixs for 5Fe index 10 '3d7    (4F ) 5d  j5F ' (E = 7.252 eV, g = 35.0) to 
+<E> = 7.287 eV, g_sum = 23.0: 
+3d7(4F)5d_5Fe[5] (7.240 eV, g = 11.0, match_score = 98.0)
+3d7(4F)5d_5Fe[3] (7.315 eV, g = 7.0, match_score = 98.0)
+3d7(4F)5d_5Fe[2] (7.351 eV, g = 5.0, match_score = 98.0)
+
+Matched Nahar phixs for 5He index 3 '3d7    (4F ) 5d  c5H ' (E = 7.252 eV, g = 55.0) to 
+<E> = 7.641 eV, g_sum = 46.0: 
+3d7(4F)6d_5He[7] (7.571 eV, g = 15.0, match_score = 43.3)
+3d7(4F)6d_5He[6] (7.638 eV, g = 13.0, match_score = 43.3)
+3d7(4F)6d_5He[5] (7.689 eV, g = 11.0, match_score = 43.3)
+3d7(4F)6d_5He[3] (7.721 eV, g = 7.0, match_score = 43.3)
+
+Matched Nahar phixs for 5Pe index 8 '3d7    (4F ) 5d  h5P ' (E = 7.253 eV, g = 15.0) to 
+<E> = 7.296 eV, g_sum = 15.0: 
+3d7(4F)5d_5Pe[3] (7.244 eV, g = 7.0, match_score = 97.7)
+3d7(4F)5d_5Pe[2] (7.328 eV, g = 5.0, match_score = 97.7)
+3d7(4F)5d_5Pe[1] (7.366 eV, g = 3.0, match_score = 97.7)
+
+Matched Nahar phixs for 7De index 8 '3d64s  (6D ) 8s  h7D ' (E = 7.284 eV, g = 35.0) to 
+3d6(5D)4s7s_h7De[5] (7.178 eV, g = 11.0, match_score = 96.8)
+
+No matched Hillier levels for Nahar cross section of 7Fe index 5 '3d7    (4P ) 0s  e7F ' (E = 7.292 eV, g = 49.0)
+
+Matched Nahar phixs for 5De index 13 '3d64s  (6D ) 8s  m5D ' (E = 7.304 eV, g = 25.0) to 
+<E> = 7.492 eV, g_sum = 25.0: 
+3d6(5D)4s8s_5De[4] (7.438 eV, g = 9.0, match_score = 46.2)
+3d6(5D)4s8s_5De[3] (7.501 eV, g = 7.0, match_score = 46.2)
+3d6(5D)4s8s_5De[2] (7.529 eV, g = 5.0, match_score = 46.2)
+3d6(5D)4s8s_5De[1] (7.548 eV, g = 3.0, match_score = 46.2)
+3d6(5D)4s8s_5De[0] (7.557 eV, g = 1.0, match_score = 46.2)
+
+Matched Nahar phixs for 5Fe index 11 '3d7    (4F ) 7s  k5F ' (E = 7.328 eV, g = 35.0) to 
+<E> = 7.431 eV, g_sum = 35.0: 
+3d7(4F)7s_5Fe[5] (7.368 eV, g = 11.0, match_score = 95.9)
+3d7(4F)7s_5Fe[4] (7.435 eV, g = 9.0, match_score = 95.9)
+3d7(4F)7s_5Fe[3] (7.442 eV, g = 7.0, match_score = 95.9)
+3d7(4F)7s_5Fe[2] (7.493 eV, g = 5.0, match_score = 95.9)
+3d7(4F)7s_5Fe[1] (7.521 eV, g = 3.0, match_score = 95.9)
+
+Matched Nahar phixs for 5De index 14 '3d64s  (6D ) 7d  n5D ' (E = 7.345 eV, g = 25.0) to 
+<E> = 7.518 eV, g_sum = 20.0: 
+3d6(5D)4s7d_5De[4] (7.500 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s7d_5De[3] (7.517 eV, g = 7.0, match_score = 46.5)
+3d6(5D)4s7d_5De[1] (7.556 eV, g = 3.0, match_score = 46.5)
+3d6(5D)4s7d_5De[0] (7.571 eV, g = 1.0, match_score = 46.5)
+
+Matched Nahar phixs for 5Ge index 8 '3d64s  (6D ) 7d  h5G ' (E = 7.351 eV, g = 45.0) to 
+<E> = 7.534 eV, g_sum = 34.0: 
+3d6(5D)4s7d_5Ge[6] (7.493 eV, g = 13.0, match_score = 46.3)
+3d6(5D)4s7d_5Ge[4] (7.544 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s7d_5Ge[3] (7.560 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s7d_5Ge[2] (7.585 eV, g = 5.0, match_score = 46.3)
+
+Matched Nahar phixs for 5Se index 5 '3d64s  (6D ) 7d  e5S ' (E = 7.358 eV, g = 5.0) to 
+3d6(5D)4s4d_e5Se[2] (6.342 eV, g = 5.0, match_score = 69.5)
+
+Matched Nahar phixs for 7Do index 7 '3d64s  (6D ) 8p  t7Do' (E = 7.360 eV, g = 35.0) to 
+<E> = 7.546 eV, g_sum = 26.0: 
+3d6(5D)4s8p_7Do[5] (7.511 eV, g = 11.0, match_score = 46.3)
+3d6(5D)4s8p_7Do[3] (7.546 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s8p_7Do[2] (7.583 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s8p_7Do[1] (7.610 eV, g = 3.0, match_score = 46.3)
+
+Matched Nahar phixs for 7De index 9 '3d64s  (6D ) 7d  i7D ' (E = 7.362 eV, g = 35.0) to 
+<E> = 7.531 eV, g_sum = 30.0: 
+3d6(5D)4s7d_7De[5] (7.496 eV, g = 11.0, match_score = 46.5)
+3d6(5D)4s7d_7De[4] (7.496 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s7d_7De[1] (7.575 eV, g = 3.0, match_score = 46.5)
+3d6(5D)4s7d_7De[3] (7.613 eV, g = 7.0, match_score = 46.5)
+
+Matched Nahar phixs for 7Fe index 6 '3d64s  (6D ) 7d  f7F ' (E = 7.363 eV, g = 49.0) to 
+<E> = 7.536 eV, g_sum = 38.0: 
+3d6(5D)4s7d_7Fe[6] (7.495 eV, g = 13.0, match_score = 46.5)
+3d6(5D)4s7d_7Fe[4] (7.540 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s7d_7Fe[3] (7.543 eV, g = 7.0, match_score = 46.5)
+3d6(5D)4s7d_7Fe[2] (7.574 eV, g = 5.0, match_score = 46.5)
+3d6(5D)4s7d_7Fe[1] (7.592 eV, g = 3.0, match_score = 46.5)
+3d6(5D)4s7d_7Fe[0] (7.596 eV, g = 1.0, match_score = 46.5)
+
+Matched Nahar phixs for 7Pe index 5 '3d64s  (6D ) 7d  e7P ' (E = 7.364 eV, g = 21.0) to 
+<E> = 7.518 eV, g_sum = 12.0: 
+3d6(5D)4s7d_7Pe[3] (7.499 eV, g = 7.0, match_score = 46.7)
+3d6(5D)4s7d_7Pe[2] (7.545 eV, g = 5.0, match_score = 46.7)
+
+Matched Nahar phixs for 7Fo index 7 '3d64s  (6D ) 8p  t7Fo' (E = 7.364 eV, g = 49.0) to 
+<E> = 7.567 eV, g_sum = 49.0: 
+3d6(5D)4s8p_7Fo[6] (7.513 eV, g = 13.0, match_score = 46.0)
+3d6(5D)4s8p_7Fo[5] (7.567 eV, g = 11.0, match_score = 46.0)
+3d6(5D)4s8p_7Fo[3] (7.581 eV, g = 7.0, match_score = 46.0)
+3d6(5D)4s8p_7Fo[4] (7.582 eV, g = 9.0, match_score = 46.0)
+3d6(5D)4s8p_7Fo[2] (7.613 eV, g = 5.0, match_score = 46.0)
+3d6(5D)4s8p_7Fo[1] (7.630 eV, g = 3.0, match_score = 46.0)
+3d6(5D)4s8p_7Fo[0] (7.630 eV, g = 1.0, match_score = 46.0)
+
+Matched Nahar phixs for 5Fe index 12 '3d64s  (6D ) 7d  l5F ' (E = 7.365 eV, g = 35.0) to 
+<E> = 7.564 eV, g_sum = 32.0: 
+3d6(5D)4s7d_5Fe[5] (7.506 eV, g = 11.0, match_score = 46.1)
+3d6(5D)4s7d_5Fe[4] (7.579 eV, g = 9.0, match_score = 46.1)
+3d6(5D)4s7d_5Fe[3] (7.601 eV, g = 7.0, match_score = 46.1)
+3d6(5D)4s7d_5Fe[2] (7.615 eV, g = 5.0, match_score = 46.1)
+
+Matched Nahar phixs for 7Ge index 5 '3d64s  (6D ) 7d  e7G ' (E = 7.366 eV, g = 63.0) to 
+<E> = 6.338 eV, g_sum = 63.0: 
+3d6(5D)4s4d_e7Ge[7] (6.280 eV, g = 15.0, match_score = 69.2)
+3d6(5D)4s4d_e7Ge[6] (6.319 eV, g = 13.0, match_score = 69.2)
+3d6(5D)4s4d_e7Ge[5] (6.352 eV, g = 11.0, match_score = 69.2)
+3d6(5D)4s4d_e7Ge[4] (6.365 eV, g = 9.0, match_score = 69.2)
+3d6(5D)4s4d_e7Ge[3] (6.380 eV, g = 7.0, match_score = 69.2)
+3d6(5D)4s4d_e7Ge[2] (6.390 eV, g = 5.0, match_score = 69.2)
+3d6(5D)4s4d_e7Ge[1] (6.393 eV, g = 3.0, match_score = 69.2)
+
+Matched Nahar phixs for 5Po index 13 '3d64s  (6D ) 8p  n5Po' (E = 7.367 eV, g = 15.0) to 
+3d6(5D)4s8p_5Po[1] (7.665 eV, g = 3.0, match_score = 44.6)
+
+Matched Nahar phixs for 7Po index 8 '3d64s  (6D ) 8p  s7Po' (E = 7.367 eV, g = 21.0) to 
+<E> = 7.559 eV, g_sum = 21.0: 
+3d6(5D)4s8p_7Po[4] (7.513 eV, g = 9.0, match_score = 46.2)
+3d6(5D)4s8p_7Po[3] (7.567 eV, g = 7.0, match_score = 46.2)
+3d6(5D)4s8p_7Po[2] (7.630 eV, g = 5.0, match_score = 46.2)
+
+No matched Hillier levels for Nahar cross section of 7Se index 4 '3d64s  (6D ) 7d  d7S ' (E = 7.368 eV, g = 7.0)
+
+No matched Hillier levels for Nahar cross section of 7Go index 3 '3d64s  (6D ) 6f  x7Go' (E = 7.373 eV, g = 63.0)
+
+Matched Nahar phixs for 7Fo index 8 '3d64s  (6D ) 6f  s7Fo' (E = 7.373 eV, g = 49.0) to 
+<E> = 7.679 eV, g_sum = 49.0: 
+3d6(5D)4s9p_7Fo[6] (7.621 eV, g = 13.0, match_score = 29.1)
+3d6(5D)4s9p_7Fo[5] (7.670 eV, g = 11.0, match_score = 29.1)
+3d6(5D)4s9p_7Fo[3] (7.686 eV, g = 7.0, match_score = 29.1)
+3d6(5D)4s9p_7Fo[4] (7.707 eV, g = 9.0, match_score = 29.1)
+3d6(5D)4s9p_7Fo[1] (7.738 eV, g = 3.0, match_score = 29.1)
+3d6(5D)4s9p_7Fo[2] (7.738 eV, g = 5.0, match_score = 29.1)
+3d6(5D)4s9p_7Fo[0] (7.739 eV, g = 1.0, match_score = 29.1)
+
+No matched Hillier levels for Nahar cross section of 5Go index 10 '3d64s  (6D ) 6f  q5Go' (E = 7.373 eV, g = 45.0)
+
+Matched Nahar phixs for 5Fo index 15 '3d64s  (6D ) 6f  l5Fo' (E = 7.373 eV, g = 35.0) to 
+<E> = 7.582 eV, g_sum = 35.0: 
+3d6(5D)4s8p_5Fo[5] (7.533 eV, g = 11.0, match_score = 30.0)
+3d6(5D)4s8p_5Fo[4] (7.569 eV, g = 9.0, match_score = 30.0)
+3d6(5D)4s8p_5Fo[3] (7.605 eV, g = 7.0, match_score = 30.0)
+3d6(5D)4s8p_5Fo[2] (7.636 eV, g = 5.0, match_score = 30.0)
+3d6(5D)4s8p_5Fo[1] (7.655 eV, g = 3.0, match_score = 30.0)
+
+Matched Nahar phixs for 7Do index 8 '3d64s  (6D ) 6f  s7Do' (E = 7.373 eV, g = 35.0) to 
+<E> = 7.659 eV, g_sum = 28.0: 
+3d6(5D)4s9p_7Do[5] (7.620 eV, g = 11.0, match_score = 29.3)
+3d6(5D)4s9p_7Do[4] (7.670 eV, g = 9.0, match_score = 29.3)
+3d6(5D)4s9p_7Do[2] (7.686 eV, g = 5.0, match_score = 29.3)
+3d6(5D)4s9p_7Do[1] (7.722 eV, g = 3.0, match_score = 29.3)
+
+Matched Nahar phixs for 5Do index 16 '3d64s  (6D ) 6f  k5Do' (E = 7.373 eV, g = 25.0) to 
+<E> = 7.578 eV, g_sum = 18.0: 
+3d6(5D)4s8p_5Do[4] (7.534 eV, g = 9.0, match_score = 30.0)
+3d6(5D)4s8p_5Do[2] (7.607 eV, g = 5.0, match_score = 30.0)
+3d6(5D)4s8p_5Do[1] (7.636 eV, g = 3.0, match_score = 30.0)
+3d6(5D)4s8p_5Do[0] (7.653 eV, g = 1.0, match_score = 30.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 6 '3d64s  (6D ) 6f  u5Ho' (E = 7.373 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 3 '3d64s  (6D ) 6f  x7Ho' (E = 7.374 eV, g = 77.0)
+
+Matched Nahar phixs for 5Po index 14 '3d64s  (6D ) 6f  m5Po' (E = 7.374 eV, g = 15.0) to 
+<E> = 7.676 eV, g_sum = 12.0: 
+3d6(5D)4s9p_5Po[3] (7.650 eV, g = 7.0, match_score = 29.1)
+3d6(5D)4s9p_5Po[2] (7.712 eV, g = 5.0, match_score = 29.1)
+
+Matched Nahar phixs for 7Po index 9 '3d64s  (6D ) 6f  r7Po' (E = 7.374 eV, g = 21.0) to 
+<E> = 7.666 eV, g_sum = 21.0: 
+3d6(5D)4s9p_7Po[4] (7.621 eV, g = 9.0, match_score = 29.2)
+3d6(5D)4s9p_7Po[3] (7.672 eV, g = 7.0, match_score = 29.2)
+3d6(5D)4s9p_7Po[2] (7.737 eV, g = 5.0, match_score = 29.2)
+
+No matched Hillier levels for Nahar cross section of 7He index 2 '3d64s  (6D ) 6g  b7H ' (E = 7.376 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5He index 4 '3d64s  (6D ) 6g  d5H ' (E = 7.376 eV, g = 55.0)
+
+Matched Nahar phixs for 7Ge index 6 '3d64s  (6D ) 6g  f7G ' (E = 7.376 eV, g = 63.0) to 
+<E> = 7.657 eV, g_sum = 63.0: 
+3d6(5D)4s8d_7Ge[7] (7.605 eV, g = 15.0, match_score = 29.3)
+3d6(5D)4s8d_7Ge[6] (7.649 eV, g = 13.0, match_score = 29.3)
+3d6(5D)4s8d_7Ge[5] (7.650 eV, g = 11.0, match_score = 29.3)
+3d6(5D)4s8d_7Ge[4] (7.684 eV, g = 9.0, match_score = 29.3)
+3d6(5D)4s8d_7Ge[3] (7.693 eV, g = 7.0, match_score = 29.3)
+3d6(5D)4s8d_7Ge[2] (7.714 eV, g = 5.0, match_score = 29.3)
+3d6(5D)4s8d_7Ge[1] (7.718 eV, g = 3.0, match_score = 29.3)
+
+Matched Nahar phixs for 5Ge index 9 '3d64s  (6D ) 6g  i5G ' (E = 7.376 eV, g = 45.0) to 
+<E> = 7.655 eV, g_sum = 45.0: 
+3d6(5D)4s8d_5Ge[6] (7.601 eV, g = 13.0, match_score = 29.3)
+3d6(5D)4s8d_5Ge[5] (7.648 eV, g = 11.0, match_score = 29.3)
+3d6(5D)4s8d_5Ge[4] (7.682 eV, g = 9.0, match_score = 29.3)
+3d6(5D)4s8d_5Ge[3] (7.683 eV, g = 7.0, match_score = 29.3)
+3d6(5D)4s8d_5Ge[2] (7.720 eV, g = 5.0, match_score = 29.3)
+
+Matched Nahar phixs for 7Fe index 7 '3d64s  (6D ) 6g  g7F ' (E = 7.377 eV, g = 49.0) to 
+<E> = 7.642 eV, g_sum = 31.0: 
+3d6(5D)4s8d_7Fe[6] (7.603 eV, g = 13.0, match_score = 29.5)
+3d6(5D)4s8d_7Fe[4] (7.649 eV, g = 9.0, match_score = 29.5)
+3d6(5D)4s8d_7Fe[2] (7.682 eV, g = 5.0, match_score = 29.5)
+3d6(5D)4s8d_7Fe[1] (7.698 eV, g = 3.0, match_score = 29.5)
+3d6(5D)4s8d_7Fe[0] (7.705 eV, g = 1.0, match_score = 29.5)
+
+Matched Nahar phixs for 5Fe index 13 '3d64s  (6D ) 6g  m5F ' (E = 7.377 eV, g = 35.0) to 
+<E> = 7.651 eV, g_sum = 26.0: 
+3d6(5D)4s8d_5Fe[5] (7.609 eV, g = 11.0, match_score = 29.4)
+3d6(5D)4s8d_5Fe[3] (7.666 eV, g = 7.0, match_score = 29.4)
+3d6(5D)4s8d_5Fe[2] (7.688 eV, g = 5.0, match_score = 29.4)
+3d6(5D)4s8d_5Fe[1] (7.708 eV, g = 3.0, match_score = 29.4)
+
+No matched Hillier levels for Nahar cross section of 7Ie index 2 '3d64s  (6D ) 6g  b7I ' (E = 7.377 eV, g = 91.0)
+
+No matched Hillier levels for Nahar cross section of 5Ie index 2 '3d64s  (6D ) 6g  b5I ' (E = 7.377 eV, g = 65.0)
+
+Matched Nahar phixs for 7De index 10 '3d64s  (6D ) 6g  j7D ' (E = 7.377 eV, g = 35.0) to 
+<E> = 7.462 eV, g_sum = 35.0: 
+3d6(5D)4s8s_7De[5] (7.414 eV, g = 11.0, match_score = 31.2)
+3d6(5D)4s8s_7De[4] (7.463 eV, g = 9.0, match_score = 31.2)
+3d6(5D)4s8s_7De[3] (7.478 eV, g = 7.0, match_score = 31.2)
+3d6(5D)4s8s_7De[2] (7.507 eV, g = 5.0, match_score = 31.2)
+3d6(5D)4s8s_7De[1] (7.525 eV, g = 3.0, match_score = 31.2)
+
+Matched Nahar phixs for 5De index 15 '3d64s  (6D ) 6g  o5D ' (E = 7.377 eV, g = 25.0) to 
+<E> = 7.285 eV, g_sum = 25.0: 
+3d6(5D)4s7s_5De[4] (7.242 eV, g = 9.0, match_score = 31.1)
+3d6(5D)4s7s_5De[3] (7.287 eV, g = 7.0, match_score = 31.1)
+3d6(5D)4s7s_5De[2] (7.318 eV, g = 5.0, match_score = 31.1)
+3d6(5D)4s7s_5De[1] (7.337 eV, g = 3.0, match_score = 31.1)
+3d6(5D)4s7s_5De[0] (7.348 eV, g = 1.0, match_score = 31.1)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 7 '3d64s  (6D ) 6h  t5Ho' (E = 7.377 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Io index 3 '3d64s  (6D ) 6h  x5Io' (E = 7.377 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 4 '3d64s  (6D ) 6h  w7Ho' (E = 7.377 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 11 '3d64s  (6D ) 6h  p5Go' (E = 7.377 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 7Go index 4 '3d64s  (6D ) 6h  w7Go' (E = 7.377 eV, g = 63.0)
+
+No Hillier levels with term 5Ko
+No matched Hillier levels for Nahar cross section of 5Ko index 1 '3d64s  (6D ) 6h  z5Ko' (E = 7.377 eV, g = 75.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 9 '3d64s  (6D ) 6h  r7Fo' (E = 7.377 eV, g = 49.0)
+
+Matched Nahar phixs for 5Fo index 16 '3d64s  (6D ) 6h  k5Fo' (E = 7.377 eV, g = 35.0) to 
+<E> = 7.695 eV, g_sum = 35.0: 
+3d6(5D)4s9p_5Fo[5] (7.637 eV, g = 11.0, match_score = 29.0)
+3d6(5D)4s9p_5Fo[4] (7.682 eV, g = 9.0, match_score = 29.0)
+3d6(5D)4s9p_5Fo[3] (7.734 eV, g = 7.0, match_score = 29.0)
+3d6(5D)4s9p_5Fo[2] (7.754 eV, g = 5.0, match_score = 29.0)
+3d6(5D)4s9p_5Fo[1] (7.754 eV, g = 3.0, match_score = 29.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 17 '3d64s  (6D ) 8p  j5Fo' (E = 7.380 eV, g = 35.0)
+
+Matched Nahar phixs for 5Do index 17 '3d64s  (6D ) 8p  j5Do' (E = 7.380 eV, g = 25.0) to 
+<E> = 7.663 eV, g_sum = 20.0: 
+3d6(5D)4s9p_5Do[3] (7.642 eV, g = 7.0, match_score = 29.3)
+3d6(5D)4s9p_5Do[4] (7.642 eV, g = 9.0, match_score = 29.3)
+3d6(5D)4s9p_5Do[1] (7.741 eV, g = 3.0, match_score = 29.3)
+3d6(5D)4s9p_5Do[0] (7.759 eV, g = 1.0, match_score = 29.3)
+
+Matched Nahar phixs for 5Pe index 9 '3d64s  (6D ) 7d  i5P ' (E = 7.382 eV, g = 15.0) to 
+<E> = 7.596 eV, g_sum = 10.0: 
+3d6(5D)4s7d_5Pe[3] (7.587 eV, g = 7.0, match_score = 45.9)
+3d6(5D)4s7d_5Pe[1] (7.619 eV, g = 3.0, match_score = 45.9)
+
+No matched Hillier levels for Nahar cross section of 5Po index 15 '3d7    (4P ) 5p  l5Po' (E = 7.415 eV, g = 15.0)
+
+Matched Nahar phixs for 7De index 11 '3d64s  (6D ) 9s  k7D ' (E = 7.421 eV, g = 35.0) to 
+<E> = 7.604 eV, g_sum = 35.0: 
+3d6(5D)4s9s_7De[5] (7.554 eV, g = 11.0, match_score = 46.3)
+3d6(5D)4s9s_7De[4] (7.600 eV, g = 9.0, match_score = 46.3)
+3d6(5D)4s9s_7De[3] (7.635 eV, g = 7.0, match_score = 46.3)
+3d6(5D)4s9s_7De[2] (7.642 eV, g = 5.0, match_score = 46.3)
+3d6(5D)4s9s_7De[1] (7.663 eV, g = 3.0, match_score = 46.3)
+
+Matched Nahar phixs for 5De index 16 '3d64s  (6D ) 9s  p5D ' (E = 7.431 eV, g = 25.0) to 
+<E> = 7.604 eV, g_sum = 20.0: 
+3d6(5D)4s9s_5De[4] (7.566 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s9s_5De[3] (7.610 eV, g = 7.0, match_score = 46.5)
+3d6(5D)4s9s_5De[1] (7.676 eV, g = 3.0, match_score = 46.5)
+3d6(5D)4s9s_5De[0] (7.683 eV, g = 1.0, match_score = 46.5)
+
+Matched Nahar phixs for 5De index 17 '3d64s  (6D ) 8d  q5D ' (E = 7.452 eV, g = 25.0) to 
+<E> = 7.630 eV, g_sum = 25.0: 
+3d6(5D)4s8d_5De[4] (7.606 eV, g = 9.0, match_score = 46.4)
+3d6(5D)4s8d_5De[3] (7.627 eV, g = 7.0, match_score = 46.4)
+3d6(5D)4s8d_5De[2] (7.649 eV, g = 5.0, match_score = 46.4)
+3d6(5D)4s8d_5De[1] (7.663 eV, g = 3.0, match_score = 46.4)
+3d6(5D)4s8d_5De[0] (7.679 eV, g = 1.0, match_score = 46.4)
+
+Matched Nahar phixs for 5Do index 18 '3d7    (4F ) 5f  i5Do' (E = 7.457 eV, g = 25.0) to 
+<E> = 7.641 eV, g_sum = 4.0: 
+3d7(4F)5f_5Do[1] (7.628 eV, g = 3.0, match_score = 93.5)
+3d7(4F)5f_5Do[0] (7.681 eV, g = 1.0, match_score = 93.5)
+
+Matched Nahar phixs for 5Go index 12 '3d7    (4F ) 5f  o5Go' (E = 7.457 eV, g = 45.0) to 
+<E> = 7.603 eV, g_sum = 27.0: 
+3d7(4F)5f_5Go[6] (7.556 eV, g = 13.0, match_score = 94.7)
+3d7(4F)5f_5Go[4] (7.627 eV, g = 9.0, match_score = 94.7)
+3d7(4F)5f_5Go[2] (7.680 eV, g = 5.0, match_score = 94.7)
+
+Matched Nahar phixs for 5Fo index 18 '3d7    (4F ) 5f  i5Fo' (E = 7.457 eV, g = 35.0) to 
+<E> = 7.582 eV, g_sum = 28.0: 
+3d7(4F)5f_5Fo[5] (7.556 eV, g = 11.0, match_score = 95.3)
+3d7(4F)5f_5Fo[4] (7.557 eV, g = 9.0, match_score = 95.3)
+3d7(4F)5f_5Fo[2] (7.628 eV, g = 5.0, match_score = 95.3)
+3d7(4F)5f_5Fo[1] (7.681 eV, g = 3.0, match_score = 95.3)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 10 '3d64s  (6D ) 8d  j5G ' (E = 7.457 eV, g = 45.0)
+
+Matched Nahar phixs for 5Ho index 8 '3d7    (4F ) 5f  s5Ho' (E = 7.457 eV, g = 55.0) to 
+<E> = 7.622 eV, g_sum = 44.0: 
+3d7(4F)5f_5Ho[7] (7.556 eV, g = 15.0, match_score = 94.1)
+3d7(4F)5f_5Ho[6] (7.627 eV, g = 13.0, match_score = 94.1)
+3d7(4F)5f_5Ho[4] (7.680 eV, g = 9.0, match_score = 94.1)
+3d7(4F)5f_5Ho[3] (7.680 eV, g = 7.0, match_score = 94.1)
+
+Matched Nahar phixs for 5Fo index 19 '3d7    (4F ) 7p  h5Fo' (E = 7.458 eV, g = 35.0) to 
+<E> = 7.630 eV, g_sum = 35.0: 
+3d7(4F)7p_5Fo[5] (7.558 eV, g = 11.0, match_score = 93.9)
+3d7(4F)7p_5Fo[4] (7.624 eV, g = 9.0, match_score = 93.9)
+3d7(4F)7p_5Fo[3] (7.668 eV, g = 7.0, match_score = 93.9)
+3d7(4F)7p_5Fo[2] (7.694 eV, g = 5.0, match_score = 93.9)
+3d7(4F)7p_5Fo[1] (7.713 eV, g = 3.0, match_score = 93.9)
+
+No matched Hillier levels for Nahar cross section of 5So index 4 '3d7    (4F ) 5f  w5So' (E = 7.458 eV, g = 5.0)
+
+Matched Nahar phixs for 5Po index 16 '3d7    (4F ) 5f  k5Po' (E = 7.458 eV, g = 15.0) to 
+<E> = 7.557 eV, g_sum = 12.0: 
+3d7(4F)5f_5Po[3] (7.557 eV, g = 7.0, match_score = 96.0)
+3d7(4F)5f_5Po[2] (7.557 eV, g = 5.0, match_score = 96.0)
+
+Matched Nahar phixs for 5Io index 4 '3d7    (4F ) 5f  w5Io' (E = 7.458 eV, g = 65.0) to 
+<E> = 7.641 eV, g_sum = 65.0: 
+3d7(4F)5f_5Io[8] (7.557 eV, g = 17.0, match_score = 93.6)
+3d7(4F)5f_5Io[7] (7.628 eV, g = 15.0, match_score = 93.6)
+3d7(4F)5f_5Io[5] (7.680 eV, g = 11.0, match_score = 93.6)
+3d7(4F)5f_5Io[6] (7.680 eV, g = 13.0, match_score = 93.6)
+3d7(4F)5f_5Io[4] (7.716 eV, g = 9.0, match_score = 93.6)
+
+Matched Nahar phixs for 5Fe index 14 '3d64s  (6D ) 8d  n5F ' (E = 7.458 eV, g = 35.0) to 
+<E> = 7.883 eV, g_sum = 20.0: 
+3d6(5D)4p2_5Fe[5] (7.875 eV, g = 11.0, match_score = 14.0)
+3d6(5D)4p2_5Fe[4] (7.893 eV, g = 9.0, match_score = 14.0)
+
+Matched Nahar phixs for 5Do index 19 '3d7    (4F ) 7p  h5Do' (E = 7.458 eV, g = 25.0) to 
+<E> = 7.613 eV, g_sum = 18.0: 
+3d7(4F)7p_5Do[4] (7.558 eV, g = 9.0, match_score = 94.4)
+3d7(4F)7p_5Do[2] (7.643 eV, g = 5.0, match_score = 94.4)
+3d7(4F)7p_5Do[1] (7.694 eV, g = 3.0, match_score = 94.4)
+3d7(4F)7p_5Do[0] (7.721 eV, g = 1.0, match_score = 94.4)
+
+Matched Nahar phixs for 5He index 5 '3d7    (4F ) 5g  e5H ' (E = 7.459 eV, g = 55.0) to 
+<E> = 7.648 eV, g_sum = 44.0: 
+3d7(4F)5g_5He[7] (7.580 eV, g = 15.0, match_score = 93.4)
+3d7(4F)5g_5He[4] (7.648 eV, g = 9.0, match_score = 93.4)
+3d7(4F)5g_5He[6] (7.698 eV, g = 13.0, match_score = 93.4)
+3d7(4F)5g_5He[3] (7.698 eV, g = 7.0, match_score = 93.4)
+
+Matched Nahar phixs for 5Ie index 3 '3d7    (4F ) 5g  c5I ' (E = 7.459 eV, g = 65.0) to 
+<E> = 7.634 eV, g_sum = 52.0: 
+3d7(4F)5g_5Ie[8] (7.581 eV, g = 17.0, match_score = 93.8)
+3d7(4F)5g_5Ie[5] (7.648 eV, g = 11.0, match_score = 93.8)
+3d7(4F)5g_5Ie[7] (7.648 eV, g = 15.0, match_score = 93.8)
+3d7(4F)5g_5Ie[4] (7.698 eV, g = 9.0, match_score = 93.8)
+
+Matched Nahar phixs for 5Ge index 11 '3d7    (4F ) 5g  k5G ' (E = 7.459 eV, g = 45.0) to 
+<E> = 7.625 eV, g_sum = 38.0: 
+3d7(4F)5g_5Ge[6] (7.580 eV, g = 13.0, match_score = 94.1)
+3d7(4F)5g_5Ge[5] (7.581 eV, g = 11.0, match_score = 94.1)
+3d7(4F)5g_5Ge[2] (7.648 eV, g = 5.0, match_score = 94.1)
+3d7(4F)5g_5Ge[4] (7.732 eV, g = 9.0, match_score = 94.1)
+
+Matched Nahar phixs for 5Ke index 1 '3d7    (4F ) 5g  a5K ' (E = 7.459 eV, g = 75.0) to 
+<E> = 7.657 eV, g_sum = 75.0: 
+3d7(4F)5g_5Ke[9] (7.581 eV, g = 19.0, match_score = 93.1)
+3d7(4F)5g_5Ke[8] (7.648 eV, g = 17.0, match_score = 93.1)
+3d7(4F)5g_5Ke[5] (7.698 eV, g = 11.0, match_score = 93.1)
+3d7(4F)5g_5Ke[6] (7.698 eV, g = 13.0, match_score = 93.1)
+3d7(4F)5g_5Ke[7] (7.698 eV, g = 15.0, match_score = 93.1)
+
+Matched Nahar phixs for 5De index 18 '3d7    (4F ) 5g  r5D ' (E = 7.459 eV, g = 25.0) to 
+<E> = 7.638 eV, g_sum = 22.0: 
+3d7(4F)5g_5De[3] (7.581 eV, g = 7.0, match_score = 93.7)
+3d7(4F)5g_5De[4] (7.648 eV, g = 9.0, match_score = 93.7)
+3d7(4F)5g_5De[0] (7.648 eV, g = 1.0, match_score = 93.7)
+3d7(4F)5g_5De[2] (7.698 eV, g = 5.0, match_score = 93.7)
+
+Matched Nahar phixs for 5Pe index 10 '3d7    (4F ) 5g  j5P ' (E = 7.459 eV, g = 15.0) to 
+<E> = 7.612 eV, g_sum = 15.0: 
+3d7(4F)5g_5Pe[2] (7.581 eV, g = 5.0, match_score = 94.4)
+3d7(4F)5g_5Pe[1] (7.581 eV, g = 3.0, match_score = 94.4)
+3d7(4F)5g_5Pe[3] (7.648 eV, g = 7.0, match_score = 94.4)
+
+Matched Nahar phixs for 5Fe index 15 '3d7    (4F ) 5g  o5F ' (E = 7.459 eV, g = 35.0) to 
+<E> = 7.622 eV, g_sum = 23.0: 
+3d7(4F)5g_5Fe[4] (7.581 eV, g = 9.0, match_score = 94.2)
+3d7(4F)5g_5Fe[5] (7.648 eV, g = 11.0, match_score = 94.2)
+3d7(4F)5g_5Fe[1] (7.648 eV, g = 3.0, match_score = 94.2)
+
+Matched Nahar phixs for 7De index 12 '3d64s  (6D ) 8d  l7D ' (E = 7.460 eV, g = 35.0) to 
+<E> = 7.627 eV, g_sum = 35.0: 
+3d6(5D)4s8d_7De[5] (7.603 eV, g = 11.0, match_score = 46.5)
+3d6(5D)4s8d_7De[4] (7.604 eV, g = 9.0, match_score = 46.5)
+3d6(5D)4s8d_7De[3] (7.650 eV, g = 7.0, match_score = 46.5)
+3d6(5D)4s8d_7De[2] (7.654 eV, g = 5.0, match_score = 46.5)
+3d6(5D)4s8d_7De[1] (7.682 eV, g = 3.0, match_score = 46.5)
+
+Matched Nahar phixs for 5Go index 13 '3d7    (4F ) 7p  n5Go' (E = 7.461 eV, g = 45.0) to 
+<E> = 7.625 eV, g_sum = 45.0: 
+3d7(4F)7p_5Go[6] (7.560 eV, g = 13.0, match_score = 94.1)
+3d7(4F)7p_5Go[4] (7.623 eV, g = 9.0, match_score = 94.1)
+3d7(4F)7p_5Go[5] (7.627 eV, g = 11.0, match_score = 94.1)
+3d7(4F)7p_5Go[3] (7.674 eV, g = 7.0, match_score = 94.1)
+3d7(4F)7p_5Go[2] (7.721 eV, g = 5.0, match_score = 94.1)
+
+No matched Hillier levels for Nahar cross section of 5Se index 6 '3d64s  (6D ) 8d  f5S ' (E = 7.463 eV, g = 5.0)
+
+No matched Hillier levels for Nahar cross section of 7Do index 9 '3d64s  (6D ) 9p  r7Do' (E = 7.467 eV, g = 35.0)
+
+Matched Nahar phixs for 7Pe index 6 '3d64s  (6D ) 8d  f7P ' (E = 7.468 eV, g = 21.0) to 
+<E> = 7.621 eV, g_sum = 12.0: 
+3d6(5D)4s8d_7Pe[3] (7.605 eV, g = 7.0, match_score = 46.7)
+3d6(5D)4s8d_7Pe[2] (7.644 eV, g = 5.0, match_score = 46.7)
+
+Matched Nahar phixs for 7Fe index 8 '3d64s  (6D ) 8d  h7F ' (E = 7.468 eV, g = 49.0) to 
+<E> = 7.418 eV, g_sum = 49.0: 
+3d6(5D)4p2_7Fe[6] (7.390 eV, g = 13.0, match_score = 15.8)
+3d6(5D)4p2_7Fe[5] (7.407 eV, g = 11.0, match_score = 15.8)
+3d6(5D)4p2_7Fe[4] (7.422 eV, g = 9.0, match_score = 15.8)
+3d6(5D)4p2_7Fe[3] (7.437 eV, g = 7.0, match_score = 15.8)
+3d6(5D)4p2_7Fe[2] (7.448 eV, g = 5.0, match_score = 15.8)
+3d6(5D)4p2_7Fe[1] (7.456 eV, g = 3.0, match_score = 15.8)
+3d6(5D)4p2_7Fe[0] (7.460 eV, g = 1.0, match_score = 15.8)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 10 '3d64s  (6D ) 9p  q7Fo' (E = 7.470 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 7 '3d64s  (6D ) 8d  g7G ' (E = 7.470 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7Po index 10 '3d64s  (6D ) 9p  q7Po' (E = 7.471 eV, g = 21.0)
+
+Matched Nahar phixs for 7Se index 5 '3d64s  (6D ) 8d  e7S ' (E = 7.472 eV, g = 7.0) to 
+3d6(5D)4s4d_e7Se[3] (6.394 eV, g = 7.0, match_score = 67.7)
+
+No matched Hillier levels for Nahar cross section of 7Go index 5 '3d64s  (6D ) 7f  v7Go' (E = 7.474 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 20 '3d64s  (6D ) 7f  g5Fo' (E = 7.474 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 11 '3d64s  (6D ) 7f  p7Fo' (E = 7.475 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Do index 20 '3d64s  (6D ) 7f  g5Do' (E = 7.475 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 7Do index 10 '3d64s  (6D ) 7f  q7Do' (E = 7.475 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 14 '3d64s  (6D ) 7f  m5Go' (E = 7.475 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 9 '3d64s  (6D ) 7f  r5Ho' (E = 7.475 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 5 '3d64s  (6D ) 7f  v7Ho' (E = 7.475 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Po index 17 '3d64s  (6D ) 7f  j5Po' (E = 7.475 eV, g = 15.0)
+
+No matched Hillier levels for Nahar cross section of 7Po index 11 '3d64s  (6D ) 7f  p7Po' (E = 7.475 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 7He index 3 '3d64s  (6D ) 7g  c7H ' (E = 7.477 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5He index 6 '3d64s  (6D ) 7g  f5H ' (E = 7.477 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 8 '3d64s  (6D ) 7g  h7G ' (E = 7.477 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 12 '3d64s  (6D ) 7g  l5G ' (E = 7.477 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 7Fe index 9 '3d64s  (6D ) 7g  i7F ' (E = 7.477 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Fe index 16 '3d64s  (6D ) 7g  p5F ' (E = 7.477 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Ie index 3 '3d64s  (6D ) 7g  c7I ' (E = 7.477 eV, g = 91.0)
+
+No matched Hillier levels for Nahar cross section of 5Ie index 4 '3d64s  (6D ) 7g  d5I ' (E = 7.477 eV, g = 65.0)
+
+Matched Nahar phixs for 7De index 13 '3d64s  (6D ) 7g  m7D ' (E = 7.477 eV, g = 35.0) to 
+<E> = 7.712 eV, g_sum = 35.0: 
+3d6(5D)4p2_7De[5] (7.677 eV, g = 11.0, match_score = 14.9)
+3d6(5D)4p2_7De[4] (7.709 eV, g = 9.0, match_score = 14.9)
+3d6(5D)4p2_7De[3] (7.731 eV, g = 7.0, match_score = 14.9)
+3d6(5D)4p2_7De[2] (7.745 eV, g = 5.0, match_score = 14.9)
+3d6(5D)4p2_7De[1] (7.754 eV, g = 3.0, match_score = 14.9)
+
+Matched Nahar phixs for 5De index 19 '3d64s  (6D ) 7g  s5D ' (E = 7.477 eV, g = 25.0) to 
+<E> = 7.243 eV, g_sum = 9.0: 
+3d6(5D)4s4d_5De[1] (7.221 eV, g = 3.0, match_score = 29.8)
+3d6(5D)4s4d_5De[0] (7.240 eV, g = 1.0, match_score = 29.8)
+3d6(5D)4s4d_5De[2] (7.258 eV, g = 5.0, match_score = 29.8)
+
+No matched Hillier levels for Nahar cross section of 5Io index 5 '3d64s  (6D ) 7h  v5Io' (E = 7.477 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 6 '3d64s  (6D ) 7h  u7Ho' (E = 7.477 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 10 '3d64s  (6D ) 7h  q5Ho' (E = 7.477 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 7Go index 6 '3d64s  (6D ) 7h  u7Go' (E = 7.477 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 15 '3d64s  (6D ) 7h  l5Go' (E = 7.477 eV, g = 45.0)
+
+No Hillier levels with term 5Ko
+No matched Hillier levels for Nahar cross section of 5Ko index 2 '3d64s  (6D ) 7h  y5Ko' (E = 7.477 eV, g = 75.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 21 '3d64s  (6D ) 7h  f5Fo' (E = 7.477 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 12 '3d64s  (6D ) 7h  o7Fo' (E = 7.477 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 13 '3d64s  (6D ) 7i  m5G ' (E = 7.477 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5He index 7 '3d64s  (6D ) 7i  g5H ' (E = 7.477 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Ie index 5 '3d64s  (6D ) 7i  e5I ' (E = 7.477 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 5Ke index 2 '3d64s  (6D ) 7i  b5K ' (E = 7.477 eV, g = 75.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 9 '3d64s  (6D ) 7i  i7G ' (E = 7.477 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7He index 4 '3d64s  (6D ) 7i  d7H ' (E = 7.477 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 7Ie index 4 '3d64s  (6D ) 7i  d7I ' (E = 7.477 eV, g = 91.0)
+
+Matched Nahar phixs for 5Pe index 11 '3d64s  (6D ) 8d  k5P ' (E = 7.478 eV, g = 15.0) to 
+<E> = 7.648 eV, g_sum = 8.0: 
+3d6(5D)4s8d_5Pe[2] (7.602 eV, g = 5.0, match_score = 46.5)
+3d6(5D)4s8d_5Pe[1] (7.725 eV, g = 3.0, match_score = 46.5)
+
+No matched Hillier levels for Nahar cross section of 5Do index 21 '3d64s  (6D ) 9p  f5Do' (E = 7.479 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 14 '3d64s  (4F ) 0s  n7D ' (E = 7.480 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 22 '3d64s  (6D ) 9p  e5Fo' (E = 7.480 eV, g = 35.0)
+
+Matched Nahar phixs for 5Fo index 23 '3d7    (4F ) 8p  d5Fo' (E = 7.484 eV, g = 35.0) to 
+<E> = 7.803 eV, g_sum = 35.0: 
+3d7(4F)8p_5Fo[5] (7.726 eV, g = 11.0, match_score = 89.5)
+3d7(4F)8p_5Fo[4] (7.800 eV, g = 9.0, match_score = 89.5)
+3d7(4F)8p_5Fo[3] (7.855 eV, g = 7.0, match_score = 89.5)
+3d7(4F)8p_5Fo[2] (7.855 eV, g = 5.0, match_score = 89.5)
+3d7(4F)8p_5Fo[1] (7.885 eV, g = 3.0, match_score = 89.5)
+
+No matched Hillier levels for Nahar cross section of 5Po index 18 '3d64s  (6D ) 9p  i5Po' (E = 7.486 eV, g = 15.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 15 '3d64s  (6D )10s  o7D ' (E = 7.505 eV, g = 35.0)
+
+Matched Nahar phixs for 5Do index 22 '3d7    (4F ) 8p  e5Do' (E = 7.506 eV, g = 25.0) to 
+<E> = 7.796 eV, g_sum = 25.0: 
+3d7(4F)8p_5Do[4] (7.730 eV, g = 9.0, match_score = 90.4)
+3d7(4F)8p_5Do[3] (7.801 eV, g = 7.0, match_score = 90.4)
+3d7(4F)8p_5Do[1] (7.856 eV, g = 3.0, match_score = 90.4)
+3d7(4F)8p_5Do[2] (7.856 eV, g = 5.0, match_score = 90.4)
+3d7(4F)8p_5Do[0] (7.885 eV, g = 1.0, match_score = 90.4)
+
+Matched Nahar phixs for 5Pe index 12 '3d7    (4F ) 6d  l5P ' (E = 7.507 eV, g = 15.0) to 
+<E> = 7.614 eV, g_sum = 15.0: 
+3d7(4F)6d_5Pe[3] (7.566 eV, g = 7.0, match_score = 95.8)
+3d7(4F)6d_5Pe[2] (7.640 eV, g = 5.0, match_score = 95.8)
+3d7(4F)6d_5Pe[1] (7.685 eV, g = 3.0, match_score = 95.8)
+
+No matched Hillier levels for Nahar cross section of 5De index 20 '3d64s  (6D )10s  t5D ' (E = 7.510 eV, g = 25.0)
+
+Matched Nahar phixs for 5Fe index 17 '3d7    (4F ) 6d  q5F ' (E = 7.512 eV, g = 35.0) to 
+<E> = 7.616 eV, g_sum = 26.0: 
+3d7(4F)6d_5Fe[5] (7.564 eV, g = 11.0, match_score = 95.9)
+3d7(4F)6d_5Fe[3] (7.634 eV, g = 7.0, match_score = 95.9)
+3d7(4F)6d_5Fe[2] (7.657 eV, g = 5.0, match_score = 95.9)
+3d7(4F)6d_5Fe[1] (7.702 eV, g = 3.0, match_score = 95.9)
+
+Matched Nahar phixs for 5De index 21 '3d7    (4F ) 6d  u5D ' (E = 7.512 eV, g = 25.0) to 
+<E> = 7.616 eV, g_sum = 25.0: 
+3d7(4F)6d_5De[4] (7.568 eV, g = 9.0, match_score = 95.9)
+3d7(4F)6d_5De[2] (7.605 eV, g = 5.0, match_score = 95.9)
+3d7(4F)6d_5De[1] (7.653 eV, g = 3.0, match_score = 95.9)
+3d7(4F)6d_5De[3] (7.659 eV, g = 7.0, match_score = 95.9)
+3d7(4F)6d_5De[0] (7.698 eV, g = 1.0, match_score = 95.9)
+
+Matched Nahar phixs for 5Ge index 14 '3d7    (4F ) 6d  n5G ' (E = 7.513 eV, g = 45.0) to 
+<E> = 7.628 eV, g_sum = 45.0: 
+3d7(4F)6d_5Ge[6] (7.568 eV, g = 13.0, match_score = 95.6)
+3d7(4F)6d_5Ge[4] (7.608 eV, g = 9.0, match_score = 95.6)
+3d7(4F)6d_5Ge[5] (7.636 eV, g = 11.0, match_score = 95.6)
+3d7(4F)6d_5Ge[2] (7.692 eV, g = 5.0, match_score = 95.6)
+3d7(4F)6d_5Ge[3] (7.707 eV, g = 7.0, match_score = 95.6)
+
+Matched Nahar phixs for 5He index 8 '3d7    (4F ) 6d  h5H ' (E = 7.513 eV, g = 55.0) to 
+<E> = 7.820 eV, g_sum = 55.0: 
+3d7(4F)7d_5He[7] (7.743 eV, g = 15.0, match_score = 44.5)
+3d7(4F)7d_5He[6] (7.810 eV, g = 13.0, match_score = 44.5)
+3d7(4F)7d_5He[4] (7.860 eV, g = 9.0, match_score = 44.5)
+3d7(4F)7d_5He[5] (7.860 eV, g = 11.0, match_score = 44.5)
+3d7(4F)7d_5He[3] (7.893 eV, g = 7.0, match_score = 44.5)
+
+No matched Hillier levels for Nahar cross section of 5Fe index 18 '3d64s  (6D ) 9d  r5F ' (E = 7.522 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5De index 22 '3d64s  (6D ) 9d  v5D ' (E = 7.523 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 15 '3d64s  (6D ) 9d  o5G ' (E = 7.527 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5Se index 7 '3d64s  (6D ) 9d  g5S ' (E = 7.532 eV, g = 5.0)
+
+No matched Hillier levels for Nahar cross section of 7Pe index 7 '3d64s  (6D ) 9d  g7P ' (E = 7.535 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 7Do index 11 '3d64s  (6D )10p  p7Do' (E = 7.535 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fe index 10 '3d64s  (6D ) 9d  j7F ' (E = 7.536 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 13 '3d64s  (6D )10p  n7Fo' (E = 7.537 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 10 '3d64s  (6D ) 9d  j7G ' (E = 7.538 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 16 '3d64s  (6D ) 9d  p7D ' (E = 7.538 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Po index 12 '3d64s  (6D )10p  o7Po' (E = 7.539 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 7Se index 6 '3d64s  (6D ) 9d  f7S ' (E = 7.539 eV, g = 7.0)
+
+Matched Nahar phixs for 5Pe index 13 '3d64s  (6D ) 9d  m5P ' (E = 7.540 eV, g = 15.0) to 
+3d6(5D)4p2_5Pe[3] (7.897 eV, g = 7.0, match_score = 14.3)
+
+No matched Hillier levels for Nahar cross section of 7Go index 7 '3d64s  (6D ) 8f  t7Go' (E = 7.540 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 14 '3d64s  (6D ) 8f  m7Fo' (E = 7.541 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 24 '3d64s  (6D ) 8f  c5Fo' (E = 7.541 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 16 '3d64s  (6D ) 8f  k5Go' (E = 7.541 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 7Do index 12 '3d64s  (6D ) 8f  o7Do' (E = 7.541 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 11 '3d64s  (6D ) 8f  p5Ho' (E = 7.541 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 7 '3d64s  (6D ) 8f  t7Ho' (E = 7.541 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Do index 23 '3d64s  (6D ) 8f  d5Do' (E = 7.541 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Po index 19 '3d64s  (6D ) 8f  h5Po' (E = 7.541 eV, g = 15.0)
+
+No matched Hillier levels for Nahar cross section of 7Po index 13 '3d64s  (6D ) 8f  n7Po' (E = 7.541 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 7He index 5 '3d64s  (6D ) 8g  e7H ' (E = 7.542 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5He index 9 '3d64s  (6D ) 8g  i5H ' (E = 7.542 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 16 '3d64s  (6D ) 8g  p5G ' (E = 7.542 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 11 '3d64s  (6D ) 8g  k7G ' (E = 7.542 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7Fe index 11 '3d64s  (6D ) 8g  k7F ' (E = 7.542 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Fe index 19 '3d64s  (6D ) 8g  s5F ' (E = 7.542 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Ie index 5 '3d64s  (6D ) 8g  e7I ' (E = 7.542 eV, g = 91.0)
+
+No matched Hillier levels for Nahar cross section of 5Ie index 6 '3d64s  (6D ) 8g  f5I ' (E = 7.542 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 5De index 23 '3d64s  (6D ) 8g  w5D ' (E = 7.542 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 17 '3d64s  (6D ) 8g  q7D ' (E = 7.542 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Io index 6 '3d64s  (6D ) 8h  u5Io' (E = 7.542 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 8 '3d64s  (6D ) 8h  s7Ho' (E = 7.542 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 12 '3d64s  (6D ) 8h  o5Ho' (E = 7.542 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 17 '3d64s  (6D ) 8h  j5Go' (E = 7.542 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 7Go index 8 '3d64s  (6D ) 8h  s7Go' (E = 7.542 eV, g = 63.0)
+
+No Hillier levels with term 5Ko
+No matched Hillier levels for Nahar cross section of 5Ko index 3 '3d64s  (6D ) 8h  x5Ko' (E = 7.542 eV, g = 75.0)
+
+Matched Nahar phixs for 5Fo index 25 '3d64s  (6D ) 8h  b5Fo' (E = 7.542 eV, g = 35.0) to 
+<E> = 6.597 eV, g_sum = 32.0: 
+3d7(4F)5p_b5Fo[4] (6.565 eV, g = 9.0, match_score = 71.6)
+3d7(4F)5p_b5Fo[5] (6.582 eV, g = 11.0, match_score = 71.6)
+3d7(4F)5p_b5Fo[3] (6.615 eV, g = 7.0, match_score = 71.6)
+3d7(4F)5p_b5Fo[2] (6.664 eV, g = 5.0, match_score = 71.6)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 15 '3d64s  (6D ) 8h  l7Fo' (E = 7.542 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5He index 10 '3d64s  (6D ) 8i  j5H ' (E = 7.543 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Ie index 7 '3d64s  (6D ) 8i  g5I ' (E = 7.543 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 5Ke index 3 '3d64s  (6D ) 8i  c5K ' (E = 7.543 eV, g = 75.0)
+
+No matched Hillier levels for Nahar cross section of 7He index 6 '3d64s  (6D ) 8i  f7H ' (E = 7.543 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 7Ie index 6 '3d64s  (6D ) 8i  f7I ' (E = 7.543 eV, g = 91.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 17 '3d64s  (6D ) 8i  q5G ' (E = 7.543 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 13 '3d64s  (6D ) 8k  n5Ho' (E = 7.543 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Io index 7 '3d64s  (6D ) 8k  t5Io' (E = 7.543 eV, g = 65.0)
+
+No Hillier levels with term 5Ko
+No matched Hillier levels for Nahar cross section of 5Ko index 4 '3d64s  (6D ) 8k  w5Ko' (E = 7.543 eV, g = 75.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 12 '3d64s  (6D ) 8i  l7G ' (E = 7.543 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 9 '3d64s  (6D ) 8k  r7Ho' (E = 7.543 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 26 '3d64s  (6D )10p  a5Fo' (E = 7.544 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Do index 24 '3d64s  (6D )10p  c5Do' (E = 7.546 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Po index 20 '3d64s  (6D )10p  g5Po' (E = 7.547 eV, g = 15.0)
+
+Matched Nahar phixs for 5Fe index 20 '3d7    (4F ) 8s  t5F ' (E = 7.555 eV, g = 35.0) to 
+<E> = 7.663 eV, g_sum = 35.0: 
+3d7(4F)8s_5Fe[5] (7.591 eV, g = 11.0, match_score = 95.8)
+3d7(4F)8s_5Fe[4] (7.660 eV, g = 9.0, match_score = 95.8)
+3d7(4F)8s_5Fe[2] (7.709 eV, g = 5.0, match_score = 95.8)
+3d7(4F)8s_5Fe[3] (7.712 eV, g = 7.0, match_score = 95.8)
+3d7(4F)8s_5Fe[1] (7.744 eV, g = 3.0, match_score = 95.8)
+
+No matched Hillier levels for Nahar cross section of 5De index 24 '3d64s  (6D )11s  x5D ' (E = 7.556 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 18 '3d64s  (6D )11s  r7D ' (E = 7.561 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Fe index 21 '3d64s  (6D )10d  u5F ' (E = 7.568 eV, g = 35.0)
+
+Matched Nahar phixs for 5Pe index 14 '3d7    (4F ) 7d  n5P ' (E = 7.569 eV, g = 15.0) to 
+<E> = 7.786 eV, g_sum = 15.0: 
+3d7(4F)7d_5Pe[3] (7.737 eV, g = 7.0, match_score = 92.6)
+3d7(4F)7d_5Pe[2] (7.812 eV, g = 5.0, match_score = 92.6)
+3d7(4F)7d_5Pe[1] (7.856 eV, g = 3.0, match_score = 92.6)
+
+No matched Hillier levels for Nahar cross section of 5De index 25 '3d64s  (6D )10d  y5D ' (E = 7.571 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 18 '3d64s  (6D )10d  r5G ' (E = 7.575 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5De index 26 '3d64s  (4D ) 6s  z5D ' (E = 7.578 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Se index 8 '3d64s  (6D )10d  h5S ' (E = 7.579 eV, g = 5.0)
+
+No matched Hillier levels for Nahar cross section of 7Pe index 8 '3d64s  (6D )10d  h7P ' (E = 7.581 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 7Do index 13 '3d64s  (6D )11p  n7Do' (E = 7.582 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fe index 12 '3d64s  (6D )10d  l7F ' (E = 7.583 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 16 '3d64s  (6D )11p  k7Fo' (E = 7.584 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 19 '3d64s  (6D )10d  s7D ' (E = 7.584 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 13 '3d64s  (6D )10d  m7G ' (E = 7.584 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7Po index 14 '3d64s  (6D )11p  m7Po' (E = 7.584 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 7Se index 7 '3d64s  (6D )10d  g7S ' (E = 7.584 eV, g = 7.0)
+
+No matched Hillier levels for Nahar cross section of 7Go index 9 '3d64s  (6D ) 9f  r7Go' (E = 7.586 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 17 '3d64s  (6D ) 9f  j7Fo' (E = 7.586 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 18 '3d64s  (6D ) 9f  i5Go' (E = 7.586 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 27 '3d64s  (6D ) 9f  Z5Fo' (E = 7.586 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Do index 14 '3d64s  (6D ) 9f  m7Do' (E = 7.586 eV, g = 35.0)
+
+Matched Nahar phixs for 5Do index 25 '3d64s  (6D ) 9f  b5Do' (E = 7.586 eV, g = 25.0) to 
+<E> = 6.678 eV, g_sum = 9.0: 
+3d6(3D)4s4p_b5Do[0] (6.674 eV, g = 1.0, match_score = 72.8)
+3d6(3D)4s4p_b5Do[2] (6.675 eV, g = 5.0, match_score = 72.8)
+3d6(3D)4s4p_b5Do[1] (6.684 eV, g = 3.0, match_score = 72.8)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 14 '3d64s  (6D ) 9f  m5Ho' (E = 7.586 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 10 '3d64s  (6D ) 9f  q7Ho' (E = 7.586 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Po index 21 '3d64s  (6D ) 9f  f5Po' (E = 7.586 eV, g = 15.0)
+
+No matched Hillier levels for Nahar cross section of 7Po index 15 '3d64s  (6D ) 9f  l7Po' (E = 7.586 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 5Pe index 15 '3d64s  (6D )10d  o5P ' (E = 7.586 eV, g = 15.0)
+
+No matched Hillier levels for Nahar cross section of 5He index 11 '3d64s  (6D ) 9g  k5H ' (E = 7.587 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 7He index 7 '3d64s  (6D ) 9g  g7H ' (E = 7.587 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 14 '3d64s  (6D ) 9g  n7G ' (E = 7.587 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 19 '3d64s  (6D ) 9g  s5G ' (E = 7.587 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5Fe index 22 '3d64s  (6D ) 9g  v5F ' (E = 7.587 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fe index 13 '3d64s  (6D ) 9g  m7F ' (E = 7.587 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Ie index 8 '3d64s  (6D ) 9g  h5I ' (E = 7.587 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 7Ie index 7 '3d64s  (6D ) 9g  g7I ' (E = 7.587 eV, g = 91.0)
+
+No matched Hillier levels for Nahar cross section of 5De index 27 '3d64s  (6D ) 9g  A5D ' (E = 7.587 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 20 '3d64s  (6D ) 9g  t7D ' (E = 7.587 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 15 '3d64s  (6D ) 9h  l5Ho' (E = 7.587 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Io index 8 '3d64s  (6D ) 9h  s5Io' (E = 7.587 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 11 '3d64s  (6D ) 9h  p7Ho' (E = 7.587 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 19 '3d64s  (6D ) 9h  h5Go' (E = 7.587 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 7Go index 10 '3d64s  (6D ) 9h  q7Go' (E = 7.587 eV, g = 63.0)
+
+No Hillier levels with term 5Ko
+No matched Hillier levels for Nahar cross section of 5Ko index 5 '3d64s  (6D ) 9h  v5Ko' (E = 7.587 eV, g = 75.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 28 '3d64s  (6D ) 9h  Y5Fo' (E = 7.587 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 18 '3d64s  (6D ) 9h  i7Fo' (E = 7.587 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Ke index 4 '3d64s  (6D ) 9i  d5K ' (E = 7.587 eV, g = 75.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 20 '3d64s  (6D ) 9i  t5G ' (E = 7.587 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5He index 12 '3d64s  (6D ) 9i  l5H ' (E = 7.587 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 16 '3d64s  (6D ) 9k  k5Ho' (E = 7.587 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 5Io index 9 '3d64s  (6D ) 9k  r5Io' (E = 7.587 eV, g = 65.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 15 '3d64s  (6D ) 9i  o7G ' (E = 7.587 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7He index 8 '3d64s  (6D ) 9i  h7H ' (E = 7.587 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 12 '3d64s  (6D ) 9k  o7Ho' (E = 7.587 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 29 '3d64s  (6D )11p  X5Fo' (E = 7.588 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Do index 26 '3d64s  (6D )11p  a5Do' (E = 7.588 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Po index 22 '3d64s  (6D )11p  e5Po' (E = 7.589 eV, g = 15.0)
+
+No matched Hillier levels for Nahar cross section of 5Fe index 23 '3d64s  (6D )11d  w5F ' (E = 7.600 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 21 '3d64s  (6D )12s  u7D ' (E = 7.601 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5De index 28 '3d64s  (6D )12s  B5D ' (E = 7.606 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5De index 29 '3d64s  (6D )11d  C5D ' (E = 7.607 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Ge index 21 '3d64s  (6D )11d  u5G ' (E = 7.610 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5Se index 9 '3d64s  (6D )11d  i5S ' (E = 7.613 eV, g = 5.0)
+
+No matched Hillier levels for Nahar cross section of 7Pe index 9 '3d64s  (6D )11d  i7P ' (E = 7.614 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 7Do index 15 '3d64s  (6D )12p  l7Do' (E = 7.616 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fe index 14 '3d64s  (6D )11d  n7F ' (E = 7.616 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 19 '3d64s  (6D )12p  h7Fo' (E = 7.617 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 22 '3d64s  (6D )11d  v7D ' (E = 7.617 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Ge index 16 '3d64s  (6D )11d  p7G ' (E = 7.617 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7Po index 16 '3d64s  (6D )12p  k7Po' (E = 7.617 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 7Se index 8 '3d64s  (6D )11d  h7S ' (E = 7.617 eV, g = 7.0)
+
+No matched Hillier levels for Nahar cross section of 5Pe index 16 '3d64s  (6D )11d  p5P ' (E = 7.617 eV, g = 15.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 20 '3d64s  (6D )10f  g5Go' (E = 7.618 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 5Do index 27 '3d64s  (6D )12p  Z5Do' (E = 7.618 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 30 '3d64s  (6D )10f  W5Fo' (E = 7.618 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Go index 11 '3d64s  (6D )10f  p7Go' (E = 7.618 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 20 '3d64s  (6D )10f  g7Fo' (E = 7.618 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 7Do index 16 '3d64s  (6D )10f  k7Do' (E = 7.618 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Do index 28 '3d64s  (6D )10f  Y5Do' (E = 7.618 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 5Ho index 17 '3d64s  (6D )10f  j5Ho' (E = 7.618 eV, g = 55.0)
+
+No matched Hillier levels for Nahar cross section of 7Ho index 13 '3d64s  (6D )10f  n7Ho' (E = 7.618 eV, g = 77.0)
+
+No matched Hillier levels for Nahar cross section of 5Po index 23 '3d64s  (6D )10f  d5Po' (E = 7.618 eV, g = 15.0)
+
+No matched Hillier levels for Nahar cross section of 7Po index 17 '3d64s  (6D )10f  j7Po' (E = 7.618 eV, g = 21.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 31 '3d64s  (6D )12p  V5Fo' (E = 7.618 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fe index 15 '3d64s  (6D )10g  o7F ' (E = 7.619 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5Fe index 24 '3d64s  (6D )10g  x5F ' (E = 7.619 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5De index 30 '3d64s  (6D )10g  D5D ' (E = 7.619 eV, g = 25.0)
+
+No matched Hillier levels for Nahar cross section of 7De index 23 '3d64s  (6D )10g  w7D ' (E = 7.619 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 5Go index 21 '3d64s  (6D )10h  f5Go' (E = 7.619 eV, g = 45.0)
+
+No matched Hillier levels for Nahar cross section of 7Go index 12 '3d64s  (6D )10h  o7Go' (E = 7.619 eV, g = 63.0)
+
+No matched Hillier levels for Nahar cross section of 5Fo index 32 '3d64s  (6D )10h  U5Fo' (E = 7.619 eV, g = 35.0)
+
+No matched Hillier levels for Nahar cross section of 7Fo index 21 '3d64s  (6D )10h  f7Fo' (E = 7.619 eV, g = 49.0)
+
+No matched Hillier levels for Nahar cross section of 5So index 5 '3d7    (4F ) 6f  v5So' (E = 7.624 eV, g = 5.0)
+
+No matched Hillier levels for Nahar cross section of 5So index 6 '3d7    (4F ) 7f  u5So' (E = 7.725 eV, g = 5.0)
+Included 1578 levels from Hillier dataset and added 214 levels from Nahar phixs tables for a total of 1792 levels
+Reading atomic-data-hillier/atomic/FE/I/07sep16/col_data
+Temperatures available for effective collision strengths (units of 1.0e+04 K):
+0.0100, 0.02512, 0.0631, 0.1584, 0.3981
+Selecting 3981.000 K
+Read 45 effective collision strengths 
+Output 45 effective collision strengths 
+
+===========> Fe I output:
+Adding in 34 extra transitions with only upsilon values
+Writing to 'adata.txt'
+Writing to 'transitiondata.txt'
+Output 141962 transitions of which 141 are forbidden and 45 have collision strengths
+
+Matching core state 1 '3d64s_6D' E=0.000 eV to:
+Upper ion level 1 '3d6(5D)4s_a6De[9/2]' E = 0.0000 E_diff=0.0000
+Upper ion level 2 '3d6(5D)4s_a6De[7/2]' E = 0.0477 E_diff=0.0477
+Upper ion level 3 '3d6(5D)4s_a6De[5/2]' E = 0.0828 E_diff=0.0828
+Upper ion level 4 '3d6(5D)4s_a6De[3/2]' E = 0.1070 E_diff=0.1070
+Upper ion level 5 '3d6(5D)4s_a6De[1/2]' E = 0.1211 E_diff=0.1211
+Best matching levels: [1, 2, 3, 4, 5]
+Writing to 'phixsdata2.txt'
+Downsampling cross sections assuming T=6000 Kelvin, nphixspoints=500, phixsnuincrement=0.01
