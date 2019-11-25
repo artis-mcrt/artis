@@ -15,9 +15,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: "install gsl and prepare build folder"
+    - name: "install dependencies"
       run: |
-        sudo apt-get install libgsl-dev
+        sudo apt-get install libgsl-dev openmpi-bin openmpi-common
         cp artisoptions_example.h artisoptions.h
     - name: "diagnostic info"
       run: |
