@@ -19,16 +19,17 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install libgsl-dev
-        sudo apt-get install libopenmpi-dev
         cp artisoptions_example.h artisoptions.h
     - name: "diagnostic info"
       run: |
         git status
         which cc
         cc --version
-    - name: "compile"
+    - name: "compile sn3d and exspec"
       run: make sn3d exspec
-    - name: "compile MPI version"
-      run: make sn3dmpi
-    - name: "compile OpenMP version"
+    - name: "compile sn3d with OpenMP"
       run: make sn3dopenmp
+    - name: "compile sn3d with MPI"
+      run: |
+        sudo apt-get install libopenmpi-dev
+        make sn3dmpi
