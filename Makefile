@@ -64,6 +64,9 @@ else ifneq (, $(shell which mpicc))
 	endif
 
   sn3d: CFLAGS += -DMPI_ON
+else
+	  CFLAGS = -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing -std=c11 -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF #-fopenmp=libomp
+	  LDFLAGS= -lgsl -lgslcblas -lm
 endif
 
 
