@@ -897,14 +897,54 @@ static void assign_temperature(void)
 
   const double tstart = time_step[0].mid;
 
+  const double factor56ni = 1. / 56 / MH * (-1. / (tstart * (- meanlife(NUCLIDE_CO56) + meanlife(NUCLIDE_NI56))))
+    * (- nucdecayenergy(NUCLIDE_NI56) * exp(- tstart / meanlife(NUCLIDE_NI56)) * tstart * meanlife(NUCLIDE_CO56) - nucdecayenergy(NUCLIDE_NI56) * exp(- tstart / meanlife(NUCLIDE_NI56)) * meanlife(NUCLIDE_NI56) * meanlife(NUCLIDE_CO56)
+       + nucdecayenergy(NUCLIDE_NI56) * exp(- tstart / meanlife(NUCLIDE_NI56)) * tstart * meanlife(NUCLIDE_NI56) + pow(meanlife(NUCLIDE_NI56), 2) * nucdecayenergy(NUCLIDE_NI56) * exp(- tstart / meanlife(NUCLIDE_NI56))
+       - meanlife(NUCLIDE_CO56) * tstart * nucdecayenergy(NUCLIDE_CO56) * exp(- tstart / meanlife(NUCLIDE_CO56)) - pow(meanlife(NUCLIDE_CO56), 2) * nucdecayenergy(NUCLIDE_CO56) * exp(- tstart / meanlife(NUCLIDE_CO56))
+       + nucdecayenergy(NUCLIDE_CO56) * tstart * meanlife(NUCLIDE_NI56) * exp(- tstart / meanlife(NUCLIDE_NI56)) + pow(meanlife(NUCLIDE_NI56), 2) * nucdecayenergy(NUCLIDE_CO56) * exp(- tstart / meanlife(NUCLIDE_NI56))
+       + nucdecayenergy(NUCLIDE_NI56) * meanlife(NUCLIDE_CO56) * meanlife(NUCLIDE_NI56) - nucdecayenergy(NUCLIDE_NI56) * pow(meanlife(NUCLIDE_NI56), 2) - pow(meanlife(NUCLIDE_NI56), 2) * nucdecayenergy(NUCLIDE_CO56) + nucdecayenergy(NUCLIDE_CO56) * pow(meanlife(NUCLIDE_CO56), 2));
+
+  const double factor56co = 1. / 56 / MH * (1. / (tstart * meanlife(NUCLIDE_CO56)))
+    * (meanlife(NUCLIDE_CO56) * tstart * nucdecayenergy(NUCLIDE_CO56) * exp(- tstart / meanlife(NUCLIDE_CO56)) + pow(meanlife(NUCLIDE_CO56), 2) * nucdecayenergy(NUCLIDE_CO56) * exp(- tstart / meanlife(NUCLIDE_CO56)));
+
+  const double factor57ni = 1. / 57 / MH * (-1. / (tstart * (- meanlife(NUCLIDE_CO57) + meanlife(NUCLIDE_NI57))))
+    * (- nucdecayenergy(NUCLIDE_NI57) * exp(- tstart / meanlife(NUCLIDE_NI57)) * tstart * meanlife(NUCLIDE_CO57) - nucdecayenergy(NUCLIDE_NI57) * exp(- tstart / meanlife(NUCLIDE_NI57)) * meanlife(NUCLIDE_NI57) * meanlife(NUCLIDE_CO57)
+       + nucdecayenergy(NUCLIDE_NI57) * exp(- tstart / meanlife(NUCLIDE_NI57)) * tstart * meanlife(NUCLIDE_NI57) + pow(meanlife(NUCLIDE_NI57), 2) * nucdecayenergy(NUCLIDE_NI57) * exp(- tstart / meanlife(NUCLIDE_NI57))
+       - meanlife(NUCLIDE_CO57) * tstart * nucdecayenergy(NUCLIDE_CO57) * exp(- tstart / meanlife(NUCLIDE_CO57)) - pow(meanlife(NUCLIDE_CO57), 2) * nucdecayenergy(NUCLIDE_CO57) * exp(- tstart / meanlife(NUCLIDE_CO57))
+       + nucdecayenergy(NUCLIDE_CO57) * tstart * meanlife(NUCLIDE_NI57) * exp(- tstart / meanlife(NUCLIDE_NI57)) + pow(meanlife(NUCLIDE_NI57), 2) * nucdecayenergy(NUCLIDE_CO57) * exp(- tstart / meanlife(NUCLIDE_NI57))
+       + nucdecayenergy(NUCLIDE_NI57) * meanlife(NUCLIDE_CO57) * meanlife(NUCLIDE_NI57) - nucdecayenergy(NUCLIDE_NI57) * pow(meanlife(NUCLIDE_NI57), 2) - pow(meanlife(NUCLIDE_NI57), 2) * nucdecayenergy(NUCLIDE_CO57) + nucdecayenergy(NUCLIDE_CO57) * pow(meanlife(NUCLIDE_CO57), 2));
+
+  const double factor52fe = 1. / 52 / MH * (-1. / (tstart * (- meanlife(NUCLIDE_MN52) + meanlife(NUCLIDE_FE52))))
+    * (- nucdecayenergy(NUCLIDE_FE52) * exp(- tstart / meanlife(NUCLIDE_FE52)) * tstart * meanlife(NUCLIDE_MN52) - nucdecayenergy(NUCLIDE_FE52) * exp(- tstart / meanlife(NUCLIDE_FE52)) * meanlife(NUCLIDE_FE52) * meanlife(NUCLIDE_MN52)
+       + nucdecayenergy(NUCLIDE_FE52) * exp(- tstart / meanlife(NUCLIDE_FE52)) * tstart * meanlife(NUCLIDE_FE52) + pow(meanlife(NUCLIDE_FE52), 2) * nucdecayenergy(NUCLIDE_FE52) * exp(- tstart / meanlife(NUCLIDE_FE52))
+       - meanlife(NUCLIDE_MN52) * tstart * nucdecayenergy(NUCLIDE_MN52) * exp(- tstart / meanlife(NUCLIDE_MN52)) - pow(meanlife(NUCLIDE_MN52), 2) * nucdecayenergy(NUCLIDE_MN52) * exp(- tstart / meanlife(NUCLIDE_MN52))
+       + nucdecayenergy(NUCLIDE_MN52) * tstart * meanlife(NUCLIDE_FE52) * exp(- tstart / meanlife(NUCLIDE_FE52)) + pow(meanlife(NUCLIDE_FE52), 2) * nucdecayenergy(NUCLIDE_MN52) * exp(- tstart / meanlife(NUCLIDE_FE52))
+       + nucdecayenergy(NUCLIDE_FE52) * meanlife(NUCLIDE_MN52) * meanlife(NUCLIDE_FE52) - nucdecayenergy(NUCLIDE_FE52) * pow(meanlife(NUCLIDE_FE52), 2) - pow(meanlife(NUCLIDE_FE52), 2) * nucdecayenergy(NUCLIDE_MN52) + nucdecayenergy(NUCLIDE_MN52) * pow(meanlife(NUCLIDE_MN52), 2));
+
+  const double factor48cr = 1. / 48 / MH * (-1. / (tstart * (- meanlife(NUCLIDE_V48) + meanlife(NUCLIDE_CR48))))
+    * (- nucdecayenergy(NUCLIDE_CR48) * exp(- tstart / meanlife(NUCLIDE_CR48)) * tstart * meanlife(NUCLIDE_V48) - nucdecayenergy(NUCLIDE_CR48) * exp(- tstart / meanlife(NUCLIDE_CR48)) * meanlife(NUCLIDE_CR48) * meanlife(NUCLIDE_V48)
+       + nucdecayenergy(NUCLIDE_CR48) * exp(- tstart / meanlife(NUCLIDE_CR48)) * tstart * meanlife(NUCLIDE_CR48) + pow(meanlife(NUCLIDE_CR48), 2) * nucdecayenergy(NUCLIDE_CR48) * exp(- tstart / meanlife(NUCLIDE_CR48))
+       - meanlife(NUCLIDE_V48) * tstart * nucdecayenergy(NUCLIDE_V48) * exp(- tstart / meanlife(NUCLIDE_V48)) - pow(meanlife(NUCLIDE_V48), 2) * nucdecayenergy(NUCLIDE_V48) * exp(- tstart / meanlife(NUCLIDE_V48))
+       + nucdecayenergy(NUCLIDE_V48) * tstart * meanlife(NUCLIDE_CR48) * exp(- tstart / meanlife(NUCLIDE_CR48)) + pow(meanlife(NUCLIDE_CR48), 2) * nucdecayenergy(NUCLIDE_V48) * exp(- tstart / meanlife(NUCLIDE_CR48))
+       + nucdecayenergy(NUCLIDE_CR48) * meanlife(NUCLIDE_V48) * meanlife(NUCLIDE_CR48) - nucdecayenergy(NUCLIDE_CR48) * pow(meanlife(NUCLIDE_CR48), 2) - pow(meanlife(NUCLIDE_CR48), 2) * nucdecayenergy(NUCLIDE_V48) + nucdecayenergy(NUCLIDE_V48) * pow(meanlife(NUCLIDE_V48), 2));
+
   //factor56ni = CLIGHT/4/STEBO * nucdecayenergy(NUCLIDE_NI56)/56/MH;
   /// This works only for the inbuilt Lucy model
   //factor56ni = CLIGHT/4/STEBO * 3*mtot/4/PI * nucdecayenergy(NUCLIDE_NI56)/56/MH  / pow(vmax,3);
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
-    const double decayedenergy_per_mass = get_decayedenergy_per_ejectamass(mgi, tstart);
+    // alternative, not correct because it neglects expansion factor
+    // const double decayedenergy_per_mass = get_decayedenergy_per_ejectamass(mgi, tstart);
+    //
+    // double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
 
-    double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(mgi) * decayedenergy_per_mass, 1. / 4.);
+    double T_initial = pow(CLIGHT / 4 / STEBO  * pow(tmin / tstart, 3) * get_rhoinit(mgi) * (
+         (factor56ni * get_modelinitradioabund(mgi, NUCLIDE_NI56)) +
+         (factor56co * get_modelinitradioabund(mgi, NUCLIDE_CO56)) +
+         (factor57ni * get_modelinitradioabund(mgi, NUCLIDE_NI57)) +
+         // (factor57co * get_modelinitradioabund(mgi, NUCLIDE_CO57)) +
+         (factor52fe * get_modelinitradioabund(mgi, NUCLIDE_FE52)) +
+         (factor48cr * get_modelinitradioabund(mgi, NUCLIDE_CR48))), 1. / 4.);
 
     if (T_initial < MINTEMP)
     {
