@@ -1,5 +1,6 @@
 #include "sn3d.h"
 #include "vectors.h"
+#include <gsl/gsl_randist.h>
 
 
 extern inline double vec_len(const double x[3]);
@@ -94,6 +95,12 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
 void get_rand_isotropic_unitvec(double vecout[3])
 // Assume isotropic distribution, get a random direction vector
 {
+  // alternatively, use GSL's functions:
+  // gsl_ran_dir_3d(rng, &vecout[0], &vecout[1], &vecout[2]);
+  // or
+  // gsl_ran_dir_nd(rng, 3, vecout);
+  // but check validity first
+
   const double zrand = gsl_rng_uniform(rng);
   const double zrand2 = gsl_rng_uniform(rng);
 
