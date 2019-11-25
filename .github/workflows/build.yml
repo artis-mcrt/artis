@@ -20,4 +20,5 @@ jobs:
         cp artisoptions_example.h artisoptions.h
         sudo apt-get install libgsl-dev
         git status
+        cc --version
         make sn3d
