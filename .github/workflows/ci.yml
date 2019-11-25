@@ -29,10 +29,10 @@ jobs:
       run: make sn3d exspec
     - name: "compile sn3d with OpenMP"
       run: make sn3dopenmp
-    - name: "compile sn3d with MPI"
-      run: |
-        sudo apt-get install libopenmpi-dev
-        make sn3dmpi
+    # - name: "compile sn3d with MPI"
+    #   run: |
+    #     sudo apt-get install libopenmpi-dev
+    #     make sn3dmpi
     - name: "Setup nebularonezone test"
       run: |
         cp tests/nebularonezone/artisoptions.h .
