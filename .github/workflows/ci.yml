@@ -45,8 +45,9 @@ jobs:
       run: |
         cp input-newrun.txt input.txt
         touch output_0-0.txt
-        ./sn3d&
-        tail -f output_0-0.txt
+        ./sn3d
+        cat output_0-0.txt
+        cat estimators_0000.out
     - name: Upload estimators
       uses: actions/upload-artifact@v1
       with:
@@ -60,8 +61,8 @@ jobs:
     - name: "Run exspec for nebularonezone"
       run: |
         touch exspec.txt
-        ./exspec&
-        tail -f exspec.txt
+        ./exspec
+        cat exspec.txt
     - name: Upload spectrum
       uses: actions/upload-artifact@v1
       with:
