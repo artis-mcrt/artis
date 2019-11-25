@@ -37,12 +37,10 @@ jobs:
       run: |
         cp tests/nebularonezone/artisoptions.h .
         make sn3d exspec
-        cd tests/nebularonezone
+        cd tests/nebularonezone/
         cp ../../sn3d .
         cp ../../exspec .
         gunzip -v *.gz
-    - name: "Run sn3d for nebularonezone"
-      run: |
         cp input-newrun.txt input.txt
         touch output_0-0.txt
         ./sn3d
