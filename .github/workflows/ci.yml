@@ -41,10 +41,11 @@ jobs:
         cp ../../sn3d .
         cp ../../exspec .
         gunzip -v *.gz
-    - name: "Run nebularonezone sn3d"
+    - name: "Run sn3d for nebularonezone"
       run: |
+        touch output_0-0.txt
         ./sn3d&
-        tail -f output*.txt
+        tail -f output_0-0.txt
     - name: Upload estimators
       uses: actions/upload-artifact@v1
       with:
@@ -55,8 +56,9 @@ jobs:
       with:
         name: test-nebularonezone-output
         path: tests/nebularonezone/output_0-0.txt
-    - name: "Run nebularonezone exspec"
+    - name: "Run exspec for nebularonezone"
       run: |
+        touch exspec.txt
         ./exspec&
         tail -f exspec.txt
     - name: Upload spectrum
