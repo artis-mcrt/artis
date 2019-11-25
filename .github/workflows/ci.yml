@@ -43,6 +43,7 @@ jobs:
         gunzip -v *.gz
     - name: "Run sn3d for nebularonezone"
       run: |
+        cp input-newrun.txt input.txt
         touch output_0-0.txt
         ./sn3d&
         tail -f output_0-0.txt
