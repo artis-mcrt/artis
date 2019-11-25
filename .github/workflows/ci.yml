@@ -40,6 +40,7 @@ jobs:
         cd tests/nebularonezone
         cp ../../sn3d .
         cp ../../exspec .
+        gunzip -v *.zip
     - name: "Run nebularonezone sn3d"
       run: |
         ./sn3d&
