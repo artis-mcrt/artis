@@ -990,7 +990,7 @@ static void read_recombrate_file(void)
 
   printout("Reading recombination rate file...\n");
 
-  const double Te_estimate = 6000.;
+  const double Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(Te_estimate);
 
   printout("Calibrating recombination rates for a temperature of %.1f K\n", Te_estimate);

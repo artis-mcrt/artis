@@ -16,3 +16,4 @@ sn3d.dSYM
 .vscode
 build
 .DS_Store
+artisoptions.h

@@ -4,9 +4,6 @@
 #include "packet_init.h"
 #include "vectors.h"
 
-// if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
-#define UNIFORM_PELLET_ENERGIES true
-
 
 static void place_pellet(const double e0, const int cellindex, const int pktnumber, PKT *pkt_ptr)
 /// This subroutine places pellet n with energy e0 in cell m
