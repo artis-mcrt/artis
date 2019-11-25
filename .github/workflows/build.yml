@@ -17,7 +17,8 @@ jobs:
     - uses: actions/checkout@v1
     - name: "install dependencies"
       run: |
-        sudo apt-get install libgsl-dev openmpi-bin openmpi-common
+        sudo apt-get install libgsl-dev
+        sudo apt-get install libopenmpi-dev
         cp artisoptions_example.h artisoptions.h
     - name: "diagnostic info"
       run: |
