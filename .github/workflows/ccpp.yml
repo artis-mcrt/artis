@@ -1,0 +1,19 @@
+name: C/C++ CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+#     - name: configure
+#       run: ./configure
+    - name: makesn3d
+      run: make sn3d
+#     - name: make check
+#       run: make check
+#     - name: make distcheck
+#       run: make distcheck
