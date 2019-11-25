@@ -1,0 +1,55 @@
+
+===========> Ni IV input:
+Reading atomic-data-hillier/atomic/NICK/IV/18oct00/nkiv_osc.dat
+File specifies 1000 levels
+File specifies 72898 transitions
+Can't find LS term in Hillier level name '3d6(3P2)4po[5/2]'
+Can't find LS term in Hillier level name '3d6(3H)4po[9/2]'
+Can't find LS term in Hillier level name '3d6(3P2)4pbo[5/2]'
+Can't find LS term in Hillier level name '3d6(3P2)4po[7/2]'
+Can't find LS term in Hillier level name '3d6(3P2)4po[3/2]'
+Can't find LS term in Hillier level name '3d6(3H)4pbo[9/2]'
+Can't find LS term in Hillier level name '3d6(3H)4po[7/2]'
+Can't find LS term in Hillier level name '3d6(3P2)4pbo[3/2]'
+Can't find LS term in Hillier level name '3d6(3F2)4po[5/2]'
+Can't find LS term in Hillier level name '3d6(3P2)4pco[3/2]'
+Can't find LS term in Hillier level name '3d6(3F2)4pbo[5/2]'
+Can't find LS term in Hillier level name '3d6(3F2)4po[7/2]'
+Can't find LS term in Hillier level name '3d6(3F2)4pbo[7/2]'
+Can't find LS term in Hillier level name '3d6(3H)4po[5/2]'
+Can't find LS term in Hillier level name '3d6(3G)4po[11/2]'
+Can't find LS term in Hillier level name '3d6(3P2)4po[1/2]'
+Can't find LS term in Hillier level name '3d6(3F2)4po[9/2]'
+Can't find LS term in Hillier level name '3d6(3F2)4pbo[9/2]'
+Can't find LS term in Hillier level name '3d6(3D)4po[1/2]'
+Can't find LS term in Hillier level name '3d6(3D)4po[7/2]'
+Can't find LS term in Hillier level name '3d6(3D)4po[3/2]'
+Can't find LS term in Hillier level name '3d6(1G2)4po[5/2]'
+Can't find LS term in Hillier level name '3d6(1S2)4po[1/2]'
+Can't find LS term in Hillier level name '3d6(1D2)4po[5/2]'
+Can't find LS term in Hillier level name '3d6(1D2)4pbo[5/2]'
+Can't find LS term in Hillier level name '3d6(1S2)4po[3/2]'
+Can't find LS term in Hillier level name '3d6(3F1)4po[3/2]'
+Can't find LS term in Hillier level name '3d6(3F1)4po[5/2]'
+Can't find LS term in Hillier level name '3d6(3F1)4po[7/2]'
+Can't find LS term in Hillier level name '3d6(3F1)4pbo[3/2]'
+Can't find LS term in Hillier level name '3d6(1G1)4po[7/2]'
+Read 1000 levels
+Read 72898 transitions
+Reading atomic-data-hillier/atomic/NICK/IV/18oct00/col_guess.dat
+Temperatures available for effective collision strengths (units of 1.0e+04 K):
+0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0
+Selecting 5000.000 K
+Read 0 effective collision strengths 
+Output 0 effective collision strengths 
+Reading atomic-data-hillier/atomic/NICK/IV/18oct00/phot_data.dat
+Photoionisation target: 3d6_5De
+417 levels with cross-section type 1: Seaton formula fit [sigma_o, alpha, beta]
+
+===========> Ni IV output:
+Adding in 0 extra transitions with only upsilon values
+Writing to 'adata.txt'
+Writing to 'transitiondata.txt'
+Output 72898 transitions of which 0 are forbidden and 0 have collision strengths
+Writing to 'phixsdata2.txt'
+Downsampling cross sections assuming T=6000 Kelvin, nphixspoints=500, phixsnuincrement=0.01

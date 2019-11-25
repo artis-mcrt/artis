@@ -1,0 +1,13 @@
+
+===========> Co III input:
+Reading atomic-data-qub/co_tyndall/adf04_v1
+Read 262 levels
+Read 24479 transitions
+
+===========> Co III output:
+Adding in 9712 extra transitions with only upsilon values
+Writing to 'adata.txt'
+Writing to 'transitiondata.txt'
+Output 34191 transitions of which 19431 are forbidden and 34191 have collision strengths
+Writing to 'phixsdata2.txt'
+Downsampling cross sections assuming T=6000 Kelvin, nphixspoints=500, phixsnuincrement=0.01

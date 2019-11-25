@@ -1,0 +1,24 @@
+Fits to the rates of direct collisional ionization.
+M. Arnaud & R. Rothenflug (1985, A&AS, 60, 425),
+M. Arnaud & J. Raymond (1992, ApJ, 398, 394).
+
+Fit parameters for direct ionization rates.
+Byte-per-byte description of file: ci.dat (391 records)
+-------------------------------------------------------------------------------
+   Bytes Format  Units   Label        Explanations
+-------------------------------------------------------------------------------
+   1-  2  I2     ---     Z            Atomic number
+   4-  5  I2     ---     N            Number of electrons
+   7-  7  I1     ---     n            Shell principal quantum number
+   9-  9  I1     ---     l            Shell orbital quantum number
+  11- 18  F8.2   eV      E            Ionization potential
+  20- 24  F5.1   ---     A            Fit parameter
+  26- 32  F7.3   ---     B            Fit parameter
+  34- 38  F5.2   ---     C            Fit parameter
+  40- 46  F7.2   ---     D            Fit parameter
+-------------------------------------------------------------------------------
+  Note two inaccuraces in Arnaud & Rothenflug (1985) fitting formulae.
+1. (x-1) should be replaced by (x+1) in the denominator of the equation 
+for f1(x) at 0.02<x<10.
+2. At x<0.27 it is more adequate to use the following expression for f2(x):
+             f2(x)=0.5*(ln x)**2+0.577722*(ln x)+1
