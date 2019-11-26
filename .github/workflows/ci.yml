@@ -15,24 +15,30 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+
     - name: "install dependencies"
       run: |
         sudo apt-get update
         sudo apt-get install libgsl-dev
         cp artisoptions_example.h artisoptions.h
+
     - name: "diagnostic info"
       run: |
         git status
         which cc
         cc --version
+
     - name: "compile sn3d and exspec"
       run: make sn3d exspec
+
     - name: "compile sn3d with OpenMP"
       run: make sn3dopenmp
+
     # - name: "compile sn3d with MPI"
     #   run: |
     #     sudo apt-get install libopenmpi-dev
     #     make sn3dmpi
+
     - name: "Setup nebularonezone test"
       run: |
         cp tests/nebularonezone/artisoptions.h .
@@ -47,23 +53,33 @@ jobs:
         cat output_0-0.txt
         cat estimators_0000.out
         ./exspec
-        cat exspec.txt
-    - name: Upload estimators
+        # cat exspec.txt
+
+    - name: Upload estimators file
       uses: actions/upload-artifact@v1
       with:
-        name: test-nebularonezone-estimators
+        name: test-nebularonezone-estimators_0000.out
         path: tests/nebularonezone/estimators_0000.out
-    - name: Upload output
+
+    - name: Upload output log file
       uses: actions/upload-artifact@v1
       with:
-        name: test-nebularonezone-output
+        name: test-nebularonezone-output_0-0.txt
         path: tests/nebularonezone/output_0-0.txt
-    # - name: "Run exspec for nebularonezone"
-    #   run: |
-    #     ./exspec
-    #     cat exspec.txt
-    - name: Upload spectrum
+
+    - name: Upload spec.out
       uses: actions/upload-artifact@v1
       with:
-        name: test-nebularonezone-spec
+        name: test-nebularonezone-spec.out
         path: tests/nebularonezone/spec.out
+
+    - name: Upload deposition.out
+      uses: actions/upload-artifact@v1
+      with:
+        name: test.nebularonezone/deposition.out
+        path: tests/nebularonezone/deposition.out
+
+    - name: "Run exspec for nebularonezone"
+      run: |
+        ./exspec
+        cat exspec.txt
