@@ -34,32 +34,6 @@ static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 // maximum number of NLTE/Te/Spencer-Fano iterations
 static const int NLTEITER = 30;
 
-// if using this, avoid look up tables and switch on the direct integration options below
-// (since LUTs created with Planck function J_nu)
-static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
-
-// store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
-static const bool DETAILED_LINE_ESTIMATORS_ON = false;
-
-// store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
-
-// extremely slow and memory consuming - for debugging only
-// not safe for MPI or OpenMP - single process and single thread only!
-// this will output a list of contributions to each bound-free rate estimator
-// with each packet emission type ranked by their contribution to the rate
-#define DETAILED_BF_ESTIMATORS_BYTYPE false
-
-// dynamically calculate photoionization rates for the current radiation field
-// instead of interpolating values from a lookup table for a blackbody radiation field
-#define NO_LUT_PHOTOION true
-
-// as above for bound-free heating
-#define NO_LUT_BFHEATING true
-
-// if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
-#define SEPARATE_STIMRECOMB false
-
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
 
@@ -96,9 +70,13 @@ static const size_t GSLWSIZE = 16384;
 #define MINPOP 1e-40
 
 
-// *****************
-// Radiation field model
-//
+// ****
+// Start of radiation field model options
+
+// if using this, avoid look up tables and switch on the direct integration options below
+// (since LUTs created with Planck function J_nu)
+static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
+
 #define RADFIELDBINCOUNT 256
 
 static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
@@ -109,9 +87,37 @@ static const double nu_upper_last_initial = (CLIGHT /  (1085e-8));  // not inclu
 static const double T_R_min = 500;
 static const double T_R_max = 250000;
 
+// store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
+static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
-// *****************
-// Non-thermal solution
+// store detailed bound-free rate estimators
+#define DETAILED_BF_ESTIMATORS_ON true
+
+// if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
+#define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13
+
+// extremely slow and memory consuming - for debugging only
+// not safe for MPI or OpenMP - single process and single thread only!
+// this will output a list of contributions to each bound-free rate estimator
+// with each packet emission type ranked by their contribution to the rate
+#define DETAILED_BF_ESTIMATORS_BYTYPE false
+
+// dynamically calculate photoionization rates for the current radiation field
+// instead of interpolating values from a lookup table for a blackbody radiation field
+#define NO_LUT_PHOTOION true
+
+// as above for bound-free heating
+#define NO_LUT_BFHEATING true
+
+// if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
+#define SEPARATE_STIMRECOMB false
+
+// End of radiation field model options
+// ****
+
+
+// ****
+// Start of non-thermal solution options
 //
 
 /// non-thermal ionisation
