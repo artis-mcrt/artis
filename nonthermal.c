@@ -2778,10 +2778,10 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
   printout("Spencer-Fano solver at timestep %d (last solution was at timestep %d) nne/niontot = %g, at last solution was %g fracdiff %g\n",
            timestep, timestep_last_solved, nne_per_ion, nne_per_ion_last, nne_per_ion_fracdiff);
 
-  if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) && (timestep - timestep_last_solved < MAX_TIMESTEPS_BETWEEN_SOLUTIONS) && timestep_last_solved > n_lte_timesteps)
+  if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) && (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) && timestep_last_solved > n_lte_timesteps)
   {
     printout("Keeping Spencer-Fano solution from timestep %d because x_e fracdiff %g < %g and because timestep %d - %d < %d\n",
-             timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep, timestep_last_solved, MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
+             timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep, timestep_last_solved, SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
 
     return;
   }

@@ -132,11 +132,13 @@ static const bool NT_SOLVE_SPENCERFANO = true;
 // use a grid of energy points with constant spacing in log energy
 #define SF_USE_LOG_E_INCREMENT true
 
-// trigger a solution at least once every n timesteps
-static const int MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
+// trigger a Spencer-Fano solution at least once every n timesteps
+// 0 can only use solutions from previous NLTE iterations on the current timestep
+// <=-1 will always solve the SF equation for every iteration of every timestep
+static const int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
 // a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a solution
-static const double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 1;
+static const double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
 
 // just consider excitation from the first N levels and to the first M upper levels,
 // because these transitions really slow down the solver
