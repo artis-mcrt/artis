@@ -1,3 +1,4 @@
+#include "constants.h"
 #include "artisoptions.h"
 #include "decay.h"
 
