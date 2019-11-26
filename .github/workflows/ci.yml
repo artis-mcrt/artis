@@ -59,3 +59,9 @@ jobs:
         cat exspec.txt
         mkdir output
         cp output_0-0.txt exspec.txt *.out output/
+
+    - name: Upload output files
+      uses: actions/upload-artifact@v1
+      with:
+        name: test-nebularonezone-output
+        path: tests/nebularonezone/output
