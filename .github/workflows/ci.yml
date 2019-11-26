@@ -46,6 +46,8 @@ jobs:
         ./sn3d
         cat output_0-0.txt
         cat estimators_0000.out
+        ./exspec
+        cat exspec.txt
     - name: Upload estimators
       uses: actions/upload-artifact@v1
       with:
@@ -56,11 +58,10 @@ jobs:
       with:
         name: test-nebularonezone-output
         path: tests/nebularonezone/output_0-0.txt
-    - name: "Run exspec for nebularonezone"
-      run: |
-        touch exspec.txt
-        ./exspec
-        cat exspec.txt
+    # - name: "Run exspec for nebularonezone"
+    #   run: |
+    #     ./exspec
+    #     cat exspec.txt
     - name: Upload spectrum
       uses: actions/upload-artifact@v1
       with:
