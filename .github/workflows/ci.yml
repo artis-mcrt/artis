@@ -39,13 +39,16 @@ jobs:
     #     sudo apt-get install libopenmpi-dev
     #     make sn3dmpi
 
-    - name: "Setup nebularonezone test"
+    - name: "Setup test nebularonezone"
       run: |
         cp tests/nebularonezone/artisoptions.h .
         make sn3d exspec
+        cp sn3d tests/nebularonezone/
+        cp exspec tests/nebularonezone/
+
+    - name: "Run test nebularonezone test"
+      run: |
         cd tests/nebularonezone/
-        cp ../../sn3d .
-        cp ../../exspec .
         gunzip -v *.gz
         cp input-newrun.txt input.txt
         touch output_0-0.txt
@@ -53,33 +56,6 @@ jobs:
         cat output_0-0.txt
         cat estimators_0000.out
         ./exspec
-        # cat exspec.txt
-
-    - name: Upload estimators file
-      uses: actions/upload-artifact@v1
-      with:
-        name: test-nebularonezone-estimators_0000.out
-        path: tests/nebularonezone/estimators_0000.out
-
-    - name: Upload output log file
-      uses: actions/upload-artifact@v1
-      with:
-        name: test-nebularonezone-output_0-0.txt
-        path: tests/nebularonezone/output_0-0.txt
-
-    - name: Upload spec.out
-      uses: actions/upload-artifact@v1
-      with:
-        name: test-nebularonezone-spec.out
-        path: tests/nebularonezone/spec.out
-
-    - name: Upload deposition.out
-      uses: actions/upload-artifact@v1
-      with:
-        name: test-nebularonezone-deposition.out
-        path: tests/nebularonezone/deposition.out
-
-    - name: "Run exspec for nebularonezone"
-      run: |
-        ./exspec
         cat exspec.txt
+        mkdir output
+        cp output_0-0.txt exspec.txt *.out output/
