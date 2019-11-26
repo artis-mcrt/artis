@@ -72,6 +72,7 @@ static const size_t GSLWSIZE = 16384;
 
 // ****
 // Start of radiation field model options
+//
 
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
@@ -112,6 +113,7 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 // if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
 #define SEPARATE_STIMRECOMB false
 
+//
 // End of radiation field model options
 // ****
 
@@ -179,6 +181,10 @@ static const int MAX_NT_EXCITATIONS_STORED = 25000;
 
 // set true to divide up the mean Auger energy by the number of electrons that come out
 #define SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN false
+
+//
+// End of non-thermal solution options
+// ****
 
 
 #endif //ARTISOPTIONS_H
