@@ -76,7 +76,7 @@ jobs:
     - name: Upload deposition.out
       uses: actions/upload-artifact@v1
       with:
-        name: test.nebularonezone/deposition.out
+        name: test-nebularonezone-deposition.out
         path: tests/nebularonezone/deposition.out
 
     - name: "Run exspec for nebularonezone"
