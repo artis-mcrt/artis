@@ -1412,7 +1412,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
   /// correction may be evaluated at T_R!
   double gammacorr = -1;
 
-  if (DETAILED_BF_ESTIMATORS_ON && nts_global >= 13)
+  if (DETAILED_BF_ESTIMATORS_ON && nts_global >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP)
   {
     gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
     //gammacorr will be -1 if no estimators available

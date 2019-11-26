@@ -34,32 +34,6 @@ static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 // maximum number of NLTE/Te/Spencer-Fano iterations
 static const int NLTEITER = 30;
 
-// if using this, avoid look up tables and switch on the direct integration options below
-// (since LUTs created with Planck function J_nu)
-static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
-
-// store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
-static const bool DETAILED_LINE_ESTIMATORS_ON = false;
-
-// store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
-
-// extremely slow and memory consuming - for debugging only
-// not safe for MPI or OpenMP - single process and single thread only!
-// this will output a list of contributions to each bound-free rate estimator
-// with each packet emission type ranked by their contribution to the rate
-#define DETAILED_BF_ESTIMATORS_BYTYPE false
-
-// dynamically calculate photoionization rates for the current radiation field
-// instead of interpolating values from a lookup table for a blackbody radiation field
-#define NO_LUT_PHOTOION true
-
-// as above for bound-free heating
-#define NO_LUT_BFHEATING true
-
-// if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
-#define SEPARATE_STIMRECOMB false
-
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
 
@@ -70,7 +44,7 @@ static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 /// Rate coefficients
 #define TABLESIZE 20 //200 //100
 #define MINTEMP 2000.
-#define MAXTEMP 15000. //1000000.
+#define MAXTEMP 10000. //1000000.
 
 // temperature for which total ion recombination rate are calibrated to input data (recombrates.txt)
 #define RECOMBCALIBRATION_T_ELEC 6000.
@@ -89,19 +63,23 @@ static const size_t GSLWSIZE = 16384;
 #define TRACK_ION_STATS false
 #define TRACK_ION_MASTATS false
 
-#define MTSTEP 100       // Max number of time steps.
+#define MTSTEP 200       // Max number of time steps.
 #define MLINES 500000    // Increase linelist by this blocksize
 
 #define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-40
 
 
-// *****************
-// Radiation field model
-//
-#define RADFIELDBINCOUNT 128
+// ****
+// Start of radiation field model options
 
-static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
+// if using this, avoid look up tables and switch on the direct integration options below
+// (since LUTs created with Planck function J_nu)
+static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
+
+#define RADFIELDBINCOUNT 256
+
+static const int FIRST_NLTE_RADFIELD_TIMESTEP = 7;
 
 static const double nu_lower_first_initial = (CLIGHT / (40000e-8)); // CLIGHT / ([lambda Angstroms]e-8)
 static const double nu_upper_last_initial = (CLIGHT /  (1085e-8));  // not including the very top super bin
@@ -109,9 +87,37 @@ static const double nu_upper_last_initial = (CLIGHT /  (1085e-8));  // not inclu
 static const double T_R_min = 500;
 static const double T_R_max = 250000;
 
+// store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
+static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
-// *****************
-// Non-thermal solution
+// store detailed bound-free rate estimators
+#define DETAILED_BF_ESTIMATORS_ON true
+
+// if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
+#define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 7
+
+// extremely slow and memory consuming - for debugging only
+// not safe for MPI or OpenMP - single process and single thread only!
+// this will output a list of contributions to each bound-free rate estimator
+// with each packet emission type ranked by their contribution to the rate
+#define DETAILED_BF_ESTIMATORS_BYTYPE false
+
+// dynamically calculate photoionization rates for the current radiation field
+// instead of interpolating values from a lookup table for a blackbody radiation field
+#define NO_LUT_PHOTOION true
+
+// as above for bound-free heating
+#define NO_LUT_BFHEATING true
+
+// if SEPARATE_STIMRECOMB is false, then stimulated recombination is treated as negative photoionisation
+#define SEPARATE_STIMRECOMB false
+
+// End of radiation field model options
+// ****
+
+
+// ****
+// Start of non-thermal solution options
 //
 
 /// non-thermal ionisation
@@ -121,7 +127,7 @@ static const bool NT_ON = true;
 static const bool NT_SOLVE_SPENCERFANO = true;
 
 // number of energy points in the Spencer-Fano solution vector
-#define SFPTS 2048
+#define SFPTS 4096
 
 // eV
 #define SF_EMAX 16000.
@@ -135,7 +141,7 @@ static const bool NT_SOLVE_SPENCERFANO = true;
 // trigger a Spencer-Fano solution at least once every n timesteps
 // 0 can only use solutions from previous NLTE iterations on the current timestep
 // <=-1 will always solve the SF equation for every iteration of every timestep
-static const int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 3;
+static const int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
 // a change in the electron fraction (e.g. 0.5 is a 50% change) since the previous solution will also trigger a solution
 static const double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
@@ -148,7 +154,7 @@ static const int NTEXCITATION_MAXNLEVELS_UPPER = 250; // maximum number of upper
 // limit the number of stored non-thermal excitation transition rates to reduce memory cost.
 // if this is higher than SFPTS, then you might as well just store
 // the full NT degradation spectrum and calculate the rates as needed (although CPU costs)
-static const int MAX_NT_EXCITATIONS_STORED = 5000;
+static const int MAX_NT_EXCITATIONS_STORED = 25000;
 
 // set to true to keep a list of non-thermal excitation rates for use
 // in the NLTE pop solver, macroatom, and NTLEPTON packets.
