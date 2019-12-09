@@ -2352,7 +2352,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
             printout(" %d: %.3f", get_ionstage(element, upperion), probability);
         }
         printout("\n");
-        assert(fabs(prob_sum - 1.0) <= 1e-2);
+        assert((fabs(prob_sum - 1.0) <= 1e-2) || (nt_ionization_ratecoeff_sf(modelgridindex, element, ion) < 1e-20));
 
         printout("         enfrac to ionstage:");
         double enfrac_sum = 0.;
@@ -2364,7 +2364,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
             printout(" %d: %.3f", get_ionstage(element, upperion), probability);
         }
         printout("\n");
-        assert(fabs(enfrac_sum - 1.0) <= 1e-2);
+        assert(fabs(enfrac_sum - 1.0) <= 1e-2 || (nt_ionization_ratecoeff_sf(modelgridindex, element, ion) < 1e-20));
       }
     }
   }
