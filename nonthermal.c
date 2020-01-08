@@ -884,6 +884,7 @@ static double get_y(const int modelgridindex, const double energy_ev)
 static double electron_loss_rate(const double energy, const double nne)
 // -dE / dx for fast electrons
 // energy is in ergs
+// nne is the thermal electron density [cm^-3]
 // return units are erg / cm
 {
   if (energy <= 0.)
