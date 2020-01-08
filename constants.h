@@ -15,7 +15,7 @@
 #define DAY           86400.0           /// day to seconds [s/day]
 #define SIGMA_T       6.6524e-25        /// Thomson cross-section
 #define THOMSON_LIMIT 1e-2              /// Limit below which e-scattering is Thomson
-#define PARSEC        3.0857e+18        /// pc to cm [pc/cm]
+#define PARSEC        3.0857e+18        /// pc to cm [cm/pc]
 #define KB            1.38064852e-16    /// Boltzmann constant [erg/K]
 #define STEBO         5.670400e-5       /// Stefan-Boltzmann constant [erg cm^−2 s^−1 K^−4.]
                                         /// (data from NIST http://physics.nist.gov/cgi-bin/cuu/Value?eqsigma)
