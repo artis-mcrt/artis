@@ -74,7 +74,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // uniform decay time distribution (scale the packet energies instead)
     const double zrand = gsl_rng_uniform(rng);
     pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * tmax;
-    pkt_ptr->e_cmf = get_decay_power_density(decaypath, mgi, pkt_ptr->tdecay);
+    const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypath) / (tmax - tdecaymin);
+    pkt_ptr->e_cmf = e0 * get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
   }
 
   bool from_positron;
