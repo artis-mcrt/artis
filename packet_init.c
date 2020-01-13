@@ -56,8 +56,6 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   }
   assert(decaypath != DECAYPATH_COUNT) // Failed to select pellet
 
-  pkt_ptr->tdecay = -1.; // ensure we enter the following loop
-
   #ifdef NO_INITIAL_PACKETS
   const double tdecaymin = tmin;
   #else
@@ -71,9 +69,15 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   }
   else
   {
-    // uniform decay time distribution (scale the packet energies instead)
+    // use uniform decay time distribution (scale the packet energies instead)
+    // keeping the pellet decay rate constant will give better statistics at very late times when very little
+    // energy is released
     const double zrand = gsl_rng_uniform(rng);
     pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * tmax;
+
+    // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
+    // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
+    // according to: decay power at this time relative to the average decay power
     const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypath) / (tmax - tdecaymin);
     pkt_ptr->e_cmf = e0 * get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
   }
