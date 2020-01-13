@@ -45,7 +45,7 @@ enum radionuclides decayparent(enum decaypathways decaypath);
 enum radionuclides decaydaughter(enum decaypathways decaypath);
 void update_abundances(const int modelgridindex, const int timestep, const double t_current);
 double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath);
-double get_decay_power_density(enum decaypathways decaypath, const int modelgridindex, const double time);
+double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int modelgridindex, const double time);
 double get_positroninjection_rate_density(const int modelgridindex, const double t);
 double get_decayedenergy_per_ejectamass(const int n, const double tstart);
 

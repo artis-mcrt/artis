@@ -455,6 +455,7 @@ static double get_endecay_per_ejectamass_between_times(
 
 
 double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways decaypath)
+// get the decay energy released during the simulation time
 {
 #ifdef NO_INITIAL_PACKETS
   return get_endecay_per_ejectamass_between_times(mgi, decaypath, tmin, tmax);
@@ -465,10 +466,10 @@ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways deca
 }
 
 
-double get_decay_power_density(enum decaypathways decaypath, const int modelgridindex, const double time)
-// total decay energy injection rate in erg / s / cm^3
+double get_decay_power_per_ejectamass(enum decaypathways decaypath, const int modelgridindex, const double time)
+// total decay energy injection rate in erg / s / kg
 {
-  const double rho = get_rho(modelgridindex);
+  double decaypower = 0.;
 
   const enum radionuclides nuc1 = decayparent(decaypath);
   if (decaypath_is_chain(decaypath))
@@ -484,13 +485,17 @@ double get_decay_power_density(enum decaypathways decaypath, const int modelgrid
     double abund2;
     double abund3;
     calculate_double_decay_chain(initabund1, meanlife(nuc1), initabund2, meanlife(nuc2), time, &abund1, &abund2, &abund3);
-    return abund2 / nucmass(nuc2) * rho / meanlife(nuc2) * nucdecayenergy(nuc2);
+    decaypower = abund2 / nucmass(nuc2) / meanlife(nuc2) * nucdecayenergy(nuc2);
   }
   else
   {
     // simple decay from initial abundance , e.g. DECAY_NI56 or DECAY_CO56
-    return get_modelinitradioabund_decayed(modelgridindex, nuc1, time) / nucmass(nuc1) * rho / meanlife(nuc1) * nucdecayenergy(nuc1);
+    decaypower = get_modelinitradioabund_decayed(modelgridindex, nuc1, time) / nucmass(nuc1) / meanlife(nuc1) * nucdecayenergy(nuc1);
   }
+  // const double time2 = time * 1.001;
+  // const double decaypower2 = get_endecay_per_ejectamass_between_times(modelgridindex, decaypath, time, time2) / (time2 - time);
+  // printout("compare decaypath %d answer %g and %g\n", decaypath, decaypower, decaypower2);
+  return decaypower;
 }
 
 
