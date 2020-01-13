@@ -557,8 +557,8 @@ void nt_init(const int my_rank)
     for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
     {
       // should make these negative?
-      nt_solution[modelgridindex].frac_heating = 0.98;
-      nt_solution[modelgridindex].frac_ionization = 0.02;
+      nt_solution[modelgridindex].frac_heating = 0.97;
+      nt_solution[modelgridindex].frac_ionization = 0.03;
       nt_solution[modelgridindex].frac_excitation = 0.0;
 
       nt_solution[modelgridindex].E_0 = 0.;
