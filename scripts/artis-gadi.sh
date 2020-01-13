@@ -22,9 +22,8 @@
 
 module load gsl
 module load intel-compiler
-module load intel-mpi
-
-ulimit -l 2097152
+module unload intel-mpi
+module load openmpi
 
 mpirun ./sn3d -w 10 > out.txt
 
