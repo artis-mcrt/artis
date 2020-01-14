@@ -2,7 +2,7 @@
 
 #PBS -P fm5
 #PBS -q normal
-#PBS -l walltime=10:00:00
+#PBS -l walltime=24:00:00
 #PBS -l mem=1920GB
 #PBS -l ncpus=960
 #PBS -l wd
@@ -25,7 +25,7 @@ module load intel-compiler
 module unload intel-mpi
 module load openmpi
 
-mpirun ./sn3d -w 10 > out.txt
+mpirun ./sn3d -w 24 > out.txt
 
 mkdir ${PBS_JOBID}
 ./artis/scripts/movefiles.sh ${PBS_JOBID}
