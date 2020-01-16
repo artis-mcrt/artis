@@ -7,9 +7,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=luke.shingles@gmail.com
 
-module load Intel
-module load Intel ParaStationMPI
-module load GSL
+module load Intel ParaStationMPI GSL
 
 cd $SLURM_SUBMIT_DIR
 
