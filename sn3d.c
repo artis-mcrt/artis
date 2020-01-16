@@ -542,7 +542,8 @@ static void save_grid_and_packets(
   const time_t time_write_packets_file_start = time(NULL);
   printout("time before write temporary packets file %d\n", time_write_packets_file_start);
 
-  write_temp_packetsfile(nts, my_rank, packets); // save packet state at start of current timestep (before propagation)
+  // save packet state at start of current timestep (before propagation)
+  write_temp_packetsfile(nts, my_rank, packets);
 
   #ifdef VPKT_ON
   char filename[100];
