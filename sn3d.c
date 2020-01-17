@@ -1393,6 +1393,7 @@ int main(int argc, char** argv)
     /// code.
 
     #ifdef MPI_ON
+      MPI_Barrier(MPI_COMM_WORLD);
       free(buffer);
     #endif
   }
