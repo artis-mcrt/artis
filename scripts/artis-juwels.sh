@@ -11,7 +11,7 @@ module load Intel ParaStationMPI GSL
 
 cd $SLURM_SUBMIT_DIR
 
-srun ./sn3d -w 24
+srun ./sn3d -w 24 > out.txt
 
 mkdir ${SLURM_JOBID}.slurm
 ./artis/scripts/movefiles.sh ${SLURM_JOBID}.slurm
