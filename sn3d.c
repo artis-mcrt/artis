@@ -582,6 +582,11 @@ static void save_grid_and_packets(
 
   if (!KEEP_ALL_RESTART_FILES)
   {
+    // ensure new packets files have been written by all processes before we remove the old set
+    #ifdef MPI_ON
+      MPI_Barrier(MPI_COMM_WORLD);
+    #endif
+
     if (my_rank == 0)
       remove_grid_restart_data(nts - 1);
 
