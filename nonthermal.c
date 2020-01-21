@@ -1612,10 +1612,12 @@ static void calculate_eff_ionpot_auger_rates(
   double eta_over_ionpot_sum = 0.;
   double eta_sum = 0.;
   double ionpot_valence = -1;
+  int matching_nlsubshell_count = 0;
   for (int collionindex = 0; collionindex < colliondatacount; collionindex++)
   {
     if (colliondata[collionindex].Z == Z && colliondata[collionindex].nelec == Z - ionstage + 1)
     {
+      matching_nlsubshell_count++;
       const double frac_ionization_shell = calculate_nt_frac_ionization_shell(modelgridindex, element, ion, collionindex);
       eta_sum += frac_ionization_shell;
       const double ionpot_shell = colliondata[collionindex].ionpot_ev * EV;
@@ -1640,7 +1642,7 @@ static void calculate_eff_ionpot_auger_rates(
     }
   }
 
-  if (NT_MAX_AUGER_ELECTRONS > 0)
+  if (NT_MAX_AUGER_ELECTRONS > 0 && matching_nlsubshell_count > 0)
   {
     const int nions = get_nions(element);
     if (ion < nions - 1) // don't try to ionise the top ion
@@ -1681,14 +1683,25 @@ static void calculate_eff_ionpot_auger_rates(
   }
   else
   {
-    nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)] = 1.;
-    nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1)] = 1.;
+    const int a = 0;
+    nt_solution[modelgridindex].prob_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 1.;
+    nt_solution[modelgridindex].ionenfrac_num_auger[uniqueionindex * (NT_MAX_AUGER_ELECTRONS + 1) + a] = 1.;
   }
 
-  double eff_ionpot = X_ion / eta_over_ionpot_sum;
-  if (!isfinite(eff_ionpot))
-    eff_ionpot = 0.;
-  nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] = eff_ionpot;
+  if (matching_nlsubshell_count > 0)
+  {
+    double eff_ionpot = X_ion / eta_over_ionpot_sum;
+    if (!isfinite(eff_ionpot))
+      eff_ionpot = 0.;
+    nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] = eff_ionpot;
+  }
+  else
+  {
+    printout("WARNING! No matching subshells in NT impact ionisation cross section data for Z=%d ionstage %d.\n -> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano solution.\n",
+             get_element(element), get_ionstage(element, ion));
+
+    nt_solution[modelgridindex].eff_ionpot[get_uniqueionindex(element, ion)] = 1. / get_oneoverw(element, ion, modelgridindex);
+  }
 }
 
 
@@ -2213,7 +2226,6 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
     for (int ion = 0; ion < nions; ion++)
     {
       const int uniqueionindex = get_uniqueionindex(element, ion);
-      calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
 
       const int ionstage = get_ionstage(element, ion);
       const double nnion = ionstagepop(modelgridindex, element, ion);
@@ -2227,6 +2239,9 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       printout("  Z=%d ion_stage %d:\n", Z, ionstage);
       // printout("    nnion: %g\n", nnion);
       printout("    nnion/nntot: %g\n", nnion / nntot, get_nne(modelgridindex));
+
+      calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
+
       int matching_nlsubshell_count = 0;
       for (int n = 0; n < colliondatacount; n++)
       {
@@ -2338,7 +2353,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
               calculate_nt_ionization_ratecoeff(modelgridindex, element, ion, true));
 
       printout("    ARTIS using Gamma:       %9.3e\n",
-               nt_ionization_ratecoeff_sf(modelgridindex, element, ion));
+               nt_ionization_ratecoeff(modelgridindex, element, ion));
 
       // the ion values (unlike shell ones) have been collapsed down to ensure that upperion < nions
       if (ion < nions - 1)
