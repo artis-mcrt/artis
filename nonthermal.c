@@ -1524,7 +1524,7 @@ static double calculate_nt_ionization_ratecoeff(
 // i.e. multiply this by ion population to get a rate of ionizations per second
 // Do not call during packet propagation, as the y vector may not be in memory!
 // IMPORTANT: we are dividing by the shell potential, not the valence potential here!
-// To change this, include a factor of (ionpot_shell / ionpot_valence)
+// To change this set assumeshellpotentialisvalence to true
 {
   gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
   gsl_vector *cross_section_vec_allshells = gsl_vector_calloc(SFPTS);
