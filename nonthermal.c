@@ -1562,6 +1562,8 @@ static double calculate_nt_ionization_ratecoeff(
   gsl_vector_mul(cross_section_vec_allshells, delta_envec);
   #endif
 
+  assert(nt_solution[modelgridindex].yfunc != NULL);
+
   double y_dot_crosssection_de = 0.;
   gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
   gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec_allshells, &y_dot_crosssection_de);
