@@ -17,7 +17,6 @@ extern inline void get_ionfromuniqueionindex(int allionsindex, int *element, int
 extern inline double epsilon(int element, int ion, int level);
 extern inline double stat_weight(int element, int ion, int level);
 extern inline int get_maxrecombininglevel(int element, int ion);
-extern inline bool is_nlte(int element, int ion, int level);
 extern inline bool ion_has_superlevel(int element, int ion);
 extern inline int get_ndowntrans(int element, int ion, int level);
 extern inline int get_nuptrans(int element, int ion, int level);
