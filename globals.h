@@ -1,4 +1,3 @@
-#include "types.h"
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
@@ -8,28 +7,21 @@
 
 extern double syn_dir[3]; // vector pointing from origin to observer
 
-//#define NRAYS_SYN 1 // number of rays traced in a syn calculation
-
-//RAY rays[NRAYS_SYN];
-
 extern struct time time_step[MTSTEP];
 
 #define MSYN_TIME 100
 extern int nsyn_time;
 extern double time_syn[MSYN_TIME];
 
-#define EMISS_MAX 2 // Maxmimum number of frequency points in
-                    // grid used to store emissivity estimators.
-extern int emiss_offset;   // the index in the line list of the 1st line for which
-                    // an emissivity estimator is recorded
-extern int emiss_max;      // actual number of frequency points in emissivity grid
+#define EMISS_MAX 2
+extern int emiss_offset;
+extern int emiss_max;
 
 
 extern modelgrid_t modelgrid[MMODELGRID + 1];
 
-/// THESE ARE THE GRID BASED ESTIMATORS
-extern float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity                     ///ATOMIC
-extern double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpkt emissivity                        ///ATOMIC
+extern float compton_emiss[MMODELGRID+1][EMISS_MAX];
+extern double rpkt_emiss[MMODELGRID+1];
 
 
 #if (!NO_LUT_PHOTOION)
@@ -40,7 +32,6 @@ extern double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for 
   extern double bfheatingestimator[MMODELGRID * MELEMENTS * MIONS];
 #endif
 #ifdef FORCE_LTE
-  // don't use the variables below in LTE mode, just declare them here so the code compiles
   extern double *ffheatingestimator;
 #else
   extern double ffheatingestimator[MMODELGRID + 1];
@@ -52,9 +43,6 @@ extern double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for 
     extern double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
     extern double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
   #endif
-
-  //double mabfcount[MGRID],mabfcount_thermal[MGRID], kbfcount[MGRID],kbfcount_ion[MGRID],kffcount[MGRID], kffabs[MGRID],kbfabs[MGRID],kgammadep[MGRID];
-  //double matotem[MGRID],maabs[MGRID];
 #endif
 
 #ifdef RECORD_LINESTAT
@@ -64,30 +52,24 @@ extern double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for 
 #endif
 
 
-extern bool file_set; // 1 if the output files already exist. 0 otherwise.
+extern bool file_set;
 
-extern bool do_comp_est; // 1 = compute compton emissivity estimators. 0 = don't
-extern bool do_r_lc;     // If not set to 1 then the opacity for r-packets is 0.
-extern int do_rlc_est;  // 1 = compute estimators for the r-pkt light curve.
-                 // 2 = compute estimators with opacity weights
-                 // 3 = compute estimators, but use only for gamma-heating rate
+extern bool do_comp_est;
+extern bool do_r_lc;
+extern int do_rlc_est;
 
+extern int n_out_it;
 
-extern int n_out_it; // # of sets of 1,000,000 photons to run.
-
-extern int npts_model; // number of points in 1-D input model
+extern int npts_model;
 extern double vout_model[MMODELGRID];
-extern double t_model; // time at which densities in input model are correct.
-extern int ncoord1_model, ncoord2_model; // For 2D model, the input grid dimensions
-extern double dcoord1, dcoord2; // spacings of a 2D model grid - must be uniform grid
+extern double t_model;
+extern int ncoord1_model;
+extern int ncoord2_model;
+extern double dcoord1, dcoord2;
 
-//#define MPTS_MODEL_3D 8000000
+extern double CLIGHT_PROP;
 
-extern double CLIGHT_PROP; // Speed of light for ray travel. Physically = CLIGHT but
-                    // can be changed for testing.
-
-extern double gamma_grey; // set to -ve for proper treatment. If possitive, then
-                   // gamma_rays are treated as grey with this opacity.
+extern double gamma_grey;
 
 extern double min_den;
 
@@ -95,21 +77,11 @@ extern double min_den;
 
 extern double max_path_step;
 
-extern int opacity_case; // 0 normally, 1 for Fe-grp dependence.
-                  ///MK: 2 for Fe-grp dependence and proportional to 1/rho
-                  ///MK: 3 combination of 1 & 2 depending on a rho_crit
-                  ///MK: 4 non-grey treatment
-
+extern int opacity_case;
 
 extern double dlogt;
-
-
-/// ATOMIC DATA
-///============================================================================
 extern int maxion;
-extern short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
-                                                   /// in a given cell. Be aware that this must not be used outside of the update_grid
-                                                   /// routine and their daughters.
+extern short elements_uppermost_ion[MTHREADS][MELEMENTS];
 extern int nelements;
 extern int nlines;
 extern int includedions;
@@ -119,32 +91,17 @@ extern bflist_t *bflist;
 
 extern rpkt_cont_opacity_struct *kappa_rpkt_cont;
 
-/// Coolinglist
-///============================================================================
-//coolinglist_entry *globalcoolinglist;
-//coolinglist_entry *globalheatinglist;
-//double totalcooling;
 extern int ncoolingterms;
 extern int importantcoolingterms;
 
-//double heating_col;
-
-
-/// PHIXSLIST
-///============================================================================
-
 extern phixslist_t *phixslist;
 extern int nbfcontinua;
-extern int nbfcontinua_ground; ///number of bf-continua
+extern int nbfcontinua_ground;
 extern int NPHIXSPOINTS;
 extern double NPHIXSNUINCREMENT;
 
-/// Cell history
-///============================================================================
+extern cellhistory_struct *cellhistory;
 
-extern cellhistory_struct *cellhistory;          /// Global pointer to the beginning of the cellhistory stack.
-
-/// Debug/Analysis Counter
 extern int ma_stat_activation_collexc;
 extern int ma_stat_activation_collion;
 extern int ma_stat_activation_ntcollexc;
@@ -178,61 +135,53 @@ extern int coolingratecalccounter;
 
 extern int debuglevel;
 
-extern int ncoordgrid[3]; /// actual grid dimensions to use
+extern int ncoordgrid[3];
 extern int ngrid;
 extern int grid_type;
 extern char coordlabel[3];
 
 extern enum model_types model_type;
 
-extern int nprocs;      /// Global variable which holds the number of MPI processes
-extern int rank_global; /// Global variable which holds the rank of the active MPI process
+extern int nprocs;
+extern int rank_global;
 extern int npkts;
-extern int nesc; //number of packets that escape during current timestep  ///ATOMIC
+extern int nesc;
 
 extern double coordmax[3];
 extern double mtot;
 extern double vmax;
-extern double rmax;  /// Total mass and outer velocity/radius
-extern double totmassradionuclide[RADIONUCLIDE_COUNT]; /// total mass of each radionuclide in the ejecta
-extern double mfeg;              /// Total mass of Fe group elements in ejecta
-extern double tmax;              /// End time of current simulation
-extern double tmin;              /// Start time of current simulation
+extern double rmax;
+extern double totmassradionuclide[RADIONUCLIDE_COUNT];
+extern double mfeg;
+extern double tmax;
+extern double tmin;
 
-extern int ntstep;       /// Number of timesteps
-extern int itstep;       /// Initial timestep's number
-extern int ftstep;       /// Final timestep's number
-extern int nts_global;   /// Current time step
+extern int ntstep;
+extern int itstep;
+extern int ftstep;
+extern int nts_global;
 
-extern int ntbins, nnubins; //number of bins for spectrum
-extern double nu_min_r, nu_max_r; //limits on frequency range for r-pkt spectrum
+extern int ntbins, nnubins;
+extern double nu_min_r, nu_max_r;
 
-extern int ntlcbins; //number of bins for light curve
+extern int ntlcbins;
 
-extern double nusyn_min, nusyn_max; //limits on range for syn
-extern int nfake_gam; //# of fake gamma ray lines for syn
+extern double nusyn_min, nusyn_max;
+extern int nfake_gam;
 
-/// New variables for other opacity cases, still grey.
-extern double opcase3_normal;           ///MK: normalisation factor for opacity_case 3
-extern double rho_crit_para;            ///MK: free parameter for the selection of the critical opacity in opacity_case 3
-extern double rho_crit;                 ///MK: critical opacity in opacity_case 3 (could now be declared locally)
+extern double opcase3_normal;
+extern double rho_crit_para;
+extern double rho_crit;
 
-
-/// New variables for the non-grey case
-//FILE *ldist_file;
-extern int debug_packet;                /// activate debug output for this packet if non negative
-//double global_threshold;         /// global variable to transfer a threshold frequency to another function
+extern int debug_packet;
 extern int n_middle_it;
 
-extern int total_nlte_levels;            ///total number of nlte levels
+extern int total_nlte_levels;
 extern int n_super_levels;
 
 extern mastate_t *mastate;
 
 extern CELL cell[MGRID+1];
-//int *nonemptycells;  /// Array which contains all the non-empty cells cellnumbers
-//int nnonemptycells;  /// Total number of non-empty cells
-
 
 
 extern bool homogeneous_abundances;
