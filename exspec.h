@@ -8,19 +8,6 @@
 #define MABINS    100
 #define MTBINS  200
 
-extern int nprocs_exspec;
-extern bool do_emission_res;
-extern int nepkts;
-
-extern double dlognu;
-
-extern double dlogtlc;
-extern double dlogtlc_angle;
-
-extern struct specpol stokes_i[MTBINS];
-extern struct specpol stokes_q[MTBINS];
-extern struct specpol stokes_u[MTBINS];
-
 typedef struct
 {
   double *absorption;
@@ -58,5 +45,18 @@ typedef struct
   double stokes[3];
   float trueemissionvelocity;
 } EPKT;
+
+extern int nprocs_exspec;
+extern bool do_emission_res;
+extern int nepkts;
+
+extern double dlognu;
+
+extern double dlogtlc;
+extern double dlogtlc_angle;
+
+extern struct specpol stokes_i[MTBINS];
+extern struct specpol stokes_q[MTBINS];
+extern struct specpol stokes_u[MTBINS];
 
 #endif //EXSPEC_H
