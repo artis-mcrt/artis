@@ -20,8 +20,8 @@ int emiss_max;      // actual number of frequency points in emissivity grid
 modelgrid_t modelgrid[MMODELGRID + 1];
 
 /// THESE ARE THE GRID BASED ESTIMATORS
-float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity                     ///ATOMIC
-double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpkt emissivity                        ///ATOMIC
+float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity
+double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpkt emissivity
 
 
 #if (!NO_LUT_PHOTOION)
@@ -44,9 +44,6 @@ double rpkt_emiss[MMODELGRID+1];                /// Volume estimator for the rpk
     double gammaestimator_save[MMODELGRID * MELEMENTS * MIONS];
     double bfheatingestimator_save[MMODELGRID * MELEMENTS * MIONS];
   #endif
-
-  //double mabfcount[MGRID],mabfcount_thermal[MGRID], kbfcount[MGRID],kbfcount_ion[MGRID],kffcount[MGRID], kffabs[MGRID],kbfabs[MGRID],kgammadep[MGRID];
-  //double matotem[MGRID],maabs[MGRID];
 #endif
 
 #ifdef RECORD_LINESTAT
@@ -72,8 +69,6 @@ double vout_model[MMODELGRID];
 double t_model; // time at which densities in input model are correct.
 int ncoord1_model, ncoord2_model; // For 2D model, the input grid dimensions
 double dcoord1, dcoord2; // spacings of a 2D model grid - must be uniform grid
-
-//#define MPTS_MODEL_3D 8000000
 
 double CLIGHT_PROP; // Speed of light for ray travel. Physically = CLIGHT but
                     // can be changed for testing.
@@ -111,15 +106,8 @@ bflist_t *bflist;
 rpkt_cont_opacity_struct *kappa_rpkt_cont;
 
 /// Coolinglist
-///============================================================================
-//coolinglist_entry *globalcoolinglist;
-//coolinglist_entry *globalheatinglist;
-//double totalcooling;
 int ncoolingterms;
 int importantcoolingterms;
-
-//double heating_col;
-
 
 /// PHIXSLIST
 ///============================================================================
@@ -130,12 +118,9 @@ int nbfcontinua_ground; ///number of bf-continua
 int NPHIXSPOINTS;
 double NPHIXSNUINCREMENT;
 
-/// Cell history
-///============================================================================
+cellhistory_struct *cellhistory;
 
-cellhistory_struct *cellhistory;          /// Global pointer to the beginning of the cellhistory stack.
-
-/// Debug/Analysis Counter
+/// Debug/Analysis Counters
 int ma_stat_activation_collexc;
 int ma_stat_activation_collion;
 int ma_stat_activation_ntcollexc;
@@ -169,7 +154,7 @@ int coolingratecalccounter;
 
 int debuglevel;
 
-int ncoordgrid[3]; /// actual grid dimensions to use
+int ncoordgrid[3]; /// propagration grid dimensions
 int ngrid;
 int grid_type;
 char coordlabel[3];
@@ -179,7 +164,7 @@ enum model_types model_type;
 int nprocs;      /// Global variable which holds the number of MPI processes
 int rank_global; /// Global variable which holds the rank of the active MPI process
 int npkts;
-int nesc; //number of packets that escape during current timestep  ///ATOMIC
+int nesc; //number of packets that escape during current timestep
 
 double coordmax[3];
 double mtot;
@@ -210,9 +195,7 @@ double rho_crit;                 ///MK: critical opacity in opacity_case 3 (coul
 
 
 /// New variables for the non-grey case
-//FILE *ldist_file;
 int debug_packet;                /// activate debug output for this packet if non negative
-//double global_threshold;         /// global variable to transfer a threshold frequency to another function
 int n_middle_it;
 
 int total_nlte_levels;            ///total number of nlte levels
@@ -221,9 +204,6 @@ int n_super_levels;
 mastate_t *mastate;
 
 CELL cell[MGRID+1];
-//int *nonemptycells;  /// Array which contains all the non-empty cells cellnumbers
-//int nnonemptycells;  /// Total number of non-empty cells
-
 
 
 bool homogeneous_abundances;
