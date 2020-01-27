@@ -70,17 +70,18 @@ extern FILE *output_file;
 #endif
 
 
+#define printout(...) fprintf (output_file, __VA_ARGS__)
 
-inline int printout(const char *format, ...)
-{
-   va_list args;
-   va_start(args, format);
-   const int ret_status = vfprintf(output_file, format, args);
-   // fprintf(output_file, "vfprintf return code %d\n", va_arg(args, char*) == NULL);
-   va_end(args);
-
-   return ret_status;
-}
+// inline int printout(const char *format, ...)
+// {
+//    va_list args;
+//    va_start(args, format);
+//    const int ret_status = vfprintf(output_file, format, args);
+//    // fprintf(output_file, "vfprintf return code %d\n", va_arg(args, char*) == NULL);
+//    va_end(args);
+//
+//    return ret_status;
+// }
 
 // #ifdef DEBUG_ON
 //   #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
