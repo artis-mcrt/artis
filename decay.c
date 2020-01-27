@@ -186,7 +186,7 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
       return true;
 
     case DECAYPATH_COUNT:
-      assert(false)
+      assert(false);
   }
 }
 
