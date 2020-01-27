@@ -88,11 +88,11 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
   if (do_emission_res)
   {
     emission_file = fopen_required(emission_filename, "w");
-    assert(emission_file != NULL)
+    assert(emission_file != NULL);
     trueemission_file = fopen_required(trueemission_filename, "w");
-    assert(trueemission_file != NULL)
+    assert(trueemission_file != NULL);
     absorption_file = fopen_required(absorption_filename, "w");
-    assert(absorption_file != NULL)
+    assert(absorption_file != NULL);
     printout("Writing %s, %s, %s, and %s\n", spec_filename, emission_filename, trueemission_filename, absorption_filename);
   }
   else
