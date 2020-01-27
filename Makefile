@@ -18,6 +18,7 @@ ifeq ($(SYSNAME),Darwin)
 	# CC = gcc-9
 	# CC = icc
 	# CC = mpicc
+	CXX = clang++
 	CFLAGS = -std=c17 -O3 -fstrict-aliasing -ftree-vectorize -flto
 
 	CFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
@@ -95,6 +96,9 @@ sn3d: clean version
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CC) $(CFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
+
+sn3dcpp: clean version
+	$(CXX) $(CFLAGS) -std=c++17 $(sn3d_files) $(LDFLAGS) -o sn3d
 
 exspec_files = exspec.c grid_init.c globals.c input.c vectors.c packet_init.c update_grid.c update_packets.c gamma.c boundary.c macroatom.c decay.c rpkt.c kpkt.c photo_electric.c emissivities.c grey_emissivities.c ltepop.c atomic.c ratecoeff.c thermalbalance.c light_curve.c spectrum.c polarization.c nltepop.c radfield.c nonthermal.c vpkt.c md5.c
 

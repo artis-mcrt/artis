@@ -304,7 +304,7 @@ static enum radionuclides find_nucparent(enum radionuclides nuclide)
 {
   for (int d = 0; d < DECAYPATH_COUNT; d++)
   {
-    enum decaypathways decaypath = d;
+    enum decaypathways decaypath = (enum decaypathways)(d);
     if (decaypath_is_chain(decaypath))
     {
       enum radionuclides nuc2 = decaydaughter(decaypath);
@@ -508,7 +508,7 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
   double pos_dep_sum = 0.;
   for (int n = 0; n < RADIONUCLIDE_COUNT; n++)
   {
-    enum radionuclides nuclide = n;
+    enum radionuclides nuclide = (enum radionuclides)(n);
     if (nucdecayenergypositrons(nuclide) > 0. && get_modelradioabund_at_time(modelgridindex, nuclide, t) > 0.)
     {
       printout("positrons coming from nuclide %d en %g abund %g\n", nuclide, nucdecayenergypositrons(nuclide), get_modelradioabund_at_time(modelgridindex, nuclide, t));
