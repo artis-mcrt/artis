@@ -1747,7 +1747,7 @@ void nltepop_read_restart_data(FILE *restart_file)
   fscanf(restart_file, "%d\n", &code_check);
   if (code_check != 75618527)
   {
-    printout("ERROR: Beginning of NLTE restart data not found!");
+    printout("ERROR: Beginning of NLTE restart data not found!\n");
     abort();
   }
 
@@ -1755,7 +1755,7 @@ void nltepop_read_restart_data(FILE *restart_file)
   fscanf(restart_file, "%d\n", &total_nlte_levels_in);
   if (total_nlte_levels_in != total_nlte_levels)
   {
-    printout("ERROR: Expected NLTE levels but found %d in restart file", total_nlte_levels, total_nlte_levels_in);
+    printout("ERROR: Expected %d NLTE levels but found %d in restart file\n", total_nlte_levels, total_nlte_levels_in);
     abort();
   }
 

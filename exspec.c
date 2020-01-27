@@ -112,9 +112,9 @@ int main(int argc, char** argv)
   #endif
 
   /// Get input stuff
-  printout("time before input %d\n", time(NULL));
+  printout("time before input %ld\n", time(NULL));
   input(my_rank);
-  printout("time after input %d\n", time(NULL));
+  printout("time after input %ld\n", time(NULL));
   nprocs = nprocs_exspec;
 
   PKT *pkts = (PKT *) malloc(npkts * sizeof(PKT));

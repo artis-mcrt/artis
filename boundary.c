@@ -328,7 +328,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
     printout("packet %d cell %d or %d\n", pkt_ptr->number, cellindex, pkt_ptr->where);
     printout("choice %d\n", choice);
     printout("tmin %g tstart %g\n", tmin, tstart);
-    printout("not_allowed %d or %d, type %d\n", not_allowed, pkt_ptr->type);
+    printout("not_allowed %d, type %d\n", not_allowed, pkt_ptr->type);
     for (int d2 = 0; d2 < 3; d2++)
     {
       printout("coord %d: initpos %g dir %g\n",

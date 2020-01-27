@@ -371,7 +371,7 @@ static void do_macroatom_ionisation(
   if (zrand * internal_up_higher >= rate)
   {
     printout("%s: From Z=%d ionstage %d level %d, could not select upper level to ionise to. zrand %g * internal_up_higher %g >= rate %g\n",
-             __func__, get_element(element), get_ionstage(element, *ion), level, zrand, internal_up_higher, rate);
+             __func__, get_element(element), get_ionstage(element, *ion), *level, zrand, internal_up_higher, rate);
     abort();
   }
 
@@ -1406,7 +1406,8 @@ double col_ionization_ratecoeff(
   #ifdef DEBUG_ON
   if (phixstargetindex > get_nphixstargets(element,ion,lower))
   {
-    printout("[fatal] col_ionization called with phixstargetindex %g > nphixstargets %g",phixstargetindex,get_nphixstargets(element,ion,lower));
+    printout("[fatal] col_ionization called with phixstargetindex %d > nphixstargets %d",
+             phixstargetindex, get_nphixstargets(element, ion, lower));
     abort();
   }
   #endif

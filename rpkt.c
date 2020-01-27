@@ -1277,7 +1277,7 @@ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
              n, dot(startpos, dirvec), dirvec[0], dirvec[1], dirvec[2], tau_cont, tau_lines, escape_prob, escape_prob_sum / (n + 1));
   }
   const double escape_prob_avg = escape_prob_sum / ndirs;
-  printout("from %d random directions, average escape probability is %g (took %d s)\n", ndirs, escape_prob_avg, time(NULL) - sys_time_start_escape_prob);
+  printout("from %d random directions, average escape probability is %g (took %ld s)\n", ndirs, escape_prob_avg, time(NULL) - sys_time_start_escape_prob);
 
   // reset the cell history and rpkt opacities back to values for the start point
   cellhistory_reset(mgi, false);

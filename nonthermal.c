@@ -404,8 +404,7 @@ static void read_auger_data(void)
 
           if (found_existing_data)
           {
-            printout("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)",
-                     Z, ionstage, shellnum, n, l, ionpot_ev, en_auger_ev_total_nocorrection, en_auger_ev, epsilon_e3, n_auger_elec_avg);
+            printout("  same NL shell already has data from another X-ray shell. New g-weighted values: P(n_Auger)");
 
             for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++)
             {
@@ -2240,7 +2239,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       double frac_excitation_ion = 0.;
       printout("  Z=%d ion_stage %d:\n", Z, ionstage);
       // printout("    nnion: %g\n", nnion);
-      printout("    nnion/nntot: %g\n", nnion / nntot, get_nne(modelgridindex));
+      printout("    nnion/nntot: %g\n", nnion / nntot);
 
       calculate_eff_ionpot_auger_rates(modelgridindex, element, ion);
 
