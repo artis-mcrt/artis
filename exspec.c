@@ -236,7 +236,7 @@ int main(int argc, char** argv)
   free(epkts);
   free(pkts);
 
-  printout("exspec finished at %d (tstart + %d seconds)\n", time(NULL), time(NULL) - sys_time_start);
+  printout("exspec finished at %ld (tstart + %ld seconds)\n", time(NULL), time(NULL) - sys_time_start);
   fclose(output_file);
 
   return 0;
