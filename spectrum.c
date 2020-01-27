@@ -51,8 +51,8 @@ double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
 static int compare_emission(const void *p1, const void *p2)
 {
-  const struct emissionabsorptioncontrib *elem1 = p1;
-  const struct emissionabsorptioncontrib *elem2 = p2;
+  const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *) p1;
+  const struct emissionabsorptioncontrib *elem2 = (struct emissionabsorptioncontrib *) p2;
 
  if (elem1->energyemitted < elem2->energyemitted)
     return 1;
@@ -64,8 +64,8 @@ static int compare_emission(const void *p1, const void *p2)
 
 static int compare_absorption(const void *p1, const void *p2)
 {
-  const struct emissionabsorptioncontrib *elem1 = p1;
-  const struct emissionabsorptioncontrib *elem2 = p2;
+  const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *) p1;
+  const struct emissionabsorptioncontrib *elem2 = (struct emissionabsorptioncontrib *) p2;
 
  if (elem1->energyabsorbed < elem2->energyabsorbed)
     return 1;
@@ -452,7 +452,7 @@ void init_spectrum(void)
   if (TRACE_EMISSION_ABSORPTION_REGION_ON)
   {
     traceemission_totalenergy = 0.;
-    traceemissionabsorption = malloc(nlines * sizeof(emissionabsorptioncontrib));
+    traceemissionabsorption = (struct emissionabsorptioncontrib *) malloc(nlines * sizeof(emissionabsorptioncontrib));
     traceabsorption_totalenergy = 0.;
     for (int i = 0; i < nlines; i++)
     {

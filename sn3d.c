@@ -38,7 +38,7 @@ bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng;
 gsl_integration_workspace *gslworkspace;
-FILE *restrict output_file;
+FILE *output_file;
 static FILE *linestat_file;
 static time_t real_time_start;
 static time_t time_timestep_start = -1; // this will be set after the first update of the grid and before packet prop
@@ -1160,7 +1160,7 @@ int main(int argc, char** argv)
         else
           sprintf(filename,"vspecpol_%d_%d_even.tmp", 0 ,my_rank);
 
-        FILE *restrict packets_file = fopen_required(filename, "rb");
+        FILE *packets_file = fopen_required(filename, "rb");
 
         read_vspecpol(packets_file);
 
@@ -1296,7 +1296,7 @@ int main(int argc, char** argv)
 
 
 // printout should be used instead of printf throughout the whole code for output messages
-extern inline int printout(const char *restrict format, ...);
+extern inline int printout(const char *format, ...);
 extern inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
 extern inline FILE *fopen_required(const char *filename, const char *mode);
 

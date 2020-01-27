@@ -121,7 +121,7 @@ typedef struct
   int binindex;
 } gsl_T_R_solver_paras;
 
-static FILE *restrict radfieldfile = NULL;
+static FILE *radfieldfile = NULL;
 
 
 extern inline double radfield_dbb(double nu, float T, float W);
@@ -858,7 +858,6 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
 #endif
 
 
-inline
 void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
 {
   #ifdef _OPENMP
@@ -978,7 +977,7 @@ double radfield(double nu, int modelgridindex)
     const int binindex = select_bin(nu);
     if (binindex >= 0)
     {
-      const struct radfieldbin *restrict const bin = &radfieldbins[modelgridindex][binindex];
+      const struct radfieldbin *const bin = &radfieldbins[modelgridindex][binindex];
       if (bin->W >= 0.)
       {
         // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
@@ -1025,7 +1024,7 @@ double radfield(double nu, int modelgridindex)
 }
 
 
-static double gsl_integrand_planck(double nu, void *restrict paras)
+static double gsl_integrand_planck(double nu, void *paras)
 {
   const double T_R = ((gsl_planck_integral_paras *) paras)->T_R;
   const enum_prefactor prefactor = ((gsl_planck_integral_paras *) paras)->prefactor;
@@ -1109,7 +1108,7 @@ static double planck_integral_analytic(double T_R, double nu_lower, double nu_up
 }
 
 
-static double delta_nu_bar(double T_R, void *restrict paras)
+static double delta_nu_bar(double T_R, void *paras)
 // difference between the average nu and the average nu of a planck function
 // at temperature T_R, in the frequency range corresponding to a bin
 {

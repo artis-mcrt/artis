@@ -302,14 +302,15 @@ enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *origi
 static enum radionuclides find_nucparent(enum radionuclides nuclide)
 // get the parent nuclide, or if it doesn't have one then the value RADIONUCLIDE_COUNT is used
 {
-  for (enum decaypathways d = 0; d < DECAYPATH_COUNT; d++)
+  for (int d = 0; d < DECAYPATH_COUNT; d++)
   {
-    if (decaypath_is_chain(d))
+    enum decaypathways decaypath = d;
+    if (decaypath_is_chain(decaypath))
     {
-      enum radionuclides nuc2 = decaydaughter(d);
+      enum radionuclides nuc2 = decaydaughter(decaypath);
       if (nuc2 == nuclide)
       {
-        return decayparent(d);
+        return decayparent(decaypath);
       }
     }
   }
@@ -505,8 +506,9 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
   const double rho = get_rho(modelgridindex);
 
   double pos_dep_sum = 0.;
-  for (enum radionuclides nuclide = 0; nuclide < RADIONUCLIDE_COUNT; nuclide++)
+  for (int n = 0; n < RADIONUCLIDE_COUNT; n++)
   {
+    enum radionuclides nuclide = n;
     if (nucdecayenergypositrons(nuclide) > 0. && get_modelradioabund_at_time(modelgridindex, nuclide, t) > 0.)
     {
       printout("positrons coming from nuclide %d en %g abund %g\n", nuclide, nucdecayenergypositrons(nuclide), get_modelradioabund_at_time(modelgridindex, nuclide, t));
@@ -608,7 +610,7 @@ double get_decayedenergy_per_ejectamass(const int modelgridindex, const double t
   double endecaytot = 0.;
   for (int i = 0; i < DECAYPATH_COUNT; i++)
   {
-    endecaytot += get_endecay_per_ejectamass_between_times(modelgridindex, i, 0., tstart);
+    endecaytot += get_endecay_per_ejectamass_between_times(modelgridindex, (enum decaypathways)(i), 0., tstart);
   }
   return endecaytot;
 }

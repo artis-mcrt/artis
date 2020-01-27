@@ -38,8 +38,8 @@ static inline double get_individ_internal_up_same(int element, int ion, int leve
 
 
 static void get_macroatom_transitionrates(
-  const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *restrict processrates,
-  chlevels_struct *const restrict chlevel)
+  const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *processrates,
+  chlevels_struct *const chlevel)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -160,7 +160,7 @@ static void get_macroatom_transitionrates(
 
 
 static void do_macroatom_raddeexcitation(
-  PKT *restrict pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
+  PKT *pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
   const double total_transitions, const double t_current, const int activatingline)
 {
   ///radiative deexcitation of MA: emitt rpkt
@@ -250,7 +250,7 @@ static void do_macroatom_raddeexcitation(
 
 
 static void do_macroatom_radrecomb(
-  PKT *restrict pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
+  PKT *pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
   const double rad_recomb, const double t_current)
 {
   const float T_e = get_Te(modelgridindex);
@@ -381,7 +381,7 @@ static void do_macroatom_ionisation(
 }
 
 
-double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, const int timestep)
+double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int timestep)
 /// Material for handling activated macro atoms.
 {
   double t_current = t1; // this will keep track of time in the calculation
@@ -464,9 +464,9 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       if (debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
     #endif
 
-    assert(cellhistory[tid].cellnumber == modelgridindex)
+    assert(cellhistory[tid].cellnumber == modelgridindex);
 
-    double *restrict processrates = cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
+    double *processrates = cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
 
     /// If there are no precalculated rates available then calculate them
     if (processrates[MA_ACTION_COLDEEXC] < 0)
@@ -504,7 +504,7 @@ double do_macroatom(PKT *restrict pkt_ptr, const double t1, const double t2, con
       rate += processrates[action];
       if (rate > randomrate)
       {
-        selected_action = action;
+        selected_action = (enum ma_action)(action);
         break;
       }
     }

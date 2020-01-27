@@ -1,11 +1,13 @@
+// #include <gsl/gsl_poly.h>
+#include <assert.h>
+#include <gsl/gsl_blas.h>
+
 #include "sn3d.h"
 #include "boundary.h"
 #include "grid_init.h"
 #include "rpkt.h"
 #include "update_packets.h"
 #include "vectors.h"
-// #include <gsl/gsl_poly.h>
-#include <gsl/gsl_blas.h>
 
 
 static double get_shellcrossdist(
@@ -110,7 +112,7 @@ static double get_shellcrossdist(
 }
 
 
-double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *snext)
+double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
   //double close, close_try;
@@ -355,7 +357,7 @@ double boundary_cross(PKT *restrict const pkt_ptr, const double tstart, int *sne
 }
 
 
-void change_cell(PKT *restrict pkt_ptr, int snext, bool *end_packet, double t_current)
+void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
 /// Routine to take a packet across a boundary.
 {
   #ifdef DEBUG_ON
@@ -465,7 +467,7 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
 }
 
 
-// static int locate(const PKT *restrict pkt_ptr, double t_current)
+// static int locate(const PKT *pkt_ptr, double t_current)
 // /// Routine to return which grid cell the packet is in.
 // {
 //   // Cheap and nasty version for now - assume a uniform grid.

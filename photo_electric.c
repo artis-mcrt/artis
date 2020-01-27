@@ -129,7 +129,7 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 }
 
 /* Routine to deal with pair production. */
-void pair_prod(PKT *restrict pkt_ptr, double t_current)
+void pair_prod(PKT *pkt_ptr, double t_current)
 {
   /* In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
      gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to

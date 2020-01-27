@@ -1,6 +1,7 @@
+#include <assert.h>
+#include <gsl/gsl_randist.h>
 #include "sn3d.h"
 #include "vectors.h"
-#include <gsl/gsl_randist.h>
 
 
 extern inline double vec_len(const double x[3]);
@@ -10,7 +11,7 @@ extern inline void get_velocity(const double x[3], double y[3], const double t);
 extern inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);
 extern inline void vec_scale(double vec[3], const double scalefactor);
 extern inline void vec_copy(double dest[3], const double source[3]);
-extern inline double doppler_packetpos(const PKT *const restrict pkt_ptr, const double t);
+extern inline double doppler_packetpos(const PKT *const pkt_ptr, const double t);
 
 
 void angle_ab(const double dir1[3], const double vel[3], double dir2[3])
@@ -114,7 +115,7 @@ void get_rand_isotropic_unitvec(double vecout[3])
 }
 
 
-void move_pkt(PKT *restrict pkt_ptr, const double distance, const double time)
+void move_pkt(PKT *pkt_ptr, const double distance, const double time)
 /// Subroutine to move a packet along a straight line (specified by currect
 /// dir vector). The distance moved is in the rest frame. Time must be the
 /// time at the end of distance travelled.

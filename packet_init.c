@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "sn3d.h"
 #include "grid_init.h"
 #include "decay.h"
@@ -41,7 +42,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   for (int i = 0; i < DECAYPATH_COUNT; i++)
   {
     const double lower_sum = ((i > 0) ? cumulative_decay_energy_per_mass[i - 1] : 0);
-    cumulative_decay_energy_per_mass[i] = lower_sum + get_simtime_endecay_per_ejectamass(mgi, i);
+    cumulative_decay_energy_per_mass[i] = lower_sum + get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways) i);
   }
 
   const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[DECAYPATH_COUNT - 1];
@@ -50,7 +51,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   {
     if (zrand_chain <= cumulative_decay_energy_per_mass[i])
     {
-      decaypath = i;
+      decaypath = (enum decaypathways)(i);
       break;
     }
   }
@@ -124,7 +125,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     double totmassradionuclide_actual = 0.;
     for (int mgi = 0; mgi < npts_model; mgi++)
     {
-      totmassradionuclide_actual += get_modelinitradioabund(mgi, iso) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
+      totmassradionuclide_actual += get_modelinitradioabund(mgi, (enum radionuclides) iso) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
     }
     const double ratio = totmassradionuclide[iso] / totmassradionuclide_actual;
     if (totmassradionuclide_actual <= 0.)
@@ -134,9 +135,9 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     {
       if (get_numassociatedcells(mgi) > 0)
       {
-        const double prev_abund = get_modelinitradioabund(mgi, iso);
+        const double prev_abund = get_modelinitradioabund(mgi, (enum radionuclides)(iso));
         const double new_abund = prev_abund * ratio;
-        set_modelinitradioabund(mgi, iso, new_abund);
+        set_modelinitradioabund(mgi, (enum radionuclides)(iso), new_abund);
       }
     }
   }
@@ -147,7 +148,7 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     modelcell_decay_energy_density[mgi] = 0.;
     for (int i = 0; i < DECAYPATH_COUNT; i++)
     {
-      modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, i) * MH;
+      modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways)(i)) * MH;
     }
   }
 

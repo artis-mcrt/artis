@@ -4,6 +4,8 @@
 #include "ltepop.h"
 #include "update_grid.h"
 
+double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+
 extern inline int get_element(int element);
 extern inline int get_elementindex(int Z);
 extern inline int get_nions(int element);

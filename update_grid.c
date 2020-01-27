@@ -1936,7 +1936,7 @@ void write_grid_restart_data(const int timestep)
   const time_t sys_time_start_write_restart = time(NULL);
   printout("Write grid restart data to %s...", filename);
 
-  FILE *restrict gridsave_file = fopen_required(filename, "w");
+  FILE *gridsave_file = fopen_required(filename, "w");
 
   fprintf(gridsave_file, "%d ", ntstep);
 

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "sn3d.h"
 #include "boundary.h"
 #include "emissivities.h"
@@ -68,7 +69,7 @@ static void read_decaydata(void)
     gamma_spectra[iso].nlines = 0;
     gamma_spectra[iso].energy = NULL;
     gamma_spectra[iso].probability = NULL;
-    set_nucdecayenergygamma(iso, 0.);
+    set_nucdecayenergygamma((enum radionuclides) iso, 0.);
   }
 
   read_gamma_spectrum(NUCLIDE_NI56, "ni_lines.txt");
