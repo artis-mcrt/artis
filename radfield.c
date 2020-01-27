@@ -1382,7 +1382,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       radfieldbins[modelgridindex][binindex].W = W_bin;
     }
 
-    double prev_nu_upper = nu_lower_first_initial;
+    // double prev_nu_upper = nu_lower_first_initial;
     // for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     // {
     //   const double J_bin = get_bin_J(modelgridindex,binindex);
