@@ -1119,7 +1119,7 @@ static void read_recombrate_file(void)
 }
 
 
-static void precalculate_ion_alpha_sp()
+static void precalculate_ion_alpha_sp(void)
 {
   for (int iter = 0; iter < TABLESIZE; iter++)
   {
