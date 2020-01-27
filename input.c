@@ -2280,7 +2280,7 @@ void read_parameterfile(int rank)
   else
   {
     pre_zseed = time(NULL);
-    printout("[debug] randomly-generated random number seed is %d\n", pre_zseed);
+    printout("[debug] randomly-generated random number seed is %lu\n", pre_zseed);
   }
 
   #ifdef _OPENMP
@@ -2291,7 +2291,7 @@ void read_parameterfile(int rank)
       /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
       /// to the thread-ID tid.
       unsigned long int zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
-      printout("rank %d: thread %d has zseed %d\n", rank, tid, zseed);
+      printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
       /// start by setting up the randon number generator
       rng = gsl_rng_alloc(gsl_rng_ran3);
       gsl_rng_set(rng, zseed);

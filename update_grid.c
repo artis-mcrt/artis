@@ -1083,7 +1083,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
       const time_t sys_time_start_update_abundances = time(NULL);
       update_abundances(n, nts, time_step[nts].mid);
       calculate_deposition_rate_density(n, nts);
-      printout("update_abundances for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_update_abundances);
+      printout("update_abundances for cell %d timestep %d took %ld seconds\n", n, nts, time(NULL) - sys_time_start_update_abundances);
 
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
@@ -1195,7 +1195,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
           solve_Te_nltepops(n, nts, titer, heatingcoolingrates);
         }
         #endif
-        printout("Temperature/NLTE solution for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_temperature_corrections);
+        printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", n, nts, time(NULL) - sys_time_start_temperature_corrections);
       }
 
       const float nne = get_nne(n);
@@ -1251,7 +1251,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
       // don't pass pointer to heatingcoolingrates because current populations and rates weren't used to determine T_e
       calculate_cooling_rates(n, NULL);
 
-      printout("calculate_kpkt_rates for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_calc_kpkt_rates);
+      printout("calculate_kpkt_rates for cell %d timestep %d took %ld seconds\n", n, nts, time(NULL) - sys_time_start_calc_kpkt_rates);
     }
     else if (opacity_case == 3)
     {
@@ -1281,7 +1281,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
         mps[tid] = cell_len_scale_b;
       }
     }
-    printout("update_grid_cell for cell %d timestep %d took %d seconds\n", n, nts, time(NULL) - sys_time_start_update_cell);
+    printout("update_grid_cell for cell %d timestep %d took %ld seconds\n", n, nts, time(NULL) - sys_time_start_update_cell);
   }
   else
   {
@@ -1326,13 +1326,13 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   setvbuf(thermal_file, NULL, _IOLBF, 1);
   */
 
-  //printout("[debug] update_grid: time before initialisation of heating file %d\n",time(NULL));
+  //printout("[debug] update_grid: time before initialisation of heating file %ld\n", time(NULL));
   //#ifndef FORCE_LTE
   //  sprintf(filename,"h%d-%d_heating_%.4d.out",m,titer,my_rank);
   //  heating_file = fopen_required(filename, "w")) == NULL);
   //  setvbuf(heating_file, NULL, _IOLBF, 1);
   //#endif
-  //printout("[debug] update_grid: heating file initialised %d\n",time(NULL));
+  //printout("[debug] update_grid: heating file initialised %ld\n", time(NULL));
 
   ///Calculate the critical opacity at which opacity_case 3 switches from a
   ///regime proportional to the density to a regime independent of the density
@@ -1340,7 +1340,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * time_step[m].mid;
   rho_crit = ME * CLIGHT * nucmass(NUCLIDE_NI56) / (PI * QE * QE * rho_crit_para * 3000e-8 * time_step[nts].mid);
   printout("update_grid: rho_crit = %g\n", rho_crit);
-  //printf("time %ld\n",time(NULL));
 
   // const double t_current = time_step[nts].start;
 
@@ -1434,7 +1433,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
           write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates);
         }
 
-        printout("writing estimators took %d seconds\n", time(NULL) - sys_time_start_write_estimators);
+        printout("writing estimators took %ld seconds\n", time(NULL) - sys_time_start_write_estimators);
       }
       else
       {
@@ -1985,7 +1984,7 @@ void write_grid_restart_data(const int timestep)
   nt_write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
-  printout("done in %d seconds.\n", time(NULL) - sys_time_start_write_restart);
+  printout("done in %ld seconds.\n", time(NULL) - sys_time_start_write_restart);
 }
 
 

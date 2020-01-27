@@ -223,7 +223,7 @@ void update_packets(const int nts, PKT *pkt)
   /// For 2D and 3D models sorting by the modelgrid cell's density should be most efficient
   qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
 
-  printout("start of parallel update_packets loop %d\n",time(NULL));
+  printout("start of parallel update_packets loop %ld\n", time(NULL));
   /// Initialise the OpenMP reduction target to zero
   #ifdef _OPENMP
     #pragma omp parallel
@@ -240,7 +240,7 @@ void update_packets(const int nts, PKT *pkt)
       if ((n % 10000 == 0) || n == npkts - 1)
       {
         // time_of_last_packet_printout = time(NULL);
-        printout("[debug] update_packets: updating packet %d for timestep %d at time %d...\n", n, nts, time(NULL));
+        printout("[debug] update_packets: updating packet %d for timestep %d at time %ld...\n", n, nts, time(NULL));
       }
 
       PKT *pkt_ptr = &pkt[n];
@@ -334,10 +334,10 @@ void update_packets(const int nts, PKT *pkt)
       //            n, pkt_ptr->interactions, nts);
 
     }
-    printout("last packet updated at %d\n",time(NULL));
+    printout("last packet updated at %ld\n", time(NULL));
   }
 
-  printout("end of update_packets parallel for loop %d\n",time(NULL));
+  printout("end of update_packets parallel for loop %ld\n", time(NULL));
 }
 
 

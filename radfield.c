@@ -1145,7 +1145,7 @@ static double delta_nu_bar(double T_R, void *paras)
   if (!isfinite(delta_nu_bar))
   {
     printout("delta_nu_bar is %g. nu_bar_planck_T_R %g nu_times_planck_numerical %g planck_integral_numerical %g nu_bar_estimator %g\n",
-             nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
+             delta_nu_bar, nu_bar_planck_T_R, nu_times_planck_numerical, planck_integral_numerical, nu_bar_estimator);
   }
 
   //double delta_nu_bar = nu_bar_planck_T_R / nu_bar_estimator - 1.0;

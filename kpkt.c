@@ -515,7 +515,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 
       printout("lower %g, %g, %g\n",cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)-1].contribution,cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution,cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)+1].contribution);
       int finalpos = get_coolinglistoffset(element,ion)+get_ncoolingterms(element,ion)-1;
-      printout("upper %g, %g, %g\n",cellhistory[tid].coolinglist[finalpos-1].contribution,cellhistory[tid].coolinglist[finalpos].contribution,cellhistory[tid].coolinglist[finalpos+1]);
+      printout("upper %g, %g, %g\n",cellhistory[tid].coolinglist[finalpos-1].contribution,cellhistory[tid].coolinglist[finalpos].contribution,cellhistory[tid].coolinglist[finalpos+1].contribution);
     }
 
 
@@ -689,7 +689,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
     {
       printout("[fatal] do_kpkt: coolinglist.type mismatch\n");
       printout("[fatal] do_kpkt: zrand %g, modelgrid[modelgridindex].totalcooling %g, coolingsum %g, i %d\n",zrand,modelgrid[modelgridindex].totalcooling,  coolingsum,i);
-      printout("[fatal] do_kpkt: COOLINGCUT %d, importantcoolingterms %d, tid %d\n",COOLINGCUT,importantcoolingterms,tid);
+      printout("[fatal] do_kpkt: COOLINGCUT %lg, importantcoolingterms %d, tid %d\n",COOLINGCUT,importantcoolingterms,tid);
       printout("[fatal] do_kpkt: cellhistory[tid].coolinglist[i].type %d\n",cellhistory[tid].coolinglist[i].type);
       printout("[fatal] do_kpkt: pkt_ptr->where %d, mgi %d\n",pkt_ptr->where,modelgridindex);
       abort();
