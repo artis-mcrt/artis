@@ -938,11 +938,13 @@ int main(int argc, char** argv)
     switch (opt)
     {
       case 'w':
+      {
         printout("Command line argument specifies wall time hours '%s', setting ", optarg);
         const float walltimehours = strtof(optarg, NULL);
         walltimelimitseconds = walltimehours * 3600;
         printout("walltimelimitseconds = %d\n", walltimelimitseconds);
         break;
+      }
 
       // case 'p':
       //   printout("Command line argument specifies number of packets '%s', setting ", optarg);
@@ -951,8 +953,10 @@ int main(int argc, char** argv)
       //   break;
 
       default:
+      {
         fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n", argv[0]);
         exit(EXIT_FAILURE);
+      }
     }
   }
 

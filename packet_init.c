@@ -54,7 +54,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
       break;
     }
   }
-  assert(decaypath != DECAYPATH_COUNT) // Failed to select pellet
+  assert(decaypath != DECAYPATH_COUNT); // Failed to select pellet
 
   #ifdef NO_INITIAL_PACKETS
   const double tdecaymin = tmin;

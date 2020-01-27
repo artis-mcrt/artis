@@ -1420,7 +1420,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo)
       {
-        heatingcoolingrates_t heatingcoolingrates = {0};
+        heatingcoolingrates_t heatingcoolingrates = {};
         update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
