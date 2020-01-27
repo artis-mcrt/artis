@@ -25,9 +25,18 @@ const bool MODE_GAMMA = true;
 const bool MODE_GAMMA = false;
 #endif
 
+int nprocs_exspec;
+bool do_emission_res;
+int nepkts;
+
+double dlognu;
+
+double dlogtlc;
+double dlogtlc_angle;
+
 
 // threadprivate variables
-FILE *restrict output_file;
+FILE *output_file;
 int tid;
 bool use_cellhist;
 bool neutral_flag;
@@ -108,8 +117,8 @@ int main(int argc, char** argv)
   printout("time after input %d\n", time(NULL));
   nprocs = nprocs_exspec;
 
-  PKT *pkts = malloc(npkts * sizeof(PKT));
-  EPKT *epkts = malloc(npkts * sizeof(EPKT));
+  PKT *pkts = (PKT *) malloc(npkts * sizeof(PKT));
+  EPKT *epkts = (EPKT *) malloc(npkts * sizeof(EPKT));
 
   if (epkts == NULL)
   {
@@ -167,13 +176,14 @@ int main(int argc, char** argv)
         /// Extract angle-averaged spectra and light curves
         if (!MODE_GAMMA)
         {
-          write_light_curve("light_curve.out", -1);
-          write_spectrum("spec.out", do_emission_res, "emission.out", "emissiontrue.out", "absorption.out");
+          write_light_curve((char *) "light_curve.out", -1);
+          write_spectrum((char *) "spec.out", do_emission_res, (char *) "emission.out",
+                         (char *) "emissiontrue.out", (char *) "absorption.out");
         }
         else
         {
-          write_light_curve("gamma_light_curve.out", -1);
-          write_spectrum("gamma_spec.out", do_emission_res, NULL, NULL, NULL);
+          write_light_curve((char *) "gamma_light_curve.out", -1);
+          write_spectrum((char *) "gamma_spec.out", do_emission_res, NULL, NULL, NULL);
         }
       }
       else
@@ -233,7 +243,7 @@ int main(int argc, char** argv)
 }
 
 
-extern inline int printout(const char *restrict format, ...);
+extern inline int printout(const char *format, ...);
 extern inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno);
 extern inline FILE *fopen_required(const char *filename, const char *mode);
 

@@ -14,6 +14,60 @@
 //#include <gsl/gsl_sf_expint.h>
 
 
+struct time
+{
+  double start; // time at start of this timestep.
+  double width; // Width of timestep.
+  double mid; // Mid time in step - computed logarithmically.
+  double gamma_dep; // cmf gamma ray energy deposition rate             ///ATOMIC
+  double positron_dep; // cmf positron energy deposition rate           ///ATOMIC
+  double cmf_lum; // cmf luminosity light curve                         ///ATOMIC
+  int pellet_decays; // Number of pellets that decay in this time step. ///ATOMIC
+};
+
+enum model_types {
+  RHO_UNIFORM = 1,  // Constant density.
+  RHO_1D_READ = 2,  // Read model.
+  RHO_2D_READ = 4,  // Read model.
+  RHO_3D_READ = 3,  // Read model.
+};
+
+enum ionstatscounters {
+  ION_COUNTER_RADRECOMB_MACROATOM = 0,
+  ION_COUNTER_RADRECOMB_KPKT = 1,
+  ION_COUNTER_RADRECOMB_ABSORBED = 2,
+  ION_COUNTER_RADRECOMB_ESCAPED = 3,
+  ION_COUNTER_BOUNDBOUND_MACROATOM = 4,
+  ION_COUNTER_BOUNDBOUND_ABSORBED = 5,
+  ION_COUNTER_NTION = 6,
+  ION_COUNTER_PHOTOION = 7,
+  ION_COUNTER_PHOTOION_FROMBOUNDFREE = 8,
+  ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT = 9,
+  ION_COUNTER_PHOTOION_FROMBFIONPLUSONE = 10,
+  ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO = 11,
+  ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE = 12,
+  ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL = 13,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUND = 14,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE = 15,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO = 16,
+  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE = 17,
+  ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC = 18,
+  ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB = 19,
+  ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC = 20,
+  ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB = 21,
+  ION_COUNTER_MACROATOM_ENERGYIN_RADEXC = 22,
+  ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION = 23,
+  ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC = 24,
+  ION_COUNTER_MACROATOM_ENERGYIN_COLLION = 25,
+  ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION = 27,
+  ION_COUNTER_MACROATOM_ENERGYIN_TOTAL = 28,
+  ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL = 29,
+  ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL = 30,
+  ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL = 31,
+  ION_COUNTER_COUNT = 32,
+};
+
+
 /// Coolinglist
 ///============================================================================
 enum coolingtype {
@@ -97,8 +151,8 @@ typedef struct groundphixslist_t
 
 typedef struct phixslist_t
 {
-  fullphixslist_t *restrict allcont;
-  groundphixslist_t *restrict groundcont;
+  fullphixslist_t *allcont;
+  groundphixslist_t *groundcont;
 } phixslist_t;
 
 enum packet_type {
@@ -299,14 +353,14 @@ typedef struct syn_ray
 
 typedef struct phixstarget_entry
 {
-  double *restrict spontrecombcoeff;
+  double *spontrecombcoeff;
   #if (!NO_LUT_PHOTOION)
-    double *restrict corrphotoioncoeff;
+    double *corrphotoioncoeff;
   #endif
   #if (!NO_LUT_BFHEATING)
-  double *restrict bfheating_coeff;
+  double *bfheating_coeff;
   #endif
-  double *restrict bfcooling_coeff;
+  double *bfcooling_coeff;
 
   double probability;        // fraction of phixs cross section leading to this final level
   int levelindex;         // index of upper ion level after photoionisation
@@ -321,8 +375,8 @@ typedef struct levellist_entry
   int nuptrans;
   int ndowntrans;
   double phixs_threshold;                    /// Energy of first point in the photion_xs table
-  phixstarget_entry *restrict phixstargets;  /// pointer to table of target states and probabilities
-  float *restrict photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
+  phixstarget_entry *phixstargets;  /// pointer to table of target states and probabilities
+  float *photoion_xs;               /// Pointer to a lookup-table providing photoionisation cross-sections for this level.
   int nphixstargets;                         /// length of phixstargets array:
   int stat_weight;                           /// Statistical weight of this level.
 
@@ -382,7 +436,7 @@ typedef struct ionlist_entry
 
 typedef struct elementlist_entry
 {
-  ionlist_entry *restrict ions;              /// Carries information for each ion: 0,1,...,nions-1
+  ionlist_entry *ions;              /// Carries information for each ion: 0,1,...,nions-1
   int nions;                                 /// Number of ions for the current element
   int anumber;                               /// Atomic number
 //  int uppermost_ion;                       /// Highest ionisation stage which has a decent population for a given cell
@@ -462,26 +516,26 @@ typedef struct
 typedef struct chlevels_struct
 {
   double processrates[MA_ACTION_COUNT];
-  double *restrict individ_rad_deexc;
-  double *restrict individ_internal_down_same;
-  double *restrict individ_internal_up_same;
-  chphixstargets_struct *restrict chphixstargets;
+  double *individ_rad_deexc;
+  double *individ_internal_down_same;
+  double *individ_internal_up_same;
+  chphixstargets_struct *chphixstargets;
 } chlevels_struct;
 
 typedef struct chions_struct
 {
-  chlevels_struct *restrict chlevels;              /// Pointer to the ions levellist.
+  chlevels_struct *chlevels;              /// Pointer to the ions levellist.
 } chions_struct;
 
 typedef struct chelements_struct
 {
-  chions_struct *restrict chions;                  /// Pointer to the elements ionlist.
+  chions_struct *chions;                  /// Pointer to the elements ionlist.
 } chelements_struct;
 
 typedef struct cellhistory_struct
 {
-  cellhistorycoolinglist_t *restrict coolinglist;    /// Cooling contributions by the different processes.
-  chelements_struct *restrict chelements;            /// Pointer to a nested list which helds compositional
+  cellhistorycoolinglist_t *coolinglist;    /// Cooling contributions by the different processes.
+  chelements_struct *chelements;            /// Pointer to a nested list which helds compositional
                                             /// information for all the elements=0,1,...,nelements-1
   int cellnumber;                           /// Identifies the cell the data is valid for.
   int bfheating_mgi;

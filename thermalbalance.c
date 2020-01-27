@@ -59,10 +59,10 @@ typedef struct
 #endif
 
 
-static double integrand_bfheatingcoeff_custom_radfield(double nu, void *restrict voidparas)
+static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
-  const gsl_integral_paras_bfheating *restrict const params = (gsl_integral_paras_bfheating *) voidparas;
+  const gsl_integral_paras_bfheating *const params = (gsl_integral_paras_bfheating *) voidparas;
 
   const int modelgridindex = params->modelgridindex;
   const double nu_edge = params->nu_edge;
@@ -494,7 +494,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 
     // one-dimensional gsl root solver, bracketing type
     const gsl_root_fsolver_type *solvertype = gsl_root_fsolver_brent;
-    gsl_root_fsolver *restrict T_e_solver = gsl_root_fsolver_alloc(solvertype);
+    gsl_root_fsolver *T_e_solver = gsl_root_fsolver_alloc(solvertype);
 
     gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
     const double fractional_accuracy = 1e-3;

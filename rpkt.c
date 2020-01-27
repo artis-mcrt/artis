@@ -358,7 +358,7 @@ static double get_event(
 }
 
 
-static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
+static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
 {
   const double nu = pkt_ptr->nu_cmf;
 
@@ -626,7 +626,7 @@ static void rpkt_event_continuum(PKT *restrict pkt_ptr, const double t_current, 
 }
 
 
-static void rpkt_event_boundbound(PKT *restrict pkt_ptr, const int mgi)
+static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
 {
   /// bound-bound transition occured
   /// activate macro-atom in corresponding upper-level. Actually all the information
@@ -699,7 +699,7 @@ static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
 }
 
 
-static double closest_transition_empty(PKT *restrict pkt_ptr)
+static double closest_transition_empty(PKT *pkt_ptr)
 /// for the propagation through empty cells
 /// here its possible that the packet jumps over several lines
 {
@@ -859,7 +859,7 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
 }
 
 
-double do_rpkt(PKT *restrict pkt_ptr, const double t1, const double t2)
+double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
   const int cellindex = pkt_ptr->where;
@@ -1241,7 +1241,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 }
 
 
-double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
+double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
 {
   // return -1.; // disable this functionality and speed up the code
 
@@ -1288,7 +1288,7 @@ double get_rpkt_escape_prob(PKT *restrict pkt_ptr, const double tstart)
 }
 
 
-void emitt_rpkt(PKT *restrict pkt_ptr, double t_current)
+void emitt_rpkt(PKT *pkt_ptr, double t_current)
 {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
@@ -1541,7 +1541,7 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 }
 
 
-void calculate_kappa_rpkt_cont(const PKT *restrict const pkt_ptr, const double t_current, const int modelgridindex)
+void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current, const int modelgridindex)
 {
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;

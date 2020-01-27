@@ -1,9 +1,10 @@
 #ifndef ATOMIC_H
 #define ATOMIC_H
 
+#include <assert.h>
 #include "sn3d.h"
 
-double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+extern double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
 int get_continuumindex(int element, int ion, int level, int upperionlevel);
 int get_phixtargetindex(const int element, const int ion, const int level, const int upperionlevel);

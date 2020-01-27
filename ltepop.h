@@ -4,7 +4,7 @@
 #include "atomic.h"
 #include "sn3d.h"
 
-double nne_solution_f(double x, void *restrict paras);
+double nne_solution_f(double x, void *paras);
 void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion);
 double phi(int element, int ion, int modelgridindex);
 double calculate_partfunct(int element, int ion, int modelgridindex);

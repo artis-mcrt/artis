@@ -10,7 +10,7 @@
 #include "vectors.h"
 
 
-static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const double t2, const int nts)
+static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, const int nts)
 // Master routine for moving packets around. When it called,
 //   it is given the time at start of inverval and at end - when it finishes,
 //   everything the packet does during this time should be sorted out.
@@ -106,7 +106,7 @@ static void packet_prop(PKT *restrict const pkt_ptr, const double t1, const doub
 
 
 static void update_pellet(
-  PKT *restrict pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double ts, const double tw)
+  PKT *pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double ts, const double tw)
 {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
@@ -178,7 +178,7 @@ static void update_pellet(
 }
 
 
-static int compare_packets_bymodelgriddensity(const void *restrict p1, const void *restrict p2)
+static int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
 {
   // <0 The element pointed by p1 goes before the element pointed by p2
   // 0  The element pointed by p1 is equivalent to the element pointed by p2
@@ -243,7 +243,7 @@ void update_packets(const int nts, PKT *pkt)
         printout("[debug] update_packets: updating packet %d for timestep %d at time %d...\n", n, nts, time(NULL));
       }
 
-      PKT *restrict pkt_ptr = &pkt[n];
+      PKT *pkt_ptr = &pkt[n];
       pkt_ptr->interactions = 0;
 
       // if (pkt_ptr->type == TYPE_ESCAPE)
@@ -341,11 +341,11 @@ void update_packets(const int nts, PKT *pkt)
 }
 
 
-/*static int compare_packets_byposition(const void *restrict p1, const void *restrict p2)
+/*static int compare_packets_byposition(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  const PKT *restrict a1 = (PKT *)(p1);
-  const PKT *restrict a2 = (PKT *)(p2);
+  const PKT *a1 = (PKT *)(p1);
+  const PKT *a2 = (PKT *)(p2);
 
   int cell_diff = a1->where - a2->where;
   if (cell_diff < 0)
@@ -357,11 +357,11 @@ void update_packets(const int nts, PKT *pkt)
 }
 
 
-static int compare_packets_bymodelgridposition(const void *restrict p1, const void *restrict p2)
+static int compare_packets_bymodelgridposition(const void *p1, const void *p2)
 /// Helper function to sort the phixslist by ascending threshold frequency.
 {
-  const PKT *restrict a1 = (PKT *)(p1);
-  const PKT *restrict a2 = (PKT *)(p2);
+  const PKT *a1 = (PKT *)(p1);
+  const PKT *a2 = (PKT *)(p2);
 
   int mgi_diff = cell[a1->where].modelgridindex - cell[a2->where].modelgridindex;
   if (mgi_diff < 0)

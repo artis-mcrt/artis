@@ -338,7 +338,7 @@ static double sample_planck(const double T)
 }
 
 
-double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
+double do_kpkt_bb(PKT *pkt_ptr, const double t1)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   //double nne = cell[pkt_ptr->where].nne ;
@@ -374,7 +374,7 @@ double do_kpkt_bb(PKT *restrict pkt_ptr, const double t1)
 }
 
 
-double do_kpkt(PKT *restrict pkt_ptr, double t1, double t2, int nts)
+double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 //{
 //  double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2);

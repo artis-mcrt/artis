@@ -12,7 +12,7 @@ extern inline double calculate_sahafact(int element, int ion, int level, int upp
 extern inline double ionstagepop(int modelgridindex, int element, int ion);
 
 
-double nne_solution_f(double x, void *restrict paras)
+double nne_solution_f(double x, void *paras)
 /// For libgsl bracketing type solver
 /// provides the equation which has to be solved to obtain the electron number
 /// density (passed by x)

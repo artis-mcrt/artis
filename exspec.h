@@ -7,9 +7,19 @@
 #define MNUBINS   1000
 #define MABINS    100
 #define MTBINS  200
-int nprocs_exspec;
-bool do_emission_res;
-int nepkts;
+
+extern int nprocs_exspec;
+extern bool do_emission_res;
+extern int nepkts;
+
+extern double dlognu;
+
+extern double dlogtlc;
+extern double dlogtlc_angle;
+
+extern struct specpol stokes_i[MTBINS];
+extern struct specpol stokes_q[MTBINS];
+extern struct specpol stokes_u[MTBINS];
 
 typedef struct
 {
@@ -18,10 +28,6 @@ typedef struct
   double *trueemission;
 } emstat_t;
 
-double dlognu;
-
-double dlogtlc;
-double dlogtlc_angle;
 
 ///Specpol
 
@@ -33,7 +39,7 @@ struct specpol
     float lower_time;
     float delta_t;
     emstat_t stat[MNUBINS];
-} stokes_i[MTBINS], stokes_q[MTBINS], stokes_u[MTBINS];
+};
 
 typedef struct
 {

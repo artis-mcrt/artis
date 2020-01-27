@@ -260,11 +260,11 @@ static void write_ratecoeff_dat(void)
 ///****************************************************************************
 /// The following functions define the integrands for these rate coefficients
 /// for use with libgsl integrators.
-static double alpha_sp_integrand_gsl(double nu, void *restrict voidparas)
+static double alpha_sp_integrand_gsl(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
+  const gslintegration_paras *const params = (gslintegration_paras *) voidparas;
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
   const double x = TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 2) * exp(-HOVERKB * nu / params->T);
@@ -277,11 +277,11 @@ static double alpha_sp_integrand_gsl(double nu, void *restrict voidparas)
 }
 
 
-static double alpha_sp_E_integrand_gsl(double nu, void *restrict voidparas)
+static double alpha_sp_E_integrand_gsl(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
 {
-  const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
+  const gslintegration_paras *const params = (gslintegration_paras *) voidparas;
 
   const double T = params->T;
   const double nu_edge = params->nu_edge;
@@ -322,11 +322,11 @@ static double alpha_sp_E_integrand_gsl(double nu, void *restrict voidparas)
 
 
 #if (!NO_LUT_PHOTOION)
-static double gammacorr_integrand_gsl(double nu, void *restrict voidparas)
+static double gammacorr_integrand_gsl(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
+  const gslintegration_paras *const params = (gslintegration_paras *) voidparas;
 
   const double T = params->T;
   const double nu_edge = params->nu_edge;
@@ -342,13 +342,13 @@ static double gammacorr_integrand_gsl(double nu, void *restrict voidparas)
 
 
 #if (!NO_LUT_BFHEATING)
-  static double approx_bfheating_integrand_gsl(double nu, void *restrict voidparas)
+  static double approx_bfheating_integrand_gsl(double nu, void *voidparas)
   /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
   /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
   /// formula. The radiation fields dependence on W is taken into account by multiplying
   /// the resulting expression with the correct W later on.
   {
-    const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
+    const gslintegration_paras *const params = (gslintegration_paras *) voidparas;
 
     const double T = params->T;
     const double nu_edge = params->nu_edge;
@@ -457,7 +457,7 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
 /// formula. The radiation fields dependence on W is taken into account by multiplying
 /// the resulting expression with the correct W later on.
 {
-  const gslintegration_paras *const restrict params = (gslintegration_paras *) voidparas;
+  const gslintegration_paras *const params = (gslintegration_paras *) voidparas;
 
   const double T = params->T;
   const double nu_edge = params->nu_edge;
@@ -1215,10 +1215,10 @@ void ratecoefficients_init(void)
 #endif
 
 
-static double integrand_stimrecombination_custom_radfield(const double nu, void *restrict voidparas)
+static double integrand_stimrecombination_custom_radfield(const double nu, void *voidparas)
 {
   {
-    const gsl_integral_paras_gammacorr *const restrict params = (gsl_integral_paras_gammacorr *) voidparas;
+    const gsl_integral_paras_gammacorr *const params = (gsl_integral_paras_gammacorr *) voidparas;
     const int modelgridindex = params->modelgridindex;
     const float T_e = params->T_e;
 
@@ -1314,11 +1314,11 @@ double get_stimrecombcoeff(int element, int lowerion, int level, int phixstarget
 }
 
 
-static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void *restrict voidparas)
+static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  const gsl_integral_paras_gammacorr *const restrict params = (gsl_integral_paras_gammacorr *) voidparas;
+  const gsl_integral_paras_gammacorr *const params = (gsl_integral_paras_gammacorr *) voidparas;
   const int modelgridindex = params->modelgridindex;
 
   #if (SEPARATE_STIMRECOMB)

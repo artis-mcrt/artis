@@ -87,7 +87,7 @@ struct collionrow {
 static struct collionrow *colliondata = NULL;
 static int colliondatacount = 0;
 
-static FILE *restrict nonthermalfile = NULL;
+static FILE *nonthermalfile = NULL;
 static bool nonthermal_initialized = false;
 
 static gsl_vector *envec;            // energy grid on which solution is sampled
