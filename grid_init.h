@@ -1,6 +1,7 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
+#include <assert.h>
 #include "sn3d.h"
 
 void grid_init(int my_rank);
@@ -215,6 +216,8 @@ inline void set_nnetot(int modelgridindex, float x)
 
 inline void set_ffegrp(int modelgridindex, float x)
 {
+  assert(x >= 0);
+  assert(x <= 1.);
   modelgrid[modelgridindex].ffegrp = x;
 }
 

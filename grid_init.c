@@ -62,6 +62,8 @@ float get_modelinitradioabund(const int modelgridindex, const enum radionuclides
 
 void set_modelinitradioabund(const int modelgridindex, const enum radionuclides nuclide_type, const float abund)
 {
+  assert(abund >= 0.);
+  assert(abund <= 1.);
   // this function replaces set_f56ni(mgi), set_fco56(mgi), etc.
 
   if ((nuclide_type == FAKE_GAM_LINE_ID && abund > 0) || nuclide_type >= RADIONUCLIDE_COUNT)
