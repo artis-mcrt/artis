@@ -1083,14 +1083,19 @@ int main(int argc, char** argv)
 
     grid_init(my_rank);
 
-    /// Next we want to initialise the packets.
-    /// To overcome memory limitations for large numbers of packets, which need to be
-    /// propagated on the _same_ grid, this middle_iteration loop was introduced.
-    for (int middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
+    printout("mem_usage: packets occupy %.1f MB\n", MPKTS * (sizeof(PKT *) + sizeof(packets)) / 1024. / 1024.);
+
+    if (!simulation_continued_from_saved)
     {
-      /// Create a bunch of npkts packets
-      /// and write them to a binary file for later readin.
-      packet_init(middle_iteration, my_rank, packets);
+      /// Next we want to initialise the packets.
+      /// To overcome memory limitations for large numbers of packets, which need to be
+      /// propagated on the _same_ grid, this middle_iteration loop was introduced.
+      for (int middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
+      {
+        /// Create a bunch of npkts packets
+        /// and write them to a binary file for later readin.
+        packet_init(middle_iteration, my_rank, packets);
+      }
     }
 
     /// For the parallelisation of update_grid, the process needs to be told which cells belong to it.
