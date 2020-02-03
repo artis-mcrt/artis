@@ -81,6 +81,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // according to: decay power at this time relative to the average decay power
     const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypath) / (tmax - tdecaymin);
     pkt_ptr->e_cmf = e0 * get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
+    // assert(pkt_ptr->e_cmf >= 0);
   }
 
   bool from_positron;
@@ -94,9 +95,10 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 }
 
 
-static void setup_packets(int pktnumberoffset, PKT *pkt)
+void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
+  const int pktnumberoffset = middle_iteration * npkts;
   float cont[MGRID + 1];
 
   /// The total number of pellets that we want to start with is just
@@ -114,34 +116,6 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
   printout("decayenergy(CR48), decayenergy(V48): %g %g\n", nucdecayenergy(NUCLIDE_CR48) / MEV, nucdecayenergy(NUCLIDE_V48) / MEV);
   printout("decayenergy(FE52), decayenergy(MN52): %g %g\n", nucdecayenergy(NUCLIDE_FE52) / MEV, nucdecayenergy(NUCLIDE_MN52) / MEV);
 
-  const double e0_tinf = etot_tinf / npkts / n_out_it / n_middle_it;
-  printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
-
-  // scale up the radioactive abundances to account for the missing masses in the model cells that are not associated with any propagation cells
-  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
-  {
-    if (totmassradionuclide[iso] <= 0)
-      continue;
-    double totmassradionuclide_actual = 0.;
-    for (int mgi = 0; mgi < npts_model; mgi++)
-    {
-      totmassradionuclide_actual += get_modelinitradioabund(mgi, (enum radionuclides) iso) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
-    }
-    const double ratio = totmassradionuclide[iso] / totmassradionuclide_actual;
-    if (totmassradionuclide_actual <= 0.)
-      continue;
-    // printout("nuclide %d ratio %g\n", iso, ratio);
-    for (int mgi = 0; mgi < npts_model; mgi++)
-    {
-      if (get_numassociatedcells(mgi) > 0)
-      {
-        const double prev_abund = get_modelinitradioabund(mgi, (enum radionuclides)(iso));
-        const double new_abund = prev_abund * ratio;
-        set_modelinitradioabund(mgi, (enum radionuclides)(iso), new_abund);
-      }
-    }
-  }
-
   double modelcell_decay_energy_density[npts_model];
   for (int mgi = 0; mgi < npts_model; mgi++)
   {
@@ -151,6 +125,9 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
       modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways)(i)) * MH;
     }
   }
+
+  const double e0_tinf = etot_tinf / npkts / n_out_it / n_middle_it;
+  printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
   // Need to get a normalisation factor.
   float norm = 0.0;
@@ -247,54 +224,6 @@ static void setup_packets(int pktnumberoffset, PKT *pkt)
     pkt[n].e_rf *= e_ratio;
   }
   printout("radioactive energy which will be freed during simulation time: %g erg\n", e_cmf_total);
-}
-
-
-void packet_init(int middle_iteration, int my_rank, PKT *pkt)
-{
-  printout("mem_usage: packets occupy %.1f MB\n", MPKTS * (sizeof(PKT *) + sizeof(PKT)) / 1024. / 1024.);
-  if (simulation_continued_from_saved)
-    return;
-
-  const int pktnumberoffset = middle_iteration * npkts;
-  setup_packets(pktnumberoffset, pkt);
-
-  /* Consistency check to debug read/write
-  PKT testpkt[MPKTS];
-  int n;
-  if (i > 0)
-  {
-  sprintf(filename,"packets%d_%d.tmp",i-1,my_rank);
-  packets_file = fopen_required(filename, "rb");
-  fread(&testpkt, sizeof(PKT), npkts, packets_file);
-  fclose(packets_file);
-
-  for (n=0; n<npkts; n++)
-  {
-  if (testpkt[n].number-pkt[n].number != 0) printout("fatal 1!!! %d, %d\n",testpkt[n].number,pkt[n].number);
-  if (testpkt[n].where-pkt[n].where != 0) printout("fatal 2!!!\n");      /// The grid cell that the packet is in.
-  if (testpkt[n].type-pkt[n].type != 0) printout("fatal 3!!!\n");       /// Identifies the type of packet (k-, r-, etc.)
-  if (testpkt[n].pos[0]-pkt[n].pos[0] != 0) printout("fatal 4!!!\n");  /// Position of the packet (x,y,z).
-  if (testpkt[n].pos[1]-pkt[n].pos[1] != 0) printout("fatal 5!!!\n");  /// Position of the packet (x,y,z).
-  if (testpkt[n].pos[2]-pkt[n].pos[2] != 0) printout("fatal 6 !!!\n");  /// Position of the packet (x,y,z).
-  if (testpkt[n].dir[0]-pkt[n].dir[0] != 0) printout("fatal 7!!!\n");  /// Direction of propagation. (x,y,z). Always a unit vector.
-  if (testpkt[n].dir[1]-pkt[n].dir[1] != 0) printout("fatal 8!!!\n");  /// Direction of propagation. (x,y,z). Always a unit vector.
-  if (testpkt[n].dir[2]-pkt[n].dir[2] != 0) printout("fatal 9!!!\n");  /// Direction of propagation. (x,y,z). Always a unit vector.
-  if (testpkt[n].last_cross-pkt[n].last_cross != 0) printout("fatal 10!!!\n"); /// To avoid rounding errors on cell crossing.
-  if (testpkt[n].tdecay-pkt[n].tdecay != 0) printout("fatal 11!!!\n");  /// Time at which pellet decays.
-  if (testpkt[n].e_cmf-pkt[n].e_cmf != 0) printout("fatal 12!!!\n");   /// The energy the packet carries in the co-moving frame.
-  if (testpkt[n].e_rf-pkt[n].e_rf != 0) printout("fatal 13!!!\n");    /// The energy the packet carries in the rest frame.
-  if (testpkt[n].nu_cmf-pkt[n].nu_cmf != 0) printout("fatal 14!!!\n");  /// The frequency in the co-moving frame.
-  if (testpkt[n].nu_rf-pkt[n].nu_rf != 0) printout("fatal 15!!!\n");   /// The frequency in the rest frame.
-  if (testpkt[n].escape_type-pkt[n].escape_type != 0) printout("fatal 16!!!\n"); /// Flag to tell us in which form it escaped from the grid.
-  if (testpkt[n].escape_time-pkt[n].escape_time != 0) printout("fatal 17!!!\n");
-  if (testpkt[n].scat_count-pkt[n].scat_count != 0) printout("fatal 18!!!\n");  /// WHAT'S THAT???
-  if (testpkt[n].next_trans-pkt[n].next_trans != 0) printout("fatal 19!!!\n");
-  if (testpkt[n].interactions-pkt[n].interactions != 0) printout("fatal 20!!!\n");/// debug: number of interactions the packet undergone
-  if (testpkt[n].last_event-pkt[n].last_event != 0) printout("fatal 21!!!\n");  /// debug: stores information about the packets history
-}
-}
-  */
 }
 
 

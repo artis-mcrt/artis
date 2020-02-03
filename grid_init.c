@@ -1148,26 +1148,29 @@ void grid_init(int my_rank)
     assign_temperature();
   }
 
-  /// Finally determine which cells are non-empty...
-  /*if ((nonemptycells = malloc(ngrid*sizeof(int))) == NULL)
+  // scale up the radioactive abundances to account for the missing masses in the model cells that are not associated with any propagation cells
+  for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
-    printout("[fatal] grid_init: not enough memory to initialize the list of non-empty cells\n");
-    abort();
-  }
-  i = 0;
-  for (n = 0; n < ngrid; n++)
-  {
-    if (cell[n].rho_init > MINDENSITY)
+    if (totmassradionuclide[iso] <= 0)
+      continue;
+    double totmassradionuclide_actual = 0.;
+    for (int mgi = 0; mgi < npts_model; mgi++)
     {
-      nonemptycells[i] = n;
-      i++;
+      totmassradionuclide_actual += get_modelinitradioabund(mgi, (enum radionuclides) iso) * get_rhoinit(mgi) * vol_init_modelcell(mgi);
+    }
+    if (totmassradionuclide_actual >= 0.)
+    {
+      const double ratio = totmassradionuclide[iso] / totmassradionuclide_actual;
+      // printout("nuclide %d ratio %g\n", iso, ratio);
+      for (int mgi = 0; mgi < npts_model; mgi++)
+      {
+        if (get_numassociatedcells(mgi) > 0)
+        {
+          const double prev_abund = get_modelinitradioabund(mgi, (enum radionuclides)(iso));
+          const double new_abund = prev_abund * ratio;
+          set_modelinitradioabund(mgi, (enum radionuclides)(iso), new_abund);
+        }
+      }
     }
   }
-  nnonemptycells = i;*/
-  /*  if ((nonemptycells = realloc(nonemptycells, nnonemptycells*sizeof(int))) == NULL)
-  {
-    printout("[fatal] grid_init: problem during reallocation of list of non-empty cells\n");
-    abort();
-  }
-  */
 }
