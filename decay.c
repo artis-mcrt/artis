@@ -202,7 +202,7 @@ double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, co
     // simple decay from initial abundances, e.g. Ni56 -> Co56
     while (tdecay <= tdecaymin || tdecay >= tdecaymax)
     {
-      const double zrand = gsl_rng_uniform(rng);
+      const double zrand = gsl_rng_uniform_pos(rng);
       tdecay = -meanlife1 * log(zrand);
     }
   }
@@ -212,8 +212,8 @@ double sample_decaytime(enum decaypathways decaypath, const double tdecaymin, co
     const double meanlife2 = meanlife(decaydaughter(decaypath));
     while (tdecay <= tdecaymin || tdecay >= tdecaymax)
     {
-      const double zrand = gsl_rng_uniform(rng);
-      const double zrand2 = gsl_rng_uniform(rng);
+      const double zrand = gsl_rng_uniform_pos(rng);
+      const double zrand2 = gsl_rng_uniform_pos(rng);
       tdecay = (-meanlife1 * log(zrand)) + (-meanlife2 * log(zrand2));
     }
   }
