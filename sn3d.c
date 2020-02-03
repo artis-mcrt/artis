@@ -1080,10 +1080,9 @@ int main(int argc, char** argv)
     /// and sizes of the grid cells.
     time_init();
     printout("time time init %ld\n", time(NULL));
-
     grid_init(my_rank);
 
-    printout("mem_usage: packets occupy %.1f MB\n", MPKTS * (sizeof(PKT *) + sizeof(packets)) / 1024. / 1024.);
+    printout("mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
 
     if (!simulation_continued_from_saved)
     {
