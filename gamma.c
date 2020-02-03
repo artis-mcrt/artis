@@ -537,7 +537,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
   {
     // Assign optical depth to next physical event. And start counter of
     // optical depth for this path.
-    double zrand = gsl_rng_uniform(rng);
+    double zrand = gsl_rng_uniform_pos(rng);
     const double tau_next = -1. * log(zrand);
     const double tau_current = 0.0;
 

@@ -884,7 +884,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
     //it++;
     // Assign optical depth to next physical event. And start counter of
     // optical depth for this path.
-    double zrand = gsl_rng_uniform(rng);
+    double zrand = gsl_rng_uniform_pos(rng);
     double tau_next = -1. * log(zrand);
 
     // Start by finding the distance to the crossing of the grid cell
