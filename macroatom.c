@@ -966,9 +966,10 @@ void macroatom_open_file(const int my_rank)
 
 void macroatom_close_file(void)
 {
-  if (!LOG_MACROATOM)
-    return;
-  fclose(macroatom_file);
+  if (LOG_MACROATOM)
+  {
+    fclose(macroatom_file);
+  }
 }
 
 

@@ -21,14 +21,10 @@ int closest_transition(const double nu_cmf, const int next_trans)
 {
   int match;
 
-  //int left = 0;
   int left = next_trans;
-  //printout("[debug] closest_transition: initial left %d\n",left);
   int right = nlines - 1;
   int middle = 1;
 
-  //printout("[debug] ___closest_transition___: initial left %d, right %d, nu_cmf %g\n",left,right,nu_cmf);
-  //printout("[debug] ___closest_transition___: nu_left %g, nu_right%g\n",linelist[left].nu,linelist[right].nu);
   /// if nu_cmf is smaller than the lowest frequency in the linelist,
   /// no line interaction is possible: return negative value as a flag
   if (nu_cmf < linelist[right].nu)
@@ -58,26 +54,6 @@ int closest_transition(const double nu_cmf, const int next_trans)
     /// otherwise go through the list until nu_cmf is located between two
     /// entries in the line list and get the index of the closest line
     /// to lower frequencies
-    /*
-    if (left > 0)
-    {
-      if ((linelist[left].nu-nu_cmf)/nu_cmf > 1e-8)
-      {
-        printout("[warning] closest_transition: search was executed for initial left > 0\n");
-        printout("[warning] closest_transition:   left %d, right %d\n",left,right);
-        //printf("[warning] closest_transition:   nu_cmf %25.16e, linelist[left].nu %25.16e,\n",nu_cmf, linelist[left].nu);
-        printout("[warning] closest_transition:   nu_cmf %g, linelist[left].nu %g,\n",nu_cmf, linelist[left].nu);
-        printout("[warning] closest_transition:   (linelist[left].nu-nu_cmf)/nu_cmf %g,\n",(linelist[left].nu-nu_cmf)/nu_cmf);
-        printout("[warning] closest_transition:   linelist[left-1].nu %g, linelist[left+1].nu %g,\n",linelist[left-1].nu, linelist[left+1].nu);
-        printout("[warning] closest_transition:   linelist[right].nu %g,\n",linelist[right].nu);
-        //printout("[warning] closest_transition:   propagationcounter %d,\n",propagationcounter);
-        printout("[warning] closest_transition:   pkt_ptr->last_event %d,\n",pkt_ptr->last_event);
-        printout("[warning] closest_transition:   pkt_ptr->number %d,\n",pkt_ptr->number);
-        if (nu_cmf >= linelist[left+1].nu) printout("[warning] closest_transition:   nu_cmf larger than next line\n");
-        else printout("[warning] closest_transition:   jump over several lines\n");
-      }
-    }
-    */
     while (left <= right)  ///must be a "<=" to obtain proper search results!!!
                           ///access to negative array indices is prevented by the upper check
     {
@@ -100,14 +76,6 @@ int closest_transition(const double nu_cmf, const int next_trans)
     }
     match = middle;
   }
-
-  /// read transition data out of the linelist and store it as the
-  /// next transition for this packet. To save memory it is stored
-  /// to the macro atoms state variables. This has no influence until
-  /// the macro atom becomes activated by rpkt_event.
-  //printout("[debug] closest_transition: next_trans %d\n",pkt_ptr->next_trans);
-  //printout("[debug] closest_transition: linelistindex %d corresponds to transition from level %d to level %d of ion %d of element %d\n",match,mastate[tid].level,pkt_ptr->nextrans_lower,mastate[tid].ion,mastate[tid].element);
-  //printout("[debug] closest_transition:   frequency of this transiton %g\n",nu_trans);
 
   /// return the transitions frequency
   return match;
@@ -132,7 +100,6 @@ static double get_event(
 
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
-  //propagationcounter = 0;
   bool endloop = false;
   calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
   const double kap_cont = kappa_rpkt_cont[tid].total;
@@ -151,8 +118,6 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:   line interaction possible\n");
       #endif
 
-      // const int lineindex = mastate[tid].activatingline;
-      // const int lineindex = dummypkt_ptr->next_trans - 1;
       const double nu_trans = linelist[lineindex].nu;
 
       // helper variable to overcome numerical problems after line scattering
@@ -850,11 +815,6 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
       #endif
 
     #endif
-
-    ///Heating estimators. These are only applicable for pure H. Other elements
-    ///need advanced treatment in thermalbalance calculation.
-    //cell[pkt_ptr->where].heating_ff += distance_e_cmf * kappa_rpkt_cont[tid].ffheating;
-    //cell[pkt_ptr->where].heating_bf += distance_e_cmf * kappa_rpkt_cont[tid].bfheating;
   }
 }
 
@@ -866,8 +826,6 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
   int mgi = cell[cellindex].modelgridindex;
 
   double t_current = t1; ///this will keep track of time in the calculation
-  //printout("[debug] r-pkt propagation init\n");
-  //int it = 1;
 
   bool end_packet = false; ///means "keep working"
   while (!end_packet)
@@ -880,8 +838,6 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       }
     #endif
 
-    //printout("[debug] r-pkt propagation iteration %d\n",it);
-    //it++;
     // Assign optical depth to next physical event. And start counter of
     // optical depth for this path.
     double zrand = gsl_rng_uniform_pos(rng);
@@ -943,11 +899,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
 
       double tdist = (t2 - t_current) * CLIGHT_PROP;
 
-      if (tdist < 0)
-      {
-        printout("[fatal] do_rpkt: Negative distance (tdist). Abort. \n");
-        abort();
-      }
+      assert(tdist >= 0);
 
       //if (cell[pkt_ptr->where].nne < 1e-40)
       //if (get_nne(cell[pkt_ptr->where].modelgridindex) < 1e-40)
@@ -988,12 +940,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
           }
         #endif
       }
-      if (edist < 0)
-      {
-        printout("[fatal] do_rpkt: Negative distance (edist). Abort. \n");
-        printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-        abort();
-      }
+      assert(edist >= 0);
       //printout("[debug] do_rpkt: sdist, tdist, edist %g, %g, %g\n",sdist,tdist,edist);
 
       if ((sdist < tdist) && (sdist < edist))
@@ -1022,12 +969,11 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
           const int cellindexnew = pkt_ptr->where;
           mgi = cell[cellindexnew].modelgridindex;
         }
-        #ifdef DEBUG_ON
-          /** New cell so reset the scat_counter */
-          pkt_ptr->scat_count = 0;
-          //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
-          pkt_ptr->last_event = pkt_ptr->last_event + 100;
-        #endif
+        // New cell so reset the scat_counter
+        pkt_ptr->scat_count = 0;
+        //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
+        pkt_ptr->last_event = pkt_ptr->last_event + 100;
+
         /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
         /// find the next possible line interaction.
         if (find_nextline)
@@ -1087,7 +1033,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         move_pkt(pkt_ptr, edist, t_current);
         edist = edist * 2.;
 
-        /** The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event*/
+        // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
         if (modelgrid[mgi].thick == 1)
         {
           rpkt_event_thickcell(pkt_ptr, t_current);
@@ -1107,7 +1053,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
 
         if (pkt_ptr->type != TYPE_RPKT)
         {
-          /** It's not an r-packet any more - return.*/
+          // It's not an r-packet any more - return.
           return t_current;
         }
       }
@@ -1207,7 +1153,6 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
         }
 
         const double t_line = t_future + ldist / CLIGHT;
-
         const double tau_line = get_tau_sobolev(mgi, lineindex, t_line);
 
         *tot_tau_lines += tau_line;
