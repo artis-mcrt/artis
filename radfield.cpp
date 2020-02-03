@@ -22,18 +22,6 @@ static bool radfield_initialized = false;
 //   FIT_CONSTANT = 1,
 // } enum_bin_fit_type;
 
-struct radfieldbin
-{
-  double J_raw;           // value needs to be multipled by J_normfactor to get the true value
-  double nuJ_raw;
-  int contribcount;
-
-  // these two parameters are used in the current timestep, but were calculated
-  // from the values of J and nuJ in the previous timestep
-  float W;                // dilution (scaling) factor
-  float T_R;              // radiation temperature
-  // enum_bin_fit_type fit_type;
-};
 
 static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequency boundaries of bins
 static struct radfieldbin *radfieldbins[MMODELGRID + 1];

@@ -46,4 +46,17 @@ inline double radfield_dbb(double nu, float T, float W)
 }
 
 
+struct radfieldbin
+{
+  double J_raw;           // value needs to be multipled by J_normfactor to get the true value
+  double nuJ_raw;
+  int contribcount;
+
+  // these two parameters are used in the current timestep, but were calculated
+  // from the values of J and nuJ in the previous timestep
+  float W;                // dilution (scaling) factor
+  float T_R;              // radiation temperature
+  // enum_bin_fit_type fit_type;
+};
+
 #endif //RADFIELD_H
