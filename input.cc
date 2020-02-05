@@ -14,6 +14,11 @@
   #include "exspec.h"
 #endif
 
+#if CUDA_ENABLED
+#include <cuda_runtime.h>
+#endif
+
+
 const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
 
 const int groundstate_index_in = 1; // starting level index in the input files
@@ -157,7 +162,12 @@ static void read_phixs_data_table(
   }
 
   mem_usage_phixs += NPHIXSPOINTS * sizeof(float);
-  if ((elements[element].ions[lowerion].levels[lowerlevel].photoion_xs = (float *) calloc(NPHIXSPOINTS, sizeof(float))) == NULL)
+#if CUDA_ENABLED
+  cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].photoion_xs, NPHIXSPOINTS * sizeof(float));
+#else
+  elements[element].ions[lowerion].levels[lowerlevel].photoion_xs = (float *) calloc(NPHIXSPOINTS, sizeof(float));
+#endif
+  if (elements[element].ions[lowerion].levels[lowerlevel].photoion_xs == NULL)
   {
     printout("[fatal] input: not enough memory to initialize photoion_xslist... abort\n");
     abort();

@@ -1396,6 +1396,15 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
 
+  #if CUDA_ENABLED
+    if (gammacorr > 0 && nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)
+    {
+      double gammacorr2 = calculate_corrphotoioncoeff_integral_gpu(modelgridindex, intparas.nu_edge, intparas.photoion_xs, intparas.departure_ratio, T_e);
+
+      printout("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %g GPU %g\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr2);
+    }
+  #endif
+
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
   return gammacorr;

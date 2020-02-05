@@ -61,7 +61,7 @@ else ifneq (, $(shell which mpicc))
 
   sn3d: CXXFLAGS += -DMPI_ON
 else
-	CXX = cc
+	CXX = c++
 	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 	LDFLAGS= -lgsl -lgslcblas -lm
 endif
@@ -82,7 +82,7 @@ sn3dopenmp: CXXFLAGS += -fopenmp
 sn3dopenmp: LDFLAGS += -lomp
 sn3dopenmp: sn3d
 
-sn3dcuda: CXXFLAGS += -DENABLE_CUDA
+sn3dcuda: CXXFLAGS += -DCUDA_ENABLED=true
 
 CXXFLAGS += -std=c++1y
 
@@ -105,6 +105,7 @@ sn3ddebug: clean version $(sn3d_objects)
 
 sn3dcuda: version $(sn3d_objects)
 	nvcc -ccbin=$(CXX) $(sn3d_objects) $(cuda_files) $(LDFLAGS) -o sn3d
+# -Xcompiler "$(CXXFLAGS)"
 
 exspec_files = exspec.cc grid_init.cc globals.cc input.cc vectors.cc packet_init.cc update_grid.cc update_packets.cc gamma.cc boundary.cc macroatom.cc decay.cc rpkt.cc kpkt.cc photo_electric.cc emissivities.cc grey_emissivities.cc ltepop.cc atomic.cc ratecoeff.cc thermalbalance.cc light_curve.cc spectrum.cc polarization.cc nltepop.cc radfield.cc nonthermal.cc vpkt.cc md5.cc
 
