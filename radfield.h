@@ -6,6 +6,11 @@
 #include "types.h"
 #include "sn3d.h"
 
+#if CUDA_ENABLED
+double radfield_gpu(double nu, int modelgridindex);
+double calculate_corrphotoioncoeff_integral_gpu(int modelgridindex, double nu_edge, float *photoion_xs, double departure_ratio, float T_e);
+#endif
+
 void radfield_zero_estimators(int modelgridindex);
 void radfield_jblue_init(void);
 void radfield_init(int my_rank);
@@ -38,6 +43,9 @@ int radfield_integrate(
   const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
   size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);
 
+
+extern double *radfieldbin_nu_upper; // array of upper frequency boundaries of bins, indexed by [binindex]
+extern struct radfieldbin **radfieldbins; // 2D array indexed by [modelgridindex][binindex]
 
 inline double radfield_dbb(double nu, float T, float W)
 // returns J_nu for a diluted black body

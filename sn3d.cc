@@ -30,6 +30,10 @@
 #include "version.h"
 #include "vpkt.h"
 
+#if CUDA_ENABLED
+#include <cuda_runtime.h>
+#endif
+
 const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 
 // threadprivate variables
@@ -980,6 +984,14 @@ int main(int argc, char** argv)
     printout("MPI enabled\n");
   #else
     printout("MPI disabled\n");
+  #endif
+
+  #if CUDA_ENABLED
+  printout("NVIDIA CUDA is enabled\n");
+  int deviceCount = 0;
+  assert(cudaGetDeviceCount(&deviceCount) == cudaSuccess);
+  printout("Detected %d CUDA capable device(s)\n", deviceCount);
+  assert(deviceCount > 0);
   #endif
 
   if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)

@@ -11,6 +11,9 @@
 #include "rpkt.h"
 #include "sn3d.h"
 
+#if CUDA_ENABLED
+#include <cuda_runtime.h>
+#endif
 
 static double J_normfactor[MMODELGRID + 1];
 
@@ -23,8 +26,8 @@ static bool radfield_initialized = false;
 // } enum_bin_fit_type;
 
 
-static double radfieldbin_nu_upper[RADFIELDBINCOUNT]; // array of upper frequency boundaries of bins
-static struct radfieldbin *radfieldbins[MMODELGRID + 1];
+double *radfieldbin_nu_upper; // array of upper frequency boundaries of bins, indexed by [binindex]
+struct radfieldbin **radfieldbins; // 2D array indexed by [modelgridindex][binindex]
 
 // ** Detailed lines - Jblue_lu estimators for selected lines
 
@@ -261,6 +264,44 @@ static int compare_integers(const void* a, const void* b)
 }
 
 
+static void radfield_allocate_cell(int modelgridindex, long *radfield_mem_usage)
+{
+  #if (DETAILED_BF_ESTIMATORS_ON)
+  {
+    bfrate_raw[modelgridindex] = (double *) calloc(nbfcontinua, sizeof(double));
+    prev_bfrate_normed[modelgridindex] = (float *) calloc(nbfcontinua, sizeof(float));
+
+    #if (DETAILED_BF_ESTIMATORS_BYTYPE)
+    bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(nbfcontinua, sizeof(struct bfratecontrib *));
+    bfrate_raw_bytype_size[modelgridindex] = (int *) calloc(nbfcontinua, sizeof(int));
+    for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
+    {
+      bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
+      bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
+    }
+    #endif
+  }
+  #endif
+
+#if CUDA_ENABLED
+  cudaMallocManaged(&radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin));
+#else
+  radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
+#endif
+
+  *radfield_mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
+  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  {
+    radfieldbins[modelgridindex][binindex].J_raw = 0.;
+    radfieldbins[modelgridindex][binindex].nuJ_raw = 0.;
+    radfieldbins[modelgridindex][binindex].contribcount = 0;
+    radfieldbins[modelgridindex][binindex].W = -1.;
+    radfieldbins[modelgridindex][binindex].T_R = -1.;
+    // radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTE_BLACKBODY;
+  }
+}
+
+
 void radfield_init(int my_rank)
 // this should be called only after the atomic data is in memory
 {
@@ -339,6 +380,14 @@ void radfield_init(int my_rank)
           "nuJ","J","J_nu_avg","ncontrib","T_R","W");
   fflush(radfieldfile);
 
+  #if CUDA_ENABLED
+     cudaMallocManaged(&radfieldbin_nu_upper, RADFIELDBINCOUNT * sizeof(double));
+     cudaMallocManaged(&radfieldbins, (MMODELGRID + 1) * sizeof(struct radfieldbin *));
+  #else
+    radfieldbin_nu_upper = (double *) calloc(RADFIELDBINCOUNT, sizeof(double));
+    radfieldbins = (struct radfieldbin *) malloc((MMODELGRID + 1) * sizeof(struct radfieldbin *));
+  #endif
+
   setup_bin_boundaries();
 
   long radfield_mem_usage = 0;
@@ -348,34 +397,7 @@ void radfield_init(int my_rank)
     // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
     if (get_numassociatedcells(modelgridindex) > 0)
     {
-      #if (DETAILED_BF_ESTIMATORS_ON)
-      {
-        bfrate_raw[modelgridindex] = (double *) calloc(nbfcontinua, sizeof(double));
-        prev_bfrate_normed[modelgridindex] = (float *) calloc(nbfcontinua, sizeof(float));
-
-        #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(nbfcontinua, sizeof(struct bfratecontrib *));
-        bfrate_raw_bytype_size[modelgridindex] = (int *) calloc(nbfcontinua, sizeof(int));
-        for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
-        {
-          bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
-          bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
-        }
-        #endif
-      }
-      #endif
-
-      radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
-      radfield_mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
-      {
-        radfieldbins[modelgridindex][binindex].J_raw = 0.;
-        radfieldbins[modelgridindex][binindex].nuJ_raw = 0.;
-        radfieldbins[modelgridindex][binindex].contribcount = 0;
-        radfieldbins[modelgridindex][binindex].W = -1.;
-        radfieldbins[modelgridindex][binindex].T_R = -1.;
-        // radfieldbins[modelgridindex][binindex].fit_type = FIT_DILUTE_BLACKBODY;
-      }
+      radfield_allocate_cell(modelgridindex, &radfield_mem_usage);
     }
   }
   printout("mem_usage: radiation field bins for non-empty cells occupy %.2f MB\n", radfield_mem_usage / 1024. / 1024.);
@@ -971,6 +993,14 @@ double radfield(double nu, int modelgridindex)
         // if (bin->fit_type == FIT_DILUTE_BLACKBODY)
         {
           const double J_nu = radfield_dbb(nu, bin->T_R, bin->W);
+          #if CUDA_ENABLED
+            // if (J_nu > 0)
+            // {
+            //   double J_nu_cuda = radfield_gpu(nu, modelgridindex);
+            //   printout("CUDA compare radfield cpu %g gpu %g\n", J_nu, J_nu_cuda);
+            // }
+          #endif
+
           return J_nu;
         }
         // else
@@ -2006,3 +2036,4 @@ int radfield_integrate(
   else
     return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
 }
+
