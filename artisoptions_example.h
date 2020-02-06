@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include "constants.h"
 
+
 // Number of energy packets per process (OpenMP threads share these pacekts)
 #define MPKTS 1000000
 
@@ -80,7 +81,7 @@ static const bool MULTIBIN_RADFIELD_MODEL_ON = true;
 
 #define RADFIELDBINCOUNT 256
 
-static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
+static const int FIRST_NLTE_RADFIELD_TIMESTEP = 5;
 
 static const double nu_lower_first_initial = (CLIGHT / (40000e-8)); // CLIGHT / ([lambda Angstroms]e-8)
 static const double nu_upper_last_initial = (CLIGHT /  (1085e-8));  // not including the very top super bin
@@ -92,7 +93,7 @@ static const double T_R_max = 250000;
 static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // store detailed bound-free rate estimators
-#define DETAILED_BF_ESTIMATORS_ON true
+#define DETAILED_BF_ESTIMATORS_ON false
 
 // if DETAILED_BF_ESTIMATORS_ON, then use BF estimators at the following timestep and later
 #define DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP 13

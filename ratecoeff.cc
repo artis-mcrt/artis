@@ -1401,7 +1401,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
     {
       double gammacorr2 = calculate_corrphotoioncoeff_integral_gpu(modelgridindex, intparas.nu_edge, intparas.photoion_xs, intparas.departure_ratio, T_e);
 
-      printout("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %g GPU %g\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr2);
+      printout("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr2);
     }
   #endif
 
