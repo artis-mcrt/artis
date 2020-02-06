@@ -12,7 +12,7 @@ __global__ void kernel_radfield(double nu, struct radfieldbin *radfieldbins_this
     const float bin_W = radfieldbins_thiscell[binindex].W;
     const double bin_nu_lower = binindex == 0 ? nu_lower_first_initial : radfieldbin_nu_upper[binindex - 1];
     const double bin_nu_upper = radfieldbin_nu_upper[binindex];
-    if (bin_nu_upper > nu && bin_nu_lower <= nu)
+    if (bin_nu_lower <= nu && bin_nu_upper > nu)
     {
         // printf("CUDAkernel: nu %lg binindex %d nu_lower %lg nu_upper %lg T_R %g W %g\n", nu, binindex, bin_nu_lower, bin_nu_upper, bin_T_R, bin_W);
         *radfieldjnu = bin_W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / bin_T_R);
@@ -54,32 +54,54 @@ __device__ double photoionization_crosssection_fromtable(float *photoion_xs, dou
 }
 
 
-// const int blocksize = 10;
+__device__ int select_bin(double nu, double *radfieldbin_nu_upper)
+{
+  // linear search one by one until found
+  if (nu >= radfieldbin_nu_upper[RADFIELDBINCOUNT - 1])
+    return -1; // out of range, nu higher than highest bin
+  else if (nu < nu_lower_first_initial)
+    return -2; // out of range, nu lower than lowest bin
+  else
+  {
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    {
+      if (radfieldbin_nu_upper[binindex] > nu)
+      {
+        return binindex;
+      }
+    }
 
-__global__ void kernel_corrphotoion_integral(
+    return -3;
+  }
+}
+
+const int integralsamplesperxspoint = 8;
+
+__global__ void kernel_corrphotoion_integral2(
   struct radfieldbin *radfieldbins_thiscell, double *radfieldbin_nu_upper, double nu_edge, float *photoion_xs,
-  double departure_ratio, float T_e, double *integral, int NPHIXSPOINTS, double NPHIXSNUINCREMENT)
+  double departure_ratio, float T_e, float *integral, int NPHIXSPOINTS, double NPHIXSNUINCREMENT)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  if (threadIdx.x >= RADFIELDBINCOUNT)
+  extern __shared__ double part_integral[];
+  // __shared__ double part_integral[integralsamplesperxspoint * 100];
+
+  if (threadIdx.x >= integralsamplesperxspoint || threadIdx.y >= NPHIXSPOINTS)
     return;
 
-  __shared__ double part_integral[RADFIELDBINCOUNT];
+  // const double last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
 
-  const int binindex = threadIdx.x;
+  const double nu = nu_edge * (1. + (NPHIXSNUINCREMENT * (threadIdx.y + (threadIdx.x / integralsamplesperxspoint))));
 
+  const int binindex = select_bin(nu, radfieldbin_nu_upper);
+  if (binindex < 0)
+    return;
   const float bin_T_R = radfieldbins_thiscell[binindex].T_R;
   const float bin_W = radfieldbins_thiscell[binindex].W;
-  const double bin_nu_lower = binindex == 0 ? nu_lower_first_initial : radfieldbin_nu_upper[binindex - 1];
-  const double bin_nu_upper = radfieldbin_nu_upper[binindex];
+  // const double bin_nu_lower = binindex == 0 ? nu_lower_first_initial : radfieldbin_nu_upper[binindex - 1];
+  // const double bin_nu_upper = radfieldbin_nu_upper[binindex];
 
-  const double delta_nu = (bin_nu_upper - bin_nu_lower);
-
-  // const int binpiece = blockIdx.x;
-  const int binpiece = 0;
-
-  const double nu = bin_nu_lower + binpiece * delta_nu;
+  const double delta_nu = nu_edge * (NPHIXSNUINCREMENT / integralsamplesperxspoint);
 
   #if (SEPARATE_STIMRECOMB)
     const double corrfactor = 1.0;
@@ -95,21 +117,31 @@ __global__ void kernel_corrphotoion_integral(
 
   const float sigma_bf = photoionization_crosssection_fromtable(photoion_xs, nu_edge, nu, NPHIXSPOINTS, NPHIXSNUINCREMENT);
 
-  part_integral[threadIdx.x] = ONEOVERH * sigma_bf / nu * Jnu * corrfactor * delta_nu;
+  part_integral[threadIdx.y * integralsamplesperxspoint + threadIdx.x] = ONEOVERH * sigma_bf / nu * Jnu * corrfactor * delta_nu;
 
   // printf("kernel_corrphotoion_integral sigma_bf %g T_e %g corrfactor %lg part_integral %g\n", sigma_bf, T_e, corrfactor, part_integral);
 
   __syncthreads();
 
-  // const int i = blockDim.x * blockIdx.x + threadIdx.x;
-
   if (threadIdx.x == 0)
   {
-    *integral = 0;
-    for (unsigned int s = 0; s < RADFIELDBINCOUNT; s++) // change to blockDim.x
+    for (unsigned int x = 1; x < integralsamplesperxspoint; x++)
     {
-      *integral = *integral + part_integral[s];
+      const int firstsampleindex = threadIdx.y * integralsamplesperxspoint;
+      part_integral[firstsampleindex] += part_integral[firstsampleindex + x];
     }
+  }
+
+  __syncthreads();
+
+  if (threadIdx.x == 0 && threadIdx.y == 0)
+  {
+    double total = 0.;
+    for (unsigned int y = 0; y < NPHIXSPOINTS; y++)
+    {
+      total += part_integral[y * integralsamplesperxspoint];
+    }
+    *integral = total;
   }
 
   __syncthreads();
@@ -127,7 +159,7 @@ double radfield_gpu(double nu, int modelgridindex)
     }
 
     // Launch a kernel on the GPU with one thread for each element.
-    dim3 threadsPerBlock(RADFIELDBINCOUNT, 1, 1);
+    dim3 threadsPerBlock(RADFIELDBINCOUNT, 10, 1);
     dim3 numBlocks(1, 1, 1);
 
     double *radfieldjnu;
@@ -168,18 +200,18 @@ double calculate_corrphotoioncoeff_integral_gpu(int modelgridindex, double nu_ed
         abort();
     }
 
-    // Launch a kernel on the GPU with one thread for each element.
-    dim3 threadsPerBlock(RADFIELDBINCOUNT, 1, 1);
-    dim3 numBlocks(1, 1, 1);
-
-    double *integral;
+    float *integral;
 
     cudaMallocManaged(&integral, sizeof(double));
     *integral = 0;
 
     cudaStatus = cudaDeviceSynchronize();
 
-    kernel_corrphotoion_integral<<<numBlocks, threadsPerBlock>>>(
+    dim3 threadsPerBlock(integralsamplesperxspoint, NPHIXSPOINTS, 1);
+    dim3 numBlocks(1, 1, 1);
+    size_t sharedsize = sizeof(double) * NPHIXSPOINTS * integralsamplesperxspoint;
+
+    kernel_corrphotoion_integral<<<numBlocks, threadsPerBlock, sharedsize>>>(
       radfieldbins[modelgridindex], radfieldbin_nu_upper, nu_edge, photoion_xs, departure_ratio, T_e, integral, NPHIXSPOINTS, NPHIXSNUINCREMENT);
 
     // Check for any errors launching the kernel
