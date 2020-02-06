@@ -1378,33 +1378,38 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   intparas.departure_ratio = departure_ratio;
 #endif
 
-  gsl_function F_gammacorr;
-  F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
-  F_gammacorr.params = &intparas;
-  double error = 0.0;
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
   double gammacorr = 0.0;
-  const int status = gsl_integration_qag(
-    &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
 
-  gsl_set_error_handler(previous_handler);
-
-  if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning))
+#if CUDA_ENABLED
+  if (nts_global > FIRST_NLTE_RADFIELD_TIMESTEP) //  && element == 0 && ion == 0 && level >= 1150 && level <= 1200
   {
-    printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
-             status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
+    gammacorr = calculate_corrphotoioncoeff_integral_gpu(modelgridindex, intparas.nu_edge, intparas.photoion_xs, intparas.departure_ratio, T_e);
+
+    // printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr2);
+  }
+  else
+#else
+  {
+    gsl_function F_gammacorr;
+    F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
+    F_gammacorr.params = &intparas;
+    double error = 0.0;
+
+    gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+    const int status = gsl_integration_qag(
+      &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
+
+    gsl_set_error_handler(previous_handler);
+
+    if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning))
+    {
+      printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
+               status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
+    }
   }
 
-  #if CUDA_ENABLED
-    if (gammacorr > 0 && nts_global > FIRST_NLTE_RADFIELD_TIMESTEP) //  && element == 0 && ion == 0 && level >= 1150 && level <= 1200
-    {
-      double gammacorr2 = calculate_corrphotoioncoeff_integral_gpu(modelgridindex, intparas.nu_edge, intparas.photoion_xs, intparas.departure_ratio, T_e);
-
-      printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr2);
-    }
-  #endif
+#endif
 
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
