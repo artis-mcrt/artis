@@ -7,7 +7,6 @@
 #include "sn3d.h"
 
 #if CUDA_ENABLED
-double radfield_gpu(double nu, int modelgridindex);
 double calculate_corrphotoioncoeff_integral_gpu(int modelgridindex, double nu_edge, float *photoion_xs, double departure_ratio, float T_e);
 #endif
 
