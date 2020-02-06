@@ -1,6 +1,6 @@
 #include <string.h>
 #include <gsl/gsl_integration.h>
-#define  _XOPEN_SOURCE
+// #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <stdio.h>
 #include "md5.h"
@@ -1398,11 +1398,11 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   }
 
   #if CUDA_ENABLED
-    if (gammacorr > 0 && nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP)
+    if (gammacorr > 0 && nts_global > FIRST_NLTE_RADFIELD_TIMESTEP) //  && element == 0 && ion == 0 && level >= 1150 && level <= 1200
     {
       double gammacorr2 = calculate_corrphotoioncoeff_integral_gpu(modelgridindex, intparas.nu_edge, intparas.photoion_xs, intparas.departure_ratio, T_e);
 
-      printout("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr2);
+      printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr2);
     }
   #endif
 
