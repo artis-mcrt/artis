@@ -43,9 +43,6 @@ int radfield_integrate(
   size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);
 
 
-extern double *radfieldbin_nu_upper; // array of upper frequency boundaries of bins, indexed by [binindex]
-extern struct radfieldbin **radfieldbins; // 2D array indexed by [modelgridindex][binindex]
-
 inline double radfield_dbb(double nu, float T, float W)
 // returns J_nu for a diluted black body
 {

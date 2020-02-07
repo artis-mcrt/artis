@@ -2,6 +2,10 @@
 #include "radfield.h"
 #include "artisoptions.h"
 
+extern double *radfieldbin_nu_upper;
+extern struct radfieldbin **radfieldbins;
+
+
 __global__ void kernel_radfield(double nu, struct radfieldbin *radfieldbins_thiscell, double *radfieldbin_nu_upper, double *radfieldjnu)
 {
     const int binindex = threadIdx.x + blockIdx.x * blockDim.x;
