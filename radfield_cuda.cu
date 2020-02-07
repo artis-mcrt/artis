@@ -2,8 +2,8 @@
 #include "radfield.h"
 #include "artisoptions.h"
 
-extern double *radfieldbin_nu_upper;
-extern struct radfieldbin **radfieldbins;
+extern double *dev_radfieldbin_nu_upper;
+extern struct radfieldbin **dev_radfieldbins;
 
 
 __global__ void kernel_radfield(double nu, struct radfieldbin *radfieldbins_thiscell, double *radfieldbin_nu_upper, double *radfieldjnu)
@@ -174,48 +174,6 @@ __global__ void kernel_corrphotoion_integral(
 }
 
 
-double radfield_gpu(double nu, int modelgridindex)
-{
-    cudaError_t cudaStatus;
-
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaSetDevice failed. CUDA-capable GPU installed?");
-        abort();
-    }
-
-    // Launch a kernel on the GPU with one thread for each element.
-    dim3 threadsPerBlock(RADFIELDBINCOUNT, 10, 1);
-    dim3 numBlocks(1, 1, 1);
-
-    double *radfieldjnu;
-
-    cudaMallocManaged(&radfieldjnu, sizeof(double));
-    *radfieldjnu = 0;
-
-    kernel_radfield<<<numBlocks, threadsPerBlock>>>(nu, radfieldbins[modelgridindex], radfieldbin_nu_upper, radfieldjnu);
-
-    // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "kernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-        abort();
-    }
-
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        abort();
-    }
-
-    double result = *radfieldjnu;
-    cudaFree(radfieldjnu);
-    return result;
-}
-
-
 double calculate_corrphotoioncoeff_integral_gpu(int modelgridindex, double nu_edge, float *photoion_xs, double departure_ratio, float T_e)
 {
     cudaError_t cudaStatus;
@@ -239,7 +197,7 @@ double calculate_corrphotoioncoeff_integral_gpu(int modelgridindex, double nu_ed
     size_t sharedsize = sizeof(double) * NPHIXSPOINTS * integralsamplesperxspoint;
 
     kernel_corrphotoion_integral<<<numBlocks, threadsPerBlock, sharedsize>>>(
-      radfieldbins[modelgridindex], radfieldbin_nu_upper, nu_edge, photoion_xs, departure_ratio, T_e, (double *) dev_integral, NPHIXSPOINTS, NPHIXSNUINCREMENT);
+      dev_radfieldbins[modelgridindex], dev_radfieldbin_nu_upper, nu_edge, photoion_xs, departure_ratio, T_e, (double *) dev_integral, NPHIXSPOINTS, NPHIXSNUINCREMENT);
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError();
