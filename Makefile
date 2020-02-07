@@ -91,6 +91,8 @@ ifneq (,$(findstring jakita,$(HOSTNAME)))
 endif
 
 CXXFLAGS += -std=c++1y
+# CXXFLAGS += -fPIC -shared
+# CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
 
 
 ### use pg when you want to use gprof the profiler
