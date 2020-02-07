@@ -15,14 +15,14 @@ __global__ void kernel_radfield(double nu, struct radfieldbin *radfieldbins_this
     const double bin_nu_upper = radfieldbin_nu_upper[binindex];
     if (bin_nu_lower <= nu && bin_nu_upper > nu)
     {
-        // printf("CUDAkernel: nu %lg binindex %d nu_lower %lg nu_upper %lg T_R %g W %g\n", nu, binindex, bin_nu_lower, bin_nu_upper, bin_T_R, bin_W);
-        *radfieldjnu = bin_W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / bin_T_R);
-        // printf("    radfieldjnu %g\n", *radfieldjnu);
+      // printf("CUDAkernel: nu %lg binindex %d nu_lower %lg nu_upper %lg T_R %g W %g\n", nu, binindex, bin_nu_lower, bin_nu_upper, bin_T_R, bin_W);
+      *radfieldjnu = bin_W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / bin_T_R);
+      // printf("    radfieldjnu %g\n", *radfieldjnu);
     }
 }
 
 
-__device__ double photoionization_crosssection_fromtable_gpu(float *photoion_xs, double nu_edge, double nu, int NPHIXSPOINTS, double NPHIXSNUINCREMENT)
+__device__ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu, int NPHIXSPOINTS, double NPHIXSNUINCREMENT)
 /// Calculates the photoionisation cross-section at frequency nu out of the atomic data.
 /// Input: - edge frequency nu_edge of the desired bf-continuum
 ///        - nu
@@ -121,14 +121,14 @@ __global__ void kernel_corrphotoion_integral(
           corrfactor = 0.;
       #endif
 
-      // printf("kernel_corrphotoion_integral: nu %lg binindex %d nu_lower %lg nu_upper %lg T_R %g W %g\n", nu, binindex, bin_nu_lower, bin_nu_upper, bin_T_R, bin_W);
-
-
-      const float sigma_bf = photoionization_crosssection_fromtable_gpu(photoion_xs, nu_edge, nu, NPHIXSPOINTS, NPHIXSNUINCREMENT);
+      const float sigma_bf = photoionization_crosssection_fromtable(photoion_xs, nu_edge, nu, NPHIXSPOINTS, NPHIXSNUINCREMENT);
 
       const int lastsampleindex = (NPHIXSPOINTS - 1) * integralsamplesperxspoint + (integralsamplesperxspoint - 1);
 
-      // Simpson rule integral (will later be divided by 3)
+      // Simpson's rule integral (will later be divided by 3)
+      // n must be odd
+      // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
+      // weights e.g., 1,4,2,4,2,4,1
       double weight = 0.;
       if (sampleindex == 0 || sampleindex == lastsampleindex)
       {
