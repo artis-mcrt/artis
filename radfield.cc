@@ -29,6 +29,11 @@ static bool radfield_initialized = false;
 double *radfieldbin_nu_upper; // array of upper frequency boundaries of bins, indexed by [binindex]
 struct radfieldbin **radfieldbins; // 2D array indexed by [modelgridindex][binindex]
 
+#if CUDA_ENABLED
+double *dev_radfieldbin_nu_upper;
+struct radfieldbin **dev_radfieldbins;
+#endif
+
 // ** Detailed lines - Jblue_lu estimators for selected lines
 
 struct Jb_lu_estimator
@@ -283,11 +288,10 @@ static void radfield_allocate_cell(int modelgridindex, long *radfield_mem_usage)
   }
   #endif
 
-#if CUDA_ENABLED
-  cudaMallocManaged(&radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin));
-#else
+  #if CUDA_ENABLED
+  cudaMalloc(&dev_radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin));
+  #endif
   radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
-#endif
 
   *radfield_mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -380,15 +384,19 @@ void radfield_init(int my_rank)
           "nuJ","J","J_nu_avg","ncontrib","T_R","W");
   fflush(radfieldfile);
 
-  #if CUDA_ENABLED
-     cudaMallocManaged(&radfieldbin_nu_upper, RADFIELDBINCOUNT * sizeof(double));
-     cudaMallocManaged(&radfieldbins, (MMODELGRID + 1) * sizeof(struct radfieldbin *));
-  #else
-    radfieldbin_nu_upper = (double *) calloc(RADFIELDBINCOUNT, sizeof(double));
-    radfieldbins = (struct radfieldbin **) malloc((MMODELGRID + 1) * sizeof(struct radfieldbin *));
-  #endif
+  radfieldbin_nu_upper = (double *) calloc(RADFIELDBINCOUNT, sizeof(double));
+  radfieldbins = (struct radfieldbin **) malloc((MMODELGRID + 1) * sizeof(struct radfieldbin *));
 
   setup_bin_boundaries();
+
+  #if CUDA_ENABLED
+  cudaError_t cudaStatus;
+  cudaMalloc(&dev_radfieldbin_nu_upper, RADFIELDBINCOUNT * sizeof(double));
+  cudaMemcpy(dev_radfieldbin_nu_upper, radfieldbin_nu_upper, RADFIELDBINCOUNT * sizeof(double), cudaMemcpyHostToDevice);
+
+  // array of device pointers
+  dev_radfieldbins = (struct radfieldbin **) malloc((MMODELGRID + 1) * sizeof(struct radfieldbin *));
+  #endif
 
   long radfield_mem_usage = 0;
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
@@ -739,11 +747,19 @@ void radfield_close_file(void)
   {
     fclose(radfieldfile);
 
+    free(radfieldbin_nu_upper);
+    #if CUDA_ENABLED
+    cudaFree(dev_radfieldbin_nu_upper);
+    #endif
+
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
         free(radfieldbins[modelgridindex]);
+        #if CUDA_ENABLED
+        free(dev_radfieldbins[modelgridindex]);
+        #endif
         #if (DETAILED_BF_ESTIMATORS_ON)
         free(bfrate_raw[modelgridindex]);
         free(prev_bfrate_normed[modelgridindex]);
@@ -1400,6 +1416,10 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       radfieldbins[modelgridindex][binindex].T_R = T_R_bin;
       radfieldbins[modelgridindex][binindex].W = W_bin;
     }
+
+    #if CUDA_ENABLED
+    cudaMemcpy(dev_radfieldbins[modelgridindex], radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin), cudaMemcpyHostToDevice);
+    #endif
 
     double prev_nu_upper = nu_lower_first_initial;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
