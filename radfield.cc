@@ -580,7 +580,7 @@ static inline
 double get_bin_nu_lower(int binindex)
 {
   if (binindex > 0)
-    return radfieldbin_nu_upper[binindex - 1];
+    return get_bin_nu_upper(binindex - 1);
   else
     return nu_lower_first_initial;
 }
@@ -611,7 +611,7 @@ static inline
 int select_bin(double nu)
 {
   // linear search one by one until found
-  if (nu >= radfieldbin_nu_upper[RADFIELDBINCOUNT - 1])
+  if (nu >= get_bin_nu_upper(RADFIELDBINCOUNT - 1))
     return -1; // out of range, nu higher than highest bin
   else if (nu < get_bin_nu_lower(0))
     return -2; // out of range, nu lower than lowest bin
@@ -619,7 +619,7 @@ int select_bin(double nu)
   {
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      if (radfieldbin_nu_upper[binindex] > nu)
+      if (get_bin_nu_upper(binindex) > nu)
       {
         return binindex;
       }
@@ -631,7 +631,7 @@ int select_bin(double nu)
     // while (low <= high)
     // {
     //   int mid = low + ((high - low) / 2);
-    //   if (radfieldbin_nu_upper[mid] <= nu)
+    //   if (get_bin_nu_upper(mid) <= nu)
     //   {
     //     low = mid + 1;
     //   }
@@ -902,14 +902,14 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
   if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     // int binindex = 0;
-    // if (nu_cmf <= get_bin_nu_lower(modelgridindex,binindex))
+    // if (nu_cmf <= get_bin_nu_lower(binindex))
     // {
     //   #ifdef DEBUG_ON
     //   printout("radfield: Extending nu_lower_first from %g down to %g\n",nu_lower_first,nu_cmf);
     //   #endif
     //   nu_lower_first = nu_cmf;
     // }
-    // else if (nu_cmf > radfieldbin_nu_upper[modelgridindex][RADFIELDBINCOUNT - 1])
+    // else if (nu_cmf > get_bin_nu_upper(RADFIELDBINCOUNT - 1))
     // {
     //   binindex = RADFIELDBINCOUNT - 1;
     //   #ifdef DEBUG_ON
@@ -1772,7 +1772,7 @@ void radfield_write_restart_data(FILE *gridsave_file)
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
-      fprintf(gridsave_file,"%d %lg\n", binindex, radfieldbin_nu_upper[binindex]);
+      fprintf(gridsave_file,"%d %lg\n", binindex, get_bin_nu_upper(binindex));
     }
   }
 
