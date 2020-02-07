@@ -385,7 +385,7 @@ void radfield_init(int my_rank)
      cudaMallocManaged(&radfieldbins, (MMODELGRID + 1) * sizeof(struct radfieldbin *));
   #else
     radfieldbin_nu_upper = (double *) calloc(RADFIELDBINCOUNT, sizeof(double));
-    radfieldbins = (struct radfieldbin *) malloc((MMODELGRID + 1) * sizeof(struct radfieldbin *));
+    radfieldbins = (struct radfieldbin **) malloc((MMODELGRID + 1) * sizeof(struct radfieldbin *));
   #endif
 
   setup_bin_boundaries();
