@@ -52,14 +52,14 @@ else ifneq (, $(shell which mpicc))
 	# any other system which has mpicc available (Juwels, Cambridge, Gadi, etc)
 
 	CXX = mpicc
- 	CXXFLAGS = -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
- 	LDFLAGS= -lgsl -lgslcblas -lm
+	CXXFLAGS = -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
+	LDFLAGS= -lgsl -lgslcblas -lm
 
 	ifeq (,$(findstring raijin,$(HOSTNAME)))
-    LDFLAGS += -lgslcblas
+		LDFLAGS += -lgslcblas
 	endif
 
-  sn3d: CXXFLAGS += -DMPI_ON
+	sn3d: CXXFLAGS += -DMPI_ON
 else
 	CXX = c++
 	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
@@ -84,8 +84,11 @@ sn3dopenmp: sn3d
 
 sn3dcuda: CXXFLAGS += -DCUDA_ENABLED=true
 
-# Tesla K80 (QUB ARC Jakita)
-CUDAFLAGS = -gencode=arch=compute_37,code=sm_37 -gencode=arch=compute_37,code=compute_37
+# QUB ARC jakita.starfleet
+ifneq (,$(findstring jakita,$(HOSTNAME)))
+	# Tesla K80
+	CUDA_NVCC_FLAGS += --gpu-architecture=sm_37
+endif
 
 CXXFLAGS += -std=c++1y
 
@@ -98,6 +101,8 @@ sn3d_objects = sn3d.o atomic.o boundary.o emissivities.o gamma.o globals.o grey_
 
 cuda_files = radfield_cuda.cu
 
+cuda_objects = radfield_cuda.o
+
 all: sn3d exspec
 
 sn3d: clean version
@@ -107,8 +112,11 @@ sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
 sn3dcuda: version $(sn3d_objects)
-	nvcc $(CUDAFLAGS) -ccbin=$(CXX) $(sn3d_objects) $(cuda_files) $(LDFLAGS) -o sn3d
+	nvcc $(CUDA_NVCC_FLAGS) -ccbin=$(CXX) $(sn3d_objects) $(cuda_files) $(LDFLAGS) -o sn3d
 # -Xcompiler "$(CXXFLAGS)"
+
+%.o: %.cc
+	$(CXX) -c $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $< -o $@
 
 exspec_files = exspec.cc grid_init.cc globals.cc input.cc vectors.cc packet_init.cc update_grid.cc update_packets.cc gamma.cc boundary.cc macroatom.cc decay.cc rpkt.cc kpkt.cc photo_electric.cc emissivities.cc grey_emissivities.cc ltepop.cc atomic.cc ratecoeff.cc thermalbalance.cc light_curve.cc spectrum.cc polarization.cc nltepop.cc radfield.cc nonthermal.cc vpkt.cc md5.cc
 
