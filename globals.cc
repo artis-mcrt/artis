@@ -115,8 +115,8 @@ int importantcoolingterms;
 phixslist_t *phixslist;
 int nbfcontinua;
 int nbfcontinua_ground; ///number of bf-continua
-int NPHIXSPOINTS;
-double NPHIXSNUINCREMENT;
+__managed__ int NPHIXSPOINTS;
+__managed__ double NPHIXSNUINCREMENT;
 
 cellhistory_struct *cellhistory;
 
