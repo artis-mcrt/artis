@@ -1315,6 +1315,7 @@ double get_stimrecombcoeff(int element, int lowerion, int level, int phixstarget
 }
 
 
+__host__ __device__
 static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
@@ -1341,6 +1342,130 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 }
 
 
+#if CUDA_ENABLED
+
+const int integralsamplesperxspoint = 8; // must be an even number for Simpsons rule to work
+
+__global__ void kernel_corrphotoion_integral(
+  gsl_integral_paras_gammacorr *intparas, double *integral)
+/// Integrand to calculate the rate coefficient for photoionization
+/// using gsl integrators. Corrected for stimulated recombination.
+{
+  extern __shared__ double part_integral[];
+  // __shared__ double part_integral[integralsamplesperxspoint * 100];
+
+  if (threadIdx.x < integralsamplesperxspoint && threadIdx.y < NPHIXSPOINTS)
+  {
+    // const double last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
+
+    const double nu = nu_edge * (1. + (NPHIXSNUINCREMENT * (threadIdx.y + (threadIdx.x / integralsamplesperxspoint))));
+
+    const int sampleindex = threadIdx.y * integralsamplesperxspoint + threadIdx.x;
+
+    const int lastsampleindex = (NPHIXSPOINTS - 1) * integralsamplesperxspoint + (integralsamplesperxspoint - 1);
+
+    // Simpson's rule integral (will later be divided by 3)
+    // n must be odd
+    // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
+    // weights e.g., 1,4,2,4,2,4,1
+    double weight = 0.;
+    if (sampleindex == 0 || sampleindex == lastsampleindex)
+    {
+      weight = 1.;
+    }
+    else if (sampleindex % 2 == 0)
+    {
+      weight = 2.;
+    }
+    else
+    {
+      weight = 4.;
+    }
+
+    const double delta_nu = nu_edge * (NPHIXSNUINCREMENT / integralsamplesperxspoint);
+
+    const double integrand = integrand_corrphotoioncoeff_custom_radfield(nu, intparas);
+
+    part_integral[sampleindex] = weight * integrand * delta_nu;
+  }
+
+  __syncthreads();
+
+  if (threadIdx.x == 0)
+  {
+    for (unsigned int x = 1; x < integralsamplesperxspoint; x++)
+    {
+      const int firstsampleindex = threadIdx.y * integralsamplesperxspoint;
+      part_integral[firstsampleindex] += part_integral[firstsampleindex + x];
+    }
+  }
+
+  __syncthreads();
+
+  if (threadIdx.x == 0 && threadIdx.y == 0)
+  {
+    double total = 0.;
+    for (unsigned int y = 0; y < NPHIXSPOINTS; y++)
+    {
+      total += part_integral[y * integralsamplesperxspoint];
+    }
+    *integral = total / 3.;
+  }
+
+  __syncthreads();
+}
+
+
+static double calculate_corrphotoioncoeff_integral_gpu(gsl_integral_paras_gammacorr *intparas, int modelgridindex, double nu_edge, float *photoion_xs, double departure_ratio, float T_e)
+{
+    cudaError_t cudaStatus;
+
+    cudaStatus = cudaSetDevice(0);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaSetDevice failed. CUDA-capable GPU installed?");
+        abort();
+    }
+
+    gsl_integral_paras_gammacorr *dev_intparas;
+    cudaStatus = cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr));
+    assert(cudaStatus == cudaSuccess);
+    cudaMemcpy(dev_intparas, intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice);
+
+    double *dev_integral;
+    cudaStatus = cudaMalloc(&dev_integral, sizeof(double));
+    assert(cudaStatus == cudaSuccess);
+
+    cudaStatus = cudaDeviceSynchronize();
+    assert(cudaStatus == cudaSuccess);
+
+    dim3 threadsPerBlock(integralsamplesperxspoint, NPHIXSPOINTS, 1);
+    dim3 numBlocks(1, 1, 1);
+    size_t sharedsize = sizeof(double) * NPHIXSPOINTS * integralsamplesperxspoint;
+
+    kernel_corrphotoion_integral<<<numBlocks, threadsPerBlock, sharedsize>>>(dev_intparas, dev_integral);
+
+    // Check for any errors launching the kernel
+    cudaStatus = cudaGetLastError();
+    assert(cudaStatus == cudaSuccess);
+
+    // cudaDeviceSynchronize waits for the kernel to finish, and returns
+    // any errors encountered during the launch.
+    cudaStatus = cudaDeviceSynchronize();
+    assert(cudaStatus == cudaSuccess);
+
+    double result;
+
+    cudaStatus = cudaMemcpy(&result, dev_integral, sizeof(double), cudaMemcpyDeviceToHost);
+    assert(cudaStatus == cudaSuccess);
+
+    cudaFree(dev_integral);
+    cudaFree(dev_intparas);
+
+    return result;
+}
+#endif
+
+
 static double calculate_corrphotoioncoeff_integral(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   const double epsrel = 1e-3;
@@ -1355,6 +1480,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
   gsl_integral_paras_gammacorr intparas;
+
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
   intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
@@ -1380,35 +1506,29 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 
   double gammacorr = 0.0;
 
-#if CUDA_ENABLED
-  if (nts_global > FIRST_NLTE_RADFIELD_TIMESTEP) //  && element == 0 && ion == 0 && level >= 1150 && level <= 1200
-  {
-    gammacorr = calculate_corrphotoioncoeff_integral_gpu(modelgridindex, intparas.nu_edge, intparas.photoion_xs, intparas.departure_ratio, T_e);
+#if !CUDA_ENABLED
+  gsl_function F_gammacorr;
+  F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
+  F_gammacorr.params = &intparas;
+  double error = 0.0;
 
-    // printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr2);
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+
+  const int status = gsl_integration_qag(
+    &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
+
+  gsl_set_error_handler(previous_handler);
+
+  if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning))
+  {
+    printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
+             status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
-  else
 #else
-  {
-    gsl_function F_gammacorr;
-    F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
-    F_gammacorr.params = &intparas;
-    double error = 0.0;
+  const double gammacorr_gpu = calculate_corrphotoioncoeff_integral_gpu(&intparas, modelgridindex, intparas.nu_edge, intparas.photoion_xs, intparas.departure_ratio, T_e);
 
-    gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-    const int status = gsl_integration_qag(
-      &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
-
-    gsl_set_error_handler(previous_handler);
-
-    if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning))
-    {
-      printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
-               status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
-    }
-  }
-
+  // printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
+  gammacorr = gammacorr_gpu;
 #endif
 
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);

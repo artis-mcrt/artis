@@ -18,7 +18,7 @@ extern int emiss_offset;
 extern int emiss_max;
 
 
-extern modelgrid_t modelgrid[MMODELGRID + 1];
+extern __managed__ modelgrid_t modelgrid[MMODELGRID + 1];
 
 extern float compton_emiss[MMODELGRID+1][EMISS_MAX];
 extern double rpkt_emiss[MMODELGRID+1];
@@ -159,7 +159,7 @@ extern double tmin;
 extern int ntstep;
 extern int itstep;
 extern int ftstep;
-extern int nts_global;
+extern __managed__ int nts_global;
 
 extern int ntbins, nnubins;
 extern double nu_min_r, nu_max_r;
