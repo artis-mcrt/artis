@@ -4,6 +4,11 @@
 #include <assert.h>
 #include "sn3d.h"
 
+#if CUDA_ENABLED
+#include <cuda_runtime.h>
+__device__ double photoionization_crosssection_fromtable_gpu(float *photoion_xs, double nu_edge, double nu, int NPHIXSPOINTS, double NPHIXSNUINCREMENT);
+#endif
+
 extern double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
 int get_continuumindex(int element, int ion, int level, int upperionlevel);
