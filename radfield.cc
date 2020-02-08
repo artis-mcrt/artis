@@ -10,10 +10,10 @@
 #include "radfield.h"
 #include "rpkt.h"
 #include "sn3d.h"
-
 #if CUDA_ENABLED
 #include <cuda_runtime.h>
 #endif
+
 
 static double J_normfactor[MMODELGRID + 1];
 
@@ -26,13 +26,8 @@ static bool radfield_initialized = false;
 // } enum_bin_fit_type;
 
 
-double *radfieldbin_nu_upper; // array of upper frequency boundaries of bins, indexed by [binindex]
-struct radfieldbin **radfieldbins; // 2D array indexed by [modelgridindex][binindex]
-
-#if CUDA_ENABLED
-double *dev_radfieldbin_nu_upper;
-struct radfieldbin **dev_radfieldbins;
-#endif
+__managed__ double *radfieldbin_nu_upper; // array of upper frequency boundaries of bins, indexed by [binindex]
+__managed__ struct radfieldbin **radfieldbins; // 2D array indexed by [modelgridindex][binindex]
 
 // ** Detailed lines - Jblue_lu estimators for selected lines
 
@@ -289,9 +284,10 @@ static void radfield_allocate_cell(int modelgridindex, long *radfield_mem_usage)
   #endif
 
   #if CUDA_ENABLED
-  cudaMalloc(&dev_radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin));
-  #endif
+  cudaMallocManaged(&radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin));
+  #else
   radfieldbins[modelgridindex] = (struct radfieldbin *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbin));
+  #endif
 
   *radfield_mem_usage += RADFIELDBINCOUNT * sizeof(struct radfieldbin);
   for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
@@ -384,19 +380,15 @@ void radfield_init(int my_rank)
           "nuJ","J","J_nu_avg","ncontrib","T_R","W");
   fflush(radfieldfile);
 
+  #if CUDA_ENABLED
+  cudaMallocManaged(&radfieldbin_nu_upper, RADFIELDBINCOUNT * sizeof(double));
+  cudaMallocManaged(&radfieldbins, (MMODELGRID + 1) * sizeof(struct radfieldbin *));
+  #else
   radfieldbin_nu_upper = (double *) calloc(RADFIELDBINCOUNT, sizeof(double));
   radfieldbins = (struct radfieldbin **) malloc((MMODELGRID + 1) * sizeof(struct radfieldbin *));
+  #endif
 
   setup_bin_boundaries();
-
-  #if CUDA_ENABLED
-  cudaError_t cudaStatus;
-  cudaMalloc(&dev_radfieldbin_nu_upper, RADFIELDBINCOUNT * sizeof(double));
-  cudaMemcpy(dev_radfieldbin_nu_upper, radfieldbin_nu_upper, RADFIELDBINCOUNT * sizeof(double), cudaMemcpyHostToDevice);
-
-  // array of device pointers
-  dev_radfieldbins = (struct radfieldbin **) malloc((MMODELGRID + 1) * sizeof(struct radfieldbin *));
-  #endif
 
   long radfield_mem_usage = 0;
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
@@ -748,18 +740,12 @@ void radfield_close_file(void)
     fclose(radfieldfile);
 
     free(radfieldbin_nu_upper);
-    #if CUDA_ENABLED
-    cudaFree(dev_radfieldbin_nu_upper);
-    #endif
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
         free(radfieldbins[modelgridindex]);
-        #if CUDA_ENABLED
-        free(dev_radfieldbins[modelgridindex]);
-        #endif
         #if (DETAILED_BF_ESTIMATORS_ON)
         free(bfrate_raw[modelgridindex]);
         free(prev_bfrate_normed[modelgridindex]);
@@ -1417,10 +1403,6 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
       radfieldbins[modelgridindex][binindex].W = W_bin;
     }
 
-    #if CUDA_ENABLED
-    cudaMemcpy(dev_radfieldbins[modelgridindex], radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin), cudaMemcpyHostToDevice);
-    #endif
-
     double prev_nu_upper = nu_lower_first_initial;
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
     {
@@ -1758,9 +1740,6 @@ void radfield_MPI_Bcast(const int modelgridindex, const int root)
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].nuJ_raw, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
         MPI_Bcast(&radfieldbins[modelgridindex][binindex].contribcount, 1, MPI_INT, root, MPI_COMM_WORLD);
       }
-      #if CUDA_ENABLED
-      cudaMemcpy(dev_radfieldbins[modelgridindex], radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin), cudaMemcpyHostToDevice);
-      #endif
     }
 
     if (DETAILED_LINE_ESTIMATORS_ON)
@@ -1906,9 +1885,6 @@ void radfield_read_restart_data(FILE *gridsave_file)
       fscanf(gridsave_file,"%d %lg\n", &binindex_in, &radfieldbin_nu_upper[binindex]);
       assert(binindex_in == binindex);
     }
-    #if CUDA_ENABLED
-    cudaMemcpy(dev_radfieldbin_nu_upper, radfieldbin_nu_upper, RADFIELDBINCOUNT * sizeof(double), cudaMemcpyHostToDevice);
-    #endif
   }
 
   #if (DETAILED_BF_ESTIMATORS_ON)
@@ -1978,9 +1954,6 @@ void radfield_read_restart_data(FILE *gridsave_file)
                  &radfieldbins[modelgridindex][binindex].T_R,
                  &radfieldbins[modelgridindex][binindex].contribcount);
         }
-        #if CUDA_ENABLED
-        cudaMemcpy(dev_radfieldbins[modelgridindex], radfieldbins[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbin), cudaMemcpyHostToDevice);
-        #endif
       }
 
       if (DETAILED_LINE_ESTIMATORS_ON)
@@ -2100,8 +2073,8 @@ __device__ int select_bin_gpu(double nu, double *radfieldbin_nu_upper)
 const int integralsamplesperxspoint = 8; // must be an even number for Simpsons rule to work
 
 __global__ void kernel_corrphotoion_integral(
-  struct radfieldbin *radfieldbins_thiscell, double *radfieldbin_nu_upper, double nu_edge, float *photoion_xs,
-  double departure_ratio, float T_e, double *integral, int NPHIXSPOINTS, double NPHIXSNUINCREMENT)
+  struct radfieldbin *radfieldbins_thiscell, double nu_edge, float *photoion_xs,
+  double departure_ratio, float T_e, double *integral)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
@@ -2142,7 +2115,7 @@ __global__ void kernel_corrphotoion_integral(
           corrfactor = 0.;
       #endif
 
-      const float sigma_bf = photoionization_crosssection_fromtable_gpu(photoion_xs, nu_edge, nu, NPHIXSPOINTS, NPHIXSNUINCREMENT);
+      const float sigma_bf = photoionization_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
       const int lastsampleindex = (NPHIXSPOINTS - 1) * integralsamplesperxspoint + (integralsamplesperxspoint - 1);
 
@@ -2218,7 +2191,7 @@ double calculate_corrphotoioncoeff_integral_gpu(int modelgridindex, double nu_ed
     size_t sharedsize = sizeof(double) * NPHIXSPOINTS * integralsamplesperxspoint;
 
     kernel_corrphotoion_integral<<<numBlocks, threadsPerBlock, sharedsize>>>(
-      dev_radfieldbins[modelgridindex], dev_radfieldbin_nu_upper, nu_edge, photoion_xs, departure_ratio, T_e, (double *) dev_integral, NPHIXSPOINTS, NPHIXSNUINCREMENT);
+      radfieldbins[modelgridindex], nu_edge, photoion_xs, departure_ratio, T_e, (double *) dev_integral);
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError();

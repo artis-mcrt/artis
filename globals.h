@@ -97,8 +97,8 @@ extern int importantcoolingterms;
 extern phixslist_t *phixslist;
 extern int nbfcontinua;
 extern int nbfcontinua_ground;
-extern int NPHIXSPOINTS;
-extern double NPHIXSNUINCREMENT;
+extern __managed__ int NPHIXSPOINTS;
+extern __managed__ double NPHIXSNUINCREMENT;
 
 extern cellhistory_struct *cellhistory;
 
