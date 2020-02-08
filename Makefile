@@ -91,10 +91,10 @@ ifneq (,$(findstring jakita,$(HOSTNAME)))
 	LDFLAGS += -lprofiler
 endif
 
-CXXFLAGS += -std=c++1y
+# CXXFLAGS += -std=c++11
 # CXXFLAGS += -fPIC -shared
 # CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -Xcompiler "$(CXXFLAGS)"
+CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -rdc=true -Xcompiler "$(CXXFLAGS)"
 
 
 ### use pg when you want to use gprof the profiler
@@ -103,9 +103,6 @@ sn3d_files = sn3d.cc atomic.cc boundary.cc emissivities.cc gamma.cc globals.cc g
 
 sn3d_objects = sn3d.o atomic.o boundary.o emissivities.o gamma.o globals.o grey_emissivities.o grid_init.o input.o kpkt.o ltepop.o macroatom.o nltepop.o nonthermal.o decay.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
 
-cuda_files = atomic_cuda.cu radfield_cuda.cu
-
-cuda_objects = atomic_cuda.o radfield_cuda.o
 
 all: sn3d exspec
 
@@ -115,14 +112,8 @@ sn3d: clean version
 sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
-sn3dcuda: version $(sn3d_objects) $(cuda_objects)
-	nvcc $(CUDA_NVCC_FLAGS) $(sn3d_objects) $(cuda_objects) $(LDFLAGS) -o sn3d
-
-%.o: %.cc
-	$(CXX) -c $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $< -o $@
-
-%.o: %.cu
-	nvcc $(CUDA_NVCC_FLAGS) --device-c $(LDFLAGS) $< -o $@
+sn3dcuda: version
+	nvcc -x cu $(CUDA_NVCC_FLAGS) $(sn3d_files) $(INCLUDE) $(LDFLAGS) -o sn3d
 
 exspec_files = exspec.cc grid_init.cc globals.cc input.cc vectors.cc packet_init.cc update_grid.cc update_packets.cc gamma.cc boundary.cc macroatom.cc decay.cc rpkt.cc kpkt.cc photo_electric.cc emissivities.cc grey_emissivities.cc ltepop.cc atomic.cc ratecoeff.cc thermalbalance.cc light_curve.cc spectrum.cc polarization.cc nltepop.cc radfield.cc nonthermal.cc vpkt.cc md5.cc
 
