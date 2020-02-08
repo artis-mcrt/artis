@@ -6,10 +6,6 @@
 #include "types.h"
 #include "sn3d.h"
 
-#if CUDA_ENABLED
-double calculate_corrphotoioncoeff_integral_gpu(int modelgridindex, double nu_edge, float *photoion_xs, double departure_ratio, float T_e);
-#endif
-
 void radfield_zero_estimators(int modelgridindex);
 void radfield_jblue_init(void);
 void radfield_init(int my_rank);
@@ -18,8 +14,8 @@ void radfield_write_to_file(int modelgridindex, int timestep);
 void radfield_close_file(void);
 void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr, double t_current);
 void radfield_increment_lineestimator(int modelgridindex, int lineindex, double increment);
-double radfield(double nu, int modelgridindex);
-double radfield_dbb_mgi(double nu, int modelgridindex);
+__host__ __device__ double radfield(double nu, int modelgridindex);
+__host__ __device__ double radfield_dbb_mgi(double nu, int modelgridindex);
 void radfield_fit_parameters(int modelgridindex, int timestep);
 void radfield_set_J_normfactor(int modelgridindex, double normfactor);
 void radfield_normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
@@ -42,25 +38,12 @@ int radfield_integrate(
   const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
   size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);
 
-
+__host__ __device__
 inline double radfield_dbb(double nu, float T, float W)
 // returns J_nu for a diluted black body
 {
   return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
 }
 
-
-struct radfieldbin
-{
-  double J_raw;           // value needs to be multipled by J_normfactor to get the true value
-  double nuJ_raw;
-  int contribcount;
-
-  // these two parameters are used in the current timestep, but were calculated
-  // from the values of J and nuJ in the previous timestep
-  float W;                // dilution (scaling) factor
-  float T_R;              // radiation temperature
-  // enum_bin_fit_type fit_type;
-};
 
 #endif //RADFIELD_H

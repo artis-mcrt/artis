@@ -3,6 +3,9 @@
 
 #include <assert.h>
 #include "sn3d.h"
+#if CUDA_ENABLED
+#include <cuda_runtime.h>
+#endif
 
 extern __managed__ double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
@@ -13,10 +16,7 @@ double get_nntot(int modelgridindex);
 bool is_nlte(int element, int ion, int level);
 bool level_isinsuperlevel(int element, int ion, int level);
 
-#if CUDA_ENABLED
-#include <cuda_runtime.h>
 __device__ __host__
-#endif
 double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
 
 inline int get_element(int element)

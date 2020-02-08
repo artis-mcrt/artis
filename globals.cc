@@ -17,7 +17,7 @@ int emiss_offset;   // the index in the line list of the 1st line for which
 int emiss_max;      // actual number of frequency points in emissivity grid
 
 
-modelgrid_t modelgrid[MMODELGRID + 1];
+__managed__ modelgrid_t modelgrid[MMODELGRID + 1];
 
 /// THESE ARE THE GRID BASED ESTIMATORS
 float compton_emiss[MMODELGRID+1][EMISS_MAX];  /// Volume estimator for the compton emissivity
@@ -178,7 +178,7 @@ double tmin;              /// Start time of current simulation
 int ntstep;       /// Number of timesteps
 int itstep;       /// Initial timestep's number
 int ftstep;       /// Final timestep's number
-int nts_global;   /// Current time step
+__managed__ int nts_global;   /// Current time step
 
 int ntbins, nnubins; //number of bins for spectrum
 double nu_min_r, nu_max_r; //limits on frequency range for r-pkt spectrum

@@ -174,21 +174,25 @@ inline float get_kappagrey(int modelgridindex)
   return modelgrid[modelgridindex].kappagrey;
 }
 
+__device__ __host__
 inline float get_Te(int modelgridindex)
 {
   return modelgrid[modelgridindex].Te;
 }
 
+__device__ __host__
 inline float get_TR(int modelgridindex)
 {
   return modelgrid[modelgridindex].TR;
 }
 
+__device__ __host__
 inline float get_TJ(int modelgridindex)
 {
   return modelgrid[modelgridindex].TJ;
 }
 
+__device__ __host__
 inline float get_W(int modelgridindex)
 {
   return modelgrid[modelgridindex].W;
