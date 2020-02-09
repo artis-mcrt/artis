@@ -1418,7 +1418,7 @@ __global__ void kernel_integral(f_integrand_t dev_func, void *intparas, double n
 }
 
 
-static double calculate_phixs_integral_gpu(f_integrand_t ptr_func, void *intparas, size_t intparas_size, double nu_edge)
+static double calculate_phixs_integral_gpu(f_integrand_t ptr_func, void *dev_intparas, double nu_edge)
 {
     cudaError_t cudaStatus;
 
@@ -1427,11 +1427,6 @@ static double calculate_phixs_integral_gpu(f_integrand_t ptr_func, void *intpara
         fprintf(stderr, "cudaSetDevice failed. CUDA-capable GPU installed?");
         abort();
     }
-
-    void *dev_intparas;
-    cudaStatus = cudaMalloc(&dev_intparas, intparas_size);
-    assert(cudaStatus == cudaSuccess);
-    cudaMemcpy(dev_intparas, intparas, intparas_size, cudaMemcpyHostToDevice);
 
     double *dev_integral;
     cudaStatus = cudaMalloc(&dev_integral, sizeof(double));
@@ -1461,7 +1456,6 @@ static double calculate_phixs_integral_gpu(f_integrand_t ptr_func, void *intpara
     assert(cudaStatus == cudaSuccess);
 
     cudaFree(dev_integral);
-    cudaFree(dev_intparas);
 
     return result;
 }
@@ -1529,7 +1523,15 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 #else
   f_integrand_t ptr_func;
   cudaMemcpyFromSymbol(&ptr_func, devptr_integrand_corrphotoioncoeff_custom_radfield, sizeof(f_integrand_t));
-  const double gammacorr_gpu = calculate_phixs_integral_gpu(ptr_func, &intparas, sizeof(gsl_integral_paras_gammacorr), intparas.nu_edge);
+
+  void *dev_intparas;
+  cudaError_t cudaStatus = cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr));
+  assert(cudaStatus == cudaSuccess);
+  cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice);
+
+  const double gammacorr_gpu = calculate_phixs_integral_gpu(ptr_func, dev_intparas, intparas.nu_edge);
+
+  cudaFree(dev_intparas);
 
   // printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
   gammacorr = gammacorr_gpu;

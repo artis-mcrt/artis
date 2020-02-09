@@ -16,7 +16,11 @@
 #include "update_grid.h"
 
 
-extern inline double get_abundance(int modelgridindex, int element);
+__host__ __device__
+double get_abundance(int modelgridindex, int element)
+{
+  return modelgrid[modelgridindex].composition[element].abundance;
+}
 
 
 void precalculate_partfuncts(int modelgridindex)

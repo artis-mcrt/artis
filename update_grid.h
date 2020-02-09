@@ -11,9 +11,6 @@ double calculate_populations(int modelgridindex);
 double calculate_electron_densities(int modelgridindex);
 void write_grid_restart_data(const int timestep);
 
-inline double get_abundance(const int modelgridindex, const int element)
-{
-  return modelgrid[modelgridindex].composition[element].abundance;
-}
+__host__ __device__ double get_abundance(const int modelgridindex, const int element);
 
 #endif //UPDATE_GRID_H

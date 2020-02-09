@@ -717,7 +717,12 @@ static void read_atomicdata_files(void)
     printout("ERROR: nelements = %d > %d MELEMENTS", nelements, MELEMENTS);
     abort();
   }
-  if ((elements = (elementlist_entry *) calloc(nelements, sizeof(elementlist_entry))) == NULL)
+  #if CUDA_ENABLED
+  cudaMallocManaged(&elements, nelements * sizeof(elementlist_entry));
+  #else
+  elements = (elementlist_entry *) calloc(nelements, sizeof(elementlist_entry));
+  #endif
+  if (elements == NULL)
   {
     printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
     abort();
@@ -725,7 +730,8 @@ static void read_atomicdata_files(void)
   //printout("elements initialized\n");
 
   /// Initialize the linelist
-  if ((linelist = (linelist_entry *) calloc(MLINES, sizeof(linelist_entry))) == NULL)
+  linelist = (linelist_entry *) calloc(MLINES, sizeof(linelist_entry));
+  if (linelist == NULL)
   {
     printout("[fatal] input: not enough memory to initialize linelist ... abort\n");
     abort();
@@ -778,7 +784,12 @@ static void read_atomicdata_files(void)
     includedions += nions;
 
     /// Initialize the elements ionlist
-    if ((elements[element].ions = (ionlist_entry *) calloc(nions, sizeof(ionlist_entry))) == NULL)
+    #if CUDA_ENABLED
+    cudaMallocManaged(&elements[element].ions, nions * sizeof(ionlist_entry));
+    #else
+    elements[element].ions = (ionlist_entry *) calloc(nions, sizeof(ionlist_entry));
+    #endif
+    if (elements[element].ions == NULL)
     {
         printout("[fatal] input: not enough memory to initialize ionlist ... abort\n");
         abort();
@@ -1018,11 +1029,12 @@ static void read_atomicdata_files(void)
   if (nlines > 0)
   {
     /// and release empty memory from the linelist
-    if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-      abort();
-    }
+    linelist = (linelist_entry *) makemanaged(linelist, nlines * sizeof(linelist_entry));
+    // if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
+    // {
+    //   printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
+    //   abort();
+    // }
     printout("mem_usage: linelist occupies %.1f MB\n", nlines * (sizeof(linelist[0]) + sizeof(&linelist[0])) / 1024. / 1024);
   }
 

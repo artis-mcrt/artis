@@ -3,6 +3,7 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
+#include "gsl_matrix_double_managed.h"
 #include <gsl/gsl_vector_double.h>
 #include "sn3d.h"
 #include "atomic.h"
@@ -17,7 +18,7 @@
 static FILE *nlte_file;
 
 
-static inline
+__host__ __device__ static
 int get_nlte_vector_index(const int element, const int ion, const int level)
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into modelgrid[modelgridindex].nlte_pops that contains all elements
@@ -34,7 +35,7 @@ int get_nlte_vector_index(const int element, const int ion, const int level)
 }
 
 
-static void get_ion_level_of_nlte_vector_index(const int index, const int element, int *ion, int *level)
+__host__ __device__ static void get_ion_level_of_nlte_vector_index(const int index, const int element, int *ion, int *level)
 {
   // this could easily be optimized if need be
   for (int dion = 0; dion < get_nions(element); dion++)
@@ -1600,6 +1601,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
 }
 
 
+__host__ __device__
 double superlevel_boltzmann(const int modelgridindex, const int element, const int ion, const int level)
 {
   const int superlevel_index = get_nlevels_nlte(element,ion) + 1;

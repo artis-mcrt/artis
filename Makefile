@@ -88,7 +88,7 @@ sn3dcuda: CXXFLAGS += -DCUDA_ENABLED=true
 ifneq (,$(findstring jakita,$(HOSTNAME)))
 	# Tesla K80
 	CUDA_NVCC_FLAGS += --gpu-architecture=sm_37
-	LDFLAGS += -lprofiler
+	# LDFLAGS += -lprofiler
 endif
 
 # CXXFLAGS += -std=c++11

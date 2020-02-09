@@ -17,8 +17,8 @@ extern inline int get_cellcoordpointnum(const int cellindex, const int axis);
 extern inline int get_coordcellindexincrement(int axis);
 extern inline int get_ngriddimensions(void);
 extern inline float get_rhoinit(int modelgridindex);
-extern inline float get_rho(int modelgridindex);
-extern inline float get_nne(int modelgridindex);
+extern __device__ __host__ inline float get_rho(int modelgridindex);
+extern __device__ __host__ inline float get_nne(int modelgridindex);
 extern inline float get_nnetot(int modelgridindex);
 extern inline float get_ffegrp(int modelgridindex);
 extern inline float get_kappagrey(int modelgridindex);
@@ -273,7 +273,12 @@ static void calculate_kappagrey(void)
 static void allocate_compositiondata(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
-  if ((modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements * sizeof(compositionlist_entry))) == NULL)
+  #if CUDA_ENABLED
+  cudaMallocManaged(&modelgrid[modelgridindex].composition, nelements * sizeof(compositionlist_entry));
+  #else
+  modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(nelements * sizeof(compositionlist_entry));
+  #endif
+  if (modelgrid[modelgridindex].composition == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
     abort();
@@ -281,7 +286,12 @@ static void allocate_compositiondata(const int modelgridindex)
 
   mem_usage_nltepops += total_nlte_levels * sizeof(double);
 
-  if ((modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels * sizeof(double))) == NULL)
+  #if CUDA_ENABLED
+  cudaMallocManaged(&modelgrid[modelgridindex].nlte_pops, total_nlte_levels * sizeof(double));
+  #else
+  modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels * sizeof(double));
+  #endif
+  if (modelgrid[modelgridindex].nlte_pops == NULL)
   {
     printout("[fatal] input: not enough memory to initialize nlte memory for cell %d... abort\n",modelgridindex);
     abort();
@@ -301,13 +311,24 @@ static void allocate_compositiondata(const int modelgridindex)
     modelgrid[modelgridindex].composition[element].abundance = 0.;
 
     /// and allocate memory to store the ground level populations for each ionisation stage
-    if ((modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) calloc(get_nions(element), sizeof(float))) == NULL)
+
+    #if CUDA_ENABLED
+    cudaMallocManaged(&modelgrid[modelgridindex].composition[element].groundlevelpop, get_nions(element) * sizeof(float));
+    #else
+    modelgrid[modelgridindex].composition[element].groundlevelpop = (double *) malloc(get_nions(element) * sizeof(float));
+    #endif
+    if (modelgrid[modelgridindex].composition[element].groundlevelpop == NULL)
     {
       printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,modelgridindex);
       abort();
     }
 
-    if ((modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element) * sizeof(float))) == NULL)
+    #if CUDA_ENABLED
+    cudaMallocManaged(&modelgrid[modelgridindex].composition[element].partfunct, get_nions(element) * sizeof(float));
+    #else
+    modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element) * sizeof(float));
+    #endif
+    if (modelgrid[modelgridindex].composition[element].partfunct == NULL)
     {
       printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,modelgridindex);
       abort();
