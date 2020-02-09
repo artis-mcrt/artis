@@ -14,6 +14,7 @@
 
 // Material for handing r-packet propagation.
 
+__host__ __device__
 int closest_transition(const double nu_cmf, const int next_trans)
 /// for the propagation through non empty cells
 // find the next transition lineindex redder than nu_cmf
@@ -1347,7 +1348,8 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
 }
 
 
-void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
+__host__ __device__
+void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid)
 // bound-free opacity
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
@@ -1411,18 +1413,7 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
         phixslist[tid].allcont[i].gamma_contr = sigma_bf * probability * corrfactor;
         #endif
 
-        #ifdef DEBUG_ON
-          if (!isfinite(kappa_bf_contr))
-          {
-            printout("[fatal] calculate_kappa_rpkt_cont: non-finite contribution to kappa_bf_contr %g ... abort\n",kappa_bf_contr);
-            printout("[fatal] phixslist index %d, element %d, ion %d, level %d\n",i,element,ion,level);
-            printout("[fatal] Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
-            printout("[fatal] cell[%d].composition[%d].abundance = %g\n",modelgridindex,element,get_abundance(modelgridindex,element));
-            printout("[fatal] nne %g, nnlevel %g, (or %g)\n", get_nne(modelgridindex), nnlevel, calculate_exclevelpop(modelgridindex,element,ion,level));
-            printout("[fatal] sigma_bf %g, T_e %g, nu %g, nu_edge %g\n",sigma_bf,get_Te(modelgridindex),nu,nu_edge);
-            abort();
-          }
-        #endif
+        assert(isfinite(kappa_bf_contr));
 
         phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
         *kappa_bf = *kappa_bf + kappa_bf_contr;
@@ -1521,7 +1512,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current,
       kappa_ffheating = kappa_ff;
 
       /// Third contribution: bound-free absorption
-      calculate_kappa_bf_fb_gammacontr(modelgridindex, nu_cmf, &kappa_bf, &kappa_fb);
+      calculate_kappa_bf_fb_gammacontr(modelgridindex, nu_cmf, &kappa_bf, &kappa_fb, tid);
 
       kappa_rpkt_cont[tid].bf_inrest = kappa_bf;
       kappa_rpkt_cont[tid].fb_inrest = kappa_fb;

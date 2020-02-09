@@ -563,8 +563,7 @@ void* makemanaged(void* ptr, size_t curSize)
 {
   void *newptr;
   cudaMallocManaged(&newptr, curSize);
-  cudaMemcpy(newptr, ptr, curSize, cudaMemcpyDefault);
-  cudaDeviceSynchronize();
+  memcpy(newptr, ptr, curSize);
   free(ptr);
   return newptr;
 }
@@ -1026,6 +1025,12 @@ int main(int argc, char** argv)
   assert(cudaGetDeviceCount(&deviceCount) == cudaSuccess);
   printout("Detected %d CUDA capable device(s)\n", deviceCount);
   assert(deviceCount > 0);
+  cudaError_t cudaStatus = cudaSetDevice(0);
+  if (cudaStatus != cudaSuccess)
+  {
+      fprintf(stderr, "cudaSetDevice failed. CUDA-capable GPU installed?");
+      abort();
+  }
   #endif
 
   if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)

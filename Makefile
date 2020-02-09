@@ -99,9 +99,9 @@ CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -rdc=true -Xcompiler "$(CXXFLAGS)"
 
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
-sn3d_files = sn3d.cc atomic.cc boundary.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid_init.cc input.cc kpkt.cc ltepop.cc macroatom.cc nltepop.cc nonthermal.cc decay.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc md5.cc
+sn3d_files = sn3d.cc atomic.cc boundary.cc emissivities.cc gamma.cc globals.cc grey_emissivities.cc grid_init.cc gsl_managed.cc input.cc kpkt.cc ltepop.cc macroatom.cc nltepop.cc nonthermal.cc decay.cc packet_init.cc photo_electric.cc polarization.cc radfield.cc ratecoeff.cc rpkt.cc thermalbalance.cc update_grid.cc update_packets.cc vectors.cc vpkt.cc md5.cc
 
-sn3d_objects = sn3d.o atomic.o boundary.o emissivities.o gamma.o globals.o grey_emissivities.o grid_init.o input.o kpkt.o ltepop.o macroatom.o nltepop.o nonthermal.o decay.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
+sn3d_objects = sn3d.o atomic.o boundary.o emissivities.o gamma.o globals.o grey_emissivities.o grid_init.o gsl_managed.o input.o kpkt.o ltepop.o macroatom.o nltepop.o nonthermal.o decay.o packet_init.o photo_electric.o polarization.o radfield.o ratecoeff.o rpkt.o thermalbalance.o update_grid.o update_packets.o vectors.o vpkt.o md5.o
 
 
 all: sn3d exspec

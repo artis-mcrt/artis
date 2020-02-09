@@ -194,7 +194,7 @@ extern int n_lte_timesteps;
 extern double cell_is_optically_thick;
 extern int n_grey_timesteps;
 extern int n_titer;
-extern bool initial_iteration;
+extern __managed__ bool initial_iteration;
 extern int max_bf_continua;
 extern int n_kpktdiffusion_timesteps;
 extern float kpktdiffusion_timescale;

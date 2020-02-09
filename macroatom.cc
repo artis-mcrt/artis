@@ -19,19 +19,19 @@
 static FILE *macroatom_file;
 
 
-static inline double get_individ_rad_deexc(int element, int ion, int level, int i)
+static inline __host__ __device__ double get_individ_rad_deexc(int element, int ion, int level, int i)
 {
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
 }
 
 
-static inline double get_individ_internal_down_same(int element, int ion, int level, int i)
+static inline __host__ __device__ double get_individ_internal_down_same(int element, int ion, int level, int i)
 {
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
 }
 
 
-static inline double get_individ_internal_up_same(int element, int ion, int level, int i)
+static inline __host__ __device__ double get_individ_internal_up_same(int element, int ion, int level, int i)
 {
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
 }
@@ -973,19 +973,14 @@ void macroatom_close_file(void)
 }
 
 
+__host__ __device__
 double rad_deexcitation_ratecoeff(
   const int modelgridindex, const int element, const int ion, const int upper, const int lower,
   const double epsilon_trans, const int lineindex, const double t_current)
 ///radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
 {
-  #ifdef DEBUG_ON
-  if (upper <= lower)
-  {
-    printout("[fatal] rad_deexcitation: tried to calculate upward transition ... abort\n");
-    abort();
-  }
-  #endif
+  assert(lower < upper);
 
   const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
   const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
@@ -1019,39 +1014,21 @@ double rad_deexcitation_ratecoeff(
       //abort();
     }
 
-    #ifdef DEBUG_ON
-      if (debuglevel == 2)
-      {
-        // printout("[debug] rad_rates_down: Z=%d, ionstage %d, upper %d, lower %d\n", get_element(element), get_ionstage(element, ion), upper, lower);
-        // printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n", A_ul, tau_sobolev, n_u);
-      }
-      else if (debuglevel == 777)
-        printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n", A_ul, tau_sobolev, n_u);
-      if (!isfinite(R))
-      {
-        printout("fatal a1: abort\n");
-        abort();
-      }
-    #endif
+    assert(isfinite(R));
   }
 
   return R;
 }
 
 
+__host__ __device__
 double rad_excitation_ratecoeff(
   const int modelgridindex, const int element, const int ion, const int lower,
   const int upper, const double epsilon_trans, const int lineindex, const double t_current)
 ///radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 {
-  #ifdef DEBUG_ON
-  if (upper <= lower)
-  {
-    printout("[fatal] rad_excitation: tried to calculate downward transition ... abort\n");
-    abort();
-  }
-  #endif
+  assert(lower < upper);
 
   const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
   const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
@@ -1116,35 +1093,37 @@ double rad_excitation_ratecoeff(
     }
 
     #ifdef DEBUG_ON
-    if (R < 0)
-    {
-      const double g_u = statw_upper(lineindex);
-      const double g_u2 = stat_weight(element, ion, upper);
-      const double g_l = statw_lower(lineindex);
-      const double g_l2 = stat_weight(element, ion, lower);
-      printout("Negative excitation rate from level %d to %d\n", lower, upper);
-      printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n", n_l, n_u, g_l, g_l2, g_u, g_u2);
-      printout("n_u/n_l %g, g_u/g_l %g\n", n_u / n_l, g_u / g_l);
-      printout("radfield(nutrans=%g) = %g\n", nu_trans, radfield(nu_trans, modelgridindex));
-      abort();
-    }
-    if (debuglevel == 2)
-    {
-      // printout("[debug] rad_rates_up: Z=%d, ionstage %d, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",
-      //          get_element(element), get_ionstage(element, ion), upper, lower, A_ul, n_l);
-      // printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",
-      //          A_ul, tau_sobolev, n_u, n_l, radfield(nu_trans,modelgridindex));
-    }
-    else if (debuglevel == 777)
-      printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n", A_ul, tau_sobolev, n_u, n_l, radfield(nu_trans, modelgridindex));
-    if (!isfinite(R))
-    {
-      printout("[fatal] rad_excitation: abort\n");
-      printout("[fatal] rad_excitation: R %g, B_lu %g, B_ul %g, n_u %g, n_l %g, radfield %g,tau_sobolev %g, t_current %g\n",
-               R,B_lu,B_ul,n_u,n_l,radfield(nu_trans,modelgridindex),tau_sobolev,t_current);
-      printout("[fatal] rad_excitation: %g, %g, %g\n", 1.0 / tau_sobolev, exp(-tau_sobolev), 1.0 / tau_sobolev * (1. - exp(-tau_sobolev)));
-      abort();
-    }
+    assert(R >= 0);
+    assert(isfinite(R));
+    // if (R < 0)
+    // {
+    //   const double g_u = statw_upper(lineindex);
+    //   const double g_u2 = stat_weight(element, ion, upper);
+    //   const double g_l = statw_lower(lineindex);
+    //   const double g_l2 = stat_weight(element, ion, lower);
+    //   printout("Negative excitation rate from level %d to %d\n", lower, upper);
+    //   printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n", n_l, n_u, g_l, g_l2, g_u, g_u2);
+    //   printout("n_u/n_l %g, g_u/g_l %g\n", n_u / n_l, g_u / g_l);
+    //   printout("radfield(nutrans=%g) = %g\n", nu_trans, radfield(nu_trans, modelgridindex));
+    //   abort();
+    // }
+    // if (debuglevel == 2)
+    // {
+    //   // printout("[debug] rad_rates_up: Z=%d, ionstage %d, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",
+    //   //          get_element(element), get_ionstage(element, ion), upper, lower, A_ul, n_l);
+    //   // printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",
+    //   //          A_ul, tau_sobolev, n_u, n_l, radfield(nu_trans,modelgridindex));
+    // }
+    // else if (debuglevel == 777)
+    //   printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n", A_ul, tau_sobolev, n_u, n_l, radfield(nu_trans, modelgridindex));
+    // if (!isfinite(R))
+    // {
+    //   printout("[fatal] rad_excitation: abort\n");
+    //   printout("[fatal] rad_excitation: R %g, B_lu %g, B_ul %g, n_u %g, n_l %g, radfield %g,tau_sobolev %g, t_current %g\n",
+    //            R,B_lu,B_ul,n_u,n_l,radfield(nu_trans,modelgridindex),tau_sobolev,t_current);
+    //   printout("[fatal] rad_excitation: %g, %g, %g\n", 1.0 / tau_sobolev, exp(-tau_sobolev), 1.0 / tau_sobolev * (1. - exp(-tau_sobolev)));
+    //   abort();
+    // }
     #endif
   }
 
@@ -1218,6 +1197,7 @@ double stim_recombination_ratecoeff(
 ///***************************************************************************/
 
 
+__host__ __device__
 double col_deexcitation_ratecoeff(const float T_e, const float nne, const double epsilon_trans, const int lineindex)
 // multiply by upper level population to get a rate per second
 {
@@ -1282,6 +1262,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
 }
 
 
+__host__ __device__
 double col_excitation_ratecoeff(const float T_e, const float nne, const int lineindex, const double epsilon_trans)
 // multiply by lower level population to get a rate per second
 {
@@ -1354,6 +1335,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
 }
 
 
+__host__ __device__
 double col_recombination_ratecoeff(
   const int modelgridindex, const int element, const int upperion, const int upper, const int lower, const double epsilon_trans)
 // multiply by upper level population to get a rate per second
@@ -1398,6 +1380,7 @@ double col_recombination_ratecoeff(
 }
 
 
+__host__ __device__
 double col_ionization_ratecoeff(
   const float T_e, const float nne, const int element, const int ion, const int lower,
   const int phixstargetindex, const double epsilon_trans)
@@ -1405,12 +1388,7 @@ double col_ionization_ratecoeff(
 // multiply by lower level population to get a rate per second
 {
   #ifdef DEBUG_ON
-  if (phixstargetindex > get_nphixstargets(element,ion,lower))
-  {
-    printout("[fatal] col_ionization called with phixstargetindex %d > nphixstargets %d",
-             phixstargetindex, get_nphixstargets(element, ion, lower));
-    abort();
-  }
+  assert(phixstargetindex < get_nphixstargets(element,ion,lower));
   #endif
 
   ///Seaton approximation: Mihalas (1978), eq.5-79, p.134
@@ -1429,11 +1407,7 @@ double col_ionization_ratecoeff(
   const double sigma_bf = elements[element].ions[ion].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion,lower,phixstargetindex);
   const double C = nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
-  #ifdef DEBUG_ON
-    if (debuglevel == 777)
-      printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
-    assert(isfinite(C));
-  #endif
+  assert(isfinite(C));
 
   return C;
 }

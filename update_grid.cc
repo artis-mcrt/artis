@@ -457,7 +457,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
         double kappa_bf = 0.;
         double kappa_fb = 0.;
-        calculate_kappa_bf_fb_gammacontr(mgi, nu_edge, &kappa_bf, &kappa_fb);
+        calculate_kappa_bf_fb_gammacontr(mgi, nu_edge, &kappa_bf, &kappa_fb, tid);
 
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
