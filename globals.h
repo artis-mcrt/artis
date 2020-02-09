@@ -82,21 +82,22 @@ extern int opacity_case;
 extern double dlogt;
 extern int maxion;
 extern short elements_uppermost_ion[MTHREADS][MELEMENTS];
-extern int nelements;
-extern int nlines;
-extern int includedions;
-extern elementlist_entry *elements;
-extern linelist_entry *linelist;
-extern bflist_t *bflist;
 
-extern rpkt_cont_opacity_struct *kappa_rpkt_cont;
+extern __managed__ int nelements;
+extern __managed__ int nlines;
+extern __managed__ int includedions;
+extern __managed__ elementlist_entry *elements;
+extern __managed__ linelist_entry *linelist;
+extern __managed__ bflist_t *bflist;
+
+extern __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
 
 extern int ncoolingterms;
 extern int importantcoolingterms;
 
-extern phixslist_t *phixslist;
-extern int nbfcontinua;
-extern int nbfcontinua_ground;
+extern __managed__ phixslist_t *phixslist;
+extern __managed__ int nbfcontinua;
+extern __managed__ int nbfcontinua_ground;
 extern __managed__ int NPHIXSPOINTS;
 extern __managed__ double NPHIXSNUINCREMENT;
 

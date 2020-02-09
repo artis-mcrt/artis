@@ -8,8 +8,36 @@
 #include "ratecoeff.h"
 #include "update_grid.h"
 
-extern inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold);
-extern inline double ionstagepop(int modelgridindex, int element, int ion);
+__host__ __device__
+double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
+/// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
+{
+  const double g_lower = stat_weight(element, ion, level);
+  const double g_upper = stat_weight(element, ion + 1, upperionlevel);
+  const double sf = SAHACONST * g_lower / g_upper * pow(T, -1.5) * exp(E_threshold / KB / T);
+  //printout("element %d, ion %d, level %d, T, %g, E %g has sf %g (g_l %g g_u %g)\n", element, ion, level, T, E_threshold, sf,stat_weight(element,ion,level),stat_weight(element,ion+1,0) );
+  #ifndef __CUDA_ARCH__
+  if (sf < 0)
+  {
+    printout("[fatal] calculate_sahafact: Negative Saha factor. sfac %g element %d ion %d level %d upperionlevel %d g_lower %g g_upper %g T %g E_threshold %g exppart %g\n",
+             sf, element, ion, level, upperionlevel, g_lower, g_upper, T, E_threshold, exp(E_threshold / KB / T));
+    abort();
+  }
+  #else
+  assert(sf >= 0);
+  #endif
+  return sf;
+}
+
+
+__host__ __device__
+double ionstagepop(int modelgridindex, int element, int ion)
+/// Calculates the given ionstages total population in nebular approximation for modelgridindex
+/// The precalculated ground level population and partition function are used.
+{
+  return get_groundlevelpop(modelgridindex,element,ion) * modelgrid[modelgridindex].composition[element].partfunct[ion]
+          / stat_weight(element,ion,0);
+}
 
 
 double nne_solution_f(double x, void *paras)
@@ -427,7 +455,7 @@ double calculate_groundlevelpop(int element, int ion, double T, int cellnumber, 
 }
 */
 
-
+__host__ __device__
 double get_groundlevelpop(int modelgridindex, int element, int ion)
 /// Returns the given ions groundlevel population for modelgridindex which was precalculated
 /// during update_grid and stored to the grid.
@@ -506,6 +534,7 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 }*/
 
 
+__host__ __device__
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation population of a level assuming LTE excitation
 {
@@ -526,6 +555,7 @@ double calculate_levelpop_lte(int modelgridindex, int element, int ion, int leve
 }
 
 
+__host__ __device__
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level)
 /// Calculates the population of a level from either LTE or NLTE information
 {
@@ -566,14 +596,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       {
         //printout("Using an nlte population!\n");
         nn = nltepop_over_rho * get_rho(modelgridindex);
-        if (!isfinite(nn))
-        {
-          printout("[fatal] NLTE population failure.\n");
-          printout("element %d ion %d level %d\n", element, ion, level);
-          printout("nn %g nltepop_over_rho %g rho %g\n", nn, nltepop_over_rho, get_rho(modelgridindex));
-          printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
-          abort();
-        }
+        assert(isfinite(nn));
         return nn;
       }
     }
@@ -593,14 +616,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       {
         //printout("Using a superlevel population!\n");
         nn = superlevelpop_over_rho * get_rho(modelgridindex) * superlevel_boltzmann(modelgridindex, element, ion, level);
-        if (!isfinite(nn))
-        {
-          printout("[fatal] NLTE population failure.\n");
-          printout("element %d ion %d level %d\n", element, ion, level);
-          printout("nn %g superlevelpop_over_rho %g rho %g\n", nn, superlevelpop_over_rho, get_rho(modelgridindex));
-          printout("ground level %g\n", get_groundlevelpop(modelgridindex, element, ion));
-          abort();
-        }
+        assert(isfinite(nn));
         return nn;
       }
     }
@@ -620,13 +636,14 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }
 
   #ifdef DEBUG_ON
-    if (!isfinite(nn))
-    {
-      printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
-      printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n", get_groundlevelpop(modelgridindex, element, ion));
-      printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n", ionstagepop(modelgridindex, element, ion));
-      printout("[fatal] calculate_exclevelpop: associated partition function %g\n",modelgrid[modelgridindex].composition[element].partfunct[ion]);
-    }
+  assert(isfinite(nn));
+    // if (!isfinite(nn))
+    // {
+    //   printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);
+    //   printout("[fatal] calculate_exclevelpop: associated ground level has pop %g\n", get_groundlevelpop(modelgridindex, element, ion));
+    //   printout("[fatal] calculate_exclevelpop: associated ion has pop %g\n", ionstagepop(modelgridindex, element, ion));
+    //   printout("[fatal] calculate_exclevelpop: associated partition function %g\n",modelgrid[modelgridindex].composition[element].partfunct[ion]);
+    // }
   #endif
   return nn;
 }

@@ -148,11 +148,13 @@ inline float get_rhoinit(int modelgridindex)
   return modelgrid[modelgridindex].rhoinit;
 }
 
+__device__ __host__
 inline float get_rho(int modelgridindex)
 {
   return modelgrid[modelgridindex].rho;
 }
 
+__device__ __host__
 inline float get_nne(int modelgridindex)
 {
   return modelgrid[modelgridindex].nne;

@@ -96,14 +96,14 @@ int maxion;
 short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid
                                                    /// routine and their daughters.
-int nelements;
-int nlines;
-int includedions;
-elementlist_entry *elements;
-linelist_entry *linelist;
-bflist_t *bflist;
+__managed__ int nelements;
+__managed__ int nlines;
+__managed__ int includedions;
+__managed__ elementlist_entry *elements;
+__managed__ linelist_entry *linelist;
+__managed__ bflist_t *bflist;
 
-rpkt_cont_opacity_struct *kappa_rpkt_cont;
+__managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
 
 /// Coolinglist
 int ncoolingterms;
@@ -112,9 +112,9 @@ int importantcoolingterms;
 /// PHIXSLIST
 ///============================================================================
 
-phixslist_t *phixslist;
-int nbfcontinua;
-int nbfcontinua_ground; ///number of bf-continua
+__managed__ phixslist_t *phixslist;
+__managed__ int nbfcontinua;
+__managed__ int nbfcontinua_ground; ///number of bf-continua
 __managed__ int NPHIXSPOINTS;
 __managed__ double NPHIXSNUINCREMENT;
 

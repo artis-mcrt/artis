@@ -540,6 +540,35 @@ static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, c
 }
 
 
+void* reallocmanaged(void* ptr, size_t newSize, size_t curSize)
+{
+  void *newptr;
+  cudaMallocManaged(&newptr, newSize);
+  if (ptr == 0)
+  {
+    return newptr;
+  }
+  else
+  {
+    size_t transferSize = newSize > curSize ? curSize : newSize;
+    cudaMemcpy(newptr, ptr, transferSize, cudaMemcpyDefault);
+    cudaDeviceSynchronize();
+    cudaFree(ptr);
+    return newptr;
+  }
+}
+
+
+void* makemanaged(void* ptr, size_t curSize)
+{
+  void *newptr;
+  cudaMallocManaged(&newptr, curSize);
+  cudaMemcpy(newptr, ptr, curSize, cudaMemcpyDefault);
+  cudaDeviceSynchronize();
+  free(ptr);
+  return newptr;
+}
+
 static void save_grid_and_packets(
   const int nts, const int my_rank, PKT* packets)
 {
@@ -964,7 +993,12 @@ int main(int argc, char** argv)
     }
   }
 
-  PKT *const packets = (PKT *) calloc(MPKTS, sizeof(PKT));
+  PKT *packets;
+  #if CUDA_ENABLED
+  cudaMallocManaged(&packets, MPKTS * sizeof(PKT));
+  #else
+  packets = (PKT *) calloc(MPKTS, sizeof(PKT));
+  #endif
   assert(packets != NULL);
 
   #ifndef GIT_BRANCH

@@ -115,5 +115,8 @@ inline FILE *fopen_required(const char *filename, const char *mode)
     return file;
 }
 
+void* reallocmanaged(void* ptr, size_t newSize, size_t curSize);
+void* makemanaged(void* ptr, size_t curSize);
+
 
 #endif // SN3D_H
