@@ -3,8 +3,8 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix_double.h>
-#include "gsl_matrix_double_managed.h"
 #include <gsl/gsl_vector_double.h>
+#include "gsl_managed.h"
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
@@ -897,7 +897,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-  gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix = gsl_matrix_calloc_managed(nlte_dimension, nlte_dimension);
   gsl_matrix *rate_matrix_rad_bb;
   gsl_matrix *rate_matrix_coll_bb;
   gsl_matrix *rate_matrix_ntcoll_bb;

@@ -56,20 +56,20 @@ struct Jb_lu_estimator
 
 // reallocate the detailed line arrays in units of BLOCKSIZEJBLUE
 static const int BLOCKSIZEJBLUE = 128;
-static int detailed_linecount = 0;
+static __managed__ int detailed_linecount = 0;
 
 // array of indicies into the linelist[] array for selected lines
-static int *detailed_lineindicies;
+static __managed__ int *detailed_lineindicies;
 
-static struct Jb_lu_estimator *prev_Jb_lu_normed[MMODELGRID + 1];  // value from the previous timestep
-static struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised estimator for the current timestep
+static __managed__ struct Jb_lu_estimator *prev_Jb_lu_normed[MMODELGRID + 1];  // value from the previous timestep
+static __managed__ struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised estimator for the current timestep
 
 // ** end detailed lines
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-static bool normed_bfrates_available = false;
-static float *prev_bfrate_normed[MMODELGRID + 1];  // values from the previous timestep
-static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the current timestep
+static __managed__ bool normed_bfrates_available = false;
+static __managed__ float *prev_bfrate_normed[MMODELGRID + 1];  // values from the previous timestep
+static __managed__ double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the current timestep
   #if (DETAILED_BF_ESTIMATORS_BYTYPE)
 
   struct bfratecontrib
@@ -78,8 +78,8 @@ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the 
     double ratecontrib;
   };
 
-  static struct bfratecontrib **bfrate_raw_bytype[MMODELGRID + 1];   // unnormalised estimator contributions for stats
-  static int *bfrate_raw_bytype_size[MMODELGRID + 1];
+  static __managed__ struct bfratecontrib **bfrate_raw_bytype[MMODELGRID + 1];   // unnormalised estimator contributions for stats
+  static __managed__ int *bfrate_raw_bytype_size[MMODELGRID + 1];
 
   static int compare_bfrate_raw_bytype(const void *p1, const void *p2)
   {
@@ -370,7 +370,24 @@ void radfield_init(int my_rank)
 
     // shrink the detailed line list in case detailed_linecount isn't a multiple of BLOCKSIZEJBLUE
     // (important for saving memory if there are a lot of grid cells)
-    realloc_detailed_lines(detailed_linecount);
+    // realloc_detailed_lines(detailed_linecount);
+    detailed_lineindicies = (int *) makemanaged(detailed_lineindicies, detailed_linecount * sizeof(int));
+
+    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+    {
+      if (get_numassociatedcells(modelgridindex) > 0)
+      {
+        prev_Jb_lu_normed[modelgridindex] = (struct Jb_lu_estimator *) makemanaged(prev_Jb_lu_normed[modelgridindex], detailed_linecount * sizeof(struct Jb_lu_estimator));
+        Jb_lu_raw[modelgridindex] = (struct Jb_lu_estimator *) makemanaged(Jb_lu_raw[modelgridindex], detailed_linecount * sizeof(struct Jb_lu_estimator));
+
+        if (prev_Jb_lu_normed[modelgridindex] == NULL || Jb_lu_raw[modelgridindex] == NULL)
+        {
+          printout("ERROR: Not enough memory to reallocate detailed Jblue estimator list for cell %d.\n", modelgridindex);
+          abort();
+        }
+      }
+    }
+
 
     // these are probably sorted anyway because the previous loop goes in ascending
     // lineindex. But this sorting step is quick and makes sure that the
@@ -465,6 +482,7 @@ void initialise_prev_titer_photoionestimators(void)
 }
 
 
+__host__ __device__
 int radfield_get_Jblueindex(const int lineindex)
 // returns -1 if the line does not have a Jblue estimator
 {
@@ -510,6 +528,7 @@ int radfield_get_Jblueindex(const int lineindex)
 }
 
 
+__host__ __device__
 double radfield_get_Jb_lu(const int modelgridindex, const int jblueindex)
 {
   assert(jblueindex >= 0);
@@ -518,6 +537,7 @@ double radfield_get_Jb_lu(const int modelgridindex, const int jblueindex)
 }
 
 
+__host__ __device__
 int radfield_get_Jb_lu_contribcount(const int modelgridindex, const int jblueindex)
 {
   assert(jblueindex >= 0);

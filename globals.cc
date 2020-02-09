@@ -215,7 +215,7 @@ int n_lte_timesteps;
 double cell_is_optically_thick;
 int n_grey_timesteps;
 int n_titer;
-bool initial_iteration;
+__managed__ bool initial_iteration;
 int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;

@@ -729,7 +729,7 @@ static void read_atomicdata_files(void)
   }
   //printout("elements initialized\n");
 
-  /// Initialize the linelist
+  /// Initialize the linelist on the host (later convert to a CUDA managed pointer)
   linelist = (linelist_entry *) calloc(MLINES, sizeof(linelist_entry));
   if (linelist == NULL)
   {
@@ -968,17 +968,26 @@ static void read_atomicdata_files(void)
 //             printout("[fatal] input: not enough memory to initialize zetalist for element %d, ion %d ... abort\n",element,ion);
 //             abort();
 //           }
-      if ((elements[element].ions[ion].Alpha_sp = (float *) calloc(TABLESIZE, sizeof(float))) == NULL)
+      #if CUDA_ENABLED
+      cudaMallocManaged(&elements[element].ions[ion].Alpha_sp, TABLESIZE * sizeof(float));
+      #else
+      elements[element].ions[ion].Alpha_sp = (float *) calloc(TABLESIZE, sizeof(float));
+      #endif
+      if (elements[element].ions[ion].Alpha_sp == NULL)
       {
         printout("[fatal] input: not enough memory to initialize Alpha_sp list for element %d, ion %d ... abort\n",element,ion);
         abort();
       }
-      if ((elements[element].ions[ion].levels = (levellist_entry *) calloc(nlevelsmax, sizeof(levellist_entry))) == NULL)
+      #if CUDA_ENABLED
+      cudaMallocManaged(&elements[element].ions[ion].levels, nlevelsmax * sizeof(levellist_entry));
+      #else
+      elements[element].ions[ion].levels = (elementlist_entry *) calloc(nlevelsmax, sizeof(levellist_entry));
+      #endif
+      if (elements[element].ions[ion].levels == NULL)
       {
         printout("[fatal] input: not enough memory to initialize level list of element %d, ion %d ... abort\n",element,ion);
         abort();
       }
-
 
       /// now we need to readout the data for all those levels, write them to memory
       /// and set up the list of possible transitions for each level
@@ -1000,6 +1009,9 @@ static void read_atomicdata_files(void)
         totaldowntrans += get_ndowntrans(element, ion, level);
         totaluptrans += get_nuptrans(element, ion, level);
         free(transitions[level].to);
+
+        // elements[element].ions[ion].levels[level].downtrans_lineindicies = (int *) makemanaged(elements[element].ions[ion].levels[level].downtrans_lineindicies, sizeof(int) * get_ndowntrans(element, ion, level));
+        // elements[element].ions[ion].levels[level].uptrans_lineindicies = (int *) makemanaged(elements[element].ions[ion].levels[level].downtrans_lineindicies, sizeof(int) * get_nuptrans(element, ion, level));
       }
       free(transitiontable);
       free(transitions);
@@ -1029,12 +1041,12 @@ static void read_atomicdata_files(void)
   if (nlines > 0)
   {
     /// and release empty memory from the linelist
-    linelist = (linelist_entry *) makemanaged(linelist, nlines * sizeof(linelist_entry));
-    // if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
-    // {
-    //   printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-    //   abort();
-    // }
+    // linelist = (linelist_entry *) makemanaged(linelist, nlines * sizeof(linelist_entry));
+    if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
+      abort();
+    }
     printout("mem_usage: linelist occupies %.1f MB\n", nlines * (sizeof(linelist[0]) + sizeof(&linelist[0])) / 1024. / 1024);
   }
 

@@ -21,22 +21,22 @@ extern __host__ __device__ inline bool level_isinsuperlevel(int element, int ion
 extern __host__ __device__ inline double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
 extern __host__ __device__ double stat_weight(int element, int ion, int level);
 
-extern inline int get_maxrecombininglevel(int element, int ion);
-extern inline bool ion_has_superlevel(int element, int ion);
-extern inline int get_ndowntrans(int element, int ion, int level);
-extern inline int get_nuptrans(int element, int ion, int level);
-extern inline int get_nphixstargets(int element, int ion, int level);
-extern inline int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
-extern inline double get_phixsprobability(int element, int ion, int level, int phixstargetindex);
-extern inline void set_ndowntrans( int element,  int ion,  int level,  int ndowntrans);
-extern inline void set_nuptrans( int element, int ion,  int level,  int nuptrans);
-extern inline double einstein_spontaneous_emission(int lineindex);
-extern inline double osc_strength(int lineindex);
-extern inline double get_coll_str(int lineindex);
-extern inline double statw_upper(int lineindex);
-extern inline double statw_lower(int lineindex);
-extern inline double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
-extern inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
+extern inline __host__ __device__ int get_maxrecombininglevel(int element, int ion);
+extern inline __host__ __device__ bool ion_has_superlevel(int element, int ion);
+extern inline __host__ __device__ int get_ndowntrans(int element, int ion, int level);
+extern inline __host__ __device__ int get_nuptrans(int element, int ion, int level);
+extern inline __host__ __device__ int get_nphixstargets(int element, int ion, int level);
+extern inline __host__ __device__ int get_phixsupperlevel(int element, int ion, int level, int phixstargetindex);
+extern inline __host__ __device__ double get_phixsprobability(int element, int ion, int level, int phixstargetindex);
+extern inline __host__ __device__ void set_ndowntrans( int element,  int ion,  int level,  int ndowntrans);
+extern inline __host__ __device__ void set_nuptrans( int element, int ion,  int level,  int nuptrans);
+extern inline __host__ __device__ double einstein_spontaneous_emission(int lineindex);
+extern inline __host__ __device__ double osc_strength(int lineindex);
+extern inline __host__ __device__ double get_coll_str(int lineindex);
+extern inline __host__ __device__ double statw_upper(int lineindex);
+extern inline __host__ __device__ double statw_lower(int lineindex);
+extern inline __host__ __device__ double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu);
+extern inline __host__ __device__ double get_phixs_threshold(int element, int ion, int level, int phixstargetindex);
 
 
 __host__ __device__

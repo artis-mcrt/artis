@@ -25,8 +25,8 @@
 //   int cellnumber;
 // } gslintegration_bfheatingparas;
 
-static double T_step;
-double T_step_log;
+static __managed__ double T_step;
+__managed__ double T_step_log;
 
 typedef struct
 {
@@ -795,6 +795,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
 }
 
 
+__host__ __device__
 double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
 /// Returns the rate coefficient for spontaneous recombination.
 {
@@ -1421,12 +1422,6 @@ __global__ void kernel_integral(f_integrand_t dev_func, void *intparas, double n
 static double calculate_phixs_integral_gpu(f_integrand_t ptr_func, void *dev_intparas, double nu_edge)
 {
     cudaError_t cudaStatus;
-
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaSetDevice failed. CUDA-capable GPU installed?");
-        abort();
-    }
 
     double *dev_integral;
     cudaStatus = cudaMalloc(&dev_integral, sizeof(double));
