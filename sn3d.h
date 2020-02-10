@@ -59,6 +59,7 @@ double get_ion_stats(const int modelgridindex, const int element, const int ion,
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue);
 
 extern int tid;
+extern int myGpuId;
 extern bool use_cellhist;
 extern bool neutral_flag;
 extern gsl_rng *rng;  // pointer for random number generator
@@ -66,7 +67,7 @@ extern gsl_integration_workspace *gslworkspace;
 extern FILE *output_file;
 
 #ifdef _OPENMP
-  #pragma omp threadprivate(tid, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
+  #pragma omp threadprivate(tid, myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
 #endif
 
 

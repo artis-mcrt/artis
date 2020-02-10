@@ -38,6 +38,7 @@ const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.t
 
 // threadprivate variables
 int tid;
+int myGpuId;
 bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng;
@@ -1025,7 +1026,9 @@ int main(int argc, char** argv)
   assert(cudaGetDeviceCount(&deviceCount) == cudaSuccess);
   printout("Detected %d CUDA capable device(s)\n", deviceCount);
   assert(deviceCount > 0);
-  cudaError_t cudaStatus = cudaSetDevice(0);
+  myGpuId = 0;
+  printout("This thread will use cudaSetDevice(%d)\n", myGpuId);
+  cudaError_t cudaStatus = cudaSetDevice(myGpuId);
   if (cudaStatus != cudaSuccess)
   {
       fprintf(stderr, "cudaSetDevice failed. CUDA-capable GPU installed?");

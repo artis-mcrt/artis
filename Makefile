@@ -112,8 +112,11 @@ sn3d: clean version
 sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
-sn3dcuda: version
-	nvcc -x cu $(CUDA_NVCC_FLAGS) $(sn3d_files) $(INCLUDE) $(LDFLAGS) -o sn3d
+# sn3dcuda: version
+# 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(sn3d_files) $(INCLUDE) $(LDFLAGS) -o sn3d
+
+sn3dcuda: version $(sn3d_objects)
+	nvcc $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
 %.o: %.cc
 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
