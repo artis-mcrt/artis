@@ -2506,34 +2506,29 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
 __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfmatrix, double *vec_xs_excitation, double epsilon_trans_ev, double nnlevel, int xsstartindex)
 {
-  const int j = xsstartindex + threadIdx.x + blockIdx.x * blockDim.x;
+  const int i = threadIdx.x + blockIdx.x * blockDim.x;
 
-  const double xs_excitation_j = vec_xs_excitation[j];
-
-  for (int i = 0; i < SFPTS; i++) // TODO: should i start at startindex?
+  // for (int i = 0; i < SFPTS; i++) // TODO: should i start at startindex?
+  if (i < SFPTS)
   {
     const double en = gsl_vector_get_managed(envec, i);
     const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
 
-    #if (SF_USE_LOG_E_INCREMENT)
-    const double delta_en = gsl_vector_get_managed(delta_envec, j);
-    #else
-    const double delta_en = DELTA_E;
-    #endif
-
     const int startindex = i > xsstartindex ? i : xsstartindex;
-    // for (int j = startindex; j < stopindex; j++)
-    if (j >= startindex && j < stopindex)
+    for (int j = startindex; j < stopindex; j++)
     {
-      *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel * xs_excitation_j * delta_en;
-      // do the last bit separately because we're not using the full delta_e interval
+      #if (SF_USE_LOG_E_INCREMENT)
+      const double delta_en = gsl_vector_get_managed(delta_envec, j);
+      #else
+      const double delta_en = DELTA_E;
+      #endif
+
+      *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel * vec_xs_excitation[j] * delta_en;
     }
 
-    if (j == stopindex)
-    {
-      const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
-      *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel * xs_excitation_j * delta_en_actual;
-    }
+    // do the last bit separately because we're not using the full delta_e interval
+    const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
+    *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel * vec_xs_excitation[stopindex] * delta_en_actual;
   }
 }
 
@@ -2555,7 +2550,7 @@ static void sfmatrix_add_excitation_transition_gpu(gsl_matrix *sfmatrix, int lin
   assert(cudaStatus == cudaSuccess);
 
   dim3 threadsPerBlock(512, 1, 1);
-  dim3 numBlocks(ceil((SFPTS - xsstartindex) / 512.), 1, 1);
+  dim3 numBlocks(ceil((SFPTS) / 512.), 1, 1);
 
   kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, vec_xs_excitation->data, epsilon_trans_ev, nnlevel, xsstartindex);
 
