@@ -303,6 +303,7 @@ static void radfield_allocate_cell(int modelgridindex, long *radfield_mem_usage)
   #if CUDA_ENABLED
   cudaMallocManaged(&radfieldbins_estim[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinestim));
   cudaMallocManaged(&radfieldbins_params[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinparams));
+  cudaMemAdvise(radfieldbins_params[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinparams), cudaMemAdviseSetReadMostly, 0);
   #else
   radfieldbins_estim[modelgridindex] = (struct radfieldbinestim *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbinestim));
   radfieldbins_params[modelgridindex] = (struct radfieldbinparams *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbinparams));
@@ -387,7 +388,6 @@ void radfield_init(int my_rank)
         }
       }
     }
-
 
     // these are probably sorted anyway because the previous loop goes in ascending
     // lineindex. But this sorting step is quick and makes sure that the

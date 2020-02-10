@@ -1,5 +1,5 @@
 #include "gsl_managed.h"
-
+#include "sn3d.h"
 
 gsl_matrix *gsl_matrix_alloc_managed(const size_t n1, const size_t n2)
 {
@@ -40,24 +40,32 @@ double *gsl_matrix_ptr_managed(gsl_matrix * m, const size_t i, const size_t j)
 
 void gsl_matrix_free_managed(gsl_matrix *m)
 {
-  // printf("gsl_matrix_free_managed cudaFree(m->block->data)");
   cudaFree(m->block->data);
-  // printf("gsl_matrix_free_managed free(m->block)");
   cudaFree(m->block);
-  // printf("gsl_matrix_free_managed gsl_matrix_free(m)");
   cudaFree(m);
 }
 
 
-gsl_vector *gsl_vector_alloc_managed(const size_t n)
+gsl_vector *gsl_vector_alloc_managed(const size_t n, bool readmostly)
 {
+  // int myGpuId;
+  // cudaGetDevice(&myGpuId);
+
   gsl_block *block;
-  cudaMallocManaged((gsl_block **) &block, sizeof(gsl_block));
+  cudaMallocManaged(&block, sizeof(gsl_block));
+
   block->size = sizeof(double) * n;
-  cudaMallocManaged((double **) &block->data, block->size);
+  cudaMallocManaged(&block->data, block->size);
 
   gsl_vector *v;
   cudaMallocManaged(&v, sizeof(gsl_vector));
+
+  if (readmostly)
+  {
+    cudaMemAdvise(block, sizeof(gsl_block), cudaMemAdviseSetReadMostly, myGpuId);
+    cudaMemAdvise(block->data, block->size, cudaMemAdviseSetReadMostly, myGpuId);
+    cudaMemAdvise(v, sizeof(gsl_vector), cudaMemAdviseSetReadMostly, myGpuId);
+  }
 
   v->data = block->data;
   v->size = n;
@@ -69,9 +77,9 @@ gsl_vector *gsl_vector_alloc_managed(const size_t n)
 }
 
 
-gsl_vector *gsl_vector_calloc_managed(const size_t n)
+gsl_vector *gsl_vector_calloc_managed(const size_t n, bool readmostly)
 {
-  gsl_vector *vec = gsl_vector_alloc_managed(n);
+  gsl_vector *vec = gsl_vector_alloc_managed(n, readmostly);
   gsl_vector_set_zero(vec);
   return vec;
 }
@@ -86,10 +94,7 @@ double gsl_vector_get_managed(gsl_vector *v, const size_t i)
 
 void gsl_vector_free_managed(gsl_vector *vec)
 {
-  // printf("gsl_vector_free_managed cudaFree(vec->block->data);");
   cudaFree(vec->block->data);
-  // printf("gsl_vector_free_managed free(vec->block);");
   cudaFree(vec->block);
-  // printf("gsl_vector_free_managed gsl_vector_free(vec);");
   cudaFree(vec);
 }

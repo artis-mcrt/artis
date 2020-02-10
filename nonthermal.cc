@@ -603,13 +603,13 @@ void nt_init(const int my_rank)
     if (STORE_NT_SPECTRUM)
       printout("mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n", mem_usage_yfunc / 1024 / 1024.);;
 
-    envec = gsl_vector_calloc_managed(SFPTS); // energy grid on which solution is sampled
-    logenvec = gsl_vector_calloc_managed(SFPTS);
-    sourcevec = gsl_vector_calloc_managed(SFPTS); // energy grid on which solution is sampled
+    envec = gsl_vector_calloc_managed(SFPTS, true); // energy grid on which solution is sampled
+    logenvec = gsl_vector_calloc_managed(SFPTS, true);
+    sourcevec = gsl_vector_calloc_managed(SFPTS, true); // energy grid on which solution is sampled
 
     #if (SF_USE_LOG_E_INCREMENT)
     {
-      delta_envec = gsl_vector_calloc_managed(SFPTS);
+      delta_envec = gsl_vector_calloc_managed(SFPTS, true);
       delta_log_e = log(SF_EMAX / SF_EMIN) / (SFPTS - 1);
     }
     #endif
@@ -647,7 +647,7 @@ void nt_init(const int my_rank)
         gsl_vector_set(sourcevec, s, 1. / source_spread_en);
     }
 
-    gsl_vector *integralvec = gsl_vector_alloc_managed(SFPTS);
+    gsl_vector *integralvec = gsl_vector_alloc(SFPTS);
     gsl_vector_memcpy(integralvec, sourcevec);
     #if (SF_USE_LOG_E_INCREMENT)
       gsl_vector_mul(integralvec, delta_envec);
@@ -658,7 +658,7 @@ void nt_init(const int my_rank)
 
     gsl_vector_mul(integralvec, envec);
     E_init_ev = gsl_blas_dasum(integralvec); // integral of E * S(e) dE
-    gsl_vector_free_managed(integralvec);
+    gsl_vector_free(integralvec);
 
     // or put all of the source into one point at SF_EMAX
     // gsl_vector_set_zero(sourcevec);
@@ -1488,7 +1488,7 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
   const double nnion = ionstagepop(modelgridindex, element, ion); // hopefully ions per cm^3?
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
 
-  gsl_vector *cross_section_vec = gsl_vector_alloc_managed(SFPTS);
+  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
   get_xs_ionization_vector(cross_section_vec, collionindex);
 
   // either multiply by the variable delta_e for LOG_E spacing...
@@ -1500,7 +1500,7 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
 
   double y_dot_crosssection_de = 0.;
   gsl_blas_ddot(&yvecview.vector, cross_section_vec, &y_dot_crosssection_de);
-  gsl_vector_free_managed(cross_section_vec);
+  gsl_vector_free(cross_section_vec);
 
   // or multiply the scalar result by the constant DELTA_E
   #if (!SF_USE_LOG_E_INCREMENT)
@@ -1530,8 +1530,8 @@ static double calculate_nt_ionization_ratecoeff(
 // IMPORTANT: we are dividing by the shell potential, not the valence potential here!
 // To change this set assumeshellpotentialisvalence to true
 {
-  gsl_vector *cross_section_vec = gsl_vector_alloc_managed(SFPTS);
-  gsl_vector *cross_section_vec_allshells = gsl_vector_calloc_managed(SFPTS);
+  gsl_vector *cross_section_vec = gsl_vector_alloc(SFPTS);
+  gsl_vector *cross_section_vec_allshells = gsl_vector_calloc(SFPTS);
 
   const int Z = get_element(element);
   const int ionstage = get_ionstage(element, ion);
@@ -1560,7 +1560,7 @@ static double calculate_nt_ionization_ratecoeff(
     }
   }
 
-  gsl_vector_free_managed(cross_section_vec);
+  gsl_vector_free(cross_section_vec);
 
   #if (SF_USE_LOG_E_INCREMENT)
   gsl_vector_mul(cross_section_vec_allshells, delta_envec);
@@ -1571,7 +1571,7 @@ static double calculate_nt_ionization_ratecoeff(
   double y_dot_crosssection_de = 0.;
   gsl_vector_view yvecview_thismgi = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
   gsl_blas_ddot(&yvecview_thismgi.vector, cross_section_vec_allshells, &y_dot_crosssection_de);
-  gsl_vector_free_managed(cross_section_vec_allshells);
+  gsl_vector_free(cross_section_vec_allshells);
 
   #if (!SF_USE_LOG_E_INCREMENT)
   y_dot_crosssection_de *= DELTA_E;
@@ -1901,7 +1901,7 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(
     abort();
 }
 
-  gsl_vector *xs_excitation_vec = gsl_vector_alloc_managed(SFPTS);
+  gsl_vector *xs_excitation_vec = gsl_vector_alloc(SFPTS);
   if (get_xs_excitation_vector((double *) xs_excitation_vec->data, lineindex, statweight_lower, epsilon_trans) >= 0)
   {
     #if (SF_USE_LOG_E_INCREMENT)
@@ -1911,7 +1911,7 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(
     double y_dot_crosssection = 0.;
     gsl_vector_view yvecview = gsl_vector_view_array(nt_solution[modelgridindex].yfunc, SFPTS);
     gsl_blas_ddot(xs_excitation_vec, &yvecview.vector, &y_dot_crosssection);
-    gsl_vector_free_managed(xs_excitation_vec);
+    gsl_vector_free(xs_excitation_vec);
 
     #if (!SF_USE_LOG_E_INCREMENT)
     y_dot_crosssection *= DELTA_E;
@@ -1921,7 +1921,7 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(
   }
   else
   {
-    gsl_vector_free_managed(xs_excitation_vec);
+    gsl_vector_free(xs_excitation_vec);
 
     return 0.;
   }
@@ -2504,27 +2504,60 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   // E_init_ev *= frac_sum;
 }
 
-__global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfmatrix, int lineindex, double statweight_lower, double epsilon_trans)
+__global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfmatrix, double *vec_xs_excitation, double epsilon_trans_ev, double nnlevel, int xsstartindex)
 {
-  // TODO
-  // const int j = threadIdx.x + blockIdx.x * blockDim.x;
+  const int j = xsstartindex + threadIdx.x + blockIdx.x * blockDim.x;
+
+  const double xs_excitation_j = vec_xs_excitation[j];
+
+  for (int i = 0; i < SFPTS; i++) // TODO: should i start at startindex?
+  {
+    const double en = gsl_vector_get_managed(envec, i);
+    const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
+
+    #if (SF_USE_LOG_E_INCREMENT)
+    const double delta_en = gsl_vector_get_managed(delta_envec, j);
+    #else
+    const double delta_en = DELTA_E;
+    #endif
+
+    const int startindex = i > xsstartindex ? i : xsstartindex;
+    // for (int j = startindex; j < stopindex; j++)
+    if (j >= startindex && j < stopindex)
+    {
+      *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel * xs_excitation_j * delta_en;
+      // do the last bit separately because we're not using the full delta_e interval
+    }
+
+    if (j == stopindex)
+    {
+      const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
+      *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel * xs_excitation_j * delta_en_actual;
+    }
+  }
 }
 
 
-static void sfmatrix_add_excitation_transition_gpu(gsl_matrix *sfmatrix, int lineindex, double statweight_lower, double epsilon_trans)
+static void sfmatrix_add_excitation_transition_gpu(gsl_matrix *sfmatrix, int lineindex, double statweight_lower, double epsilon_trans, double nnlevel)
 {
-  // double vec_xs_excitation_deltae[SFPTS];
-  // const int xsstartindex = get_xs_excitation_vector(&vec_xs_excitation_deltae, lineindex, statweight_lower, epsilon_trans);
+  gsl_vector *vec_xs_excitation = gsl_vector_alloc_managed(SFPTS, false);
+  const int xsstartindex = get_xs_excitation_vector(vec_xs_excitation->data, lineindex, statweight_lower, epsilon_trans);
+  if (xsstartindex < 0)
+  {
+    return;
+  }
+
+  const double epsilon_trans_ev = epsilon_trans / EV;
 
   cudaError_t cudaStatus;
 
   cudaStatus = cudaDeviceSynchronize();
   assert(cudaStatus == cudaSuccess);
 
-  dim3 numBlocks(ceil(SFPTS / 512.), 1, 1);
   dim3 threadsPerBlock(512, 1, 1);
+  dim3 numBlocks(ceil((SFPTS - xsstartindex) / 512.), 1, 1);
 
-  kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, lineindex, statweight_lower, epsilon_trans);
+  kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, vec_xs_excitation->data, epsilon_trans_ev, nnlevel, xsstartindex);
 
   // Check for any errors launching the kernel
   cudaStatus = cudaGetLastError();
@@ -2534,6 +2567,8 @@ static void sfmatrix_add_excitation_transition_gpu(gsl_matrix *sfmatrix, int lin
   // any errors encountered during the launch.
   cudaStatus = cudaDeviceSynchronize();
   assert(cudaStatus == cudaSuccess);
+
+  gsl_vector_free_managed(vec_xs_excitation);
 }
 
 
@@ -2602,8 +2637,11 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      // sfmatrix_add_excition_transition_gpu(sfmatrix, lineindex, statweight_lower, epsilon_trans);
+      #if CUDA_ENABLED
+      sfmatrix_add_excitation_transition_gpu(sfmatrix, lineindex, statweight_lower, epsilon_trans, nnlevel);
+      #else
       sfmatrix_add_excitation_transition(sfmatrix, lineindex, statweight_lower, epsilon_trans, nnlevel);
+      #endif
     }
   }
 }
@@ -2756,7 +2794,7 @@ static void add_ionization_shell(gsl_matrix *sfmatrix, const int collionindex, c
   // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
   //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
-  gsl_vector *const vec_xs_ionization = gsl_vector_alloc_managed(SFPTS);
+  gsl_vector *const vec_xs_ionization = gsl_vector_alloc(SFPTS);
   const int xsstartindex = get_xs_ionization_vector(vec_xs_ionization, collionindex);
 
   double atanexp[SFPTS];
@@ -2906,9 +2944,9 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
   // printout("Refining solution\n");
 
   double error_best = -1.;
-  gsl_vector *yvec_best = gsl_vector_alloc_managed(SFPTS); // solution vector with lowest error
-  gsl_vector *gsl_work_vector = gsl_vector_calloc_managed(SFPTS);
-  gsl_vector *residual_vector = gsl_vector_alloc_managed(SFPTS);
+  gsl_vector *yvec_best = gsl_vector_alloc(SFPTS); // solution vector with lowest error
+  gsl_vector *gsl_work_vector = gsl_vector_calloc(SFPTS);
+  gsl_vector *residual_vector = gsl_vector_alloc(SFPTS);
   int iteration;
   for (iteration = 0; iteration < 10; iteration++)
   {
@@ -2936,9 +2974,9 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
                iteration, error_best);
     gsl_vector_memcpy(yvec, yvec_best);
   }
-  gsl_vector_free_managed(yvec_best);
-  gsl_vector_free_managed(gsl_work_vector);
-  gsl_vector_free_managed(residual_vector);
+  gsl_vector_free(yvec_best);
+  gsl_vector_free(gsl_work_vector);
+  gsl_vector_free(residual_vector);
 
   // gsl_matrix_free_managed(sfmatrix_LU); // if this matrix is different to sfmatrix then free it
   gsl_permutation_free(p);
@@ -3039,12 +3077,12 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
     if (i < SFPTS - 1)
     {
       #if (SF_USE_LOG_E_INCREMENT)
-      gsl_vector *sourcevec_de = gsl_vector_alloc_managed(SFPTS);
+      gsl_vector *sourcevec_de = gsl_vector_alloc(SFPTS);
       gsl_vector_memcpy(sourcevec_de, sourcevec);
       gsl_vector_mul(sourcevec_de, delta_envec);
       gsl_vector_const_view source_de_e_to_SF_EMAX = gsl_vector_const_subvector(sourcevec_de, i + 1, SFPTS - i - 1);
       source_integral_to_SF_EMAX = gsl_blas_dasum(&source_de_e_to_SF_EMAX.vector);
-      gsl_vector_free_managed(sourcevec_de);
+      gsl_vector_free(sourcevec_de);
       #else
       gsl_vector_const_view source_e_to_SF_EMAX = gsl_vector_const_subvector(sourcevec, i + 1, SFPTS - i - 1);
       source_integral_to_SF_EMAX = gsl_blas_dasum(&source_e_to_SF_EMAX.vector) * DELTA_E;
