@@ -115,6 +115,9 @@ sn3ddebug: clean version $(sn3d_objects)
 sn3dcuda: version
 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(sn3d_files) $(INCLUDE) $(LDFLAGS) -o sn3d
 
+%.o: %.cc
+	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
+
 exspec_files = exspec.cc grid_init.cc globals.cc input.cc vectors.cc packet_init.cc update_grid.cc update_packets.cc gamma.cc boundary.cc macroatom.cc decay.cc rpkt.cc kpkt.cc photo_electric.cc emissivities.cc grey_emissivities.cc ltepop.cc atomic.cc ratecoeff.cc thermalbalance.cc light_curve.cc spectrum.cc polarization.cc nltepop.cc radfield.cc nonthermal.cc vpkt.cc md5.cc
 
 exspec: clean version
