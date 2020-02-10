@@ -101,7 +101,7 @@ extern __managed__ int nbfcontinua_ground;
 extern __managed__ int NPHIXSPOINTS;
 extern __managed__ double NPHIXSNUINCREMENT;
 
-extern cellhistory_struct *cellhistory;
+extern __managed__ cellhistory_struct *cellhistory;
 
 extern int ma_stat_activation_collexc;
 extern int ma_stat_activation_collion;

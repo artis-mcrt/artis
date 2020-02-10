@@ -941,7 +941,7 @@ static double xs_excitation(const int lineindex, const double epsilon_trans, con
 }
 
 
-static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
+static int get_xs_excitation_vector(double *xs_excitation_vec, const int lineindex, const double statweight_lower, const double epsilon_trans)
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
 // returns the index of the first valid cross section point (en >= epsilon_trans)
@@ -958,12 +958,12 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
     for (int j = 0; j < en_startindex; j++)
-      gsl_vector_set(xs_excitation_vec, j, 0.);
+      xs_excitation_vec[j] = 0.;
 
     for (int j = en_startindex; j < SFPTS; j++)
     {
       const double energy = gsl_vector_get(envec, j) * EV;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * pow(energy, -2));
+      xs_excitation_vec[j] = constantfactor * pow(energy, -2);
     }
     return en_startindex;
   }
@@ -985,7 +985,7 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
 
     for (int j = 0; j < en_startindex; j++)
-      gsl_vector_set(xs_excitation_vec, j, 0.);
+      xs_excitation_vec[j] = 0.;
 
     // U = en / epsilon
     // g_bar = A * log(U) + b
@@ -995,7 +995,7 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
     {
       const double logU = gsl_vector_get(logenvec, j) - log(epsilon_trans_ev);
       const double g_bar = A * logU + B;
-      gsl_vector_set(xs_excitation_vec, j, constantfactor * g_bar / gsl_vector_get(envec, j));
+      xs_excitation_vec[j] = constantfactor * g_bar / gsl_vector_get(envec, j);
     }
 
     return en_startindex;
@@ -1902,7 +1902,7 @@ static double calculate_nt_excitation_ratecoeff_perdeposition(
 }
 
   gsl_vector *xs_excitation_vec = gsl_vector_alloc_managed(SFPTS);
-  if (get_xs_excitation_vector(xs_excitation_vec, lineindex, statweight_lower, epsilon_trans) >= 0)
+  if (get_xs_excitation_vector((double *) xs_excitation_vec->data, lineindex, statweight_lower, epsilon_trans) >= 0)
   {
     #if (SF_USE_LOG_E_INCREMENT)
     gsl_vector_mul(xs_excitation_vec, delta_envec);
@@ -2504,12 +2504,82 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   // E_init_ev *= frac_sum;
 }
 
+__global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfmatrix, int lineindex, double statweight_lower, double epsilon_trans)
+{
+  // TODO
+  // const int j = threadIdx.x + blockIdx.x * blockDim.x;
+}
 
-static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion, double *E_0)
+
+static void sfmatrix_add_excitation_transition_gpu(gsl_matrix *sfmatrix, int lineindex, double statweight_lower, double epsilon_trans)
+{
+  // double vec_xs_excitation_deltae[SFPTS];
+  // const int xsstartindex = get_xs_excitation_vector(&vec_xs_excitation_deltae, lineindex, statweight_lower, epsilon_trans);
+
+  cudaError_t cudaStatus;
+
+  cudaStatus = cudaDeviceSynchronize();
+  assert(cudaStatus == cudaSuccess);
+
+  dim3 numBlocks(ceil(SFPTS / 512.), 1, 1);
+  dim3 threadsPerBlock(512, 1, 1);
+
+  kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, lineindex, statweight_lower, epsilon_trans);
+
+  // Check for any errors launching the kernel
+  cudaStatus = cudaGetLastError();
+  assert(cudaStatus == cudaSuccess);
+
+  // cudaDeviceSynchronize waits for the kernel to finish, and returns
+  // any errors encountered during the launch.
+  cudaStatus = cudaDeviceSynchronize();
+  assert(cudaStatus == cudaSuccess);
+}
+
+
+static void sfmatrix_add_excitation_transition(gsl_matrix *sfmatrix, int lineindex, double statweight_lower, double epsilon_trans, double nnlevel)
+{
+  const double epsilon_trans_ev = epsilon_trans / EV;
+  gsl_vector *vec_xs_excitation_deltae = gsl_vector_alloc(SFPTS);
+  const int xsstartindex = get_xs_excitation_vector(vec_xs_excitation_deltae->data, lineindex, statweight_lower, epsilon_trans);
+  if (xsstartindex >= 0)
+  {
+    #if (SF_USE_LOG_E_INCREMENT)
+    gsl_vector_mul(vec_xs_excitation_deltae, delta_envec);
+    #else
+    gsl_blas_dscal(DELTA_E, vec_xs_excitation_deltae);
+    #endif
+
+    for (int i = 0; i < SFPTS; i++)
+    {
+      const double en = gsl_vector_get(envec, i);
+      const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
+
+      const int startindex = i > xsstartindex ? i : xsstartindex;
+      for (int j = startindex; j < stopindex; j++)
+      {
+        *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * vec_xs_excitation_deltae->data[j];
+      }
+
+      // do the last bit separately because we're not using the full delta_e interval
+      #if (SF_USE_LOG_E_INCREMENT)
+      const double delta_en = gsl_vector_get(delta_envec, stopindex);
+      #else
+      const double delta_en = DELTA_E;
+      #endif
+
+      const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
+
+      *gsl_matrix_ptr(sfmatrix, i, stopindex) += nnlevel * vec_xs_excitation_deltae->data[stopindex] * delta_en_actual / delta_en;
+    }
+  }
+  gsl_vector_free(vec_xs_excitation_deltae);
+}
+
+
+static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridindex, const int element, const int ion, double *E_0)
 {
   // excitation terms
-  gsl_vector *vec_xs_excitation_deltae = gsl_vector_alloc_managed(SFPTS);
-
   const int nlevels_all = get_nlevels(element, ion);
   const int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
 
@@ -2528,159 +2598,127 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
         continue;
       }
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
-      const double epsilon_trans_ev = epsilon_trans / EV;
 
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      const int xsstartindex = get_xs_excitation_vector(vec_xs_excitation_deltae, lineindex, statweight_lower, epsilon_trans);
-      if (xsstartindex >= 0)
-      {
-        #if (SF_USE_LOG_E_INCREMENT)
-        gsl_vector_mul(vec_xs_excitation_deltae, delta_envec);
-        #else
-        gsl_blas_dscal(DELTA_E, vec_xs_excitation_deltae);
-        #endif
-
-        for (int i = 0; i < SFPTS; i++)
-        {
-          const double en = gsl_vector_get(envec, i);
-          const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
-
-          const int startindex = i > xsstartindex ? i : xsstartindex;
-          for (int j = startindex; j < stopindex; j++)
-          {
-            *gsl_matrix_ptr(sfmatrix, i, j) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, j);
-          }
-
-          // do the last bit separately because we're not using the full delta_e interval
-          #if (SF_USE_LOG_E_INCREMENT)
-          const double delta_en = gsl_vector_get(delta_envec, stopindex);
-          #else
-          const double delta_en = DELTA_E;
-          #endif
-
-          const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get(envec, stopindex));
-
-          *gsl_matrix_ptr(sfmatrix, i, stopindex) += nnlevel * gsl_vector_get(vec_xs_excitation_deltae, stopindex) * delta_en_actual / delta_en;
-        }
-      }
+      // sfmatrix_add_excition_transition_gpu(sfmatrix, lineindex, statweight_lower, epsilon_trans);
+      sfmatrix_add_excitation_transition(sfmatrix, lineindex, statweight_lower, epsilon_trans, nnlevel);
     }
   }
-  gsl_vector_free_managed(vec_xs_excitation_deltae);
 }
 
 
-__global__ void kernel_add_ionization_shell(
-  gsl_matrix *sfmatrix, int collionindex, double ionpot_ev, double nnion, double J, int xsstartindex)
+__global__ static void kernel_add_ionization_shell(
+    gsl_matrix *sfmatrix, int collionindex, double ionpot_ev, double nnion, double J, int xsstartindex)
 {
-  const int i = threadIdx.y + blockIdx.y * blockDim.y;
-  const int j = threadIdx.x + blockIdx.x * blockDim.x;
+  const int j = xsstartindex + threadIdx.x + blockIdx.x * blockDim.x;
 
-  printf("kernel_add_ionization_shell i %d j %d threadIdx x %d y %d blockIdx x %d y %d blockDim x %d y %d\n", i, j, threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y, blockDim.x, blockDim.y);
-
+  // const double ionpot_ev = colliondata[collionindex].ionpot_ev;
   const double en_auger_ev = colliondata[collionindex].en_auger_ev;
   // const double n_auger_elec_avg = colliondata[n].n_auger_elec_avg;
 
   // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
   //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
 
-  if (i < SFPTS && j < SFPTS)
+  double atanexp_j = 0.;
+  double prefactors_j = 0.;
+  double xs_impactionization_j = 0.;
+  if (j >= xsstartindex && j < SFPTS)
+  {
+    const double endash = gsl_vector_get_managed(envec, j);
+    const double epsilon_upper = (endash + ionpot_ev) / 2;
+    atanexp_j = atan((epsilon_upper - ionpot_ev) / J);
+    xs_impactionization_j = xs_impactionization(endash, collionindex);
+    prefactors_j = xs_impactionization_j * nnion / atan((endash - ionpot_ev) / 2 / J);
+  }
+
+  for (int i = 0; i < SFPTS; i++)
   {
     // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
     const double en = gsl_vector_get_managed(envec, i);
 
-    printf("kernel_add_ionization_shell i %d j %d en %g\n", i, j, en);
-
-    double atanexp = 0.;
-    double prefactor = 0.;
-
     // endash ranges from en to SF_EMAX, but skip over the zero-cross section points
-    // const int jstart = i > xsstartindex ? i : xsstartindex;
-    // if (j >= jstart)
-    // {
-    //   const double endash = gsl_vector_get_managed(envec, j);
-    //   const double epsilon_upper = (endash + ionpot_ev) / 2;
-    //   atanexp = atan((epsilon_upper - ionpot_ev) / J);
-    //   prefactor = xs_impactionization(endash, collionindex) * nnion / atan((endash - ionpot_ev) / 2 / J);
-    //
-    //   // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E' = envec(j)
-    //   #if (SF_USE_LOG_E_INCREMENT)
-    //   const double deltaendash = gsl_vector_get_managed(delta_envec, j);
-    //   #else
-    //   const double deltaendash = DELTA_E;
-    //   #endif
-    //
-    //   // atan[(epsilon - ionpot_ev) / J] is the indefinite integral of 1/[1 + (epsilon - ionpot_ev) / J]
-    //   // in Kozma & Fransson 1992 equation 4
-    //
-    //   const double epsilon_lower = endash - en; // and epsilon_upper = (endash + ionpot_ev) / 2;
-    //   *gsl_matrix_ptr_managed(sfmatrix, i, j) += prefactor * (atanexp - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
-    // }
-    //
-    // // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
-    // const double atanexp2 = atan(en / J);
-    //
-    // // endash ranges from 2 * en + ionpot_ev to SF_EMAX
-    // const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
-    // if (j >= secondintegralstartindex)
-    // {
-    //   #if (SF_USE_LOG_E_INCREMENT)
-    //   const double deltaendash = gsl_vector_get_managed(delta_envec, j);
-    //   #else
-    //   const double deltaendash = DELTA_E;
-    //   #endif
-    //
-    //   // epsilon_lower = en + ionpot_ev;
-    //   // epsilon_upper = (endash + ionpot_ev) / 2;
-    //   *gsl_matrix_ptr_managed(sfmatrix, i, j) -= prefactor * (atanexp - atanexp2) * deltaendash;
-    // }
+    const int jstart = i > xsstartindex ? i : xsstartindex;
+    if (j >= jstart && j < SFPTS)
+    {
+      // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E' = envec(j)
+      const double endash = gsl_vector_get_managed(envec, j);
+      #if (SF_USE_LOG_E_INCREMENT)
+      const double deltaendash = gsl_vector_get_managed(delta_envec, j);
+      #else
+      const double deltaendash = DELTA_E;
+      #endif
+
+      // atan[(epsilon - ionpot_ev) / J] is the indefinite integral of 1/[1 + (epsilon - ionpot_ev) / J]
+      // in Kozma & Fransson 1992 equation 4
+
+      const double epsilon_lower = endash - en; // and epsilon_upper = (endash + ionpot_ev) / 2;
+      *gsl_matrix_ptr_managed(sfmatrix, i, j) += prefactors_j * (atanexp_j - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+    }
+
+    // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
+    const double atanexp2 = atan(en / J);
+
+    // endash ranges from 2 * en + ionpot_ev to SF_EMAX
+    const int secondintegralstartindex = get_energyindex_ev_lteq(2 * en + ionpot_ev);
+    if (j >= secondintegralstartindex && j < SFPTS)
+    {
+      #if (SF_USE_LOG_E_INCREMENT)
+      const double deltaendash = gsl_vector_get_managed(delta_envec, j);
+      #else
+      const double deltaendash = DELTA_E;
+      #endif
+
+      // epsilon_lower = en + ionpot_ev;
+      // epsilon_upper = (endash + ionpot_ev) / 2;
+      *gsl_matrix_ptr_managed(sfmatrix, i, j) -= prefactors_j * (atanexp_j - atanexp2) * deltaendash;
+    }
   }
 
-  // if (SF_AUGER_CONTRIBUTION_ON)
-  // {
-  //   int augerstopindex = 0;
-  //   if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
-  //   {
-  //     // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger electrons
-  //     // so we need a boost to get the average energy of Auger electrons given that there are one or more
-  //     const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
-  //
-  //     augerstopindex = get_energyindex_ev_gteq(en_auger_ev * en_boost);
-  //   }
-  //   else
-  //   {
-  //     augerstopindex = get_energyindex_ev_gteq(en_auger_ev);
-  //   }
-  //
-  //   if (i < augerstopindex)
-  //   {
-  //     const double en = gsl_vector_get_managed(envec, i);
-  //     const int jstart = i > xsstartindex ? i : xsstartindex;
-  //     if (j >= jstart)
-  //     {
-  //       const double endash = gsl_vector_get_managed(envec, j);
-  //       const double xs = xs_impactionization(endash, collionindex);
-  //       if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
-  //       {
-  //         const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
-  //         for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++)
-  //         {
-  //           if (en < (en_auger_ev * en_boost / a))
-  //           {
-  //             *gsl_matrix_ptr_managed(sfmatrix, i, j) -= nnion * xs * colliondata[collionindex].prob_num_auger[a] * a;
-  //           }
-  //         }
-  //       }
-  //       else
-  //       {
-  //         assert(en < en_auger_ev);
-  //         // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
-  //         *gsl_matrix_ptr_managed(sfmatrix, i, j) -= nnion * xs; // * n_auger_elec_avg; // * en_auger_ev???
-  //       }
-  //     }
-  //   }
-  // }
+  if (SF_AUGER_CONTRIBUTION_ON)
+  {
+    int augerstopindex = 0;
+    if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
+    {
+      // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger electrons
+      // so we need a boost to get the average energy of Auger electrons given that there are one or more
+      const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
+
+      augerstopindex = get_energyindex_ev_gteq(en_auger_ev * en_boost);
+    }
+    else
+    {
+      augerstopindex = get_energyindex_ev_gteq(en_auger_ev);
+    }
+
+    for (int i = 0; i < augerstopindex; i++)
+    {
+      const double en = gsl_vector_get_managed(envec, i);
+      const int jstart = i > xsstartindex ? i : xsstartindex;
+      // for (int j = jstart; j < SFPTS; j++)
+      if (j >= jstart && j < SFPTS)
+      {
+        if (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN)
+        {
+          const double en_boost = 1 / (1. - colliondata[collionindex].prob_num_auger[0]);
+          for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++)
+          {
+            if (en < (en_auger_ev * en_boost / a))
+            {
+              *gsl_matrix_ptr_managed(sfmatrix, i, j) -= nnion * xs_impactionization_j * colliondata[collionindex].prob_num_auger[a] * a;
+            }
+          }
+        }
+        else
+        {
+          assert(en < en_auger_ev);
+          // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
+          *gsl_matrix_ptr_managed(sfmatrix, i, j) -= nnion * xs_impactionization_j; // * n_auger_elec_avg; // * en_auger_ev???
+        }
+      }
+    }
+  }
 }
 
 static void sfmatrix_add_ionization_shell_gpu(gsl_matrix *sfmatrix, int collionindex, double nnion, double J)
@@ -2693,8 +2731,8 @@ static void sfmatrix_add_ionization_shell_gpu(gsl_matrix *sfmatrix, int collioni
   cudaStatus = cudaDeviceSynchronize();
   assert(cudaStatus == cudaSuccess);
 
-  dim3 threadsPerBlock(32, 32, 1);
-  dim3 numBlocks(ceil(SFPTS / 32.), ceil(SFPTS / 32.), 1);
+  dim3 numBlocks(ceil((SFPTS - xsstartindex + 1) / 512.), 1, 1);
+  dim3 threadsPerBlock(512, 1, 1);
 
   kernel_add_ionization_shell<<<numBlocks, threadsPerBlock>>>(sfmatrix, collionindex, ionpot_ev, nnion, J, xsstartindex);
 
@@ -2988,7 +3026,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
   }
 
   gsl_matrix *const sfmatrix = gsl_matrix_calloc_managed(SFPTS, SFPTS);
-  gsl_vector *const rhsvec = gsl_vector_calloc_managed(SFPTS); // constant term (not dependent on y func) in each equation
+  gsl_vector *const rhsvec = gsl_vector_calloc(SFPTS); // constant term (not dependent on y func) in each equation
 
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++)
@@ -3088,7 +3126,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
   // gsl_matrix_free_managed(sfmatrix_LU); // if sfmatrix_LU is different to sfmatrix
 
   gsl_matrix_free_managed(sfmatrix);
-  gsl_vector_free_managed(rhsvec);
+  gsl_vector_free(rhsvec);
 
   if (timestep % 10 == 0)
     nt_write_to_file(modelgridindex, timestep, iteration);

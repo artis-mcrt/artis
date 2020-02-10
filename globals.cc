@@ -118,7 +118,7 @@ __managed__ int nbfcontinua_ground; ///number of bf-continua
 __managed__ int NPHIXSPOINTS;
 __managed__ double NPHIXSNUINCREMENT;
 
-cellhistory_struct *cellhistory;
+cellhistory_struct __managed__ *cellhistory;
 
 /// Debug/Analysis Counters
 int ma_stat_activation_collexc;

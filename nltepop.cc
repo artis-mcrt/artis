@@ -897,7 +897,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
-  gsl_matrix *rate_matrix = gsl_matrix_calloc_managed(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
   gsl_matrix *rate_matrix_rad_bb;
   gsl_matrix *rate_matrix_coll_bb;
   gsl_matrix *rate_matrix_ntcoll_bb;
