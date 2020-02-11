@@ -95,7 +95,7 @@ endif
 # CXXFLAGS += -fPIC -shared
 # CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
 CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -rdc=true -Xcompiler "$(CXXFLAGS)"
-
+INCLUDE += -I/usr/local/cuda/samples/common/inc/
 
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)

@@ -38,7 +38,7 @@ const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.t
 
 // threadprivate variables
 int tid;
-int myGpuId;
+int myGpuId = 0;
 bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng;
@@ -562,6 +562,10 @@ void* reallocmanaged(void* ptr, size_t newSize, size_t curSize)
 
 void* makemanaged(void* ptr, size_t curSize)
 {
+  if (ptr == NULL)
+  {
+    return NULL;
+  }
   void *newptr;
   cudaMallocManaged(&newptr, curSize);
   memcpy(newptr, ptr, curSize);

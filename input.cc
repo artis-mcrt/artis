@@ -164,6 +164,7 @@ static void read_phixs_data_table(
   mem_usage_phixs += NPHIXSPOINTS * sizeof(float);
 #if CUDA_ENABLED
   cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].photoion_xs, NPHIXSPOINTS * sizeof(float));
+  cudaMemAdvise(elements[element].ions[lowerion].levels[lowerlevel].photoion_xs, NPHIXSPOINTS * sizeof(float), cudaMemAdviseSetReadMostly, myGpuId);
 #else
   elements[element].ions[lowerion].levels[lowerlevel].photoion_xs = (float *) calloc(NPHIXSPOINTS, sizeof(float));
 #endif
@@ -719,6 +720,7 @@ static void read_atomicdata_files(void)
   }
   #if CUDA_ENABLED
   cudaMallocManaged(&elements, nelements * sizeof(elementlist_entry));
+  cudaMemAdvise(elements, nelements * sizeof(elementlist_entry), cudaMemAdviseSetReadMostly, myGpuId);
   #else
   elements = (elementlist_entry *) calloc(nelements, sizeof(elementlist_entry));
   #endif
@@ -786,6 +788,7 @@ static void read_atomicdata_files(void)
     /// Initialize the elements ionlist
     #if CUDA_ENABLED
     cudaMallocManaged(&elements[element].ions, nions * sizeof(ionlist_entry));
+    cudaMemAdvise(elements[element].ions, nions * sizeof(ionlist_entry), cudaMemAdviseSetReadMostly, myGpuId);
     #else
     elements[element].ions = (ionlist_entry *) calloc(nions, sizeof(ionlist_entry));
     #endif
@@ -980,6 +983,7 @@ static void read_atomicdata_files(void)
       }
       #if CUDA_ENABLED
       cudaMallocManaged(&elements[element].ions[ion].levels, nlevelsmax * sizeof(levellist_entry));
+      cudaMemAdvise(elements[element].ions[ion].levels, nlevelsmax * sizeof(levellist_entry), cudaMemAdviseSetReadMostly, myGpuId);
       #else
       elements[element].ions[ion].levels = (elementlist_entry *) calloc(nlevelsmax, sizeof(levellist_entry));
       #endif
@@ -1010,8 +1014,20 @@ static void read_atomicdata_files(void)
         totaluptrans += get_nuptrans(element, ion, level);
         free(transitions[level].to);
 
-        // elements[element].ions[ion].levels[level].downtrans_lineindicies = (int *) makemanaged(elements[element].ions[ion].levels[level].downtrans_lineindicies, sizeof(int) * get_ndowntrans(element, ion, level));
-        // elements[element].ions[ion].levels[level].uptrans_lineindicies = (int *) makemanaged(elements[element].ions[ion].levels[level].downtrans_lineindicies, sizeof(int) * get_nuptrans(element, ion, level));
+        #if CUDA_ENABLED
+        if (elements[element].ions[ion].levels[level].downtrans_lineindicies != NULL)
+        {
+          const int nupperdowntrans = get_ndowntrans(element, ion, level);
+          elements[element].ions[ion].levels[level].downtrans_lineindicies = (int *) makemanaged(elements[element].ions[ion].levels[level].downtrans_lineindicies, nupperdowntrans * sizeof(int));
+          cudaMemAdvise(elements[element].ions[ion].levels[level].downtrans_lineindicies, nupperdowntrans * sizeof(int), cudaMemAdviseSetReadMostly, myGpuId);
+        }
+        if (elements[element].ions[ion].levels[level].uptrans_lineindicies != NULL)
+        {
+          const int nloweruptrans = get_nuptrans(element, ion, level);
+          elements[element].ions[ion].levels[level].uptrans_lineindicies = (int *) makemanaged(elements[element].ions[ion].levels[level].uptrans_lineindicies, nloweruptrans * sizeof(int));
+          cudaMemAdvise(elements[element].ions[ion].levels[level].uptrans_lineindicies, nloweruptrans * sizeof(int), cudaMemAdviseSetReadMostly, myGpuId);
+        }
+        #endif
       }
       free(transitiontable);
       free(transitions);
@@ -1027,8 +1043,9 @@ static void read_atomicdata_files(void)
           abort();
         }*/
       }
-    }
-  }
+    } // for ions
+  } // for elements
+
   fclose(adata);
   fclose(transitiondata);
   fclose(compositiondata);
@@ -1041,18 +1058,18 @@ static void read_atomicdata_files(void)
   if (nlines > 0)
   {
     /// and release empty memory from the linelist
-    // linelist = (linelist_entry *) makemanaged(linelist, nlines * sizeof(linelist_entry));
-    if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-      abort();
-    }
+    linelist = (linelist_entry *) makemanaged(linelist, nlines * sizeof(linelist_entry));
+    cudaMemAdvise(linelist, nlines * sizeof(linelist_entry), cudaMemAdviseSetReadMostly, myGpuId);
+    // if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
+    // {
+    //   printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
+    //   abort();
+    // }
     printout("mem_usage: linelist occupies %.1f MB\n", nlines * (sizeof(linelist[0]) + sizeof(&linelist[0])) / 1024. / 1024);
   }
 
   if (T_preset > 0)
     abort();
-
 
   /// Set up the list of allowed upward transitions for each level
   printout("total uptrans %d\n", totaluptrans);
