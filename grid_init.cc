@@ -288,6 +288,7 @@ static void allocate_compositiondata(const int modelgridindex)
 
   #if CUDA_ENABLED
   cudaMallocManaged(&modelgrid[modelgridindex].nlte_pops, total_nlte_levels * sizeof(double));
+  cudaMemAdvise(modelgrid[modelgridindex].nlte_pops, total_nlte_levels * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
   #else
   modelgrid[modelgridindex].nlte_pops = (double *) malloc(total_nlte_levels * sizeof(double));
   #endif
@@ -314,6 +315,7 @@ static void allocate_compositiondata(const int modelgridindex)
 
     #if CUDA_ENABLED
     cudaMallocManaged(&modelgrid[modelgridindex].composition[element].groundlevelpop, get_nions(element) * sizeof(float));
+    cudaMemAdvise(modelgrid[modelgridindex].composition[element].groundlevelpop, get_nions(element) * sizeof(float), cudaMemAdviseSetReadMostly, myGpuId);
     #else
     modelgrid[modelgridindex].composition[element].groundlevelpop = (double *) malloc(get_nions(element) * sizeof(float));
     #endif
@@ -325,6 +327,7 @@ static void allocate_compositiondata(const int modelgridindex)
 
     #if CUDA_ENABLED
     cudaMallocManaged(&modelgrid[modelgridindex].composition[element].partfunct, get_nions(element) * sizeof(float));
+    cudaMemAdvise(modelgrid[modelgridindex].composition[element].partfunct, get_nions(element) * sizeof(float), cudaMemAdviseSetReadMostly, myGpuId);
     #else
     modelgrid[modelgridindex].composition[element].partfunct = (float *) malloc(get_nions(element) * sizeof(float));
     #endif

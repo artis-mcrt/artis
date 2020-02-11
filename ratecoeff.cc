@@ -1,5 +1,6 @@
 #include <string.h>
 #include <gsl/gsl_integration.h>
+#include <helper_cuda.h>
 // #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <stdio.h>
@@ -1421,14 +1422,10 @@ __global__ void kernel_integral(f_integrand_t dev_func, void *intparas, double n
 
 static double calculate_phixs_integral_gpu(f_integrand_t ptr_func, void *dev_intparas, double nu_edge)
 {
-    cudaError_t cudaStatus;
-
     double *dev_integral;
-    cudaStatus = cudaMalloc(&dev_integral, sizeof(double));
-    assert(cudaStatus == cudaSuccess);
+    checkCudaErrors(cudaMalloc(&dev_integral, sizeof(double)));
 
-    cudaStatus = cudaDeviceSynchronize();
-    assert(cudaStatus == cudaSuccess);
+    checkCudaErrors(cudaDeviceSynchronize());
 
     dim3 threadsPerBlock(integralsamplesperxspoint, NPHIXSPOINTS, 1);
     dim3 numBlocks(1, 1, 1);
@@ -1437,18 +1434,15 @@ static double calculate_phixs_integral_gpu(f_integrand_t ptr_func, void *dev_int
     kernel_integral<<<numBlocks, threadsPerBlock, sharedsize>>>(ptr_func, dev_intparas, nu_edge, dev_integral);
 
     // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    assert(cudaStatus == cudaSuccess);
+    checkCudaErrors(cudaGetLastError());
 
     // cudaDeviceSynchronize waits for the kernel to finish, and returns
     // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    assert(cudaStatus == cudaSuccess);
+    checkCudaErrors(cudaDeviceSynchronize());
 
     double result;
 
-    cudaStatus = cudaMemcpy(&result, dev_integral, sizeof(double), cudaMemcpyDeviceToHost);
-    assert(cudaStatus == cudaSuccess);
+    checkCudaErrors(cudaMemcpy(&result, dev_integral, sizeof(double), cudaMemcpyDeviceToHost));
 
     cudaFree(dev_integral);
 
@@ -1516,12 +1510,13 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
 #else
+  checkCudaErrors(cudaDeviceSynchronize());
+
   f_integrand_t ptr_func;
   cudaMemcpyFromSymbol(&ptr_func, devptr_integrand_corrphotoioncoeff_custom_radfield, sizeof(f_integrand_t));
 
   void *dev_intparas;
-  cudaError_t cudaStatus = cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr));
-  assert(cudaStatus == cudaSuccess);
+  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
   cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice);
 
   const double gammacorr_gpu = calculate_phixs_integral_gpu(ptr_func, dev_intparas, intparas.nu_edge);
