@@ -2619,6 +2619,10 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
     const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, lower);
     const double epsilon_lower = epsilon(element, ion, lower);
     const int nuptrans = get_nuptrans(element, ion, lower);
+    if (nuptrans == 0)
+    {
+      continue;
+    }
     float *arr_epsilon_trans_ev;
     #if CUDA_ENABLED
     cudaMallocManaged(&arr_epsilon_trans_ev, nuptrans * sizeof(float));
