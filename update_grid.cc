@@ -1463,22 +1463,6 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // }
   // #endif
 
-  /// Move that check to outside the update grid routine. These numbers
-  /// must be the same as they were during grid_init, but on the
-  /// grid as a whole. Therefore densities and kappa must be propagated.
-  /*
-  //fclose(thermal_file);
-  check1=check2=0.;
-  int mgi;
-  for (n=0; n < ngrid; n++)
-  {
-    mgi=cell[n].modelgridindex;
-    check1 = check1 + (get_kappagrey(mgi)  * get_rho(mgi));
-    check2 = check2 + get_rho(mgi);
-  }
-  printout("Grey normalisation check: %g\n", check1/check2);
-  */
-
   /// Assign the minimum of thread private mps to the global variable max_path_step
   max_path_step = mps[0];
   for (int i = 1; i < nthreads; i++)
