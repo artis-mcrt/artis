@@ -52,14 +52,14 @@ else ifneq (, $(shell which mpicc))
 	# any other system which has mpicc available (Juwels, Cambridge, Gadi, etc)
 
 	CXX = mpicc
-	CXXFLAGS = -mcmodel=medium -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 	LDFLAGS= -lgsl -lgslcblas -lm
 
 	ifeq (,$(findstring raijin,$(HOSTNAME)))
 		LDFLAGS += -lgslcblas
 	endif
 
-	sn3d: CXXFLAGS += -DMPI_ON
+sn3d: CXXFLAGS += -DMPI_ON
 else
 	CXX = c++
 	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
@@ -89,13 +89,21 @@ ifneq (,$(findstring jakita,$(HOSTNAME)))
 	# Tesla K80
 	CUDA_NVCC_FLAGS += --gpu-architecture=sm_37
 	# LDFLAGS += -lprofiler
+	INCLUDE += -I/usr/local/cuda/samples/common/inc/
+endif
+
+# QUB ARC jakita.starfleet
+ifneq (,$(findstring gadi,$(HOSTNAME)))
+	# Tesla V100
+	CUDA_NVCC_FLAGS += --gpu-architecture=sm_70
+	CXX = c++
+	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
 endif
 
 # CXXFLAGS += -std=c++11
 # CXXFLAGS += -fPIC -shared
 # CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
 CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -rdc=true -Xcompiler "$(CXXFLAGS)"
-INCLUDE += -I/usr/local/cuda/samples/common/inc/
 
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)

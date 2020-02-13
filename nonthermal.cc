@@ -2551,7 +2551,7 @@ __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfm
 
 static void sfmatrix_add_excitation_transitions_gpu(gsl_matrix *sfmatrix, float *arr_epsilon_trans_ev, int *uptrans_lineindicies, int nuptrans, float nnlevel_lower)
 {
-  checkCudaErrors(cudaDeviceSynchronize());
+  CUDA_CALL(cudaDeviceSynchronize());
 
   dim3 threadsPerBlock(512, 1, 1);
   dim3 numBlocks(ceil(SFPTS / 512.), 1, 1);
@@ -2559,11 +2559,11 @@ static void sfmatrix_add_excitation_transitions_gpu(gsl_matrix *sfmatrix, float 
   kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, arr_epsilon_trans_ev, uptrans_lineindicies, nuptrans, nnlevel_lower);
 
   // Check for any errors launching the kernel
-  checkCudaErrors(cudaGetLastError());
+  CUDA_CALL(cudaGetLastError());
 
   // cudaDeviceSynchronize waits for the kernel to finish, and returns
   // any errors encountered during the launch.
-  checkCudaErrors(cudaDeviceSynchronize());
+  CUDA_CALL(cudaDeviceSynchronize());
 }
 
 

@@ -7,6 +7,8 @@
 #include <stdarg.h>  /// MK: needed for printout()
 #include <stdbool.h>
 #include <gsl/gsl_integration.h>
+#include <iostream>
+#include <cuda_runtime.h>
 
 #define DEBUG_ON
 // #define DO_TITER
@@ -58,10 +60,10 @@ double get_ion_stats(const int modelgridindex, const int element, const int ion,
 
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue);
 
-extern int tid;
-extern int myGpuId;
-extern bool use_cellhist;
-extern bool neutral_flag;
+extern __managed__ int tid;
+extern __managed__ int myGpuId;
+extern __managed__ bool use_cellhist;
+extern __managed__ bool neutral_flag;
 extern gsl_rng *rng;  // pointer for random number generator
 extern gsl_integration_workspace *gslworkspace;
 extern FILE *output_file;
@@ -119,5 +121,11 @@ inline FILE *fopen_required(const char *filename, const char *mode)
 void* reallocmanaged(void* ptr, size_t newSize, size_t curSize);
 void* makemanaged(void* ptr, size_t curSize);
 
+#define CUDA_CALL( call )               \
+{                                       \
+cudaError_t result = call;              \
+if ( cudaSuccess != result )            \
+    std::cerr << "CUDA error " << result << " in " << __FILE__ << ":" << __LINE__ << ": " << cudaGetErrorString( result ) << " (" << #call << ")" << std::endl;  \
+}
 
 #endif // SN3D_H
