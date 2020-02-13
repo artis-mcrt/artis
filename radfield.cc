@@ -15,7 +15,7 @@
 #endif
 
 
-static double J_normfactor[MMODELGRID + 1];
+static __managed__ double J_normfactor[MMODELGRID + 1];
 
 static bool radfield_initialized = false;
 
@@ -286,7 +286,11 @@ static void radfield_allocate_cell(int modelgridindex, long *radfield_mem_usage)
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
     bfrate_raw[modelgridindex] = (double *) calloc(nbfcontinua, sizeof(double));
+    #if CUDA_ENABLED
+    cudaMallocManaged(&prev_bfrate_normed[modelgridindex], nbfcontinua * sizeof(float));
+    #else
     prev_bfrate_normed[modelgridindex] = (float *) calloc(nbfcontinua, sizeof(float));
+    #endif
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
     bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(nbfcontinua, sizeof(struct bfratecontrib *));
@@ -1598,6 +1602,7 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
 #endif
 
 
+__host__ __device__
 double get_bfrate_estimator(const int element, const int lowerion, const int lower, const int phixstargetindex, const int modelgridindex)
 {
 #if (!DETAILED_BF_ESTIMATORS_ON)

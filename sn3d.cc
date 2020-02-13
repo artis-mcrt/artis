@@ -37,10 +37,10 @@
 const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 
 // threadprivate variables
-int tid;
-int myGpuId = 0;
-bool use_cellhist;
-bool neutral_flag;
+__managed__ int tid;
+__managed__ int myGpuId = 0;
+__managed__ bool use_cellhist;
+__managed__ bool neutral_flag;
 gsl_rng *rng;
 gsl_integration_workspace *gslworkspace;
 FILE *output_file;

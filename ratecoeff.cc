@@ -1,6 +1,5 @@
 #include <string.h>
 #include <gsl/gsl_integration.h>
-#include <helper_cuda.h>
 // #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <stdio.h>
@@ -1415,12 +1414,13 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
 }
 
 
+__host__
 static double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
 {
     double *dev_integral;
-    checkCudaErrors(cudaMalloc(&dev_integral, sizeof(double)));
+    CUDA_CALL(cudaMallocManaged(&dev_integral, sizeof(double)));
 
-    checkCudaErrors(cudaDeviceSynchronize());
+    CUDA_CALL(cudaDeviceSynchronize());
 
     dim3 threadsPerBlock(integralsamplesperxspoint, NPHIXSPOINTS, 1);
     dim3 numBlocks(1, 1, 1);
@@ -1429,15 +1429,13 @@ static double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
     kernel_integral<<<numBlocks, threadsPerBlock, sharedsize>>>(dev_intparas, nu_edge, dev_integral);
 
     // Check for any errors launching the kernel
-    checkCudaErrors(cudaGetLastError());
+    CUDA_CALL(cudaGetLastError());
 
     // cudaDeviceSynchronize waits for the kernel to finish, and returns
     // any errors encountered during the launch.
-    checkCudaErrors(cudaDeviceSynchronize());
+    CUDA_CALL(cudaDeviceSynchronize());
 
-    double result;
-
-    checkCudaErrors(cudaMemcpy(&result, dev_integral, sizeof(double), cudaMemcpyDeviceToHost));
+    const double result = *dev_integral;
 
     cudaFree(dev_integral);
 
@@ -1507,7 +1505,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   }
 #else
   void *dev_intparas;
-  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
+  CUDA_CALL(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
   cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice);
 
   const double gammacorr_gpu = calculate_phixs_integral_gpu(dev_intparas, intparas.nu_edge);

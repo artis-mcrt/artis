@@ -343,12 +343,6 @@ static void print_level_rates(
     abort();
   }
 
-  if (rate_matrix_rad_bb == rate_matrix_coll_bb)
-  {
-    printout("print_level_rates: rate_matrix_rad_bb == rate_matrix_coll_bb. check individual_process_matricies is off\n");
-    abort();
-  }
-
   const gsl_vector popvector = *popvec;
   const int nlte_dimension = popvector.size;
   const int atomic_number = get_element(element);
@@ -479,11 +473,33 @@ static int get_element_nlte_dimension_and_slpartfunc(
 }
 
 
-static void nltepop_matrix_add_boundbound(const int modelgridindex, const int element, const int ion,
-                                          const double t_mid, double *s_renorm,
-                                          gsl_matrix *rate_matrix_rad_bb,
-                                          gsl_matrix *rate_matrix_coll_bb,
-                                          gsl_matrix *rate_matrix_ntcoll_bb)
+__host__ __device__
+static void get_bbdowntrans(
+  const int modelgridindex, const int element, const int ion, const int level,
+  const double epsilon_level, const int ndowntrans, const double t_mid,
+  float T_e, float nne, double *R_deexc_coeff, double *C_deexc_coeff, int *downtrans_lowernlteindicies)
+{
+  for (int i = 0; i < ndowntrans; i++)
+  {
+    const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+    const int lower = linelist[lineindex].lowerlevelindex;
+    downtrans_lowernlteindicies[i] = get_nlte_vector_index(element,ion,lower);;
+
+    const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
+
+    R_deexc_coeff[i] = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
+    C_deexc_coeff[i] = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+    #ifndef __CUDA_ARCH__
+    if ((R_deexc_coeff[i] < 0) || (C_deexc_coeff[i] < 0))
+      printout("  WARNING: Negative de-excitation rate coeff from ion_stage %d level %d to level %d\n", get_ionstage(element, ion), level, lower);
+    #endif
+  }
+}
+
+
+static void nltepop_matrix_add_boundbound(
+  const int modelgridindex, const int element, const int ion, const double t_mid, double *s_renorm,
+  gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -497,39 +513,43 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
 
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);
+    double R_deexc_coeff[ndowntrans];
+    double C_deexc_coeff[ndowntrans];
+    int downtrans_lowernlteindicies[ndowntrans];
+    get_bbdowntrans(modelgridindex, element, ion, level, epsilon_level, ndowntrans, t_mid, T_e, nne, R_deexc_coeff, C_deexc_coeff, downtrans_lowernlteindicies);
+
     for (int i = 0; i < ndowntrans; i++)
     {
-      const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
-      const int lower = linelist[lineindex].lowerlevelindex;
-
-      const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
-
-      const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid) * s_renorm[level];
-      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * s_renorm[level];
-
       const int upper_index = level_index;
-      const int lower_index = get_nlte_vector_index(element,ion,lower);
+      const int lower_index = downtrans_lowernlteindicies[i];
 
-      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, upper_index) -= R;
-      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, upper_index) += R;
-      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index) -= C;
-      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index) += C;
-      if ((R < 0) || (C < 0))
-        printout("  WARNING: Negative de-excitation rate from ion_stage %d level %d to level %d\n", get_ionstage(element, ion), level, lower);
+      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, upper_index) -= R_deexc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, upper_index) += R_deexc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index) -= C_deexc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index) += C_deexc_coeff[i] * s_renorm[level];
     }
 
     // excitation
     const int nuptrans = get_nuptrans(element, ion, level);
+    double R_exc_coeff[nuptrans];
+    double C_exc_coeff[nuptrans];
+    double NTC_exc_coeff[nuptrans];
+    int uptrans_uppernlteindicies[nuptrans];
     for (int i = 0; i < nuptrans; i++)
     {
       const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
       const int upper = linelist[lineindex].upperlevelindex;
+
+      uptrans_uppernlteindicies[i] = get_nlte_vector_index(element,ion,upper);
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
-      const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
-      const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
-      // const double NTC = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) * s_renorm[level];
-      const double NTC = 0.;
+      R_exc_coeff[i] = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
+      C_exc_coeff[i] = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+      // NTC_exc_coeff[i] = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+      NTC_exc_coeff[i] = 0.;
+
+      if ((R_exc_coeff[i] < 0) || (C_exc_coeff[i] < 0))
+        printout("  WARNING: Negative excitation rate from ion %d level %d to level %d\n", get_ionstage(element, ion), level, upper);
 
       // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
       // {
@@ -540,18 +560,19 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
       //            Z, ionstage, level, upper, lambda, tau_sobolev,
       //            linelist[lineindex].einstein_A, linelist[lineindex].osc_strength, linelist[lineindex].coll_str);
       // }
+    }
 
+    for (int i = 0; i < nuptrans; i++)
+    {
       const int lower_index = level_index;
-      const int upper_index = get_nlte_vector_index(element,ion,upper);
+      const int upper_index = uptrans_uppernlteindicies[i];
 
-      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, lower_index) -= R;
-      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, lower_index) += R;
-      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, lower_index) -= C;
-      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, lower_index) += C;
-      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, lower_index, lower_index) -= NTC;
-      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, upper_index, lower_index) += NTC;
-      if ((R < 0) || (C < 0))
-        printout("  WARNING: Negative excitation rate from ion %d level %d to level %d\n", get_ionstage(element, ion), level, upper);
+      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, lower_index) -= R_exc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, lower_index) += R_exc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, lower_index) -= C_exc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, lower_index) += C_exc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, lower_index, lower_index) -= NTC_exc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, upper_index, lower_index) += NTC_exc_coeff[i] * s_renorm[level];
     }
   }
 }
@@ -877,9 +898,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     return;
   }
 
-  // can save memory by using a combined rate matrix at the cost of diagnostic information
-  const bool individual_process_matricies = true;
-
   const double t_mid = time_step[timestep].mid;
   const int nions = get_nions(element);
 
@@ -898,31 +916,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
   gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_rad_bb;
-  gsl_matrix *rate_matrix_coll_bb;
-  gsl_matrix *rate_matrix_ntcoll_bb;
-  gsl_matrix *rate_matrix_rad_bf;
-  gsl_matrix *rate_matrix_coll_bf;
-  gsl_matrix *rate_matrix_ntcoll_bf;
-  if (individual_process_matricies)
-  {
-    rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_ntcoll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_rad_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_coll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-    rate_matrix_ntcoll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  }
-  else
-  {
-    // alias the single matrix accounting for all processes
-    rate_matrix_rad_bb = rate_matrix;
-    rate_matrix_coll_bb = rate_matrix;
-    rate_matrix_ntcoll_bb = rate_matrix;
-    rate_matrix_rad_bf = rate_matrix;
-    rate_matrix_coll_bf = rate_matrix;
-    rate_matrix_ntcoll_bf = rate_matrix;
-  }
+  gsl_matrix *rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_ntcoll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_rad_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_coll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_ntcoll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
 
   gsl_vector *const balance_vector = gsl_vector_calloc(nlte_dimension);
 
@@ -940,7 +939,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
     const int nlevels = get_nlevels(element, ion);
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
+    #if CUDA_ENABLED
+    double *s_renorm;
+    cudaMallocManaged(&s_renorm, nlevels * sizeof(double));
+    #else
     double s_renorm[nlevels];
+    #endif
     for (int level = 0; level <= nlevels_nlte; level++)
     {
       s_renorm[level] = 1.0;
@@ -964,16 +968,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   }
   // printout("\n");
 
-  if (individual_process_matricies)
-  {
-    // sum the matricies for each transition process to get a total rate matrix
-    gsl_matrix_add(rate_matrix, rate_matrix_rad_bb);
-    gsl_matrix_add(rate_matrix, rate_matrix_coll_bb);
-    gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bb);
-    gsl_matrix_add(rate_matrix, rate_matrix_rad_bf);
-    gsl_matrix_add(rate_matrix, rate_matrix_coll_bf);
-    gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bf);
-  }
+  // sum the matricies for each transition process to get a total rate matrix
+  gsl_matrix_add(rate_matrix, rate_matrix_rad_bb);
+  gsl_matrix_add(rate_matrix, rate_matrix_coll_bb);
+  gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bb);
+  gsl_matrix_add(rate_matrix, rate_matrix_rad_bf);
+  gsl_matrix_add(rate_matrix, rate_matrix_coll_bf);
+  gsl_matrix_add(rate_matrix, rate_matrix_ntcoll_bf);
 
   // replace the first row of the matrix and balance vector with the normalisation
   // constraint on the total element population
@@ -1113,12 +1114,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       set_element_pops_lte(modelgridindex, element);
     }
 
-    if (individual_process_matricies && (timestep % 5 == 0) && (nlte_iter == 0)) // output NLTE stats every nth timestep for the first NLTE iteration only
+    if ((timestep % 5 == 0) && (nlte_iter == 0)) // output NLTE stats every nth timestep for the first NLTE iteration only
     {
       print_element_rates_summary(element, timestep, nlte_iter, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
-    // if (individual_process_matricies && (atomic_number == 26 && timestep % 2 == 0))
+    // if ((atomic_number == 26 && timestep % 2 == 0))
     // {
     //   const int ionstage = 2;
     //   const int ion = ionstage - get_ionstage(element, 0);
@@ -1139,15 +1140,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     // }
   }
 
-  if (individual_process_matricies)
-  {
-    gsl_matrix_free(rate_matrix_rad_bb);
-    gsl_matrix_free(rate_matrix_coll_bb);
-    gsl_matrix_free(rate_matrix_ntcoll_bb);
-    gsl_matrix_free(rate_matrix_rad_bf);
-    gsl_matrix_free(rate_matrix_coll_bf);
-    gsl_matrix_free(rate_matrix_ntcoll_bf);
-  }
+  gsl_matrix_free(rate_matrix_rad_bb);
+  gsl_matrix_free(rate_matrix_coll_bb);
+  gsl_matrix_free(rate_matrix_ntcoll_bb);
+  gsl_matrix_free(rate_matrix_rad_bf);
+  gsl_matrix_free(rate_matrix_coll_bf);
+  gsl_matrix_free(rate_matrix_ntcoll_bf);
 
   gsl_vector_free(popvec);
 

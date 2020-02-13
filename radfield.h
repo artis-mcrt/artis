@@ -31,7 +31,7 @@ void radfield_MPI_Bcast(int modelgridindex, int root);
 void radfield_write_restart_data(FILE *gridsave_file);
 void radfield_read_restart_data(FILE *gridsave_file);
 void radfield_normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
-double get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex);
+__host__ __device__ double get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex);
 void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex, double nnlowerlevel, double nnlowerion);
 void reset_bfrate_contributions(const int modelgridindex);
 int radfield_integrate(
