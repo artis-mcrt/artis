@@ -2647,13 +2647,13 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      // #if !CUDA_ENABLED
+      #if !CUDA_ENABLED
       sfmatrix_add_excitation_transition(sfmatrix, lineindex, statweight_lower, epsilon_trans, nnlevel);
-      // #endif
+      #endif
     }
 
     #if CUDA_ENABLED
-    // sfmatrix_add_excitation_transitions_gpu(sfmatrix, arr_epsilon_trans_ev, elements[element].ions[ion].levels[lower].uptrans_lineindicies, statweight_lower, nnlevel);
+    sfmatrix_add_excitation_transitions_gpu(sfmatrix, arr_epsilon_trans_ev, elements[element].ions[ion].levels[lower].uptrans_lineindicies, statweight_lower, nnlevel);
     cudaFree(arr_epsilon_trans_ev);
     #endif
   }

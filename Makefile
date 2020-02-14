@@ -88,7 +88,7 @@ ifneq (,$(findstring jakita,$(HOSTNAME)))
 	# Tesla K80
 	CUDA_NVCC_FLAGS += --gpu-architecture=sm_37
 	# LDFLAGS += -lprofiler
-	# INCLUDE += -I/usr/local/cuda/samples/common/inc/
+	INCLUDE += -I/usr/local/cuda/samples/common/inc/
 endif
 
 # Gadi
@@ -96,7 +96,7 @@ ifneq (,$(findstring gadi,$(HOSTNAME)))
 	# Tesla V100
 	CUDA_NVCC_FLAGS += --gpu-architecture=sm_70
 	CXX = c++
-	# INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
+	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
 endif
 
 # CXXFLAGS += -std=c++11
