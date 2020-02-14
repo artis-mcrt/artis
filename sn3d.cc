@@ -30,10 +30,6 @@
 #include "version.h"
 #include "vpkt.h"
 
-#if CUDA_ENABLED
-#include <cuda_runtime.h>
-#endif
-
 const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 
 // threadprivate variables
@@ -541,25 +537,7 @@ static bool walltime_sufficient_to_continue(const int nts, const int nts_prev, c
 }
 
 
-void* reallocmanaged(void* ptr, size_t newSize, size_t curSize)
-{
-  void *newptr;
-  cudaMallocManaged(&newptr, newSize);
-  if (ptr == 0)
-  {
-    return newptr;
-  }
-  else
-  {
-    size_t transferSize = newSize > curSize ? curSize : newSize;
-    cudaMemcpy(newptr, ptr, transferSize, cudaMemcpyDefault);
-    cudaDeviceSynchronize();
-    cudaFree(ptr);
-    return newptr;
-  }
-}
-
-
+#if CUDA_ENABLED
 void* makemanaged(void* ptr, size_t curSize)
 {
   if (ptr == NULL)
@@ -572,6 +550,7 @@ void* makemanaged(void* ptr, size_t curSize)
   free(ptr);
   return newptr;
 }
+#endif
 
 static void save_grid_and_packets(
   const int nts, const int my_rank, PKT* packets)
@@ -1178,7 +1157,7 @@ int main(int argc, char** argv)
       mpi_grid_buffer_size = 4 * ((12 + 4 * includedions) * (maxndo) + 1);
       printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
       //char buffer[mpi_grid_buffer_size];
-      mpi_grid_buffer  = malloc(mpi_grid_buffer_size * sizeof(char));
+      mpi_grid_buffer = (char *) malloc(mpi_grid_buffer_size * sizeof(char));
       if (mpi_grid_buffer == NULL)
       {
         printout("[fatal] input: not enough memory to initialize MPI grid buffer ... abort.\n");

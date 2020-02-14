@@ -10,9 +10,6 @@
 #include "radfield.h"
 #include "rpkt.h"
 #include "sn3d.h"
-#if CUDA_ENABLED
-#include <cuda_runtime.h>
-#endif
 
 
 static __managed__ double J_normfactor[MMODELGRID + 1];
@@ -375,7 +372,7 @@ void radfield_init(int my_rank)
 
     // shrink the detailed line list in case detailed_linecount isn't a multiple of BLOCKSIZEJBLUE
     // (important for saving memory if there are a lot of grid cells)
-    // realloc_detailed_lines(detailed_linecount);
+#if CUDA_ENABLED
     detailed_lineindicies = (int *) makemanaged(detailed_lineindicies, detailed_linecount * sizeof(int));
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
@@ -392,6 +389,9 @@ void radfield_init(int my_rank)
         }
       }
     }
+#else
+    realloc_detailed_lines(detailed_linecount);
+#endif
 
     // these are probably sorted anyway because the previous loop goes in ascending
     // lineindex. But this sorting step is quick and makes sure that the
@@ -774,8 +774,6 @@ void radfield_close_file(void)
   if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     fclose(radfieldfile);
-
-    free(radfieldbin_nu_upper);
 
     for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
     {

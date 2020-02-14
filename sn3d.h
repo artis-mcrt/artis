@@ -1,6 +1,8 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include "cuda.h"
+
 #include "globals.h"
 
 #include <unistd.h>
@@ -8,7 +10,6 @@
 #include <stdbool.h>
 #include <gsl/gsl_integration.h>
 #include <iostream>
-#include <cuda_runtime.h>
 
 #define DEBUG_ON
 // #define DO_TITER
@@ -115,14 +116,8 @@ inline FILE *fopen_required(const char *filename, const char *mode)
     return file;
 }
 
-void* reallocmanaged(void* ptr, size_t newSize, size_t curSize);
+#if CUDA_ENABLED
 void* makemanaged(void* ptr, size_t curSize);
-
-#define CUDA_CALL( call )               \
-{                                       \
-cudaError_t result = call;              \
-if ( cudaSuccess != result )            \
-    std::cerr << "CUDA error " << result << " in " << __FILE__ << ":" << __LINE__ << ": " << cudaGetErrorString( result ) << " (" << #call << ")" << std::endl;  \
-}
+#endif
 
 #endif // SN3D_H

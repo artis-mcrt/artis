@@ -1428,7 +1428,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
         const time_t sys_time_start_write_estimators = time(NULL);
-        printout("writing to estimators file cell %d timestep %d...", mgi, nts);
+        printout("writing to estimators file cell %d timestep %d...\n", mgi, nts);
 
         #ifdef _OPENMP
         #pragma omp critical(estimators_file)

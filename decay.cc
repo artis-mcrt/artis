@@ -67,6 +67,7 @@ double meanlife(enum radionuclides nuclide_type)
     case RADIONUCLIDE_COUNT:
       assert(false);
   }
+  return -1;
 }
 
 
@@ -94,6 +95,7 @@ double nucmass(enum radionuclides nuclide_type)
     case RADIONUCLIDE_COUNT:
       assert(false);
   }
+  return -1;
 }
 
 
@@ -134,6 +136,7 @@ enum radionuclides decayparent(enum decaypathways decaypath)
     case DECAYPATH_COUNT:
       assert(false);
   }
+  return RADIONUCLIDE_COUNT;
 }
 
 
@@ -187,6 +190,7 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
 
     case DECAYPATH_COUNT:
       assert(false);
+      return 0;
   }
 }
 

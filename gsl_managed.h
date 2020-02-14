@@ -1,7 +1,7 @@
 #ifndef __GSL_MANAGED_H__
 #define __GSL_MANAGED_H__
 
-#include <cuda_runtime.h>
+#include "cuda.h"
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_vector_double.h>
 

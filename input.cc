@@ -14,10 +14,6 @@
   #include "exspec.h"
 #endif
 
-#if CUDA_ENABLED
-#include <cuda_runtime.h>
-#endif
-
 
 const bool single_level_top_ion = false; // Only include a single level for the highest ion stage
 
@@ -164,7 +160,6 @@ static void read_phixs_data_table(
   mem_usage_phixs += NPHIXSPOINTS * sizeof(float);
 #if CUDA_ENABLED
   cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].photoion_xs, NPHIXSPOINTS * sizeof(float));
-  cudaMemAdvise(elements[element].ions[lowerion].levels[lowerlevel].photoion_xs, NPHIXSPOINTS * sizeof(float), cudaMemAdviseSetReadMostly, myGpuId);
 #else
   elements[element].ions[lowerion].levels[lowerlevel].photoion_xs = (float *) calloc(NPHIXSPOINTS, sizeof(float));
 #endif
@@ -184,6 +179,10 @@ static void read_phixs_data_table(
     elements[element].ions[lowerion].levels[lowerlevel].photoion_xs[i] = phixs * 1e-18;
     //fprintf(database_file,"%g %g\n", nutable[i], phixstable[i]);
   }
+
+  #if CUDA_ENABLED
+  cudaMemAdvise(elements[element].ions[lowerion].levels[lowerlevel].photoion_xs, NPHIXSPOINTS * sizeof(float), cudaMemAdviseSetReadMostly, myGpuId);
+  #endif
 
   //nbfcontinua++;
   //printout("[debug] element %d, ion %d, level %d: phixs exists %g\n",element,lowerion,lowerlevel,phixs*1e-18);
@@ -985,7 +984,7 @@ static void read_atomicdata_files(void)
       cudaMallocManaged(&elements[element].ions[ion].levels, nlevelsmax * sizeof(levellist_entry));
       cudaMemAdvise(elements[element].ions[ion].levels, nlevelsmax * sizeof(levellist_entry), cudaMemAdviseSetReadMostly, myGpuId);
       #else
-      elements[element].ions[ion].levels = (elementlist_entry *) calloc(nlevelsmax, sizeof(levellist_entry));
+      elements[element].ions[ion].levels = (levellist_entry *) calloc(nlevelsmax, sizeof(levellist_entry));
       #endif
       if (elements[element].ions[ion].levels == NULL)
       {
@@ -1058,13 +1057,16 @@ static void read_atomicdata_files(void)
   if (nlines > 0)
   {
     /// and release empty memory from the linelist
+    #if CUDA_ENABLED
     linelist = (linelist_entry *) makemanaged(linelist, nlines * sizeof(linelist_entry));
     cudaMemAdvise(linelist, nlines * sizeof(linelist_entry), cudaMemAdviseSetReadMostly, myGpuId);
-    // if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
-    // {
-    //   printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
-    //   abort();
-    // }
+    #else
+    if ((linelist = (linelist_entry *) realloc(linelist, nlines * sizeof(linelist_entry))) == NULL)
+    {
+      printout("[fatal] input: not enough memory to reallocate linelist ... abort\n");
+      abort();
+    }
+    #endif
     printout("mem_usage: linelist occupies %.1f MB\n", nlines * (sizeof(linelist[0]) + sizeof(&linelist[0])) / 1024. / 1024);
   }
 

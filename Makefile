@@ -52,14 +52,12 @@ else ifneq (, $(shell which mpicc))
 	# any other system which has mpicc available (Juwels, Cambridge, Gadi, etc)
 
 	CXX = mpicc
-	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
-	LDFLAGS= -lgsl -lgslcblas -lm
+	CXX = c++
+	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -g -fstrict-aliasing #-fopenmp=libomp
+	LDFLAGS = -lgsl -lgslcblas -lm
 
-	ifeq (,$(findstring raijin,$(HOSTNAME)))
-		LDFLAGS += -lgslcblas
-	endif
 
-sn3d: CXXFLAGS += -DMPI_ON
+# sn3d: CXXFLAGS += -DMPI_ON
 else
 	CXX = c++
 	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
@@ -83,27 +81,28 @@ sn3dopenmp: LDFLAGS += -lomp
 sn3dopenmp: sn3d
 
 sn3dcuda: CXXFLAGS += -DCUDA_ENABLED=true
+sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
 
 # QUB ARC jakita.starfleet
 ifneq (,$(findstring jakita,$(HOSTNAME)))
 	# Tesla K80
 	CUDA_NVCC_FLAGS += --gpu-architecture=sm_37
 	# LDFLAGS += -lprofiler
-	INCLUDE += -I/usr/local/cuda/samples/common/inc/
+	# INCLUDE += -I/usr/local/cuda/samples/common/inc/
 endif
 
-# QUB ARC jakita.starfleet
+# Gadi
 ifneq (,$(findstring gadi,$(HOSTNAME)))
 	# Tesla V100
 	CUDA_NVCC_FLAGS += --gpu-architecture=sm_70
 	CXX = c++
-	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
+	# INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
 endif
 
 # CXXFLAGS += -std=c++11
 # CXXFLAGS += -fPIC -shared
 # CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -rdc=true -Xcompiler "$(CXXFLAGS)"
+CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -Xcompiler "$(CXXFLAGS)" -rdc=true
 
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -120,8 +119,8 @@ sn3d: clean version
 sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
-# sn3dcuda: version
-# 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(sn3d_files) $(INCLUDE) $(LDFLAGS) -o sn3d
+sn3dcudawhole: version
+	nvcc -x cu $(CUDA_NVCC_FLAGS) $(sn3d_files) $(INCLUDE) $(LDFLAGS) -o sn3d
 
 sn3dcuda: version $(sn3d_objects)
 	nvcc $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d

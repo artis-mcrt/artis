@@ -3,9 +3,6 @@
 
 #include <assert.h>
 #include "sn3d.h"
-#if CUDA_ENABLED
-#include <cuda_runtime.h>
-#endif
 
 extern __managed__ double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
