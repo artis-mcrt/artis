@@ -473,28 +473,121 @@ static int get_element_nlte_dimension_and_slpartfunc(
 }
 
 
-__host__ __device__
-static void get_bbdowntrans(
+#if CUDA_ENABLED
+__global__ static void kernel_levelbbuptrans(
   const int modelgridindex, const int element, const int ion, const int level,
-  const double epsilon_level, const int ndowntrans, const double t_mid,
-  float T_e, float nne, double *R_deexc_coeff, double *C_deexc_coeff, int *downtrans_lowernlteindicies)
+  const double epsilon_level, const int nuptrans, const int lower_index, const double s_renorm_level, const double t_mid,
+  float T_e, float nne, gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb)
 {
-  for (int i = 0; i < ndowntrans; i++)
+  int i = threadIdx.x + blockDim.x * blockIdx.x;
+  if (i < nuptrans)
+  {
+    const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+    const int upper = linelist[lineindex].upperlevelindex;
+    const int upper_index = get_nlte_vector_index(element,ion,upper);
+
+    const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
+
+    const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
+    const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+    // const double NTC = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+    const double NTC = 0.;
+
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, lower_index, lower_index), - R * s_renorm_level);
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, upper_index, lower_index), + R * s_renorm_level);
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, lower_index, lower_index), - C * s_renorm_level);
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, upper_index, lower_index), + C * s_renorm_level);
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_ntcoll_bb, lower_index, lower_index), - NTC * s_renorm_level);
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_ntcoll_bb, upper_index, lower_index), + NTC * s_renorm_level);
+  }
+}
+
+
+__global__ static void kernel_levelbbdowntrans(
+  const int modelgridindex, const int element, const int ion, const int level,
+  const double epsilon_level, const int ndowntrans, const int upper_index, const double s_renorm_level, const double t_mid,
+  float T_e, float nne, gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb)
+{
+  int i = threadIdx.x + blockDim.x * blockIdx.x;
+  if (i < ndowntrans)
   {
     const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
     const int lower = linelist[lineindex].lowerlevelindex;
-    downtrans_lowernlteindicies[i] = get_nlte_vector_index(element,ion,lower);;
+    const int lower_index = get_nlte_vector_index(element,ion,lower);;
 
     const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
-    R_deexc_coeff[i] = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
-    C_deexc_coeff[i] = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
-    #ifndef __CUDA_ARCH__
-    if ((R_deexc_coeff[i] < 0) || (C_deexc_coeff[i] < 0))
-      printout("  WARNING: Negative de-excitation rate coeff from ion_stage %d level %d to level %d\n", get_ionstage(element, ion), level, lower);
-    #endif
+    // const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+
+    // atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, upper_index, upper_index), - R * s_renorm_level);
+    // atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, lower_index, upper_index), + R * s_renorm_level);
+    // atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, upper_index, upper_index), - C * s_renorm_level);
+    // atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, lower_index, upper_index), + C * s_renorm_level);
+
+    // *gsl_matrix_ptr_managed(rate_matrix_coll_bb, upper_index, upper_index) -= C * s_renorm_level;
+    // *gsl_matrix_ptr_managed(rate_matrix_coll_bb, lower_index, upper_index) += C * s_renorm_level;
   }
 }
+
+
+static void nltepop_matrix_add_boundbound_gpu(
+  const int modelgridindex, const int element, const int ion, const double t_mid, double *s_renorm,
+  gsl_matrix *rate_matrix_rad_bb, gsl_matrix *rate_matrix_coll_bb, gsl_matrix *rate_matrix_ntcoll_bb)
+{
+  // checkCudaErrors(cudaDeviceSynchronize());
+
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const int nlevels = get_nlevels(element, ion);
+  // const int Z = get_element(element);
+  // const int ionstage = get_ionstage(element, ion);
+  for (int level = 0; level < nlevels; level++)
+  {
+    printout("nltepop_matrix_add_boundbound_gpu element %d ion %d level %d\n", element, ion, level);
+    const int level_index = get_nlte_vector_index(element, ion, level);
+    const double epsilon_level = epsilon(element, ion, level);
+
+    // de-excitation
+    const int ndowntrans = get_ndowntrans(element, ion, level);
+
+    if (ndowntrans > 0)
+    {
+      dim3 threadsPerBlock(1024, 1, 1);
+      dim3 numBlocks(ceil(ndowntrans / 1024.), 1, 1);
+
+      kernel_levelbbdowntrans<<<numBlocks, threadsPerBlock>>>(
+        modelgridindex, element, ion, level, epsilon_level, ndowntrans, level_index, s_renorm[level], t_mid, T_e, nne,
+        rate_matrix_rad_bb, rate_matrix_coll_bb);
+
+      // Check for any errors launching the kernel
+      checkCudaErrors(cudaGetLastError());
+
+      checkCudaErrors(cudaDeviceSynchronize());
+    }
+
+    // excitation
+    const int nuptrans = get_nuptrans(element, ion, level);
+
+    if (nuptrans)
+    {
+      dim3 threadsPerBlock(1024, 1, 1);
+      dim3 numBlocks(ceil(nuptrans / 1024.), 1, 1);
+
+      kernel_levelbbuptrans<<<numBlocks, threadsPerBlock>>>(
+        modelgridindex, element, ion, level, epsilon_level, nuptrans, level_index, s_renorm[level], t_mid, T_e, nne,
+        rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
+
+      // Check for any errors launching the kernel
+      checkCudaErrors(cudaGetLastError());
+    }
+  }
+
+  // cudaDeviceSynchronize waits for the kernel to finish, and returns
+  // any errors encountered during the launch.
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+#endif
 
 
 static void nltepop_matrix_add_boundbound(
@@ -513,66 +606,52 @@ static void nltepop_matrix_add_boundbound(
 
     // de-excitation
     const int ndowntrans = get_ndowntrans(element, ion, level);
-    double R_deexc_coeff[ndowntrans];
-    double C_deexc_coeff[ndowntrans];
-    int downtrans_lowernlteindicies[ndowntrans];
-    get_bbdowntrans(modelgridindex, element, ion, level, epsilon_level, ndowntrans, t_mid, T_e, nne, R_deexc_coeff, C_deexc_coeff, downtrans_lowernlteindicies);
-
     for (int i = 0; i < ndowntrans; i++)
     {
+      const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+      const int lower = linelist[lineindex].lowerlevelindex;
       const int upper_index = level_index;
-      const int lower_index = downtrans_lowernlteindicies[i];
+      const int lower_index = get_nlte_vector_index(element,ion,lower);;
 
-      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, upper_index) -= R_deexc_coeff[i] * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, upper_index) += R_deexc_coeff[i] * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index) -= C_deexc_coeff[i] * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index) += C_deexc_coeff[i] * s_renorm[level];
+      const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
+
+      const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
+      const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+
+      if ((R < 0) || (C < 0))
+        printout("  WARNING: Negative de-excitation rate coeff from ion_stage %d level %d to level %d\n", get_ionstage(element, ion), level, lower);
+
+      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, upper_index) -= R * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, upper_index) += R * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, upper_index) -= C * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, upper_index) += C * s_renorm[level];
     }
 
     // excitation
     const int nuptrans = get_nuptrans(element, ion, level);
-    double R_exc_coeff[nuptrans];
-    double C_exc_coeff[nuptrans];
-    double NTC_exc_coeff[nuptrans];
-    int uptrans_uppernlteindicies[nuptrans];
+    const int lower_index = level_index;
     for (int i = 0; i < nuptrans; i++)
     {
       const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
       const int upper = linelist[lineindex].upperlevelindex;
+      const int upper_index = get_nlte_vector_index(element,ion,upper);
 
-      uptrans_uppernlteindicies[i] = get_nlte_vector_index(element,ion,upper);
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
 
-      R_exc_coeff[i] = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-      C_exc_coeff[i] = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
-      // NTC_exc_coeff[i] = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
-      NTC_exc_coeff[i] = 0.;
+      const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
+      const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+      // const double NTC = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+      const double NTC = 0.;
 
-      if ((R_exc_coeff[i] < 0) || (C_exc_coeff[i] < 0))
+      if ((R < 0) || (C < 0))
         printout("  WARNING: Negative excitation rate from ion %d level %d to level %d\n", get_ionstage(element, ion), level, upper);
 
-      // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
-      // {
-      //   const double tau_sobolev = get_tau_sobolev(modelgridindex, lineindex, t_mid);
-      //   const double nu_trans = epsilon_trans / H;
-      //   const double lambda = 1e8 * CLIGHT / nu_trans; // should be in Angstroms
-      //   printout("Z=%d ionstage %d lower %d upper %d lambda %6.1fÅ tau_sobolev=%g einstein_A %g osc_strength %g coll_str %g\n",
-      //            Z, ionstage, level, upper, lambda, tau_sobolev,
-      //            linelist[lineindex].einstein_A, linelist[lineindex].osc_strength, linelist[lineindex].coll_str);
-      // }
-    }
-
-    for (int i = 0; i < nuptrans; i++)
-    {
-      const int lower_index = level_index;
-      const int upper_index = uptrans_uppernlteindicies[i];
-
-      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, lower_index) -= R_exc_coeff[i] * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, lower_index) += R_exc_coeff[i] * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, lower_index) -= C_exc_coeff[i] * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, lower_index) += C_exc_coeff[i] * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, lower_index, lower_index) -= NTC_exc_coeff[i] * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, upper_index, lower_index) += NTC_exc_coeff[i] * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_rad_bb, lower_index, lower_index) -= R * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_rad_bb, upper_index, lower_index) += R * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bb, lower_index, lower_index) -= C * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_coll_bb, upper_index, lower_index) += C * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, lower_index, lower_index) -= NTC * s_renorm[level];
+      *gsl_matrix_ptr(rate_matrix_ntcoll_bb, upper_index, lower_index) += NTC * s_renorm[level];
     }
   }
 }
@@ -916,12 +995,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   // printout("NLTE: the vector dimension is %d", nlte_dimension);
 
   gsl_matrix *rate_matrix = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_rad_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_coll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_ntcoll_bb = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_rad_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_coll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
-  gsl_matrix *rate_matrix_ntcoll_bf = gsl_matrix_calloc(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_rad_bb = gsl_matrix_calloc_managed(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_coll_bb = gsl_matrix_calloc_managed(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_ntcoll_bb = gsl_matrix_calloc_managed(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_rad_bf = gsl_matrix_calloc_managed(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_coll_bf = gsl_matrix_calloc_managed(nlte_dimension, nlte_dimension);
+  gsl_matrix *rate_matrix_ntcoll_bf = gsl_matrix_calloc_managed(nlte_dimension, nlte_dimension);
 
   gsl_vector *const balance_vector = gsl_vector_calloc(nlte_dimension);
 
@@ -955,8 +1034,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
     }
 
+    // #if CUDA_ENABLED
+    // nltepop_matrix_add_boundbound_gpu(
+    //   modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
+    // #else
     nltepop_matrix_add_boundbound(
       modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
+    // #endif
 
     if (ion < nions - 1)
     {
@@ -1140,12 +1224,12 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     // }
   }
 
-  gsl_matrix_free(rate_matrix_rad_bb);
-  gsl_matrix_free(rate_matrix_coll_bb);
-  gsl_matrix_free(rate_matrix_ntcoll_bb);
-  gsl_matrix_free(rate_matrix_rad_bf);
-  gsl_matrix_free(rate_matrix_coll_bf);
-  gsl_matrix_free(rate_matrix_ntcoll_bf);
+  gsl_matrix_free_managed(rate_matrix_rad_bb);
+  gsl_matrix_free_managed(rate_matrix_coll_bb);
+  gsl_matrix_free_managed(rate_matrix_ntcoll_bb);
+  gsl_matrix_free_managed(rate_matrix_rad_bf);
+  gsl_matrix_free_managed(rate_matrix_coll_bf);
+  gsl_matrix_free_managed(rate_matrix_ntcoll_bf);
 
   gsl_vector_free(popvec);
 

@@ -317,7 +317,7 @@ static void allocate_compositiondata(const int modelgridindex)
     cudaMallocManaged(&modelgrid[modelgridindex].composition[element].groundlevelpop, get_nions(element) * sizeof(float));
     cudaMemAdvise(modelgrid[modelgridindex].composition[element].groundlevelpop, get_nions(element) * sizeof(float), cudaMemAdviseSetReadMostly, myGpuId);
     #else
-    modelgrid[modelgridindex].composition[element].groundlevelpop = (double *) malloc(get_nions(element) * sizeof(float));
+    modelgrid[modelgridindex].composition[element].groundlevelpop = (float *) malloc(get_nions(element) * sizeof(float));
     #endif
     if (modelgrid[modelgridindex].composition[element].groundlevelpop == NULL)
     {

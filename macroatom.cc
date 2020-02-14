@@ -19,19 +19,19 @@
 static FILE *macroatom_file;
 
 
-static inline __host__ __device__ double get_individ_rad_deexc(int element, int ion, int level, int i)
+static inline double get_individ_rad_deexc(int element, int ion, int level, int i)
 {
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
 }
 
 
-static inline __host__ __device__ double get_individ_internal_down_same(int element, int ion, int level, int i)
+static inline double get_individ_internal_down_same(int element, int ion, int level, int i)
 {
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
 }
 
 
-static inline __host__ __device__ double get_individ_internal_up_same(int element, int ion, int level, int i)
+static inline double get_individ_internal_up_same(int element, int ion, int level, int i)
 {
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
 }
