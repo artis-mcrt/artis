@@ -517,16 +517,13 @@ __global__ static void kernel_levelbbdowntrans(
 
     const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
 
-    // const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
+    const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
     const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
 
-    // atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, upper_index, upper_index), - R * s_renorm_level);
-    // atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, lower_index, upper_index), + R * s_renorm_level);
-    // atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, upper_index, upper_index), - C * s_renorm_level);
-    // atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, lower_index, upper_index), + C * s_renorm_level);
-
-    // *gsl_matrix_ptr_managed(rate_matrix_coll_bb, upper_index, upper_index) -= C * s_renorm_level;
-    // *gsl_matrix_ptr_managed(rate_matrix_coll_bb, lower_index, upper_index) += C * s_renorm_level;
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, upper_index, upper_index), - R * s_renorm_level);
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, lower_index, upper_index), + R * s_renorm_level);
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, upper_index, upper_index), - C * s_renorm_level);
+    atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, lower_index, upper_index), + C * s_renorm_level);
   }
 }
 
@@ -544,7 +541,6 @@ static void nltepop_matrix_add_boundbound_gpu(
   // const int ionstage = get_ionstage(element, ion);
   for (int level = 0; level < nlevels; level++)
   {
-    printout("nltepop_matrix_add_boundbound_gpu element %d ion %d level %d\n", element, ion, level);
     const int level_index = get_nlte_vector_index(element, ion, level);
     const double epsilon_level = epsilon(element, ion, level);
 
@@ -563,7 +559,7 @@ static void nltepop_matrix_add_boundbound_gpu(
       // Check for any errors launching the kernel
       checkCudaErrors(cudaGetLastError());
 
-      checkCudaErrors(cudaDeviceSynchronize());
+      // checkCudaErrors(cudaDeviceSynchronize());
     }
 
     // excitation
@@ -1034,13 +1030,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
     }
 
-    // #if CUDA_ENABLED
-    // nltepop_matrix_add_boundbound_gpu(
-    //   modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
-    // #else
+    #if CUDA_ENABLED
+    nltepop_matrix_add_boundbound_gpu(
+      modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
+    #else
     nltepop_matrix_add_boundbound(
       modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
-    // #endif
+    #endif
 
     if (ion < nions - 1)
     {
