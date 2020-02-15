@@ -1384,7 +1384,6 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
 
     const double delta_nu = nu_edge * (NPHIXSNUINCREMENT / integralsamplesperxspoint);
 
-    // const double integrand = integrand_corrphotoioncoeff_custom_radfield(nu, intparas);
     const double integrand = func_integrand(nu, intparas);
 
     part_integral[sampleindex] = weight * integrand * delta_nu;
