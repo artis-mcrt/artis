@@ -1345,6 +1345,7 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 #if CUDA_ENABLED
 const int integralsamplesperxspoint = 8; // must be an even number for Simpsons rule to work
 
+template <double func_integrand(double, void *)>
 __global__ void kernel_integral(void *intparas, double nu_edge, double *integral)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
@@ -1382,7 +1383,8 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
 
     const double delta_nu = nu_edge * (NPHIXSNUINCREMENT / integralsamplesperxspoint);
 
-    const double integrand = integrand_corrphotoioncoeff_custom_radfield(nu, intparas);
+    // const double integrand = integrand_corrphotoioncoeff_custom_radfield(nu, intparas);
+    const double integrand = func_integrand(nu, intparas);
 
     part_integral[sampleindex] = weight * integrand * delta_nu;
   }
@@ -1414,6 +1416,7 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
 }
 
 
+template <double func_integrand(double, void *)>
 static double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
 {
     double *dev_integral;
@@ -1425,7 +1428,7 @@ static double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
     dim3 numBlocks(1, 1, 1);
     size_t sharedsize = sizeof(double) * NPHIXSPOINTS * integralsamplesperxspoint;
 
-    kernel_integral<<<numBlocks, threadsPerBlock, sharedsize>>>(dev_intparas, nu_edge, dev_integral);
+    kernel_integral<func_integrand><<<numBlocks, threadsPerBlock, sharedsize>>>(dev_intparas, nu_edge, dev_integral);
 
     // Check for any errors launching the kernel
     checkCudaErrors(cudaGetLastError());
@@ -1509,7 +1512,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
   checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice));
 
-  const double gammacorr_gpu = calculate_phixs_integral_gpu(dev_intparas, intparas.nu_edge);
+  const double gammacorr_gpu = calculate_phixs_integral_gpu<integrand_corrphotoioncoeff_custom_radfield>(dev_intparas, intparas.nu_edge);
 
   cudaFree(dev_intparas);
 
