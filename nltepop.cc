@@ -495,8 +495,10 @@ __global__ static void kernel_levelbbuptrans(
 
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, lower_index, lower_index), - R * s_renorm_level);
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, upper_index, lower_index), + R * s_renorm_level);
+
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, lower_index, lower_index), - C * s_renorm_level);
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, upper_index, lower_index), + C * s_renorm_level);
+
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_ntcoll_bb, lower_index, lower_index), - NTC * s_renorm_level);
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_ntcoll_bb, upper_index, lower_index), + NTC * s_renorm_level);
   }
@@ -522,6 +524,7 @@ __global__ static void kernel_levelbbdowntrans(
 
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, upper_index, upper_index), - R * s_renorm_level);
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_rad_bb, lower_index, upper_index), + R * s_renorm_level);
+
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, upper_index, upper_index), - C * s_renorm_level);
     atomicAdd(gsl_matrix_ptr_managed(rate_matrix_coll_bb, lower_index, upper_index), + C * s_renorm_level);
   }
