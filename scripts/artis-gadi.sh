@@ -21,7 +21,7 @@
 # "one resource" is the higher of CPU request, or memory request divided by 4GB
 
 module load gsl
-module load intel-compiler
+module load intel-compiler/2019.4.243
 module unload intel-mpi
 module load openmpi
 

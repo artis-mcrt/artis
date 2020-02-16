@@ -1003,11 +1003,17 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  #if CUDA_ENABLED
-  printout("NVIDIA CUDA is enabled\n");
+  #if __CUDACC__
+  printout("NVIDIA CUDA is available\n");
   int deviceCount = 0;
   assert(cudaGetDeviceCount(&deviceCount) == cudaSuccess);
   printout("Detected %d CUDA capable device(s)\n", deviceCount);
+  #else
+  printout("NVIDIA CUDA is not available\n");
+  #endif
+
+  #if CUDA_ENABLED
+  printout("NVIDIA CUDA accelerated routines are enabled\n");
   assert(deviceCount > 0);
   myGpuId = 0;
   printout("This thread will use cudaSetDevice(%d)\n", myGpuId);
@@ -1017,6 +1023,8 @@ int main(int argc, char** argv)
       fprintf(stderr, "cudaSetDevice failed. CUDA-capable GPU installed?");
       abort();
   }
+  #else
+  printout("NVIDIA CUDA accelerated routines are disabled\n");
   #endif
 
   if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)

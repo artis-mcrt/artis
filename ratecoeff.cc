@@ -1344,7 +1344,7 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 
 
 #if CUDA_ENABLED
-const int integralsamplesperxspoint = 8; // must be an even number for Simpsons rule to work
+const int integralsamplesperxspoint = 4; // must be an even number for Simpsons rule to work
 
 template <double func_integrand(double, void *)>
 __global__ void kernel_integral(void *intparas, double nu_edge, double *integral)
@@ -1417,7 +1417,7 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
 
 
 template <double func_integrand(double, void *)>
-static double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
+double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
 {
     double *dev_integral;
     checkCudaErrors(cudaMalloc(&dev_integral, sizeof(double)));
@@ -1507,7 +1507,9 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
     printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
+
 #else
+
   void *dev_intparas;
   checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
   checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice));
