@@ -2570,8 +2570,12 @@ __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfm
         const int xsstartindex = get_energyindex_ev_gteq(epsilon_trans_ev);
         if (xsstartindex >= 0)
         {
-          // int k;
-          for (int k = 0; k < SFPTS; k++)
+          const double en = gsl_vector_get_managed(envec, i);
+          const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
+
+          const int startindex = i > xsstartindex ? i : xsstartindex;
+
+          for (int k = startindex; k <= stopindex; k++)
           {
             vec_xs_excitation_deltae[k] = xs_excitation(lineindex, arr_epsilon_trans[t], envec->data[k] * EV);
             #if (SF_USE_LOG_E_INCREMENT)
@@ -2581,28 +2585,21 @@ __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfm
             #endif
           }
 
-          // for (int i = 0; i < SFPTS; i++)
+          for (int j = startindex; j < stopindex; j++)
           {
-            const double en = gsl_vector_get_managed(envec, i);
-            const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
-
-            const int startindex = i > xsstartindex ? i : xsstartindex;
-            for (int j = startindex; j < stopindex; j++)
-            {
-              *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel_lower * vec_xs_excitation_deltae[j];
-            }
-
-            // do the last bit separately because we're not using the full delta_e interval
-            #if (SF_USE_LOG_E_INCREMENT)
-            const double delta_en = gsl_vector_get_managed(delta_envec, stopindex);
-            #else
-            const double delta_en = DELTA_E;
-            #endif
-
-            const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
-
-            *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel_lower * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
+            *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel_lower * vec_xs_excitation_deltae[j];
           }
+
+          // do the last bit separately because we're not using the full delta_e interval
+          #if (SF_USE_LOG_E_INCREMENT)
+          const double delta_en = gsl_vector_get_managed(delta_envec, stopindex);
+          #else
+          const double delta_en = DELTA_E;
+          #endif
+
+          const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
+
+          *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel_lower * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
         }
       }
     }
