@@ -5,4 +5,5 @@ void call_T_e_finder(int modelgridindex, int timestep, double t_current, double 
 double get_bfheatingcoeff_ana(int element, int ion, int level, int phixstargetindex, float T, double W);
 void calculate_bfheatingcoeffs(int modelgridindex);
 
+
 #endif //THERMALBALANCE_H

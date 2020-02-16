@@ -95,7 +95,7 @@ endif
 # Gadi
 ifneq (,$(findstring gadi,$(HOSTNAME)))
 	# Tesla V100
-	CUDA_NVCC_FLAGS += --gpu-architecture=sm_70
+	CUDA_NVCC_FLAGS += -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70
 	CXX = icc
 	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
 endif

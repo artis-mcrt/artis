@@ -1003,7 +1003,7 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  #if __CUDACC__
+  #ifdef __CUDACC__
   printout("NVIDIA CUDA is available\n");
   int deviceCount = 0;
   assert(cudaGetDeviceCount(&deviceCount) == cudaSuccess);

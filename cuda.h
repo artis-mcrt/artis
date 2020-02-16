@@ -5,7 +5,7 @@
 #define CUDA_ENABLED false
 #endif
 
-#if __CUDACC__
+#ifdef __CUDACC__
 
 #include <cuda_runtime.h>
 
@@ -37,8 +37,11 @@
 // }
 
 #else
+#include <assert.h>
 
-assert(CUDA_ENABLED == false);
+#if CUDA_ENABLED
+assert(false);
+#endif
 
 #define __managed__
 #define __device__
