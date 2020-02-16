@@ -10,7 +10,7 @@
 #define USECUDA_BFHEATING false
 #define USECUDA_PHOTOIONCOEFF false
 #define USECUDA_NLTE_BOUNDBOUND false
-#define USECUDA_NONTHERMAL_EXCITATION false
+#define USECUDA_NONTHERMAL_EXCITATION true
 #define USECUDA_NONTHERMAL_IONIZATION true
 
 #include <cuda_runtime.h>
