@@ -2640,7 +2640,7 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
         continue;
       }
       float epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
-      #if CUDA_ENABLED
+      #if (CUDA_ENABLED && USECUDA_NONTHERMAL_EXCITATION)
       arr_epsilon_trans_ev[t] = epsilon_trans / EV;
       #endif
 
