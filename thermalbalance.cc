@@ -59,6 +59,7 @@ typedef struct
 #endif
 
 
+__host__ __device__
 static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for bfheating using gsl integrators.
 {
