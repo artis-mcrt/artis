@@ -1378,7 +1378,21 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 
   double gammacorr = 0.0;
 
-#if !CUDA_ENABLED
+#if (CUDA_ENABLED && USECUDA_PHOTOIONCOEFF)
+
+  void *dev_intparas;
+  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
+  checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice));
+
+  const double gammacorr_gpu = calculate_phixs_integral_gpu<integrand_corrphotoioncoeff_custom_radfield>(dev_intparas, intparas.nu_edge);
+
+  cudaFree(dev_intparas);
+
+  // printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
+  gammacorr = gammacorr_gpu;
+
+#else
+
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
   const double epsabs = 0.;
@@ -1402,19 +1416,6 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
     printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
-
-#else
-
-  void *dev_intparas;
-  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
-  checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice));
-
-  const double gammacorr_gpu = calculate_phixs_integral_gpu<integrand_corrphotoioncoeff_custom_radfield>(dev_intparas, intparas.nu_edge);
-
-  cudaFree(dev_intparas);
-
-  // printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
-  gammacorr = gammacorr_gpu;
 #endif
 
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);

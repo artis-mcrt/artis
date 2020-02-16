@@ -1017,12 +1017,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
     const int nlevels = get_nlevels(element, ion);
     const int nlevels_nlte = get_nlevels_nlte(element, ion);
-    #if CUDA_ENABLED
+#if (CUDA_ENABLED && USECUDA_NLTE_BOUNDBOUND)
     double *s_renorm;
     cudaMallocManaged(&s_renorm, nlevels * sizeof(double));
-    #else
+#else
     double s_renorm[nlevels];
-    #endif
+#endif
+
     for (int level = 0; level <= nlevels_nlte; level++)
     {
       s_renorm[level] = 1.0;
@@ -1033,13 +1034,13 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       s_renorm[level] = superlevel_boltzmann(modelgridindex, element, ion, level) / superlevel_partfunc[ion];
     }
 
-    #if CUDA_ENABLED
+#if (CUDA_ENABLED && USECUDA_NLTE_BOUNDBOUND)
     nltepop_matrix_add_boundbound_gpu(
       modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
-    #else
+#else
     nltepop_matrix_add_boundbound(
       modelgridindex, element, ion, t_mid, s_renorm, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb);
-    #endif
+#endif
 
     if (ion < nions - 1)
     {

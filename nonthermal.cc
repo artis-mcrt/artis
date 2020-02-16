@@ -2537,14 +2537,14 @@ __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfm
           const double delta_en = DELTA_E;
           #endif
 
-          *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel_lower * xs_excitation(lineindex, epsilon_trans_ev * EV, endash * EV) * delta_en;
+          atomicAdd(gsl_matrix_ptr_managed(sfmatrix, i, j), nnlevel_lower * xs_excitation(lineindex, epsilon_trans_ev * EV, endash * EV) * delta_en);
         }
 
         const double endash_stopindex = gsl_vector_get_managed(envec, stopindex);
 
         // do the last bit separately because we're not using the full delta_e interval
         const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
-        *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel_lower * xs_excitation(lineindex, epsilon_trans_ev * EV, endash_stopindex * EV) * delta_en_actual;
+        atomicAdd(gsl_matrix_ptr_managed(sfmatrix, i, stopindex), nnlevel_lower * xs_excitation(lineindex, epsilon_trans_ev * EV, endash_stopindex * EV) * delta_en_actual);
       }
     }
   }
@@ -2626,7 +2626,7 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
       continue;
     }
 
-    #if CUDA_ENABLED
+    #if (CUDA_ENABLED && USECUDA_NONTHERMAL_EXCITATION)
     float *arr_epsilon_trans_ev;
     cudaMallocManaged(&arr_epsilon_trans_ev, nuptrans * sizeof(float));
     #endif
@@ -2647,12 +2647,12 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
         *E_0 = epsilon_trans / EV;
 
-      #if !CUDA_ENABLED
+      #if (!CUDA_ENABLED || !USECUDA_NONTHERMAL_EXCITATION)
       sfmatrix_add_excitation_transition(sfmatrix, lineindex, statweight_lower, epsilon_trans, nnlevel);
       #endif
     }
 
-    #if CUDA_ENABLED
+    #if (CUDA_ENABLED && USECUDA_NONTHERMAL_EXCITATION)
     sfmatrix_add_excitation_transitions_gpu(sfmatrix, arr_epsilon_trans_ev, elements[element].ions[ion].levels[lower].uptrans_lineindicies, statweight_lower, nnlevel);
     cudaFree(arr_epsilon_trans_ev);
     #endif
@@ -2706,7 +2706,7 @@ __global__ static void kernel_add_ionization_shell(
       // in Kozma & Fransson 1992 equation 4
 
       const double epsilon_lower = endash - en; // and epsilon_upper = (endash + ionpot_ev) / 2;
-      *gsl_matrix_ptr_managed(sfmatrix, i, j) += prefactors_j * (atanexp_j - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash;
+      atomicAdd(gsl_matrix_ptr_managed(sfmatrix, i, j), prefactors_j * (atanexp_j - atan((epsilon_lower - ionpot_ev) / J)) * deltaendash);
     }
 
     // below is atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
@@ -2724,7 +2724,7 @@ __global__ static void kernel_add_ionization_shell(
 
       // epsilon_lower = en + ionpot_ev;
       // epsilon_upper = (endash + ionpot_ev) / 2;
-      *gsl_matrix_ptr_managed(sfmatrix, i, j) -= prefactors_j * (atanexp_j - atanexp2) * deltaendash;
+      atomicAdd(gsl_matrix_ptr_managed(sfmatrix, i, j), - prefactors_j * (atanexp_j - atanexp2) * deltaendash);
     }
   }
 
@@ -2758,7 +2758,7 @@ __global__ static void kernel_add_ionization_shell(
           {
             if (en < (en_auger_ev * en_boost / a))
             {
-              *gsl_matrix_ptr_managed(sfmatrix, i, j) -= nnion * xs_impactionization_j * colliondata[collionindex].prob_num_auger[a] * a;
+              atomicAdd(gsl_matrix_ptr_managed(sfmatrix, i, j), - nnion * xs_impactionization_j * colliondata[collionindex].prob_num_auger[a] * a);
             }
           }
         }
@@ -2766,7 +2766,7 @@ __global__ static void kernel_add_ionization_shell(
         {
           assert(en < en_auger_ev);
           // printout("SFAuger E %g < en_auger_ev %g so subtracting %g from element with value %g\n", en, en_auger_ev, nnion * xs, ij_contribution);
-          *gsl_matrix_ptr_managed(sfmatrix, i, j) -= nnion * xs_impactionization_j; // * n_auger_elec_avg; // * en_auger_ev???
+          atomicAdd(gsl_matrix_ptr_managed(sfmatrix, i, j), - nnion * xs_impactionization_j); // * n_auger_elec_avg; // * en_auger_ev???
         }
       }
     }
@@ -2927,7 +2927,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       }
       const double J = get_J(Z, ionstage, ionpot_ev);
 
-      #if CUDA_ENABLED
+      #if (CUDA_ENABLED && USECUDA_NONTHERMAL_IONIZATION)
       sfmatrix_add_ionization_shell_gpu(sfmatrix, collionindex, nnion, J);
       #else
       sfmatrix_add_ionization_shell(sfmatrix, collionindex, nnion, J);
