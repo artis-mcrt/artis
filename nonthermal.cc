@@ -2514,10 +2514,12 @@ __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfm
 {
   const int i = threadIdx.x + blockIdx.x * blockDim.x;
   // const int t = threadIdx.y + blockIdx.y * blockDim.y;
+  const int t = blockIdx.y;
 
   if (i < SFPTS)
   {
-    for (int t = 0; t < nuptrans_selected; t++)
+    // for (int t = 0; t < nuptrans_selected; t++)
+    if (t < nuptrans_selected)
     {
       const int lineindex = uptrans_lineindicies[t];
       const int upper = linelist[lineindex].upperlevelindex;
@@ -2539,7 +2541,7 @@ __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfm
             xs_deltae_j *= DELTA_E;
           #endif
 
-          *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel_lower * xs_deltae_j;
+          atomicAdd(gsl_matrix_ptr_managed(sfmatrix, i, j), nnlevel_lower * xs_deltae_j);
         }
 
         // do the last bit separately because we're not using the full delta_e interval
@@ -2547,7 +2549,7 @@ __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfm
 
         double xs_stopindex = xs_excitation(lineindex, arr_epsilon_trans[t], envec->data[stopindex] * EV);
 
-        *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel_lower * xs_stopindex * delta_en_actual;
+        atomicAdd(gsl_matrix_ptr_managed(sfmatrix, i, stopindex), nnlevel_lower * xs_stopindex * delta_en_actual);
       }
     }
   }
@@ -2558,11 +2560,8 @@ static void sfmatrix_add_excitation_transitions_gpu(gsl_matrix *sfmatrix, float 
 {
   checkCudaErrors(cudaDeviceSynchronize());
 
-  // dim3 threadsPerBlock(512, 1, 1);
-  // dim3 numBlocks(ceil(SFPTS / 512.), nuptrans_selected, 1);
-
   dim3 threadsPerBlock(512, 1, 1);
-  dim3 numBlocks(ceil(SFPTS / 512.), 1, 1);
+  dim3 numBlocks(ceil(SFPTS / 512.), nuptrans_selected, 1);
 
   kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, arr_epsilon_trans, nuptrans_selected, uptrans_lineindicies, statweight_lower, nnlevel_lower);
 
