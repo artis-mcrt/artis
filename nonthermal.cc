@@ -2510,113 +2510,61 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
 
 #if CUDA_ENABLED
-// __global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfmatrix, float *arr_epsilon_trans_ev, int *uptrans_lineindicies, int nuptrans, float nnlevel_lower)
-// {
-//   const int i = threadIdx.x + blockIdx.x * blockDim.x;
-//
-//   if (i < SFPTS)
-//   {
-//     for (int t = 0; t < nuptrans; t++)
-//     {
-//       const int lineindex = uptrans_lineindicies[t];
-//       const int upper = linelist[lineindex].upperlevelindex;
-//       if (upper < NTEXCITATION_MAXNLEVELS_UPPER)
-//       {
-//         const float epsilon_trans_ev = arr_epsilon_trans_ev[t];
-//         const int xsstartindex = get_energyindex_ev_gteq(epsilon_trans_ev);
-//
-//         const double en = envec->data[i];
-//         const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
-//
-//         const int startindex = i > xsstartindex ? i : xsstartindex;
-//         for (int j = startindex; j < stopindex; j++)
-//         {
-//           const double endash = envec->data[j];
-//           #if (SF_USE_LOG_E_INCREMENT)
-//           const double delta_en = delta_envec->data[j];
-//           #else
-//           const double delta_en = DELTA_E;
-//           #endif
-//
-//           sfmatrix->data[i * SFPTS + j] += nnlevel_lower * xs_excitation(lineindex, epsilon_trans_ev * EV, endash * EV) * delta_en);
-//         }
-//
-//         const double endash_stopindex = gsl_vector_get_managed(envec, stopindex);
-//
-//         // do the last bit separately because we're not using the full delta_e interval
-//         const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
-//         sfmatrix->data[i * SFPTS + stopindex] + nnlevel_lower * xs_excitation(lineindex, epsilon_trans_ev * EV, endash_stopindex * EV) * delta_en_actual);
-//       }
-//     }
-//   }
-// }
-
-
-__global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfmatrix, float *arr_epsilon_trans, int nuptrans, int *uptrans_lineindicies, double statweight_lower, double nnlevel_lower)
+__global__ static void kernel_sfmatrix_add_excitation_transition(gsl_matrix *sfmatrix, float *arr_epsilon_trans, int nuptrans_selected, int *uptrans_lineindicies, double statweight_lower, double nnlevel_lower)
 {
   const int i = threadIdx.x + blockIdx.x * blockDim.x;
+  // const int t = threadIdx.y + blockIdx.y * blockDim.y;
 
   if (i < SFPTS)
   {
-    double vec_xs_excitation_deltae[SFPTS];
-    for (int t = 0; t < nuptrans; t++)
+    for (int t = 0; t < nuptrans_selected; t++)
     {
       const int lineindex = uptrans_lineindicies[t];
       const int upper = linelist[lineindex].upperlevelindex;
-      if (upper < NTEXCITATION_MAXNLEVELS_UPPER)
+      const double epsilon_trans_ev = arr_epsilon_trans[t] / EV;
+      const int xsstartindex = get_energyindex_ev_gteq(epsilon_trans_ev);
+      if (xsstartindex >= 0)
       {
-        // const int xsstartindex = get_xs_excitation_vector(vec_xs_excitation_deltae, lineindex, statweight_lower, arr_epsilon_trans[t]);
-        const double epsilon_trans_ev = arr_epsilon_trans[t] / EV;
-        const int xsstartindex = get_energyindex_ev_gteq(epsilon_trans_ev);
-        if (xsstartindex >= 0)
+        const double en = gsl_vector_get_managed(envec, i);
+        const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
+
+        const int startindex = i > xsstartindex ? i : xsstartindex;
+
+        for (int j = startindex; j < stopindex; j++)
         {
-          const double en = gsl_vector_get_managed(envec, i);
-          const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
-
-          const int startindex = i > xsstartindex ? i : xsstartindex;
-
-          for (int k = startindex; k <= stopindex; k++)
-          {
-            vec_xs_excitation_deltae[k] = xs_excitation(lineindex, arr_epsilon_trans[t], envec->data[k] * EV);
-            #if (SF_USE_LOG_E_INCREMENT)
-              vec_xs_excitation_deltae[k] *= delta_envec->data[k];
-            #else
-              vec_xs_excitation_deltae[k] *= DELTA_E;
-            #endif
-          }
-
-          for (int j = startindex; j < stopindex; j++)
-          {
-            *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel_lower * vec_xs_excitation_deltae[j];
-          }
-
-          // do the last bit separately because we're not using the full delta_e interval
+          double xs_deltae_j = xs_excitation(lineindex, arr_epsilon_trans[t], envec->data[j] * EV);
           #if (SF_USE_LOG_E_INCREMENT)
-          const double delta_en = gsl_vector_get_managed(delta_envec, stopindex);
+            xs_deltae_j *= delta_envec->data[j];
           #else
-          const double delta_en = DELTA_E;
+            xs_deltae_j *= DELTA_E;
           #endif
 
-          const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
-
-          *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel_lower * vec_xs_excitation_deltae[stopindex] * delta_en_actual / delta_en;
+          *gsl_matrix_ptr_managed(sfmatrix, i, j) += nnlevel_lower * xs_deltae_j;
         }
+
+        // do the last bit separately because we're not using the full delta_e interval
+        const double delta_en_actual = (en + epsilon_trans_ev - gsl_vector_get_managed(envec, stopindex));
+
+        double xs_stopindex = xs_excitation(lineindex, arr_epsilon_trans[t], envec->data[stopindex] * EV);
+
+        *gsl_matrix_ptr_managed(sfmatrix, i, stopindex) += nnlevel_lower * xs_stopindex * delta_en_actual;
       }
     }
   }
 }
 
 
-static void sfmatrix_add_excitation_transitions_gpu(gsl_matrix *sfmatrix, float *arr_epsilon_trans, int *uptrans_lineindicies, int nuptrans, double statweight_lower, double nnlevel_lower)
+static void sfmatrix_add_excitation_transitions_gpu(gsl_matrix *sfmatrix, float *arr_epsilon_trans, int *uptrans_lineindicies, int nuptrans_selected, double statweight_lower, double nnlevel_lower)
 {
   checkCudaErrors(cudaDeviceSynchronize());
+
+  // dim3 threadsPerBlock(512, 1, 1);
+  // dim3 numBlocks(ceil(SFPTS / 512.), nuptrans_selected, 1);
 
   dim3 threadsPerBlock(512, 1, 1);
   dim3 numBlocks(ceil(SFPTS / 512.), 1, 1);
 
-  // kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, arr_epsilon_trans_ev, uptrans_lineindicies, nuptrans, nnlevel_lower);
-
-  kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, arr_epsilon_trans, nuptrans, uptrans_lineindicies, statweight_lower, nnlevel_lower);
+  kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, arr_epsilon_trans, nuptrans_selected, uptrans_lineindicies, statweight_lower, nnlevel_lower);
 
   // Check for any errors launching the kernel
   checkCudaErrors(cudaGetLastError());
@@ -2688,6 +2636,9 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
     #if (CUDA_ENABLED && USECUDA_NONTHERMAL_EXCITATION)
     float *arr_epsilon_trans;
     cudaMallocManaged(&arr_epsilon_trans, nuptrans * sizeof(float));
+    int *arr_lineindicies;
+    cudaMallocManaged(&arr_lineindicies, nuptrans * sizeof(int));
+    int nuptrans_selected = 0;
     #endif
 
     for (int t = 0; t < nuptrans; t++)
@@ -2699,8 +2650,11 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
         continue;
       }
       float epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
+
       #if (CUDA_ENABLED && USECUDA_NONTHERMAL_EXCITATION)
-      arr_epsilon_trans[t] = epsilon_trans;
+      arr_epsilon_trans[nuptrans_selected] = epsilon_trans;
+      arr_lineindicies[nuptrans_selected] = lineindex;
+      nuptrans_selected++;
       #endif
 
       if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
@@ -2712,8 +2666,9 @@ static void sfmatrix_add_excitation(gsl_matrix *sfmatrix, const int modelgridind
     }
 
     #if (CUDA_ENABLED && USECUDA_NONTHERMAL_EXCITATION)
-    sfmatrix_add_excitation_transitions_gpu(sfmatrix, arr_epsilon_trans, elements[element].ions[ion].levels[lower].uptrans_lineindicies, nuptrans, statweight_lower, nnlevel);
+    sfmatrix_add_excitation_transitions_gpu(sfmatrix, arr_epsilon_trans, arr_lineindicies, nuptrans_selected, statweight_lower, nnlevel);
     cudaFree(arr_epsilon_trans);
+    cudaFree(arr_lineindicies);
     #endif
   }
 }
