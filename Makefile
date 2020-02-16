@@ -82,7 +82,7 @@ sn3dopenmp: sn3d
 
 sn3dcuda sn3dcudawhole: LDFLAGS += -lcudart
 
-# sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
+sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
 
 # QUB ARC jakita.starfleet
 ifneq (,$(findstring jakita,$(HOSTNAME)))
@@ -103,7 +103,7 @@ endif
 # CXXFLAGS += -std=c++11
 # CXXFLAGS += -fPIC -shared
 # CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -O3 -Xcompiler "$(CXXFLAGS)" -rdc=true
+CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++11 -O3 -Xcompiler "$(CXXFLAGS)" -rdc=true
 
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -121,7 +121,7 @@ sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
 
 sn3dcudawhole: version
-	nvcc -x cu $(CUDA_NVCC_FLAGS) $(sn3d_files) $(INCLUDE) $(LDFLAGS) -o sn3d
+	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3d
 
 sn3dcuda: version $(sn3d_objects)
 	nvcc $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d

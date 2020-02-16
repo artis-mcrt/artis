@@ -647,6 +647,7 @@ static int get_lineindex(const int lelement, const int lion, const int llowerlev
    }
   }
   assert(false);
+  return -1;
 }
 
 
