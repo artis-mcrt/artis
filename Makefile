@@ -80,8 +80,9 @@ sn3dopenmp: CXXFLAGS += -fopenmp
 sn3dopenmp: LDFLAGS += -lomp
 sn3dopenmp: sn3d
 
-sn3dcuda: CXXFLAGS += -DCUDA_ENABLED=true
-sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
+sn3dcuda sn3dcudawhole: LDFLAGS += -lcudart
+
+# sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
 
 # QUB ARC jakita.starfleet
 ifneq (,$(findstring jakita,$(HOSTNAME)))
@@ -95,14 +96,14 @@ endif
 ifneq (,$(findstring gadi,$(HOSTNAME)))
 	# Tesla V100
 	CUDA_NVCC_FLAGS += --gpu-architecture=sm_70
-	CXX = c++
+	CXX = icc
 	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
 endif
 
 # CXXFLAGS += -std=c++11
 # CXXFLAGS += -fPIC -shared
 # CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -Xcompiler "$(CXXFLAGS)" -rdc=true
+CUDA_NVCC_FLAGS += -std=c++11 -ccbin=$(CXX) -O3 -Xcompiler "$(CXXFLAGS)" -rdc=true
 
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)

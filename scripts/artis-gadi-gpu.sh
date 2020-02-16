@@ -21,7 +21,7 @@
 #  192GB per node (4GB per core)
 
 module load gsl
-module load intel-compiler
+module load intel-compiler/2019.4.243
 module unload intel-mpi
 module load openmpi
 module load cuda

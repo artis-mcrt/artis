@@ -26,6 +26,9 @@ double calculate_ionrecombcoeff(
   bool assume_lte, bool collisional_not_radiative, bool printdebug,
   bool lower_superlevel_only, bool per_groundmultipletpop, bool stimonly);
 
+template <double func_integrand(double, void *)>
+double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge);
+
 extern __managed__ double T_step_log;
 
 #endif //RATECOEFF_H
