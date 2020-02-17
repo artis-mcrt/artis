@@ -1347,6 +1347,53 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
   return kappa_ff;
 }
 
+__host__ __device__
+static inline void calculate_kappa_transition(
+    phixslist_t phixslist_tid, double *kappa_bf, int i, const double nu, const double nu_edge,
+    const int modelgridindex, const int element, const int ion, const int level, const int phixstargetindex, const double nnlevel,
+    const double T_e, const double nne)
+{
+  const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
+  const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
+  const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+  const double nnionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+  const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
+  const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+  const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
+
+  #if (SEPARATE_STIMRECOMB)
+    const double corrfactor = 1.; // no subtraction of stimulated recombination
+    const double kappa_fb_contr = nnlevel * sigma_bf * probability * stimfactor;
+  #else
+    double corrfactor = 1 - stimfactor; // photoionisation minus stimulated recombination
+    if (corrfactor < 0)
+      corrfactor = 0.;
+    // const double corrfactor = 1.; // no subtraction of stimulated recombination
+  #endif
+
+  const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
+
+  if (level == 0)
+  {
+    const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
+    phixslist[tid].groundcont[gphixsindex].gamma_contr += sigma_bf * probability * corrfactor;
+  }
+
+  #if (DETAILED_BF_ESTIMATORS_ON)
+  phixslist[tid].allcont[i].gamma_contr = sigma_bf * probability * corrfactor;
+  #endif
+
+  assert(isfinite(kappa_bf_contr));
+
+  phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
+  *kappa_bf = *kappa_bf + kappa_bf_contr;
+
+  #if (SEPARATE_STIMRECOMB)
+    phixslist[tid].allcont[i].kappa_fb_contr = kappa_fb_contr;
+    *kappa_fb = *kappa_fb + kappa_fb_contr;
+  #endif
+}
+
 
 __host__ __device__
 void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid)
@@ -1383,46 +1430,7 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
         //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);
         //  printout("pkt_ptr->number %d\n",pkt_ptr->number);
         //}
-        const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
-        const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
-        const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const double nnionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
-        const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
-        const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
-        const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
-
-        #if (SEPARATE_STIMRECOMB)
-          const double corrfactor = 1.; // no subtraction of stimulated recombination
-          const double kappa_fb_contr = nnlevel * sigma_bf * probability * stimfactor;
-        #else
-          double corrfactor = 1 - stimfactor; // photoionisation minus stimulated recombination
-          if (corrfactor < 0)
-            corrfactor = 0.;
-          // const double corrfactor = 1.; // no subtraction of stimulated recombination
-        #endif
-
-        const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
-
-        if (level == 0)
-        {
-          const int gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;
-          phixslist[tid].groundcont[gphixsindex].gamma_contr += sigma_bf * probability * corrfactor;
-        }
-
-        #if (DETAILED_BF_ESTIMATORS_ON)
-        phixslist[tid].allcont[i].gamma_contr = sigma_bf * probability * corrfactor;
-        #endif
-
-        assert(isfinite(kappa_bf_contr));
-
-        phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
-        *kappa_bf = *kappa_bf + kappa_bf_contr;
-
-        #if (SEPARATE_STIMRECOMB)
-          phixslist[tid].allcont[i].kappa_fb_contr = kappa_fb_contr;
-          *kappa_fb = *kappa_fb + kappa_fb_contr;
-        #endif
-
+        calculate_kappa_transition(phixslist[tid], kappa_bf, i, nu, nu_edge, modelgridindex, element, ion, level, phixstargetindex, nnlevel, T_e, nne);
       }
       else if (nu < nu_edge) // nu < nu_edge
       {

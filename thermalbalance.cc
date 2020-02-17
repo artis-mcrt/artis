@@ -81,11 +81,6 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidpara
 
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
-  double error = 0.0;
-  const double epsrel = 1e-3;
-  const double epsrelwarning = 1e-1;
-  const double epsabs = 0.;
-
   // const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   // const double E_threshold = epsilon(element, ion + 1, upperionlevel) - epsilon(element, ion, level);
   const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
@@ -121,6 +116,11 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   bfheating = bfheating_gpu;
 
 #else
+  double error = 0.0;
+  const double epsrel = 1e-3;
+  const double epsrelwarning = 1e-1;
+  const double epsabs = 0.;
+
   gsl_function F_bfheating;
   F_bfheating.function = &integrand_bfheatingcoeff_custom_radfield;
   F_bfheating.params = &intparas;
