@@ -64,7 +64,7 @@ int do_rlc_est;  // 1 = compute estimators for the r-pkt light curve.
 
 int n_out_it; // # of sets of 1,000,000 photons to run.
 
-int npts_model; // number of points in 1-D input model
+__managed__ int npts_model; // number of points in 1-D input model
 double vout_model[MMODELGRID];
 double t_model; // time at which densities in input model are correct.
 int ncoord1_model, ncoord2_model; // For 2D model, the input grid dimensions
@@ -152,19 +152,19 @@ int downscatter;
 int updatecellcounter;
 int coolingratecalccounter;
 
-int debuglevel;
+__managed__ int debuglevel;
 
-int ncoordgrid[3]; /// propagration grid dimensions
-int ngrid;
-int grid_type;
+__managed__ int ncoordgrid[3]; /// propagration grid dimensions
+__managed__ int ngrid;
+__managed__ int grid_type;
 char coordlabel[3];
 
-enum model_types model_type;
+__managed__ enum model_types model_type;
 
-int nprocs;      /// Global variable which holds the number of MPI processes
-int rank_global; /// Global variable which holds the rank of the active MPI process
-int npkts;
-int nesc; //number of packets that escape during current timestep
+__managed__ int nprocs;      /// Global variable which holds the number of MPI processes
+__managed__ int rank_global; /// Global variable which holds the rank of the active MPI process
+__managed__ int npkts;
+__managed__ int nesc; //number of packets that escape during current timestep
 
 double coordmax[3];
 double mtot;
@@ -180,8 +180,10 @@ int itstep;       /// Initial timestep's number
 int ftstep;       /// Final timestep's number
 __managed__ int nts_global;   /// Current time step
 
-int ntbins, nnubins; //number of bins for spectrum
-double nu_min_r, nu_max_r; //limits on frequency range for r-pkt spectrum
+int ntbins;
+int nnubins; //number of bins for spectrum
+double nu_min_r;
+double nu_max_r; //limits on frequency range for r-pkt spectrum
 
 int ntlcbins; //number of bins for light curve
 
@@ -198,8 +200,8 @@ double rho_crit;                 ///MK: critical opacity in opacity_case 3 (coul
 int debug_packet;                /// activate debug output for this packet if non negative
 int n_middle_it;
 
-int total_nlte_levels;            ///total number of nlte levels
-int n_super_levels;
+__managed__ int total_nlte_levels;            ///total number of nlte levels
+__managed__ int n_super_levels;
 
 mastate_t *mastate;
 
@@ -208,14 +210,14 @@ CELL cell[MGRID+1];
 
 bool homogeneous_abundances;
 
-bool simulation_continued_from_saved;
-int nthreads;
-double nu_rfcut;
-int n_lte_timesteps;
-double cell_is_optically_thick;
-int n_grey_timesteps;
-int n_titer;
+__managed__ bool simulation_continued_from_saved;
+__managed__ int nthreads;
+__managed__ double nu_rfcut;
+__managed__ int n_lte_timesteps;
+__managed__ double cell_is_optically_thick;
+__managed__ int n_grey_timesteps;
+__managed__ int n_titer;
 __managed__ bool initial_iteration;
-int max_bf_continua;
+__managed__ int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;

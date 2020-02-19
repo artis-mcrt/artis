@@ -50,7 +50,12 @@ static void read_phixs_data_table(
     assert(upperlevel >= 0);
     elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
     mem_usage_phixs += sizeof(phixstarget_entry);
-    if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry))) == NULL)
+    #if CUDA_ENABLED
+    cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].phixstargets, sizeof(phixstarget_entry));
+    #else
+    elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry));
+    #endif
+    if (elements[element].ions[lowerion].levels[lowerlevel].phixstargets == NULL)
     {
       printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
       abort();
@@ -70,7 +75,14 @@ static void read_phixs_data_table(
     {
       elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = in_nphixstargets;
       mem_usage_phixs += in_nphixstargets * sizeof(phixstarget_entry);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets, sizeof(phixstarget_entry))) == NULL)
+
+      #if CUDA_ENABLED
+      cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].phixstargets, in_nphixstargets * sizeof(phixstarget_entry));
+      #else
+      elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(in_nphixstargets, sizeof(phixstarget_entry));
+      #endif
+
+      if (elements[element].ions[lowerion].levels[lowerlevel].phixstargets == NULL)
       {
         printout("[fatal] input: not enough memory to initialize phixstargets list... abort\n");
         abort();
@@ -97,7 +109,12 @@ static void read_phixs_data_table(
     {
       elements[element].ions[lowerion].levels[lowerlevel].nphixstargets = 1;
       mem_usage_phixs += sizeof(phixstarget_entry);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry))) == NULL)
+      #if CUDA_ENABLED
+      cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].phixstargets, sizeof(phixstarget_entry));
+      #else
+      elements[element].ions[lowerion].levels[lowerlevel].phixstargets = (phixstarget_entry *) calloc(1, sizeof(phixstarget_entry));
+      #endif
+      if (elements[element].ions[lowerion].levels[lowerlevel].phixstargets == NULL)
       {
         printout("[fatal] input: not enough memory to initialize phixstargets... abort\n");
         abort();
@@ -111,6 +128,9 @@ static void read_phixs_data_table(
       elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].levelindex = 0;
       elements[element].ions[lowerion].levels[lowerlevel].phixstargets[0].probability = 1.0;
     }
+    #if CUDA_ENABLED
+    cudaMemAdvise(elements[element].ions[lowerion].levels[lowerlevel].phixstargets, elements[element].ions[lowerion].levels[lowerlevel].nphixstargets * sizeof(phixstarget_entry), cudaMemAdviseSetReadMostly, myGpuId);
+    #endif
   }
 
   /// The level contributes to the ionisinglevels if its energy
@@ -127,29 +147,56 @@ static void read_phixs_data_table(
         elements[element].ions[lowerion + 1].maxrecombininglevel = upperlevel;
 
       mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
+      #if CUDA_ENABLED
+      cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff, TABLESIZE * sizeof(double));
+      cudaMemAdvise(elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff, TABLESIZE * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
+      #else
+      elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff = (double *) calloc(TABLESIZE, sizeof(double));
+      #endif
+      if (elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].spontrecombcoeff == NULL)
       {
         printout("[fatal] input: not enough memory to initialize spontrecombcoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
       }
+
       #if (!NO_LUT_PHOTOION)
       mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
+      #if CUDA_ENABLED
+      cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff, TABLESIZE * sizeof(double));
+      cudaMemAdvise(elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff, TABLESIZE * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
+      #else
+      elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff = (double *) calloc(TABLESIZE, sizeof(double));
+      #endif
+      if (elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].corrphotoioncoeff == NULL)
       {
         printout("[fatal] input: not enough memory to initialize photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
       }
       #endif
+
       #if (!NO_LUT_BFHEATING)
       mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
+      #if CUDA_ENABLED
+      cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff, TABLESIZE * sizeof(double));
+      cudaMemAdvise(elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff, TABLESIZE * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
+      #else
+      elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff = (double *) calloc(TABLESIZE, sizeof(double));
+      #endif
+      if (elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfheating_coeff == NULL)
       {
         printout("[fatal] input: not enough memory to initialize modified_photoioncoeff table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
       }
       #endif
+
       mem_usage_phixsderivedcoeffs += TABLESIZE * sizeof(double);
-      if ((elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff = (double *) calloc(TABLESIZE, sizeof(double))) == NULL)
+      #if CUDA_ENABLED
+      cudaMallocManaged(&elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff, TABLESIZE * sizeof(double));
+      cudaMemAdvise(elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff, TABLESIZE * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
+      #else
+      elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff = (double *) calloc(TABLESIZE, sizeof(double));
+      #endif
+      if (elements[element].ions[lowerion].levels[lowerlevel].phixstargets[phixstargetindex].bfcooling_coeff == NULL)
       {
         printout("[fatal] input: not enough memory to initialize bfcooling table for element %d, ion %d, level %d\n",element,lowerion,lowerlevel);
         abort();
@@ -1516,7 +1563,11 @@ static void setup_phixs_list(void)
   printout("[info] read_atomicdata: number of bfcontinua %d\n", nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", nbfcontinua_ground);
 
+  #if CUDA_ENABLED
+  cudaMallocManaged(&phixslist, nthreads * sizeof(phixslist_t));
+  #else
   phixslist = (phixslist_t *) malloc(nthreads * sizeof(phixslist_t));
+  #endif
   if (phixslist == NULL)
   {
     printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
@@ -1538,7 +1589,11 @@ static void setup_phixs_list(void)
     /// of included elements, because the uppermost ionisation stages can't ionise.
     //printout("groundphixslist nbfcontinua_ground %d\n",nbfcontinua_ground);
     printout("initialising groundphixslist for itid %d\n", itid);
+    #if CUDA_ENABLED
+    cudaMallocManaged(&phixslist[itid].groundcont, nbfcontinua_ground * sizeof(groundphixslist_t));
+    #else
     phixslist[itid].groundcont = (groundphixslist_t *) malloc(nbfcontinua_ground * sizeof(groundphixslist_t));
+    #endif
     if (phixslist[itid].groundcont == NULL)
     {
       printout("[fatal] read_atomicdata: not enough memory to initialize phixslist[%d].groundcont... abort\n", itid);
@@ -1577,7 +1632,11 @@ static void setup_phixs_list(void)
 
     //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
     //else
+    #if CUDA_ENABLED
+    cudaMallocManaged(&phixslist[itid].allcont, nbfcontinua * sizeof(fullphixslist_t));
+    #else
     phixslist[itid].allcont = (fullphixslist_t *) malloc(nbfcontinua * sizeof(fullphixslist_t));
+    #endif
     if (phixslist[itid].allcont == NULL)
     {
       printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");

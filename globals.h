@@ -60,12 +60,13 @@ extern int do_rlc_est;
 
 extern int n_out_it;
 
-extern int npts_model;
+extern __managed__ int npts_model;
 extern double vout_model[MMODELGRID];
 extern double t_model;
 extern int ncoord1_model;
 extern int ncoord2_model;
-extern double dcoord1, dcoord2;
+extern double dcoord1;
+extern double dcoord2;
 
 extern double CLIGHT_PROP;
 
@@ -134,19 +135,19 @@ extern int downscatter;
 extern int updatecellcounter;
 extern int coolingratecalccounter;
 
-extern int debuglevel;
+extern __managed__ int debuglevel;
 
-extern int ncoordgrid[3];
-extern int ngrid;
-extern int grid_type;
+extern __managed__ int ncoordgrid[3];
+extern __managed__ int ngrid;
+extern __managed__ int grid_type;
 extern char coordlabel[3];
 
-extern enum model_types model_type;
+extern __managed__ enum model_types model_type;
 
-extern int nprocs;
-extern int rank_global;
-extern int npkts;
-extern int nesc;
+extern __managed__ int nprocs;
+extern __managed__ int rank_global;
+extern __managed__ int npkts;
+extern __managed__ int nesc;
 
 extern double coordmax[3];
 extern double mtot;
@@ -162,8 +163,10 @@ extern int itstep;
 extern int ftstep;
 extern __managed__ int nts_global;
 
-extern int ntbins, nnubins;
-extern double nu_min_r, nu_max_r;
+extern int ntbins;
+extern int nnubins;
+extern double nu_min_r;
+extern double nu_max_r;
 
 extern int ntlcbins;
 
@@ -177,8 +180,8 @@ extern double rho_crit;
 extern int debug_packet;
 extern int n_middle_it;
 
-extern int total_nlte_levels;
-extern int n_super_levels;
+extern __managed__ int total_nlte_levels;
+extern __managed__ int n_super_levels;
 
 extern mastate_t *mastate;
 
@@ -187,15 +190,15 @@ extern CELL cell[MGRID+1];
 
 extern bool homogeneous_abundances;
 
-extern bool simulation_continued_from_saved;
-extern int nthreads;
-extern double nu_rfcut;
-extern int n_lte_timesteps;
-extern double cell_is_optically_thick;
-extern int n_grey_timesteps;
-extern int n_titer;
+extern __managed__ bool simulation_continued_from_saved;
+extern __managed__ int nthreads;
+extern __managed__ double nu_rfcut;
+extern __managed__ int n_lte_timesteps;
+extern __managed__ double cell_is_optically_thick;
+extern __managed__ int n_grey_timesteps;
+extern __managed__ int n_titer;
 extern __managed__ bool initial_iteration;
-extern int max_bf_continua;
+extern __managed__ int max_bf_continua;
 extern int n_kpktdiffusion_timesteps;
 extern float kpktdiffusion_timescale;
 

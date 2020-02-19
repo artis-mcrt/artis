@@ -92,10 +92,8 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
     {
       total += part_integral[y * integralsamplesperxspoint];
     }
-    *integral = total / 3.;
+    atomicAdd(integral, total / 3.);
   }
-
-  __syncthreads();
 }
 
 
@@ -104,12 +102,13 @@ double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
 {
     double *dev_integral;
     checkCudaErrors(cudaMalloc(&dev_integral, sizeof(double)));
+    cudaMemset(dev_integral, 0, sizeof(double));
 
     checkCudaErrors(cudaDeviceSynchronize());
 
     dim3 threadsPerBlock(integralsamplesperxspoint, NPHIXSPOINTS, 1);
     dim3 numBlocks(1, 1, 1);
-    size_t sharedsize = sizeof(double) * NPHIXSPOINTS * integralsamplesperxspoint;
+    size_t sharedsize = sizeof(double) * threadsPerBlock.x * threadsPerBlock.y;
 
     kernel_integral<func_integrand><<<numBlocks, threadsPerBlock, sharedsize>>>(dev_intparas, nu_edge, dev_integral);
 
