@@ -17,38 +17,30 @@
 
 #include <helper_cuda.h>
 
-// #include <iostream>
-
-// #define checkCudaErrors( call )\
-// {\
-//     cudaError_t result = call;\
-//     if (cudaSuccess != result)\
-//     {\
-//         std::cerr << "CUDA error " << result << " in " << __FILE__ << ":" << __LINE__ << ": " << cudaGetErrorString( result ) << " (" << #call << ")" << std::endl; \
-//     }\
-// }
-
-// #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
-//
-// template <typename T>
-// void check(T result, char const *const func, const char *const file,
-//            int const line) {
-//   if (result) {
-//     fprintf(stderr, "CUDA error at %s:%d code=%d(%s) \"%s\" \n", file, line,
-//             static_cast<unsigned int>(result), _cudaGetErrorEnum(result), func);
-//     // DEVICE_RESET
-//     // Make sure we call CUDA Device Reset before exiting
-//     exit(EXIT_FAILURE);
-//   }
-// }
+// copied from https://www.micc.unifi.it/bertini/download/gpu-programming-basics/2017/gpu_cuda_5.pdf
+#if defined __CUDA_ARCH__ && __CUDA_ARCH__ < 600
+__device__ double static inline atomicAdd(double* address, double val)
+{
+ unsigned long long int* address_as_ull =
+ (unsigned long long int*) address;
+ unsigned long long int old = *address_as_ull;
+ unsigned long long int assumed;
+ do {
+ assumed = old;
+ old = atomicCAS(address_as_ull, assumed,
+ __double_as_longlong(val + __longlong_as_double(assumed)));
+ // Note: uses integer comparison to avoid hang in case
+ // of NaN (since NaN != NaN)
+ } while (assumed != old);
+ return __longlong_as_double(old);
+}
+#endif
 
 #else
 
 #include <assert.h>
 
-#if CUDA_ENABLED
-assert(false);
-#endif
+assert(!CUDA_ENABLED);
 
 #define __managed__
 #define __device__

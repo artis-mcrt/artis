@@ -596,13 +596,17 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       {
         //printout("Using an nlte population!\n");
         nn = nltepop_over_rho * get_rho(modelgridindex);
+        #ifndef __CUDA_ARCH__
         assert(isfinite(nn));
+        #endif
         return nn;
       }
     }
     else // level is in the superlevel
     {
+      #ifndef __CUDA_ARCH__
       assert(level_isinsuperlevel(element, ion, level));
+      #endif
 
       const int sl_nlte_index = elements[element].ions[ion].first_nlte + get_nlevels_nlte(element, ion);
 
@@ -616,7 +620,9 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
       {
         //printout("Using a superlevel population!\n");
         nn = superlevelpop_over_rho * get_rho(modelgridindex) * superlevel_boltzmann(modelgridindex, element, ion, level);
+        #ifndef __CUDA_ARCH__
         assert(isfinite(nn));
+        #endif
         return nn;
       }
     }
@@ -636,7 +642,9 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
   }
 
   #ifdef DEBUG_ON
+  #ifndef __CUDA_ARCH__
   assert(isfinite(nn));
+  #endif
     // if (!isfinite(nn))
     // {
     //   printout("[fatal] calculate_exclevelpop: level %d of ion %d of element %d has infinite level population %g\n",level,ion,element,nn);

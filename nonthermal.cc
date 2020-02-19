@@ -2561,7 +2561,7 @@ static void sfmatrix_add_excitation_transitions_gpu(gsl_matrix *sfmatrix, float 
   checkCudaErrors(cudaDeviceSynchronize());
 
   dim3 threadsPerBlock(512, 1, 1);
-  dim3 numBlocks(ceil(SFPTS / 512.), nuptrans_selected, 1);
+  dim3 numBlocks(ceil(SFPTS / threadsPerBlock.x), nuptrans_selected, 1);
 
   kernel_sfmatrix_add_excitation_transition<<<numBlocks, threadsPerBlock>>>(sfmatrix, arr_epsilon_trans, nuptrans_selected, uptrans_lineindicies, statweight_lower, nnlevel_lower);
 
@@ -2796,8 +2796,8 @@ static void sfmatrix_add_ionization_shell_gpu(gsl_matrix *sfmatrix, int collioni
   cudaStatus = cudaDeviceSynchronize();
   assert(cudaStatus == cudaSuccess);
 
-  dim3 numBlocks(ceil((SFPTS - xsstartindex + 1) / 512.), 1, 1);
   dim3 threadsPerBlock(512, 1, 1);
+  dim3 numBlocks(ceil((SFPTS - xsstartindex + 1) / threadsPerBlock.x), 1, 1);
 
   kernel_add_ionization_shell<<<numBlocks, threadsPerBlock>>>(sfmatrix, collionindex, ionpot_ev, nnion, J, xsstartindex);
 

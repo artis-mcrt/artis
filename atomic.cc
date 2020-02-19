@@ -6,17 +6,17 @@
 
 __managed__ double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 
-extern inline int get_element(int element);
-extern inline int get_elementindex(int Z);
-extern inline int get_nions(int element);
-extern inline int get_ionstage(int element, int ion);
-extern inline int get_nlevels(int element, int ion);
-extern inline int get_nlevels_nlte(int element, int ion);
-extern inline int get_nlevels_groundterm(int element, int ion);
-extern inline int get_ionisinglevels(int element, int ion);
-extern inline int get_uniqueionindex(int element, int ion);
-extern inline void get_ionfromuniqueionindex(int allionsindex, int *element, int *ion);
-extern inline double epsilon(int element, int ion, int level);
+extern __host__ __device__ inline int get_element(int element);
+extern __host__ __device__ inline int get_elementindex(int Z);
+extern __host__ __device__ inline int get_nions(int element);
+extern __host__ __device__ inline int get_ionstage(int element, int ion);
+extern __host__ __device__ inline int get_nlevels(int element, int ion);
+extern __host__ __device__ inline int get_nlevels_nlte(int element, int ion);
+extern __host__ __device__ inline int get_nlevels_groundterm(int element, int ion);
+extern __host__ __device__ inline int get_ionisinglevels(int element, int ion);
+extern __host__ __device__ inline int get_uniqueionindex(int element, int ion);
+extern __host__ __device__ inline void get_ionfromuniqueionindex(int allionsindex, int *element, int *ion);
+extern __host__ __device__ inline double epsilon(int element, int ion, int level);
 extern __host__ __device__ inline bool level_isinsuperlevel(int element, int ion, int level);
 extern __host__ __device__ inline double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
 extern __host__ __device__ double stat_weight(int element, int ion, int level);

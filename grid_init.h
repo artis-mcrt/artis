@@ -6,10 +6,10 @@
 
 void grid_init(int my_rank);
 double get_cellradialpos(int cellindex);
-float get_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type);
+__host__ __device__ float get_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type);
 void set_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
-float get_stable_abund(int mgi, int anumber);
-int get_numassociatedcells(int modelgridindex);
+__host__ __device__ float get_stable_abund(int mgi, int anumber);
+__host__ __device__ int get_numassociatedcells(int modelgridindex);
 
 
 inline double wid_init(const int cellindex)
@@ -131,70 +131,75 @@ inline int get_cellcoordpointnum(const int cellindex, const int axis)
         default:
           printout("invalid coordinate index %d", axis);
           abort();
+          return -1;
       }
   }
 }
 
 
-
+__host__ __device__
 inline int get_ngriddimensions(void)
 {
   return (grid_type == GRID_SPHERICAL1D) ? 1 : 3;
 }
 
 
+__host__ __device__
 inline float get_rhoinit(int modelgridindex)
 {
   return modelgrid[modelgridindex].rhoinit;
 }
 
-__device__ __host__
+__host__ __device__
 inline float get_rho(int modelgridindex)
 {
   return modelgrid[modelgridindex].rho;
 }
 
-__device__ __host__
+__host__ __device__
 inline float get_nne(int modelgridindex)
 {
   return modelgrid[modelgridindex].nne;
 }
 
+__host__ __device__
 inline float get_nnetot(int modelgridindex)
 {
   return modelgrid[modelgridindex].nnetot;
 }
 
 // the abundances referred to below are initial abundances
+__host__ __device__
 inline float get_ffegrp(int modelgridindex)
 {
   return modelgrid[modelgridindex].ffegrp;
 }
 
+__host__ __device__
 inline float get_kappagrey(int modelgridindex)
 {
   return modelgrid[modelgridindex].kappagrey;
 }
 
-__device__ __host__
+__host__ __device__
 inline float get_Te(int modelgridindex)
 {
   return modelgrid[modelgridindex].Te;
 }
 
-__device__ __host__
+__host__ __device__
 inline float get_TR(int modelgridindex)
 {
   return modelgrid[modelgridindex].TR;
 }
 
-__device__ __host__
+__host__ __device__
 inline float get_TJ(int modelgridindex)
 {
   return modelgrid[modelgridindex].TJ;
 }
 
-__device__ __host__
+__host__ __device__
 inline float get_W(int modelgridindex)
 {
   return modelgrid[modelgridindex].W;

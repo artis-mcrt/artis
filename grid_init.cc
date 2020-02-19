@@ -15,17 +15,17 @@ extern inline double vol_init_gridcell(int cellindex);
 extern inline double get_cellcoordmin(int cellindex, int axis);
 extern inline int get_cellcoordpointnum(const int cellindex, const int axis);
 extern inline int get_coordcellindexincrement(int axis);
-extern inline int get_ngriddimensions(void);
-extern inline float get_rhoinit(int modelgridindex);
-extern __device__ __host__ inline float get_rho(int modelgridindex);
-extern __device__ __host__ inline float get_nne(int modelgridindex);
-extern inline float get_nnetot(int modelgridindex);
-extern inline float get_ffegrp(int modelgridindex);
-extern inline float get_kappagrey(int modelgridindex);
-extern __device__ __host__ inline float get_Te(int modelgridindex);
-extern __device__ __host__ inline float get_TR(int modelgridindex);
-extern __device__ __host__ inline float get_TJ(int modelgridindex);
-extern __device__ __host__ inline float get_W(int modelgridindex);
+extern __host__ __device__ inline int get_ngriddimensions(void);
+extern __host__ __device__ inline float get_rhoinit(int modelgridindex);
+extern __host__ __device__ inline float get_rho(int modelgridindex);
+extern __host__ __device__ inline float get_nne(int modelgridindex);
+extern __host__ __device__ inline float get_nnetot(int modelgridindex);
+extern __host__ __device__ inline float get_ffegrp(int modelgridindex);
+extern __host__ __device__ inline float get_kappagrey(int modelgridindex);
+extern __host__ __device__ inline float get_Te(int modelgridindex);
+extern __host__ __device__ inline float get_TR(int modelgridindex);
+extern __host__ __device__ inline float get_TJ(int modelgridindex);
+extern __host__ __device__ inline float get_W(int modelgridindex);
 extern inline void set_rhoinit(int modelgridindex, float x);
 extern inline void set_rho(int modelgridindex, float x);
 extern inline void set_nne(int modelgridindex, float x);
@@ -40,9 +40,10 @@ extern inline void set_W(int modelgridindex, float x);
 
 static long mem_usage_nltepops = 0;
 
-static int mg_associated_cells[MMODELGRID + 1];
+static __managed__ int mg_associated_cells[MMODELGRID + 1];
 
 
+__host__ __device__
 int get_numassociatedcells(const int modelgridindex)
 // number of propagation cells associated with each modelgrid cell
 {
@@ -50,6 +51,7 @@ int get_numassociatedcells(const int modelgridindex)
 }
 
 
+__host__ __device__
 float get_modelinitradioabund(const int modelgridindex, const enum radionuclides nuclide_type)
 {
   // this function replaces get_f56ni(mgi), get_fco56(mgi), etc.
@@ -75,7 +77,7 @@ void set_modelinitradioabund(const int modelgridindex, const enum radionuclides 
   modelgrid[modelgridindex].initradioabund[nuclide_type] = abund;
 }
 
-
+__host__ __device__
 float get_stable_abund(const int mgi, const int anumber)
 {
   switch (anumber)
@@ -102,8 +104,14 @@ float get_stable_abund(const int mgi, const int anumber)
       return modelgrid[mgi].ftistable;
 
     default:
+    {
+#ifndef __CUDA_ARCH__
       printout("ERROR: no stable abundance variable for element Z=%d\n", anumber);
       abort();
+#endif
+      assert(false);
+      return -1;
+    }
   }
 }
 
@@ -1023,38 +1031,6 @@ static void uniform_grid_setup(void)
       nxyz[2]++;  // increment z coordinate
     }
   }
-
-  /*
-  /// Finally we must also create the composition dependent data structure for
-  /// the samplingcell which is located at MGRID (i.e. the MGRID+1th cell)
-  n = MGRID;
-  if ((cell[n].composition = malloc(nelements*sizeof(compositionlist_entry))) == NULL)
-  {
-    printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",n);
-    abort();
-  }
-  for (element = 0; element < nelements; element++)
-  {
-    ///now set the abundances (by mass) of included elements, i.e.
-    ///read out the abundances specified in the atomic data file
-    ///and allocate memory to store the ground level populations for each ionisation stage
-    if ((cell[n].composition[element].groundlevelpop = malloc(get_nions(element)*sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize groundlevelpoplist for element %d in cell %d... abort\n",element,n);
-      abort();
-    }
-    if ((cell[n].composition[element].partfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
-    {
-      printout("[fatal] input: not enough memory to initialize partfunctlist for element %d in cell %d... abort\n",element,n);
-      abort();
-    }
-//     if ((cell[n].composition[element].ltepartfunct = malloc(get_nions(element)*sizeof(float))) == NULL)
-//     {
-//       printout("[fatal] input: not enough memory to initialize lte partfunctlist for element %d in cell %d... abort\n",element,n);
-//       abort();
-//     }
-  }
-  */
 }
 
 static void spherical1d_grid_setup(void)
