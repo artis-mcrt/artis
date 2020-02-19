@@ -1599,17 +1599,19 @@ static void calculate_kappa_bf_fb_gammacontr_cpu(
 void calculate_kappa_bf_fb_gammacontr(
   const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid)
 {
+  #if (CUDA_ENABLED && USECUDA_RPKT_CONTOPACITY)
+  calculate_kappa_bf_fb_gammacontr_gpu(modelgridindex, nu, kappa_bf, kappa_fb, tid);
+  // if (*kappa_bf > 0.)
+  // {
+  //   double kappa_bf_gpu = 0.;
+  //   double kappa_fb_gpu = 0.;
+  //
+  //   calculate_kappa_bf_fb_gammacontr_gpu(modelgridindex, nu, &kappa_bf_gpu, &kappa_fb_gpu, tid);
+  //
+  //   printout("Compare nu %g kappa_bf cpu %g gpu %g\n", nu, *kappa_bf, kappa_bf_gpu);
+  // }
+  #else
   calculate_kappa_bf_fb_gammacontr_cpu(modelgridindex, nu, kappa_bf, kappa_fb, tid);
-  #if CUDA_ENABLED && USECUDA_RPKT_CONTOPACITY
-  if (*kappa_bf > 0.)
-  {
-    double kappa_bf_gpu = 0.;
-    double kappa_fb_gpu = 0.;
-
-    calculate_kappa_bf_fb_gammacontr_gpu(modelgridindex, nu, &kappa_bf_gpu, &kappa_fb_gpu, tid);
-
-    printout("Compare nu %g kappa_bf cpu %g gpu %g\n", nu, *kappa_bf, kappa_bf_gpu);
-  }
   #endif
 }
 
