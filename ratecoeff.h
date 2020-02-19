@@ -35,8 +35,7 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  extern __shared__ double part_integral[];
-  // __shared__ double part_integral[integralsamplesperxspoint * 100];
+  extern __shared__ double integralcontribs[];
 
   if (threadIdx.x < integralsamplesperxspoint && threadIdx.y < NPHIXSPOINTS)
   {
@@ -69,7 +68,7 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
 
     const double integrand = func_integrand(nu, intparas);
 
-    part_integral[sampleindex] = weight * integrand * delta_nu;
+    integralcontribs[sampleindex] = weight * integrand * delta_nu;
   }
 
   __syncthreads();
@@ -79,7 +78,7 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
     for (unsigned int x = 1; x < integralsamplesperxspoint; x++)
     {
       const int firstsampleindex = threadIdx.y * integralsamplesperxspoint; // first sample of the cross section point
-      part_integral[firstsampleindex] += part_integral[firstsampleindex + x];
+      integralcontribs[firstsampleindex] += integralcontribs[firstsampleindex + x];
     }
   }
 
@@ -90,7 +89,7 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
     double total = 0.;
     for (unsigned int y = 0; y < NPHIXSPOINTS; y++)
     {
-      total += part_integral[y * integralsamplesperxspoint];
+      total += integralcontribs[y * integralsamplesperxspoint];
     }
     atomicAdd(integral, total / 3.);
   }
@@ -101,8 +100,8 @@ template <double func_integrand(double, void *)>
 double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
 {
     double *dev_integral;
-    checkCudaErrors(cudaMalloc(&dev_integral, sizeof(double)));
-    cudaMemset(dev_integral, 0, sizeof(double));
+    checkCudaErrors(cudaMallocManaged(&dev_integral, sizeof(double)));
+    *dev_integral = 0.;
 
     checkCudaErrors(cudaDeviceSynchronize());
 
@@ -118,9 +117,7 @@ double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
     // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
     checkCudaErrors(cudaDeviceSynchronize());
 
-    double result;
-
-    checkCudaErrors(cudaMemcpy(&result, dev_integral, sizeof(double), cudaMemcpyDeviceToHost));
+    double result = *dev_integral;
 
     cudaFree(dev_integral);
 
