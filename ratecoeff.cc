@@ -1377,26 +1377,13 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 
   double gammacorr = 0.0;
 
-#if (CUDA_ENABLED && USECUDA_PHOTOIONCOEFF)
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
-  void *dev_intparas;
-  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
-  checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice));
-
-  const double gammacorr_gpu = calculate_phixs_integral_gpu<integrand_corrphotoioncoeff_custom_radfield>(dev_intparas, intparas.nu_edge);
-
-  cudaFree(dev_intparas);
-
-  // printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
-  gammacorr = gammacorr_gpu;
-
-#else
+#if (!CUDA_ENABLED || !USECUDA_PHOTOIONCOEFF || CUDA_VERIFY_CPUCONSISTENCY)
 
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
   const double epsabs = 0.;
-
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
   gsl_function F_gammacorr;
   F_gammacorr.function = &integrand_corrphotoioncoeff_custom_radfield;
@@ -1408,6 +1395,8 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   const int status = gsl_integration_qag(
     &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
 
+  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+
   gsl_set_error_handler(previous_handler);
 
   if (status != 0 && (status != 18 || (error / gammacorr) > epsrelwarning))
@@ -1416,8 +1405,25 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
   }
 #endif
+#if (CUDA_ENABLED && USECUDA_PHOTOIONCOEFF)
 
-  gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+  void *dev_intparas;
+  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
+  checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice));
+
+  const double gammacorr_gpu = calculate_integral_gpu<integrand_corrphotoioncoeff_custom_radfield>(dev_intparas, nu_threshold, nu_max_phixs) * FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+
+  cudaFree(dev_intparas);
+
+  #if CUDA_VERIFY_CPUCONSISTENCY
+  if (gammacorr > 0 && abs(gammacorr_gpu / gammacorr - 1.) > 0.1)
+  {
+    printf("WARNING corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d gsl %.2e gpu %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
+  }
+  // assert(gammacorr == 0. || (abs(gammacorr_gpu / gammacorr - 1.) < 0.1));
+  #endif
+  gammacorr = gammacorr_gpu;
+#endif
 
   return gammacorr;
 }

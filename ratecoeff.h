@@ -28,34 +28,27 @@ double calculate_ionrecombcoeff(
 
 
 #if CUDA_ENABLED
-const int integralsamplesperxspoint = 4; // must be an even number for Simpsons rule to work
-
 template <double func_integrand(double, void *)>
-__global__ void kernel_integral(void *intparas, double nu_edge, double *integral)
+__global__ void kernel_simpson_integral(void *intparas, double xlow, double deltax, int samplecount, double *integral)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
 {
-  extern __shared__ double integralcontribs[];
+  extern __shared__ double threadcontrib[];
 
-  if (threadIdx.x < integralsamplesperxspoint && threadIdx.y < NPHIXSPOINTS)
+  const int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if (i < samplecount)
   {
-    // const double last_phixs_nuovernuedge = (1.0 + NPHIXSNUINCREMENT * (NPHIXSPOINTS - 1));
-
-    const double nu = nu_edge * (1. + (NPHIXSNUINCREMENT * (threadIdx.y + (threadIdx.x / integralsamplesperxspoint))));
-
-    const int sampleindex = threadIdx.y * integralsamplesperxspoint + threadIdx.x;
-    const int lastsampleindex = (NPHIXSPOINTS - 1) * integralsamplesperxspoint + (integralsamplesperxspoint - 1);
-
     // Simpson's rule integral (will later be divided by 3)
     // n must be odd
     // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
     // weights e.g., 1,4,2,4,2,4,1
-    double weight = 0.;
-    if (sampleindex == 0 || sampleindex == lastsampleindex)
+    double weight;
+    if (i == 0 || i == (samplecount - 1))
     {
       weight = 1.;
     }
-    else if (sampleindex % 2 == 0)
+    else if (i % 2 == 0)
     {
       weight = 2.;
     }
@@ -64,40 +57,31 @@ __global__ void kernel_integral(void *intparas, double nu_edge, double *integral
       weight = 4.;
     }
 
-    const double delta_nu = nu_edge * (NPHIXSNUINCREMENT / integralsamplesperxspoint);
+    const double x = xlow + deltax * i;
 
-    const double integrand = func_integrand(nu, intparas);
-
-    integralcontribs[sampleindex] = weight * integrand * delta_nu;
+    threadcontrib[threadIdx.x] = weight * func_integrand(x, intparas) * deltax;
+  }
+  else
+  {
+    threadcontrib[threadIdx.x] = 0.;
   }
 
   __syncthreads();
 
   if (threadIdx.x == 0)
   {
-    for (unsigned int x = 1; x < integralsamplesperxspoint; x++)
+    double blockcontrib = threadcontrib[0];
+    for (int x = 1; x < blockDim.x; x++)
     {
-      const int firstsampleindex = threadIdx.y * integralsamplesperxspoint; // first sample of the cross section point
-      integralcontribs[firstsampleindex] += integralcontribs[firstsampleindex + x];
+      blockcontrib += threadcontrib[x];
     }
-  }
-
-  __syncthreads();
-
-  if (threadIdx.x == 0 && threadIdx.y == 0)
-  {
-    double total = 0.;
-    for (unsigned int y = 0; y < NPHIXSPOINTS; y++)
-    {
-      total += integralcontribs[y * integralsamplesperxspoint];
-    }
-    atomicAdd(integral, total / 3.);
+    atomicAdd(integral, blockcontrib / 3.); // divided by 3 for Simpson rule
   }
 }
 
 
 template <double func_integrand(double, void *)>
-double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
+double calculate_integral_gpu(void *dev_intparas, double xlow, double xhigh)
 {
     double *dev_integral;
     checkCudaErrors(cudaMallocManaged(&dev_integral, sizeof(double)));
@@ -105,11 +89,17 @@ double calculate_phixs_integral_gpu(void *dev_intparas, double nu_edge)
 
     checkCudaErrors(cudaDeviceSynchronize());
 
-    dim3 threadsPerBlock(integralsamplesperxspoint, NPHIXSPOINTS, 1);
-    dim3 numBlocks(1, 1, 1);
-    size_t sharedsize = sizeof(double) * threadsPerBlock.x * threadsPerBlock.y;
+    const int samplecount = NPHIXSPOINTS * 16 + 1; // need an odd number for Simpson rule
+    assert(samplecount % 2 == 1);
 
-    kernel_integral<func_integrand><<<numBlocks, threadsPerBlock, sharedsize>>>(dev_intparas, nu_edge, dev_integral);
+    dim3 threadsPerBlock(64, 1, 1);
+    dim3 numBlocks(ceil(samplecount / threadsPerBlock.x), 1, 1);
+    size_t sharedsize = sizeof(double) * threadsPerBlock.x;
+
+    const double deltax = (xhigh - xlow) / samplecount;
+
+    kernel_simpson_integral<func_integrand><<<numBlocks, threadsPerBlock, sharedsize>>>(
+      dev_intparas, xlow, deltax, samplecount, dev_integral);
 
     // Check for any errors launching the kernel
     checkCudaErrors(cudaGetLastError());

@@ -7,12 +7,13 @@
 
 #ifdef __CUDACC__
 
-#define USECUDA_BFHEATING false
-#define USECUDA_PHOTOIONCOEFF false
+#define USECUDA_BFHEATING true
+#define USECUDA_PHOTOIONCOEFF true
 #define USECUDA_NLTE_BOUNDBOUND false
 #define USECUDA_NONTHERMAL_EXCITATION true
 #define USECUDA_NONTHERMAL_IONIZATION true
 #define USECUDA_RPKT_CONTOPACITY true
+#define CUDA_VERIFY_CPUCONSISTENCY false
 
 #include <cuda_runtime.h>
 
