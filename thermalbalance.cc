@@ -102,20 +102,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
   double bfheating = 0.0;
 
-#if (CUDA_ENABLED && USECUDA_BFHEATING)
-
-  void *dev_intparas;
-  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_bfheating)));
-  checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_bfheating), cudaMemcpyHostToDevice));
-
-  const double bfheating_gpu = calculate_phixs_integral_gpu<integrand_bfheatingcoeff_custom_radfield>(dev_intparas, intparas.nu_edge);
-
-  cudaFree(dev_intparas);
-
-  // printf("corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d GSL %.2e GPU %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
-  bfheating = bfheating_gpu;
-
-#else
+#if (!CUDA_ENABLED || !USECUDA_BFHEATING || CUDA_VERIFY_CPUCONSISTENCY)
   double error = 0.0;
   const double epsrel = 1e-3;
   const double epsrelwarning = 1e-1;
@@ -130,12 +117,6 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   const int status = gsl_integration_qag(
     &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
      GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating, &error);
-  // const int status = gsl_integration_qags(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //   GSLWSIZE, workspace_bfheating, &bfheating, &error);
-  // const int status = radfield_integrate(
-  //   &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
-  //    GSLWSIZE, GSL_INTEG_GAUSS61, workspace_bfheating, &bfheating, &error);
 
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning))
   {
@@ -143,6 +124,24 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, bfheating, error);
   }
   gsl_set_error_handler(previous_handler);
+#endif
+
+#if (CUDA_ENABLED && USECUDA_BFHEATING)
+
+  void *dev_intparas;
+  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_bfheating)));
+  checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_bfheating), cudaMemcpyHostToDevice));
+
+  const double bfheating_gpu = calculate_integral_gpu<integrand_bfheatingcoeff_custom_radfield>(dev_intparas, nu_threshold, nu_max_phixs);
+
+  cudaFree(dev_intparas);
+
+  #if CUDA_VERIFY_CPUCONSISTENCY
+  printf("bfheating CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d gsl %.2e gpu %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
+  assert(abs(bfheating_gpu / bfheating - 1.) < 0.1);
+  #endif
+
+  bfheating = bfheating_gpu;
 
 #endif
 

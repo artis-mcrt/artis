@@ -1236,6 +1236,9 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix_free(rate_matrix);
   gsl_vector_free(balance_vector);
   gsl_vector_free(pop_norm_factor_vec);
+  #if (CUDA_ENABLED && USECUDA_NLTE_BOUNDBOUND)
+  cudaFree(s_renorm);
+  #endif
 }
 
 
