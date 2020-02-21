@@ -239,8 +239,8 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   for (int element = 0; element < nelements; element++)
   {
     // mastate[tid].element = element;
-    #ifdef DIRECT_COL_HEAT
     const int nions = get_nions(element);
+    #ifdef DIRECT_COL_HEAT
     for (int ion = 0; ion < nions; ion++)
     {
       C_deexc += get_heating_ion_coll_deexc(modelgridindex, element, ion, T_e, nne);
