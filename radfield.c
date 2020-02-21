@@ -1889,7 +1889,7 @@ void radfield_read_restart_data(FILE *gridsave_file)
           if (!normed_bfrates_available && prev_bfrate_normed[modelgridindex][i] > 0.)
           {
             normed_bfrates_available = true;
-            printout("radfield_read_restart_data: normed_bfrates_available is true\n");
+            printout("radfield_read_restart_data: normed_bfrates_available is now true\n");
           }
         }
       }

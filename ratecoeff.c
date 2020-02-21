@@ -719,6 +719,7 @@ static int get_index_from_cumulativesums(double *partialsums, size_t listsize, d
     }
   }
   assert(false);
+  return -1;
 }
 
 
