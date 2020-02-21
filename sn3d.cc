@@ -1032,7 +1032,12 @@ int main(int argc, char** argv)
     printout("[fatal] input: error initializing macro atom state variables ... abort\n");
     abort();
   }
-  if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
+  #if CUDA_ENABLED
+  cudaMallocManaged(&kappa_rpkt_cont, nthreads * sizeof(rpkt_cont_opacity_struct));
+  #else
+  kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct));
+  #endif
+  if (kappa_rpkt_cont == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     abort();
@@ -1308,6 +1313,9 @@ int main(int argc, char** argv)
 
 
   printout("simulation finished at %ld\n", time(NULL));
+  #if CUDA_ENABLED
+  cudaDeviceReset();
+  #endif
   //fclose(tb_file);
   fclose(estimators_file);
   macroatom_close_file();

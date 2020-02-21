@@ -1591,6 +1591,7 @@ static void setup_phixs_list(void)
     printout("initialising groundphixslist for itid %d\n", itid);
     #if CUDA_ENABLED
     cudaMallocManaged(&phixslist[itid].groundcont, nbfcontinua_ground * sizeof(groundphixslist_t));
+    cudaMemAdvise(phixslist[itid].groundcont, nbfcontinua_ground * sizeof(groundphixslist_t), cudaMemAdviseSetReadMostly, myGpuId);
     #else
     phixslist[itid].groundcont = (groundphixslist_t *) malloc(nbfcontinua_ground * sizeof(groundphixslist_t));
     #endif
@@ -1630,10 +1631,27 @@ static void setup_phixs_list(void)
     qsort(phixslist[itid].groundcont, nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
 
 
-    //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
-    //else
+    #if CUDA_ENABLED
+      cudaMallocManaged(&kappa_rpkt_cont[itid].kappa_bf_contr, nbfcontinua * sizeof(double));
+      #if (SEPARATE_STIMRECOMB)
+      cudaMallocManaged(&kappa_rpkt_cont[itid].kappa_fb_contr, nbfcontinua * sizeof(double));
+      #endif
+      #if (DETAILED_BF_ESTIMATORS_ON)
+      cudaMallocManaged(&kappa_rpkt_cont[itid].gamma_contr, nbfcontinua * sizeof(double));
+      #endif
+    #else
+      kappa_rpkt_cont[itid].kappa_bf_contr = (double *) malloc(nbfcontinua * sizeof(double));
+      #if (SEPARATE_STIMRECOMB)
+      kappa_rpkt_cont[itid].kappa_fb_contr = (double *) malloc(nbfcontinua * sizeof(double));
+      #endif
+      #if (DETAILED_BF_ESTIMATORS_ON)
+      kappa_rpkt_cont[itid].gamma_contr = (double *) malloc(nbfcontinua * sizeof(double));
+      #endif
+    #endif
+
     #if CUDA_ENABLED
     cudaMallocManaged(&phixslist[itid].allcont, nbfcontinua * sizeof(fullphixslist_t));
+    cudaMemAdvise(phixslist[itid].allcont, nbfcontinua * sizeof(fullphixslist_t), cudaMemAdviseSetReadMostly, myGpuId);
     #else
     phixslist[itid].allcont = (fullphixslist_t *) malloc(nbfcontinua * sizeof(fullphixslist_t));
     #endif

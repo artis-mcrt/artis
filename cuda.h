@@ -9,7 +9,8 @@
 
 #define USECUDA_BFHEATING true
 #define USECUDA_PHOTOIONCOEFF true
-#define USECUDA_NLTE_BOUNDBOUND false
+#define USECUDA_STIMRECOMBCOEFF true
+#define USECUDA_NLTE_BOUNDBOUND true
 #define USECUDA_NONTHERMAL_EXCITATION true
 #define USECUDA_NONTHERMAL_IONIZATION true
 #define USECUDA_RPKT_CONTOPACITY true
@@ -40,9 +41,9 @@ __device__ double static inline atomicAdd(double* address, double val)
 
 #else
 
-#include <assert.h>
-
-assert(!CUDA_ENABLED);
+#if CUDA_ENABLED
+#error CUDA is not available
+#endif
 
 #define __managed__
 #define __device__

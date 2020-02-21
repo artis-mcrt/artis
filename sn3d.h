@@ -86,14 +86,15 @@ extern FILE *output_file;
 //
 //    return ret_status;
 // }
-
-#ifdef DEBUG_ON
-  #ifdef assert
-    #undef assert
+#ifndef __CUDA_ARCH__
+  #ifdef DEBUG_ON
+    #ifdef assert
+      #undef assert
+    #endif
+    #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+  #else
+    #define	assert(e)	((void)0)
   #endif
-  #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
-#else
-  #define	assert(e)	((void)0)
 #endif
 
 

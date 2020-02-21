@@ -1,11 +1,11 @@
-#include <assert.h>
+// #include <assert.h>
 #include <gsl/gsl_randist.h>
 #include "sn3d.h"
 #include "vectors.h"
 
 
-extern inline double vec_len(const double x[3]);
-extern inline void vec_norm(const double vec_in[3], double vec_out[3]);
+extern __host__ __device__ inline double vec_len(const double x[3]);
+extern __host__ __device__ inline void vec_norm(const double vec_in[3], double vec_out[3]);
 extern inline double dot(const double x[3], const double y[3]);
 extern inline void get_velocity(const double x[3], double y[3], const double t);
 extern inline void cross_prod(const double vec1[3], const double vec2[3], double vecout[3]);

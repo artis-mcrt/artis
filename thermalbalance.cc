@@ -137,8 +137,10 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   cudaFree(dev_intparas);
 
   #if CUDA_VERIFY_CPUCONSISTENCY
-  printf("bfheating CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d gsl %.2e gpu %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
-  assert(abs(bfheating_gpu / bfheating - 1.) < 0.1);
+  if (bfheating > 0 && abs(bfheating_gpu / bfheating - 1.) > 0.3)
+  {
+    printout("WARNING bfheating CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d gsl %.2e gpu %.2e\n", element, ion, level, phixstargetindex, modelgridindex, bfheating, bfheating_gpu);
+  }
   #endif
 
   bfheating = bfheating_gpu;
@@ -228,7 +230,8 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
 }
 
 
-static void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne, heatingcoolingrates_t *heatingcoolingrates)
+static void calculate_heating_rates(
+  const int modelgridindex, const double T_e, const double nne, heatingcoolingrates_t *heatingcoolingrates)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {

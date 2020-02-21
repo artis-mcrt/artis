@@ -1217,6 +1217,7 @@ void ratecoefficients_init(void)
 #endif
 
 
+__host__ __device__
 static double integrand_stimrecombination_custom_radfield(const double nu, void *voidparas)
 {
   {
@@ -1234,15 +1235,13 @@ static double integrand_stimrecombination_custom_radfield(const double nu, void 
 }
 
 
+__host__ __device__
 static double calculate_stimrecombcoeff_integral(int element, int lowerion, int level, int phixstargetindex, int modelgridindex)
 {
   // if (nnlevel <= 1.1 * MINPOP)
   // {
   //   return 0.;
   // }
-
-  const double epsrel = 1e-3;
-  const double epsabs = 0.;
 
   const double E_threshold = get_phixs_threshold(element, lowerion, level, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
@@ -1257,13 +1256,18 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   const int upperionlevel = get_phixsupperlevel(element, lowerion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, lowerion, level, upperionlevel, T_e, H * nu_threshold);
 
+  double stimrecombcoeff = 0.0;
+
+  #if (!CUDA_ENABLED || !USECUDA_STIMRECOMBCOEFF || CUDA_VERIFY_CPUCONSISTENCY)
+  const double epsrel = 1e-3;
+  const double epsabs = 0.;
+
   gsl_function F_stimrecomb;
   F_stimrecomb.function = &integrand_stimrecombination_custom_radfield;
   F_stimrecomb.params = &intparas;
   double error = 0.0;
 
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  double stimrecombcoeff = 0.0;
 
   // const int status =
   gsl_integration_qag(
@@ -1276,14 +1280,35 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
   // if (status != 0)
   // {
   //   error *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
-  //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d gamma %g error %g\n",
-  //            status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
+  //   printout("stimrecombcoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d stimrecombcoeff %g error %g\n",
+  //            status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, stimrecombcoeff, error);
   // }
+  #endif
+
+  #if (CUDA_ENABLED && USECUDA_STIMRECOMBCOEFF)
+
+    void *dev_intparas;
+    checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_gammacorr)));
+    checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_gammacorr), cudaMemcpyHostToDevice));
+
+    const double stimrecombcoeff_gpu = calculate_integral_gpu<integrand_stimrecombination_custom_radfield>(dev_intparas, nu_threshold, nu_max_phixs) * FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
+
+    cudaFree(dev_intparas);
+
+    #if CUDA_VERIFY_CPUCONSISTENCY
+    if (stimrecombcoeff > 0 && abs(stimrecombcoeff_gpu / stimrecombcoeff - 1.) > 0.3)
+    {
+      printout("WARNING stimrecomb CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d gsl %.2e gpu %.2e\n", element, ion, level, phixstargetindex, modelgridindex, stimrecombcoeff, stimrecombcoeff_gpu);
+    }
+    #endif
+    stimrecombcoeff = stimrecombcoeff_gpu;
+  #endif
 
   return stimrecombcoeff;
 }
 
 
+__host__ __device__
 double get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex)
 /// Returns the stimulated recombination rate coefficient
 // multiple by upper level population and nne to get rate
@@ -1417,9 +1442,9 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   cudaFree(dev_intparas);
 
   #if CUDA_VERIFY_CPUCONSISTENCY
-  if (gammacorr > 0 && abs(gammacorr_gpu / gammacorr - 1.) > 0.1)
+  if (gammacorr > 0 && abs(gammacorr_gpu / gammacorr - 1.) > 0.3)
   {
-    printf("WARNING corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d gsl %.2e gpu %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
+    printout("WARNING corrphotoioncoeff CUDA test: element %d ion %d level %d phixstargetindex %d modelgridindex %d gsl %.2e gpu %.2e\n", element, ion, level, phixstargetindex, modelgridindex, gammacorr, gammacorr_gpu);
   }
   // assert(gammacorr == 0. || (abs(gammacorr_gpu / gammacorr - 1.) < 0.1));
   #endif
@@ -1430,6 +1455,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 }
 
 
+__host__ __device__
 double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 /// Returns the photoionisation rate coefficient (corrected for stimulated emission)
 /// Only needed during packet propagation, therefore the value is taken from the

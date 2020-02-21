@@ -1131,6 +1131,7 @@ double rad_excitation_ratecoeff(
 }
 
 
+__host__ __device__
 double rad_recombination_ratecoeff(
   const float T_e, const float nne, const int element, const int upperion, const int upper, const int lower, const int modelgridindex)
 ///radiative recombination rate: paperII 3.5.2
@@ -1166,6 +1167,7 @@ double rad_recombination_ratecoeff(
 }
 
 
+__host__ __device__
 double stim_recombination_ratecoeff(
   const float nne, const int element, const int upperion, const int upper, const int lower, const int modelgridindex)
 ///radiative recombination rate: paperII 3.5.2
