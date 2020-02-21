@@ -31,8 +31,8 @@ jobs:
     - name: "compile sn3d and exspec"
       run: make sn3d exspec
 
-    - name: "compile sn3d with OpenMP"
-      run: make sn3dopenmp
+    # - name: "compile sn3d with OpenMP"
+    #   run: make sn3dopenmp
 
     # - name: "compile sn3d with MPI"
     #   run: |
