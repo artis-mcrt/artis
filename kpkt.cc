@@ -12,13 +12,115 @@
 extern inline int get_coolinglistoffset(int element, int ion);
 
 
+__host__ __device__
 static int get_ncoolingterms(int element, int ion)
 {
   return elements[element].ions[ion].ncoolingterms;
 }
 
 
-static double get_cooling_ion_coll_exc(const int modelgridindex, const int element, const int ion, const double T_e, const double nne)
+
+#if CUDA_ENABLED
+
+__global__
+static void kernel_cooling_coll_exc_level(
+  const int modelgridindex, const int element, const int ion, const int level, const float T_e, const float nne,
+  const double nnlevel, const double epsilon_level, const int nuptrans, double *C_exc_level)
+{
+  extern __shared__ double threadcontrib[];
+
+  int i = threadIdx.x + blockDim.x * blockIdx.x;
+  if (i < nuptrans)
+  {
+    const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+    const int upper = linelist[lineindex].upperlevelindex;
+    //printout("    excitation to level %d possible\n",upper);
+    const double epsilon_trans = epsilon(element,ion,upper) - epsilon_level;
+    threadcontrib[threadIdx.x] = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+  }
+  else
+  {
+    threadcontrib[threadIdx.x] = 0.;
+  }
+
+  __syncthreads();
+
+  if (threadIdx.x == 0)
+  {
+    double blockcontrib = threadcontrib[0];
+    for (int x = 1; x < blockDim.x; x++)
+    {
+      blockcontrib += threadcontrib[x];
+    }
+    atomicAdd(C_exc_level, blockcontrib);
+  }
+}
+
+
+static double get_cooling_ion_coll_exc_level_gpu(
+  const int modelgridindex, const int element, const int ion, const int level, const float T_e, const float nne)
+{
+  const int nuptrans = get_nuptrans(element, ion, level);
+
+  if (nuptrans > 0)
+  {
+    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+    const double epsilon_level = epsilon(element, ion, level);
+
+    double *dev_C_exc_level;
+    checkCudaErrors(cudaMallocManaged(&dev_C_exc_level, sizeof(double)));
+    *dev_C_exc_level = 0.;
+
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    dim3 threadsPerBlock(64, 1, 1);
+    dim3 numBlocks((nuptrans + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
+    size_t sharedsize = sizeof(double) * threadsPerBlock.x;
+
+    kernel_cooling_coll_exc_level<<<numBlocks, threadsPerBlock, sharedsize>>>(
+      modelgridindex, element, ion, level, T_e, nne, nnlevel, epsilon_level, nuptrans, dev_C_exc_level);
+
+    // Check for any errors launching the kernel
+    checkCudaErrors(cudaGetLastError());
+
+    // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    const double C_exc_level = *dev_C_exc_level;
+
+    cudaFree(dev_C_exc_level);
+
+    return C_exc_level;
+  }
+  else
+  {
+    return 0.;
+  }
+}
+#endif
+
+
+static double get_cooling_ion_coll_exc_level_cpu(
+  const int modelgridindex, const int element, const int ion, const int level, const float T_e, const float nne)
+{
+  const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+  const double epsilon_level = epsilon(element, ion, level);
+  const int nuptrans = get_nuptrans(element, ion, level);
+  double C_exc = 0.;
+  for (int ii = 0; ii < nuptrans; ii++)
+  {
+    const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+    const int upper = linelist[lineindex].upperlevelindex;
+    //printout("    excitation to level %d possible\n",upper);
+    const double epsilon_trans = epsilon(element, ion, upper) - epsilon_level;
+    C_exc += nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+  }
+  return C_exc;
+}
+
+
+static double get_cooling_ion_coll_exc(
+  const int modelgridindex, const int element, const int ion, const float T_e, const float nne)
 {
   double C_exc = 0.;
   const int nlevels = get_nlevels(element, ion);
@@ -27,18 +129,20 @@ static double get_cooling_ion_coll_exc(const int modelgridindex, const int eleme
   /// -----------------------------------
   for (int level = 0; level < nlevels; level++)
   {
-    const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
-    const double epsilon_current = epsilon(element,ion,level);
-    const int nuptrans = get_nuptrans(element, ion, level);
-    for (int ii = 0; ii < nuptrans; ii++)
-    {
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
-      const int upper = linelist[lineindex].upperlevelindex;
-      //printout("    excitation to level %d possible\n",upper);
-      const double epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
-      const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
-      C_exc += C;
-    }
+    double C_exc_level = 0.;
+
+    #if (!CUDA_ENABLED || !USECUDA_COOLINGRATES || CUDA_VERIFY_CPUCONSISTENCY)
+    C_exc_level = get_cooling_ion_coll_exc_level_cpu(modelgridindex, element, ion, level, T_e, nne);
+    #endif
+
+#if (CUDA_ENABLED && USECUDA_COOLINGRATES)
+    const double C_exc_level_gpu = get_cooling_ion_coll_exc_level_gpu(modelgridindex, element, ion, level, T_e, nne);
+    #if CUDA_VERIFY_CPUCONSISTENCY
+    assert((C_exc_level == 0.) || abs(C_exc_level_gpu / C_exc_level - 1.) < 0.01);
+    #endif
+    C_exc_level = C_exc_level_gpu;
+#endif
+    C_exc += C_exc_level;
   }
 
   return C_exc;

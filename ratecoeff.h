@@ -10,9 +10,9 @@ double select_continuum_nu(int element, int ion, int level, int upperionlevel, f
 double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T);
 
 __host__ __device__ double get_spontrecombcoeff(int element, int ion, int level, int phixstargetindex, float T_e);
-double get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex);
+__host__ __device__ double get_stimrecombcoeff(int element, int lowerion, int level, int phixstargetindex, int modelgridindex);
 
-double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
+__host__ __device__ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 double get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, int modelgridindex);
 
 double calculate_iongamma_per_gspop(int modelgridindex, int element, int ion);
@@ -81,7 +81,7 @@ __global__ void kernel_simpson_integral(void *intparas, double xlow, double delt
 
 
 template <double func_integrand(double, void *)>
-double calculate_integral_gpu(void *dev_intparas, double xlow, double xhigh)
+__host__ __device__ double calculate_integral_gpu(void *dev_intparas, double xlow, double xhigh)
 {
     double *dev_integral;
     checkCudaErrors(cudaMallocManaged(&dev_integral, sizeof(double)));
@@ -92,8 +92,8 @@ double calculate_integral_gpu(void *dev_intparas, double xlow, double xhigh)
     const int samplecount = NPHIXSPOINTS * 16 + 1; // need an odd number for Simpson rule
     assert(samplecount % 2 == 1);
 
-    dim3 threadsPerBlock(64, 1, 1);
-    dim3 numBlocks(ceil(samplecount / threadsPerBlock.x), 1, 1);
+    dim3 threadsPerBlock(32, 1, 1);
+    dim3 numBlocks(ceil(samplecount / 32.), 1, 1);
     size_t sharedsize = sizeof(double) * threadsPerBlock.x;
 
     const double deltax = (xhigh - xlow) / samplecount;

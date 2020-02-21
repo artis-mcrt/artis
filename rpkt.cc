@@ -402,7 +402,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     int i;
     for (i = 0; i < nbfcontinua; i++)
     {
-      kappa_bf_sum += phixslist[tid].allcont[i].kappa_bf_contr;
+      kappa_bf_sum += kappa_rpkt_cont[tid].kappa_bf_contr[i];
       if (kappa_bf_sum > zrand2 * kappa_bf_inrest)
       {
         const double nu_edge = phixslist[tid].allcont[i].nu_edge;
@@ -555,7 +555,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     int i;
     for (i = 0; i < nbfcontinua; i++)
     {
-      kappa_fb_sum += phixslist[tid].allcont[i].kappa_fb_contr;
+      kappa_fb_sum += kappa_rpkt_cont_thisthread.kappa_fb_contr[i];
       if (kappa_fb_sum > zrand2 * kappa_fb_inrest)
       {
         // const double nu_edge = phixslist[tid].allcont[i].nu_edge;
@@ -1351,7 +1351,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
 
 __host__ __device__
 static inline void calculate_kappa_conttransition(
-    phixslist_t phixslist_tid, double *kappa_bf, double *kappa_fb, int i, const double nu, const double nu_edge,
+    phixslist_t *phixslist_tid, rpkt_cont_opacity_struct *kappa_rpkt_cont_tid, double *kappa_bf, double *kappa_fb, int i, const double nu, const double nu_edge,
     const int modelgridindex, const int element, const int ion, const int level, const int phixstargetindex,
     const double nnlevel, const float T_e, const float nne)
 {
@@ -1377,28 +1377,30 @@ static inline void calculate_kappa_conttransition(
 
   if (level == 0)
   {
-    const int gphixsindex = phixslist_tid.allcont[i].index_in_groundphixslist;
-    phixslist_tid.groundcont[gphixsindex].gamma_contr += sigma_bf * probability * corrfactor;
+    const int gphixsindex = phixslist_tid->allcont[i].index_in_groundphixslist;
+    phixslist_tid->groundcont[gphixsindex].gamma_contr += sigma_bf * probability * corrfactor;
   }
 
   #if (DETAILED_BF_ESTIMATORS_ON)
-  phixslist_tid.allcont[i].gamma_contr = sigma_bf * probability * corrfactor;
+  kappa_rpkt_cont_tid->gamma_contr[i] = sigma_bf * probability * corrfactor;
   #endif
 
   assert(isfinite(kappa_bf_contr));
 
-  phixslist_tid.allcont[i].kappa_bf_contr = kappa_bf_contr;
+  kappa_rpkt_cont_tid->kappa_bf_contr[i] = kappa_bf_contr;
   *kappa_bf += kappa_bf_contr;
 
   #if (SEPARATE_STIMRECOMB)
-    phixslist_tid.allcont[i].kappa_fb_contr = kappa_fb_contr;
+    kappa_rpkt_cont_tid->kappa_fb_contr[i] = kappa_fb_contr;
     *kappa_fb += kappa_fb_contr;
   #endif
 }
 
 
-__global__ static void kernel_calculate_kappa_conttransitions(
-    phixslist_t phixslist_tid, double *kappa_bf, double *kappa_fb, const double nu,
+#if CUDA_ENABLED
+__global__
+static void kernel_calculate_kappa_conttransitions(
+    phixslist_t *phixslist_tid, rpkt_cont_opacity_struct *kappa_rpkt_cont_tid, double *kappa_bf, double *kappa_fb, const double nu,
     const int modelgridindex, const float T_e, const float nne, const float nnetot)
 {
   extern __shared__ double blocksharedmem[];
@@ -1411,32 +1413,32 @@ __global__ static void kernel_calculate_kappa_conttransitions(
 
   if (i < nbfcontinua)
   {
-    const int element = phixslist_tid.allcont[i].element;
-    const int ion = phixslist_tid.allcont[i].ion;
-    const int level = phixslist_tid.allcont[i].level;
+    const int element = phixslist_tid->allcont[i].element;
+    const int ion = phixslist_tid->allcont[i].ion;
+    const int level = phixslist_tid->allcont[i].level;
     // The bf process happens only if the current cell contains
     // the involved atomic species
-    const double nu_edge = phixslist_tid.allcont[i].nu_edge;
+    const double nu_edge = phixslist_tid->allcont[i].nu_edge;
     const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
     if (((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6))) && (nu >= nu_edge && nu <= nu_max_phixs && nnlevel > 0))
     {
-      const int phixstargetindex = phixslist_tid.allcont[i].phixstargetindex;
+      const int phixstargetindex = phixslist_tid->allcont[i].phixstargetindex;
       calculate_kappa_conttransition(
-        phixslist_tid, &block_kappacontribs_bf[threadIdx.x], &block_kappacontribs_fb[threadIdx.x],
+        phixslist_tid, kappa_rpkt_cont_tid, &block_kappacontribs_bf[threadIdx.x], &block_kappacontribs_fb[threadIdx.x],
         i, nu, nu_edge, modelgridindex, element, ion, level,
         phixstargetindex, nnlevel, T_e, nne);
     }
     else
     {
       // ignore this process
-      phixslist_tid.allcont[i].kappa_bf_contr = 0.;
+      kappa_rpkt_cont_tid->kappa_bf_contr[i] = 0.;
       #if (SEPARATE_STIMRECOMB)
-      phixslist_tid.allcont[i].kappa_fb_contr = 0.;
+      kappa_rpkt_cont_tid->kappa_fb_contr[i] = 0.;
       #endif
       #if (DETAILED_BF_ESTIMATORS_ON)
-      phixslist_tid.allcont[i].gamma_contr = 0.;
+      kappa_rpkt_cont_tid->gamma_contr[i] = 0.;
       #endif
     }
   }
@@ -1464,7 +1466,6 @@ __global__ static void kernel_calculate_kappa_conttransitions(
 }
 
 
-#if CUDA_ENABLED
 __host__ void calculate_kappagammacontribs_gpu(
   const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid, const float T_e, const float nne)
 {
@@ -1484,13 +1485,13 @@ __host__ void calculate_kappagammacontribs_gpu(
 
   checkCudaErrors(cudaDeviceSynchronize());
 
-  dim3 threadsPerBlock(64, 1, 1);
-  dim3 numBlocks(ceil(nbfcontinua / threadsPerBlock.x), 1, 1);
+  dim3 threadsPerBlock(128, 1, 1);
+  dim3 numBlocks(ceil(nbfcontinua / 128.), 1, 1);
 
   const size_t sharedsize = sizeof(double) * threadsPerBlock.x * 2;
 
   kernel_calculate_kappa_conttransitions<<<numBlocks, threadsPerBlock, sharedsize>>>(
-    phixslist[tid], dev_kappa_bf, dev_kappa_fb, nu, modelgridindex, T_e, nne, nnetot);
+    &phixslist[tid], &kappa_rpkt_cont[tid], dev_kappa_bf, dev_kappa_fb, nu, modelgridindex, T_e, nne, nnetot);
 
   // Check for any errors launching the kernel
   checkCudaErrors(cudaGetLastError());
@@ -1498,17 +1499,17 @@ __host__ void calculate_kappagammacontribs_gpu(
   // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
   checkCudaErrors(cudaDeviceSynchronize());
 
+  cudaMemPrefetchAsync(kappa_rpkt_cont[tid].kappa_bf_contr, nbfcontinua * sizeof(double), cudaCpuDeviceId, 0);
+
   *kappa_bf = *dev_kappa_bf;
   *kappa_fb = *dev_kappa_fb;
 
   cudaFree(dev_kappa_bf);
   cudaFree(dev_kappa_fb);
-
-  cudaMemPrefetchAsync(phixslist[tid].allcont, nbfcontinua * sizeof(fullphixslist_t), cudaCpuDeviceId, 0); 
 }
 #endif
 
-
+#if (!CUDA_ENABLED || !USECUDA_RPKT_CONTOPACITY || CUDA_VERIFY_CPUCONSISTENCY)
 static void calculate_kappagammacontribs_cpu(
   const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid, const float T_e, const float nne)
 // bound-free opacity
@@ -1542,7 +1543,7 @@ static void calculate_kappagammacontribs_cpu(
         {
           const int phixstargetindex = phixslist[tid].allcont[i].phixstargetindex;
           calculate_kappa_conttransition(
-            phixslist[tid], kappa_bf, kappa_fb, i, nu, nu_edge, modelgridindex, element, ion, level,
+            &phixslist[tid], &kappa_rpkt_cont[tid], kappa_bf, kappa_fb, i, nu, nu_edge, modelgridindex, element, ion, level,
             phixstargetindex, nnlevel, T_e, nne);
             thiscont_gamma_set = true;
         }
@@ -1560,12 +1561,12 @@ static void calculate_kappagammacontribs_cpu(
       // a slight red-shifting is ignored
       for (int j = i; j < nbfcontinua; j++)
       {
-        phixslist[tid].allcont[j].kappa_bf_contr = 0.;
+        kappa_rpkt_cont[tid].kappa_bf_contr[j] = 0.;
         #if (SEPARATE_STIMRECOMB)
-        phixslist[tid].allcont[j].kappa_fb_contr = 0.;
+        kappa_rpkt_cont[tid].kappa_fb_contr[i] = 0.;
         #endif
         #if (DETAILED_BF_ESTIMATORS_ON)
-        phixslist[tid].allcont[j].gamma_contr = 0.;
+        kappa_rpkt_cont[tid].gamma_contr[i] = 0.;
         #endif
       }
       return; // all further processes in the list will have larger nu_edge, so end here
@@ -1573,17 +1574,17 @@ static void calculate_kappagammacontribs_cpu(
 
     if (!thiscont_gamma_set)
     {
-      phixslist[tid].allcont[i].kappa_bf_contr = 0.;
+      kappa_rpkt_cont[tid].kappa_bf_contr[i] = 0.;
       #if (SEPARATE_STIMRECOMB)
-      phixslist[tid].allcont[i].kappa_fb_contr = 0.;
+      kappa_rpkt_cont[tid].kappa_fb_contr[i] = 0.;
       #endif
       #if (DETAILED_BF_ESTIMATORS_ON)
-      phixslist[tid].allcont[i].gamma_contr = 0.;
+      kappa_rpkt_cont[tid].gamma_contr[i] = 0.;
       #endif
     }
   }
 }
-
+#endif
 
 void calculate_kappa_bf_fb_gammacontr(
   const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid)
@@ -1603,20 +1604,21 @@ void calculate_kappa_bf_fb_gammacontr(
   // printf("CPU top items kappa_bf %g\n", kappa_bf_cpu);
   // for (int j = 0; j < 5; j++)
   // {
-  //   printout(" cpu j %d kappa_bf_contr %g\n", j, phixslist[tid].allcont[j].kappa_bf_contr);
+  //   printout(" cpu j %d kappa_bf_contr %g\n", j, kappa_rpkt_cont[tid].kappa_bf_contr[j]);
   // }
   #endif
 
   calculate_kappagammacontribs_gpu(modelgridindex, nu, kappa_bf, kappa_fb, tid, T_e, nne);
 
-  #if (CUDA_VERIFY_CPUCONSISTENCY)
+  #if CUDA_VERIFY_CPUCONSISTENCY
   // printf("GPU top items kappa_bf_gpu %g\n", *kappa_bf);
   // for (int j = 0; j < 5; j++)
   // {
-  //   printout(" gpu j %d kappa_bf_contr %g\n", j, phixslist[tid].allcont[j].kappa_bf_contr);
+  //   printout(" gpu j %d kappa_bf_contr %g\n", j, kappa_rpkt_cont[tid].kappa_bf_contr[j]);
   // }
 
-  assert(kappa_fb_cpu == 0. || abs(*kappa_bf / kappa_bf_cpu - 1.) < 0.03);
+  assert(kappa_bf_cpu == 0. || abs(*kappa_bf / kappa_bf_cpu - 1.) < 0.03);
+  assert(kappa_fb_cpu == 0. || abs(*kappa_fb / kappa_fb_cpu - 1.) < 0.03);
   #endif
 #else
   calculate_kappagammacontribs_cpu(modelgridindex, nu, kappa_bf, kappa_fb, tid, T_e, nne);
@@ -1861,18 +1863,18 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
                             // if (fabs(check) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g) before %g after %g \n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf,bef,cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact);
                             #endif
                             check = 0.;
-                            //phixslist[tid].allcont[i].kappa_bf_contr = check;
+                            //kappa_rpkt_cont[tid].kappa_bf_contr[i] = check;
                             //phixslist[tid].allcont[i].photoion_contr = 0.;
                             //phixslist[tid].allcont[i].stimrecomb_contr = 0.;
                         }
                         /*            else
                          {
-                         phixslist[tid].allcont[i].kappa_bf_contr = check;
+                         kappa_rpkt_cont[tid].kappa_bf_contr[i] = check;
                          phixslist[tid].allcont[i].photoion_contr = nnlevel * sigma_bf;
                          phixslist[tid].allcont[i].stimrecomb_contr = sf * sigma_bf;
                          }*/
                         //check *= 2;
-                        phixslist[tid].allcont[i].kappa_bf_contr = check;
+                        kappa_rpkt_cont[tid].kappa_bf_contr[i] = check;
                         kappa_bf += check;
                         if (level == 0)
                         {
@@ -1909,7 +1911,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
                 }
                 else
                 {
-                    phixslist[tid].allcont[i].kappa_bf_contr = 0.;
+                    kappa_rpkt_cont[tid].kappa_bf_contr[i] = 0.;
                     if (phixslist[tid].allcont[i].level == 0)
                     {
                         gphixsindex = phixslist[tid].allcont[i].index_in_groundphixslist;

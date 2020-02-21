@@ -12,14 +12,17 @@ void get_rand_isotropic_unitvec(double vecout[3]);
 void move_pkt(PKT *pkt_ptr, double distance, double time);
 
 // #define vec_len(x)   (cblas_dnrm2(3, x, 1))
+
+__host__ __device__
 inline double vec_len(const double x[3])
 // return the the magnitude of a vector
 {
-  // return sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
-  return cblas_dnrm2(3, x, 1);
+  return sqrt((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
+  // return cblas_dnrm2(3, x, 1);
 }
 
 
+__host__ __device__
 inline void vec_norm(const double vec_in[3], double vec_out[3])
 // Routine for normalizing a vector.
 {

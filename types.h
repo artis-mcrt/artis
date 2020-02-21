@@ -126,13 +126,6 @@ typedef struct fullphixslist_t
   int level;
   int phixstargetindex;
   int index_in_groundphixslist;
-  double kappa_bf_contr;
-#if (SEPARATE_STIMRECOMB)
-  double kappa_fb_contr;
-#endif
-#if (DETAILED_BF_ESTIMATORS_ON)
-  double gamma_contr;
-#endif
 } fullphixslist_t;
 
 typedef struct groundphixslist_t
@@ -492,6 +485,14 @@ typedef struct rpkt_cont_opacity_struct
   double fb_inrest;
   double ffheating;
   //double bfheating;
+  double *kappa_bf_contr;
+  #if (SEPARATE_STIMRECOMB)
+    double *kappa_fb_contr;
+  #endif
+  #if (DETAILED_BF_ESTIMATORS_ON)
+    double *gamma_contr;
+  #endif
+
   int modelgridindex;
   bool recalculate_required; // e.g. when cell or timestep has changed
 } rpkt_cont_opacity_struct;

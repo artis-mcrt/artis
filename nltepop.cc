@@ -18,8 +18,8 @@
 static FILE *nlte_file;
 
 
-__host__ __device__ static
-int get_nlte_vector_index(const int element, const int ion, const int level)
+__host__ __device__
+static int get_nlte_vector_index(const int element, const int ion, const int level)
 // this is the index for the NLTE solver that is handling all ions of a single element
 // This is NOT an index into modelgrid[modelgridindex].nlte_pops that contains all elements
 {
@@ -35,7 +35,8 @@ int get_nlte_vector_index(const int element, const int ion, const int level)
 }
 
 
-__host__ __device__ static void get_ion_level_of_nlte_vector_index(const int index, const int element, int *ion, int *level)
+__host__ __device__
+static void get_ion_level_of_nlte_vector_index(const int index, const int element, int *ion, int *level)
 {
   // this could easily be optimized if need be
   for (int dion = 0; dion < get_nions(element); dion++)
@@ -552,8 +553,8 @@ static void nltepop_matrix_add_boundbound_gpu(
 
     if (ndowntrans > 0)
     {
-      dim3 threadsPerBlock(1024, 1, 1);
-      dim3 numBlocks(ceil(ndowntrans / 1024.), 1, 1);
+      dim3 threadsPerBlock(64, 1, 1);
+      dim3 numBlocks(ceil(ndowntrans / 64.), 1, 1);
 
       kernel_levelbbdowntrans<<<numBlocks, threadsPerBlock>>>(
         modelgridindex, element, ion, level, epsilon_level, ndowntrans, level_index, s_renorm[level], t_mid, T_e, nne,
@@ -568,10 +569,10 @@ static void nltepop_matrix_add_boundbound_gpu(
     // excitation
     const int nuptrans = get_nuptrans(element, ion, level);
 
-    if (nuptrans)
+    if (nuptrans > 0)
     {
-      dim3 threadsPerBlock(1024, 1, 1);
-      dim3 numBlocks(ceil(nuptrans / 1024.), 1, 1);
+      dim3 threadsPerBlock(64, 1, 1);
+      dim3 numBlocks(ceil(nuptrans / 64.), 1, 1);
 
       kernel_levelbbuptrans<<<numBlocks, threadsPerBlock>>>(
         modelgridindex, element, ion, level, epsilon_level, nuptrans, level_index, s_renorm[level], t_mid, T_e, nne,
@@ -656,6 +657,62 @@ static void nltepop_matrix_add_boundbound(
 }
 
 
+__host__ __device__
+static void nltepop_matrix_add_ionisation_level(
+      const int modelgridindex, const int element, const int ion, const int level, const int upperionmaxrecombininglevel,
+      const float T_e, const float nne,
+      double *s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf)
+{
+  const int level_index = get_nlte_vector_index(element, ion, level);
+
+  // thermal collisional ionization, photoionisation and recombination processes
+  const double epsilon_current = epsilon(element, ion, level);
+  const int lower_index = level_index;
+
+  for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
+  {
+    const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
+    const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
+    const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
+
+    // ionization
+
+    // the R part is slow!
+    const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+    const double C_ionisation = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+
+    *gsl_matrix_ptr_managed(rate_matrix_rad_bf, lower_index, lower_index) -= R_ionisation * s_renorm[level];
+    *gsl_matrix_ptr_managed(rate_matrix_rad_bf, upper_index, lower_index) += R_ionisation * s_renorm[level];
+    *gsl_matrix_ptr_managed(rate_matrix_coll_bf, lower_index, lower_index) -= C_ionisation * s_renorm[level];
+    *gsl_matrix_ptr_managed(rate_matrix_coll_bf, upper_index, lower_index) += C_ionisation * s_renorm[level];
+
+    #ifndef __CUDA_ARCH__
+    if ((R_ionisation < 0) || (C_ionisation < 0))
+      printout("  WARNING: Negative ionization rate from ion_stage %d level %d phixstargetindex %d\n",
+               get_ionstage(element, ion), level, phixstargetindex);
+    #endif
+
+    // recombination
+    if (upper <= upperionmaxrecombininglevel) // we can skip this part if the functions below will return zero anyway
+    {
+      const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, modelgridindex);
+      const double C_recomb = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
+
+      *gsl_matrix_ptr_managed(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
+      *gsl_matrix_ptr_managed(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm[upper];
+      *gsl_matrix_ptr_managed(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm[upper];
+      *gsl_matrix_ptr_managed(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm[upper];
+
+      #ifndef __CUDA_ARCH__
+      if ((R_recomb < 0) || (C_recomb < 0))
+        printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
+                 get_ionstage(element, ion), level, phixstargetindex);
+      #endif
+   }
+  }
+}
+
+
 static void nltepop_matrix_add_ionisation(
   const int modelgridindex, const int element, const int ion,
   double *s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf)
@@ -664,53 +721,13 @@ static void nltepop_matrix_add_ionisation(
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const int nionisinglevels = get_ionisinglevels(element, ion);
-  const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
+  const int upperionmaxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
 
   for (int level = 0; level < nionisinglevels; level++)
   {
-    const int level_index = get_nlte_vector_index(element, ion, level);
-
-    // thermal collisional ionization, photoionisation and recombination processes
-    const double epsilon_current = epsilon(element, ion, level);
-    const int lower_index = level_index;
-
-    for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
-    {
-      const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      const int upper_index = get_nlte_vector_index(element, ion + 1, upper);
-      const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
-
-      // ionization
-
-      // the R part is slow!
-      const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
-      const double C_ionisation = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
-
-      *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, lower_index) -= R_ionisation * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, lower_index) += R_ionisation * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, lower_index) -= C_ionisation * s_renorm[level];
-      *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, lower_index) += C_ionisation * s_renorm[level];
-
-      if ((R_ionisation < 0) || (C_ionisation < 0))
-        printout("  WARNING: Negative ionization rate from ion_stage %d level %d phixstargetindex %d\n",
-                 get_ionstage(element, ion), level, phixstargetindex);
-
-      // recombination
-      if (upper <= maxrecombininglevel) // we can skip this part if the functions below will return zero anyway
-      {
-        const double R_recomb = rad_recombination_ratecoeff(T_e, nne, element, ion + 1, upper, level, modelgridindex);
-        const double C_recomb = col_recombination_ratecoeff(modelgridindex, element, ion + 1, upper, level, epsilon_trans);
-
-        *gsl_matrix_ptr(rate_matrix_rad_bf, upper_index, upper_index) -= R_recomb * s_renorm[upper];
-        *gsl_matrix_ptr(rate_matrix_rad_bf, lower_index, upper_index) += R_recomb * s_renorm[upper];
-        *gsl_matrix_ptr(rate_matrix_coll_bf, upper_index, upper_index) -= C_recomb * s_renorm[upper];
-        *gsl_matrix_ptr(rate_matrix_coll_bf, lower_index, upper_index) += C_recomb * s_renorm[upper];
-
-        if ((R_recomb < 0) || (C_recomb < 0))
-          printout("  WARNING: Negative recombination rate to ion_stage %d level %d phixstargetindex %d\n",
-                   get_ionstage(element, ion), level, phixstargetindex);
-     }
-    }
+    nltepop_matrix_add_ionisation_level(
+      modelgridindex, element, ion, level, upperionmaxrecombininglevel, T_e, nne,
+      s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf);
   }
 }
 
@@ -1049,6 +1066,10 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       if (NT_ON)
         nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_ntcoll_bf);
     }
+
+    #if (CUDA_ENABLED && USECUDA_NLTE_BOUNDBOUND)
+    cudaFree(s_renorm);
+    #endif
   }
   // printout("\n");
 
@@ -1236,9 +1257,6 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
   gsl_matrix_free(rate_matrix);
   gsl_vector_free(balance_vector);
   gsl_vector_free(pop_norm_factor_vec);
-  #if (CUDA_ENABLED && USECUDA_NLTE_BOUNDBOUND)
-  cudaFree(s_renorm);
-  #endif
 }
 
 

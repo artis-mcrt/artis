@@ -1,5 +1,5 @@
 // #include <gsl/gsl_poly.h>
-#include <assert.h>
+// #include <assert.h>
 #include <gsl/gsl_blas.h>
 
 #include "sn3d.h"
