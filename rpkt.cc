@@ -1353,7 +1353,7 @@ __host__ __device__
 static inline void calculate_kappa_conttransition(
     rpkt_cont_opacity_struct *kappa_rpkt_cont_tid, double *kappa_bf, double *kappa_fb, int i, const double nu, const double nu_edge,
     const int modelgridindex, const int element, const int ion, const int level, const int phixstargetindex,
-    const double nnlevel, const float T_e, const float nne)
+    const double nnlevel, const double T_e, const double nne)
 {
   const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
   const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
@@ -1401,7 +1401,7 @@ static inline void calculate_kappa_conttransition(
 __global__
 static void kernel_calculate_kappa_conttransitions(
     rpkt_cont_opacity_struct *kappa_rpkt_cont_tid, double *kappa_bf, double *kappa_fb, const double nu,
-    const int modelgridindex, const float T_e, const float nne, const float nnetot)
+    const int modelgridindex, const double T_e, const double nne, const double nnetot)
 {
   extern __shared__ double blocksharedmem[];
   double *block_kappacontribs_bf = blocksharedmem;
@@ -1467,14 +1467,14 @@ static void kernel_calculate_kappa_conttransitions(
 
 
 __host__ void calculate_kappagammacontribs_gpu(
-  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid, const float T_e, const float nne)
+  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid, const double T_e, const double nne)
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
   {
     kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex] = 0.;
   }
 
-  const float nnetot = get_nnetot(modelgridindex);
+  const double nnetot = get_nnetot(modelgridindex);
 
   double *dev_kappa_bf;
   double *dev_kappa_fb;
@@ -1511,7 +1511,7 @@ __host__ void calculate_kappagammacontribs_gpu(
 
 #if (!CUDA_ENABLED || !USECUDA_RPKT_CONTOPACITY || CUDA_VERIFY_CPUCONSISTENCY)
 static void calculate_kappagammacontribs_cpu(
-  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid, const float T_e, const float nne)
+  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid, const double T_e, const double nne)
 // bound-free opacity
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
@@ -1519,7 +1519,7 @@ static void calculate_kappagammacontribs_cpu(
     kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex] = 0.;
   }
 
-  const float nnetot = get_nnetot(modelgridindex);
+  const double nnetot = get_nnetot(modelgridindex);
   for (int i = 0; i < nbfcontinua; i++)
   {
     const int element = phixsallcont[i].element;
