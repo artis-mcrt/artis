@@ -1254,7 +1254,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
 {
   int index;
 
-  if (nu_edge < phixslist[tid].groundcont[0].nu_edge)
+  if (nu_edge < phixsgroundcont[0].nu_edge)
   {
     index = -1;
     *index_in_groundlevelcontestimator = -1;
@@ -1266,21 +1266,21 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     int ion;
     for (i = 1; i < nbfcontinua_ground; i++)
     {
-      if (nu_edge < phixslist[tid].groundcont[i].nu_edge)
+      if (nu_edge < phixsgroundcont[i].nu_edge)
         break;
     }
 /*    if (i == nbfcontinua_ground)
     {
-      printout("[fatal] search_groundphixslist: i %d, nu_edge %g, phixslist[tid].groundcont[i-1].nu_edge %g ... abort\n",i,nu_edge,phixslist[tid].groundcont[i-1].nu_edge);
+      printout("[fatal] search_groundphixslist: i %d, nu_edge %g, phixsgroundcont[i-1].nu_edge %g ... abort\n",i,nu_edge,phixsgroundcont[i-1].nu_edge);
       printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",el,in,ll);
-      //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",phixslist[tid].groundcont[i-1].element,phixslist[tid].groundcont[i-1].ion,groundphixslist[i-1].level);
+      //printout("[fatal] search_groundphixslist: this is element %d, ion %d, level %d in groundphixslist at i-1\n",phixsgroundcont[i-1].element,phixsgroundcont[i-1].ion,groundphixslist[i-1].level);
       abort();
     }*/
     if (i == nbfcontinua_ground)
     {
-      element = phixslist[tid].groundcont[i - 1].element;
-      ion = phixslist[tid].groundcont[i - 1].ion;
-      int level = phixslist[tid].groundcont[i - 1].level;
+      element = phixsgroundcont[i - 1].element;
+      ion = phixsgroundcont[i - 1].ion;
+      int level = phixsgroundcont[i - 1].level;
       if (element == el && ion == in && level == ll)
       {
         index = i - 1;
@@ -1288,7 +1288,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
       else
       {
         printout("[fatal] search_groundphixslist: element %d, ion %d, level %d has edge_frequency %g equal to the bluest ground-level continuum\n",el,in,ll,nu_edge);
-        printout("[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d, level %d at nu_edge %g\n",element,ion,level,phixslist[tid].groundcont[i-1].nu_edge);
+        printout("[fatal] search_groundphixslist: bluest ground level continuum is element %d, ion %d, level %d at nu_edge %g\n",element,ion,level,phixsgroundcont[i-1].nu_edge);
         printout("[fatal] search_groundphixslist: i %d, nbfcontinua_ground %d\n",i,nbfcontinua_ground);
         printout("[fatal] This shouldn't happen, is hoewever possible if there are multiple levels in the adata file at energy=0\n");
         for (int looplevels = 0; looplevels < get_nlevels(el,in); looplevels++)
@@ -1302,11 +1302,11 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
     }
     else
     {
-      const double left_diff = nu_edge - phixslist[tid].groundcont[i - 1].nu_edge;
-      const double right_diff = phixslist[tid].groundcont[i].nu_edge - nu_edge;
+      const double left_diff = nu_edge - phixsgroundcont[i - 1].nu_edge;
+      const double right_diff = phixsgroundcont[i].nu_edge - nu_edge;
       index = (left_diff <= right_diff) ? i - 1 : i;
-      element = phixslist[tid].groundcont[index].element;
-      ion = phixslist[tid].groundcont[index].ion;
+      element = phixsgroundcont[index].element;
+      ion = phixsgroundcont[index].ion;
     }
     *index_in_groundlevelcontestimator = element * maxion + ion;
   }
@@ -1563,16 +1563,6 @@ static void setup_phixs_list(void)
   printout("[info] read_atomicdata: number of bfcontinua %d\n", nbfcontinua);
   printout("[info] read_atomicdata: number of ground-level bfcontinua %d\n", nbfcontinua_ground);
 
-  #if CUDA_ENABLED
-  cudaMallocManaged(&phixslist, nthreads * sizeof(phixslist_t));
-  #else
-  phixslist = (phixslist_t *) malloc(nthreads * sizeof(phixslist_t));
-  #endif
-  if (phixslist == NULL)
-  {
-    printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
-    abort();
-  }
 
   /// MK: 2012-01-19
   /// To fix the OpenMP problem on BlueGene machines this parallel section was removed and replaced by
@@ -1583,55 +1573,56 @@ static void setup_phixs_list(void)
   //  #pragma omp parallel private(i,element,ion,level,nions,nlevels,epsilon_upper,E_threshold,nu_edge)
   //  {
   //#endif
-  for (int itid = 0; itid < nthreads; itid++)
-  {
-    /// Number of ground level bf-continua equals the total number of included ions minus the number
-    /// of included elements, because the uppermost ionisation stages can't ionise.
-    //printout("groundphixslist nbfcontinua_ground %d\n",nbfcontinua_ground);
-    printout("initialising groundphixslist for itid %d\n", itid);
-    #if CUDA_ENABLED
-    cudaMallocManaged(&phixslist[itid].groundcont, nbfcontinua_ground * sizeof(groundphixslist_t));
-    cudaMemAdvise(phixslist[itid].groundcont, nbfcontinua_ground * sizeof(groundphixslist_t), cudaMemAdviseSetReadMostly, myGpuId);
-    #else
-    phixslist[itid].groundcont = (groundphixslist_t *) malloc(nbfcontinua_ground * sizeof(groundphixslist_t));
-    #endif
-    if (phixslist[itid].groundcont == NULL)
-    {
-      printout("[fatal] read_atomicdata: not enough memory to initialize phixslist[%d].groundcont... abort\n", itid);
-      abort();
-    }
 
-    int i = 0;
-    for (int element = 0; element < nelements; element++)
+  /// Number of ground level bf-continua equals the total number of included ions minus the number
+  /// of included elements, because the uppermost ionisation stages can't ionise.
+  //printout("groundphixslist nbfcontinua_ground %d\n",nbfcontinua_ground);
+  printout("initialising groundphixslist\n");
+  #if CUDA_ENABLED
+  cudaMallocManaged(&phixsgroundcont, nbfcontinua_ground * sizeof(groundphixslist_t));
+  cudaMemAdvise(phixsgroundcont, nbfcontinua_ground * sizeof(groundphixslist_t), cudaMemAdviseSetReadMostly, myGpuId);
+  #else
+  phixsgroundcont = (groundphixslist_t *) malloc(nbfcontinua_ground * sizeof(groundphixslist_t));
+  #endif
+  if (phixsgroundcont == NULL)
+  {
+    printout("[fatal] read_atomicdata: not enough memory to initialize phixsgroundcont... abort\n");
+    abort();
+  }
+
+  int i = 0;
+  for (int element = 0; element < nelements; element++)
+  {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions-1; ion++)
     {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions-1; ion++)
+      const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
+      for (int level = 0; level < nlevels_groundterm; level++)
       {
-        const int nlevels_groundterm = get_nlevels_groundterm(element, ion);
-        for (int level = 0; level < nlevels_groundterm; level++)
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
         {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-          {
-            // const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
-            // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-            const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-            const double nu_edge = E_threshold / H;
-            phixslist[itid].groundcont[i].element = element;
-            phixslist[itid].groundcont[i].ion = ion;
-            phixslist[itid].groundcont[i].level = level;
-            phixslist[itid].groundcont[i].nu_edge = nu_edge;
-            phixslist[itid].groundcont[i].phixstargetindex = phixstargetindex;
-            //printout("phixslist.groundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
-            i++;
-          }
+          // const int upperlevel = get_phixsupperlevel(element, ion, level, 0);
+          // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+          const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+          const double nu_edge = E_threshold / H;
+          phixsgroundcont[i].element = element;
+          phixsgroundcont[i].ion = ion;
+          phixsgroundcont[i].level = level;
+          phixsgroundcont[i].nu_edge = nu_edge;
+          phixsgroundcont[i].phixstargetindex = phixstargetindex;
+          //printout("phixsgroundcont nbfcontinua_ground %d, i %d, element %d, ion %d, level %d, nu_edge %g\n",nbfcontinua_ground,i,element,ion,level,nu_edge);
+          i++;
         }
       }
     }
-    qsort(phixslist[itid].groundcont, nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
+  }
+  qsort(phixsgroundcont, nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
 
-
+  for (int itid = 0; itid < nthreads; itid++)
+  {
     #if CUDA_ENABLED
+      cudaMallocManaged(&kappa_rpkt_cont[itid].gamma_contr_ground, nbfcontinua_ground * sizeof(double));
       cudaMallocManaged(&kappa_rpkt_cont[itid].kappa_bf_contr, nbfcontinua * sizeof(double));
       #if (SEPARATE_STIMRECOMB)
       cudaMallocManaged(&kappa_rpkt_cont[itid].kappa_fb_contr, nbfcontinua * sizeof(double));
@@ -1640,6 +1631,7 @@ static void setup_phixs_list(void)
       cudaMallocManaged(&kappa_rpkt_cont[itid].gamma_contr, nbfcontinua * sizeof(double));
       #endif
     #else
+      kappa_rpkt_cont[itid].gamma_contr_ground = (double *) malloc(nbfcontinua_ground * sizeof(double));
       kappa_rpkt_cont[itid].kappa_bf_contr = (double *) malloc(nbfcontinua * sizeof(double));
       #if (SEPARATE_STIMRECOMB)
       kappa_rpkt_cont[itid].kappa_fb_contr = (double *) malloc(nbfcontinua * sizeof(double));
@@ -1648,61 +1640,61 @@ static void setup_phixs_list(void)
       kappa_rpkt_cont[itid].gamma_contr = (double *) malloc(nbfcontinua * sizeof(double));
       #endif
     #endif
+  }
 
-    #if CUDA_ENABLED
-    cudaMallocManaged(&phixslist[itid].allcont, nbfcontinua * sizeof(fullphixslist_t));
-    cudaMemAdvise(phixslist[itid].allcont, nbfcontinua * sizeof(fullphixslist_t), cudaMemAdviseSetReadMostly, myGpuId);
-    #else
-    phixslist[itid].allcont = (fullphixslist_t *) malloc(nbfcontinua * sizeof(fullphixslist_t));
-    #endif
-    if (phixslist[itid].allcont == NULL)
-    {
-      printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
-      abort();
-    }
+  #if CUDA_ENABLED
+  cudaMallocManaged(&phixsallcont, nbfcontinua * sizeof(fullphixslist_t));
+  cudaMemAdvise(phixsallcont, nbfcontinua * sizeof(fullphixslist_t), cudaMemAdviseSetReadMostly, myGpuId);
+  #else
+  phixsallcont = (fullphixslist_t *) malloc(nbfcontinua * sizeof(fullphixslist_t));
+  #endif
+  if (phixsallcont == NULL)
+  {
+    printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
+    abort();
+  }
 
-    i = 0;
-    for (int element = 0; element < nelements; element++)
+  i = 0;
+  for (int element = 0; element < nelements; element++)
+  {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions - 1; ion++)
     {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions - 1; ion++)
+      const int nlevels = get_ionisinglevels(element, ion);
+      //nlevels = get_ionisinglevels(element,ion);
+      ///// The following line reduces the number of bf-continua per ion
+      //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
+      for (int level = 0; level < nlevels; level++)
       {
-        const int nlevels = get_ionisinglevels(element, ion);
-        //nlevels = get_ionisinglevels(element,ion);
-        ///// The following line reduces the number of bf-continua per ion
-        //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
-        for (int level = 0; level < nlevels; level++)
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
         {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-          {
-            // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
-            // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-            const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-            const double nu_edge = E_threshold / H;
+          // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
+          // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+          const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+          const double nu_edge = E_threshold / H;
 
-            int index_in_groundlevelcontestimator;
+          int index_in_groundlevelcontestimator;
 
-            phixslist[itid].allcont[i].element = element;
-            phixslist[itid].allcont[i].ion = ion;
-            phixslist[itid].allcont[i].level = level;
-            phixslist[itid].allcont[i].phixstargetindex = phixstargetindex;
-            phixslist[itid].allcont[i].nu_edge = nu_edge;
-            phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
-            #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-              if (itid == 0)
-                elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
-            #endif
-            i++;
-          }
+          phixsallcont[i].element = element;
+          phixsallcont[i].ion = ion;
+          phixsallcont[i].level = level;
+          phixsallcont[i].phixstargetindex = phixstargetindex;
+          phixsallcont[i].nu_edge = nu_edge;
+          phixsallcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
+          #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+            if (itid == 0)
+              elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
+          #endif
+          i++;
         }
       }
     }
-
-    //nbfcontinua = i;
-    //printout("number of bf-continua reduced to %d\n",nbfcontinua);
-    qsort(phixslist[itid].allcont, nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
   }
+
+  //nbfcontinua = i;
+  //printout("number of bf-continua reduced to %d\n",nbfcontinua);
+  qsort(phixsallcont, nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
   //#ifdef _OPENMP
   //  }
   //#endif

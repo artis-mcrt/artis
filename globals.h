@@ -96,7 +96,9 @@ extern __managed__ rpkt_cont_opacity_struct *kappa_rpkt_cont;
 extern int ncoolingterms;
 extern int importantcoolingterms;
 
-extern __managed__ phixslist_t *phixslist;
+extern __managed__ fullphixslist_t *phixsallcont;
+extern __managed__ groundphixslist_t *phixsgroundcont;
+
 extern __managed__ int nbfcontinua;
 extern __managed__ int nbfcontinua_ground;
 extern __managed__ int NPHIXSPOINTS;

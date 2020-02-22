@@ -88,7 +88,6 @@ sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
 ifneq (,$(findstring jakita,$(HOSTNAME)))
 	# Tesla K80
 	CUDA_NVCC_FLAGS += --gpu-architecture=sm_37
-	# LDFLAGS += -lprofiler
 	INCLUDE += -I/usr/local/cuda/samples/common/inc/
 endif
 

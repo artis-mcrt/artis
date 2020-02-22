@@ -7,47 +7,72 @@
 
 #ifdef __CUDACC__
 
-#define USECUDA_BFHEATING true
-#define USECUDA_PHOTOIONCOEFF true
-#define USECUDA_STIMRECOMBCOEFF true
-#define USECUDA_NLTE_BOUNDBOUND true
-#define USECUDA_NONTHERMAL_EXCITATION true
-#define USECUDA_NONTHERMAL_IONIZATION true
-#define USECUDA_RPKT_CONTOPACITY true
-#define CUDA_VERIFY_CPUCONSISTENCY false
+  #define USECUDA_BFHEATING true
+  #define USECUDA_PHOTOIONCOEFF true
+  #define USECUDA_STIMRECOMBCOEFF true
+  #define USECUDA_NLTE_BOUNDBOUND true
+  #define USECUDA_NONTHERMAL_EXCITATION true
+  #define USECUDA_NONTHERMAL_IONIZATION true
+  #define USECUDA_RPKT_CONTOPACITY true
+  #define CUDA_VERIFY_CPUCONSISTENCY false
 
-#include <cuda_runtime.h>
+  #include <cuda_runtime.h>
 
-#include <helper_cuda.h>
+  #ifndef __CUDA_ARCH__
+    #include "helper_cuda.h"
+  #endif
 
-// copied from https://www.micc.unifi.it/bertini/download/gpu-programming-basics/2017/gpu_cuda_5.pdf
-#if defined __CUDA_ARCH__ && __CUDA_ARCH__ < 600
-__device__ double static inline atomicAdd(double* address, double val)
-{
- unsigned long long int* address_as_ull =
- (unsigned long long int*) address;
- unsigned long long int old = *address_as_ull;
- unsigned long long int assumed;
- do {
- assumed = old;
- old = atomicCAS(address_as_ull, assumed,
- __double_as_longlong(val + __longlong_as_double(assumed)));
- // Note: uses integer comparison to avoid hang in case
- // of NaN (since NaN != NaN)
- } while (assumed != old);
- return __longlong_as_double(old);
-}
-#endif
+  // copied from https://www.micc.unifi.it/bertini/download/gpu-programming-basics/2017/gpu_cuda_5.pdf
+  #if defined __CUDA_ARCH__ && __CUDA_ARCH__ < 600
+  __device__ double static inline atomicAdd(double* address, double val)
+  {
+   unsigned long long int* address_as_ull =
+   (unsigned long long int*) address;
+   unsigned long long int old = *address_as_ull;
+   unsigned long long int assumed;
+   do {
+   assumed = old;
+   old = atomicCAS(address_as_ull, assumed,
+   __double_as_longlong(val + __longlong_as_double(assumed)));
+   // Note: uses integer comparison to avoid hang in case
+   // of NaN (since NaN != NaN)
+   } while (assumed != old);
+   return __longlong_as_double(old);
+  }
+  #endif
+
+  // #ifdef __CUDA__ARCH__
+  // __device__
+  // inline static void checkCudaErrors(cudaError_t cudaStatus)
+  // {
+  //   assert(cudaStatus == cudaSuccess);
+  // }
+  // #endif
+
+  #ifdef __CUDA_ARCH__
+    __device__ inline static void devcheck(cudaError_t result, char const *const func, const char *const file,
+               int const line) {
+      if (result != cudaSuccess)
+      {
+        printf("CUDA error at %s:%d code=%d \"%s\" \n", file, line,
+                static_cast<unsigned int>(result), func);
+        assert(result == cudaSuccess);
+      }
+    }
+
+    #undef checkCudaErrors
+    #define checkCudaErrors(val) devcheck((val), #val, __FILE__, __LINE__)
+  #endif
 
 #else
 
-#if CUDA_ENABLED
-#error CUDA is not available
-#endif
+  #if CUDA_ENABLED
+  #error CUDA is not available
+  #endif
 
-#define __managed__
-#define __device__
-#define __host__
+  #define __managed__
+  #define __device__
+  #define __host__
 
 #endif
 

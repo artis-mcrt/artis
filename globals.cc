@@ -112,7 +112,9 @@ int importantcoolingterms;
 /// PHIXSLIST
 ///============================================================================
 
-__managed__ phixslist_t *phixslist;
+__managed__ fullphixslist_t *phixsallcont;
+__managed__ groundphixslist_t *phixsgroundcont;
+
 __managed__ int nbfcontinua;
 __managed__ int nbfcontinua_ground; ///number of bf-continua
 __managed__ int NPHIXSPOINTS;

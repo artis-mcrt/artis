@@ -128,13 +128,9 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
 #if (CUDA_ENABLED && USECUDA_BFHEATING)
 
-  void *dev_intparas;
-  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(gsl_integral_paras_bfheating)));
-  checkCudaErrors(cudaMemcpy((void**) dev_intparas, (void *) &intparas, sizeof(gsl_integral_paras_bfheating), cudaMemcpyHostToDevice));
-
-  const double bfheating_gpu = calculate_integral_gpu<integrand_bfheatingcoeff_custom_radfield>(dev_intparas, nu_threshold, nu_max_phixs);
-
-  cudaFree(dev_intparas);
+  const double bfheating_gpu =
+    calculate_integral_gpu<integrand_bfheatingcoeff_custom_radfield, gsl_integral_paras_bfheating>(
+      &intparas, nu_threshold, nu_max_phixs);
 
   #if CUDA_VERIFY_CPUCONSISTENCY
   if (bfheating > 0 && abs(bfheating_gpu / bfheating - 1.) > 0.3)
