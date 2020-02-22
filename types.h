@@ -131,22 +131,11 @@ typedef struct fullphixslist_t
 typedef struct groundphixslist_t
 {
   double nu_edge;
-  //double photoion_contr;
-  double gamma_contr;
-  //double stimrecomb_contr;
-  //double bfheating_contr;
   int element;
   int ion;
   int level;
   int phixstargetindex;
 } groundphixslist_t;
-
-
-typedef struct phixslist_t
-{
-  fullphixslist_t *allcont;
-  groundphixslist_t *groundcont;
-} phixslist_t;
 
 enum packet_type {
   TYPE_ESCAPE = 32,
@@ -485,6 +474,7 @@ typedef struct rpkt_cont_opacity_struct
   double fb_inrest;
   double ffheating;
   //double bfheating;
+  double *gamma_contr_ground;
   double *kappa_bf_contr;
   #if (SEPARATE_STIMRECOMB)
     double *kappa_fb_contr;

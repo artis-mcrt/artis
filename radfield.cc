@@ -160,13 +160,13 @@ setup_bin_boundaries(void)
     // {
     //   for (int i = 0; i < nbfcontinua_ground; i++)
     //   {
-    //     const double nu_edge = phixslist[tid].groundcont[i].nu_edge;
+    //     const double nu_edge = phixsgroundcont[i].nu_edge;
     //     const double eV_edge = H * nu_edge / EV;
     //     const double angstrom_edge = 1e8 * CLIGHT / nu_edge;
-    //     const int element = phixslist[tid].groundcont[i].element;
-    //     const int ion = phixslist[tid].groundcont[i].ion;
-    //     const int level = phixslist[tid].groundcont[i].level;
-    //     const int phixstargetindex = phixslist[tid].groundcont[i].phixstargetindex;
+    //     const int element = phixsgroundcont[i].element;
+    //     const int ion = phixsgroundcont[i].ion;
+    //     const int level = phixsgroundcont[i].level;
+    //     const int phixstargetindex = phixsgroundcont[i].phixstargetindex;
     //
     //     const int Z = get_element(element);
     //     const int ion_stage = get_ionstage(element, ion);
@@ -847,7 +847,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
   for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
   {
-    const double nu_edge = phixslist[tid].allcont[allcontindex].nu_edge;
+    const double nu_edge = phixsallcont[allcontindex].nu_edge;
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs)
@@ -855,11 +855,11 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
-      bfrate_raw[modelgridindex][allcontindex] += phixslist[tid].allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu;
+      bfrate_raw[modelgridindex][allcontindex] += phixsallcont[allcontindex].gamma_contr * distance_e_cmf_over_nu;
 
       #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-      const int element = phixslist[tid].allcont[allcontindex].element;
-      // const int ion = phixslist[tid].allcont[allcontindex].ion;
+      const int element = phixsallcont[allcontindex].element;
+      // const int ion = phixsallcont[allcontindex].ion;
       // const int ionstage = get_ionstage(element, ion);
       const int atomic_number = get_element(element);
       if ((atomic_number == 26)) //  && ionstage == 2
@@ -891,7 +891,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
           bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib = 0;
         }
 
-        bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib += (phixslist[tid].allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu);
+        bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib += (phixsallcont[allcontindex].gamma_contr * distance_e_cmf_over_nu);
       }
       #endif
     }
@@ -1508,13 +1508,13 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   for (int i = 0; i < nbfcontinua; i++)
   {
-    if ((phixslist[tid].allcont[i].element == element) && (phixslist[tid].allcont[i].ion == lowerion) &&
-        (phixslist[tid].allcont[i].level == lower) && (phixslist[tid].allcont[i].phixstargetindex == phixstargetindex))
+    if ((phixsallcont[i].element == element) && (phixsallcont[i].ion == lowerion) &&
+        (phixsallcont[i].level == lower) && (phixsallcont[i].phixstargetindex == phixstargetindex))
     {
       return i;
     }
 
-    if (nu_edge > phixslist[tid].allcont[i].nu_edge)
+    if (nu_edge > phixsallcont[i].nu_edge)
       break;
   }
   return -1;

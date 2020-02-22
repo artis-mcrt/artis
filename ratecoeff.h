@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "cuda.h"
+
 void ratecoefficients_init(void);
 
 double select_continuum_nu(int element, int ion, int level, int upperionlevel, float T_e);
@@ -80,38 +82,58 @@ __global__ void kernel_simpson_integral(void *intparas, double xlow, double delt
 }
 
 
-template <double func_integrand(double, void *)>
-__host__ __device__ double calculate_integral_gpu(void *dev_intparas, double xlow, double xhigh)
+template <double func_integrand(double, void *), typename T>
+__host__ __device__ double calculate_integral_gpu(T *intparas, double xlow, double xhigh)
 {
-    double *dev_integral;
-    checkCudaErrors(cudaMallocManaged(&dev_integral, sizeof(double)));
-    *dev_integral = 0.;
+  T *dev_intparas;
+  checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(T)));
 
-    checkCudaErrors(cudaDeviceSynchronize());
+  #ifdef __CUDA_ARCH__
+  *dev_intparas = *intparas;
+  #else
+  checkCudaErrors(cudaMemcpy(dev_intparas, intparas, sizeof(T), cudaMemcpyHostToDevice));
+  #endif
 
-    const int samplecount = NPHIXSPOINTS * 16 + 1; // need an odd number for Simpson rule
-    assert(samplecount % 2 == 1);
+  double *dev_integral;
+  cudaMalloc(&dev_integral, sizeof(double));
 
-    dim3 threadsPerBlock(32, 1, 1);
-    dim3 numBlocks(ceil(samplecount / 32.), 1, 1);
-    size_t sharedsize = sizeof(double) * threadsPerBlock.x;
+  #ifdef __CUDA_ARCH__
+  *dev_integral = 0.;
+  #else
+  cudaMemset(dev_integral, 0, sizeof(double));
+  #endif
 
-    const double deltax = (xhigh - xlow) / samplecount;
+  checkCudaErrors(cudaDeviceSynchronize());
 
-    kernel_simpson_integral<func_integrand><<<numBlocks, threadsPerBlock, sharedsize>>>(
-      dev_intparas, xlow, deltax, samplecount, dev_integral);
+  const int samplecount = NPHIXSPOINTS * 16 + 1; // need an odd number for Simpson rule
+  assert(samplecount % 2 == 1);
 
-    // Check for any errors launching the kernel
-    checkCudaErrors(cudaGetLastError());
+  dim3 threadsPerBlock(32, 1, 1);
+  dim3 numBlocks((samplecount + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
+  size_t sharedsize = sizeof(double) * threadsPerBlock.x;
 
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
-    checkCudaErrors(cudaDeviceSynchronize());
+  const double deltax = (xhigh - xlow) / samplecount;
 
-    double result = *dev_integral;
+  kernel_simpson_integral<func_integrand><<<numBlocks, threadsPerBlock, sharedsize>>>(
+    dev_intparas, xlow, deltax, samplecount, dev_integral);
 
-    cudaFree(dev_integral);
+  // Check for any errors launching the kernel
+  checkCudaErrors(cudaGetLastError());
 
-    return result;
+  // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  #ifdef __CUDA_ARCH__
+  const double result = *dev_integral;
+  #else
+  double result = 0.;
+  checkCudaErrors(cudaMemcpy(&result, dev_integral, sizeof(double), cudaMemcpyDeviceToHost));
+  #endif
+
+  cudaFree(dev_integral);
+  cudaFree(dev_intparas);
+
+  return result;
 }
 #endif
 

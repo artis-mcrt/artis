@@ -2791,10 +2791,7 @@ static void sfmatrix_add_ionization_shell_gpu(gsl_matrix *sfmatrix, int collioni
   const double ionpot_ev = colliondata[collionindex].ionpot_ev;
   const int xsstartindex = get_energyindex_ev_gteq(ionpot_ev);
 
-  cudaError_t cudaStatus;
-
-  cudaStatus = cudaDeviceSynchronize();
-  assert(cudaStatus == cudaSuccess);
+  checkCudaErrors(cudaDeviceSynchronize());
 
   dim3 threadsPerBlock(64, 1, 1);
   dim3 numBlocks(ceil((SFPTS - xsstartindex + 1.) / 64.), 1, 1);
@@ -2802,13 +2799,11 @@ static void sfmatrix_add_ionization_shell_gpu(gsl_matrix *sfmatrix, int collioni
   kernel_add_ionization_shell<<<numBlocks, threadsPerBlock>>>(sfmatrix, collionindex, ionpot_ev, nnion, J, xsstartindex);
 
   // Check for any errors launching the kernel
-  cudaStatus = cudaGetLastError();
-  assert(cudaStatus == cudaSuccess);
+  checkCudaErrors(cudaGetLastError());
 
   // cudaDeviceSynchronize waits for the kernel to finish, and returns
   // any errors encountered during the launch.
-  cudaStatus = cudaDeviceSynchronize();
-  assert(cudaStatus == cudaSuccess);
+  checkCudaErrors(cudaDeviceSynchronize());
 }
 #endif
 

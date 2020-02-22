@@ -1,6 +1,24 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#ifndef __CUDA_ARCH__
+  #define printout(...) fprintf (output_file, __VA_ARGS__)
+
+  #ifdef DEBUG_ON
+    #ifdef assert
+      #undef assert
+    #endif
+    #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
+  #else
+    #define	assert(e)	((void)0)
+  #endif
+
+#else
+
+  #define printout(...) printf (__VA_ARGS__)
+
+#endif
+
 #include "cuda.h"
 
 #include "globals.h"
@@ -74,7 +92,6 @@ extern FILE *output_file;
 #endif
 
 
-#define printout(...) fprintf (output_file, __VA_ARGS__)
 
 // inline int printout(const char *format, ...)
 // {
@@ -86,16 +103,6 @@ extern FILE *output_file;
 //
 //    return ret_status;
 // }
-#ifndef __CUDA_ARCH__
-  #ifdef DEBUG_ON
-    #ifdef assert
-      #undef assert
-    #endif
-    #define assert(e) if (!(e)) { printout("%s:%u: failed assertion `%s' in function %s\n", __FILE__, __LINE__, #e, __PRETTY_FUNCTION__); abort(); }
-  #else
-    #define	assert(e)	((void)0)
-  #endif
-#endif
 
 
 inline void gsl_error_handler_printout(const char *reason, const char *file, int line, int gsl_errno)
