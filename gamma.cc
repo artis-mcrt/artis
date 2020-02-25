@@ -18,7 +18,7 @@ struct gamma_spec
   int nlines;
 };
 
-static struct gamma_spec gamma_spectra[RADIONUCLIDE_COUNT];
+__managed__ static struct gamma_spec gamma_spectra[RADIONUCLIDE_COUNT];
 
 static const int RED_OF_LIST = -956;  // must be negative
 
@@ -29,7 +29,7 @@ struct gamma_ll
   int total;                // the total number of lines in the list
 };
 
-static struct gamma_ll gam_line_list;
+__managed__ static struct gamma_ll gam_line_list;
 
 
 static void read_gamma_spectrum(enum radionuclides isotope, const char filename[50])
@@ -43,8 +43,15 @@ static void read_gamma_spectrum(enum radionuclides isotope, const char filename[
 
   gamma_spectra[isotope].nlines = nlines;
 
+  #if CUDA_ENABLED
+  cudaMallocManaged(&gamma_spectra[isotope].energy, nlines * sizeof(double));
+  cudaMallocManaged(&gamma_spectra[isotope].probability, nlines * sizeof(double));
+  cudaMemAdvise(gamma_spectra[isotope].energy, nlines * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
+  cudaMemAdvise(gamma_spectra[isotope].probability, nlines * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
+  #else
   gamma_spectra[isotope].energy = (double *) calloc(nlines, sizeof(double));
   gamma_spectra[isotope].probability = (double *) calloc(nlines, sizeof(double));
+  #endif
 
   double E_gamma_avg = 0.0;
   for (int n = 0; n < nlines; n++)
@@ -96,8 +103,16 @@ void init_gamma_linelist(void)
 
   /* Start by setting up the grid of fake lines and their energies. */
   gamma_spectra[FAKE_GAM_LINE_ID].nlines = nfake_gam;
+
+  #if CUDA_ENABLED
+  cudaMallocManaged(&gamma_spectra[FAKE_GAM_LINE_ID].energy, nfake_gam * sizeof(double));
+  cudaMallocManaged(&gamma_spectra[FAKE_GAM_LINE_ID].probability, nfake_gam * sizeof(double));
+  cudaMemAdvise(gamma_spectra[FAKE_GAM_LINE_ID].energy, nfake_gam * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
+  cudaMemAdvise(gamma_spectra[FAKE_GAM_LINE_ID].probability, nfake_gam * sizeof(double), cudaMemAdviseSetReadMostly, myGpuId);
+  #else
   gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *) malloc(nfake_gam * sizeof(double));
   gamma_spectra[FAKE_GAM_LINE_ID].probability = (double *) malloc(nfake_gam * sizeof(double));
+  #endif
 
   const double deltanu = (nusyn_max - nusyn_min) / (gamma_spectra[FAKE_GAM_LINE_ID].nlines - 3);
   for (int i = 0; i < gamma_spectra[FAKE_GAM_LINE_ID].nlines; i++)
@@ -116,8 +131,15 @@ void init_gamma_linelist(void)
   printout("total gamma-ray lines %d\n", total_lines);
 
   gam_line_list.total = total_lines;
+  #if CUDA_ENABLED
+  cudaMallocManaged(&gam_line_list.nuclidetype, total_lines * sizeof(enum radionuclides));
+  cudaMallocManaged(&gam_line_list.index, total_lines * sizeof(int));
+  cudaMemAdvise(gam_line_list.nuclidetype, total_lines * sizeof(enum radionuclides), cudaMemAdviseSetReadMostly, myGpuId);
+  cudaMemAdvise(gam_line_list.index, total_lines * sizeof(int), cudaMemAdviseSetReadMostly, myGpuId);
+  #else
   gam_line_list.nuclidetype = (enum radionuclides *) malloc(total_lines * sizeof(enum radionuclides));
   gam_line_list.index = (int *) malloc(total_lines * sizeof(int));
+  #endif
 
   double energy_last = 0.0;
   int next = -99;
@@ -163,6 +185,7 @@ void init_gamma_linelist(void)
 }
 
 
+__host__ __device__
 static void choose_gamma_ray(PKT *pkt_ptr)
 {
   // Routine to choose which gamma ray line it'll be.
@@ -225,6 +248,7 @@ static void choose_gamma_ray(PKT *pkt_ptr)
 }
 
 
+__host__ __device__
 void pellet_decay(const int nts, PKT *pkt_ptr)
 {
   // Subroutine to convert a pellet to a gamma ray.
@@ -289,6 +313,7 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
 }
 
 
+__host__ __device__
 static double sigma_compton_partial(const double x, const double f)
 // Routine to compute the partial cross section for Compton scattering.
 //   xx is the photon energy (in units of electron mass) and f
@@ -302,6 +327,7 @@ static double sigma_compton_partial(const double x, const double f)
 }
 
 
+__host__ __device__
 static double sig_comp(const PKT *pkt_ptr, double t_current)
 {
   // Start by working out the compton x-section in the co-moving frame.
@@ -333,6 +359,7 @@ static double sig_comp(const PKT *pkt_ptr, double t_current)
 }
 
 
+__host__ __device__
 static double choose_f(double xx, double zrand)
 // To choose the value of f to integrate to - idea is we want
 //   sigma_compton_partial(xx,f) = zrand.
@@ -375,6 +402,7 @@ static double choose_f(double xx, double zrand)
 }
 
 
+__host__ __device__
 static double thomson_angle(void)
 {
   // For Thomson scattering we can get the new angle from a random number very easily.
@@ -400,6 +428,7 @@ static double thomson_angle(void)
 }
 
 
+__host__ __device__
 static void compton_scatter(PKT *pkt_ptr, double t_current)
 // Routine to deal with physical Compton scattering event.
 {
@@ -525,7 +554,8 @@ static void compton_scatter(PKT *pkt_ptr, double t_current)
 }
 
 
-double do_gamma(PKT *pkt_ptr, double t1, double t2)
+__host__ __device__
+double do_gamma(PKT *pkt_ptr, double t1, double t2, int tid)
 // Now routine for moving a gamma packet. Idea is that we have as input
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
@@ -639,7 +669,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       sdist = sdist * 2.;
       if (snext != pkt_ptr->where)
       {
-        change_cell(pkt_ptr, snext, &end_packet, t_current);
+        change_cell(pkt_ptr, snext, &end_packet, t_current, tid);
       }
     }
     else if ((tdist < sdist) && (tdist < edist))
@@ -718,7 +748,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
         //pkt_ptr->type = TYPE_PRE_KPKT;
         //pkt_ptr->type = TYPE_GAMMA_KPKT;
         //if (tid == 0) nt_stat_from_gamma++;
-        nt_stat_from_gamma++;
+        safeincrement(nt_stat_from_gamma);
         return t_current;
       }
       else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
@@ -750,6 +780,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
 }
 
 
+__host__ __device__
 double get_gam_freq(const int n)
 {
   if (n == RED_OF_LIST)
@@ -773,6 +804,7 @@ double get_gam_freq(const int n)
 }
 
 
+__host__ __device__
 int get_nul(double freq)
 {
   const double freq_max = get_gam_freq(gam_line_list.total - 1);

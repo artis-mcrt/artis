@@ -19,27 +19,78 @@
 static FILE *macroatom_file;
 
 
-static inline double get_individ_rad_deexc(int element, int ion, int level, int i)
+__host__ __device__
+static inline double get_individ_rad_deexc(int modelgridindex, int element, int ion, int level, int i, const double t_mid, int tid)
 {
+  #ifdef __CUDA_ARCH__
+  const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+  const int lower = linelist[lineindex].lowerlevelindex;
+  const double epsilon_current = epsilon(element, ion, level);
+  const double epsilon_target = epsilon(element, ion, lower);
+  const double epsilon_trans = epsilon_current - epsilon_target;
+
+  const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
+
+  return R * epsilon_trans;
+  #else
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
+  #endif
 }
 
 
-static inline double get_individ_internal_down_same(int element, int ion, int level, int i)
+__host__ __device__
+static inline double get_individ_internal_down_same(int modelgridindex, int element, int ion, int level, int i, const double t_mid, int tid)
 {
+  #ifdef __CUDA_ARCH__
+  const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+  const int lower = linelist[lineindex].lowerlevelindex;
+
+  const double epsilon_current = epsilon(element, ion, level);
+  const double epsilon_target = epsilon(element, ion, lower);
+  const double epsilon_trans = epsilon_current - epsilon_target;
+
+  const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+
+  return (R + C) * epsilon_target;
+  #else
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
+  #endif
 }
 
 
-static inline double get_individ_internal_up_same(int element, int ion, int level, int i)
+__host__ __device__
+static inline double get_individ_internal_up_same(int modelgridindex, int element, int ion, int level, int i, const double t_mid, int tid)
 {
+  #ifdef __CUDA_ARCH__
+  const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+  const int upper = linelist[lineindex].upperlevelindex;
+  const double epsilon_current = epsilon(element, ion, level);
+  const double epsilon_target = epsilon(element, ion, upper);
+  const double epsilon_trans = epsilon_target - epsilon_current;
+
+  const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
+
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+  // const double NT = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+  const double NT = 0.;
+
+  return (R + C + NT) * epsilon_current;
+
+  #else
   return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
+  #endif
 }
 
 
+__host__ __device__
 static void get_macroatom_transitionrates(
-  const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *processrates,
-  chlevels_struct *const chlevel)
+  const int modelgridindex, const int element, const int ion, const int level,
+  const double t_mid, double *processrates, chlevels_struct *const chlevel, int tid)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -66,13 +117,16 @@ static void get_macroatom_transitionrates(
     const double individ_rad_deexc = R * epsilon_trans;
     const double individ_col_deexc = C * epsilon_trans;
 
+    #ifndef __CUDA_ARCH__
     chlevel->individ_rad_deexc[i] = individ_rad_deexc;
     chlevel->individ_internal_down_same[i] = individ_internal_down_same;
+    #endif
 
     processrates[MA_ACTION_RADDEEXC] += individ_rad_deexc;
     processrates[MA_ACTION_COLDEEXC] += individ_col_deexc;
     processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
+    // printf("tid %d checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",tid,i,lower,R,C,epsilon_trans);
     #ifdef DEBUG_ON
       if (debuglevel == 2)
         printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
@@ -123,7 +177,9 @@ static void get_macroatom_transitionrates(
 
     individ_internal_up_same = (R + C + NT) * epsilon_current;
 
+    #ifndef __CUDA_ARCH__
     chlevel->individ_internal_up_same[i] = individ_internal_up_same;
+    #endif
 
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
 
@@ -150,7 +206,7 @@ static void get_macroatom_transitionrates(
     {
       const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
 
-      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+      const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex, tid);
       const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
       processrates[MA_ACTION_INTERNALUPHIGHER] += (R + C) * epsilon_current;
@@ -159,9 +215,10 @@ static void get_macroatom_transitionrates(
 }
 
 
+__host__ __device__
 static void do_macroatom_raddeexcitation(
   PKT *pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
-  const double total_transitions, const double t_current, const int activatingline)
+  const double total_transitions, const double t_current, const int activatingline, const double t_mid, int tid)
 {
   ///radiative deexcitation of MA: emitt rpkt
   ///randomly select which line transitions occurs
@@ -171,7 +228,7 @@ static void do_macroatom_raddeexcitation(
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++)
   {
-    rate += get_individ_rad_deexc(element, ion, level, i);
+    rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid, tid);
     if (zrand * rad_deexc < rate)
     {
       linelistindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
@@ -180,7 +237,7 @@ static void do_macroatom_raddeexcitation(
   }
   assert(linelistindex >= 0);
   #ifdef RECORD_LINESTAT
-    if (tid == 0) ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
+    safeincrement(ecounter[linelistindex]);    /// This way we will only record line statistics from OMP-thread 0
                                                 /// With an atomic pragma or a thread-private structure with subsequent
                                                 /// reduction this could be extended to all threads. However, I'm not
                                                 /// sure if this is worth the additional computational expenses.
@@ -200,9 +257,9 @@ static void do_macroatom_raddeexcitation(
   if (pkt_ptr->last_event == 1)
   {
     if (oldnucmf < pkt_ptr->nu_cmf)
-      upscatter++;
+      safeincrement(upscatter);
     else
-      downscatter++;
+      safeincrement(downscatter);
   }
   //}
 
@@ -220,8 +277,8 @@ static void do_macroatom_raddeexcitation(
     }
     if (debuglevel == 2)
       printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA deactivation\n");
-    //if (tid == 0) ma_stat_deactivation_bb++;
-    ma_stat_deactivation_bb++;
+    safeincrement(ma_stat_deactivation_bb);
+
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 0;
   #endif
@@ -230,10 +287,12 @@ static void do_macroatom_raddeexcitation(
   emitt_rpkt(pkt_ptr, t_current);
 
   if (linelistindex == activatingline)
-    resonancescatterings++;
+  {
+    safeincrement(resonancescatterings);
+  }
   else
   {
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
   }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
@@ -249,9 +308,10 @@ static void do_macroatom_raddeexcitation(
 }
 
 
+__host__ __device__
 static void do_macroatom_radrecomb(
   PKT *pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
-  const double rad_recomb, const double t_current)
+  const double rad_recomb, const double t_current, int tid)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -319,8 +379,7 @@ static void do_macroatom_radrecomb(
       printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
       abort();
     }
-    //if (tid == 0) ma_stat_deactivation_fb++;
-    ma_stat_deactivation_fb++;
+    safeincrement(ma_stat_deactivation_fb);
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 2;
     if (debuglevel == 2) printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA recombination\n");
@@ -332,12 +391,12 @@ static void do_macroatom_radrecomb(
   #if (TRACK_ION_STATS)
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
 
-  const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
+  const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current, tid);
 
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   #endif
 
-  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
 
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
@@ -347,9 +406,10 @@ static void do_macroatom_radrecomb(
 }
 
 
+__host__ __device__
 static void do_macroatom_ionisation(
   const int modelgridindex, const int element, int *ion, int *level,
-  const double epsilon_current, const double internal_up_higher)
+  const double epsilon_current, const double internal_up_higher, int tid)
 {
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
@@ -362,7 +422,7 @@ static void do_macroatom_ionisation(
   {
     upper = get_phixsupperlevel(element, *ion, *level, phixstargetindex);
     const double epsilon_trans = epsilon(element, *ion + 1, upper) - epsilon_current;
-    const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex);
+    const double R = get_corrphotoioncoeff(element, *ion, *level, phixstargetindex, modelgridindex, tid);
     const double C = col_ionization_ratecoeff(T_e, nne, element, *ion, *level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (zrand * internal_up_higher < rate)
@@ -381,13 +441,14 @@ static void do_macroatom_ionisation(
 }
 
 
-double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int timestep)
+__host__ __device__
+double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int timestep, int tid)
 /// Material for handling activated macro atoms.
 {
   double t_current = t1; // this will keep track of time in the calculation
   const double t_mid = time_step[timestep].mid;
 
-  //printout("[debug] do MA\n");
+  // printf("tid %d do MA\n", tid);
 
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
@@ -464,15 +525,13 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
       if (debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
     #endif
 
-    assert(cellhistory[tid].cellnumber == modelgridindex);
-
     double *processrates = cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
 
     /// If there are no precalculated rates available then calculate them
     if (processrates[MA_ACTION_COLDEEXC] < 0)
       get_macroatom_transitionrates(
         modelgridindex, element, ion, level, t_mid, processrates,
-        &cellhistory[tid].chelements[element].chions[ion].chlevels[level]);
+        &cellhistory[tid].chelements[element].chions[ion].chlevels[level], tid);
 
     // for debugging the transition rates:
     // {
@@ -483,9 +542,10 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
     //   "MA_ACTION_COLRECOMB", "MA_ACTION_INTERNALDOWNSAME", "MA_ACTION_INTERNALDOWNLOWER",
     //   "MA_ACTION_INTERNALUPSAME", "MA_ACTION_INTERNALUPHIGHER", "MA_ACTION_INTERNALUPHIGHERNT"};
 
-    //   for (enum ma_action action = 0; action < MA_ACTION_COUNT; action++)
+    //   for (int action = 0; action < MA_ACTION_COUNT; action++)
     //     printout("actions: %30s %g\n", actionlabel[action], processrates[action]);
     // }
+
 
     // select transition according to probabilities
     double total_transitions = 0.;
@@ -570,7 +630,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         {
           const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
           const double epsilon_trans = epsilon(element, ion + 1, upper) - epsilon_current;
-          const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+          const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex, tid);
           const double C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
           printout("[debug]    ionisation to ion %d, level %d, epsilon_trans %g, R %g, C %g\n", ion + 1, upper, epsilon_trans, R, C);
           break;
@@ -606,7 +666,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         {
           const int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           const double epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-          R += get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
+          R += get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex,tid);
           C += col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
           printout("epsilon_current %g, epsilon_trans %g, photion %g, colion %g, internal_up_higher %g\n",epsilon_current,epsilon_trans,R,C,(R + C) * epsilon_current);
         }
@@ -637,7 +697,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         // }
         #endif
 
-        do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline);
+        do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline, t_mid, tid);
 
         #if (TRACK_ION_STATS)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC, pkt_ptr->e_cmf);
@@ -647,12 +707,13 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
-        if (LOG_MACROATOM)
+        #if (LOG_MACROATOM && !defined(__CUDA_ARCH__))
         {
           fprintf(macroatom_file, "%8d %14d %2d %12d %12d %9d %9d %9d %11.5e %11.5e %11.5e %11.5e %9d\n",
                   timestep, modelgridindex, get_element(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
                   level_in, level, activatingline, nu_cmf_in, pkt_ptr->nu_cmf, nu_rf_in, pkt_ptr->nu_rf, jumps);
         }
+        #endif
 
         end_packet = true;
         break;
@@ -667,8 +728,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
             printout("[debug] do_ma:   collisonal deexcitation\n");
             printout("[debug] do_ma: jumps = %d\n", jumps);
           }
-          //if (tid == 0) ma_stat_deactivation_colldeexc++;
-          ma_stat_deactivation_colldeexc++;
+          safeincrement(ma_stat_deactivation_colldeexc);
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 10;
         #endif
@@ -682,10 +742,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         end_packet = true;
         #ifndef FORCE_LTE
           //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
-          #ifdef _OPENMP
-            #pragma omp atomic
-          #endif
-          colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
+          safeadd(colheatingestimator[modelgridindex], pkt_ptr->e_cmf);
         #endif
         break;
       }
@@ -706,7 +763,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         double rate = 0.;
         for (int i = 0; i < ndowntrans; i++)
         {
-          rate += get_individ_internal_down_same(element, ion, level, i);
+          rate += get_individ_internal_down_same(modelgridindex, element, ion, level, i, t_mid, tid);
           if (zrand * processrates[MA_ACTION_INTERNALDOWNSAME] < rate)
           {
             const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
@@ -750,7 +807,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         // increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
-        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current);
+        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current, tid);
         end_packet = true;
         break;
       }
@@ -764,8 +821,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
             printout("[debug] do_ma:   collisonal recombination\n");
             printout("[debug] do_ma: jumps = %d\n",jumps);
           }
-          //if (tid == 0) ma_stat_deactivation_collrecomb++;
-          ma_stat_deactivation_collrecomb++;
+          safeincrement(ma_stat_deactivation_collrecomb);
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 11;
         #endif
@@ -779,10 +835,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         end_packet = true;
         #ifndef FORCE_LTE
           //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
-          #ifdef _OPENMP
-            #pragma omp atomic
-          #endif
-          colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
+          safeadd(colheatingestimator[modelgridindex], pkt_ptr->e_cmf);
         #endif
         break;
       }
@@ -797,7 +850,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
           jump = 1;
         #endif
 
-        ma_stat_internaldownlower++;
+        safeincrement(ma_stat_internaldownlower);
 
         /// Randomly select the occuring transition
         zrand = gsl_rng_uniform(rng);
@@ -866,7 +919,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         rate = 0.;
         for (int i = 0; i < nuptrans; i++)
         {
-          rate += get_individ_internal_up_same(element, ion, level, i);
+          rate += get_individ_internal_up_same(modelgridindex, element, ion, level, i, t_mid, tid);
           if (zrand * processrates[MA_ACTION_INTERNALUPSAME] < rate)
           {
             const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
@@ -888,13 +941,13 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
           jump = 3;
         #endif
 
-        ma_stat_internaluphigher++;
+        safeincrement(ma_stat_internaluphigher);
 
         #if (TRACK_ION_STATS)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
-        do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
+        do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER], tid);
 
         #if (TRACK_ION_STATS)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
@@ -913,7 +966,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
 
         ion = nt_random_upperion(modelgridindex, element, ion, false);
         level = 0;
-        ma_stat_internaluphighernt++;
+        safeincrement(ma_stat_internaluphighernt);
 
         #if (TRACK_ION_STATS)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);

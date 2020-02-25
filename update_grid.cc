@@ -42,9 +42,9 @@ void precalculate_partfuncts(int modelgridindex)
   }
 }
 
-static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates)
+static void write_to_estimators_file(FILE *estimators_file, const int mgi, const int timestep, const int titer, const heatingcoolingrates_t *heatingcoolingrates, int tid)
 {
-  // return; // disable for better performance (if estimators files are not needed)
+  return; // disable for better performance (if estimators files are not needed)
   if (get_numassociatedcells(mgi) > 0)
   {
     const float T_e = get_Te(mgi);
@@ -474,7 +474,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         const bool printdebug_gammar = false;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
+                calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false, tid));
       }
       fprintf(estimators_file, "\n");
 
@@ -489,7 +489,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
         const bool printdebug_gammar = false;
         fprintf(estimators_file, "  %d: %9.3e",
                 get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true));
+                calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, true, tid));
       }
       fprintf(estimators_file, "\n");
       #endif
@@ -714,7 +714,8 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 }
 
 
-void cellhistory_reset(const int modelgridindex, const bool new_timestep)
+__host__ __device__
+void cellhistory_reset(const int modelgridindex, const bool new_timestep, int tid)
 {
   /// All entries of the cellhistory stack must be flagged as empty at the
   /// onset of the new timestep. Also, boundary crossing?
@@ -722,6 +723,7 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
   /// as empty.
   /// Make known that cellhistory[tid] contains information about the
   /// cell given by cellnumber. (-99 if invalid)
+
   if ((modelgridindex == cellhistory[tid].cellnumber) && !new_timestep)
   {
     return;
@@ -779,10 +781,10 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 }
 
 
-static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates_t *heatingcoolingrates)
+static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates_t *heatingcoolingrates, int tid)
 {
   // needed for the T_e solver, but only depends on the radiation field, which is fixed during the iterations below
-  calculate_bfheatingcoeffs(n);
+  calculate_bfheatingcoeffs(n, tid);
 
   const double covergence_tolerance = 0.04;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
@@ -808,7 +810,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++)
         {
-          gammaestimator[n * nelements * maxion + element * maxion + ion] = calculate_iongamma_per_gspop(n, element, ion);
+          gammaestimator[n * nelements * maxion + element * maxion + ion] = calculate_iongamma_per_gspop(n, element, ion, tid);
         }
       }
     }
@@ -820,7 +822,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
     const time_t sys_time_start_Te = time(NULL);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
-    call_T_e_finder(n, nts, time_step[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates);
+    call_T_e_finder(n, nts, time_step[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates, tid);
 
     const int duration_solve_T_e = time(NULL) - sys_time_start_Te;
     const double fracdiff_T_e = fabs((get_Te(n) / prev_T_e) - 1);
@@ -829,7 +831,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
     {
       /// Store population values to the grid
       const time_t sys_time_start_pops = time(NULL);
-      calculate_populations(n);
+      calculate_populations(n, tid);
       const int duration_solve_pops = time(NULL) - sys_time_start_pops;
       //calculate_cooling_rates(n);
       //calculate_heating_rates(n);
@@ -846,7 +848,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
       {
         for (int element = 0; element < nelements; element++)
         {
-          solve_nlte_pops_element(element, n, nts, nlte_iter);
+          solve_nlte_pops_element(element, n, nts, nlte_iter, tid);
         }
       }
       else
@@ -856,7 +858,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions-1; ion++)
           {
-            const double trial = fabs(solve_nlte_pops_ion(element, ion, n, nts) - 1);
+            const double trial = fabs(solve_nlte_pops_ion(element, ion, n, nts, tid) - 1);
 
             if (trial > nlte_test)
               nlte_test = trial;
@@ -979,7 +981,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
         const int ionestimindex = n * nelements * maxion + element * maxion + ion;
 
         #if (!NO_LUT_PHOTOION)
-          gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion);
+          gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion, tid);
           //printout("mgi %d, element %d, ion %d, Gamma %g\n",n,element,ion,Gamma);
         #endif
 
@@ -1056,7 +1058,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
 
 
 static void update_grid_cell(const int n, const int nts, const int nts_prev, const int titer, const double tratmid,
-                             const double deltat, double *mps, heatingcoolingrates_t *heatingcoolingrates)
+                             const double deltat, double *mps, heatingcoolingrates_t *heatingcoolingrates, int tid)
 // n is the modelgrid index
 {
   const int assoc_cells = get_numassociatedcells(n);
@@ -1120,7 +1122,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
         precalculate_partfuncts(n);
         //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
         if (!simulation_continued_from_saved || !NLTE_POPS_ON)
-          calculate_populations(n);  // these were not read from the gridsave file, so calculate them now
+          calculate_populations(n, tid);  // these were not read from the gridsave file, so calculate them now
         else
         {
           calculate_electron_densities(n);
@@ -1168,7 +1170,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
           #endif
 
           precalculate_partfuncts(n);
-          calculate_populations(n);
+          calculate_populations(n, tid);
         }
         #ifndef FORCE_LTE
         else // not (initial_iteration || modelgrid[n].thick == 1)
@@ -1196,7 +1198,7 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
           update_gamma_corrphotoionrenorm_bfheating_estimators(n, estimator_normfactor);
           #endif
 
-          solve_Te_nltepops(n, nts, titer, heatingcoolingrates);
+          solve_Te_nltepops(n, nts, titer, heatingcoolingrates, tid);
         }
         #endif
         printout("Temperature/NLTE solution for cell %d timestep %d took %ld seconds\n", n, nts, time(NULL) - sys_time_start_temperature_corrections);
@@ -1306,7 +1308,9 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
 }
 
 
-void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const int my_rank, const int nstart, const int ndo, const int titer)
+void update_grid(
+  FILE *estimators_file, const int nts, const int nts_prev, const int my_rank,
+  const int nstart, const int ndo, const int titer)
 // Subroutine to update the matter quantities in the grid cells at the start
 //   of the new timestep.
 /// m timestep
@@ -1397,6 +1401,14 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 //     setvbuf(bfcount_file, NULL, _IOLBF, 1);
 //   #endif
 
+  #if (CUDA_ENABLED && USECUDA_UPDATEPACKETS)
+  // for (int itid = 0; itid < MTHREADS; itid++)
+  // {
+  //   use_cellhist = false;
+  //   cellhistory_reset(-99, true, itid);
+  // }
+  #endif
+
   #ifdef _OPENMP
   #pragma omp parallel
     //copyin(nuJ,J,rhosum,T_Rsum,T_esum,Wsum,associatedcells)
@@ -1405,7 +1417,9 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     /// Do not use values which are saved in the cellhistory within update_grid
     /// and daughter routines (THREADPRIVATE VARIABLE, THEREFORE HERE!)
     use_cellhist = false;
-    cellhistory_reset(-99, true);
+    #if (!USECUDA_UPDATEPACKETS)
+    cellhistory_reset(-99, true, omp_get_thread_num());
+    #endif
 
     /// Updating cell information
     #ifdef _OPENMP
@@ -1419,12 +1433,13 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 
     for (int mgi = 0; mgi < npts_model; mgi++)
     {
-      /// Check if this task should work on the current model grid cell.
+      int tid = omp_get_thread_num();
+       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
       if (mgi >= nstart && mgi < nstart + ndo)
       {
         heatingcoolingrates_t heatingcoolingrates = {};
-        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates);
+        update_grid_cell(mgi, nts, nts_prev, titer, tratmid, deltat, mps, &heatingcoolingrates, omp_get_thread_num());
 
         //maybe want to add omp ordered here if the modelgrid cells should be output in order
         const time_t sys_time_start_write_estimators = time(NULL);
@@ -1434,7 +1449,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
         #pragma omp critical(estimators_file)
         #endif
         {
-          write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates);
+          write_to_estimators_file(estimators_file, mgi, nts, titer, &heatingcoolingrates, tid);
         }
 
         printout("writing estimators took %ld seconds\n", time(NULL) - sys_time_start_write_estimators);
@@ -1489,7 +1504,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 }
 
 
-double calculate_populations(const int modelgridindex)
+#ifndef __CUDA_ARCH__
+double calculate_populations(const int modelgridindex, int tid)
 /// Determines the electron number density for a given cell using one of
 /// libgsl's root_solvers and calculates the depending level populations.
 {
@@ -1502,6 +1518,7 @@ double calculate_populations(const int modelgridindex)
   gsl_function f;
   nne_solution_paras paras;
   paras.cellnumber = modelgridindex;
+  paras.tid = tid;
   f.function = &nne_solution_f;
   f.params = &paras;
 
@@ -1541,7 +1558,7 @@ double calculate_populations(const int modelgridindex)
           //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
           //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
           #if NO_LUT_PHOTOION
-            const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
+            const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion, tid);
           #else
             const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
           #endif
@@ -1559,7 +1576,7 @@ double calculate_populations(const int modelgridindex)
       int ion;
       for (ion = 0; ion < uppermost_ion; ion++)
       {
-        factor *= nne_hi * phi(element, ion, modelgridindex);
+        factor *= nne_hi * phi(element, ion, modelgridindex, tid);
         //printout("element %d, ion %d, factor %g\n",element,i,factor);
         if (!isfinite(factor))
         {
@@ -1699,7 +1716,7 @@ double calculate_populations(const int modelgridindex)
 
       const int uppermost_ion = elements_uppermost_ion[tid][element];
       double ionfractions[uppermost_ion + 1];
-      get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);
+      get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion, tid);
 
       /// Use ionizationfractions to calculate the groundlevel populations
       for (int ion = 0; ion < nions; ion++)
@@ -1750,6 +1767,7 @@ double calculate_populations(const int modelgridindex)
   set_nnetot(modelgridindex, nne_tot);
   return nntot;
 }
+#endif
 
 
 double calculate_electron_densities(const int modelgridindex)

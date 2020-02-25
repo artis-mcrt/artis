@@ -68,7 +68,7 @@ static const double A_naught_squared = 2.800285203e-17;
 // maximum number of elements for which binding energy tables are to be used
 #define MAX_Z_BINDING 30
 
-static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
+__managed__ static double electron_binding[MAX_Z_BINDING][M_NT_SHELLS];
 
 struct collionrow {
   int Z;
@@ -90,12 +90,12 @@ static __managed__ struct collionrow *colliondata = NULL;
 static __managed__ int colliondatacount = 0;
 
 static FILE *nonthermalfile = NULL;
-static bool nonthermal_initialized = false;
+static __managed__ bool nonthermal_initialized = false;
 
 static __managed__ gsl_vector *envec;            // energy grid on which solution is sampled
 static __managed__ gsl_vector *logenvec;         // log of envec
 static __managed__ gsl_vector *sourcevec;        // samples of the source function (energy distribution of deposited energy)
-static double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
+static __managed__ double E_init_ev = 0;         // the energy injection rate density (and mean energy of injected electrons if source integral is one) in eV
 
 #if (SF_USE_LOG_E_INCREMENT)
   static __managed__ gsl_vector *delta_envec;
@@ -105,10 +105,10 @@ static double E_init_ev = 0;         // the energy injection rate density (and m
 #endif
 
 // statistics
-int nt_stat_to_ionization;
-int nt_stat_to_excitation;
-int nt_stat_to_kpkt;
-double nt_energy_deposited;
+__managed__ int nt_stat_to_ionization;
+__managed__ int nt_stat_to_excitation;
+__managed__ int nt_stat_to_kpkt;
+__managed__ double nt_energy_deposited;
 
 struct nt_excitation_struct
 {
@@ -141,10 +141,10 @@ struct nt_solution_struct {
   float nneperion_when_solved;                    // the nne when the solver was last run
 };
 
-static struct nt_solution_struct *nt_solution;
+__managed__ static struct nt_solution_struct *nt_solution;
 
-static double *deposition_rate_density;
-static int *deposition_rate_density_timestep;
+__managed__ static double *deposition_rate_density;
+__managed__ static int *deposition_rate_density_timestep;
 
 // for descending sort
 static int compare_excitation_fractions(const void *p1, const void *p2)
@@ -177,6 +177,7 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2)
 
 
 #ifndef get_tot_nion
+__host__ __device__
 static double get_tot_nion(const int modelgridindex)
 {
   double result = 0.;
@@ -514,8 +515,13 @@ static void zero_all_effionpot(const int modelgridindex)
 
 void nt_init(const int my_rank)
 {
+  #if CUDA_ENABLED
+  cudaMallocManaged(&deposition_rate_density, npts_model * sizeof(double));
+  cudaMallocManaged(&deposition_rate_density_timestep, npts_model * sizeof(int));
+  #else
   deposition_rate_density = (double *) calloc(npts_model, sizeof(double));
   deposition_rate_density_timestep = (int *) calloc(npts_model, sizeof(int));
+  #endif
 
   for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
   {
@@ -555,11 +561,16 @@ void nt_init(const int my_rank)
             "timestep","modelgridindex","index","energy_ev","source","y");
     fflush(nonthermalfile);
 
+    #if CUDA_ENABLED
+    cudaMallocManaged(&nt_solution, npts_model * sizeof(struct nt_solution_struct));
+    #else
     nt_solution = (struct nt_solution_struct *) calloc(npts_model, sizeof(struct nt_solution_struct));
+    #endif
 
     long mem_usage_yfunc = 0;
     for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
     {
+      printout("modelgridindex %d of %d\n", modelgridindex, npts_model);
       // should make these negative?
       nt_solution[modelgridindex].frac_heating = 0.97;
       nt_solution[modelgridindex].frac_ionization = 0.03;
@@ -572,11 +583,19 @@ void nt_init(const int my_rank)
 
       if (get_numassociatedcells(modelgridindex) > 0)
       {
+        #if CUDA_ENABLED
+        cudaMallocManaged(&nt_solution[modelgridindex].eff_ionpot, includedions * sizeof(float));
+        cudaMallocManaged(&nt_solution[modelgridindex].fracdep_ionization_ion, includedions * sizeof(double));
+
+        cudaMallocManaged(&nt_solution[modelgridindex].prob_num_auger, includedions * (NT_MAX_AUGER_ELECTRONS + 1) * sizeof(float));
+        cudaMallocManaged(&nt_solution[modelgridindex].ionenfrac_num_auger, includedions * (NT_MAX_AUGER_ELECTRONS + 1) * sizeof(float));
+        #else
         nt_solution[modelgridindex].eff_ionpot = (float *) calloc(includedions, sizeof(float));
         nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(includedions, sizeof(double));
 
         nt_solution[modelgridindex].prob_num_auger = (float *) calloc(includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
         nt_solution[modelgridindex].ionenfrac_num_auger = (float *) calloc(includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+        #endif
 
         if (STORE_NT_SPECTRUM)
         {
@@ -696,6 +715,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
 }
 
 
+__host__ __device__
 double get_deposition_rate_density(const int modelgridindex)
 // should be in erg / s / cm^3
 {
@@ -1309,6 +1329,7 @@ static float get_nt_frac_excitation(const int modelgridindex)
 }
 
 
+__host__ __device__
 static double get_mean_binding_energy(const int element, const int ion)
 {
   int q[M_NT_SHELLS];
@@ -1461,6 +1482,7 @@ static double get_mean_binding_energy(const int element, const int ion)
 }
 
 
+__host__ __device__
 static double get_oneoverw(const int element, const int ion, const int modelgridindex)
 {
   // Routine to compute the work per ion pair for doing the NT ionization calculation.
@@ -1515,6 +1537,7 @@ static double calculate_nt_frac_ionization_shell(const int modelgridindex, const
 }
 
 
+__host__ __device__
 static double nt_ionization_ratecoeff_wfapprox(const int modelgridindex, const int element, const int ion)
 // non-thermal ionization rate coefficient (multiply by population to get rate)
 {
@@ -1715,6 +1738,7 @@ static void calculate_eff_ionpot_auger_rates(
 }
 
 
+__host__ __device__
 static float get_eff_ionpot(const int modelgridindex, const int element, int const ion)
 // get the effective ion potential from the stored value
 // a value of 0. should be treated as invalid
@@ -1725,6 +1749,7 @@ static float get_eff_ionpot(const int modelgridindex, const int element, int con
 }
 
 
+__host__ __device__
 static double nt_ionization_ratecoeff_sf(const int modelgridindex, const int element, const int ion)
 // Kozma & Fransson 1992 equation 13
 {
@@ -1814,6 +1839,7 @@ double nt_ionization_upperion_probability(
 }
 
 
+__host__ __device__
 int nt_ionisation_maxupperion(const int element, const int lowerion)
 {
   const int nions = get_nions(element);
@@ -1825,6 +1851,7 @@ int nt_ionisation_maxupperion(const int element, const int lowerion)
 }
 
 
+__host__ __device__
 int nt_random_upperion(const int modelgridindex, const int element, const int lowerion, const bool energyweighted)
 {
   const int nions = get_nions(element);
@@ -1858,7 +1885,7 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
 }
 
 
-
+__host__ __device__
 double nt_ionization_ratecoeff(const int modelgridindex, const int element, const int ion)
 {
   assert(NT_ON);
@@ -2024,6 +2051,7 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
 }
 
 
+__host__ __device__
 static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion)
 {
   const double nnlowerion = ionstagepop(modelgridindex, element, lowerion);
@@ -2046,6 +2074,7 @@ static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion
 }
 
 
+__host__ __device__
 static double get_ntion_energyrate(int modelgridindex)
 {
   double ratetotal = 0.;
@@ -2061,6 +2090,7 @@ static double get_ntion_energyrate(int modelgridindex)
 }
 
 
+__host__ __device__
 static void select_nt_ionization2(int modelgridindex, int *element, int *lowerion)
 {
   const double ratetotal = get_ntion_energyrate(modelgridindex);
@@ -2085,9 +2115,11 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
 }
 
 
-void do_ntlepton(PKT *pkt_ptr)
+__host__ __device__
+void do_ntlepton(PKT *pkt_ptr, int tid)
 {
-  nt_energy_deposited += pkt_ptr->e_cmf;
+  // printf("tid %d do_ntlepton\n", tid);
+  safeadd(nt_energy_deposited, pkt_ptr->e_cmf);
 
   const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
@@ -2126,13 +2158,13 @@ void do_ntlepton(PKT *pkt_ptr)
       mastate[tid].level = 0;
       mastate[tid].activatingline = -99;
       pkt_ptr->type = TYPE_MA;
-      ma_stat_activation_ntcollion++;
+      safeincrement(ma_stat_activation_ntcollion);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 20;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
       pkt_ptr->trueemissionvelocity = -1;
 
-      nt_stat_to_ionization++;
+      safeincrement(nt_stat_to_ionization);
 
       #if (TRACK_ION_STATS)
       assert(upperion < get_nions(element));
@@ -2169,13 +2201,13 @@ void do_ntlepton(PKT *pkt_ptr)
           mastate[tid].level = upper;
           mastate[tid].activatingline = -99;
           pkt_ptr->type = TYPE_MA;
-          ma_stat_activation_ntcollexc++;
+          safeincrement(ma_stat_activation_ntcollexc);
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 21;
           pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
           pkt_ptr->trueemissionvelocity = -1;
 
-          nt_stat_to_excitation++;
+          safeincrement(nt_stat_to_excitation);
 
           // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
           //          modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
@@ -2191,7 +2223,7 @@ void do_ntlepton(PKT *pkt_ptr)
 
   pkt_ptr->last_event = 22;
   pkt_ptr->type = TYPE_KPKT;
-  nt_stat_to_kpkt++;
+  safeincrement(nt_stat_to_kpkt);
 }
 
 

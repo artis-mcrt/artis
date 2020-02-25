@@ -1,6 +1,8 @@
 // #include <gsl/gsl_poly.h>
 // #include <assert.h>
+#ifndef __CUDA_ARCH__
 #include <gsl/gsl_blas.h>
+#endif
 
 #include "sn3d.h"
 #include "boundary.h"
@@ -10,6 +12,7 @@
 #include "vectors.h"
 
 
+__host__ __device__
 static double get_shellcrossdist(
   const double pos[3], const double dir[3], const double shellradius, const bool isinnerboundary, const double tstart)
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell
@@ -44,12 +47,20 @@ static double get_shellcrossdist(
     double d2 = (-b - sqrt(discriminant)) / 2 / a;
 
     double posfinal1[3];
-    cblas_dcopy(3, pos, 1, posfinal1, 1);     // posfinal1 = pos
-    cblas_daxpy(3, d1, dir, 1, posfinal1, 1); // posfinal1 += d1 * dir;
-
     double posfinal2[3];
-    cblas_dcopy(3, pos, 1, posfinal2, 1);
+
+    #ifndef __CUDA_ARCH__
+    // cblas_dcopy(3, pos, 1, posfinal1, 1);     // posfinal1 = pos
+    cblas_daxpy(3, d1, dir, 1, posfinal1, 1); // posfinal1 += d1 * dir;
+    // cblas_dcopy(3, pos, 1, posfinal2, 1);
     cblas_daxpy(3, d2, dir, 1, posfinal2, 1);
+    #else
+    for (int d = 0; d < 3; d++)
+    {
+      posfinal1[d] = pos[d] + d1 * dir[d];
+      posfinal2[d] = pos[d] + d2 * dir[d];
+    }
+    #endif
 
     const double shellradiusfinal1 = shellradius / tstart * (tstart + d1 / speed);
     const double shellradiusfinal2 = shellradius / tstart * (tstart + d2 / speed);
@@ -112,6 +123,7 @@ static double get_shellcrossdist(
 }
 
 
+__host__ __device__
 double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
@@ -136,9 +148,9 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 
   // the following four vectors are in grid coordinates, so either x,y,z or r
   const int ndim = get_ngriddimensions();
-  double initpos[ndim];       // pkt_ptr->pos converted to grid coordinates
-  double cellcoordmax[ndim];
-  double vel[ndim];           // pkt_ptr->dir * CLIGHT_PROP converted to grid coordinates
+  double initpos[3];       // pkt_ptr->pos converted to grid coordinates
+  double cellcoordmax[3];
+  double vel[3];           // pkt_ptr->dir * CLIGHT_PROP converted to grid coordinates
 
   if (grid_type == GRID_UNIFORM)
   {
@@ -247,8 +259,8 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
     }
   #endif
 
-  double t_plus_coordboundary[ndim];  // time to reach the cell's upper boundary on each coordinate
-  double t_minus_coordboundary[ndim];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
+  double t_plus_coordboundary[3];  // time to reach the cell's upper boundary on each coordinate
+  double t_minus_coordboundary[3];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
   if (grid_type == GRID_SPHERICAL1D)
   {
     not_allowed = NONE; // we will handle this separately by setting d_minus and d_plus negative for invalid directions
@@ -357,7 +369,8 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 }
 
 
-void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
+__host__ __device__
+void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current, int tid)
 /// Routine to take a packet across a boundary.
 {
   #ifdef DEBUG_ON
@@ -376,7 +389,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
     pkt_ptr->escape_type = pkt_ptr->type;
     pkt_ptr->escape_time = t_current;
     pkt_ptr->type = TYPE_ESCAPE;
-    nesc++;
+    safeincrement(nesc);
     *end_packet = true;
   }
   else
@@ -387,7 +400,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
     pkt_ptr->where = snext;
     const int mgi = cell[snext].modelgridindex;
 
-    cellcrossings++;
+    safeincrement(cellcrossings);
 
     /// and calculate the continuums opacity in the new cell if the packet is a rpkt
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
@@ -405,9 +418,9 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
-          updatecellcounter++;
+          safeincrement(updatecellcounter);
 
-          cellhistory_reset(mgi, false);
+          cellhistory_reset(mgi, false, tid);
         }
       }
 
@@ -422,7 +435,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr, t_current, mgi);
+          calculate_kappa_rpkt_cont(pkt_ptr, t_current, mgi, tid);
         }
       }
     }
@@ -462,7 +475,7 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
     pkt_ptr->where = snext;
     // mgi = cell[pkt_ptr->where].modelgridindex;
 
-    cellcrossings++;
+    safeincrement(cellcrossings);
   }
 }
 

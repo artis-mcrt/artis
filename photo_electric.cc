@@ -3,8 +3,9 @@
 #include "photo_electric.h"
 #include "vectors.h"
 
-/* Stuff for photo electric effect scattering. */
+// Stuff for photo electric effect scattering.
 
+__host__ __device__
 double sig_photo_electric(const PKT *pkt_ptr, double t_current)
 {
   double sigma_cmf;
@@ -50,8 +51,9 @@ double sig_photo_electric(const PKT *pkt_ptr, double t_current)
   return sigma_rf;
 }
 
-/* Cross section for pair production. */
 
+// Cross section for pair production.
+__host__ __device__
 double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 {
   double sigma_cmf;
@@ -128,7 +130,9 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
   return sigma_rf;
 }
 
-/* Routine to deal with pair production. */
+
+// Routine to deal with pair production.
+__host__ __device__
 void pair_prod(PKT *pkt_ptr, double t_current)
 {
   /* In pair production, the original gamma makes an electron positron pair - kinetic energy equal to

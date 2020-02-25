@@ -661,7 +661,7 @@ __host__ __device__
 static void nltepop_matrix_add_ionisation_level(
       const int modelgridindex, const int element, const int ion, const int level, const int upperionmaxrecombininglevel,
       const float T_e, const float nne,
-      double *s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf)
+      double *s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf, int tid)
 {
   const int level_index = get_nlte_vector_index(element, ion, level);
 
@@ -678,7 +678,7 @@ static void nltepop_matrix_add_ionisation_level(
     // ionization
 
     // the R part is slow!
-    const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+    const double R_ionisation = get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex, tid);
     const double C_ionisation = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
     *gsl_matrix_ptr_managed(rate_matrix_rad_bf, lower_index, lower_index) -= R_ionisation * s_renorm[level];
@@ -715,7 +715,7 @@ static void nltepop_matrix_add_ionisation_level(
 
 static void nltepop_matrix_add_ionisation(
   const int modelgridindex, const int element, const int ion,
-  double *s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf)
+  double *s_renorm, gsl_matrix *rate_matrix_rad_bf, gsl_matrix *rate_matrix_coll_bf, int tid)
 {
   assert(ion + 1 < get_nions(element)); // can't ionise the top ion
   const float T_e = get_Te(modelgridindex);
@@ -727,7 +727,7 @@ static void nltepop_matrix_add_ionisation(
   {
     nltepop_matrix_add_ionisation_level(
       modelgridindex, element, ion, level, upperionmaxrecombininglevel, T_e, nne,
-      s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf);
+      s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf, tid);
   }
 }
 
@@ -977,7 +977,7 @@ static bool nltepop_matrix_solve(
 }
 
 
-void solve_nlte_pops_element(const int element, const int modelgridindex, const int timestep, const int nlte_iter)
+void solve_nlte_pops_element(const int element, const int modelgridindex, const int timestep, const int nlte_iter, int tid)
 // solves the statistical balance equations to find NLTE level populations for all ions of an element
 // (ionisation balance follows from this too)
 {
@@ -1062,7 +1062,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     if (ion < nions - 1)
     {
       // this is the slowest component
-      nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf);
+      nltepop_matrix_add_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_rad_bf, rate_matrix_coll_bf, tid);
       if (NT_ON)
         nltepop_matrix_add_nt_ionisation(modelgridindex, element, ion, s_renorm, rate_matrix_ntcoll_bf);
     }
@@ -1261,7 +1261,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
 
 // this does single ion solving and will be deprecated at some point
-double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep)
+double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep, int tid)
 //solves for nlte correction factors to level populations for levels
 {
   if (get_nlevels(element,ion) > 1)
@@ -1487,7 +1487,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
           {
             int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
             epsilon_trans = epsilon(element,ion+1,upper) - epsilon_current;
-            R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex);
+            R = get_corrphotoioncoeff(element,ion,level,phixstargetindex,modelgridindex,tid);
             C = col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
 
             upper_use = nlte_size - 1; //ion above

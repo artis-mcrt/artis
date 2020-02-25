@@ -33,12 +33,18 @@
 const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 
 // threadprivate variables
-__managed__ int tid;
+// int tid;
+#ifndef __CUDA_ARCH__
+gsl_rng *rng;
+gsl_integration_workspace *gslworkspace;
+#else
+__device__ void *rng = NULL;
+__device__ void *gslworkspace = NULL;
+#endif
+
 __managed__ int myGpuId = 0;
 __managed__ bool use_cellhist;
 __managed__ bool neutral_flag;
-gsl_rng *rng;
-gsl_integration_workspace *gslworkspace;
 FILE *output_file;
 static FILE *linestat_file;
 static time_t real_time_start;
@@ -50,12 +56,11 @@ static int ndo = 0;
 int mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = NULL;
 
-
 #ifndef _OPENMP
-typedef int omp_int_t;
-static inline omp_int_t omp_get_thread_num(void) { return 0; }
-static inline omp_int_t omp_get_num_threads(void) { return 1; }
+__host__ __device__ extern inline omp_int_t omp_get_thread_num(void);
+__host__ __device__ extern inline omp_int_t omp_get_num_threads(void);
 #endif
+
 
 #if TRACK_ION_STATS
 static double *ionstats = NULL;
@@ -475,10 +480,7 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
   assert(ion_counter_type < ION_COUNTER_COUNT);
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
+  safeadd(ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type], increment);
 }
 
 
@@ -496,9 +498,6 @@ void set_ion_stats(const int modelgridindex, const int element, const int ion, e
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
   ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
 }
 #endif
@@ -717,7 +716,11 @@ static bool do_timestep(const int outer_iteration, const int nts, const int tite
     const time_t time_update_packets_start = time(NULL);
     printout("timestep %d: time before update packets %ld\n", nts, time_update_packets_start);
 
+    #if (CUDA_ENABLED && USECUDA_UPDATEPACKETS)
+    update_packets_gpu(nts, packets);
+    #else
     update_packets(nts, packets);
+    #endif
 
     pkt_action_counters_printout(packets, nts);
 
@@ -909,6 +912,8 @@ int main(int argc, char** argv)
     int p = 1;
   #endif
 
+  int tid;
+
   nprocs = p;              /// Global variable which holds the number of MPI processes
   rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
 
@@ -937,7 +942,9 @@ int main(int argc, char** argv)
     printout("OpenMP parallelisation active with %d threads\n", nthreads);
 #   endif
 
+    #ifndef __CUDA_ARCH__
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
+    #endif
   }
 
   real_time_start = time(NULL);
@@ -979,6 +986,9 @@ int main(int argc, char** argv)
   PKT *packets;
   #if CUDA_ENABLED
   cudaMallocManaged(&packets, MPKTS * sizeof(PKT));
+    #if USECUDA_UPDATEPACKETS
+    cudaMemAdvise(packets, MPKTS * sizeof(PKT), cudaMemAdviseSetPreferredLocation, myGpuId);
+    #endif
   #else
   packets = (PKT *) calloc(MPKTS, sizeof(PKT));
   #endif
@@ -1027,13 +1037,19 @@ int main(int argc, char** argv)
   printout("NVIDIA CUDA accelerated routines are disabled\n");
   #endif
 
-  if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)
+  #if CUDA_ENABLED
+  cudaMalloc(&mastate, MTHREADS * sizeof(mastate_t));
+  #else
+  mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t));
+  if (mastate == NULL)
   {
     printout("[fatal] input: error initializing macro atom state variables ... abort\n");
     abort();
   }
+  #endif
+
   #if CUDA_ENABLED
-  cudaMallocManaged(&kappa_rpkt_cont, nthreads * sizeof(rpkt_cont_opacity_struct));
+  cudaMallocManaged(&kappa_rpkt_cont, MTHREADS * sizeof(rpkt_cont_opacity_struct));
   #else
   kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct));
   #endif
@@ -1107,7 +1123,11 @@ int main(int argc, char** argv)
 //  #endif
 
   #if TRACK_ION_STATS
-  ionstats = calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
+    #if CUDA_ENABLED && USECUDA_UPDATEPACKETS
+    cudaMallocManaged(ionstats, npts_model * includedions * ION_COUNTER_COUNT * sizeof(double));
+    #else
+    ionstats = calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
+    #endif
   #endif
 
   /// As a precaution, explicitly zero all the estimators here
@@ -1336,7 +1356,9 @@ int main(int argc, char** argv)
     #pragma omp parallel
   #endif
   {
+    #ifndef __CUDA_ARCH__
     gsl_integration_workspace_free(gslworkspace);
+    #endif
   }
 
   #ifdef MPI_ON

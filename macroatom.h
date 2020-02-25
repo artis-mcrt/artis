@@ -6,7 +6,7 @@
 void macroatom_open_file(const int my_rank);
 void macroatom_close_file(void);
 
-double do_macroatom(PKT *pkt_ptr, double t1, double t2, int timestep);
+__host__ __device__ double do_macroatom(PKT *pkt_ptr, double t1, double t2, int timestep, int tid);
 
 __host__ __device__ double rad_deexcitation_ratecoeff(int modelgridindex, int element, int ion, int upper, int lower, double epsilon_trans, int lineindex, double t_current);
 __host__ __device__ double rad_excitation_ratecoeff(int modelgridindex, int element, int ion, int lower, int upper, double epsilon_trans, int lineindex, double t_current);

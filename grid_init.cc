@@ -9,12 +9,12 @@
 #include "vectors.h"
 
 
-extern inline double wid_init(int cellindex);
-extern inline double vol_init_modelcell(int modelgridindex);
-extern inline double vol_init_gridcell(int cellindex);
-extern inline double get_cellcoordmin(int cellindex, int axis);
-extern inline int get_cellcoordpointnum(const int cellindex, const int axis);
-extern inline int get_coordcellindexincrement(int axis);
+extern __host__ __device__ inline double wid_init(int cellindex);
+extern __host__ __device__ inline double vol_init_modelcell(int modelgridindex);
+extern __host__ __device__ inline double vol_init_gridcell(int cellindex);
+extern __host__ __device__ inline double get_cellcoordmin(int cellindex, int axis);
+extern __host__ __device__ inline int get_cellcoordpointnum(const int cellindex, const int axis);
+extern __host__ __device__ inline int get_coordcellindexincrement(int axis);
 extern __host__ __device__ inline int get_ngriddimensions(void);
 extern __host__ __device__ inline float get_rhoinit(int modelgridindex);
 extern __host__ __device__ inline float get_rho(int modelgridindex);
@@ -26,16 +26,16 @@ extern __host__ __device__ inline float get_Te(int modelgridindex);
 extern __host__ __device__ inline float get_TR(int modelgridindex);
 extern __host__ __device__ inline float get_TJ(int modelgridindex);
 extern __host__ __device__ inline float get_W(int modelgridindex);
-extern inline void set_rhoinit(int modelgridindex, float x);
-extern inline void set_rho(int modelgridindex, float x);
-extern inline void set_nne(int modelgridindex, float x);
-extern inline void set_nnetot(int modelgridindex, float x);
-extern inline void set_ffegrp(int modelgridindex, float x);
-extern inline void set_kappagrey(int modelgridindex, float x);
-extern inline void set_Te(int modelgridindex, float x);
-extern inline void set_TR(int modelgridindex, float x);
-extern inline void set_TJ(int modelgridindex, float x);
-extern inline void set_W(int modelgridindex, float x);
+extern __host__ __device__ inline void set_rhoinit(int modelgridindex, float x);
+extern __host__ __device__ inline void set_rho(int modelgridindex, float x);
+extern __host__ __device__ inline void set_nne(int modelgridindex, float x);
+extern __host__ __device__ inline void set_nnetot(int modelgridindex, float x);
+extern __host__ __device__ inline void set_ffegrp(int modelgridindex, float x);
+extern __host__ __device__ inline void set_kappagrey(int modelgridindex, float x);
+extern __host__ __device__ inline void set_Te(int modelgridindex, float x);
+extern __host__ __device__ inline void set_TR(int modelgridindex, float x);
+extern __host__ __device__ inline void set_TJ(int modelgridindex, float x);
+extern __host__ __device__ inline void set_W(int modelgridindex, float x);
 
 
 static long mem_usage_nltepops = 0;
@@ -156,6 +156,7 @@ static void set_elem_stable_abund_from_total(const int mgi, const int anumber, c
 }
 
 
+__host__ __device__
 double get_cellradialpos(const int cellindex)
 {
   if (grid_type == GRID_SPHERICAL1D)
@@ -358,7 +359,12 @@ static void allocate_compositiondata(const int modelgridindex)
 static void allocate_cooling(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
-  if ((modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(nelements * sizeof(mgicooling_t))) == NULL)
+  #if CUDA_ENABLED
+  cudaMallocManaged(&modelgrid[modelgridindex].cooling, nelements * sizeof(mgicooling_t));
+  #else
+  modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(nelements * sizeof(mgicooling_t));
+  #endif
+  if (modelgrid[modelgridindex].cooling == NULL)
   {
     printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
     abort();
@@ -367,7 +373,12 @@ static void allocate_cooling(const int modelgridindex)
   for (int element = 0; element < nelements; element++)
   {
     /// and allocate memory to store the ground level populations for each ionisation stage
-    if ((modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element) * sizeof(double))) == NULL)
+    #if CUDA_ENABLED
+    cudaMallocManaged(&modelgrid[modelgridindex].cooling[element].contrib, get_nions(element) * sizeof(double));
+    #else
+    modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element) * sizeof(double));
+    #endif
+    if (modelgrid[modelgridindex].cooling[element].contrib == NULL)
     {
       printout("[fatal] input: not enough memory to initialize coolinglist for element %d in cell %d... abort\n",element,modelgridindex);
       abort();

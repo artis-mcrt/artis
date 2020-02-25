@@ -7,6 +7,7 @@
 #include <string.h>
 
 
+__host__ __device__
 static double meanf_sigma(const double x)
 // Routine to compute the mean energy converted to non-thermal electrons times
 // the Klein-Nishina cross section.
@@ -25,6 +26,7 @@ static double meanf_sigma(const double x)
 }
 
 
+__host__ __device__
 void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist, const double t_current)
 {
   // Subroutine to record the heating rate in a cell due to gamma rays.
@@ -75,14 +77,12 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist, const double t_curre
     //  3) divided by 4 pi sr
     //  This will all be done later
 
-    #ifdef _OPENMP
-      #pragma omp atomic
-    #endif
-    rpkt_emiss[mgi] += 1.e-20 * heating_cont;
+    safeadd(rpkt_emiss[mgi], 1.e-20 * heating_cont);
   }
 }
 
 
+__host__ __device__
 void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 {
   // Subroutine to record the rate of destruction (and re-creation) of
@@ -125,14 +125,12 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
     */
 
     //printout("%g %g(2)\n",tautau,cont);
-    #ifdef _OPENMP
-      #pragma omp atomic
-    #endif
-    rpkt_emiss[mgi] += 1.e-20 * cont;
+    safeadd(rpkt_emiss[mgi], 1.e-20 * cont);
   }
 }
 
 
+__host__ __device__
 void normalise_grey(int nts)
 {
   const double dt = time_step[nts].width;

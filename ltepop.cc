@@ -46,6 +46,7 @@ double nne_solution_f(double x, void *paras)
 /// density (passed by x)
 {
   const int modelgridindex = ((nne_solution_paras *) paras)->cellnumber;
+  const int tid = ((nne_solution_paras *) paras)->tid;
   const double rho = get_rho(modelgridindex);
 
   double outersum = 0.;
@@ -69,7 +70,7 @@ double nne_solution_f(double x, void *paras)
       */
 
       double ionfractions[uppermost_ion + 1];
-      get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion);
+      get_ionfractions(element, modelgridindex, x, ionfractions, uppermost_ion, tid);
 
       int ion;
       for (ion = 0; ion <= uppermost_ion; ion++)
@@ -92,7 +93,7 @@ double nne_solution_f(double x, void *paras)
 }
 
 
-void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion)
+void get_ionfractions(int element, int modelgridindex, double nne, double ionfractions[], int uppermost_ion, int tid)
 // Calculate the fractions of an element's population in each ionization stage
 // size of ionfractions array must be >= uppermostion + 1
 {
@@ -103,7 +104,7 @@ void get_ionfractions(int element, int modelgridindex, double nne, double ionfra
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--)
   {
-    nnionfactor[ion] = nnionfactor[ion + 1] * nne * phi(element, ion, modelgridindex);
+    nnionfactor[ion] = nnionfactor[ion + 1] * nne * phi(element, ion, modelgridindex, tid);
     denominator += nnionfactor[ion];
   }
 
@@ -147,7 +148,7 @@ static double interpolate_ions_spontrecombcoeff(const int element, const int ion
 }
 
 
-double phi(const int element, const int ion, const int modelgridindex)
+double phi(const int element, const int ion, const int modelgridindex, int tid)
 /// Calculates population ratio (a saha factor) of two consecutive ionisation stages
 /// in nebular approximation phi_j,k* = N_j,k*/(N_j+1,k* * nne)
 {
@@ -195,7 +196,7 @@ double phi(const int element, const int ion, const int modelgridindex)
   {
     //Gamma = photoionestimator[cellnumber*nelements*maxion+element*maxion+ion];
     #if NO_LUT_PHOTOION
-      const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
+      const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion, tid);
     #else
       const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
     #endif

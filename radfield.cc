@@ -8,13 +8,14 @@
 #include "ltepop.h"
 #include "vectors.h"
 #include "radfield.h"
+#include "ratecoeff.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
 
 static __managed__ double J_normfactor[MMODELGRID + 1];
 
-static bool radfield_initialized = false;
+static __managed__ bool radfield_initialized = false;
 
 struct radfieldbinestim
 {
@@ -93,17 +94,17 @@ static __managed__ double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimat
   #endif
 #endif
 
-static double J[MMODELGRID + 1];
+__managed__ static double J[MMODELGRID + 1];
 #ifdef DO_TITER
-  static double J_reduced_save[MMODELGRID + 1];
+  __managed__ static double J_reduced_save[MMODELGRID + 1];
 #endif
 
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 #ifndef FORCE_LTE
-  static double nuJ[MMODELGRID + 1];
+  __managed__ static double nuJ[MMODELGRID + 1];
   #ifdef DO_TITER
-    static double nuJ_reduced_save[MMODELGRID + 1];
+    __managed__ static double nuJ_reduced_save[MMODELGRID + 1];
   #endif
 #endif
 
@@ -282,16 +283,19 @@ static void radfield_allocate_cell(int modelgridindex, long *radfield_mem_usage)
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    bfrate_raw[modelgridindex] = (double *) calloc(nbfcontinua, sizeof(double));
     #if CUDA_ENABLED
+    cudaMallocManaged(&bfrate_raw[modelgridindex], nbfcontinua * sizeof(float));
     cudaMallocManaged(&prev_bfrate_normed[modelgridindex], nbfcontinua * sizeof(float));
+    cudaMallocManaged(&bfrate_raw_bytype_size[modelgridindex], nbfcontinua * sizeof(int));
+    // cudaMallocManaged(&bfrate_raw_bytype[modelgridindex], nbfcontinua * sizeof(struct bfratecontrib *));
     #else
+    bfrate_raw[modelgridindex] = (double *) calloc(nbfcontinua, sizeof(double));
     prev_bfrate_normed[modelgridindex] = (float *) calloc(nbfcontinua, sizeof(float));
+    bfrate_raw_bytype_size[modelgridindex] = (int *) calloc(nbfcontinua, sizeof(int));
     #endif
+    bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(nbfcontinua, sizeof(struct bfratecontrib *));
 
     #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-    bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(nbfcontinua, sizeof(struct bfratecontrib *));
-    bfrate_raw_bytype_size[modelgridindex] = (int *) calloc(nbfcontinua, sizeof(int));
     for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
     {
       bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
@@ -550,6 +554,7 @@ int radfield_get_Jb_lu_contribcount(const int modelgridindex, const int jblueind
 }
 
 
+__host__ __device__
 static double get_bin_J(int modelgridindex, int binindex)
 // get the normalised J_nu
 {
@@ -568,6 +573,7 @@ static double get_bin_J(int modelgridindex, int binindex)
 }
 
 
+__host__ __device__
 static void set_bin_J(int modelgridindex, int binindex, double value)
 // set the normalised J_nu
 {
@@ -585,6 +591,7 @@ static void set_bin_J(int modelgridindex, int binindex, double value)
 }
 
 
+__host__ __device__
 static double get_bin_nuJ(int modelgridindex, int binindex)
 {
   if (J_normfactor[modelgridindex] <= 0.0)
@@ -601,7 +608,7 @@ static double get_bin_nuJ(int modelgridindex, int binindex)
 }
 
 
-static inline
+__host__ __device__ static inline
 double get_bin_nu_bar(int modelgridindex, int binindex)
 // importantly, this is average beween the current and previous timestep
 {
@@ -852,10 +859,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs)
     {
-      #ifdef _OPENMP
-        #pragma omp atomic
-      #endif
-      bfrate_raw[modelgridindex][allcontindex] += phixsallcont[allcontindex].gamma_contr * distance_e_cmf_over_nu;
+      safeadd(bfrate_raw[modelgridindex][allcontindex], phixsallcont[allcontindex].gamma_contr * distance_e_cmf_over_nu);
 
       #if (DETAILED_BF_ESTIMATORS_BYTYPE)
       const int element = phixsallcont[allcontindex].element;
@@ -905,32 +909,27 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
 #endif
 
 
+__host__ __device__
 void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
 {
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  J[modelgridindex] += distance_e_cmf;
-  #ifdef DEBUG_ON
-    if (!isfinite(J[modelgridindex]))
-    {
-      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
-      abort();
-    }
-  #endif
+  safeadd(J[modelgridindex], distance_e_cmf);
+  // #ifdef DEBUG_ON
+  //   if (!isfinite(J[modelgridindex]))
+  //   {
+  //     printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+  //     abort();
+  //   }
+  // #endif
 
 #ifndef FORCE_LTE
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  nuJ[modelgridindex] += distance_e_cmf * nu_cmf;
-  #ifdef DEBUG_ON
-    if (!isfinite(nuJ[modelgridindex]))
-    {
-      printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
-      abort();
-    }
-  #endif
+  safeadd(nuJ[modelgridindex], distance_e_cmf * nu_cmf);
+  // #ifdef DEBUG_ON
+  //   if (!isfinite(nuJ[modelgridindex]))
+  //   {
+  //     printout("[fatal] update_estimators: estimator becomes non finite: distance_e_cmf %g, nu_cmf %g ... abort\n",distance_e_cmf,nu_cmf);
+  //     abort();
+  //   }
+  // #endif
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   radfield_increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current);
@@ -962,18 +961,9 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
 
     if (binindex >= 0)
     {
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbins_estim[modelgridindex][binindex].J_raw += distance_e_cmf;
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbins_estim[modelgridindex][binindex].nuJ_raw += distance_e_cmf * nu_cmf;
-      #ifdef _OPENMP
-      #pragma omp atomic
-      #endif
-      radfieldbins_estim[modelgridindex][binindex].contribcount += 1;
+      safeadd(radfieldbins_estim[modelgridindex][binindex].J_raw, distance_e_cmf);
+      safeadd(radfieldbins_estim[modelgridindex][binindex].nuJ_raw, distance_e_cmf * nu_cmf);
+      safeadd(radfieldbins_estim[modelgridindex][binindex].contribcount, 1);
     }
     // else
     // {
@@ -987,6 +977,7 @@ void radfield_update_estimators(int modelgridindex, double distance_e_cmf, doubl
 }
 
 
+__host__ __device__
 void radfield_increment_lineestimator(const int modelgridindex, const int lineindex, const double increment)
 {
   if (!DETAILED_LINE_ESTIMATORS_ON) return;
@@ -1088,6 +1079,7 @@ static double gsl_integrand_planck(double nu, void *paras)
 }
 
 
+#ifndef __CUDA_ARCH__
 static double planck_integral(double T_R, double nu_lower, double nu_upper, enum_prefactor prefactor)
 {
   double integral = 0.;
@@ -1451,6 +1443,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
     radfield_write_to_file(modelgridindex, timestep);
   }
 }
+#endif
 
 
 void radfield_set_J_normfactor(int modelgridindex, double normfactor)
@@ -2003,52 +1996,52 @@ void radfield_read_restart_data(FILE *gridsave_file)
 }
 
 
-// not in use, but could potential improve speed and accuracy of integrating
-// across the binned radiation field which is discontinuous at the bin boundaries
-inline
-int radfield_integrate(
-  const gsl_function *f, double nu_a, double nu_b, double epsabs,
-  double epsrel, size_t limit, int key, gsl_integration_workspace *workspace,
-  double *result, double *abserr)
-{
-  if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
-  {
-    double *pts = (double *) malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
-    int binindex_a = select_bin(nu_a);
-    int binindex_b = select_bin(nu_b);
-    int npts = 0;
-    pts[npts++] = nu_a;
-    if (binindex_a == binindex_b) // both higher, both lower, or match the same bin
-    {
-      // region doesn't contain any bins
-      pts[npts++] = nu_b;
-    }
-    else
-    {
-      if (binindex_a < 0) // a is below the first bin
-      {
-        binindex_a = 0;
-        pts[npts++] = get_bin_nu_lower(0);
-      }
-
-      const int maxbinplusone = (binindex_b < 0) ? RADFIELDBINCOUNT : binindex_b;
-
-      for (int binindex = binindex_a; binindex < maxbinplusone; binindex++)
-        pts[npts++] = get_bin_nu_upper(binindex);
-
-      pts[npts++] = nu_b;
-    }
-    // for (int e = 0; e < npts; e++)
-    // {
-    //   printout("radfield_integrate singular point number %d at nu %g, (nu_a %g, nu_b %g), radfield_low %g radfield_high %g\n",
-    //            e, pts[e], nu_a, nu_b, radfield(pts[e] * 0.9999, 0), radfield(pts[e] * 1.0001, 0));
-    // }
-    const int status = gsl_integration_qagp(f, pts, npts, epsabs, epsrel, limit, workspace, result, abserr);
-    free(pts);
-    return status;
-  }
-  else
-    return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
-}
-
+// // not in use, but could potential improve speed and accuracy of integrating
+// // across the binned radiation field which is discontinuous at the bin boundaries
+// inline
+// int radfield_integrate(
+//   const gsl_function *f, double nu_a, double nu_b, double epsabs,
+//   double epsrel, size_t limit, int key, gsl_integration_workspace *workspace,
+//   double *result, double *abserr)
+// {
+//   if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
+//   {
+//     double *pts = (double *) malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
+//     int binindex_a = select_bin(nu_a);
+//     int binindex_b = select_bin(nu_b);
+//     int npts = 0;
+//     pts[npts++] = nu_a;
+//     if (binindex_a == binindex_b) // both higher, both lower, or match the same bin
+//     {
+//       // region doesn't contain any bins
+//       pts[npts++] = nu_b;
+//     }
+//     else
+//     {
+//       if (binindex_a < 0) // a is below the first bin
+//       {
+//         binindex_a = 0;
+//         pts[npts++] = get_bin_nu_lower(0);
+//       }
+//
+//       const int maxbinplusone = (binindex_b < 0) ? RADFIELDBINCOUNT : binindex_b;
+//
+//       for (int binindex = binindex_a; binindex < maxbinplusone; binindex++)
+//         pts[npts++] = get_bin_nu_upper(binindex);
+//
+//       pts[npts++] = nu_b;
+//     }
+//     // for (int e = 0; e < npts; e++)
+//     // {
+//     //   printout("radfield_integrate singular point number %d at nu %g, (nu_a %g, nu_b %g), radfield_low %g radfield_high %g\n",
+//     //            e, pts[e], nu_a, nu_b, radfield(pts[e] * 0.9999, 0), radfield(pts[e] * 1.0001, 0));
+//     // }
+//     const int status = gsl_integration_qagp(f, pts, npts, epsabs, epsrel, limit, workspace, result, abserr);
+//     free(pts);
+//     return status;
+//   }
+//   else
+//     return gsl_integration_qag(void *, f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
+// }
+//
 

@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include "types.h"
 
-double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
-void meridian(double *n, double *ref1, double *ref2);
-void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
-void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
+__host__ __device__ double rot_angle(double *n1, double *n2, double *ref1, double *ref2);
+__host__ __device__ void meridian(double *n, double *ref1, double *ref2);
+__host__ __device__ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf);
+__host__ __device__ void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf);
 
 #ifdef VPKT_ON
 void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int realtype);

@@ -5,10 +5,10 @@
 #include "types.h"
 
 void calculate_cooling_rates(int modelgridindex, heatingcoolingrates_t *heatingcoolingrates);
-double do_kpkt_bb(PKT *pkt_ptr, double t1);
-double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts);
+__host__ __device__ double do_kpkt_bb(PKT *pkt_ptr, double t1, int tid);
+__host__ __device__ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts, int tid);
 
-inline int get_coolinglistoffset(int element, int ion)
+inline __host__ __device__ int get_coolinglistoffset(int element, int ion)
 {
   return elements[element].ions[ion].coolingoffset;
 }

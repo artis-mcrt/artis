@@ -2,6 +2,7 @@
 #include <stdio.h>
 //#include <math.h>
 //#include <stdlib.h>
+#include "globals.h"
 #include "sn3d.h"
 #include "atomic.h"
 #include "gamma.h"
@@ -829,7 +830,8 @@ static void read_atomicdata_files(void)
     elements[element].nions = nions;
     elements[element].abundance = abundance;       /// abundances are expected to be given by mass
     elements[element].mass = mass_amu * MH;
-    elements_uppermost_ion[tid][element] = nions - 1;
+    for (int tid = 0; tid < nthreads; tid++)
+      elements_uppermost_ion[tid][element] = nions - 1;
     includedions += nions;
 
     /// Initialize the elements ionlist
@@ -1315,101 +1317,298 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
 }
 
 
-static void setup_cellhistory(void)
+#if CUDA_ENABLED
+__global__ static void kernel_setup_cellhistory(void)
+{
+  const int tid = omp_get_thread_num();
+
+  if (tid == 0 || tid >= MTHREADS)
+    return;
+
+  long mem_usage_cellhistory = 0;
+  mem_usage_cellhistory += sizeof(cellhistory_struct);
+
+  cellhistory[tid].cellnumber = -99;
+
+  mem_usage_cellhistory += ncoolingterms * sizeof(cellhistorycoolinglist_t);
+
+  cellhistory[tid].coolinglist = (cellhistorycoolinglist_t *) malloc(ncoolingterms * sizeof(cellhistorycoolinglist_t));
+  if (cellhistory[tid].coolinglist == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize cellhistory's coolinglist ncoolingterms %d ... abort\n", ncoolingterms);
+    abort();
+  }
+
+  mem_usage_cellhistory += nelements * sizeof(chelements_struct);
+
+  cellhistory[tid].chelements = (chelements_struct *) malloc(nelements * sizeof(chelements_struct));
+  if (cellhistory[tid].chelements == NULL)
+  {
+    printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
+    abort();
+  }
+  for (int element = 0; element < nelements; element++)
+  {
+    const int nions = get_nions(element);
+    mem_usage_cellhistory += nions * sizeof(chions_struct);
+
+    cellhistory[tid].chelements[element].chions = (chions_struct *) malloc(nions * sizeof(chions_struct));
+    if (cellhistory[tid].chelements[element].chions == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize cellhistory's ionlist ... abort\n");
+      abort();
+    }
+    for (int ion = 0; ion < nions; ion++)
+    {
+      const int nlevels = get_nlevels(element,ion);
+      mem_usage_cellhistory += nlevels * sizeof(chlevels_struct);
+      cellhistory[tid].chelements[element].chions[ion].chlevels = (chlevels_struct *) malloc(nlevels * sizeof(chlevels_struct));
+      if (cellhistory[tid].chelements[element].chions[ion].chlevels == NULL)
+      {
+        printout("[fatal] input: not enough memory to initialize cellhistory's levellist ... abort\n");
+        abort();
+      }
+      for (int level = 0; level < nlevels; level++)
+      {
+        const int nphixstargets = get_nphixstargets(element,ion,level);
+        mem_usage_cellhistory += nphixstargets * sizeof(chphixstargets_struct);
+
+        if (nphixstargets > 0)
+        {
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = (chphixstargets_struct *) malloc(nphixstargets * sizeof(chphixstargets_struct));
+          if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets == NULL)
+          {
+            printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
+            abort();
+          }
+        }
+        else
+        {
+          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = NULL;
+        }
+
+        const int ndowntrans = get_ndowntrans(element, ion, level);
+        mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
+
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = (double *) malloc((ndowntrans + 1) * sizeof(double));
+        if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc == NULL)
+        {
+          printout("[fatal] input: not enough memory to initialize cellhistory's individ_rad_deexc ... abort\n");
+          abort();
+        }
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[0] = ndowntrans;
+
+        mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
+
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same = (double *) malloc((ndowntrans + 1) * sizeof(double));
+        if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same == NULL)
+        {
+          printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_down_same ... abort\n");
+          abort();
+        }
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[0] = ndowntrans;
+
+        const int nuptrans = get_nuptrans(element, ion, level);
+        mem_usage_cellhistory += (nuptrans + 1) * sizeof(double);
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = (double *) malloc((nuptrans + 1) * sizeof(double));
+        if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same == NULL)
+        {
+          printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_up_same ... abort\n");
+          abort();
+        }
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[0] = nuptrans;
+      }
+    }
+  }
+  printout("mem_usage: cellhistory for thread %d occupies %.1f MB\n", tid, mem_usage_cellhistory / 1024. / 1024.);
+}
+
+
+static void setup_cellhistory_gpu(void)
+{
+  printout("[info] input: initializing cellhistory on GPU (%d threads total) ...\n", MTHREADS);
+
+  dim3 threadsPerBlock(64, 1, 1);
+  dim3 numBlocks((MTHREADS + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
+
+  kernel_setup_cellhistory<<<numBlocks, threadsPerBlock>>>();
+
+  // Check for any errors launching the kernel
+  checkCudaErrors(cudaGetLastError());
+
+  // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  printout("[info] input: fininished initializing cellhistory on GPU (%d threads total) ...\n", MTHREADS);
+}
+#endif
+
+
+static void setup_cellhistory(int setup_nthreads)
 {
   /// SET UP THE CELL HISTORY
   ///======================================================
   /// Stack which holds information about population and other cell specific data
   /// ===> move to update_packets
-  if ((cellhistory = (cellhistory_struct *) malloc(nthreads * sizeof(cellhistory_struct))) == NULL)
+  #if CUDA_ENABLED
+  cudaMallocManaged(&cellhistory, MTHREADS * sizeof(cellhistory_struct));
+  #else
+  cellhistory = (cellhistory_struct *) malloc(setup_nthreads * sizeof(cellhistory_struct));
+  #endif
+  if (cellhistory == NULL)
   {
-    printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n",nthreads);
+    printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n",setup_nthreads);
     abort();
   }
+
+  // #if (CUDA_ENABLED && USECUDA_UPDATEPACKETS)
+  // for (int tid = setup_nthreads; tid < MTHREADS; tid++)
+  // {
+  //   cudaMallocManaged(&cellhistory[tid].coolinglist, ncoolingterms * sizeof(cellhistorycoolinglist_t));
+  // }
+  // #endif
+
   #ifdef _OPENMP
     #pragma omp parallel
-    {
   #endif
-      long mem_usage_cellhistory = 0;
-      mem_usage_cellhistory += sizeof(cellhistory_struct);;
-      printout("[info] input: initializing cellhistory for thread %d ...\n", tid);
+  #if CUDA_ENABLED
+  for (int tid = 0; tid < setup_nthreads; tid++)
+  #endif
+  {
+    #if !CUDA_ENABLED
+    const int tid = omp_get_thread_num();
+    #endif
 
-      cellhistory[tid].cellnumber = -99;
+    long mem_usage_cellhistory = 0;
+    mem_usage_cellhistory += sizeof(cellhistory_struct);
+    printout("[info] input: initializing cellhistory for thread %d (%d threads total) ...\n", tid, setup_nthreads);
 
-      mem_usage_cellhistory += ncoolingterms * sizeof(cellhistorycoolinglist_t);
-      cellhistory[tid].coolinglist = (cellhistorycoolinglist_t *) malloc(ncoolingterms * sizeof(cellhistorycoolinglist_t));
-      if (cellhistory[tid].coolinglist == NULL)
+    cellhistory[tid].cellnumber = -99;
+
+    mem_usage_cellhistory += ncoolingterms * sizeof(cellhistorycoolinglist_t);
+
+    #if CUDA_ENABLED
+    cudaMallocManaged(&cellhistory[tid].coolinglist, ncoolingterms * sizeof(cellhistorycoolinglist_t));
+    #else
+    cellhistory[tid].coolinglist = (cellhistorycoolinglist_t *) malloc(ncoolingterms * sizeof(cellhistorycoolinglist_t));
+    if (cellhistory[tid].coolinglist == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize cellhistory's coolinglist ncoolingterms %d ... abort\n", ncoolingterms);
+      abort();
+    }
+    #endif
+
+    mem_usage_cellhistory += nelements * sizeof(chelements_struct);
+
+    #if CUDA_ENABLED
+    cudaMallocManaged(&cellhistory[tid].chelements, nelements * sizeof(chelements_struct));
+    #else
+    cellhistory[tid].chelements = (chelements_struct *) malloc(nelements * sizeof(chelements_struct));
+    #endif
+    if (cellhistory[tid].chelements == NULL)
+    {
+      printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
+      abort();
+    }
+    for (int element = 0; element < nelements; element++)
+    {
+      const int nions = get_nions(element);
+      mem_usage_cellhistory += nions * sizeof(chions_struct);
+
+      #if CUDA_ENABLED
+      cudaMallocManaged(&cellhistory[tid].chelements[element].chions, nions * sizeof(chions_struct));
+      #else
+      cellhistory[tid].chelements[element].chions = (chions_struct *) malloc(nions * sizeof(chions_struct));
+      #endif
+      if (cellhistory[tid].chelements[element].chions == NULL)
       {
-        printout("[fatal] input: not enough memory to initialize cellhistory's coolinglist ... abort\n");
+        printout("[fatal] input: not enough memory to initialize cellhistory's ionlist ... abort\n");
         abort();
       }
-
-      mem_usage_cellhistory += nelements * sizeof(chelements_struct);
-      if ((cellhistory[tid].chelements = (chelements_struct *) malloc(nelements * sizeof(chelements_struct))) == NULL)
+      for (int ion = 0; ion < nions; ion++)
       {
-        printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
-        abort();
-      }
-      for (int element = 0; element < nelements; element++)
-      {
-        const int nions = get_nions(element);
-        mem_usage_cellhistory += nions * sizeof(chions_struct);
-        if ((cellhistory[tid].chelements[element].chions = (chions_struct *) malloc(nions * sizeof(chions_struct))) == NULL)
+        const int nlevels = get_nlevels(element,ion);
+        mem_usage_cellhistory += nlevels * sizeof(chlevels_struct);
+        #if CUDA_ENABLED
+        cudaMallocManaged(&cellhistory[tid].chelements[element].chions[ion].chlevels, nlevels * sizeof(chlevels_struct));
+        #else
+        cellhistory[tid].chelements[element].chions[ion].chlevels = (chlevels_struct *) malloc(nlevels * sizeof(chlevels_struct));
+        #endif
+        if (cellhistory[tid].chelements[element].chions[ion].chlevels == NULL)
         {
-          printout("[fatal] input: not enough memory to initialize cellhistory's ionlist ... abort\n");
+          printout("[fatal] input: not enough memory to initialize cellhistory's levellist ... abort\n");
           abort();
         }
-        for (int ion = 0; ion < nions; ion++)
+        for (int level = 0; level < nlevels; level++)
         {
-          const int nlevels = get_nlevels(element,ion);
-          mem_usage_cellhistory += nlevels * sizeof(chlevels_struct);
-          if ((cellhistory[tid].chelements[element].chions[ion].chlevels = (chlevels_struct *) malloc(nlevels * sizeof(chlevels_struct))) == NULL)
+          const int nphixstargets = get_nphixstargets(element,ion,level);
+          mem_usage_cellhistory += nphixstargets * sizeof(chphixstargets_struct);
+
+          if (nphixstargets > 0)
           {
-            printout("[fatal] input: not enough memory to initialize cellhistory's levellist ... abort\n");
-            abort();
-          }
-          for (int level = 0; level < nlevels; level++)
-          {
-            const int nphixstargets = get_nphixstargets(element,ion,level);
-            mem_usage_cellhistory += nphixstargets * sizeof(chphixstargets_struct);
-            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = (chphixstargets_struct *) malloc(nphixstargets * sizeof(chphixstargets_struct))) == NULL)
+            #if CUDA_ENABLED
+            cudaMallocManaged(&cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets, nphixstargets * sizeof(chphixstargets_struct));
+            #else
+            cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = (chphixstargets_struct *) malloc(nphixstargets * sizeof(chphixstargets_struct));
+            #endif
+            if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets == NULL)
             {
               printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
               abort();
             }
-
-            const int ndowntrans = get_ndowntrans(element, ion, level);
-            mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
-            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = (double *) malloc((ndowntrans + 1) * sizeof(double))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize cellhistory's individ_rad_deexc ... abort\n");
-              abort();
-            }
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[0] = ndowntrans;
-
-            mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
-            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same = (double *) malloc((ndowntrans + 1) * sizeof(double))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_down_same ... abort\n");
-              abort();
-            }
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[0] = ndowntrans;
-
-            const int nuptrans = get_nuptrans(element, ion, level);
-            mem_usage_cellhistory += (nuptrans + 1) * sizeof(double);
-            if ((cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = (double *) malloc((nuptrans + 1) * sizeof(double))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_up_same ... abort\n");
-              abort();
-            }
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[0] = nuptrans;
           }
+          else
+          {
+            cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = NULL;
+          }
+
+          // const int ndowntrans = get_ndowntrans(element, ion, level);
+          // mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
+          // #if CUDA_ENABLED
+          // cudaMallocManaged(&cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc, (ndowntrans + 1) * sizeof(double));
+          // #else
+          // cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = (double *) malloc((ndowntrans + 1) * sizeof(double));
+          // #endif
+          // if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc == NULL)
+          // {
+          //   printout("[fatal] input: not enough memory to initialize cellhistory's individ_rad_deexc ... abort\n");
+          //   abort();
+          // }
+          // cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[0] = ndowntrans;
+          //
+          // mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
+          //
+          // #if CUDA_ENABLED
+          // cudaMallocManaged(&cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same, (ndowntrans + 1) * sizeof(double));
+          // #else
+          // cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same = (double *) malloc((ndowntrans + 1) * sizeof(double));
+          // #endif
+          // if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same == NULL)
+          // {
+          //   printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_down_same ... abort\n");
+          //   abort();
+          // }
+          // cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[0] = ndowntrans;
+          //
+          // const int nuptrans = get_nuptrans(element, ion, level);
+          // mem_usage_cellhistory += (nuptrans + 1) * sizeof(double);
+          //
+          // #if CUDA_ENABLED
+          // cudaMallocManaged(&cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same, (nuptrans + 1) * sizeof(double));
+          // #else
+          // cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = (double *) malloc((nuptrans + 1) * sizeof(double));
+          // #endif
+          // if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same == NULL)
+          // {
+          //   printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_up_same ... abort\n");
+          //   abort();
+          // }
+          // cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[0] = nuptrans;
         }
       }
-      printout("mem_usage: cellhistory for thread %d occupies %.1f MB\n", tid, mem_usage_cellhistory / 1024. / 1024.);
-  #ifdef _OPENMP
     }
-  #endif
+    printout("mem_usage: cellhistory for thread %d occupies %.1f MB\n", tid, mem_usage_cellhistory / 1024. / 1024.);
+  }
 }
 
 
@@ -1622,13 +1821,13 @@ static void setup_phixs_list(void)
   for (int itid = 0; itid < nthreads; itid++)
   {
     #if CUDA_ENABLED
-      cudaMallocManaged(&kappa_rpkt_cont[itid].gamma_contr_ground, nbfcontinua_ground * sizeof(double));
-      cudaMallocManaged(&kappa_rpkt_cont[itid].kappa_bf_contr, nbfcontinua * sizeof(double));
+      cudaMalloc(&kappa_rpkt_cont[itid].gamma_contr_ground, nbfcontinua_ground * sizeof(double));
+      cudaMalloc(&kappa_rpkt_cont[itid].kappa_bf_contr, nbfcontinua * sizeof(double));
       #if (SEPARATE_STIMRECOMB)
-      cudaMallocManaged(&kappa_rpkt_cont[itid].kappa_fb_contr, nbfcontinua * sizeof(double));
+      cudaMalloc(&kappa_rpkt_cont[itid].kappa_fb_contr, nbfcontinua * sizeof(double));
       #endif
       #if (DETAILED_BF_ESTIMATORS_ON)
-      cudaMallocManaged(&kappa_rpkt_cont[itid].gamma_contr, nbfcontinua * sizeof(double));
+      cudaMalloc(&kappa_rpkt_cont[itid].gamma_contr, nbfcontinua * sizeof(double));
       #endif
     #else
       kappa_rpkt_cont[itid].gamma_contr_ground = (double *) malloc(nbfcontinua_ground * sizeof(double));
@@ -1715,17 +1914,32 @@ static void read_atomicdata(void)
   /// INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
   ///======================================================
   #ifdef RECORD_LINESTAT
-    if ((ecounter  = (int *) malloc(nlines*sizeof(int))) == NULL)
+    #if (CUDA_ENABLED && USECUDA_UPDATEPACKETS)
+    cudaMallocManaged(&ecounter, nlines * sizeof(int));
+    #else
+    ecounter = (int *) malloc(nlines * sizeof(int));
+    #endif
+    if (ecounter == NULL)
     {
       printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
       abort();
     }
-    if ((acounter  = (int *) malloc(nlines*sizeof(int))) == NULL)
+    #if (CUDA_ENABLED && USECUDA_UPDATEPACKETS)
+    cudaMallocManaged(&acounter, nlines * sizeof(int));
+    #else
+    acounter = (int *) malloc(nlines * sizeof(int));
+    #endif
+    if (acounter == NULL)
     {
       printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
       abort();
     }
-    if ((linestat_reduced  = (int *) malloc(nlines*sizeof(int))) == NULL)
+    #if (CUDA_ENABLED && USECUDA_UPDATEPACKETS)
+    cudaMallocManaged(&linestat_reduced, nlines * sizeof(int));
+    #else
+    linestat_reduced = (int *) malloc(nlines * sizeof(int));
+    #endif
+    if (linestat_reduced == NULL)
     {
       printout("[fatal] input: not enough memory to initialise ecounter array ... abort\n");
       abort();
@@ -1734,7 +1948,12 @@ static void read_atomicdata(void)
 
   setup_coolinglist();
 
-  setup_cellhistory();
+  #if CUDA_ENABLED && USECUDA_UPDATEPACKETS
+  setup_cellhistory(MTHREADS);
+  // setup_cellhistory_gpu();    // make a managed cell history for thread zero and GPU cell history for all other threads
+  #else
+  setup_cellhistory(nthreads);
+  #endif
 
   /// Printout some information about the read-in model atom
   ///======================================================
@@ -2386,7 +2605,36 @@ void input(int rank)
 
 }
 
+#if CUDA_ENABLED
+__global__ static void kernel_setupcurand(unsigned long int pre_zseed, int rank)
+{
+  const int tid = omp_get_thread_num();
+  if (tid < MTHREADS)
+  {
+    unsigned long int zseed = pre_zseed + (13 * rank);
+    curand_init(zseed, tid, 0, &curandstates[tid]);
+    // const double zrand = curand_uniform_double(&curandstates[tid]);
+    // printf("kernel_setupcurand tidx %d %g\n", tid, zrand);
+  }
+}
 
+
+static void init_curand(unsigned long int pre_zseed, int rank)
+{
+  dim3 threadsPerBlock(256, 1, 1);
+  dim3 numBlocks((MTHREADS + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
+
+  kernel_setupcurand<<<numBlocks, threadsPerBlock>>>(pre_zseed, rank);
+
+  // Check for any errors launching the kernel
+  checkCudaErrors(cudaGetLastError());
+
+  // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+#endif
+
+#ifndef __CUDA_ARCH__
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
@@ -2406,29 +2654,32 @@ void read_parameterfile(int rank)
     printout("[debug] randomly-generated random number seed is %lu\n", pre_zseed);
   }
 
-  #ifdef _OPENMP
-    #pragma omp parallel
+  #if CUDA_ENABLED
+  init_curand(pre_zseed, rank);
+  #endif
+
+#ifdef _OPENMP
+  #pragma omp parallel
+#endif
+  {
+    const int tid = omp_get_thread_num();
+    /// For MPI parallelisation, the random seed is changed based on the rank of the process
+    /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
+    /// to the thread-ID tid.
+    unsigned long int zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
+    printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
+    /// start by setting up the randon number generator
+    rng = gsl_rng_alloc(gsl_rng_ran3);
+    gsl_rng_set(rng, zseed);
+    /// call it a few times to get it in motion.
+    for (int n = 0; n < 100; n++)
     {
-  #endif
-      /// For MPI parallelisation, the random seed is changed based on the rank of the process
-      /// For OpenMP parallelisation rng is a threadprivate variable and the seed changed according
-      /// to the thread-ID tid.
-      unsigned long int zseed = pre_zseed + (13 * rank) + (17 * tid); /* rnum generator seed */
-      printout("rank %d: thread %d has zseed %lu\n", rank, tid, zseed);
-      /// start by setting up the randon number generator
-      rng = gsl_rng_alloc(gsl_rng_ran3);
-      gsl_rng_set(rng, zseed);
-      /// call it a few times to get it in motion.
-      for (int n = 0; n < 100; n++)
-      {
-        //double x = gsl_rng_uniform(rng);
-        //printout("zrand %g\n", x);
-        gsl_rng_uniform(rng);
-      }
-      printout("rng is a '%s' generator\n", gsl_rng_name(rng));
-  #ifdef _OPENMP
+      //double x = gsl_rng_uniform(rng);
+      //printout("zrand %g\n", x);
+      gsl_rng_uniform(rng);
     }
-  #endif
+    printout("rng is a '%s' generator\n", gsl_rng_name(rng));
+  }
 
   fscanf(input_file, "%d", &ntstep); // number of time steps
 
@@ -2633,7 +2884,7 @@ void read_parameterfile(int rank)
 
   fclose(input_file);
 }
-
+#endif
 
 
 /*
