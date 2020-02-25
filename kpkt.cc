@@ -9,7 +9,7 @@
 #include "rpkt.h"
 #include "vectors.h"
 
-extern inline int get_coolinglistoffset(int element, int ion);
+extern inline __host__ __device__ int get_coolinglistoffset(int element, int ion);
 
 
 __host__ __device__
@@ -100,6 +100,7 @@ static double get_cooling_ion_coll_exc_level_gpu(
 #endif
 
 
+__host__ __device__
 static double get_cooling_ion_coll_exc(
   const int modelgridindex, const int element, const int ion, const double T_e, const double nne)
 {
@@ -138,6 +139,7 @@ static double get_cooling_ion_coll_exc(
 }
 
 
+__host__ __device__
 static double get_bfcoolingcoeff(int element, int ion, int level, int phixstargetindex, float T_e)
 {
   const int lowerindex = floor(log(T_e / MINTEMP) / T_step_log);
@@ -242,7 +244,8 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
 }
 
 
-static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart, double oldcoolingsum)
+__host__ __device__
+static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, int indexionstart, double oldcoolingsum, int tid)
 /// Set up the global cooling list and determine the important entries
 /// by applying a cut to the total cooling rate. Then sort the global
 /// cooling list by the strength of the individual process contribution.
@@ -395,6 +398,7 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
 }
 
 
+__host__ __device__
 static double planck(const double nu, const double T)
 /// returns intensity for frequency nu and temperature T according
 /// to the Planck distribution
@@ -403,6 +407,7 @@ static double planck(const double nu, const double T)
 }
 
 
+__host__ __device__
 static double sample_planck(const double T)
 /// returns a randomly chosen frequency according to the Planck
 /// distribution of temperature T
@@ -431,7 +436,8 @@ static double sample_planck(const double T)
 }
 
 
-double do_kpkt_bb(PKT *pkt_ptr, const double t1)
+__host__ __device__
+double do_kpkt_bb(PKT *pkt_ptr, const double t1, int tid)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
   //double nne = cell[pkt_ptr->where].nne ;
@@ -452,10 +458,9 @@ double do_kpkt_bb(PKT *pkt_ptr, const double t1)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
   if (modelgrid[modelgridindex].thick != 1)
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
-  //if (tid == 0) k_stat_to_r_bb++;
-  k_stat_to_r_bb++;
+  safeincrement(k_stat_to_r_bb);
   pkt_ptr->interactions++;
   pkt_ptr->last_event = 6;
   pkt_ptr->emissiontype = -9999999;
@@ -467,7 +472,8 @@ double do_kpkt_bb(PKT *pkt_ptr, const double t1)
 }
 
 
-double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
+__host__ __device__
+double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts, int tid)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 //{
 //  double do_kpkt_bb(PKT *pkt_ptr, double t1, double t2);
@@ -567,7 +573,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
     if (cellhistory[tid].coolinglist[low].contribution == COOLING_UNDEFINED)
     {
       //printout("calculate kpkt rates on demand\n");
-      calculate_kpkt_rates_ion(modelgridindex,element,ion,low,oldcoolingsum);
+      calculate_kpkt_rates_ion(modelgridindex,element,ion,low,oldcoolingsum, tid);
     }
     //if (cellhistory[tid].coolinglist[high].contribution != coolingsum);
     //{
@@ -645,10 +651,9 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr,t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
-      //if (tid == 0) k_stat_to_r_ff++;
-      k_stat_to_r_ff++;
+      safeincrement(k_stat_to_r_ff);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 6;
       pkt_ptr->emissiontype = -9999999;
@@ -702,14 +707,13 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_KPKT, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
-      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
+      const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current, tid);
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
       #endif
 
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
-      //if (tid == 0) k_stat_to_r_fb++;
-      k_stat_to_r_fb++;
+      safeincrement(k_stat_to_r_fb);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
       pkt_ptr->emissiontype = get_continuumindex(element, lowerion, level, upper);
@@ -735,10 +739,8 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       #endif
 
       pkt_ptr->type = TYPE_MA;
-      //if (tid == 0) ma_stat_activation_collexc++;
-      ma_stat_activation_collexc++;
-      //if (tid == 0) k_stat_to_ma_collexc++;
-      k_stat_to_ma_collexc++;
+      safeincrement(ma_stat_activation_collexc);
+      safeincrement(k_stat_to_ma_collexc);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 8;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
@@ -765,10 +767,8 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
       #endif
 
       pkt_ptr->type = TYPE_MA;
-      //if (tid == 0) ma_stat_activation_collion++;
-      ma_stat_activation_collion++;
-      //if (tid == 0) k_stat_to_ma_collion++;
-      k_stat_to_ma_collion++;
+      safeincrement(ma_stat_activation_collion);
+      safeincrement(k_stat_to_ma_collion);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 9;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
@@ -817,38 +817,38 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 }*/
 
 
-/*double get_bfcooling_direct(int element, int ion, int level, int cellnumber)
-/// Returns the rate for bfheating. This can be called during packet propagation
-/// or update_grid. Therefore we need to decide whether a cell history is
-/// known or not.
-{
-  double bfcooling;
-
-  gsl_integration_workspace *wsp;
-  gslintegration_paras intparas;
-  double bfcooling_integrand_gsl(double nu, void *paras);
-  gsl_function F_bfcooling;
-  F_bfcooling.function = &bfcooling_integrand_gsl;
-  double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
-  double error;
-  double nu_max_phixs;
-
-  float T_e = cell[cellnumber].T_e;
-  float nne = cell[cellnumber].nne;
-  double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
-  //upper = cellhistory[tid].coolinglist[i].upperlevel;
-  double nu_threshold = (epsilon(element,ion+1,0) - epsilon(element,ion,level)) / H;
-  nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-
-  mastate[tid].element = element;
-  mastate[tid].ion = ion;
-  mastate[tid].level = level;
-  intparas.T = T_e;
-  intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
-  F_bfcooling.params = &intparas;
-  gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling, &error);
-  bfcooling *= nnionlevel*nne*4*PI*calculate_sahafact(element,ion,level,upperionlevel,T_e,nu_threshold*H);
-
-  return bfcooling;
-}*/
+// double get_bfcooling_direct(int element, int ion, int level, int cellnumber)
+// /// Returns the rate for bfheating. This can be called during packet propagation
+// /// or update_grid. Therefore we need to decide whether a cell history is
+// /// known or not.
+// {
+//   double bfcooling;
+//
+//   gsl_integration_workspace *wsp;
+//   gslintegration_paras intparas;
+//   double bfcooling_integrand_gsl(double nu, void *paras);
+//   gsl_function F_bfcooling;
+//   F_bfcooling.function = &bfcooling_integrand_gsl;
+//   double intaccuracy = 1e-2;        /// Fractional accuracy of the integrator
+//   double error;
+//   double nu_max_phixs;
+//
+//   float T_e = cell[cellnumber].T_e;
+//   float nne = cell[cellnumber].nne;
+//   double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
+//   //upper = cellhistory[tid].coolinglist[i].upperlevel;
+//   double nu_threshold = (epsilon(element,ion+1,0) - epsilon(element,ion,level)) / H;
+//   nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+//
+//   mastate[tid].element = element;
+//   mastate[tid].ion = ion;
+//   mastate[tid].level = level;
+//   intparas.T = T_e;
+//   intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
+//   F_bfcooling.params = &intparas;
+//   gsl_integration_qag(&F_bfcooling, nu_threshold, nu_max_phixs, 0, intaccuracy, 1024, 6, wsp, &bfcooling, &error);
+//   bfcooling *= nnionlevel*nne*4*PI*calculate_sahafact(element,ion,level,upperionlevel,T_e,nu_threshold*H);
+//
+//   return bfcooling;
+// }
 

@@ -7,8 +7,8 @@
 
 __host__ __device__ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
 __host__ __device__ double doppler(const double dir1[3], const double vel[3]);
-void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
-void get_rand_isotropic_unitvec(double vecout[3]);
+__host__ __device__ void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
+__host__ __device__ void get_rand_isotropic_unitvec(double vecout[3]);
 __host__ __device__ void move_pkt(PKT *pkt_ptr, double distance, double time);
 
 // #define vec_len(x)   (cblas_dnrm2(3, x, 1))
@@ -88,8 +88,7 @@ vec_scale(double vec[3], const double scalefactor)
 
 
 __host__ __device__
-inline void
-vec_copy(double destination[3], const double source[3])
+inline void vec_copy(double destination[3], const double source[3])
 {
 #ifdef __CUDA_ARCH__
   for (int d = 0; d < 3; d++)

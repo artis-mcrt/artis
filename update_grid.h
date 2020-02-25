@@ -6,8 +6,8 @@
 
 void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer);
 void precalculate_partfuncts(int modelgridindex);
-void cellhistory_reset(int cellnumber, bool set_population);
-double calculate_populations(int modelgridindex);
+__host__ __device__ void cellhistory_reset(int cellnumber, bool set_population, int tid);
+double calculate_populations(int modelgridindex, int tid);
 double calculate_electron_densities(int modelgridindex);
 void write_grid_restart_data(const int timestep);
 

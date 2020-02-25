@@ -13,11 +13,22 @@
     #define	assert(e)	((void)0)
   #endif
 
+  #ifdef _OPENMP
+    #define safeadd(var, val) #pragma omp atomic\\
+    var += val
+  #else
+    #define safeadd(var, val) var += val
+  #endif
+
 #else
 
   #define printout(...) printf (__VA_ARGS__)
 
+  #define safeadd(var, val) atomicAdd(&var, val)
+
 #endif
+
+#define safeincrement(var) safeadd(var, 1)
 
 #include "cuda.h"
 
@@ -26,7 +37,9 @@
 #include <unistd.h>
 #include <stdarg.h>  /// MK: needed for printout()
 #include <stdbool.h>
+#ifndef __CUDA_ARCH__
 #include <gsl/gsl_integration.h>
+#endif
 #include <iostream>
 
 #define DEBUG_ON
@@ -50,6 +63,19 @@
 //#define _OPENMP
 #ifdef _OPENMP
   #include "omp.h"
+#endif
+
+#ifndef _OPENMP
+typedef int omp_int_t;
+__host__ __device__ static inline omp_int_t omp_get_thread_num(void) {
+#ifdef __CUDA_ARCH__
+  return threadIdx.x + blockDim.x * blockIdx.x;
+#else
+  return 0;
+#endif
+}
+// static inline omp_int_t omp_get_num_threads(void) { return 1; }
+__host__ __device__ static inline omp_int_t omp_get_num_threads(void) { return MTHREADS; }
 #endif
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
@@ -79,12 +105,18 @@ double get_ion_stats(const int modelgridindex, const int element, const int ion,
 
 void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue);
 
-extern __managed__ int tid;
+// extern int tid;
+#ifndef __CUDA_ARCH__
+extern gsl_rng *rng;  // pointer for random number generator
+extern gsl_integration_workspace *gslworkspace;
+#else
+extern __device__ void *rng;
+extern __device__ void *gslworkspace;
+#endif
+
 extern __managed__ int myGpuId;
 extern __managed__ bool use_cellhist;
 extern __managed__ bool neutral_flag;
-extern gsl_rng *rng;  // pointer for random number generator
-extern gsl_integration_workspace *gslworkspace;
 extern FILE *output_file;
 
 #ifdef _OPENMP
@@ -123,8 +155,8 @@ inline FILE *fopen_required(const char *filename, const char *mode)
     printout("ERROR: Could not open file '%s' for mode '%s'.\n", filename, mode);
     abort();
   }
-  else
-    return file;
+
+  return file;
 }
 
 #if CUDA_ENABLED

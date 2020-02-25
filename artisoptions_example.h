@@ -23,8 +23,8 @@
 // Max number of ion stages for any element
 #define MIONS 5
 
-// Max number of OpenMP threads
-#define MTHREADS 8
+// Max number of OpenMP or GPU threads
+#define MTHREADS 128
 
 // non-LTE population solver
 static const bool NLTE_POPS_ON = true;

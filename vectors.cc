@@ -1,5 +1,7 @@
 // #include <assert.h>
+#ifndef __CUDA_ARCH__
 #include <gsl/gsl_randist.h>
+#endif
 #include "sn3d.h"
 #include "vectors.h"
 
@@ -54,7 +56,7 @@ double doppler(const double dir1[3], const double vel[3])
 }
 
 
-// __host__ __device__
+__host__ __device__
 void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[3])
 // Routine for scattering a direction through angle theta.
 {
@@ -92,6 +94,7 @@ void scatter_dir(const double dir_in[3], const double cos_theta, double dir_out[
 }
 
 
+__host__ __device__
 void get_rand_isotropic_unitvec(double vecout[3])
 // Assume isotropic distribution, get a random direction vector
 {

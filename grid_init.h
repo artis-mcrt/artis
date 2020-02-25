@@ -5,13 +5,14 @@
 #include "sn3d.h"
 
 void grid_init(int my_rank);
-double get_cellradialpos(int cellindex);
+__host__ __device__ double get_cellradialpos(int cellindex);
 __host__ __device__ float get_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type);
 void set_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
 __host__ __device__ float get_stable_abund(int mgi, int anumber);
 __host__ __device__ int get_numassociatedcells(int modelgridindex);
 
 
+__host__ __device__
 inline double wid_init(const int cellindex)
 // for a uniform grid this is the extent along the x,y,z coordinate (x_2 - x_1, etc.)
 // for spherical grid this is the radial extent (r_outer - r_inner)
@@ -32,6 +33,7 @@ inline double wid_init(const int cellindex)
 }
 
 
+__host__ __device__
 inline double vol_init_modelcell(const int modelgridindex)
 // return the model cell volume at tmin
 // for a uniform cubic grid this is constant
@@ -50,6 +52,7 @@ inline double vol_init_modelcell(const int modelgridindex)
 }
 
 
+__host__ __device__
 inline double vol_init_gridcell(const int cellindex)
 // return the propagation cell volume at tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
@@ -68,6 +71,7 @@ inline double vol_init_gridcell(const int cellindex)
 }
 
 
+__host__ __device__
 inline double get_cellcoordmin(const int cellindex, const int axis)
 // get the minimum value of a coordinate at tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
@@ -77,6 +81,7 @@ inline double get_cellcoordmin(const int cellindex, const int axis)
 }
 
 
+__host__ __device__
 inline int get_coordcellindexincrement(const int axis)
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 {
@@ -100,11 +105,13 @@ inline int get_coordcellindexincrement(const int axis)
         default:
           printout("invalid coordinate index %d", axis);
           abort();
+          return -1;
       }
   }
 }
 
 
+__host__ __device__
 inline int get_cellcoordpointnum(const int cellindex, const int axis)
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 {
@@ -205,26 +212,31 @@ inline float get_W(int modelgridindex)
   return modelgrid[modelgridindex].W;
 }
 
+__host__ __device__
 inline void set_rhoinit(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].rhoinit = x;
 }
 
+__host__ __device__
 inline void set_rho(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].rho = x;
 }
 
+__host__ __device__
 inline void set_nne(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].nne = x;
 }
 
+__host__ __device__
 inline void set_nnetot(int modelgridindex, float x)
 {
   modelgrid[modelgridindex].nnetot = x;
 }
 
+__host__ __device__
 inline void set_ffegrp(int modelgridindex, float x)
 {
   assert(x >= 0);
@@ -232,26 +244,31 @@ inline void set_ffegrp(int modelgridindex, float x)
   modelgrid[modelgridindex].ffegrp = x;
 }
 
+__host__ __device__
 inline void set_kappagrey(int modelgridindex, float kappagrey)
 {
   modelgrid[modelgridindex].kappagrey = kappagrey;
 }
 
+__host__ __device__
 inline void set_Te(int modelgridindex, float Te)
 {
   modelgrid[modelgridindex].Te = Te;
 }
 
+__host__ __device__
 inline void set_TR(int modelgridindex, float TR)
 {
   modelgrid[modelgridindex].TR = TR;
 }
 
+__host__ __device__
 inline void set_TJ(int modelgridindex, float TJ)
 {
   modelgrid[modelgridindex].TJ = TJ;
 }
 
+__host__ __device__
 inline void set_W(int modelgridindex, float W)
 {
   modelgrid[modelgridindex].W = W;

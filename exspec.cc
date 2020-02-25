@@ -38,7 +38,7 @@ double dlogtlc_angle;
 // threadprivate variables
 FILE *output_file;
 int tid;
-bool use_cellhist;
+__managed__ bool use_cellhist;
 bool neutral_flag;
 gsl_rng *rng;
 gsl_integration_workspace *gslworkspace;

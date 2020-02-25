@@ -17,6 +17,7 @@ typedef struct Te_solution_paras
 {
   double t_current;
   int modelgridindex;
+  int tid;
   heatingcoolingrates_t *heatingcoolingrates;
 } Te_solution_paras;
 
@@ -79,6 +80,7 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidpara
 }
 
 
+#ifndef __CUDA_ARCH__
 static double calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
 {
   // const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
@@ -115,7 +117,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
   const int status = gsl_integration_qag(
-    &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
+     &F_bfheating, nu_threshold, nu_max_phixs, epsabs, epsrel,
      GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &bfheating, &error);
 
   if (status != 0 && (status != 18 || (error / bfheating) > epsrelwarning))
@@ -147,9 +149,9 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
   return bfheating;
 }
+#endif
 
-
-static double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex)
+static double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int tid)
 // depends only the radiation field
 // no dependence on T_e or populations
 {
@@ -157,7 +159,8 @@ static double get_bfheatingcoeff(int element, int ion, int level, int phixstarge
 }
 
 
-void calculate_bfheatingcoeffs(int modelgridindex)
+#ifndef __CUDA_ARCH__
+void calculate_bfheatingcoeffs(int modelgridindex, int tid)
 {
   for (int element = 0; element < nelements; element++)
   {
@@ -177,7 +180,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           /// correction may be evaluated at T_R!
           const double T_R = get_TR(modelgridindex);
           const double W = get_W(modelgridindex);
-          double bfheatingcoeff = W * get_bfheatingcoeff_ana(element,ion,level,phixstargetindex, T_R, W);
+          double bfheatingcoeff = W * get_bfheatingcoeff_ana(element,ion,level,phixstargetindex, T_R, W, tid);
           const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
             bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
@@ -197,6 +200,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
   }
   cellhistory[tid].bfheating_mgi = modelgridindex;
 }
+#endif
 
 
 static double get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e, const double nne)
@@ -227,7 +231,7 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
 
 
 static void calculate_heating_rates(
-  const int modelgridindex, const double T_e, const double nne, heatingcoolingrates_t *heatingcoolingrates)
+  const int modelgridindex, const double T_e, const double nne, heatingcoolingrates_t *heatingcoolingrates, int tid)
 /// Calculate the heating rates for a given cell. Results are returned
 /// via the elements of the global heatingrates data structure.
 {
@@ -346,7 +350,7 @@ static void calculate_heating_rates(
           //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
           //double epsilon_upper = epsilon(element,ion+1,upper);
           //double epsilon_trans = epsilon_upper - epsilon_current;
-          bfheating += nnlevel * get_bfheatingcoeff(element, ion, level, phixstargetindex);
+          bfheating += nnlevel * get_bfheatingcoeff(element, ion, level, phixstargetindex, tid);
         }
       }
     }
@@ -394,6 +398,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 {
   const int modelgridindex = ((Te_solution_paras *) paras)->modelgridindex;
   const double t_current = ((Te_solution_paras *) paras)->t_current;
+  const int tid = ((Te_solution_paras *) paras)->tid;
   heatingcoolingrates_t *heatingcoolingrates = ((Te_solution_paras *) paras)->heatingcoolingrates;
 
   /// Set new T_e guess for the current cell and update populations
@@ -403,12 +408,12 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS)
     nntot = calculate_electron_densities(modelgridindex);
   else
-    nntot = calculate_populations(modelgridindex);
+    nntot = calculate_populations(modelgridindex, tid);
 
   /// Then calculate heating and cooling rates
   const float nne = get_nne(modelgridindex);
   calculate_cooling_rates(modelgridindex, heatingcoolingrates);
-  calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
+  calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates, tid);
 
   /// If selected take direct gamma heating into account
   if (do_rlc_est == 3)
@@ -437,7 +442,8 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
 }
 
 
-void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min, const double T_max, heatingcoolingrates_t *heatingcoolingrates)
+#ifndef __CUDA_ARCH__
+void call_T_e_finder(const int modelgridindex, const int timestep, const double t_current, const double T_min, const double T_max, heatingcoolingrates_t *heatingcoolingrates, int tid)
 {
   const double T_e_old = get_Te(modelgridindex);
   printout("Finding T_e in cell %d at timestep %d...", modelgridindex, timestep);
@@ -465,6 +471,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
   paras.modelgridindex = modelgridindex;
   paras.t_current = t_current;
   paras.heatingcoolingrates = heatingcoolingrates;
+  paras.tid = tid;
 
   gsl_function find_T_e_f;
   find_T_e_f.function = &T_e_eqn_heating_minus_cooling;
@@ -644,7 +651,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 
   set_Te(modelgridindex, T_e);
 }
-
+#endif
 
 // void calculate_oldheating_rates(int cellnumber)
 // /// Calculate the heating rates for a given cell. Results are returned

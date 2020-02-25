@@ -260,6 +260,7 @@ static void write_ratecoeff_dat(void)
 ///****************************************************************************
 /// The following functions define the integrands for these rate coefficients
 /// for use with libgsl integrators.
+__host__ __device__
 static double alpha_sp_integrand_gsl(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
@@ -277,6 +278,7 @@ static double alpha_sp_integrand_gsl(double nu, void *voidparas)
 }
 
 
+__host__ __device__
 static double alpha_sp_E_integrand_gsl(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for spontaneous recombination
 /// using gsl integrators.
@@ -322,6 +324,7 @@ static double alpha_sp_E_integrand_gsl(double nu, void *voidparas)
 
 
 #if (!NO_LUT_PHOTOION)
+__host__ __device__
 static double gammacorr_integrand_gsl(double nu, void *voidparas)
 /// Integrand to calculate the rate coefficient for photoionization
 /// using gsl integrators. Corrected for stimulated recombination.
@@ -342,6 +345,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
 
 
 #if (!NO_LUT_BFHEATING)
+  __host__ __device__
   static double approx_bfheating_integrand_gsl(double nu, void *voidparas)
   /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
   /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
@@ -451,6 +455,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
   return x;
 }*/
 
+__host__ __device__
 static double bfcooling_integrand_gsl(double nu, void *voidparas)
 /// Integrand to precalculate the bound-free heating ratecoefficient in an approximative way
 /// on a temperature grid using the assumption that T_e=T_R and W=1 in the ionisation
@@ -527,6 +532,7 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
 }*/
 
 
+#ifndef __CUDA_ARCH__
 static void precalculate_rate_coefficient_integrals(void)
 {
   const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
@@ -540,6 +546,7 @@ static void precalculate_rate_coefficient_integrals(void)
     #endif
     for (int ion = 0; ion < nions; ion++)
     {
+      const int tid = omp_get_thread_num();
       //nlevels = get_nlevels(element,ion);
       const int atomic_number = get_element(element);
       const int ionstage = get_ionstage(element,ion);
@@ -704,8 +711,10 @@ static void precalculate_rate_coefficient_integrals(void)
     }
   }
 }
+#endif
 
 
+__host__ __device__
 static int get_index_from_cumulativesums(double *partialsums, size_t listsize, double targetsum)
 // e.g. given a list of [0.25, 0.75, 1.00],
 // returns 0 for targetsum [0., 0.25], 1 for (0.25, 0.75], 2 for (0.75, 1.00]
@@ -723,48 +732,7 @@ static int get_index_from_cumulativesums(double *partialsums, size_t listsize, d
 }
 
 
-static double get_x_at_integralfrac(gsl_function *F_integrand, double xmin, double xmax, int npieces, double targetintegralfrac)
-// find the x such that that integral f(s) ds from xmin to x is the fraction targetintegralfrac
-// of the total integral from xmin to xmax
-// this is done by breaking the integral into npieces intervals
-{
-  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
-
-  const double deltax = (xmax - xmin) / npieces;
-
-  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-
-  double partialsums[npieces];
-  for (int i = 0; i < npieces; i++)
-  {
-    const double xlow = xmin + i * deltax;
-    const double xhigh = xmin + (i + 1) * deltax;
-    // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
-    double error;
-    double piece = 0.;
-    gsl_integration_qag(F_integrand, xlow, xhigh, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &piece, &error);
-    partialsums[i] = (i == 0 ? 0 : partialsums[i - 1]) + piece;
-  }
-
-  gsl_set_error_handler(previous_handler);
-
-  const double total = partialsums[npieces - 1];
-
-  assert(total > 0);
-
-  const double targetintegral = targetintegralfrac * total;
-
-  const int index = get_index_from_cumulativesums(partialsums, npieces, targetintegral);
-
-  const double xlow = xmin + index * deltax;
-  const double xhigh = xmin + (index + 1) * deltax;
-  const double intlow = index == 0 ? 0. : partialsums[index - 1];
-  const double inthigh = partialsums[index];
-
-  return xlow + (targetintegral - intlow) / (inthigh - intlow) * (xhigh - xlow);
-}
-
-
+__host__ __device__
 double select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e)
 {
 
@@ -772,21 +740,73 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
 
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
+  // return nu_threshold; // TODO: REPLACE WITH CORRECT VERSION!
 
-  const int npieces = NPHIXSPOINTS;
+  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
   gslintegration_paras intparas;
   intparas.T = T_e;
   intparas.nu_edge = nu_threshold;
   intparas.photoion_xs = elements[element].ions[lowerion].levels[lower].photoion_xs;
+  #ifndef __CUDA_ARCH__
   gsl_function F_alpha_sp;
   // F_alpha_sp.function = &alpha_sp_integrand_gsl;
   F_alpha_sp.function = &alpha_sp_E_integrand_gsl;
   F_alpha_sp.params = &intparas;
+  #endif
 
   const double zrand = 1. - gsl_rng_uniform(rng); // Make sure that 0 < zrand <= 1
-  double nu_selected = get_x_at_integralfrac(&F_alpha_sp, nu_threshold, nu_max_phixs, npieces, zrand);
+
+
+  const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator
+
+  const double xmin = nu_threshold;
+  const double xmax = nu_max_phixs;
+
+
+  #ifndef __CUDA_ARCH__
+  gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
+  #endif
+
+  const int npieces = NPHIXSPOINTS;
+  const double deltax = (xmax - xmin) / npieces;
+
+  double *partialsums = (double *) malloc(npieces * sizeof(double));
+  for (int i = 0; i < npieces; i++)
+  {
+    const double xlow = xmin + i * deltax;
+    const double xhigh = xmin + (i + 1) * deltax;
+    // Spontaneous recombination and bf-cooling coefficient don't depend on the cutted radiation field
+    double error;
+    double piece = 0.;
+    #ifndef __CUDA_ARCH__
+    gsl_integration_qag(&F_alpha_sp, xlow, xhigh, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &piece, &error);
+    #else
+    piece =
+      calculate_integral_gpu<alpha_sp_E_integrand_gsl, gslintegration_paras>(&intparas, xlow, xhigh);
+    #endif
+    partialsums[i] = (i == 0 ? 0 : partialsums[i - 1]) + piece;
+  }
+
+  #ifndef __CUDA_ARCH__
+  gsl_set_error_handler(previous_handler);
+  #endif
+
+  const double total = partialsums[npieces - 1];
+
+  assert(total > 0);
+
+  const double targetintegral = zrand * total;
+
+  const int index = get_index_from_cumulativesums(partialsums, npieces, targetintegral);
+
+  const double xlow = xmin + index * deltax;
+  const double xhigh = xmin + (index + 1) * deltax;
+  const double intlow = index == 0 ? 0. : partialsums[index - 1];
+  const double inthigh = partialsums[index];
+  free(partialsums);
+
+  double nu_selected = xlow + (targetintegral - intlow) / (inthigh - intlow) * (xhigh - xlow);
 
   // printout("emitted bf photon Z=%2d ionstage %d->%d upper %4d lower %4d lambda %7.1f lambda_edge %7.1f ratio %g zrand %g\n",
   //    get_element(element), get_ionstage(element, lowerion + 1), get_ionstage(element, lowerion), upperionlevel, lower, 1e8 * CLIGHT / nu_selected, 1e8 * CLIGHT / nu_threshold, nu_selected / nu_threshold, zrand);
@@ -1150,7 +1170,8 @@ static void precalculate_ion_alpha_sp(void)
 }
 
 
-void ratecoefficients_init(void)
+#ifndef __CUDA_ARCH__
+void ratecoefficients_init()
 /// Precalculates the rate coefficients for stimulated and spontaneous
 /// recombination and photoionisation on a given temperature grid using
 /// libgsl integrators.
@@ -1181,9 +1202,11 @@ void ratecoefficients_init(void)
 
   precalculate_ion_alpha_sp();
 }
+#endif
 
 
 #if (!NO_LUT_PHOTOION)
+  __host__ __device__
   double interpolate_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, double T)
   {
     const int lowerindex = floor(log(T/MINTEMP)/T_step_log);
@@ -1416,7 +1439,8 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
   const int status = gsl_integration_qag(
-    &F_gammacorr, nu_threshold, nu_max_phixs, epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
+    &F_gammacorr, nu_threshold, nu_max_phixs,
+    epsabs, epsrel, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &gammacorr, &error);
 
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
@@ -1447,7 +1471,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 
 
 __host__ __device__
-double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex)
+double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetindex, int modelgridindex, int tid)
 /// Returns the photoionisation rate coefficient (corrected for stimulated emission)
 /// Only needed during packet propagation, therefore the value is taken from the
 /// cell history if known.
@@ -1501,7 +1525,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 }
 
 
-double calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion)
+double calculate_iongamma_per_gspop(const int modelgridindex, const int element, const int ion, int tid)
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate
 {
   const int nions = get_nions(element);
@@ -1521,7 +1545,7 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
       {
         const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-        Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex);
+        Gamma += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, modelgridindex, tid);
 
         const double epsilon_trans = epsilon(element,ion + 1,upperlevel) - epsilon(element,ion,level);
         //printout("%g %g %g\n", calculate_exclevelpop(n,element,ion,level),col_ionization(n,0,epsilon_trans),epsilon_trans);
@@ -1539,7 +1563,7 @@ double calculate_iongamma_per_gspop(const int modelgridindex, const int element,
 
 double calculate_iongamma_per_ionpop(
   const int modelgridindex, const float T_e, const int element, const int lowerion,
-  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool use_bfest)
+  const bool assume_lte, const bool collisional_not_radiative, const bool printdebug, const bool use_bfest, const int tid)
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate
 {
   assert(lowerion < get_nions(element) - 1);
@@ -1609,7 +1633,7 @@ double calculate_iongamma_per_ionpop(
       }
       else
       {
-        gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, modelgridindex); // whatever ARTIS uses internally
+        gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, modelgridindex, tid); // whatever ARTIS uses internally
         gamma_coeff_bfest += get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
 
         // use the cellhistory but not the detailed bf estimators

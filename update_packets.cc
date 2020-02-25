@@ -10,12 +10,14 @@
 #include "vectors.h"
 
 
-static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, const int nts)
+__host__ __device__
+static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, const int nts, int tid)
 // Master routine for moving packets around. When it called,
 //   it is given the time at start of inverval and at end - when it finishes,
 //   everything the packet does during this time should be sorted out.
 {
   double t_current = t1;
+  // printf("kernel tid %d packet prop start type %d\n", tid, pkt_ptr->type);
 
   /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
@@ -26,28 +28,26 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
     /* Start by sorting out what sort of packet it is.*/
     //printout("start of packet_prop loop %d\n", pkt_ptr->type );
     const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
+    // printf("kernel tid %d packet prop loop type %d\n", tid, pkt_ptr->type);
 
     switch (pkt_type)
     {
       case TYPE_GAMMA:
-        //printout("gamma propagation\n");
-        t_current = do_gamma(pkt_ptr, t_current, t2);
+        // printout("gamma propagation\n");
+        t_current = do_gamma(pkt_ptr, t_current, t2, tid);
   	    /* This returns a flag if the packet gets to t2 without
         changing to something else. If the packet does change it
         returns the time of change and sets everything for the
         new packet.*/
         if (t_current >= 0)
         {
-          #ifdef _OPENMP
-            #pragma omp atomic
-          #endif
-          time_step[nts].gamma_dep += pkt_ptr->e_cmf;
+          safeadd(time_step[nts].gamma_dep, pkt_ptr->e_cmf);
         }
         break;
 
       case TYPE_RPKT:
-        //printout("r-pkt propagation\n");
-        t_current = do_rpkt(pkt_ptr, t_current, t2);
+        // printout("r-pkt propagation\n");
+        t_current = do_rpkt(pkt_ptr, t_current, t2, tid);
   //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
   //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
   //       else
@@ -55,15 +55,12 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
 
         if (pkt_ptr->type == TYPE_ESCAPE)
         {
-          #ifdef _OPENMP
-            #pragma omp atomic
-          #endif
-          time_step[nts].cmf_lum += pkt_ptr->e_cmf;
+          safeadd(time_step[nts].cmf_lum, pkt_ptr->e_cmf);
         }
         break;
 
       case TYPE_NTLEPTON:
-        do_ntlepton(pkt_ptr);
+        do_ntlepton(pkt_ptr, tid);
         break;
 
       case TYPE_KPKT:
@@ -75,15 +72,14 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
         if (pkt_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
         {
-          t_current = do_kpkt_bb(pkt_ptr, t_current);
+          t_current = do_kpkt_bb(pkt_ptr, t_current, tid);
         }
         else if (pkt_type == TYPE_KPKT)
         {
-          t_current = do_kpkt(pkt_ptr, t_current, t2, nts);
+          t_current = do_kpkt(pkt_ptr, t_current, t2, nts, tid);
         }
         else
         {
-          printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
           abort();
           //t_change_type = do_kpkt_ffonly(pkt_ptr, t_current, t2);
         }
@@ -92,8 +88,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
       case TYPE_MA:
         // It's an active macroatom - apply transition probabilities
         //printout("MA-packet handling\n");
-
-        t_current = do_macroatom(pkt_ptr, t_current, t2, nts);
+        t_current = do_macroatom(pkt_ptr, t_current, t2, nts, tid);
         break;
 
       default:
@@ -105,8 +100,10 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
 }
 
 
+__host__ __device__
 static void update_pellet(
-  PKT *pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double ts, const double tw)
+  PKT *pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts,
+  const double ts, const double tw, const int tid)
 {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
@@ -126,14 +123,18 @@ static void update_pellet(
   else if (tdecay > ts)
   {
     // The packet decays in the current timestep.
+    #ifdef __CUDA_ARCH__
+    atomicAdd(&time_step[nts].pellet_decays, 1);
+    #else
     time_step[nts].pellet_decays++;
+    #endif
     if (decay_to_kpkt)
     {
       vec_scale(pkt_ptr->pos, tdecay / ts);
 
       pkt_ptr->type = TYPE_KPKT;
       pkt_ptr->absorptiontype = -6;
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
+      packet_prop(pkt_ptr, tdecay, ts + tw, nts, tid);
     }
     else if (decay_to_ntlepton)
     {
@@ -142,14 +143,14 @@ static void update_pellet(
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
+      packet_prop(pkt_ptr, tdecay, ts + tw, nts, tid);
     }
     else
     {
       // decay to gamma ray
       pellet_decay(nts, pkt_ptr);
       //printout("pellet to photon packet and propagation by packet_prop\n");
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
+      packet_prop(pkt_ptr, tdecay, ts + tw, nts, tid);
     }
   }
   else if ((tdecay > 0) && (nts == 0))
@@ -165,10 +166,15 @@ static void update_pellet(
     pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
     //if (tid == 0) k_stat_from_earlierdecay++;
+
+    #ifdef __CUDA_ARCH__
+    atomicAdd(&k_stat_from_earlierdecay, 1);
+    #else
     k_stat_from_earlierdecay++;
+    #endif
 
     //printout("already decayed packets and propagation by packet_prop\n");
-    packet_prop(pkt_ptr, tmin, ts + tw, nts);
+    packet_prop(pkt_ptr, tmin, ts + tw, nts, tid);
   }
   else
   {
@@ -204,17 +210,146 @@ static int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
   else if (rho_diff > 0)
     return -1;
   else
+  {
+    // const double p1_tdecay = ((PKT *) p1)->tdecay;
+    // const double p2_tdecay = ((PKT *) p2)->tdecay;
+    // if (p2_tdecay > p1_tdecay)
+    //   return 1;
+    // else if (p1_tdecay > p2_tdecay)
+    //   return -1;
+    // else
+    //   return 0;
     return 0;
+  }
 }
+
+#if CUDA_ENABLED
+__global__ static void kernel_updatepacket(const int firstpacketnum, const int nts, PKT *pkt, double ts, double tw)
+{
+  const int tid = omp_get_thread_num();
+  const int n = firstpacketnum + tid;
+  if (n >= npkts || tid >= MTHREADS)
+    return;
+
+  PKT *pkt_ptr = &pkt[n];
+  pkt_ptr->interactions = 0;
+
+  const int cellindex = pkt_ptr->where;
+  const int mgi = cell[cellindex].modelgridindex;
+
+  if (firstpacketnum == 0)
+  {
+    // printf("tid %d doing cellhistory_reset new timestep", tid);
+    cellhistory_reset(-99, true, tid);
+  }
+  /// for non empty cells update the global available level populations and cooling terms
+  if (mgi != MMODELGRID)
+  {
+    //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
+    /// Reset cellhistory if packet starts up in another than the last active cell
+    if (cellhistory[tid].cellnumber != mgi)
+    {
+      safeincrement(updatecellcounter);
+
+      cellhistory_reset(mgi, false, tid);
+    }
+
+    /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
+    if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
+    {
+      calculate_kappa_rpkt_cont(pkt_ptr, ts, mgi, tid);
+    }
+  }
+
+  // printf("kernel tid %d updating packet %d type %d\n", tid, n, pkt_ptr->type);
+  switch (pkt_ptr->type)
+  {
+    case TYPE_56NI_PELLET:
+    case TYPE_56CO_PELLET:
+    case TYPE_57NI_PELLET:
+    case TYPE_57CO_PELLET:
+    case TYPE_48CR_PELLET:
+    case TYPE_48V_PELLET:
+      // decay to gamma ray
+      update_pellet(pkt_ptr, false, false, nts, ts, tw, tid);
+      break;
+
+    case TYPE_52FE_PELLET:
+    case TYPE_52MN_PELLET:
+      // convert to kpkts
+      update_pellet(pkt_ptr, true, false, nts, ts, tw, tid);
+      break;
+
+    case TYPE_57NI_POSITRON_PELLET:
+    case TYPE_56CO_POSITRON_PELLET:
+      // convert to to non-thermal leptons
+      update_pellet(pkt_ptr, false, true, nts, ts, tw, tid);
+      break;
+
+    case TYPE_GAMMA:
+    case TYPE_RPKT:
+    case TYPE_KPKT:
+      /**Stuff for processing photons. */
+      //printout("further propagate a photon packet via packet_prop\n");
+
+      packet_prop(pkt_ptr, ts, ts + tw, nts, tid);
+      break;
+
+    case TYPE_ESCAPE:
+      break;
+
+    default:
+      printout("update_packets: Unknown packet type %d for pkt number %d. Abort.\n", pkt_ptr->type, n);
+      abort();
+  }
+}
+
+
+void update_packets_gpu(const int nts, PKT *pkt)
+{
+  const double ts = time_step[nts].start;
+  const double tw = time_step[nts].width;
+
+  qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
+
+  printout("start of parallel update_packets loop on GPU %ld\n", time(NULL));
+
+  dim3 threadsPerBlock(32, 1, 1);
+  dim3 numBlocks((MTHREADS + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
+
+  int lastprintedpacketnum = -1;
+
+  for (int firstpacketnum = 0; firstpacketnum < npkts; firstpacketnum += MTHREADS)
+  {
+    if (lastprintedpacketnum == -1 || firstpacketnum - lastprintedpacketnum > 10000)
+    {
+      printout("   update_packets: updating packet %d for timestep %d at time %ld...\n", firstpacketnum, nts, time(NULL));
+      lastprintedpacketnum = firstpacketnum;
+    }
+
+    kernel_updatepacket<<<numBlocks, threadsPerBlock>>>(firstpacketnum, nts, pkt, ts, tw);
+
+    // Check for any errors launching the kernel
+    checkCudaErrors(cudaGetLastError());
+
+    // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+    checkCudaErrors(cudaDeviceSynchronize());
+  }
+
+  printout("last packet updated at %ld\n", time(NULL));
+
+  printout("end of update_packets parallel for loop on GPU %ld\n", time(NULL));
+}
+#endif
 
 
 void update_packets(const int nts, PKT *pkt)
 // Subroutine to move and update packets during the current timestep (nts)
 {
-  /** At the start, the packets have all either just been initialised or have already been
-  processed for one or more timesteps. Those that are pellets will just be sitting in the
-  matter. Those that are photons (or one sort or another) will already have a position and
-  a direction.*/
+  // At the start, the packets have all either just been initialised or have already been
+  // processed for one or more timesteps. Those that are pellets will just be sitting in the
+  // matter. Those that are photons (or one sort or another) will already have a position and
+  // a direction.
 
   const double ts = time_step[nts].start;
   const double tw = time_step[nts].width;
@@ -236,11 +371,12 @@ void update_packets(const int nts, PKT *pkt)
     #endif
     for (int n = 0; n < npkts; n++)
     {
+      const int tid = omp_get_thread_num();
       // if ((time(NULL) - time_of_last_packet_printout > 1) || n == npkts - 1)
       if ((n % 10000 == 0) || n == npkts - 1)
       {
         // time_of_last_packet_printout = time(NULL);
-        printout("[debug] update_packets: updating packet %d for timestep %d at time %ld...\n", n, nts, time(NULL));
+        printout("   update_packets: updating packet %d for timestep %d at time %ld...\n", n, nts, time(NULL));
       }
 
       PKT *pkt_ptr = &pkt[n];
@@ -274,13 +410,13 @@ void update_packets(const int nts, PKT *pkt)
         {
           updatecellcounter++;
 
-          cellhistory_reset(mgi, false);
+          cellhistory_reset(mgi, false, tid);
         }
 
         /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
         if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr, ts, mgi);
+          calculate_kappa_rpkt_cont(pkt_ptr, ts, mgi, tid);
         }
       }
 
@@ -297,19 +433,19 @@ void update_packets(const int nts, PKT *pkt)
         case TYPE_48CR_PELLET:
         case TYPE_48V_PELLET:
           // decay to gamma ray
-          update_pellet(pkt_ptr, false, false, nts, ts, tw);
+          update_pellet(pkt_ptr, false, false, nts, ts, tw, tid);
           break;
 
         case TYPE_52FE_PELLET:
         case TYPE_52MN_PELLET:
           // convert to kpkts
-          update_pellet(pkt_ptr, true, false, nts, ts, tw);
+          update_pellet(pkt_ptr, true, false, nts, ts, tw, tid);
           break;
 
         case TYPE_57NI_POSITRON_PELLET:
         case TYPE_56CO_POSITRON_PELLET:
           // convert to to non-thermal leptons
-          update_pellet(pkt_ptr, false, true, nts, ts, tw);
+          update_pellet(pkt_ptr, false, true, nts, ts, tw, tid);
           break;
 
         case TYPE_GAMMA:
@@ -318,7 +454,7 @@ void update_packets(const int nts, PKT *pkt)
           /**Stuff for processing photons. */
           //printout("further propagate a photon packet via packet_prop\n");
 
-          packet_prop(pkt_ptr, ts, ts + tw, nts);
+          packet_prop(pkt_ptr, ts, ts + tw, nts, tid);
           break;
 
         case TYPE_ESCAPE:

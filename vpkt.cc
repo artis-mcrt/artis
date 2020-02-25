@@ -732,6 +732,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
 
 ///****************************************************************************
+__host__ __device__
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
 /* ------------- Rotation angle from the scattering plane --------------------------------------------- */
 /* -------- We need to rotate Stokes Parameters to (or from) the scattering plane from (or to) -------- */
@@ -767,7 +768,7 @@ double rot_angle(double *n1, double *n2, double *ref1, double *ref2) {
 
 
 /* ----------------------- Routine to compute the meridian frame axes ref1 and ref2 ----------------------------------------*/
-
+__host__ __device__
 void meridian(double *n, double *ref1, double *ref2){
 
     // for ref_1 use (from triple product rule)
@@ -787,7 +788,7 @@ void meridian(double *n, double *ref1, double *ref2){
 
 
 /* ----------------------- Routine to transform the Stokes Parameters from RF to CMF ----------------------------------------*/
-
+__host__ __device__
 void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cmf) {
 
     double rot_angle,cos2rot_angle,sin2rot_angle,p,Q0,U0;
@@ -863,7 +864,7 @@ void frame_transform(double *n_rf, double *Q, double *U, double *v, double *n_cm
 
 
 /* ----------------------- Lorentz transformations from RF to CMF --------------------------------------------- */
-
+__host__ __device__
 void lorentz(double *e_rf, double *n_rf, double *v, double *e_cmf) {
 
     double beta[3],e_par[3], e_perp[3], b_rf[3], b_par[3], b_perp[3], vsqr, gamma_rel, v_cr_b[3], v_cr_e[3], b_cmf[3];

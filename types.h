@@ -10,7 +10,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#ifndef __CUDA_ARCH__
 #include <gsl/gsl_rng.h>
+#endif
 //#include <gsl/gsl_sf_expint.h>
 
 
@@ -453,6 +455,7 @@ typedef struct bflist_t
 typedef struct nne_solution_paras
 {
   int cellnumber;
+  int tid;
 } nne_solution_paras;
 
 typedef struct gslintegration_paras
