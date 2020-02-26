@@ -132,7 +132,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 
   const double bfheating_gpu =
     calculate_integral_gpu<integrand_bfheatingcoeff_custom_radfield, gsl_integral_paras_bfheating>(
-      &intparas, nu_threshold, nu_max_phixs);
+      intparas, nu_threshold, nu_max_phixs);
 
   #if CUDA_VERIFY_CPUCONSISTENCY
   if (bfheating > 0 && abs(bfheating_gpu / bfheating - 1.) > 0.3)

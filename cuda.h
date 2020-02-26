@@ -13,10 +13,11 @@
   #define USECUDA_NLTE_BOUNDBOUND false
   #define USECUDA_NONTHERMAL_EXCITATION true
   #define USECUDA_NONTHERMAL_IONIZATION true
-  #define USECUDA_RPKT_CONTOPACITY false
+  #define USECUDA_RPKT_CONTOPACITY true
   #define CUDA_VERIFY_CPUCONSISTENCY false
 
   #define USECUDA_UPDATEPACKETS true
+
 
   #include <cuda_runtime.h>
   // #include <curand.h>
@@ -71,21 +72,23 @@
 
     extern __managed__ curandState curandstates[MTHREADS];
 
-    // #define gsl_rng_uniform(Y) curand_uniform_double(&curandstates[threadIdx.x + blockDim.x * blockIdx.x])
+    typedef int omp_int_t;
+    __host__ __device__ extern inline omp_int_t omp_get_thread_num(void);
+
     __device__ inline static double gsl_rng_uniform(void *ignore)
     {
-      const int idx = threadIdx.x + blockIdx.x * blockDim.x;
-      const double zrand = curand_uniform_double(&curandstates[idx]);
+      const int tid = omp_get_thread_num();
+      const double zrand = curand_uniform_double(&curandstates[tid]);
       // printf("random %g\n", zrand);
       return zrand;
     }
 
     __device__ inline static double gsl_rng_uniform_pos(void *ignore)
     {
-      const int idx = threadIdx.x + blockIdx.x * blockDim.x;
+      const int tid = omp_get_thread_num();
       while (true)
       {
-        const double zrand = curand_uniform_double(&curandstates[idx]);
+        const double zrand = curand_uniform_double(&curandstates[tid]);
         if (zrand > 0.)
           return zrand;
       }

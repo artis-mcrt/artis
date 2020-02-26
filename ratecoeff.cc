@@ -110,7 +110,8 @@ static bool read_ratecoeff_dat(void)
             int ionisinglevels = get_ionisinglevels(element,ion);
             if (get_element(element) != in_element || get_ionstage(element,ion) != in_ionstage || nlevels != in_levels || ionisinglevels != in_ionisinglevels)
             {
-              printout("Levels or ionising levels count mismatch!\n");
+              printout("Levels or ionising levels count mismatch! element %d %d ionstage %d %d nlevels %d %d ionisinglevels %d %d\n",
+              get_element(element), in_element, get_ionstage(element,ion), in_ionstage, nlevels, in_levels, ionisinglevels, in_ionisinglevels);
               fileisamatch = false;
               break;
             }
@@ -740,7 +741,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   const double nu_threshold = ONEOVERH * E_threshold;
 
-  // return nu_threshold; // TODO: REPLACE WITH CORRECT VERSION!
+  return nu_threshold; // TODO: REPLACE WITH CORRECT VERSION!
 
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
@@ -783,7 +784,7 @@ double select_continuum_nu(int element, int lowerion, int lower, int upperionlev
     gsl_integration_qag(&F_alpha_sp, xlow, xhigh, 0, intaccuracy, GSLWSIZE, GSL_INTEG_GAUSS61, gslworkspace, &piece, &error);
     #else
     piece =
-      calculate_integral_gpu<alpha_sp_E_integrand_gsl, gslintegration_paras>(&intparas, xlow, xhigh);
+      calculate_integral_gpu<alpha_sp_E_integrand_gsl, gslintegration_paras>(intparas, xlow, xhigh);
     #endif
     partialsums[i] = (i == 0 ? 0 : partialsums[i - 1]) + piece;
   }
@@ -1312,7 +1313,7 @@ static double calculate_stimrecombcoeff_integral(int element, int lowerion, int 
 
     const double stimrecombcoeff_gpu =
       calculate_integral_gpu<integrand_stimrecombination_custom_radfield, gsl_integral_paras_gammacorr>(
-        &intparas, nu_threshold, nu_max_phixs) * FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
+        intparas, nu_threshold, nu_max_phixs) * FOURPI * sf * get_phixsprobability(element, lowerion, level, phixstargetindex);
 
     #if CUDA_VERIFY_CPUCONSISTENCY
     if (stimrecombcoeff > 0 && abs(stimrecombcoeff_gpu / stimrecombcoeff - 1.) > 0.3)
@@ -1454,7 +1455,7 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
 #endif
 #if (CUDA_ENABLED && USECUDA_PHOTOIONCOEFF)
 
-  const double gammacorr_gpu = calculate_integral_gpu<integrand_corrphotoioncoeff_custom_radfield, gsl_integral_paras_gammacorr>(&intparas, nu_threshold, nu_max_phixs) * FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
+  const double gammacorr_gpu = calculate_integral_gpu<integrand_corrphotoioncoeff_custom_radfield, gsl_integral_paras_gammacorr>(intparas, nu_threshold, nu_max_phixs) * FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
   #if (CUDA_VERIFY_CPUCONSISTENCY && !defined(__CUDA_ARCH__))
   if (gammacorr > 0 && abs(gammacorr_gpu / gammacorr - 1.) > 0.3)
@@ -1637,10 +1638,17 @@ double calculate_iongamma_per_ionpop(
         gamma_coeff_bfest += get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
 
         // use the cellhistory but not the detailed bf estimators
-        double gamma_coeff_integral_level_ch = cellhistory[tid].chelements[element].chions[lowerion].chlevels[lower].chphixstargets[phixstargetindex].corrphotoioncoeff;
-        if (gamma_coeff_integral_level_ch >= 0)
+        if (use_cellhist)
         {
-          gamma_coeff_integral += gamma_coeff_integral_level_ch;
+          double gamma_coeff_integral_level_ch = cellhistory[tid].chelements[element].chions[lowerion].chlevels[lower].chphixstargets[phixstargetindex].corrphotoioncoeff;
+          if (gamma_coeff_integral_level_ch >= 0)
+          {
+            gamma_coeff_integral += gamma_coeff_integral_level_ch;
+          }
+          else
+          {
+            gamma_coeff_integral += calculate_corrphotoioncoeff_integral(element, lowerion, lower, phixstargetindex, modelgridindex);
+          }
         }
         else
         {

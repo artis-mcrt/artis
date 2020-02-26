@@ -449,21 +449,21 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       // }
       // fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_element(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions - 1; ion++)
-      {
-        double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
-        double kappa_bf = 0.;
-        double kappa_fb = 0.;
-        calculate_kappa_bf_fb_gammacontr(mgi, nu_edge, &kappa_bf, &kappa_fb, tid);
-
-        fprintf(estimators_file, "  %d: %9.3e",
-                get_ionstage(element, ion),
-                kappa_bf);
-      }
-      fprintf(estimators_file, "\n");
+      // fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_element(element));
+      // for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+      //   fprintf(estimators_file, "              ");
+      // for (int ion = 0; ion < nions - 1; ion++)
+      // {
+      //   double nu_edge = (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0)) / H;
+      //   double kappa_bf = 0.;
+      //   double kappa_fb = 0.;
+      //   calculate_kappa_bf_fb_gammacontr(mgi, nu_edge, &kappa_bf, &kappa_fb, tid);
+      //
+      //   fprintf(estimators_file, "  %d: %9.3e",
+      //           get_ionstage(element, ion),
+      //           kappa_bf);
+      // }
+      // fprintf(estimators_file, "\n");
 
       fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_element(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
@@ -730,7 +730,9 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep, int ti
   }
 
   // force rpkt opacities to be recalculated next time they are accessed
-  kappa_rpkt_cont[tid].recalculate_required = true;
+  rpkt_cont_opacity_struct *kappa_rpkt_cont = opacity_lock();
+  kappa_rpkt_cont->recalculate_required = true;
+  opacity_unlock();
 
   cellhistory[tid].cellnumber = modelgridindex;
   //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
@@ -743,13 +745,13 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep, int ti
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
-        {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
-#if (SEPARATE_STIMRECOMB)
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
-#endif
-        }
+//         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
+//         {
+//           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
+// #if (SEPARATE_STIMRECOMB)
+//           cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
+// #endif
+//         }
         /// This is the only flag needed for all of the following MA stuff!
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
         /*
@@ -1467,7 +1469,7 @@ void update_grid(
 
     /// Now after all the relevant taks of update_grid have been finished activate
     /// the use of the cellhistory for all OpenMP tasks, in what follows (update_packets)
-    use_cellhist = true;
+    use_cellhist = false; // TODO: important change!
   } /// end OpenMP parallel section
 
   // alterative way to write out estimators. this keeps the modelgrid cells in order but heatingrates are not valid.

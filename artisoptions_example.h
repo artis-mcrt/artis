@@ -24,7 +24,9 @@
 #define MIONS 5
 
 // Max number of OpenMP or GPU threads
-#define MTHREADS 128
+#define MTHREADS 512
+
+#define KAPPA_TABLE_COUNT 256
 
 // non-LTE population solver
 static const bool NLTE_POPS_ON = true;

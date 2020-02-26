@@ -211,6 +211,15 @@ static int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
     return -1;
   else
   {
+    const enum packet_type p1_type = ((PKT *) p1)->type;
+    const enum packet_type p2_type = ((PKT *) p2)->type;
+    if (p2_type > p1_type)
+      return 1;
+    else if (p2_type < p1_type)
+      return -1;
+    else
+      return 0;
+
     // const double p1_tdecay = ((PKT *) p1)->tdecay;
     // const double p2_tdecay = ((PKT *) p2)->tdecay;
     // if (p2_tdecay > p1_tdecay)
@@ -224,83 +233,92 @@ static int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
 }
 
 #if CUDA_ENABLED
-__global__ static void kernel_updatepacket(const int firstpacketnum, const int nts, PKT *pkt, double ts, double tw)
+__global__ static void kernel_updatepacket(const int nts, PKT *pkt, double ts, double tw)
 {
   const int tid = omp_get_thread_num();
-  const int n = firstpacketnum + tid;
-  if (n >= npkts || tid >= MTHREADS)
+  if (tid < MTHREADS)
+    opacity_unlock();
+  __syncthreads();
+  if (tid >= MTHREADS)
     return;
 
-  PKT *pkt_ptr = &pkt[n];
-  pkt_ptr->interactions = 0;
+  cellhistory_reset(-99, true, tid);
 
-  const int cellindex = pkt_ptr->where;
-  const int mgi = cell[cellindex].modelgridindex;
-
-  if (firstpacketnum == 0)
+  int lastprintedpacketnum = -1;
+  // const int packetsperthread = ceil(MPKTS / MTHREADS);
+  // const int firstpacket = tid * packetsperthread;
+  // const int lastpacket = (firstpacket + packetsperthread > MPKTS) ? MPKTS : firstpacket + packetsperthread;
+  // printf("tid %d doing packets %d to %d\n", tid, firstpacket, lastpacket);
+  for (int n = tid; n < npkts; n += MTHREADS)
   {
-    // printf("tid %d doing cellhistory_reset new timestep", tid);
-    cellhistory_reset(-99, true, tid);
-  }
-  /// for non empty cells update the global available level populations and cooling terms
-  if (mgi != MMODELGRID)
-  {
-    //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
-    /// Reset cellhistory if packet starts up in another than the last active cell
-    if (cellhistory[tid].cellnumber != mgi)
+    if (tid == 0)
     {
-      safeincrement(updatecellcounter);
+      if (lastprintedpacketnum == -1 || n - lastprintedpacketnum > 100000)
+      {
+        printout("   update_packets: updating packet %d for timestep %d...\n", n, nts);
+        lastprintedpacketnum = n;
+      }
+    }
+    PKT *pkt_ptr = &pkt[n];
+    pkt_ptr->interactions = 0;
 
-      cellhistory_reset(mgi, false, tid);
+    const int cellindex = pkt_ptr->where;
+    const int mgi = cell[cellindex].modelgridindex;
+
+    /// for non empty cells update the global available level populations and cooling terms
+    if (mgi != MMODELGRID)
+    {
+      //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
+      /// Reset cellhistory if packet starts up in another than the last active cell
+      if (cellhistory[tid].cellnumber != mgi)
+      {
+        safeincrement(updatecellcounter);
+
+        cellhistory_reset(mgi, false, tid);
+      }
     }
 
-    /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
-    if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
+    // printf("kernel tid %d updating packet %d type %d\n", tid, n, pkt_ptr->type);
+    switch (pkt_ptr->type)
     {
-      calculate_kappa_rpkt_cont(pkt_ptr, ts, mgi, tid);
+      case TYPE_56NI_PELLET:
+      case TYPE_56CO_PELLET:
+      case TYPE_57NI_PELLET:
+      case TYPE_57CO_PELLET:
+      case TYPE_48CR_PELLET:
+      case TYPE_48V_PELLET:
+        // decay to gamma ray
+        update_pellet(pkt_ptr, false, false, nts, ts, tw, tid);
+        break;
+
+      case TYPE_52FE_PELLET:
+      case TYPE_52MN_PELLET:
+        // convert to kpkts
+        update_pellet(pkt_ptr, true, false, nts, ts, tw, tid);
+        break;
+
+      case TYPE_57NI_POSITRON_PELLET:
+      case TYPE_56CO_POSITRON_PELLET:
+        // convert to to non-thermal leptons
+        update_pellet(pkt_ptr, false, true, nts, ts, tw, tid);
+        break;
+
+      case TYPE_GAMMA:
+      case TYPE_RPKT:
+      case TYPE_KPKT:
+        /**Stuff for processing photons. */
+        //printout("further propagate a photon packet via packet_prop\n");
+
+        packet_prop(pkt_ptr, ts, ts + tw, nts, tid);
+        break;
+
+      case TYPE_ESCAPE:
+        break;
+
+      default:
+        printout("update_packets: Unknown packet type %d for pkt number %d. Abort.\n", pkt_ptr->type, n);
+        abort();
     }
-  }
-
-  // printf("kernel tid %d updating packet %d type %d\n", tid, n, pkt_ptr->type);
-  switch (pkt_ptr->type)
-  {
-    case TYPE_56NI_PELLET:
-    case TYPE_56CO_PELLET:
-    case TYPE_57NI_PELLET:
-    case TYPE_57CO_PELLET:
-    case TYPE_48CR_PELLET:
-    case TYPE_48V_PELLET:
-      // decay to gamma ray
-      update_pellet(pkt_ptr, false, false, nts, ts, tw, tid);
-      break;
-
-    case TYPE_52FE_PELLET:
-    case TYPE_52MN_PELLET:
-      // convert to kpkts
-      update_pellet(pkt_ptr, true, false, nts, ts, tw, tid);
-      break;
-
-    case TYPE_57NI_POSITRON_PELLET:
-    case TYPE_56CO_POSITRON_PELLET:
-      // convert to to non-thermal leptons
-      update_pellet(pkt_ptr, false, true, nts, ts, tw, tid);
-      break;
-
-    case TYPE_GAMMA:
-    case TYPE_RPKT:
-    case TYPE_KPKT:
-      /**Stuff for processing photons. */
-      //printout("further propagate a photon packet via packet_prop\n");
-
-      packet_prop(pkt_ptr, ts, ts + tw, nts, tid);
-      break;
-
-    case TYPE_ESCAPE:
-      break;
-
-    default:
-      printout("update_packets: Unknown packet type %d for pkt number %d. Abort.\n", pkt_ptr->type, n);
-      abort();
   }
 }
 
@@ -314,27 +332,16 @@ void update_packets_gpu(const int nts, PKT *pkt)
 
   printout("start of parallel update_packets loop on GPU %ld\n", time(NULL));
 
-  dim3 threadsPerBlock(32, 1, 1);
+  dim3 threadsPerBlock(1, 1, 1);
   dim3 numBlocks((MTHREADS + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
 
-  int lastprintedpacketnum = -1;
+  kernel_updatepacket<<<numBlocks, threadsPerBlock>>>(nts, pkt, ts, tw);
 
-  for (int firstpacketnum = 0; firstpacketnum < npkts; firstpacketnum += MTHREADS)
-  {
-    if (lastprintedpacketnum == -1 || firstpacketnum - lastprintedpacketnum > 10000)
-    {
-      printout("   update_packets: updating packet %d for timestep %d at time %ld...\n", firstpacketnum, nts, time(NULL));
-      lastprintedpacketnum = firstpacketnum;
-    }
+  // Check for any errors launching the kernel
+  checkCudaErrors(cudaGetLastError());
 
-    kernel_updatepacket<<<numBlocks, threadsPerBlock>>>(firstpacketnum, nts, pkt, ts, tw);
-
-    // Check for any errors launching the kernel
-    checkCudaErrors(cudaGetLastError());
-
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
-    checkCudaErrors(cudaDeviceSynchronize());
-  }
+  // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+  checkCudaErrors(cudaDeviceSynchronize());
 
   printout("last packet updated at %ld\n", time(NULL));
 
@@ -411,12 +418,6 @@ void update_packets(const int nts, PKT *pkt)
           updatecellcounter++;
 
           cellhistory_reset(mgi, false, tid);
-        }
-
-        /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
-        if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
-        {
-          calculate_kappa_rpkt_cont(pkt_ptr, ts, mgi, tid);
         }
       }
 
