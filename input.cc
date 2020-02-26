@@ -1320,7 +1320,7 @@ static int search_groundphixslist(double nu_edge, int *index_in_groundlevelconte
 #if CUDA_ENABLED
 __global__ static void kernel_setup_cellhistory(void)
 {
-  const int tid = omp_get_thread_num();
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
 
   if (tid == 0 || tid >= MTHREADS)
     return;
@@ -1541,25 +1541,27 @@ static void setup_cellhistory(int setup_nthreads)
         }
         for (int level = 0; level < nlevels; level++)
         {
-          const int nphixstargets = get_nphixstargets(element,ion,level);
-          mem_usage_cellhistory += nphixstargets * sizeof(chphixstargets_struct);
-
-          if (nphixstargets > 0)
+          if (tid == 0)
           {
-            #if CUDA_ENABLED
-            cudaMallocManaged(&cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets, nphixstargets * sizeof(chphixstargets_struct));
-            #else
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = (chphixstargets_struct *) malloc(nphixstargets * sizeof(chphixstargets_struct));
-            #endif
-            if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets == NULL)
+            const int nphixstargets = get_nphixstargets(element,ion,level);
+            mem_usage_cellhistory += nphixstargets * sizeof(chphixstargets_struct);
+            if (nphixstargets > 0)
             {
-              printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
-              abort();
+              // #if CUDA_ENABLED
+              // cudaMallocManaged(&cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets, nphixstargets * sizeof(chphixstargets_struct));
+              // #else
+              cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = (chphixstargets_struct *) malloc(nphixstargets * sizeof(chphixstargets_struct));
+              // #endif
+              if (cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets == NULL)
+              {
+                printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
+                abort();
+              }
             }
-          }
-          else
-          {
-            cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = NULL;
+            else
+            {
+              cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets = NULL;
+            }
           }
 
           // const int ndowntrans = get_ndowntrans(element, ion, level);
@@ -1818,7 +1820,7 @@ static void setup_phixs_list(void)
   }
   qsort(phixsgroundcont, nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
 
-  for (int itid = 0; itid < nthreads; itid++)
+  for (int itid = 0; itid < KAPPA_TABLE_COUNT; itid++)
   {
     #if CUDA_ENABLED
       cudaMalloc(&kappa_rpkt_cont[itid].gamma_contr_ground, nbfcontinua_ground * sizeof(double));
@@ -2608,7 +2610,7 @@ void input(int rank)
 #if CUDA_ENABLED
 __global__ static void kernel_setupcurand(unsigned long int pre_zseed, int rank)
 {
-  const int tid = omp_get_thread_num();
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
   if (tid < MTHREADS)
   {
     unsigned long int zseed = pre_zseed + (13 * rank);

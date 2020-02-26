@@ -457,8 +457,6 @@ double do_kpkt_bb(PKT *pkt_ptr, const double t1, int tid)
   if (debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
-  if (modelgrid[modelgridindex].thick != 1)
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   safeincrement(k_stat_to_r_bb);
   pkt_ptr->interactions++;
@@ -651,7 +649,6 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts, int tid)
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr,t_current);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       safeincrement(k_stat_to_r_ff);
       pkt_ptr->interactions += 1;
@@ -711,7 +708,6 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts, int tid)
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
       #endif
 
-      calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       safeincrement(k_stat_to_r_fb);
       pkt_ptr->interactions += 1;

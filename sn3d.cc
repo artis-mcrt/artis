@@ -29,6 +29,9 @@
 #include "update_packets.h"
 #include "version.h"
 #include "vpkt.h"
+#if CUDA_ENABLED
+#include <cuda_runtime_api.h>
+#endif
 
 const bool KEEP_ALL_RESTART_FILES = false; // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 

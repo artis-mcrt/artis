@@ -103,7 +103,7 @@ endif
 # CXXFLAGS += -std=c++11
 # CXXFLAGS += -fPIC -shared
 # CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++14 -O3 -Xcompiler "$(CXXFLAGS)" -rdc=true --expt-relaxed-constexpr
+CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++14 -O3 -use_fast_math -Xcompiler "$(CXXFLAGS)" -rdc=true --expt-relaxed-constexpr
 # CUDA_NVCC_FLAGS += -G -g
 
 ### use pg when you want to use gprof the profiler

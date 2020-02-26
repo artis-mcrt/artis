@@ -405,8 +405,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current, in
     /// and calculate the continuums opacity in the new cell if the packet is a rpkt
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
     /// as we do it on the rpkts way through a cell
-    //if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
-    //if (pkt_ptr->type == TYPE_RPKT) calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+
 
     /// check for empty cells
     if (mgi != MMODELGRID)
@@ -427,17 +426,6 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current, in
       //copy_populations_to_phixslist();
       /// the rpkt's continuum opacity must be updated in any case as it depends on nu
       /// and nu changed after propagation
-      if (pkt_ptr->type == TYPE_RPKT)
-      {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
-        #endif
-        /// This only needs to be done for non-grey cells
-        if (modelgrid[mgi].thick != 1)
-        {
-          calculate_kappa_rpkt_cont(pkt_ptr, t_current, mgi, tid);
-        }
-      }
     }
   }
 }

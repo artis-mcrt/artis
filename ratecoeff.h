@@ -83,15 +83,16 @@ __global__ void kernel_simpson_integral(void *intparas, double xlow, double delt
 
 
 template <double func_integrand(double, void *), typename T>
-__host__ __device__ double calculate_integral_gpu(T *intparas, double xlow, double xhigh)
+__host__ __device__ double calculate_integral_gpu(T intparas, double xlow, double xhigh)
 {
   T *dev_intparas;
   checkCudaErrors(cudaMalloc(&dev_intparas, sizeof(T)));
 
   #ifdef __CUDA_ARCH__
-  *dev_intparas = *intparas;
+  memcpy(dev_intparas, &intparas, sizeof(T));
+  // *dev_intparas = intparas;
   #else
-  checkCudaErrors(cudaMemcpy(dev_intparas, intparas, sizeof(T), cudaMemcpyHostToDevice));
+  checkCudaErrors(cudaMemcpy(dev_intparas, &intparas, sizeof(T), cudaMemcpyHostToDevice));
   #endif
 
   double *dev_integral;
@@ -115,7 +116,7 @@ __host__ __device__ double calculate_integral_gpu(T *intparas, double xlow, doub
   const double deltax = (xhigh - xlow) / samplecount;
 
   kernel_simpson_integral<func_integrand><<<numBlocks, threadsPerBlock, sharedsize>>>(
-    dev_intparas, xlow, deltax, samplecount, dev_integral);
+    (void *) dev_intparas, xlow, deltax, samplecount, dev_integral);
 
   // Check for any errors launching the kernel
   checkCudaErrors(cudaGetLastError());

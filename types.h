@@ -467,6 +467,7 @@ typedef struct gslintegration_paras
 
 typedef struct rpkt_cont_opacity_struct
 {
+  int owner;
   double nu; // frequency at which opacity was calculated
   double total;
   double es;

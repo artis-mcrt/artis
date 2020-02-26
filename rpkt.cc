@@ -92,7 +92,8 @@ static double get_event(
   double t_current,         // current time
   const double tau_rnd,     // random optical depth until which the packet travels
   const double abort_dist,   // maximal travel distance before packet leaves cell or time step ends
-  int tid
+  int tid,
+  rpkt_cont_opacity_struct *kappa_rpkt_cont
 )
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
@@ -105,8 +106,8 @@ static double get_event(
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
   bool endloop = false;
-  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, tid);
-  const double kap_cont = kappa_rpkt_cont[tid].total;
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex, kappa_rpkt_cont);
+  const double kap_cont = kappa_rpkt_cont->total;
   while (!endloop)
   {
     /// calculate distance to next line encounter ldist
@@ -286,7 +287,7 @@ static double get_event(
       //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
       ///no need to restore values set by closest_transition, as nothing was set in this case
       const double tau_cont = kap_cont * (abort_dist - dist);
-      //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
+      //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont->ff*(abort_dist-dist),kappa_rpkt_cont->es*(abort_dist-dist));
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     tau_rnd %g, tau %g, tau_cont %g\n", tau_rnd, tau, tau_cont);
       #endif
@@ -328,14 +329,14 @@ static double get_event(
 
 
 __host__ __device__
-static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex, int tid)
+static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont_opacity_struct *kappa_rpkt_cont, int modelgridindex, int tid)
 {
   const double nu = pkt_ptr->nu_cmf;
 
-  const double kappa_cont = kappa_rpkt_cont_thisthread.total;
-  const double sigma = kappa_rpkt_cont_thisthread.es;
-  const double kappa_ff = kappa_rpkt_cont_thisthread.ff;
-  const double kappa_bf = kappa_rpkt_cont_thisthread.bf;
+  const double kappa_cont = kappa_rpkt_cont->total;
+  const double sigma = kappa_rpkt_cont->es;
+  const double kappa_ff = kappa_rpkt_cont->ff;
+  const double kappa_bf = kappa_rpkt_cont->bf;
 
   /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
   double zrand = gsl_rng_uniform(rng);
@@ -396,7 +397,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
 
     /// Update the bf-opacity for the packets current frequency
     //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
-    const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf_inrest;
+    const double kappa_bf_inrest = kappa_rpkt_cont->bf_inrest;
 
     /// Determine in which continuum the bf-absorption occurs
     const double zrand2 = gsl_rng_uniform(rng);
@@ -404,7 +405,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     int i;
     for (i = 0; i < nbfcontinua; i++)
     {
-      kappa_bf_sum += kappa_rpkt_cont[tid].kappa_bf_contr[i];
+      kappa_bf_sum += kappa_rpkt_cont->kappa_bf_contr[i];
       if (kappa_bf_sum > zrand2 * kappa_bf_inrest)
       {
         const double nu_edge = phixsallcont[i].nu_edge;
@@ -537,7 +538,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     #endif
   }
 #if (SEPARATE_STIMRECOMB)
-  else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf + kappa_rpkt_cont_thisthread.fb)
+  else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf + kappa_rpkt_cont->fb)
   {
     /// fb: stimulated recombination
     #ifdef DEBUG_ON
@@ -547,7 +548,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
 
     /// Update the bf-opacity for the packets current frequency
     //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
-    const double kappa_fb_inrest = kappa_rpkt_cont_thisthread.fb_inrest;
+    const double kappa_fb_inrest = kappa_rpkt_cont->fb_inrest;
 
     /// Determine in which continuum the bf-absorption occurs
     const double zrand2 = gsl_rng_uniform(rng);
@@ -555,7 +556,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     int i;
     for (i = 0; i < nbfcontinua; i++)
     {
-      kappa_fb_sum += kappa_rpkt_cont_thisthread.kappa_fb_contr[i];
+      kappa_fb_sum += kappa_rpkt_cont->kappa_fb_contr[i];
       if (kappa_fb_sum > zrand2 * kappa_fb_inrest)
       {
         // const double nu_edge = phixsallcont[i].nu_edge;
@@ -587,7 +588,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
 #endif
   else
   {
-    printout("ERROR: could not continuum process\n");
+    printout("ERROR: could not continuum process tid %d zrand %g kappa_cont %g kappa_bf %G\n", omp_get_thread_num(), zrand, kappa_cont, kappa_bf);
     abort();
   }
 }
@@ -644,7 +645,7 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi, int tid)
 
 
 __host__ __device__
-static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current, int tid)
+static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
@@ -749,8 +750,8 @@ static double closest_transition_empty(PKT *pkt_ptr)
 
 
 __host__ __device__
-static void update_estimators(const PKT *pkt_ptr, const double distance, const double t_current, int tid)
-
+static void update_estimators(
+  const PKT *pkt_ptr, const double distance, const double t_current, rpkt_cont_opacity_struct *kappa_rpkt_cont)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -770,7 +771,7 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
     #ifndef FORCE_LTE
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
       ///quick and dirty solution: store info in element=ion=0, and leave the others untouched (i.e. zero)
-      safeadd(ffheatingestimator[modelgridindex], distance_e_cmf * kappa_rpkt_cont[tid].ffheating);
+      safeadd(ffheatingestimator[modelgridindex], distance_e_cmf * kappa_rpkt_cont->ffheating);
 
       #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
         #if (!NO_LUT_PHOTOION)
@@ -790,18 +791,18 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
             {
               const int ionestimindex = modelgridindex * nelements * maxion + element * maxion + ion;
               #if (!NO_LUT_PHOTOION)
-                safeadd(gammaestimator[ionestimindex], kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex] * distance_e_cmf_over_nu);
+                safeadd(gammaestimator[ionestimindex], kappa_rpkt_cont->gamma_contr_ground[gphixsindex] * distance_e_cmf_over_nu);
 
                 #ifdef DEBUG_ON
                 if (!isfinite(gammaestimator[ionestimindex]))
                 {
-                  printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, distance_e_cmf_over_nu %g\n", i, kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex], distance_e_cmf_over_nu);
+                  printout("[fatal] update_estimators: gamma estimator becomes non finite: level %d, gamma_contr %g, distance_e_cmf_over_nu %g\n", i, kappa_rpkt_cont->gamma_contr_ground[gphixsindex], distance_e_cmf_over_nu);
                   abort();
                 }
                 #endif
               #endif
               #if (!NO_LUT_BFHEATING)
-                safeadd(bfheatingestimator[ionestimindex], kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex] * distance_e_cmf * (1. - nu_edge/nu));
+                safeadd(bfheatingestimator[ionestimindex], kappa_rpkt_cont->gamma_contr_ground[gphixsindex] * distance_e_cmf * (1. - nu_edge/nu));
                 //bfheatingestimator[ionestimindex] += phixsgroundcont[i].bfheating_contr * distance_e_cmf * (1/nu_edge - 1/nu);
               #endif
             }
@@ -815,11 +816,42 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
   }
 }
 
+__host__ __device__
+static rpkt_cont_opacity_struct *opacity_lock(void)
+{
+  const int tid = omp_get_thread_num();
+  const int index = tid % KAPPA_TABLE_COUNT;
+  #ifdef __CUDA_ARCH__
+  int assumedowner;
+  int prevowner = kappa_rpkt_cont[index].owner;
+  // printf("tid %d waiting for lock on index %d owned by thread %d\n", tid, index, prevowner);
+  do
+  {
+    assumedowner = prevowner;
+    prevowner = atomicCAS(&kappa_rpkt_cont[index].owner, assumedowner, tid);
+  } while (assumedowner != prevowner || prevowner != -1);
+  #else
+  kappa_rpkt_cont[index].owner = tid;
+  #endif
+  // printf("tid %d acquired lock on index %d\n", tid, index);
+  return &kappa_rpkt_cont[index];
+}
+
+__host__ __device__
+void opacity_unlock(void)
+{
+  const int tid = omp_get_thread_num();
+  const int index = tid % KAPPA_TABLE_COUNT;
+  kappa_rpkt_cont[index].owner = -1;
+  // printf("tid %d freed lock on index %d\n", tid, index);
+}
 
 __host__ __device__
 double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
+  rpkt_cont_opacity_struct *kappa_rpkt_cont = opacity_lock();
+
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
 
@@ -930,7 +962,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
       else
       {
         // get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), tid); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist), tid, kappa_rpkt_cont); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
         #ifdef DEBUG_ON
           if (debuglevel == 2)
           {
@@ -952,7 +984,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
         sdist = sdist / 2.;
         t_current += sdist / CLIGHT_PROP;
         move_pkt(pkt_ptr, sdist, t_current);
-        update_estimators(pkt_ptr, sdist * 2, t_current, tid);
+        update_estimators(pkt_ptr, sdist * 2, t_current, kappa_rpkt_cont);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           sdist = sdist * 2.;
@@ -994,7 +1026,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
         tdist = tdist / 2.;
         t_current += tdist / CLIGHT_PROP;
         move_pkt(pkt_ptr, tdist, t_current);
-        update_estimators(pkt_ptr, tdist * 2, t_current, tid);
+        update_estimators(pkt_ptr, tdist * 2, t_current, kappa_rpkt_cont);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           tdist = tdist * 2.;
@@ -1022,7 +1054,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
         edist = edist / 2.;
         t_current += edist / CLIGHT_PROP;
         move_pkt(pkt_ptr, edist, t_current);
-        update_estimators(pkt_ptr, edist * 2, t_current, tid);
+        update_estimators(pkt_ptr, edist * 2, t_current, kappa_rpkt_cont);
         if (do_rlc_est != 0 && do_rlc_est != 3)
         {
           edist = edist * 2.;
@@ -1036,7 +1068,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
         // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
         if (modelgrid[mgi].thick == 1)
         {
-          rpkt_event_thickcell(pkt_ptr, t_current, tid);
+          rpkt_event_thickcell(pkt_ptr, t_current);
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
         {
@@ -1044,7 +1076,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
         }
         else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
         {
-          rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont[tid], mgi, tid);
+          rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont, mgi, tid);
         }
         else
         {
@@ -1053,6 +1085,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
 
         if (pkt_ptr->type != TYPE_RPKT)
         {
+          opacity_unlock();
           // It's not an r-packet any more - return.
           return t_current;
         }
@@ -1065,6 +1098,8 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2, int tid)
       }
     }
   }
+
+  opacity_unlock();
 
   return PACKET_SAME;
 }
@@ -1110,7 +1145,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
       }
     }
 
-    calculate_kappa_rpkt_cont(&vpkt, t_future, mgi, tid);
+    calculate_kappa_rpkt_cont(&vpkt, t_future, mgi, &kappa_rpkt_cont[tid]);
 
     const double kappa_cont = kappa_rpkt_cont[tid].total;
 
@@ -1351,7 +1386,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
 
 __host__ __device__
 static inline void calculate_kappa_conttransition(
-    rpkt_cont_opacity_struct *kappa_rpkt_cont_tid, double *kappa_bf, double *kappa_fb, int i, const double nu, const double nu_edge,
+    rpkt_cont_opacity_struct *kappa_rpkt_cont, double *kappa_bf, double *kappa_fb, int i, const double nu, const double nu_edge,
     const int modelgridindex, const int element, const int ion, const int level, const int phixstargetindex,
     const double nnlevel, const double T_e, const double nne)
 {
@@ -1378,20 +1413,20 @@ static inline void calculate_kappa_conttransition(
   if (level == 0)
   {
     const int gphixsindex = phixsallcont[i].index_in_groundphixslist;
-    kappa_rpkt_cont_tid->gamma_contr_ground[gphixsindex] += sigma_bf * probability * corrfactor;
+    kappa_rpkt_cont->gamma_contr_ground[gphixsindex] += sigma_bf * probability * corrfactor;
   }
 
   #if (DETAILED_BF_ESTIMATORS_ON)
-  kappa_rpkt_cont_tid->gamma_contr[i] = sigma_bf * probability * corrfactor;
+  kappa_rpkt_cont->gamma_contr[i] = sigma_bf * probability * corrfactor;
   #endif
 
   assert(isfinite(kappa_bf_contr));
 
-  kappa_rpkt_cont_tid->kappa_bf_contr[i] = kappa_bf_contr;
+  kappa_rpkt_cont->kappa_bf_contr[i] = kappa_bf_contr;
   *kappa_bf += kappa_bf_contr;
 
   #if (SEPARATE_STIMRECOMB)
-    kappa_rpkt_cont_tid->kappa_fb_contr[i] = kappa_fb_contr;
+    kappa_rpkt_cont->kappa_fb_contr[i] = kappa_fb_contr;
     *kappa_fb += kappa_fb_contr;
   #endif
 }
@@ -1400,7 +1435,7 @@ static inline void calculate_kappa_conttransition(
 #if CUDA_ENABLED
 __global__
 static void kernel_calculate_kappa_conttransitions(
-    rpkt_cont_opacity_struct *kappa_rpkt_cont_tid, double *kappa_bf, double *kappa_fb, const double nu,
+    rpkt_cont_opacity_struct *kappa_rpkt_cont, double *kappa_bf, double *kappa_fb, const double nu,
     const int modelgridindex, const double T_e, const double nne, const double nnetot)
 {
   extern __shared__ double blocksharedmem[];
@@ -1426,19 +1461,19 @@ static void kernel_calculate_kappa_conttransitions(
     {
       const int phixstargetindex = phixsallcont[i].phixstargetindex;
       calculate_kappa_conttransition(
-        kappa_rpkt_cont_tid, &block_kappacontribs_bf[threadIdx.x], &block_kappacontribs_fb[threadIdx.x],
+        kappa_rpkt_cont, &block_kappacontribs_bf[threadIdx.x], &block_kappacontribs_fb[threadIdx.x],
         i, nu, nu_edge, modelgridindex, element, ion, level,
         phixstargetindex, nnlevel, T_e, nne);
     }
     else
     {
       // ignore this process
-      kappa_rpkt_cont_tid->kappa_bf_contr[i] = 0.;
+      kappa_rpkt_cont->kappa_bf_contr[i] = 0.;
       #if (SEPARATE_STIMRECOMB)
-      kappa_rpkt_cont_tid->kappa_fb_contr[i] = 0.;
+      kappa_rpkt_cont->kappa_fb_contr[i] = 0.;
       #endif
       #if (DETAILED_BF_ESTIMATORS_ON)
-      kappa_rpkt_cont_tid->gamma_contr[i] = 0.;
+      kappa_rpkt_cont->gamma_contr[i] = 0.;
       #endif
     }
   }
@@ -1468,23 +1503,26 @@ static void kernel_calculate_kappa_conttransitions(
 
 __host__ __device__
 void calculate_kappagammacontribs_gpu(
-  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid, const double T_e, const double nne)
+  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, const double T_e, const double nne,
+  rpkt_cont_opacity_struct *kappa_rpkt_cont)
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
   {
-    kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex] = 0.;
+    kappa_rpkt_cont->gamma_contr_ground[gphixsindex] = 0.;
   }
 
   const double nnetot = get_nnetot(modelgridindex);
 
-  #ifndef __CUDA_ARCH__
   double *dev_kappa_bf;
   double *dev_kappa_fb;
+  #ifndef __CUDA_ARCH__
   cudaMallocManaged(&dev_kappa_bf, sizeof(double));
   cudaMallocManaged(&dev_kappa_fb, sizeof(double));
   #else
-  double *dev_kappa_bf = (double *) malloc(sizeof(double));
-  double *dev_kappa_fb = (double *) malloc(sizeof(double));
+  cudaMalloc(&dev_kappa_bf, sizeof(double));
+  cudaMalloc(&dev_kappa_fb, sizeof(double));
+  // dev_kappa_bf = (double *) malloc(sizeof(double));
+  // dev_kappa_fb = (double *) malloc(sizeof(double));
   #endif
   *dev_kappa_bf = 0.;
   *dev_kappa_fb = 0.;
@@ -1492,12 +1530,12 @@ void calculate_kappagammacontribs_gpu(
   checkCudaErrors(cudaDeviceSynchronize());
 
   dim3 threadsPerBlock(32, 1, 1);
-  dim3 numBlocks(ceil(nbfcontinua / 32.), 1, 1);
+  dim3 numBlocks((nbfcontinua + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
 
   const size_t sharedsize = sizeof(double) * threadsPerBlock.x * 2;
 
   kernel_calculate_kappa_conttransitions<<<numBlocks, threadsPerBlock, sharedsize>>>(
-    &kappa_rpkt_cont[tid], dev_kappa_bf, dev_kappa_fb, nu, modelgridindex, T_e, nne, nnetot);
+    kappa_rpkt_cont, dev_kappa_bf, dev_kappa_fb, nu, modelgridindex, T_e, nne, nnetot);
 
   // Check for any errors launching the kernel
   checkCudaErrors(cudaGetLastError());
@@ -1505,10 +1543,12 @@ void calculate_kappagammacontribs_gpu(
   // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
   checkCudaErrors(cudaDeviceSynchronize());
 
-  // cudaMemPrefetchAsync(kappa_rpkt_cont[tid].kappa_bf_contr, nbfcontinua * sizeof(double), cudaCpuDeviceId, 0);
+  // cudaMemPrefetchAsync(kappa_rpkt_cont->kappa_bf_contr, nbfcontinua * sizeof(double), cudaCpuDeviceId, 0);
 
-  *kappa_bf = *dev_kappa_bf;
-  *kappa_fb = *dev_kappa_fb;
+  memcpy(kappa_bf, dev_kappa_bf, sizeof(double));
+  memcpy(kappa_fb, dev_kappa_fb, sizeof(double));
+  // *kappa_bf = *dev_kappa_bf;
+  // *kappa_fb = *dev_kappa_fb;
 
   cudaFree(dev_kappa_bf);
   cudaFree(dev_kappa_fb);
@@ -1518,12 +1558,13 @@ void calculate_kappagammacontribs_gpu(
 #if (!CUDA_ENABLED || !USECUDA_RPKT_CONTOPACITY || CUDA_VERIFY_CPUCONSISTENCY)
 __host__ __device__
 static void calculate_kappagammacontribs_cpu(
-  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid, const double T_e, const double nne)
+  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, const double T_e, const double nne,
+  rpkt_cont_opacity_struct *kappa_rpkt_cont)
 // bound-free opacity
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
   {
-    kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex] = 0.;
+    kappa_rpkt_cont->gamma_contr_ground[gphixsindex] = 0.;
   }
 
   const double nnetot = get_nnetot(modelgridindex);
@@ -1550,7 +1591,7 @@ static void calculate_kappagammacontribs_cpu(
         {
           const int phixstargetindex = phixsallcont[i].phixstargetindex;
           calculate_kappa_conttransition(
-            &kappa_rpkt_cont[tid], kappa_bf, kappa_fb, i, nu, nu_edge, modelgridindex, element, ion, level,
+            kappa_rpkt_cont, kappa_bf, kappa_fb, i, nu, nu_edge, modelgridindex, element, ion, level,
             phixstargetindex, nnlevel, T_e, nne);
             thiscont_gamma_set = true;
         }
@@ -1568,12 +1609,12 @@ static void calculate_kappagammacontribs_cpu(
       // a slight red-shifting is ignored
       for (int j = i; j < nbfcontinua; j++)
       {
-        kappa_rpkt_cont[tid].kappa_bf_contr[j] = 0.;
+        kappa_rpkt_cont->kappa_bf_contr[j] = 0.;
         #if (SEPARATE_STIMRECOMB)
-        kappa_rpkt_cont[tid].kappa_fb_contr[i] = 0.;
+        kappa_rpkt_cont->kappa_fb_contr[i] = 0.;
         #endif
         #if (DETAILED_BF_ESTIMATORS_ON)
-        kappa_rpkt_cont[tid].gamma_contr[i] = 0.;
+        kappa_rpkt_cont->gamma_contr[i] = 0.;
         #endif
       }
       return; // all further processes in the list will have larger nu_edge, so end here
@@ -1581,12 +1622,12 @@ static void calculate_kappagammacontribs_cpu(
 
     if (!thiscont_gamma_set)
     {
-      kappa_rpkt_cont[tid].kappa_bf_contr[i] = 0.;
+      kappa_rpkt_cont->kappa_bf_contr[i] = 0.;
       #if (SEPARATE_STIMRECOMB)
-      kappa_rpkt_cont[tid].kappa_fb_contr[i] = 0.;
+      kappa_rpkt_cont->kappa_fb_contr[i] = 0.;
       #endif
       #if (DETAILED_BF_ESTIMATORS_ON)
-      kappa_rpkt_cont[tid].gamma_contr[i] = 0.;
+      kappa_rpkt_cont->gamma_contr[i] = 0.;
       #endif
     }
   }
@@ -1596,7 +1637,7 @@ static void calculate_kappagammacontribs_cpu(
 
 __host__ __device__
 void calculate_kappa_bf_fb_gammacontr(
-  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, int tid)
+  const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb, rpkt_cont_opacity_struct *kappa_rpkt_cont)
 {
   const double T_e = get_Te(modelgridindex);
   const double nne = get_nne(modelgridindex);
@@ -1608,40 +1649,28 @@ void calculate_kappa_bf_fb_gammacontr(
   double kappa_bf_cpu = 0.;
   double kappa_fb_cpu = 0.;
 
-  calculate_kappagammacontribs_cpu(modelgridindex, nu, &kappa_bf_cpu, &kappa_fb_cpu, tid, T_e, nne);
-
-  // printf("CPU top items kappa_bf %g\n", kappa_bf_cpu);
-  // for (int j = 0; j < 5; j++)
-  // {
-  //   printout(" cpu j %d kappa_bf_contr %g\n", j, kappa_rpkt_cont[tid].kappa_bf_contr[j]);
-  // }
+  calculate_kappagammacontribs_cpu(modelgridindex, nu, &kappa_bf_cpu, &kappa_fb_cpu, T_e, nne, kappa_rpkt_cont);
   #endif
 
-  calculate_kappagammacontribs_gpu(modelgridindex, nu, kappa_bf, kappa_fb, tid, T_e, nne);
+  calculate_kappagammacontribs_gpu(modelgridindex, nu, kappa_bf, kappa_fb, T_e, nne, kappa_rpkt_cont);
 
   #if CUDA_VERIFY_CPUCONSISTENCY
-  // printf("GPU top items kappa_bf_gpu %g\n", *kappa_bf);
-  // for (int j = 0; j < 5; j++)
-  // {
-  //   printout(" gpu j %d kappa_bf_contr %g\n", j, kappa_rpkt_cont[tid].kappa_bf_contr[j]);
-  // }
-
   assert(kappa_bf_cpu == 0. || abs(*kappa_bf / kappa_bf_cpu - 1.) < 0.03);
   assert(kappa_fb_cpu == 0. || abs(*kappa_fb / kappa_fb_cpu - 1.) < 0.03);
   #endif
 #else
-  calculate_kappagammacontribs_cpu(modelgridindex, nu, kappa_bf, kappa_fb, tid, T_e, nne);
+  calculate_kappagammacontribs_cpu(modelgridindex, nu, kappa_bf, kappa_fb, T_e, nne, kappa_rpkt_cont);
 #endif
 }
 
 
 __host__ __device__
-void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current, const int modelgridindex, int tid)
+void calculate_kappa_rpkt_cont(
+  const PKT *const pkt_ptr, const double t_current, const int modelgridindex, rpkt_cont_opacity_struct *kappa_rpkt_cont)
 {
-  // printf("tid %d calculate_kappa_rpkt_cont\n", tid);
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
-  if ((modelgridindex == kappa_rpkt_cont[tid].modelgridindex) && (!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
+  if ((modelgridindex == kappa_rpkt_cont->modelgridindex) && (!kappa_rpkt_cont->recalculate_required) && (fabs(kappa_rpkt_cont->nu / nu_cmf - 1.0) < 1e-4))
   {
     // calculated values are a match already
     return;
@@ -1672,10 +1701,10 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current,
       kappa_ffheating = kappa_ff;
 
       /// Third contribution: bound-free absorption
-      calculate_kappa_bf_fb_gammacontr(modelgridindex, nu_cmf, &kappa_bf, &kappa_fb, tid);
+      calculate_kappa_bf_fb_gammacontr(modelgridindex, nu_cmf, &kappa_bf, &kappa_fb, kappa_rpkt_cont);
 
-      kappa_rpkt_cont[tid].bf_inrest = kappa_bf;
-      kappa_rpkt_cont[tid].fb_inrest = kappa_fb;
+      kappa_rpkt_cont->bf_inrest = kappa_bf;
+      kappa_rpkt_cont->fb_inrest = kappa_fb;
 
       // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
       // if (pkt_lambda < 4000)
@@ -1709,34 +1738,34 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current,
     kappa_fb *= dopplerfactor;
   }
 
-  kappa_rpkt_cont[tid].nu = nu_cmf;
-  kappa_rpkt_cont[tid].modelgridindex = modelgridindex;
-  kappa_rpkt_cont[tid].recalculate_required = false;
-  kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_fb + kappa_ff;
+  kappa_rpkt_cont->nu = nu_cmf;
+  kappa_rpkt_cont->modelgridindex = modelgridindex;
+  kappa_rpkt_cont->recalculate_required = false;
+  kappa_rpkt_cont->total = sigma + kappa_bf + kappa_fb + kappa_ff;
   #ifdef DEBUG_ON
     //if (debuglevel == 2)
-    //  printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
+    //  printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont->total,sigma,kappa_ff,kappa_bf);
   #endif
-  kappa_rpkt_cont[tid].es = sigma;
-  kappa_rpkt_cont[tid].ff = kappa_ff;
-  kappa_rpkt_cont[tid].bf = kappa_bf;
-  kappa_rpkt_cont[tid].fb = kappa_fb;
-  kappa_rpkt_cont[tid].ffheating = kappa_ffheating;
-  //kappa_rpkt_cont[tid].bfheating = kappa_bfheating;
+  kappa_rpkt_cont->es = sigma;
+  kappa_rpkt_cont->ff = kappa_ff;
+  kappa_rpkt_cont->bf = kappa_bf;
+  kappa_rpkt_cont->fb = kappa_fb;
+  kappa_rpkt_cont->ffheating = kappa_ffheating;
+  //kappa_rpkt_cont->bfheating = kappa_bfheating;
 
   #ifdef DEBUG_ON
-    if (!isfinite(kappa_rpkt_cont[tid].total))
+    if (!isfinite(kappa_rpkt_cont->total))
     {
       printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
-      printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont[tid].es,kappa_rpkt_cont[tid].ff,kappa_rpkt_cont[tid].bf);
+      printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont->es,kappa_rpkt_cont->ff,kappa_rpkt_cont->bf);
       printout("[fatal] nbfcontinua %d\n",nbfcontinua);
       printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
       printout("[fatal] pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
-      if (isfinite(kappa_rpkt_cont[tid].es))
+      if (isfinite(kappa_rpkt_cont->es))
       {
-        kappa_rpkt_cont[tid].ff = 0.;
-        kappa_rpkt_cont[tid].bf = 0.;
-        kappa_rpkt_cont[tid].total = kappa_rpkt_cont[tid].es;
+        kappa_rpkt_cont->ff = 0.;
+        kappa_rpkt_cont->bf = 0.;
+        kappa_rpkt_cont->total = kappa_rpkt_cont->es;
       }
       else
       {
@@ -1750,6 +1779,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current,
 
 void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current, int tid)
 {
+    rpkt_cont_opacity_struct *kappa_rpkt_cont = &kappa_rpkt_cont[tid];
     double sigma;
     double kappa_ffheating = 0.;//,kappa_bfheating;
     double g_ff;
@@ -1874,18 +1904,18 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current, int t
                             // if (fabs(check) > 1e-10) printout("[warning] calculate_kappa_rpkt_cont: kappa_bf has negative contribution %g for element %d ion %d level %d (nnionlevel %g, nnlevel %g, nne %g, sf %g, sigma_bf %g) before %g after %g \n", check,element,ion,level,nnionlevel,nnlevel,nne,sf,sigma_bf,bef,cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[0].sahafact);
                             #endif
                             check = 0.;
-                            //kappa_rpkt_cont[tid].kappa_bf_contr[i] = check;
+                            //kappa_rpkt_cont->kappa_bf_contr[i] = check;
                             //phixsallcont[i].photoion_contr = 0.;
                             //phixsallcont[i].stimrecomb_contr = 0.;
                         }
                         /*            else
                          {
-                         kappa_rpkt_cont[tid].kappa_bf_contr[i] = check;
+                         kappa_rpkt_cont->kappa_bf_contr[i] = check;
                          phixsallcont[i].photoion_contr = nnlevel * sigma_bf;
                          phixsallcont[i].stimrecomb_contr = sf * sigma_bf;
                          }*/
                         //check *= 2;
-                        kappa_rpkt_cont[tid].kappa_bf_contr[i] = check;
+                        kappa_rpkt_cont->kappa_bf_contr[i] = check;
                         kappa_bf += check;
                         if (level == 0)
                         {
@@ -1893,7 +1923,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current, int t
                             //groundphixslist[gphixsindex].photoion_contr = helper;
                             corrfactor = 1 - departure_ratio * exp(-HOVERKB*nu/T_e);
                             if (corrfactor < 0) corrfactor = 1;
-                            kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex] = sigma_bf * corrfactor;
+                            kappa_rpkt_cont->gamma_contr_ground[gphixsindex] = sigma_bf * corrfactor;
                             //phixsgroundcont[gphixsindex].stimrecomb_contr = sf * sigma_bf;
                             //phixsgroundcont[gphixsindex].bfheating_contr = helper * nu_edge;
                         }
@@ -1922,18 +1952,18 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current, int t
                 }
                 else
                 {
-                    kappa_rpkt_cont[tid].kappa_bf_contr[i] = 0.;
+                    kappa_rpkt_cont->kappa_bf_contr[i] = 0.;
                     if (phixsallcont[i].level == 0)
                     {
                         gphixsindex = phixsallcont[i].index_in_groundphixslist;
                         //phixsgroundcont[gphixsindex].photoion_contr = 0.;
-                        kappa_rpkt_cont[tid].gamma_contr_ground[gphixsindex] = 0.;
+                        kappa_rpkt_cont->gamma_contr_ground[gphixsindex] = 0.;
                         //phixsgroundcont[gphixsindex].stimrecomb_contr = 0.;
                         //phixsgroundcont[gphixsindex].bfheating_contr = 0.;
                     }
                 }
             }
-            kappa_rpkt_cont[tid].bf_inrest = kappa_bf;
+            kappa_rpkt_cont->bf_inrest = kappa_bf;
         }
         else
         {
@@ -1990,29 +2020,29 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current, int t
         //kappa_bfheating = 0.;
     }
 
-    kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_ff;
+    kappa_rpkt_cont->total = sigma + kappa_bf + kappa_ff;
     #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
+    if (debuglevel == 2) printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont->total,sigma,kappa_ff,kappa_bf);
     #endif
-    kappa_rpkt_cont[tid].es = sigma;
-    kappa_rpkt_cont[tid].ff = kappa_ff;
-    kappa_rpkt_cont[tid].bf = kappa_bf;
-    kappa_rpkt_cont[tid].ffheating = kappa_ffheating;
-    //kappa_rpkt_cont[tid].bfheating = kappa_bfheating;
+    kappa_rpkt_cont->es = sigma;
+    kappa_rpkt_cont->ff = kappa_ff;
+    kappa_rpkt_cont->bf = kappa_bf;
+    kappa_rpkt_cont->ffheating = kappa_ffheating;
+    //kappa_rpkt_cont->bfheating = kappa_bfheating;
 
     #ifdef DEBUG_ON
-    if (!isfinite(kappa_rpkt_cont[tid].total))
+    if (!isfinite(kappa_rpkt_cont->total))
     {
         printout("[fatal] calculate_kappa_rpkt_cont: resulted in non-finite kappa_rpkt_cont.total ... abort\n");
-        printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont[tid].es,kappa_rpkt_cont[tid].ff,kappa_rpkt_cont[tid].bf);
+        printout("[fatal] es %g, ff %g, bf %g\n",kappa_rpkt_cont->es,kappa_rpkt_cont->ff,kappa_rpkt_cont->bf);
         printout("[fatal] nbfcontinua %d\n",nbfcontinua);
         printout("[fatal] in cell %d with density %g\n",modelgridindex,get_rho(modelgridindex));
         printout("[fatal] pkt_ptr->nu_cmf %g, T_e %g, nne %g\n",pkt_ptr->nu_cmf,get_Te(modelgridindex),get_nne(modelgridindex));
-        if (isfinite(kappa_rpkt_cont[tid].es))
+        if (isfinite(kappa_rpkt_cont->es))
         {
-            kappa_rpkt_cont[tid].ff = 0.;
-            kappa_rpkt_cont[tid].bf = 0.;
-            kappa_rpkt_cont[tid].total = kappa_rpkt_cont[tid].es;
+            kappa_rpkt_cont->ff = 0.;
+            kappa_rpkt_cont->bf = 0.;
+            kappa_rpkt_cont->total = kappa_rpkt_cont->es;
         }
         else
         {
