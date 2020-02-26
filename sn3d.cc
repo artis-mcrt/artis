@@ -1018,24 +1018,25 @@ int main(int argc, char** argv)
 
   #ifdef __CUDACC__
   printout("NVIDIA CUDA is available\n");
-  int deviceCount = 0;
-  assert(cudaGetDeviceCount(&deviceCount) == cudaSuccess);
-  printout("Detected %d CUDA capable device(s)\n", deviceCount);
   #else
   printout("NVIDIA CUDA is not available\n");
   #endif
 
   #if CUDA_ENABLED
   printout("NVIDIA CUDA accelerated routines are enabled\n");
+  int deviceCount = -1;
+  checkCudaErrors(cudaGetDeviceCount(&deviceCount));
+  printout("Detected %d CUDA capable device(s)\n", deviceCount);
   assert(deviceCount > 0);
   myGpuId = 0;
   printout("This thread will use cudaSetDevice(%d)\n", myGpuId);
-  cudaError_t cudaStatus = cudaSetDevice(myGpuId);
-  if (cudaStatus != cudaSuccess)
-  {
-      fprintf(stderr, "cudaSetDevice failed. CUDA-capable GPU installed?");
-      abort();
-  }
+  checkCudaErrors(cudaSetDevice(myGpuId));
+  struct cudaDeviceProp prop;
+  checkCudaErrors(cudaGetDeviceProperties(&prop, myGpuId));
+  printout("totalGlobalMem %7.1f GiB\n", prop.totalGlobalMem / 1024. / 1024. / 1024.);
+  printout("multiProcessorCount %d\n", prop.multiProcessorCount);
+  printout("maxThreadsPerBlock %d\n", prop.maxThreadsPerBlock);
+  printout("warpSize %d\n", prop.warpSize);
   #else
   printout("NVIDIA CUDA accelerated routines are disabled\n");
   #endif

@@ -817,7 +817,7 @@ static void update_estimators(
 }
 
 __host__ __device__
-static rpkt_cont_opacity_struct *opacity_lock(void)
+rpkt_cont_opacity_struct *opacity_lock(void)
 {
   const int tid = omp_get_thread_num();
   const int index = tid % KAPPA_TABLE_COUNT;
