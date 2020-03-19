@@ -822,14 +822,18 @@ rpkt_cont_opacity_struct *opacity_lock(void)
   const int tid = omp_get_thread_num();
   const int index = tid % KAPPA_TABLE_COUNT;
   #ifdef __CUDA_ARCH__
-  int assumedowner;
-  int prevowner = kappa_rpkt_cont[index].owner;
-  // printf("tid %d waiting for lock on index %d owned by thread %d\n", tid, index, prevowner);
-  do
-  {
-    assumedowner = prevowner;
-    prevowner = atomicCAS(&kappa_rpkt_cont[index].owner, assumedowner, tid);
-  } while (assumedowner != prevowner || prevowner != -1);
+
+  // int assumedowner;
+  // int prevowner = kappa_rpkt_cont[index].owner;
+  // // printf("tid %d waiting for lock on index %d owned by thread %d\n", tid, index, prevowner);
+  // do
+  // {
+  //   assumedowner = prevowner;
+  //   prevowner = atomicCAS(&kappa_rpkt_cont[index].owner, assumedowner, tid);
+  // } while (assumedowner != prevowner || prevowner != -1);
+
+  while (atomicCAS(&kappa_rpkt_cont[index].owner, -1, tid) != tid);
+
   #else
   kappa_rpkt_cont[index].owner = tid;
   #endif

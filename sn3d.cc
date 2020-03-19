@@ -1028,15 +1028,16 @@ int main(int argc, char** argv)
   checkCudaErrors(cudaGetDeviceCount(&deviceCount));
   printout("[CUDA] Detected %d CUDA capable device(s)\n", deviceCount);
   assert(deviceCount > 0);
-  myGpuId = 0;
-  printout("[CUDA] This thread will use cudaSetDevice(%d)\n", myGpuId);
+  myGpuId = my_rank % deviceCount;
+  printout("[CUDA] This rank will use cudaSetDevice(%d)\n", myGpuId);
   checkCudaErrors(cudaSetDevice(myGpuId));
-  struct cudaDeviceProp prop;
-  checkCudaErrors(cudaGetDeviceProperties(&prop, myGpuId));
-  printout("[CUDA] totalGlobalMem %7.1f GiB\n", prop.totalGlobalMem / 1024. / 1024. / 1024.);
-  printout("[CUDA] multiProcessorCount %d\n", prop.multiProcessorCount);
-  printout("[CUDA] maxThreadsPerBlock %d\n", prop.maxThreadsPerBlock);
-  printout("[CUDA] warpSize %d\n", prop.warpSize);
+  struct cudaDeviceProp deviceProp;
+  checkCudaErrors(cudaGetDeviceProperties(&deviceProp, myGpuId));
+  printout("[CUDA] totalGlobalMem %7.1f GiB\n", deviceProp.totalGlobalMem / 1024. / 1024. / 1024.);
+  printout("[CUDA] multiProcessorCount %d\n", deviceProp.multiProcessorCount);
+  printout("[CUDA] maxThreadsPerMultiProcessor %d\n", deviceProp.maxThreadsPerMultiProcessor);
+  printout("[CUDA] maxThreadsPerBlock %d\n", deviceProp.maxThreadsPerBlock);
+  printout("[CUDA] warpSize %d\n", deviceProp.warpSize);
   #else
   printout("[CUDA] NVIDIA CUDA accelerated routines are disabled\n");
   #endif
