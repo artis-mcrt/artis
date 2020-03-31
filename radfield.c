@@ -187,7 +187,7 @@ setup_bin_boundaries(void)
     // }
     // prev_nu_upper = get_bin_nu_upper(binindex);
   }
-  radfieldbin_nu_upper[RADFIELDBINCOUNT - 1] = (CLIGHT /  (10e-8));  // very top end super bin
+  radfieldbin_nu_upper[RADFIELDBINCOUNT - 1] = nu_upper_superbin;  // very top end super bin
 }
 
 
