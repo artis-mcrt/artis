@@ -34,6 +34,15 @@ static const bool NLTE_POPS_ALL_IONS_SIMULTANEOUS = true;
 // maximum number of NLTE/Te/Spencer-Fano iterations
 static const int NLTEITER = 30;
 
+// this macro function determines which levels of which ions will be treated in full NLTE (if NLTE_POPS_ON is true)
+// for now, all NLTE levels should be contiguous and include the ground state
+// (i.e. level indices < X should return true for some X)
+#define LEVEL_IS_NLTE(element, ion, level) \
+if (get_element(element) == 26 && get_ionstage(element, ion) == 2) \
+return (level <= 197); \
+else \
+return (level <= 80);
+
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 #define UNIFORM_PELLET_ENERGIES true
 
@@ -69,6 +78,9 @@ static const size_t GSLWSIZE = 16384;
 #define MINDENSITY 1e-40         /// Minimum cell density. Below cells are treated as empty.
 #define MINPOP 1e-40
 
+#define NU_MIN_R 1e13   /// lower frequency boundary for UVOIR spectra and BB sampling
+#define NU_MAX_R 5e15   /// upper frequency boundary for UVOIR spectra and BB sampling
+
 
 // ****
 // Start of radiation field model options
@@ -84,6 +96,7 @@ static const int FIRST_NLTE_RADFIELD_TIMESTEP = 12;
 
 static const double nu_lower_first_initial = (CLIGHT / (40000e-8)); // CLIGHT / ([lambda Angstroms]e-8)
 static const double nu_upper_last_initial = (CLIGHT /  (1085e-8));  // not including the very top super bin
+static const double nu_upper_superbin = (CLIGHT /  (10e-8)); // very top end super bin
 
 static const double T_R_min = 500;
 static const double T_R_max = 250000;

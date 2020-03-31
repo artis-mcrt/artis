@@ -1,3 +1,4 @@
+#include "artisoptions.h"
 #include "sn3d.h"
 #include "atomic.h"
 #include "grid_init.h"
@@ -105,10 +106,10 @@ bool is_nlte(int element, int ion, int level)
   {
     return false;
   }
-  else if (get_element(element) == 26 && get_ionstage(element, ion) == 2)
-    return (level <= 197);
   else
-    return (level <= 80);
+  {
+    LEVEL_IS_NLTE(element, ion, level);
+  }
 }
 
 
