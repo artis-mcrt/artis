@@ -1002,7 +1002,7 @@ double rad_deexcitation_ratecoeff(
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
-    if (tau_sobolev > 0)
+    if (tau_sobolev > 1e-100)
     {
       const double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
       // const double beta = 1.0;
@@ -1065,7 +1065,7 @@ double rad_excitation_ratecoeff(
 
     const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
 
-    if (tau_sobolev > 0)
+    if (tau_sobolev > 1e-100)
     {
       double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
       //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
