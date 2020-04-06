@@ -1374,7 +1374,11 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
   const double sf = calculate_sahafact(element, ion, level, upperionlevel, T_e, H * nu_threshold);
   const double nnupperionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upperionlevel);
-  const double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.0; // put that to phixslist
+  double departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * sf : 1.0; // put that to phixslist
+  if (!isfinite(departure_ratio))
+  {
+    departure_ratio = 0.;
+  }
   intparas.departure_ratio = departure_ratio;
 #endif
 
@@ -1395,6 +1399,8 @@ static double calculate_corrphotoioncoeff_integral(int element, int ion, int lev
   {
     printout("corrphotoioncoeff gsl integrator warning %d. modelgridindex %d Z=%d ionstage %d lower %d phixstargetindex %d integral %g error %g\n",
              status, modelgridindex, get_element(element), get_ionstage(element, ion), level, phixstargetindex, gammacorr, error);
+    if (!isfinite(gammacorr))
+      gammacorr = 0.;
   }
 
   gammacorr *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
