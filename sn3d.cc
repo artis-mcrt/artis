@@ -904,12 +904,39 @@ int main(int argc, char** argv)
     nvpkt_esc3 = 0;
   #endif
 
+  #if CUDA_ENABLED
+  printf("CUDA ENABLED\n");
+  int deviceCount = -1;
+  checkCudaErrors(cudaGetDeviceCount(&deviceCount));
+  printf("deviceCount %d\n", deviceCount);
+  assert(deviceCount > 0);
+  {
+    myGpuId = 0;
+    #ifdef _OPENMP
+    const int omp_tid = omp_get_thread_num();
+    myGpuId = omp_tid % deviceCount;
+    printf("OMP thread id %d\n", omp_tid);
+    #else
+      #if MPI_ON
+      const int local_rank = atoi(getenv("OMPI_COMM_WORLD_LOCAL_RANK"));
+      myGpuId = local_rank % deviceCount;
+      printf("local_rank %d\n", local_rank);
+      #endif
+    #endif
+    printf("myGpuId %d\n", myGpuId);
+  }
+  cudaSetDevice(myGpuId);
+  #endif
+
   #ifdef MPI_ON
     MPI_Init(&argc, &argv);
+    printf("MPI init complete\n");
     int my_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    printf("MPI rank %d\n", my_rank);
     int p;
     MPI_Comm_size(MPI_COMM_WORLD, &p);
+    printf("MPI number of processes %d\n", p);
   #else
     int my_rank = 0;
     int p = 1;
@@ -1024,13 +1051,8 @@ int main(int argc, char** argv)
 
   #if CUDA_ENABLED
   printout("[CUDA] NVIDIA CUDA accelerated routines are enabled\n");
-  int deviceCount = -1;
-  checkCudaErrors(cudaGetDeviceCount(&deviceCount));
   printout("[CUDA] Detected %d CUDA capable device(s)\n", deviceCount);
-  assert(deviceCount > 0);
-  myGpuId = my_rank % deviceCount;
   printout("[CUDA] This rank will use cudaSetDevice(%d)\n", myGpuId);
-  checkCudaErrors(cudaSetDevice(myGpuId));
   struct cudaDeviceProp deviceProp;
   checkCudaErrors(cudaGetDeviceProperties(&deviceProp, myGpuId));
   printout("[CUDA] totalGlobalMem %7.1f GiB\n", deviceProp.totalGlobalMem / 1024. / 1024. / 1024.);
