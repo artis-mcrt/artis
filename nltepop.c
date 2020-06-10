@@ -1702,12 +1702,10 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
 
 void nltepop_write_restart_data(FILE *restart_file)
 {
-  if (!NLTE_POPS_ON)
-    return;
-
-  printout("NLTE populations, ");
+  printout("populations, ");
 
   fprintf(restart_file, "%d\n", 75618527); // special number marking the beginning of nlte data
+
   fprintf(restart_file, "%d\n", total_nlte_levels);
 
   for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
@@ -1727,9 +1725,12 @@ void nltepop_write_restart_data(FILE *restart_file)
                   modelgrid[modelgridindex].cooling[element].contrib[ion]);
         }
       }
-      for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
+      if (NLTE_POPS_ON)
       {
-        fprintf(restart_file, "%lg ", modelgrid[modelgridindex].nlte_pops[nlteindex]);
+        for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
+        {
+          fprintf(restart_file, "%lg ", modelgrid[modelgridindex].nlte_pops[nlteindex]);
+        }
       }
     }
   }
@@ -1738,10 +1739,7 @@ void nltepop_write_restart_data(FILE *restart_file)
 
 void nltepop_read_restart_data(FILE *restart_file)
 {
-  if (!NLTE_POPS_ON)
-    return;
-
-  printout("Reading restart data for NLTE populations\n");
+  printout("Reading restart data for populations\n");
 
   int code_check;
   fscanf(restart_file, "%d\n", &code_check);
@@ -1789,9 +1787,12 @@ void nltepop_read_restart_data(FILE *restart_file)
           }
         }
       }
-      for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
+      if (NLTE_POPS_ON)
       {
-        fscanf(restart_file, "%lg ", &modelgrid[modelgridindex].nlte_pops[nlteindex]);
+        for (int nlteindex = 0; nlteindex < total_nlte_levels; nlteindex++)
+        {
+          fscanf(restart_file, "%lg ", &modelgrid[modelgridindex].nlte_pops[nlteindex]);
+        }
       }
     }
   }
