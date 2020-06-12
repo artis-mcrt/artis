@@ -305,24 +305,27 @@ static void radfield_allocate_cell(int modelgridindex, long *radfield_mem_usage)
   }
   #endif
 
-  #if CUDA_ENABLED
-  cudaMallocManaged(&radfieldbins_estim[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinestim));
-  cudaMallocManaged(&radfieldbins_params[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinparams));
-  cudaMemAdvise(radfieldbins_params[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinparams), cudaMemAdviseSetReadMostly, 0);
-  #else
-  radfieldbins_estim[modelgridindex] = (struct radfieldbinestim *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbinestim));
-  radfieldbins_params[modelgridindex] = (struct radfieldbinparams *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbinparams));
-  #endif
-
-  *radfield_mem_usage += RADFIELDBINCOUNT * (sizeof(struct radfieldbinestim) + sizeof(struct radfieldbinparams));
-  for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
   {
-    radfieldbins_estim[modelgridindex][binindex].J_raw = 0.;
-    radfieldbins_estim[modelgridindex][binindex].nuJ_raw = 0.;
-    radfieldbins_estim[modelgridindex][binindex].contribcount = 0;
-    radfieldbins_params[modelgridindex][binindex].W = -1.;
-    radfieldbins_params[modelgridindex][binindex].T_R = -1.;
-    // radfieldbins_params[modelgridindex][binindex].fit_type = FIT_DILUTE_BLACKBODY;
+    #if CUDA_ENABLED
+    cudaMallocManaged(&radfieldbins_estim[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinestim));
+    cudaMallocManaged(&radfieldbins_params[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinparams));
+    cudaMemAdvise(radfieldbins_params[modelgridindex], RADFIELDBINCOUNT * sizeof(struct radfieldbinparams), cudaMemAdviseSetReadMostly, 0);
+    #else
+    radfieldbins_estim[modelgridindex] = (struct radfieldbinestim *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbinestim));
+    radfieldbins_params[modelgridindex] = (struct radfieldbinparams *) calloc(RADFIELDBINCOUNT, sizeof(struct radfieldbinparams));
+    #endif
+
+    *radfield_mem_usage += RADFIELDBINCOUNT * (sizeof(struct radfieldbinestim) + sizeof(struct radfieldbinparams));
+    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++)
+    {
+      radfieldbins_estim[modelgridindex][binindex].J_raw = 0.;
+      radfieldbins_estim[modelgridindex][binindex].nuJ_raw = 0.;
+      radfieldbins_estim[modelgridindex][binindex].contribcount = 0;
+      radfieldbins_params[modelgridindex][binindex].W = -1.;
+      radfieldbins_params[modelgridindex][binindex].T_R = -1.;
+      // radfieldbins_params[modelgridindex][binindex].fit_type = FIT_DILUTE_BLACKBODY;
+    }
   }
 }
 
@@ -405,26 +408,27 @@ void radfield_init(int my_rank)
 
   printout("There are %d lines with detailed Jblue_lu estimators.\n", detailed_linecount);
 
-  if (!MULTIBIN_RADFIELD_MODEL_ON)
+  if (MULTIBIN_RADFIELD_MODEL_ON)
+  {
+    printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
+
+    printout("Initialising multibin radiation field with %d bins from (%.2f eV, %6.1f A) to (%.2f eV, %6.1f A)\n",
+             RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
+             H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
+    char filename[100];
+    sprintf(filename,"radfield_%.4d.out", my_rank);
+    radfieldfile = fopen_required(filename, "w");
+    fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n",
+            "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
+            "nuJ","J","J_nu_avg","ncontrib","T_R","W");
+    fflush(radfieldfile);
+
+    setup_bin_boundaries();
+  }
+  else
   {
     printout("The radiation field model is a whole-spectrum fit to a single diluted blackbody.\n");
-    return;
   }
-
-  printout("The multibin radiation field estimators are being used instead of the whole-spectrum fit from timestep %d onwards.\n", FIRST_NLTE_RADFIELD_TIMESTEP);
-
-  printout("Initialising multibin radiation field with %d bins from (%.2f eV, %6.1f A) to (%.2f eV, %6.1f A)\n",
-           RADFIELDBINCOUNT, H * nu_lower_first_initial / EV, 1e8 * CLIGHT / nu_lower_first_initial,
-           H * nu_upper_last_initial / EV, 1e8 * CLIGHT / nu_upper_last_initial);
-  char filename[100];
-  sprintf(filename,"radfield_%.4d.out", my_rank);
-  radfieldfile = fopen_required(filename, "w");
-  fprintf(radfieldfile,"%8s %15s %8s %11s %11s %9s %9s %9s %9s %9s %12s\n",
-          "timestep","modelgridindex","bin_num","nu_lower","nu_upper",
-          "nuJ","J","J_nu_avg","ncontrib","T_R","W");
-  fflush(radfieldfile);
-
-  setup_bin_boundaries();
 
   long radfield_mem_usage = 0;
   for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
@@ -781,18 +785,21 @@ void radfield_close_file(void)
   if (MULTIBIN_RADFIELD_MODEL_ON)
   {
     fclose(radfieldfile);
+  }
 
-    for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < MMODELGRID; modelgridindex++)
+  {
+    if (get_numassociatedcells(modelgridindex) > 0)
     {
-      if (get_numassociatedcells(modelgridindex) > 0)
+      if (MULTIBIN_RADFIELD_MODEL_ON)
       {
         free(radfieldbins_estim[modelgridindex]);
         free(radfieldbins_params[modelgridindex]);
-        #if (DETAILED_BF_ESTIMATORS_ON)
-        free(bfrate_raw[modelgridindex]);
-        free(prev_bfrate_normed[modelgridindex]);
-        #endif
       }
+      #if (DETAILED_BF_ESTIMATORS_ON)
+      free(bfrate_raw[modelgridindex]);
+      free(prev_bfrate_normed[modelgridindex]);
+      #endif
     }
   }
 }
