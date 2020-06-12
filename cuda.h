@@ -73,11 +73,11 @@
     extern __managed__ curandState curandstates[MTHREADS];
 
     typedef int omp_int_t;
-    __host__ __device__ extern inline omp_int_t omp_get_thread_num(void);
+    __host__ __device__ extern inline omp_int_t get_thread_num(void);
 
     __device__ inline static double gsl_rng_uniform(void *ignore)
     {
-      const int tid = omp_get_thread_num();
+      const int tid = get_thread_num();
       const double zrand = curand_uniform_double(&curandstates[tid]);
       // printf("random %g\n", zrand);
       return zrand;
@@ -85,7 +85,7 @@
 
     __device__ inline static double gsl_rng_uniform_pos(void *ignore)
     {
-      const int tid = omp_get_thread_num();
+      const int tid = get_thread_num();
       while (true)
       {
         const double zrand = curand_uniform_double(&curandstates[tid]);

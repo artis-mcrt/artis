@@ -2,6 +2,8 @@
 #define SN3D_H
 
 #ifndef __CUDA_ARCH__
+  // host code
+
   #define printout(...) fprintf (output_file, __VA_ARGS__)
 
   #ifdef DEBUG_ON
@@ -14,13 +16,20 @@
   #endif
 
   #ifdef _OPENMP
-    #define safeadd(var, val) #pragma omp atomic\\
-    var += val
+  #ifndef __CUDACC__
+    #define safeadd(var, val) #pragma omp atomic update \
+    { \
+    var += val \
+    }
+  #else
+    #define safeadd(var, val) var += val
+  #endif
   #else
     #define safeadd(var, val) var += val
   #endif
 
 #else
+  // device code
 
   #define printout(...) printf (__VA_ARGS__)
 
@@ -65,18 +74,36 @@
   #include "omp.h"
 #endif
 
-#ifndef _OPENMP
 typedef int omp_int_t;
-__host__ __device__ static inline omp_int_t omp_get_thread_num(void) {
+
+#ifndef _OPENMP
+  __host__ static inline omp_int_t omp_get_thread_num(void)
+  {
+    return 0;
+  }
+
+  __host__ static inline omp_int_t omp_get_num_threads(void)
+  {
+    return MTHREADS;
+  }
+#endif
+
+__host__ __device__ static inline omp_int_t get_thread_num(void) {
 #ifdef __CUDA_ARCH__
   return threadIdx.x + blockDim.x * blockIdx.x;
 #else
-  return 0;
+  return omp_get_thread_num();
 #endif
 }
-// static inline omp_int_t omp_get_num_threads(void) { return 1; }
-__host__ __device__ static inline omp_int_t omp_get_num_threads(void) { return MTHREADS; }
-#endif
+
+// static inline omp_int_t get_num_threads(void) { return 1; }
+__host__ __device__ static inline omp_int_t get_num_threads(void) {
+  #ifdef __CUDA_ARCH__
+    return MTHREADS;
+  #else
+    return omp_get_num_threads();
+  #endif
+}
 
 #define GRID_UNIFORM 1 // Simple cuboidal cells.
 #define GRID_SPHERICAL1D 2 // radial shells
@@ -120,7 +147,7 @@ extern __managed__ bool neutral_flag;
 extern FILE *output_file;
 
 #ifdef _OPENMP
-  #pragma omp threadprivate(tid, myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
+  #pragma omp threadprivate(myGpuId, use_cellhist, neutral_flag, rng, gslworkspace, output_file)
 #endif
 
 

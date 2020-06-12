@@ -59,11 +59,13 @@ static int ndo = 0;
 int mpi_grid_buffer_size = 0;
 char *mpi_grid_buffer = NULL;
 
-#ifndef _OPENMP
-__host__ __device__ extern inline omp_int_t omp_get_thread_num(void);
-__host__ __device__ extern inline omp_int_t omp_get_num_threads(void);
-#endif
+__host__ __device__ extern inline omp_int_t get_thread_num(void);
+__host__ __device__ extern inline omp_int_t get_num_threads(void);
 
+#ifndef _OPENMP
+__host__ extern inline omp_int_t omp_get_thread_num(void);
+__host__ extern inline omp_int_t omp_get_num_threads(void);
+#endif
 
 #if TRACK_ION_STATS
 static double *ionstats = NULL;

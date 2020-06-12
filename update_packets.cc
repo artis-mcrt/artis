@@ -235,7 +235,7 @@ static int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
 #if CUDA_ENABLED
 __global__ static void kernel_updatepacket(const int nts, PKT *pkt, double ts, double tw)
 {
-  const int tid = omp_get_thread_num();
+  const int tid = get_thread_num();
   if (tid < MTHREADS)
     opacity_unlock();
   __syncthreads();
@@ -349,7 +349,7 @@ void update_packets_gpu(const int nts, PKT *pkt)
 }
 #endif
 
-
+#if !CUDA_ENABLED
 void update_packets(const int nts, PKT *pkt)
 // Subroutine to move and update packets during the current timestep (nts)
 {
@@ -476,6 +476,7 @@ void update_packets(const int nts, PKT *pkt)
 
   printout("end of update_packets parallel for loop %ld\n", time(NULL));
 }
+#endif
 
 
 /*static int compare_packets_byposition(const void *p1, const void *p2)

@@ -43,22 +43,22 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	#  compilers/gcc/system(default)
 	#  libs/gsl/1.16/gcc-4.4.7
 
-	CXX = mpicc
+	CXX = mpic++
 	CXXFLAGS = -mcmodel=medium -O3 -I$(GSLINCLUDE) #-fopenmp=libomp
 	LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
 
 	sn3d: CXXFLAGS += -DMPI_ON
 
-else ifneq (, $(shell which mpicc))
-	# any other system which has mpicc available (Juwels, Cambridge, Gadi, etc)
+else ifneq (, $(shell which mpic++))
+	# any other system which has mpic++ available (Juwels, Cambridge, Gadi, etc)
 
-	CXX = mpicc
-	CXX = c++
+	CXX = mpic++
+	# CXX = c++
 	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -g -fstrict-aliasing #-fopenmp=libomp
-	LDFLAGS = -lgsl -lgslcblas -lm
+	LDFLAGS = -lgsl -lgslcblas
 
 
-# sn3d: CXXFLAGS += -DMPI_ON
+sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 else
 	CXX = c++
 	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
@@ -68,6 +68,7 @@ endif
 
 # Use GSL inline functions and skip array range checking for performance
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE -DGSL_RANGE_CHECK_OFF
+
 
 exspec exgamma: CXXFLAGS += -DDO_EXSPEC
 exgamma: CXXFLAGS += -DDO_EXGAMMA
@@ -96,7 +97,9 @@ endif
 ifneq (,$(findstring gadi,$(HOSTNAME)))
 	# Tesla V100
 	CUDA_NVCC_FLAGS += -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70
-	CXX = icc
+	CXX = mpic++
+	# CXX = icpc
+	# CXXFLAGS += -qopenmp
 	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
 endif
 
@@ -125,7 +128,8 @@ sn3dcudawhole: version
 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3d
 
 sn3dcuda: version $(sn3d_objects)
-	nvcc $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
+	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
+	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3d
 
 %.o: %.cc
 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c

@@ -588,7 +588,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
 #endif
   else
   {
-    printout("ERROR: could not continuum process tid %d zrand %g kappa_cont %g kappa_bf %G\n", omp_get_thread_num(), zrand, kappa_cont, kappa_bf);
+    printout("ERROR: could not continuum process tid %d zrand %g kappa_cont %g kappa_bf %G\n", get_thread_num(), zrand, kappa_cont, kappa_bf);
     abort();
   }
 }
@@ -819,7 +819,7 @@ static void update_estimators(
 __host__ __device__
 rpkt_cont_opacity_struct *opacity_lock(void)
 {
-  const int tid = omp_get_thread_num();
+  const int tid = get_thread_num();
   const int index = tid % KAPPA_TABLE_COUNT;
   #ifdef __CUDA_ARCH__
 
@@ -844,7 +844,7 @@ rpkt_cont_opacity_struct *opacity_lock(void)
 __host__ __device__
 void opacity_unlock(void)
 {
-  const int tid = omp_get_thread_num();
+  const int tid = get_thread_num();
   const int index = tid % KAPPA_TABLE_COUNT;
   kappa_rpkt_cont[index].owner = -1;
   // printf("tid %d freed lock on index %d\n", tid, index);
