@@ -818,6 +818,21 @@ static void read_atomicdata_files(void)
       }
 
       printout("adata header matched: Z %d, ionstage %d, nlevels %d\n", adata_Z_in, ionstage, nlevels);
+
+      if (single_level_top_ion && ion == nions - 1) // limit the top ion to one level and no transitions
+      {
+        nlevelsmax = 1;
+      }
+
+      // if (adata_Z_in == 26 && ionstage == 1)
+      // {
+      //   nlevelsmax = 5;
+      // }
+      // else if (adata_Z_in == 26 && ionstage == 2)
+      // {
+      //   nlevelsmax = 5;
+      // }
+
       if (nlevelsmax < 0)
       {
         nlevelsmax = nlevels;
@@ -864,36 +879,8 @@ static void read_atomicdata_files(void)
 
       if (single_level_top_ion && ion == nions - 1) // limit the top ion to one level and no transitions
       {
-        nlevelsmax = 1;
         tottransitions = 0;
       }
-
-      //TODO: REMOVE
-      // if (adata_Z_in == 26 && ionstage == 1)
-      // {
-      //   nlevelsmax = 5;
-      // }
-      // if (adata_Z_in == 26 && ionstage == 2)
-      // {
-      //   nlevelsmax = 5;
-      // }
-      // if (adata_Z_in == 26 && ionstage == 3)
-      // {
-      //   nlevelsmax = 5;
-      // }
-      // if (adata_Z_in == 26 && ionstage >= 4)
-      // {
-      //   nlevelsmax = 80;
-      // }
-      // else if (adata_Z_in == 26 && ionstage == 5)
-      // {
-      //   nlevelsmax = 5;
-      // }
-      // nlevelsmax = 1;
-      // if (nlevelsmax > 50)
-      // {
-      //   nlevelsmax = 50;
-      // }
 
       assert(transdata_Z_in == Z);
       assert(transdata_ionstage_in == ionstage);
