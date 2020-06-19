@@ -49,9 +49,18 @@ static int get_escaped_packets(int i, int nprocs, PKT pkt[], EPKT *epkts, int np
   char filename[100];
   /// Read in the next bunch of packets to work on
   //sprintf(filename,"packets%d_%d.tmp",0,i);
+
   sprintf(filename, "packets%.2d_%.4d.out", 0, i);
   printout("reading %s (file %d of %d)\n", filename, i + 1, nprocs);
-  read_packets(filename, pkt);
+  if (access(filename, F_OK) != -1)
+  {
+    read_packets(filename, pkt);
+  }
+  else
+  {
+    printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ", filename, i);
+    read_temp_packetsfile(itstep, i, pkt);
+  }
 
   int nepkts = 0;
   for (int ii = 0; ii < npkts; ii++)

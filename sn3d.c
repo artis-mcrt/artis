@@ -409,19 +409,6 @@ static void mpi_reduce_estimators(int my_rank, int nts)
 #endif
 
 
-static void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt)
-{
-  char filename[100];
-  sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
-
-  printout("Reading %s...", filename);
-  FILE *packets_file = fopen_required(filename, "rb");
-  fread(pkt, sizeof(PKT), npkts, packets_file);
-  //read_packets(packets_file);
-  fclose(packets_file);
-  printout("done\n");
-}
-
 
 static void write_temp_packetsfile(const int timestep, const int my_rank, const PKT *const pkt)
 {
