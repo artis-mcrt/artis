@@ -11,8 +11,7 @@ double calculate_partfunct(int element, int ion, int modelgridindex);
 double get_groundlevelpop(int modelgridindex, int element, int ion);
 double calculate_levelpop_lte(int modelgridindex, int element, int ion, int level);
 double calculate_exclevelpop(int modelgridindex, int element, int ion, int level);
-double get_groundmultiplet_pop(
-  int modelgridindex, float T_e, int element, int ion, bool assume_lte);
+double get_groundmultiplet_pop(int modelgridindex, int element, int ion);
 
 inline double calculate_sahafact(int element, int ion, int level, int upperionlevel, double T, double E_threshold)
 /// calculates saha factor in LTE: Phi_level,ion,element = nn_level,ion,element/(nne*nn_upper,ion+1,element)
