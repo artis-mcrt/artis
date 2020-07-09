@@ -451,6 +451,20 @@ double get_groundlevelpop(int modelgridindex, int element, int ion)
 }
 
 
+double get_groundmultiplet_pop(int modelgridindex, int element, int ion)
+{
+  const int nlevels_gm = get_nlevels_groundterm(element, ion);
+
+  double gmpop = 0.;
+  for (int level = 0; level < nlevels_gm; level++)
+  {
+    gmpop += calculate_exclevelpop(modelgridindex, element, ion, level);
+  }
+
+  return gmpop;
+}
+
+
 /*static double calculate_exclevelpop_old(int modelgridindex, int element, int ion, int level)
 /// Calculates occupation number of level relative to the ions ground level population
 /// using a modified version of the Boltzmann formula, which fulfills the diluted BB

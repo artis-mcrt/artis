@@ -447,7 +447,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
             }
           }
         }
-        else if (et != -9999999) // r-pkt is from bound-free emission (not free-free scattering
+        else if (et != -9999999) // r-pkt is from bound-free emission (not free-free scattering)
         {
           increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_PHOTOION_FROMBOUNDFREE, n_photons_absorbed);
 
