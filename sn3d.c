@@ -639,7 +639,7 @@ static bool do_timestep(const int outer_iteration, const int nts, const int tite
   update_grid(estimators_file, nts, nts_prev, my_rank, nstart, ndo, titer);
 
   const time_t sys_time_finish_update_grid = time(NULL);
-  printout("timestep %d: update_grid: process %d finished update_grid at %ld (took %ld seconds)\n",
+  printout("timestep %d: update_grid: process %d finished update grid at %ld (took %ld seconds)\n",
            nts, my_rank, sys_time_finish_update_grid, sys_time_finish_update_grid - sys_time_start_update_grid);
 
   #ifdef DO_TITER
