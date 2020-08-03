@@ -1113,10 +1113,14 @@ static void update_grid_cell(const int n, const int nts, const int nts_prev, con
           printout("initial_iteration %d\n",initial_iteration);
           printout("modelgrid.thick: %d\n",modelgrid[n].thick);
         }
+
         precalculate_partfuncts(n);
         //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
+
         if (!simulation_continued_from_saved || !NLTE_POPS_ON)
+        {
           calculate_populations(n);  // these were not read from the gridsave file, so calculate them now
+        }
         else
         {
           calculate_electron_densities(n);
