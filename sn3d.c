@@ -1014,7 +1014,6 @@ int main(int argc, char** argv)
   /// Get input stuff
   input(my_rank);
 
-  /// Initialise linestat file
   #ifdef RECORD_LINESTAT
   if (my_rank == 0)
   {
@@ -1059,13 +1058,17 @@ int main(int argc, char** argv)
   printout("time read syn file %ld\n", time(NULL));
 
   bool terminate_early = false;
-  file_set = false;
+  file_set = false; // LJS: deprecate this switch?
   debuglevel = 4;  /// Selects detail level of debug output, needs still some work.
   for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
   {
     /// Initialise the grid. Call routine that sets up the initial positions
     /// and sizes of the grid cells.
     time_init();
+    if (my_rank == 0)
+    {
+      write_timestep_file();
+    }
     printout("time time init %ld\n", time(NULL));
     grid_init(my_rank);
 
