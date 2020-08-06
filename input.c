@@ -2576,24 +2576,42 @@ void time_init(void)
     abort();
   }
 
-  /// For logarithmic steps, the logarithmic inverval will be
-  const double dlogt = (log(tmax) - log(tmin)) / ntstep;
-  //dlogt = 0.17917595;
-  //dlogt = 0.03583518938456109026;
-  //dlogt = (tmax - tmin)/ntstep;
-
   /// Now setup the individual time steps
   for (int n = 0; n < ntstep; n++)
   {
+    // For logarithmic steps, the logarithmic inverval will be
+    const double dlogt = (log(tmax) - log(tmin)) / ntstep;
     time_step[n].start = tmin * exp(n * dlogt);
     time_step[n].mid = tmin * exp((n + 0.5) * dlogt);
     time_step[n].width = (tmin * exp((n + 1) * dlogt)) - time_step[n].start;
-    //time_step[n].start = tmin * n*dlogt;
-    //time_step[n].mid = tmin * (n+0.5)*dlogt;
-    //time_step[n].width = (tmin * (n+1)*dlogt) - time_step[n].start;
 
-    //      printout("start %g, width %g, mid %g\n",time_step[n].start,time_step[n].width,time_step[n].mid);
+    // for constant timesteps
+    // const double dt = (tmax - tmin) / ntstep;
+    // time_step[n].start = tmin + n * dt;
+    // time_step[n].width = dt;
+    // time_step[n].mid = time_step[n].start + 0.5 * time_step[n].width;
+  }
 
+  // to limit the timestep durations
+  // const double maxt = 0.5 * DAY;
+  // for (int n = ntstep - 1; n > 0; n--)
+  // {
+  //   if (time_step[n].width > maxt)
+  //   {
+  //     const double boundaryshift = time_step[n].width - maxt;
+  //     time_step[n].width -= boundaryshift;
+  //     time_step[n].start += boundaryshift;
+  //     time_step[n - 1].width += boundaryshift;
+  //   }
+  //   else if (n < ntstep - 1 && time_step[n + 1].width > maxt)
+  //   {
+  //     printout("TIME: Keeping logarithmic durations for timesteps <= %d\n", n);
+  //   }
+  // }
+  // assert(time_step[0].width <= maxt); // no solution is possible with these constraints!
+
+  for (int n = 0; n < ntstep; n++)
+  {
     time_step[n].pellet_decays = 0;
     time_step[n].positron_dep = 0.;
     time_step[n].gamma_dep = 0.0;
