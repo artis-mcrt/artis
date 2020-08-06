@@ -2606,3 +2606,14 @@ void time_init(void)
   time_step[ntstep].mid = tmax;
 }
 
+
+void write_timestep_file(void)
+{
+  FILE *timestepfile = fopen_required("timesteps.out", "w");
+  fprintf(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
+  for (int n = 0; n < ntstep; n++)
+  {
+    fprintf(timestepfile, "%d %lg %lg %lg\n", n, time_step[n].start / DAY, time_step[n].mid / DAY, time_step[n].width / DAY);
+  }
+  fclose(timestepfile);
+}
