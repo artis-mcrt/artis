@@ -2576,7 +2576,7 @@ void time_init(void)
     abort();
   }
 
-  /// Now setup the individual time steps
+  /// Now set the individual time steps
   for (int n = 0; n < ntstep; n++)
   {
     // For logarithmic steps, the logarithmic inverval will be
@@ -2591,6 +2591,39 @@ void time_init(void)
     // time_step[n].width = dt;
     // time_step[n].mid = time_step[n].start + 0.5 * time_step[n].width;
   }
+
+  // /// Part log, part fixed timestepss
+  // const double t_transition = 40. * DAY; // transition from logarithmic to fixed timesteps
+  // const double maxtsdelta = 0.5 * DAY; // maximum timestep width in fixed part
+  // assert(t_transition > tmin);
+  // assert(t_transition < tmax);
+  // const int nts_fixed = ceil((tmax - t_transition) / maxtsdelta);
+  // const double fixed_tsdelta = (tmax - t_transition) / nts_fixed;
+  // assert(nts_fixed >= 0);
+  // assert(nts_fixed <= ntstep);
+  // const int nts_log = ntstep - nts_fixed;
+  // assert(nts_log >= 0);
+  // assert(nts_log <= ntstep);
+  // assert((nts_log + nts_fixed) == ntstep);
+  // for (int n = 0; n < ntstep; n++)
+  // {
+  //   if (n < nts_log)
+  //   {
+  //     // For logarithmic steps, the logarithmic inverval will be
+  //     const double dlogt = (log(t_transition) - log(tmin)) / nts_log;
+  //     time_step[n].start = tmin * exp(n * dlogt);
+  //     time_step[n].mid = tmin * exp((n + 0.5) * dlogt);
+  //     time_step[n].width = (tmin * exp((n + 1) * dlogt)) - time_step[n].start;
+  //   }
+  //   else
+  //   {
+  //     // for constant timesteps
+  //     const double prev_start = n > 0 ? (time_step[n - 1].start + time_step[n - 1].width) : tmin;
+  //     time_step[n].start = prev_start;
+  //     time_step[n].width = fixed_tsdelta;
+  //     time_step[n].mid = time_step[n].start + 0.5 * time_step[n].width;
+  //   }
+  // }
 
   // to limit the timestep durations
   // const double maxt = 0.5 * DAY;
@@ -2609,6 +2642,13 @@ void time_init(void)
   //   }
   // }
   // assert(time_step[0].width <= maxt); // no solution is possible with these constraints!
+
+  // check consistency of start + width = start_next
+  for (int n = 1; n < ntstep; n++)
+  {
+    assert(fabs((time_step[n - 1].start + time_step[n - 1].width) / time_step[n].start) - 1 < 0.001);
+  }
+  assert(fabs((time_step[ntstep - 1].start + time_step[ntstep - 1].width) / tmax) - 1 < 0.001);
 
   for (int n = 0; n < ntstep; n++)
   {
