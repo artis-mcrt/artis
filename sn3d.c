@@ -740,7 +740,7 @@ static bool do_timestep(const int outer_iteration, const int nts, const int tite
     }
 
     #ifdef MPI_ON
-      printout("timestep %d: time after estimators have been communicated %d (took %ld seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);
+      printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);
     #endif
 
     printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n",
