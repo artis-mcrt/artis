@@ -37,7 +37,7 @@ ifeq ($(SYSNAME),Darwin)
 	# LDFLAGS += -lprofiler
 
 else ifneq (,$(findstring kelvin,$(HOSTNAME)))
-  # QUB Kelvin cluster
+	# QUB Kelvin cluster
 	# needs
 	#  mpi/openmpi/1.8.5/gcc-4.4.7
 	#  compilers/gcc/system(default)
@@ -45,9 +45,8 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 
 	CXX = mpic++
 	CXXFLAGS = -mcmodel=medium -O3 -I$(GSLINCLUDE) #-fopenmp=libomp
-	LDFLAGS= -lgsl -lgslcblas -lm -L$(GSLLIB)
-
-	sn3d: CXXFLAGS += -DMPI_ON
+	LDFLAGS = -lgsl -lgslcblas -lm -L$(GSLLIB)
+sn3d: CXXFLAGS += -DMPI_ON
 
 else ifneq (, $(shell which mpic++))
 	# any other system which has mpic++ available (Juwels, Cambridge, Gadi, etc)
@@ -82,32 +81,6 @@ sn3dopenmp: CXXFLAGS += -fopenmp
 sn3dopenmp: LDFLAGS += -lomp
 sn3dopenmp: sn3d
 
-sn3dcuda sn3dcudawhole: LDFLAGS += -lcudart
-
-sn3dcuda sn3dcudawhole: CXXFLAGS += -DCUDA_ENABLED=true
-
-# QUB ARC jakita.starfleet
-ifneq (,$(findstring jakita,$(HOSTNAME)))
-	# Tesla K80
-	CUDA_NVCC_FLAGS += --gpu-architecture=sm_37
-	INCLUDE += -I/usr/local/cuda/samples/common/inc/
-endif
-
-# Gadi
-ifneq (,$(findstring gadi,$(HOSTNAME)))
-	# Tesla V100
-	CUDA_NVCC_FLAGS += -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70
-	CXX = mpic++
-	# CXX = icpc
-	# CXXFLAGS += -qopenmp
-	INCLUDE += -I/home/120/ljs120/cuda_samples/common/inc
-endif
-
-# CXXFLAGS += -std=c++11
-# CXXFLAGS += -fPIC -shared
-# CUDA_NVCC_FLAGS += -Xcompiler -fPIC -shared -rdc=true
-CUDA_NVCC_FLAGS += -ccbin=$(CXX) -std=c++14 -O3 -use_fast_math -Xcompiler "$(CXXFLAGS)" -rdc=true --expt-relaxed-constexpr
-# CUDA_NVCC_FLAGS += -G -g
 
 ### use pg when you want to use gprof the profiler
 #CXXFLAGS = -g -pg -Wall -I$(INCLUDE)
@@ -123,16 +96,6 @@ sn3d: clean version
 
 sn3ddebug: clean version $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_objects) -o sn3d
-
-# sn3dcudawhole: version
-# 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) $(LDFLAGS) $(sn3d_files) -o sn3d
-#
-# sn3dcuda: version $(sn3d_objects)
-# 	nvcc --gpu-architecture=sm_70 --device-link $(sn3d_objects) --output-file gpucode.o
-# 	$(CXX) $(CXXFLAGS) gpucode.o $(INCLUDE) -lcudadevrt $(LDFLAGS) $(sn3d_objects) -o sn3d
-#
-# %.o: %.cc
-# 	nvcc -x cu $(CUDA_NVCC_FLAGS) $(INCLUDE) --device-c $< -c
 
 exspec_files = exspec.cc grid_init.cc globals.cc input.cc vectors.cc packet_init.cc update_grid.cc update_packets.cc gamma.cc boundary.cc macroatom.cc decay.cc rpkt.cc kpkt.cc photo_electric.cc emissivities.cc grey_emissivities.cc ltepop.cc atomic.cc ratecoeff.cc thermalbalance.cc light_curve.cc spectrum.cc polarization.cc nltepop.cc radfield.cc nonthermal.cc vpkt.cc md5.cc
 

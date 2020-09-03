@@ -1,6 +1,6 @@
 #include <string.h>
 #include <gsl/gsl_integration.h>
-#define  _XOPEN_SOURCE
+// #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
 #include <stdio.h>
 #include "md5.h"
