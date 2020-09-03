@@ -44,7 +44,7 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	#  libs/gsl/1.16/gcc-4.4.7
 
 	CXX = mpic++
-	CXXFLAGS = -mcmodel=medium -O3 -I$(GSLINCLUDE) #-fopenmp=libomp
+	CXXFLAGS = -std=c++17 -mcmodel=medium -O3 -I$(GSLINCLUDE) #-fopenmp=libomp
 	LDFLAGS = -lgsl -lgslcblas -lm -L$(GSLLIB)
 sn3d: CXXFLAGS += -DMPI_ON
 
@@ -53,14 +53,14 @@ else ifneq (, $(shell which mpic++))
 
 	CXX = mpic++
 	# CXX = c++
-	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -g -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS = -std=c++17 -march=native -Wstrict-aliasing -O3 -g -fstrict-aliasing #-fopenmp=libomp
 	LDFLAGS = -lgsl -lgslcblas
 
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 else
 	CXX = c++
-	CXXFLAGS = -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS = -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 	LDFLAGS= -lgsl -lgslcblas -lm
 endif
 

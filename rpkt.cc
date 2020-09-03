@@ -1644,7 +1644,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
             kappa_ffheating = 0.;
             //kappa_bfheating = 0.;
             double ionpops_local[MELEMENTS][MIONS];
-            for (int element = 0; element < nelements; element++)
+            for (element = 0; element < nelements; element++)
             {
                 const int nions = get_nions(element);
                 for (int ion = 0; ion < nions; ion++)
