@@ -43,15 +43,15 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	#  compilers/gcc/system(default)
 	#  libs/gsl/1.16/gcc-4.4.7
 
-	CXX = mpic++
+	CXX = mpicxx
 	CXXFLAGS = -std=c++17 -mcmodel=medium -O3 -I$(GSLINCLUDE) #-fopenmp=libomp
 	LDFLAGS = -lgsl -lgslcblas -lm -L$(GSLLIB)
 sn3d: CXXFLAGS += -DMPI_ON
 
-else ifneq (, $(shell which mpic++))
-	# any other system which has mpic++ available (Juwels, Cambridge, Gadi, etc)
+else ifneq (, $(shell which mpicxx))
+	# any other system which has mpicxx available (Juwels, Cambridge, Gadi, etc)
 
-	CXX = mpic++
+	CXX = mpicxx
 	# CXX = c++
 	CXXFLAGS = -std=c++17 -march=native -Wstrict-aliasing -O3 -g -fstrict-aliasing #-fopenmp=libomp
 	LDFLAGS = -lgsl -lgslcblas
@@ -60,6 +60,7 @@ else ifneq (, $(shell which mpic++))
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 else
 	CXX = c++
+	# CXX = icpc
 	CXXFLAGS = -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
 	LDFLAGS= -lgsl -lgslcblas -lm
 endif
