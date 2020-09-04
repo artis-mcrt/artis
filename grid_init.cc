@@ -1048,6 +1048,8 @@ static void spherical1d_grid_setup(void)
   coordmax[1] = 0.;
   coordmax[2] = 0.;
 
+  assert(ngrid <= MGRID);
+
   // in this mode, cellindex and modelgridindex are the same thing
   for (int cellindex = 0; cellindex < npts_model; cellindex++)
   {
