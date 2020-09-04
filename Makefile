@@ -10,13 +10,13 @@ ifeq ($(SYSNAME),Darwin)
 	# macOS
 
 	#if using homebrew gsl, gperftools, etc, you might need to add:
-	# export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/local/include/
+	# export CPATH=$CPATH:/usr/local/include/
 	# export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/lib/
 	# to your .zshrc/.bashrc startup script
 
-	# CXX = gcc-9
-	# CXX = icc
-	# CXX = mpicc
+	# CXX = gcc-10
+	# CXX = icpc
+	# CXX = mpicxx
 	CXX = clang++
 	CXXFLAGS = -std=c++17 -O3 -fstrict-aliasing -ftree-vectorize -flto
 
@@ -28,7 +28,7 @@ ifeq ($(SYSNAME),Darwin)
 	# enable OpenMP for Clang
 	# CXXFLAGS += -Xpreprocessor -fopenmp -lomp
 
-	# in GCC6, -Wmisleading-indentation will be useful
+	# in GCC, -Wmisleading-indentation will be useful
 	# also -fopenmp after -I$(INCLUDE)
 	# maybe  -fopt-info-vec-missed
 	#  -fwhole-program
