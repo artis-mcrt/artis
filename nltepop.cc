@@ -281,6 +281,7 @@ static void print_level_rates_summary(
 
 static void print_element_rates_summary(
   const int element,
+  const int modelgridindex,
   const int timestep,
   const int nlte_iter,
   const gsl_vector *popvec,
@@ -306,8 +307,8 @@ static void print_element_rates_summary(
     {
       if (level == 0)
       {
-        printout("  timestep %d NLTE iteration %d: NLTE summary stats for Z=%d ion_stage %d:\n",
-                 timestep, nlte_iter, atomic_number, ionstage);
+        printout("  modelgridindex %d timestep %d NLTE iteration %d: NLTE summary stats for Z=%d ion_stage %d:\n",
+                 modelgridindex, timestep, nlte_iter, atomic_number, ionstage);
         printout("                           pop       rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n");
       }
 
@@ -1114,7 +1115,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
     if (individual_process_matricies && (timestep % 5 == 0) && (nlte_iter == 0)) // output NLTE stats every nth timestep for the first NLTE iteration only
     {
-      print_element_rates_summary(element, timestep, nlte_iter, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      print_element_rates_summary(element, modelgridindex, timestep, nlte_iter, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
     // if (individual_process_matricies && (atomic_number == 26 && timestep % 2 == 0))
@@ -1126,13 +1127,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
     //   print_level_rates(element, ion, 1, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     //   print_level_rates(element, ion, 28, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     //   print_level_rates(element, ion, 29, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(element, ion, 30, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(element, ion, 36, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(element, ion, 37, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(element, ion, 38, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(element, ion, 39, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(element, ion, 40, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(element, ion, 41, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+
     //   const int slindex = get_nlevels_nlte(element, ion) + 1;
     //   print_level_rates(element, ion, slindex, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     // }
