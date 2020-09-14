@@ -288,7 +288,7 @@ static void read_auger_data(void)
   printout("Reading Auger effect data...\n");
   FILE *augerfile = fopen_required("auger-km1993-table2.txt", "r");
 
-  char line[1024] = "";
+  char line[151] = "";
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
   const int xrayn[7] = {1, 2, 2, 2, 3, 3, 3};
@@ -307,7 +307,8 @@ static void read_auger_data(void)
     char *linepos = line;
     int offset = 0;
 
-    sscanf(linepos, "%d %d%n", &Z, &ionstage, &offset);
+    assert(sscanf(linepos, "%d %d%n", &Z, &ionstage, &offset) == 2);
+    assert(offset == 5);
     linepos += offset;
 
     const int element = get_elementindex(Z);
@@ -326,14 +327,16 @@ static void read_auger_data(void)
       double prob_num_auger[NT_MAX_AUGER_ELECTRONS + 1];
       for (int a = 0; a < 9; a++)
       {
+        linepos = line + 26 + a * 5;
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
-        char strprob[6];
+        char strprob[6] = "00000";
         assert(sscanf(linepos, "%5c%n", strprob, &offset) == 1);
         assert(offset == 5);
         linepos += offset;
+        strprob[5] = '\0';
 
         int probnaugerelece4;
-        sscanf(strprob, "%d", &probnaugerelece4);
+        assert(sscanf(strprob, "%d", &probnaugerelece4) == 1);
 
         const double probnaugerelec = probnaugerelece4 / 10000.;
 
