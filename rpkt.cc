@@ -105,7 +105,7 @@ static double get_event(
   const double kap_cont = kappa_rpkt_cont[tid].total;
   while (!endloop)
   {
-    assert(t_current == pkt_ptr->prop_time);
+    assert(t_current == dummypkt_ptr->prop_time);
     /// calculate distance to next line encounter ldist
     /// first select the closest transition in frequency
     /// we need its frequency nu_trans, the element/ion and the corresponding levels
@@ -139,7 +139,7 @@ static double get_event(
       }
       else
       {
-        ldist = CLIGHT * pkt_ptr->prop_time * (dummypkt_ptr->nu_cmf / nu_trans - 1);
+        ldist = CLIGHT * dummypkt_ptr->prop_time * (dummypkt_ptr->nu_cmf / nu_trans - 1);
       }
       //fprintf(ldist_file,"%25.16e %25.16e\n",dummypkt_ptr->nu_cmf,ldist);
       if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
@@ -148,7 +148,7 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:     ldist %g\n",ldist);
       #endif
 
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, pkt_ptr->prop_time);
+      //calculate_kappa_rpkt_cont(dummypkt_ptr, dummypkt_ptr->prop_time);
       ///restore values which were changed by calculate_kappa_rpkt_cont to those set by closest_transition
       //mastate[tid].element = element;
       //mastate[tid].ion = ion;
@@ -168,7 +168,7 @@ static double get_event(
         const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
         const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
 
-        double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * pkt_ptr->prop_time;
+        double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time;
 
         if (tau_line < 0)
         {
@@ -210,6 +210,7 @@ static double get_event(
           tau += tau_cont + tau_line;
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
+          dummypkt_ptr->prop_time = t_current;
           move_pkt(dummypkt_ptr, ldist, t_current);
           radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
@@ -248,9 +249,9 @@ static double get_event(
           else if (DETAILED_LINE_ESTIMATORS_ON)
           {
             t_current += ldist / CLIGHT_PROP;
-            pkt_ptr->prop_time = t_current;
+            dummypkt_ptr->prop_time = t_current;
             move_pkt(dummypkt_ptr, ldist, t_current);
-            radfield_increment_lineestimator(modelgridindex, lineindex, pkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+            radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
@@ -281,7 +282,7 @@ static double get_event(
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     line interaction impossible\n");
       #endif
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, pkt_ptr->prop_time);
+      //calculate_kappa_rpkt_cont(dummypkt_ptr, dummypkt_ptr->prop_time);
       ///no need to restore values set by closest_transition, as nothing was set in this case
       const double tau_cont = kap_cont * (abort_dist - dist);
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
@@ -830,9 +831,6 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
 
-  double t_current = t1; ///this will keep track of time in the calculation
-  pkt_ptr->prop_time = t_current;
-
   bool end_packet = false; ///means "keep working"
 
   #ifdef DEBUG_ON
@@ -852,20 +850,20 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
   int snext;
-  double sdist = boundary_cross(pkt_ptr, t_current, &snext);
+  double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
 
   if (sdist == 0)
   {
-    change_cell(pkt_ptr, snext, &end_packet, t_current);
+    change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
     const int cellindexnew = pkt_ptr->where;
     mgi = cell[cellindexnew].modelgridindex;
   }
   else
   {
-    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
+    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / tmin : rmax * pkt_ptr->prop_time / tmin;
     if (sdist > maxsdist)
     {
-      printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
+      printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, pkt_ptr->prop_time/tmin, sdist);
       abort();
     }
 
@@ -877,10 +875,10 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
       printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
       printout("[warning] r_pkt: cell corner %g %g %g\n",
-               get_cellcoordmin(cellindexnew, 0) * t_current / tmin,
-               get_cellcoordmin(cellindexnew, 1) * t_current / tmin,
-               get_cellcoordmin(cellindexnew, 2) * t_current / tmin);
-      printout("[warning] r_pkt: cell width %g\n",wid_init(0)*t_current/tmin);
+               get_cellcoordmin(cellindexnew, 0) * pkt_ptr->prop_time / tmin,
+               get_cellcoordmin(cellindexnew, 1) * pkt_ptr->prop_time / tmin,
+               get_cellcoordmin(cellindexnew, 2) * pkt_ptr->prop_time / tmin);
+      printout("[warning] r_pkt: cell width %g\n",wid_init(0)*pkt_ptr->prop_time/tmin);
       //abort();
     }
     if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
@@ -902,7 +900,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
 
     // Find how far it can travel during the time inverval.
 
-    double tdist = (t2 - t_current) * CLIGHT_PROP;
+    double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
 
     assert(tdist >= 0);
 
@@ -925,7 +923,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
       /// Get distance to the next physical event in this case only electron scattering
       //kappa = SIGMA_T*get_nne(mgi);
-      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr, t_current);
+      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
       const double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
       find_nextline = true;
@@ -936,7 +934,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
     else
     {
       // get distance to the next physical event (continuum or bound-bound)
-      edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+      edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, pkt_ptr->prop_time, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
       #ifdef DEBUG_ON
         if (debuglevel == 2)
         {
@@ -955,24 +953,22 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       #endif
       /** Move it into the new cell. */
       sdist = sdist / 2.;
-      t_current += sdist / CLIGHT_PROP;
-      pkt_ptr->prop_time = t_current;
-      move_pkt(pkt_ptr, sdist, t_current);
-      update_estimators(pkt_ptr, sdist * 2, t_current);
+      pkt_ptr->prop_time += sdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, sdist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         sdist = sdist * 2.;
-        rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
+        rlc_emiss_rpkt(pkt_ptr, sdist, pkt_ptr->prop_time);
         sdist = sdist / 2.;
       }
-      t_current += sdist / CLIGHT_PROP;
-      pkt_ptr->prop_time = t_current;
-      move_pkt(pkt_ptr, sdist, t_current);
+      pkt_ptr->prop_time += sdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
       sdist = sdist * 2.;
 
       if (snext != pkt_ptr->where)
       {
-        change_cell(pkt_ptr, snext, &end_packet, t_current);
+        change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
         const int cellindexnew = pkt_ptr->where;
         mgi = cell[cellindexnew].modelgridindex;
       }
@@ -999,19 +995,17 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       #endif
       // Doesn't reach boundary
       tdist = tdist / 2.;
-      t_current += tdist / CLIGHT_PROP;
-      pkt_ptr->prop_time = t_current;
-      move_pkt(pkt_ptr, tdist, t_current);
-      update_estimators(pkt_ptr, tdist * 2, t_current);
+      pkt_ptr->prop_time += tdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, tdist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         tdist = tdist * 2.;
-        rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
+        rlc_emiss_rpkt(pkt_ptr, tdist, pkt_ptr->prop_time);
         tdist = tdist / 2.;
       }
-      t_current = t2;
       pkt_ptr->prop_time = t2;
-      move_pkt(pkt_ptr, tdist, t_current);
+      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
       tdist = tdist * 2.;
       #ifdef DEBUG_ON
         pkt_ptr->last_event = pkt_ptr->last_event + 1000;
@@ -1029,25 +1023,23 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
       #endif
       edist = edist / 2.;
-      t_current += edist / CLIGHT_PROP;
-      pkt_ptr->prop_time = t_current;
-      move_pkt(pkt_ptr, edist, t_current);
-      update_estimators(pkt_ptr, edist * 2, t_current);
+      pkt_ptr->prop_time += edist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, edist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         edist = edist * 2.;
-        rlc_emiss_rpkt(pkt_ptr, edist, t_current);
+        rlc_emiss_rpkt(pkt_ptr, edist, pkt_ptr->prop_time);
         edist = edist / 2.;
       }
-      t_current += edist / CLIGHT_PROP;
-      pkt_ptr->prop_time = t_current;
-      move_pkt(pkt_ptr, edist, t_current);
+      pkt_ptr->prop_time += edist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
       edist = edist * 2.;
 
       // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
       if (modelgrid[mgi].thick == 1)
       {
-        rpkt_event_thickcell(pkt_ptr, t_current);
+        rpkt_event_thickcell(pkt_ptr, pkt_ptr->prop_time);
       }
       else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
       {
@@ -1055,7 +1047,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       }
       else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
       {
-        rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont[tid], mgi);
+        rpkt_event_continuum(pkt_ptr, pkt_ptr->prop_time, kappa_rpkt_cont[tid], mgi);
       }
       else
       {
@@ -1065,8 +1057,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       if (pkt_ptr->type != TYPE_RPKT)
       {
         // It's not an r-packet any more - return.
-        pkt_ptr->prop_time = t_current;
-        return t_current;
+        return pkt_ptr->prop_time;
       }
     }
     else
@@ -1077,11 +1068,9 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
     }
   }
 
-  pkt_ptr->prop_time = t_current;
-
   if (!end_packet)
   {
-    return t_current;
+    return pkt_ptr->prop_time;
   }
 
   return PACKET_SAME;
