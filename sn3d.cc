@@ -964,7 +964,7 @@ int main(int argc, char** argv)
   printout("Compiled at %s on %s\n", __TIME__, __DATE__);
 
   #ifdef MPI_ON
-    printout("MPI enabled\n");
+    printout("MPI enabled with %d processes\n", nprocs);
   #else
     printout("MPI disabled\n");
   #endif
