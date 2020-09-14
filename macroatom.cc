@@ -161,8 +161,10 @@ static void get_macroatom_transitionrates(
 
 static void do_macroatom_raddeexcitation(
   PKT *pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
-  const double total_transitions, const double t_current, const int activatingline)
+  const double total_transitions, const int activatingline)
 {
+  const double t_current = pkt_ptr->prop_time;
+
   ///radiative deexcitation of MA: emitt rpkt
   ///randomly select which line transitions occurs
   const double zrand = gsl_rng_uniform(rng);
@@ -251,8 +253,9 @@ static void do_macroatom_raddeexcitation(
 
 static void do_macroatom_radrecomb(
   PKT *pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
-  const double rad_recomb, const double t_current)
+  const double rad_recomb)
 {
+  const double t_current = pkt_ptr->prop_time;
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
@@ -384,7 +387,8 @@ static void do_macroatom_ionisation(
 double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int timestep)
 /// Material for handling activated macro atoms.
 {
-  double t_current = t1; // this will keep track of time in the calculation
+  assert(t1 == pkt_ptr->prop_time);
+
   const double t_mid = time_step[timestep].mid;
 
   //printout("[debug] do MA\n");
@@ -637,7 +641,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         // }
         #endif
 
-        do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, t_current, activatingline);
+        do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, activatingline);
 
         #if (TRACK_ION_STATS)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC, pkt_ptr->e_cmf);
@@ -750,7 +754,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
         // increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
-        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB], t_current);
+        do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB]);
         end_packet = true;
         break;
       }
@@ -945,7 +949,7 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
   /// procedure ends only after a change to r or k packets has taken place and
   /// returns then the actual time, which is the same as the input t1
   /// internal transitions are carried out until a type change occurs
-  return t_current;
+  return pkt_ptr->prop_time;
 }
 
 

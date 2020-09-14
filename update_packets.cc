@@ -15,6 +15,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
 //   it is given the time at start of inverval and at end - when it finishes,
 //   everything the packet does during this time should be sorted out.
 {
+
   double t_current = t1;
 
   /* 0 the scatter counter for the packet. */
@@ -23,6 +24,8 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
   // t_current == PACKET_SAME which is < 0 after t2 has been reached;
   while (t_current >= 0)
   {
+    assert(t_current == pkt_ptr->prop_time);
+
     /* Start by sorting out what sort of packet it is.*/
     //printout("start of packet_prop loop %d\n", pkt_ptr->type );
     const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
@@ -32,6 +35,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
       case TYPE_GAMMA:
         //printout("gamma propagation\n");
         t_current = do_gamma(pkt_ptr, t_current, t2);
+        assert(t_current < 0 || t_current == pkt_ptr->prop_time);
   	    /* This returns a flag if the packet gets to t2 without
         changing to something else. If the packet does change it
         returns the time of change and sets everything for the
@@ -48,6 +52,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
       case TYPE_RPKT:
         //printout("r-pkt propagation\n");
         t_current = do_rpkt(pkt_ptr, t_current, t2);
+        assert(t_current < 0 || t_current == pkt_ptr->prop_time);
   //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
   //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
   //       else
@@ -113,6 +118,8 @@ static void update_pellet(
   // this time step then just move the packet along with the matter for the
   // start of the next time step.
 
+  assert(ts == pkt_ptr->prop_time);
+
   assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
 
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
@@ -120,6 +127,7 @@ static void update_pellet(
   {
     // It won't decay in this timestep, so just need to move it on with the flow.
     vec_scale(pkt_ptr->pos, (ts + tw) / ts);
+    pkt_ptr->prop_time = ts + tw;
 
     // That's all that needs to be done for the inactive pellet.
   }
@@ -127,6 +135,7 @@ static void update_pellet(
   {
     // The packet decays in the current timestep.
     time_step[nts].pellet_decays++;
+    pkt_ptr->prop_time = tdecay;
     if (decay_to_kpkt)
     {
       vec_scale(pkt_ptr->pos, tdecay / ts);
@@ -168,6 +177,7 @@ static void update_pellet(
     k_stat_from_earlierdecay++;
 
     //printout("already decayed packets and propagation by packet_prop\n");
+    pkt_ptr->prop_time = tmin;
     packet_prop(pkt_ptr, tmin, ts + tw, nts);
   }
   else
