@@ -73,7 +73,7 @@ CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE -DGSL_RANGE_CHECK_OFF
 exspec exgamma: CXXFLAGS += -DDO_EXSPEC
 exgamma: CXXFLAGS += -DDO_EXGAMMA
 
-sn3dmpi: CXX = mpicc
+sn3dmpi: CXX = mpicxx
 sn3dmpi: CXXFLAGS += -DMPI_ON
 sn3dmpi: sn3d
 
