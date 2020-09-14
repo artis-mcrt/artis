@@ -13,6 +13,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   /// n is the index of the packet. m is the index for the grid cell.
   pkt_ptr->where = cellindex;
   pkt_ptr->number = pktnumber;  ///record the packets number for debugging
+  pkt_ptr->prop_time = tmin;
   pkt_ptr->originated_from_positron = false;
 
   if (grid_type == GRID_SPHERICAL1D)

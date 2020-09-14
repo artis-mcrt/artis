@@ -381,6 +381,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
 //  return do_kpkt_bb(pkt_ptr, t1, t2);
 //}
 {
+  assert(t1 == pkt_ptr->prop_time);
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
 
@@ -412,6 +413,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   if (t_current <= t2)
   {
     vec_scale(pkt_ptr->pos, t_current / t1);
+    pkt_ptr->prop_time = t_current;
 
     /// Randomly select the occuring cooling process out of the important ones
     double coolingsum = 0.;
@@ -700,6 +702,7 @@ double do_kpkt(PKT *pkt_ptr, double t1, double t2, int nts)
   else
   {
     vec_scale(pkt_ptr->pos, t2 / t1);
+    pkt_ptr->prop_time = t2;
     return PACKET_SAME;
   }
 }

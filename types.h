@@ -205,6 +205,7 @@ typedef struct packet
   int emissiontype;   /// records how the packet was emitted if it is a r-pkt
   double em_pos[3];   /// Position of the packet (x,y,z).
   int em_time;
+  double prop_time; // internal clock to track how far in time the packet has been propagated
   int absorptiontype;     /// records linelistindex of the last absorption
                           /// negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
                           /// photoelectric effect of gammas (-4), pair production of gammas (-5)

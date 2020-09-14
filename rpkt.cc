@@ -822,248 +822,255 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
 double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
+  assert(t1 == pkt_ptr->prop_time);
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
 
   double t_current = t1; ///this will keep track of time in the calculation
 
   bool end_packet = false; ///means "keep working"
-  while (!end_packet)
-  {
-    #ifdef DEBUG_ON
-      if (pkt_ptr->next_trans > 0)
-      {
-        //if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
-        if (debuglevel == 2) printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n", (pkt_ptr->nu_cmf-linelist[pkt_ptr->next_trans-1].nu)/pkt_ptr->nu_cmf);
-      }
-    #endif
 
-    // Assign optical depth to next physical event. And start counter of
-    // optical depth for this path.
-    double zrand = gsl_rng_uniform_pos(rng);
-    double tau_next = -1. * log(zrand);
-
-    // Start by finding the distance to the crossing of the grid cell
-    // boundaries. sdist is the boundary distance and snext is the
-    // grid cell into which we pass.
-    int snext;
-    double sdist = boundary_cross(pkt_ptr, t_current, &snext);
-
-    if (sdist == 0)
+  #ifdef DEBUG_ON
+    if (pkt_ptr->next_trans > 0)
     {
-      change_cell(pkt_ptr, snext, &end_packet, t_current);
+      //if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
+      if (debuglevel == 2) printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n", (pkt_ptr->nu_cmf-linelist[pkt_ptr->next_trans-1].nu)/pkt_ptr->nu_cmf);
+    }
+  #endif
+
+  // Assign optical depth to next physical event. And start counter of
+  // optical depth for this path.
+  double zrand = gsl_rng_uniform_pos(rng);
+  double tau_next = -1. * log(zrand);
+
+  // Start by finding the distance to the crossing of the grid cell
+  // boundaries. sdist is the boundary distance and snext is the
+  // grid cell into which we pass.
+  int snext;
+  double sdist = boundary_cross(pkt_ptr, t_current, &snext);
+
+  if (sdist == 0)
+  {
+    change_cell(pkt_ptr, snext, &end_packet, t_current);
+    const int cellindexnew = pkt_ptr->where;
+    mgi = cell[cellindexnew].modelgridindex;
+  }
+  else
+  {
+    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
+    if (sdist > maxsdist)
+    {
+      printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
+      abort();
+    }
+
+    if (sdist < 1)
+    {
       const int cellindexnew = pkt_ptr->where;
-      mgi = cell[cellindexnew].modelgridindex;
+      printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
+      printout("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
+      printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
+      printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
+      printout("[warning] r_pkt: cell corner %g %g %g\n",
+               get_cellcoordmin(cellindexnew, 0) * t_current / tmin,
+               get_cellcoordmin(cellindexnew, 1) * t_current / tmin,
+               get_cellcoordmin(cellindexnew, 2) * t_current / tmin);
+      printout("[warning] r_pkt: cell width %g\n",wid_init(0)*t_current/tmin);
+      //abort();
+    }
+    if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
+    {
+      printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
+      printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
+      abort();
+    }
+
+    if (sdist > max_path_step)
+    {
+      sdist = max_path_step;
+      snext = pkt_ptr->where;
+    }
+
+
+    // At present there is no scattering/destruction process so all that needs to
+    // happen is that we determine whether the packet reaches the boundary during the timestep.
+
+    // Find how far it can travel during the time inverval.
+
+    double tdist = (t2 - t_current) * CLIGHT_PROP;
+
+    assert(tdist >= 0);
+
+    //if (cell[pkt_ptr->where].nne < 1e-40)
+    //if (get_nne(cell[pkt_ptr->where].modelgridindex) < 1e-40)
+    double edist;
+    int rpkt_eventtype;
+    bool find_nextline = false;
+    if (mgi == MMODELGRID)
+    {
+      /// for empty cells no physical event occurs. The packets just propagate.
+      edist = 1e99;
+      find_nextline = true;
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
+      #endif
+    }
+    else if (modelgrid[mgi].thick == 1)
+    {
+      /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
+      /// Get distance to the next physical event in this case only electron scattering
+      //kappa = SIGMA_T*get_nne(mgi);
+      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr, t_current);
+      const double tau_current = 0.0;
+      edist = (tau_next - tau_current) / kappa;
+      find_nextline = true;
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
+      #endif
     }
     else
     {
-      const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
-      if (sdist > maxsdist)
-      {
-        printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
-        abort();
-      }
-
-      if (sdist < 1)
-      {
-        const int cellindexnew = pkt_ptr->where;
-        printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-        printout("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
-        printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
-        printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-        printout("[warning] r_pkt: cell corner %g %g %g\n",
-                 get_cellcoordmin(cellindexnew, 0) * t_current / tmin,
-                 get_cellcoordmin(cellindexnew, 1) * t_current / tmin,
-                 get_cellcoordmin(cellindexnew, 2) * t_current / tmin);
-        printout("[warning] r_pkt: cell width %g\n",wid_init(0)*t_current/tmin);
-        //abort();
-      }
-      if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
-      {
-        printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
-        printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-        abort();
-      }
-
-      if (sdist > max_path_step)
-      {
-        sdist = max_path_step;
-        snext = pkt_ptr->where;
-      }
-
-
-      // At present there is no scattering/destruction process so all that needs to
-      // happen is that we determine whether the packet reaches the boundary during the timestep.
-
-      // Find how far it can travel during the time inverval.
-
-      double tdist = (t2 - t_current) * CLIGHT_PROP;
-
-      assert(tdist >= 0);
-
-      //if (cell[pkt_ptr->where].nne < 1e-40)
-      //if (get_nne(cell[pkt_ptr->where].modelgridindex) < 1e-40)
-      double edist;
-      int rpkt_eventtype;
-      bool find_nextline = false;
-      if (mgi == MMODELGRID)
-      {
-        /// for empty cells no physical event occurs. The packets just propagate.
-        edist = 1e99;
-        find_nextline = true;
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
-        #endif
-      }
-      else if (modelgrid[mgi].thick == 1)
-      {
-        /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
-        /// Get distance to the next physical event in this case only electron scattering
-        //kappa = SIGMA_T*get_nne(mgi);
-        const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr, t_current);
-        const double tau_current = 0.0;
-        edist = (tau_next - tau_current) / kappa;
-        find_nextline = true;
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
-        #endif
-      }
-      else
-      {
-        // get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
-        #ifdef DEBUG_ON
-          if (debuglevel == 2)
-          {
-            const int next_trans = pkt_ptr->next_trans;
-            printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
-          }
-        #endif
-      }
-      assert(edist >= 0);
-      //printout("[debug] do_rpkt: sdist, tdist, edist %g, %g, %g\n",sdist,tdist,edist);
-
-      if ((sdist < tdist) && (sdist < edist))
-      {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
-        #endif
-        /** Move it into the new cell. */
-        sdist = sdist / 2.;
-        t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, sdist, t_current);
-        update_estimators(pkt_ptr, sdist * 2, t_current);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
+      // get distance to the next physical event (continuum or bound-bound)
+      edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+      #ifdef DEBUG_ON
+        if (debuglevel == 2)
         {
-          sdist = sdist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
-          sdist = sdist / 2.;
+          const int next_trans = pkt_ptr->next_trans;
+          printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
         }
-        t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, sdist, t_current);
+      #endif
+    }
+    assert(edist >= 0);
+    //printout("[debug] do_rpkt: sdist, tdist, edist %g, %g, %g\n",sdist,tdist,edist);
+
+    if ((sdist < tdist) && (sdist < edist))
+    {
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
+      #endif
+      /** Move it into the new cell. */
+      sdist = sdist / 2.;
+      t_current += sdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist, t_current);
+      update_estimators(pkt_ptr, sdist * 2, t_current);
+      if (do_rlc_est != 0 && do_rlc_est != 3)
+      {
         sdist = sdist * 2.;
-
-        if (snext != pkt_ptr->where)
-        {
-          change_cell(pkt_ptr, snext, &end_packet, t_current);
-          const int cellindexnew = pkt_ptr->where;
-          mgi = cell[cellindexnew].modelgridindex;
-        }
-        // New cell so reset the scat_counter
-        pkt_ptr->scat_count = 0;
-        //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
-        pkt_ptr->last_event = pkt_ptr->last_event + 100;
-
-        /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
-        /// find the next possible line interaction.
-        if (find_nextline)
-        {
-          /// However, this is only required if the new cell is non-empty or non-grey
-          if (mgi != MMODELGRID && modelgrid[mgi].thick != 1)
-          {
-            closest_transition_empty(pkt_ptr);
-          }
-        }
+        rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
+        sdist = sdist / 2.;
       }
-      else if ((tdist < sdist) && (tdist < edist))
+      t_current += sdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist, t_current);
+      sdist = sdist * 2.;
+
+      if (snext != pkt_ptr->where)
       {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
-        #endif
-        // Doesn't reach boundary
-        tdist = tdist / 2.;
-        t_current += tdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, tdist, t_current);
-        update_estimators(pkt_ptr, tdist * 2, t_current);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
+        change_cell(pkt_ptr, snext, &end_packet, t_current);
+        const int cellindexnew = pkt_ptr->where;
+        mgi = cell[cellindexnew].modelgridindex;
+      }
+      // New cell so reset the scat_counter
+      pkt_ptr->scat_count = 0;
+      //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
+      pkt_ptr->last_event = pkt_ptr->last_event + 100;
+
+      /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
+      /// find the next possible line interaction.
+      if (find_nextline)
+      {
+        /// However, this is only required if the new cell is non-empty or non-grey
+        if (mgi != MMODELGRID && modelgrid[mgi].thick != 1)
         {
-          tdist = tdist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
-          tdist = tdist / 2.;
-        }
-        t_current = t2;
-        move_pkt(pkt_ptr, tdist, t_current);
-        tdist = tdist * 2.;
-        #ifdef DEBUG_ON
-          pkt_ptr->last_event = pkt_ptr->last_event + 1000;
-        #endif
-        /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
-        /// find the next possible line interaction.
-        if (find_nextline)
           closest_transition_empty(pkt_ptr);
-        end_packet = true;
-      }
-      else if ((edist < sdist) && (edist < tdist))
-      {
-        // bound-bound or continuum event
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
-        #endif
-        edist = edist / 2.;
-        t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, edist, t_current);
-        update_estimators(pkt_ptr, edist * 2, t_current);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
-        {
-          edist = edist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, edist, t_current);
-          edist = edist / 2.;
         }
-        t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, edist, t_current);
-        edist = edist * 2.;
-
-        // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
-        if (modelgrid[mgi].thick == 1)
-        {
-          rpkt_event_thickcell(pkt_ptr, t_current);
-        }
-        else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
-        {
-          rpkt_event_boundbound(pkt_ptr, mgi);
-        }
-        else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
-        {
-          rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont[tid], mgi);
-        }
-        else
-        {
-          assert(false);
-        }
-
-        if (pkt_ptr->type != TYPE_RPKT)
-        {
-          // It's not an r-packet any more - return.
-          return t_current;
-        }
-      }
-      else
-      {
-        printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-        printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-        abort();
       }
     }
+    else if ((tdist < sdist) && (tdist < edist))
+    {
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
+      #endif
+      // Doesn't reach boundary
+      tdist = tdist / 2.;
+      t_current += tdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, tdist, t_current);
+      update_estimators(pkt_ptr, tdist * 2, t_current);
+      if (do_rlc_est != 0 && do_rlc_est != 3)
+      {
+        tdist = tdist * 2.;
+        rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
+        tdist = tdist / 2.;
+      }
+      t_current = t2;
+      move_pkt(pkt_ptr, tdist, t_current);
+      tdist = tdist * 2.;
+      #ifdef DEBUG_ON
+        pkt_ptr->last_event = pkt_ptr->last_event + 1000;
+      #endif
+      /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
+      /// find the next possible line interaction.
+      if (find_nextline)
+        closest_transition_empty(pkt_ptr);
+      end_packet = true;
+    }
+    else if ((edist < sdist) && (edist < tdist))
+    {
+      // bound-bound or continuum event
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
+      #endif
+      edist = edist / 2.;
+      t_current += edist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist, t_current);
+      update_estimators(pkt_ptr, edist * 2, t_current);
+      if (do_rlc_est != 0 && do_rlc_est != 3)
+      {
+        edist = edist * 2.;
+        rlc_emiss_rpkt(pkt_ptr, edist, t_current);
+        edist = edist / 2.;
+      }
+      t_current += edist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist, t_current);
+      edist = edist * 2.;
+
+      // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
+      if (modelgrid[mgi].thick == 1)
+      {
+        rpkt_event_thickcell(pkt_ptr, t_current);
+      }
+      else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
+      {
+        rpkt_event_boundbound(pkt_ptr, mgi);
+      }
+      else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
+      {
+        rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont[tid], mgi);
+      }
+      else
+      {
+        assert(false);
+      }
+
+      if (pkt_ptr->type != TYPE_RPKT)
+      {
+        // It's not an r-packet any more - return.
+        pkt_ptr->prop_time = t_current;
+        return t_current;
+      }
+    }
+    else
+    {
+      printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
+      printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
+      abort();
+    }
+  }
+
+  pkt_ptr->prop_time = t_current;
+
+  if (!end_packet)
+  {
+    return t_current;
   }
 
   return PACKET_SAME;
