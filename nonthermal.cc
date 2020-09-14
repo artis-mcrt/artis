@@ -288,7 +288,7 @@ static void read_auger_data(void)
   printout("Reading Auger effect data...\n");
   FILE *augerfile = fopen_required("auger-km1993-table2.txt", "r");
 
-  char line[150 + 1] = "";
+  char line[1024] = "";
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
   const int xrayn[7] = {1, 2, 2, 2, 3, 3, 3};
