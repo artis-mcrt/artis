@@ -1333,7 +1333,7 @@ void radfield_fit_parameters(int modelgridindex, int timestep)
           if (binindex == RADFIELDBINCOUNT - 1)
           {
             const float T_e = get_Te(modelgridindex);
-            printout("    replacing bin %d T_R %71.f with cell T_e = %7.1f\n",
+            printout("    replacing bin %d T_R %7.1f with cell T_e = %7.1f\n",
                      binindex, radfieldbins[modelgridindex][binindex].T_R, T_e);
             T_R_bin = T_e;
           }
