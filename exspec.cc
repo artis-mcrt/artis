@@ -89,7 +89,6 @@ static int get_escaped_packets(int i, int nprocs, PKT pkt[], EPKT *epkts, int np
       epkts[nepkts].em_pos[0] = pkt[ii].em_pos[0];
       epkts[nepkts].em_pos[1] = pkt[ii].em_pos[1];
       epkts[nepkts].em_pos[2] = pkt[ii].em_pos[2];
-      epkts[nepkts].trueem_time = pkt[ii].trueem_time;
       epkts[nepkts].em_time = pkt[ii].em_time;
       epkts[nepkts].emissiontype = pkt[ii].emissiontype;
       epkts[nepkts].trueemissiontype = pkt[ii].trueemissiontype;

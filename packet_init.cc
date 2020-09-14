@@ -261,7 +261,6 @@ void write_packets(char filename[], PKT *pkt)
     fprintf(packets_file, "%lg %lg %lg ", pkt[i].pol_dir[0], pkt[i].pol_dir[1], pkt[i].pol_dir[2]);
     fprintf(packets_file, "%d ", pkt[i].originated_from_positron);
     fprintf(packets_file, "%g ", pkt[i].trueemissionvelocity);
-    fprintf(packets_file, "%d ", pkt[i].trueem_time);
     fprintf(packets_file, "\n");
   }
   fclose(packets_file);
@@ -363,9 +362,6 @@ void read_packets(char filename[], PKT *pkt)
     pkt[i].originated_from_positron = (int_originated_from_positron != 0);
 
     sscanf(linepos, "%g%n", &pkt[i].trueemissionvelocity, &offset);
-    linepos += offset;
-
-    sscanf(linepos, "%d%n", &pkt[i].trueem_time, &offset);
     linepos += offset;
 
   }

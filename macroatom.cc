@@ -939,7 +939,6 @@ double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int ti
   {
     pkt_ptr->trueemissiontype = pkt_ptr->emissiontype;
     pkt_ptr->trueemissionvelocity = vec_len(pkt_ptr->em_pos) / pkt_ptr->em_time;
-    pkt_ptr->trueem_time = pkt_ptr->em_time;
   }
 
   /// procedure ends only after a change to r or k packets has taken place and
