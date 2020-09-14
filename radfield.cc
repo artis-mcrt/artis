@@ -62,8 +62,9 @@ static struct Jb_lu_estimator *Jb_lu_raw[MMODELGRID + 1];   // unnormalised esti
 static bool normed_bfrates_available = false;
 static float *prev_bfrate_normed[MMODELGRID + 1];  // values from the previous timestep
 static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the current timestep
-  #if (DETAILED_BF_ESTIMATORS_BYTYPE)
 
+// expensive debugging mode to track the contributions to each bound-free rate estimator
+#if (DETAILED_BF_ESTIMATORS_BYTYPE)
   struct bfratecontrib
   {
     int emissiontype;
