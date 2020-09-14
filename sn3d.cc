@@ -1022,7 +1022,7 @@ int main(int argc, char** argv)
   #endif
 
   printout("time after input %ld\n", time(NULL));
-  printout("simulation propagates %d packets through a %d x %d x %d grid\n",
+  printout("simulation propagates %d packets per process through a %d x %d x %d grid\n",
            npkts, ncoordgrid[0], ncoordgrid[1], ncoordgrid[2]);
   printout("timesteps %d\n", ntstep);
 
