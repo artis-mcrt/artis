@@ -210,9 +210,8 @@ static double get_event(
           tau += tau_cont + tau_line;
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
-          pkt_ptr->prop_time = t_current;
-          move_pkt(dummypkt_ptr, ldist, pkt_ptr->prop_time);
-          radfield_increment_lineestimator(modelgridindex, lineindex, pkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+          move_pkt(dummypkt_ptr, ldist, t_current);
+          radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           #ifdef DEBUG_ON
             if (debuglevel == 2)
