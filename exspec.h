@@ -42,6 +42,7 @@ typedef struct
   double absorptionfreq;   /// records how the packet was emitted if it is a r-pkt
   double em_pos[3]; /// Position of the packet (x,y,z) at last emission process
   int em_time;
+  int trueem_time;
   double stokes[3];
   float trueemissionvelocity;
 } EPKT;
