@@ -696,7 +696,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       abort();
     }
 
-    return t_current;
+    return pkt_ptr->prop_time;
   }
   else
   {

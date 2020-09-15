@@ -381,11 +381,9 @@ static void do_macroatom_ionisation(
 }
 
 
-double do_macroatom(PKT *pkt_ptr, const double t1, const double t2, const int timestep)
+double do_macroatom(PKT *pkt_ptr, const double t2, const int timestep)
 /// Material for handling activated macro atoms.
 {
-  assert(t1 == pkt_ptr->prop_time);
-
   const double t_mid = time_step[timestep].mid;
 
   //printout("[debug] do MA\n");

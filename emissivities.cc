@@ -128,7 +128,7 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist)
   // gamma rays from pair production per unit volume per unit time in the cmf.
 
   // Called with a packet that is about to travel a
-  // distance dist in the lab frame. Time at start of distance is t_current.
+  // distance dist in the lab frame.
 
   const double emiss_cont = sig_pair_prod(pkt_ptr) * (2.46636e+20 / pkt_ptr->nu_cmf) * pkt_ptr->e_rf * dist;
 

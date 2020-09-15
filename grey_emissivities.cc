@@ -38,10 +38,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
   // This is only done to order v/c for now.
 
   // Called with a packet that is about to travel a
-  // distance dist in the lab frame. Time at start of distance is t_current.
-
-
-  //printout("[debug] Execution of rlc_emiss_gamma\n");
+  // distance dist in the lab frame.
 
   // PKT dummy;
   // dummy.pos[0] = pkt_ptr->pos[0];
@@ -91,7 +88,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
   // This is only done to order v/c for now.
 
   // Called with a packet that is about to travel a
-  //    distance dist in the lab frame. Time at start of distance is t_current
+  //    distance dist in the lab frame.
 
   /*PKT dummy;
 

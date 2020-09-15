@@ -452,7 +452,7 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
     /* Then the packet is exiting the grid. We need to record
      where and at what time it leaves the grid. */
     pkt_ptr->escape_type = pkt_ptr->type;
-    pkt_ptr->escape_time = t_current;
+    pkt_ptr->escape_time = pkt_ptr->prop_time;
     pkt_ptr->type = TYPE_ESCAPE;
     *end_packet = true;
   }

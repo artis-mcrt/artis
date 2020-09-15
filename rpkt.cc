@@ -806,10 +806,9 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
 }
 
 
-double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
+double do_rpkt(PKT *pkt_ptr, const double t2)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
-  assert(t1 == pkt_ptr->prop_time);
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
 
