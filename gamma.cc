@@ -235,9 +235,6 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 
-  vec_scale(pkt_ptr->pos, pkt_ptr->tdecay / time_step[nts].start);
-  pkt_ptr->prop_time = pkt_ptr->tdecay;
-
   // Now let's give the gamma ray a direction.
 
   // Assuming isotropic emission in cmf
