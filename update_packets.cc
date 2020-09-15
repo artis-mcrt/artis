@@ -10,13 +10,11 @@
 #include "vectors.h"
 
 
-static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, const int nts)
+static void packet_prop(PKT *const pkt_ptr, const double t2, const int nts)
 // Master routine for moving packets around. When it called,
 //   it is given the time at start of inverval and at end - when it finishes,
 //   everything the packet does during this time should be sorted out.
 {
-  assert(t1 == pkt_ptr->prop_time);
-
   /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
 
@@ -126,31 +124,37 @@ static void update_pellet(
   else if (tdecay > ts)
   {
     // The packet decays in the current timestep.
+    #ifdef _OPENMP
+      #pragma omp atomic
+    #endif
     time_step[nts].pellet_decays++;
+
     pkt_ptr->prop_time = tdecay;
+    vec_scale(pkt_ptr->pos, tdecay / ts);
+
     if (decay_to_kpkt)
     {
-      vec_scale(pkt_ptr->pos, tdecay / ts);
-
       pkt_ptr->type = TYPE_KPKT;
       pkt_ptr->absorptiontype = -6;
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
+      packet_prop(pkt_ptr, ts + tw, nts);
     }
     else if (decay_to_ntlepton)
     {
-      vec_scale(pkt_ptr->pos, tdecay / ts);
+      #ifdef _OPENMP
+        #pragma omp atomic
+      #endif
       time_step[nts].positron_dep += pkt_ptr->e_cmf;
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
+      packet_prop(pkt_ptr, ts + tw, nts);
     }
     else
     {
       // decay to gamma ray
       pellet_decay(nts, pkt_ptr);
       //printout("pellet to photon packet and propagation by packet_prop\n");
-      packet_prop(pkt_ptr, tdecay, ts + tw, nts);
+      packet_prop(pkt_ptr, ts + tw, nts);
     }
   }
   else if ((tdecay > 0) && (nts == 0))
@@ -170,7 +174,7 @@ static void update_pellet(
 
     //printout("already decayed packets and propagation by packet_prop\n");
     pkt_ptr->prop_time = tmin;
-    packet_prop(pkt_ptr, tmin, ts + tw, nts);
+    packet_prop(pkt_ptr, ts + tw, nts);
   }
   else
   {
@@ -319,12 +323,8 @@ void update_packets(const int nts, PKT *pkt)
         case TYPE_KPKT:
           /**Stuff for processing photons. */
           //printout("further propagate a photon packet via packet_prop\n");
-          if (ts != pkt_ptr->prop_time)
-          {
-            printout("ts %g prop_time %g type %d\n", ts, pkt_ptr->prop_time, pkt_ptr->type);
-          }
           assert(ts == pkt_ptr->prop_time);
-          packet_prop(pkt_ptr, ts, ts + tw, nts);
+          packet_prop(pkt_ptr, ts + tw, nts);
           break;
 
         case TYPE_ESCAPE:
