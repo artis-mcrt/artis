@@ -6,6 +6,7 @@
 
 void escat_rpkt(PKT *pkt_ptr, double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   double dummy_dir[3], vel_vec[3], vel_rev[3];
   double old_dir_cmf[3],new_dir_cmf[3];
   double Qi, Ui, Inew, Unew, Qnew, Uold, Qold, I, Q, U;

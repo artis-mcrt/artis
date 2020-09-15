@@ -25,9 +25,8 @@ static double meanf_sigma(const double x)
 }
 
 
-void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist, const double t_current)
+void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
 {
-  assert(pkt_ptr->prop_time == t_current);
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
@@ -84,9 +83,8 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist, const double t_curre
 }
 
 
-void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
+void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
 {
-  assert(pkt_ptr->prop_time == t_current);
   // Subroutine to record the rate of destruction (and re-creation) of
   // r-packets by the grey opacity.
 
@@ -114,7 +112,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
     // for the weighted estimators version
 
     double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, t_current);
+    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
     double cont = (get_kappagrey(mgi) * get_rho(mgi));
     cont = cont * pkt_ptr->e_rf * dist * (1. - (2. * dot(vel_vec, pkt_ptr->dir) / CLIGHT));

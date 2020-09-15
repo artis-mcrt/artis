@@ -211,7 +211,7 @@ static double get_event(
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
           dummypkt_ptr->prop_time = t_current;
-          move_pkt(dummypkt_ptr, ldist, t_current);
+          move_pkt(dummypkt_ptr, ldist);
           dummypkt_ptr->prop_time = t_current;
           radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
@@ -251,7 +251,7 @@ static double get_event(
           {
             t_current += ldist / CLIGHT_PROP;
             dummypkt_ptr->prop_time = t_current;
-            move_pkt(dummypkt_ptr, ldist, t_current);
+            move_pkt(dummypkt_ptr, ldist);
             dummypkt_ptr->prop_time = t_current;
             radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
@@ -647,13 +647,12 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
 }
 
 
-static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
+static void rpkt_event_thickcell(PKT *pkt_ptr)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
 /// but with different direction.
 {
-  assert(t_current == pkt_ptr->prop_time);
   #ifdef DEBUG_ON
     if (debuglevel == 2) printout("[debug] rpkt_event_thickcell:   electron scattering\n");
     pkt_ptr->interactions += 1;
@@ -956,15 +955,15 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       #endif
       /** Move it into the new cell. */
       sdist = sdist / 2.;
-      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, sdist);
       update_estimators(pkt_ptr, sdist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         sdist = sdist * 2.;
-        rlc_emiss_rpkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+        rlc_emiss_rpkt(pkt_ptr, sdist);
         sdist = sdist / 2.;
       }
-      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, sdist);
       sdist = sdist * 2.;
 
       if (snext != pkt_ptr->where)
@@ -996,16 +995,16 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       #endif
       // Doesn't reach boundary
       tdist = tdist / 2.;
-      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, tdist);
       update_estimators(pkt_ptr, tdist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         tdist = tdist * 2.;
-        rlc_emiss_rpkt(pkt_ptr, tdist, pkt_ptr->prop_time);
+        rlc_emiss_rpkt(pkt_ptr, tdist);
         tdist = tdist / 2.;
       }
       pkt_ptr->prop_time = t2;
-      move_pkt(pkt_ptr, tdist, t2);
+      move_pkt(pkt_ptr, tdist);
       pkt_ptr->prop_time = t2;
       tdist = tdist * 2.;
       #ifdef DEBUG_ON
@@ -1024,21 +1023,21 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
       #endif
       edist = edist / 2.;
-      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, edist);
       update_estimators(pkt_ptr, edist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         edist = edist * 2.;
-        rlc_emiss_rpkt(pkt_ptr, edist, pkt_ptr->prop_time);
+        rlc_emiss_rpkt(pkt_ptr, edist);
         edist = edist / 2.;
       }
-      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+      move_pkt(pkt_ptr, edist);
       edist = edist * 2.;
 
       // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
       if (modelgrid[mgi].thick == 1)
       {
-        rpkt_event_thickcell(pkt_ptr, pkt_ptr->prop_time);
+        rpkt_event_thickcell(pkt_ptr);
       }
       else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
       {
@@ -1177,7 +1176,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
 
     t_future += (sdist / CLIGHT_PROP);
-    move_pkt(&vpkt, sdist, t_future);
+    vpkt.prop_time = t_future;
+    move_pkt(&vpkt, sdist);
 
     if (snext != vpkt.where)
     {
@@ -1256,7 +1256,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
   /// This direction is in the cmf - we want to convert it to the rest
   /// frame - use aberation of angles. We want to convert from cmf to
   /// rest so need -ve velocity.
-  get_velocity(pkt_ptr->pos, vel_vec, -1. * t_current);
+  get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
   ///negative time since we want the backwards transformation here
 
   angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
@@ -1283,7 +1283,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
   #endif
 
   assert(pkt_ptr->prop_time == t_current);
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 

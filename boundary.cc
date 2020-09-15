@@ -360,6 +360,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
 /// Routine to take a packet across a boundary.
 {
+  assert(pkt_ptr->prop_time == t_current);
   #ifdef DEBUG_ON
     if (debuglevel == 2)
     {
@@ -374,7 +375,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
     // Then the packet is exiting the grid. We need to record
     // where and at what time it leaves the grid.
     pkt_ptr->escape_type = pkt_ptr->type;
-    pkt_ptr->escape_time = t_current;
+    pkt_ptr->escape_time = pkt_ptr->prop_time;
     pkt_ptr->type = TYPE_ESCAPE;
     nesc++;
     *end_packet = true;
@@ -393,7 +394,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
     /// as we do it on the rpkts way through a cell
     //if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
-    //if (pkt_ptr->type == TYPE_RPKT) calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+    //if (pkt_ptr->type == TYPE_RPKT) calculate_kappa_rpkt_cont(pkt_ptr,pkt_ptr->prop_time);
 
     /// check for empty cells
     if (mgi != MMODELGRID)
@@ -422,7 +423,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr, t_current, mgi);
+          calculate_kappa_rpkt_cont(pkt_ptr, pkt_ptr->prop_time, mgi);
         }
       }
     }
@@ -434,6 +435,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
 void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
 /// Routine to take a VIRTUAL packet across a boundary.
 {
+  assert(pkt_ptr->prop_time == t_current);
   //int element, ion, level;
 
   #ifdef DEBUG_ON
