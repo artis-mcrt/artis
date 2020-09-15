@@ -868,6 +868,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
 
 void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   #ifdef _OPENMP
     #pragma omp atomic
   #endif

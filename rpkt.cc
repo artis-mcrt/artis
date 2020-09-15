@@ -756,6 +756,7 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
 {
+  assert(pkt_ptr->prop_time == t_current);
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
 
@@ -1281,6 +1282,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
     }
   #endif
 
+  assert(pkt_ptr->prop_time == t_current);
   const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
@@ -1559,6 +1561,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current,
     }
 
     // convert between frames.
+    assert(pkt_ptr->prop_time == t_current);
     const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
     sigma *= dopplerfactor;
     kappa_ff *= dopplerfactor;
@@ -1833,6 +1836,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
         }
 
         /// Now need to convert between frames.
+        assert(pkt_ptr->prop_time == t_current);
         const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
         sigma = sigma * dopplerfactor;
         kappa_ff = kappa_ff * dopplerfactor;
