@@ -90,7 +90,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         break;
 
       case TYPE_MA:
-        do_macroatom(pkt_ptr, t2, nts);
+        do_macroatom(pkt_ptr, nts);
         break;
 
       default:

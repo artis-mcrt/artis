@@ -806,7 +806,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
 }
 
 
-double do_rpkt(PKT *pkt_ptr, const double t2)
+void do_rpkt(PKT *pkt_ptr, const double t2)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
 {
   const int cellindex = pkt_ptr->where;
@@ -996,7 +996,6 @@ double do_rpkt(PKT *pkt_ptr, const double t2)
       /// find the next possible line interaction.
       if (find_nextline)
         closest_transition_empty(pkt_ptr);
-      end_packet = true;
     }
     else if ((edist < sdist) && (edist < tdist))
     {
@@ -1035,12 +1034,6 @@ double do_rpkt(PKT *pkt_ptr, const double t2)
       {
         assert(false);
       }
-
-      if (pkt_ptr->type != TYPE_RPKT)
-      {
-        // It's not an r-packet any more - return.
-        return pkt_ptr->prop_time;
-      }
     }
     else
     {
@@ -1049,13 +1042,6 @@ double do_rpkt(PKT *pkt_ptr, const double t2)
       abort();
     }
   }
-
-  if (!end_packet)
-  {
-    return pkt_ptr->prop_time;
-  }
-
-  return t2;
 }
 
 
