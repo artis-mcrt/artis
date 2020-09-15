@@ -115,11 +115,10 @@ void get_rand_isotropic_unitvec(double vecout[3])
 }
 
 
-void move_pkt(PKT *pkt_ptr, const double distance)
+void move_pkt(PKT *pkt_ptr, const double distance, const double time)
 /// Subroutine to move a packet along a straight line (specified by currect
 /// dir vector). The distance moved is in the rest frame.
 {
-  pkt_ptr->prop_time += distance / CLIGHT_PROP;
   /// First update pos.
   assert(distance >= 0);
 
