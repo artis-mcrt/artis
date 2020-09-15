@@ -294,7 +294,7 @@ void update_packets(const int nts, PKT *pkt)
         /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
         if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr, ts, mgi);
+          calculate_kappa_rpkt_cont(pkt_ptr, mgi);
         }
       }
 

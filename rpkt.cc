@@ -100,7 +100,7 @@ static double get_event(
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
   bool endloop = false;
-  calculate_kappa_rpkt_cont(pkt_ptr, dummypkt_ptr->prop_time, modelgridindex);
+  calculate_kappa_rpkt_cont(pkt_ptr, modelgridindex);
   const double kap_cont = kappa_rpkt_cont[tid].total;
   while (!endloop)
   {
@@ -146,11 +146,6 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:     ldist %g\n",ldist);
       #endif
 
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
-      ///restore values which were changed by calculate_kappa_rpkt_cont to those set by closest_transition
-      //mastate[tid].element = element;
-      //mastate[tid].ion = ion;
-      //mastate[tid].level = upper;
       const double tau_cont = kap_cont * ldist;
 
       #ifdef DEBUG_ON
@@ -278,8 +273,6 @@ static double get_event(
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     line interaction impossible\n");
       #endif
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
-      ///no need to restore values set by closest_transition, as nothing was set in this case
       const double tau_cont = kap_cont * (abort_dist - dist);
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
       #ifdef DEBUG_ON
@@ -389,8 +382,6 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
     #endif
     pkt_ptr->absorptiontype = -2;
 
-    /// Update the bf-opacity for the packets current frequency
-    //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
     const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf_inrest;
 
     /// Determine in which continuum the bf-absorption occurs
@@ -542,8 +533,6 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
     #endif
     pkt_ptr->absorptiontype = -2;
 
-    /// Update the bf-opacity for the packets current frequency
-    //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
     const double kappa_fb_inrest = kappa_rpkt_cont_thisthread.fb_inrest;
 
     /// Determine in which continuum the bf-absorption occurs
@@ -1112,7 +1101,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
       }
     }
 
-    calculate_kappa_rpkt_cont(&vpkt, t_future, mgi);
+    vpkt.prop_time = t_future;
+    calculate_kappa_rpkt_cont(&vpkt, mgi);
 
     const double kappa_cont = kappa_rpkt_cont[tid].total;
 
@@ -1229,8 +1219,6 @@ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
 
   // reset the cell history and rpkt opacities back to values for the start point
   cellhistory_reset(mgi, false);
-
-  // calculate_kappa_rpkt_cont(pkt_ptr, tstart, mgi);
 
   return escape_prob_avg;
 }
@@ -1489,9 +1477,8 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 }
 
 
-void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current, const int modelgridindex)
+void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const int modelgridindex)
 {
-  assert(t_current == pkt_ptr->prop_time);
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
   if ((modelgridindex == kappa_rpkt_cont[tid].modelgridindex) && (!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
