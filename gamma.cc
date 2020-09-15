@@ -262,7 +262,8 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a gamma ray.
 
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->tdecay);
+  pkt_ptr->prop_time = pkt_ptr->tdecay;
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -305,6 +306,7 @@ static double sigma_compton_partial(const double x, const double f)
 
 static double sig_comp(const PKT *pkt_ptr, double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   // Start by working out the compton x-section in the co-moving frame.
 
   double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -401,9 +403,10 @@ static double thomson_angle(void)
 }
 
 
-static void compton_scatter(PKT *pkt_ptr, double t_current)
+static void compton_scatter(PKT *pkt_ptr, const double t_current)
 // Routine to deal with physical Compton scattering event.
 {
+  assert(pkt_ptr->prop_time == t_current);
   double f;
 
   //  printout("Compton scattering.\n");
@@ -661,6 +664,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
         tdist = tdist / 2.;
       }
     }
+    pkt_ptr->prop_time = t2;
     move_pkt(pkt_ptr, tdist, t2);
     pkt_ptr->prop_time = t2;
     tdist = tdist * 2.;
