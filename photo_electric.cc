@@ -5,7 +5,7 @@
 
 /* Stuff for photo electric effect scattering. */
 
-double sig_photo_electric(const PKT *pkt_ptr, double t_current)
+double sig_photo_electric(const PKT *pkt_ptr)
 {
   double sigma_cmf;
   /* Start by working out the x-section in the co-moving frame.*/
@@ -46,13 +46,13 @@ double sig_photo_electric(const PKT *pkt_ptr, double t_current)
 
   /* Now need to convert between frames. */
 
-  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, t_current);
+  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
   return sigma_rf;
 }
 
 /* Cross section for pair production. */
 
-double sig_pair_prod(const PKT *pkt_ptr, double t_current)
+double sig_pair_prod(const PKT *pkt_ptr)
 {
   double sigma_cmf;
 
@@ -117,7 +117,7 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 
   // Now need to convert between frames.
 
-  double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, t_current);
+  double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
 
   if (sigma_rf < 0)
   {
@@ -129,7 +129,7 @@ double sig_pair_prod(const PKT *pkt_ptr, double t_current)
 }
 
 /* Routine to deal with pair production. */
-void pair_prod(PKT *pkt_ptr, double t_current)
+void pair_prod(PKT *pkt_ptr)
 {
   /* In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
      gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
@@ -169,14 +169,20 @@ void pair_prod(PKT *pkt_ptr, double t_current)
     // rest so need -ve velocity.
 
     double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, -1. * t_current);
+    get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
     // negative time since we want the backwards transformation here
 
     angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
 
+    const double prop_time_before = pkt_ptr->prop_time;
+    pkt_ptr->prop_time = pkt_ptr->tdecay;
+
+    // possible bug: should this be prop_time instead of tdecay?
     const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->tdecay);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
+
+    pkt_ptr->prop_time = prop_time_before;
 
     pkt_ptr->type = TYPE_GAMMA;
     pkt_ptr->last_cross = NONE;

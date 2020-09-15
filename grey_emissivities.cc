@@ -27,6 +27,7 @@ static double meanf_sigma(const double x)
 
 void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist, const double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   // Subroutine to record the heating rate in a cell due to gamma rays.
   // By heating rate I mean, for now, really the rate at which the code is making
   // k-packets in that cell which will then convert into r-packets. This is (going
@@ -59,10 +60,10 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist, const double t_curre
   if (dist > 0)
   {
     double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, t_current);
+    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
     const double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
 
-    double heating_cont = ((meanf_sigma(xx) * get_nnetot(mgi)) + sig_photo_electric(pkt_ptr, t_current) + (sig_pair_prod(pkt_ptr, t_current) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
+    double heating_cont = ((meanf_sigma(xx) * get_nnetot(mgi)) + sig_photo_electric(pkt_ptr) + (sig_pair_prod(pkt_ptr) * (1. - (2.46636e+20 / pkt_ptr->nu_cmf))));
     heating_cont = heating_cont * pkt_ptr->e_rf * dist * (1. - (2. * dot(vel_vec, pkt_ptr->dir) / CLIGHT));
 
     // The terms in the above are for Compton, photoelectric and pair production. The pair production one
@@ -85,6 +86,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist, const double t_curre
 
 void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist, double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   // Subroutine to record the rate of destruction (and re-creation) of
   // r-packets by the grey opacity.
 

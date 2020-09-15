@@ -304,9 +304,8 @@ static double sigma_compton_partial(const double x, const double f)
 }
 
 
-static double sig_comp(const PKT *pkt_ptr, double t_current)
+static double sig_comp(const PKT *pkt_ptr)
 {
-  assert(pkt_ptr->prop_time == t_current);
   // Start by working out the compton x-section in the co-moving frame.
 
   double xx = H * pkt_ptr->nu_cmf / ME / CLIGHT / CLIGHT;
@@ -330,7 +329,7 @@ static double sig_comp(const PKT *pkt_ptr, double t_current)
 
   // Now need to convert between frames.
 
-  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, t_current);
+  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
 
   return sigma_rf;
 }
@@ -403,10 +402,9 @@ static double thomson_angle(void)
 }
 
 
-static void compton_scatter(PKT *pkt_ptr, const double t_current)
+static void compton_scatter(PKT *pkt_ptr)
 // Routine to deal with physical Compton scattering event.
 {
-  assert(pkt_ptr->prop_time == t_current);
   double f;
 
   //  printout("Compton scattering.\n");
@@ -464,7 +462,7 @@ static void compton_scatter(PKT *pkt_ptr, const double t_current)
     // Use aberation of angles to get this into the co-moving frame.
 
     double vel_vec[3];
-    get_velocity(pkt_ptr->pos, vel_vec, t_current);
+    get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
     double cmf_dir[3];
     angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
@@ -503,7 +501,7 @@ static void compton_scatter(PKT *pkt_ptr, const double t_current)
 
     // Now convert back again.
 
-    // get_velocity(pkt_ptr->pos, vel_vec, (-1 * t_current));
+    // get_velocity(pkt_ptr->pos, vel_vec, (-1 * pkt_ptr->prop_time));
     vec_scale(vel_vec, -1.);
 
     double final_dir[3];
@@ -513,8 +511,7 @@ static void compton_scatter(PKT *pkt_ptr, const double t_current)
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
-
-    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+    const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -583,11 +580,11 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
   double kap_compton = 0.0;
   if (gamma_grey < 0)
   {
-    kap_compton = sig_comp(pkt_ptr, pkt_ptr->prop_time);
+    kap_compton = sig_comp(pkt_ptr);
   }
 
-  const double kap_photo_electric = sig_photo_electric(pkt_ptr, pkt_ptr->prop_time);
-  const double kap_pair_prod = sig_pair_prod(pkt_ptr, pkt_ptr->prop_time);
+  const double kap_photo_electric = sig_photo_electric(pkt_ptr);
+  const double kap_pair_prod = sig_pair_prod(pkt_ptr);
   const double kap_tot = kap_compton + kap_photo_electric + kap_pair_prod;
 
   // So distance before physical event is...
@@ -623,8 +620,8 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       if (do_comp_est)
       {
         sdist = sdist * 2.;
-        compton_emiss_cont(pkt_ptr, sdist, pkt_ptr->prop_time);
-        pp_emiss_cont(pkt_ptr, sdist, pkt_ptr->prop_time);
+        compton_emiss_cont(pkt_ptr, sdist);
+        pp_emiss_cont(pkt_ptr, sdist);
         sdist = sdist / 2.;
       }
       if (do_rlc_est != 0)
@@ -653,8 +650,8 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       if (do_comp_est)
       {
         tdist = tdist * 2.;
-        compton_emiss_cont(pkt_ptr, tdist, pkt_ptr->prop_time);
-        pp_emiss_cont(pkt_ptr, tdist, pkt_ptr->prop_time);
+        compton_emiss_cont(pkt_ptr, tdist);
+        pp_emiss_cont(pkt_ptr, tdist);
         tdist = tdist / 2.;
       }
       if (do_rlc_est != 0)
@@ -679,8 +676,8 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       if (do_comp_est)
       {
         edist = edist * 2.;
-        compton_emiss_cont(pkt_ptr, edist, pkt_ptr->prop_time);
-        pp_emiss_cont(pkt_ptr, edist, pkt_ptr->prop_time);
+        compton_emiss_cont(pkt_ptr, edist);
+        pp_emiss_cont(pkt_ptr, edist);
         edist = edist / 2.;
       }
       if (do_rlc_est != 0)
@@ -698,7 +695,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
     if (kap_compton > (zrand * kap_tot))
     {
       // Compton scattering.
-      compton_scatter(pkt_ptr, pkt_ptr->prop_time);
+      compton_scatter(pkt_ptr);
       if (pkt_ptr->type != TYPE_GAMMA)
       {
         // It's not a gamma ray any more - return.
@@ -722,7 +719,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
     else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
     {
       // It's a pair production
-      pair_prod(pkt_ptr, pkt_ptr->prop_time);
+      pair_prod(pkt_ptr);
       if (pkt_ptr->type != TYPE_GAMMA)
       {
         // It's not a gamma ray any more - return.
