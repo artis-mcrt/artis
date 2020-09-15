@@ -153,6 +153,7 @@ void pair_prod(PKT *pkt_ptr, double t_current)
     // for consistency with compton_scatter.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -5;
+    nt_stat_from_gamma++;
   }
   else
   {
