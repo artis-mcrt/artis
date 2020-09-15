@@ -11,11 +11,8 @@
 
 
 static void packet_prop(PKT *const pkt_ptr, const double t2, const int nts)
-// Master routine for moving packets around. When it called,
-//   it is given the time at start of inverval and at end - when it finishes,
-//   everything the packet does during this time should be sorted out.
+// propagate a packet up to time t2
 {
-  /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
 
   while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < t2)
@@ -136,7 +133,6 @@ static void update_pellet(
     {
       pkt_ptr->type = TYPE_KPKT;
       pkt_ptr->absorptiontype = -6;
-      packet_prop(pkt_ptr, ts + tw, nts);
     }
     else if (decay_to_ntlepton)
     {
@@ -147,15 +143,14 @@ static void update_pellet(
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;
-      packet_prop(pkt_ptr, ts + tw, nts);
     }
     else
     {
       // decay to gamma ray
       pellet_decay(nts, pkt_ptr);
       //printout("pellet to photon packet and propagation by packet_prop\n");
-      packet_prop(pkt_ptr, ts + tw, nts);
     }
+    packet_prop(pkt_ptr, ts + tw, nts);
   }
   else if ((tdecay > 0) && (nts == 0))
   {
