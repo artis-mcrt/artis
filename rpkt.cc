@@ -1055,7 +1055,7 @@ double do_rpkt(PKT *pkt_ptr, const double t2)
     return pkt_ptr->prop_time;
   }
 
-  return PACKET_SAME;
+  return t2;
 }
 
 

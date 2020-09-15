@@ -22,7 +22,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
   pkt_ptr->scat_count = 0;
 
   // t_current == PACKET_SAME which is < 0 after t2 has been reached;
-  while (t_current >= 0)
+  while (pkt_ptr->type != TYPE_ESCAPE && t_current >= 0 && t_current < t2)
   {
     assert(t_current == pkt_ptr->prop_time);
 
@@ -35,12 +35,11 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
       case TYPE_GAMMA:
         //printout("gamma propagation\n");
         t_current = do_gamma(pkt_ptr, t2);
-        assert(t_current < 0 || t_current == pkt_ptr->prop_time);
   	    /* This returns a flag if the packet gets to t2 without
         changing to something else. If the packet does change it
         returns the time of change and sets everything for the
         new packet.*/
-        if (t_current >= 0)
+        if (pkt_ptr->type != TYPE_GAMMA && pkt_ptr->type != TYPE_ESCAPE)
         {
           #ifdef _OPENMP
             #pragma omp atomic
@@ -52,7 +51,6 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
       case TYPE_RPKT:
         //printout("r-pkt propagation\n");
         t_current = do_rpkt(pkt_ptr, t2);
-        assert(t_current < 0 || t_current == pkt_ptr->prop_time);
   //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
   //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
   //       else
@@ -97,9 +95,6 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         break;
 
       case TYPE_MA:
-        // It's an active macroatom - apply transition probabilities
-        //printout("MA-packet handling\n");
-
         t_current = do_macroatom(pkt_ptr, t2, nts);
         assert(t_current == pkt_ptr->prop_time);
         break;
@@ -108,9 +103,9 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
         abort();
     }
-    assert(t_current < 0 || t_current == pkt_ptr->prop_time);
+    assert(t_current < 0 || t_current == pkt_ptr->prop_time || pkt_ptr->type == TYPE_ESCAPE);
   }
-  assert(t_current == PACKET_SAME);
+  assert(t_current == PACKET_SAME || t_current == t2);
 }
 
 

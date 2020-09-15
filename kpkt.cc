@@ -702,7 +702,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
   {
     vec_scale(pkt_ptr->pos, t2 / t1);
     pkt_ptr->prop_time = t2;
-    return PACKET_SAME;
+    return pkt_ptr->prop_time;
   }
 }
 
