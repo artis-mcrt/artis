@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-double do_rpkt(PKT *pkt_ptr, double t2);
+void do_rpkt(PKT *pkt_ptr, double t2);
 void emitt_rpkt(PKT *pkt_ptr);
 int closest_transition(double nu_cmf, int next_trans);
 double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart);

@@ -381,7 +381,7 @@ static void do_macroatom_ionisation(
 }
 
 
-double do_macroatom(PKT *pkt_ptr, const double t2, const int timestep)
+void do_macroatom(PKT *pkt_ptr, const int timestep)
 /// Material for handling activated macro atoms.
 {
   const double t_mid = time_step[timestep].mid;
@@ -941,10 +941,7 @@ double do_macroatom(PKT *pkt_ptr, const double t2, const int timestep)
     pkt_ptr->trueem_time = pkt_ptr->em_time;
   }
 
-  /// procedure ends only after a change to r or k packets has taken place and
-  /// returns then the actual time, which is the same as the input t1
-  /// internal transitions are carried out until a type change occurs
-  return pkt_ptr->prop_time;
+  /// procedure ends only after a change to r or k packets has taken place
 }
 
 
