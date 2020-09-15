@@ -353,7 +353,7 @@ double do_kpkt_bb(PKT *pkt_ptr)
     abort();
   }
   /// and then emitt the packet randomly in the comoving frame
-  emitt_rpkt(pkt_ptr, pkt_ptr->prop_time);
+  emitt_rpkt(pkt_ptr);
   if (debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
@@ -551,7 +551,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
         abort();
       }
       /// and then emitt the packet randomly in the comoving frame
-      emitt_rpkt(pkt_ptr, pkt_ptr->prop_time);
+      emitt_rpkt(pkt_ptr);
       if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
       calculate_kappa_rpkt_cont(pkt_ptr, pkt_ptr->prop_time, modelgridindex);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
@@ -606,7 +606,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       // printout("[debug] do_kpkt: pkt_ptr->nu_cmf %g\n",pkt_ptr->nu_cmf);
 
       // and then emitt the packet randomly in the comoving frame
-      emitt_rpkt(pkt_ptr, pkt_ptr->prop_time);
+      emitt_rpkt(pkt_ptr);
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_KPKT, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);

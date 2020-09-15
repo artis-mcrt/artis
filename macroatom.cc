@@ -163,8 +163,6 @@ static void do_macroatom_raddeexcitation(
   PKT *pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
   const double total_transitions, const int activatingline)
 {
-  const double t_current = pkt_ptr->prop_time;
-
   ///radiative deexcitation of MA: emitt rpkt
   ///randomly select which line transitions occurs
   const double zrand = gsl_rng_uniform(rng);
@@ -229,20 +227,20 @@ static void do_macroatom_raddeexcitation(
   #endif
 
   /// Emit the rpkt in a random direction
-  emitt_rpkt(pkt_ptr, t_current);
+  emitt_rpkt(pkt_ptr);
 
   if (linelistindex == activatingline)
     resonancescatterings++;
   else
   {
-    calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+    calculate_kappa_rpkt_cont(pkt_ptr, pkt_ptr->prop_time, modelgridindex);
   }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
   pkt_ptr->next_trans = linelistindex + 1;
   pkt_ptr->emissiontype = linelistindex;
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
-  pkt_ptr->em_time = t_current;
+  pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
   //printout("next possible line encounter %d\n",pkt_ptr->next_trans);
   #ifndef FORCE_LTE
@@ -255,7 +253,6 @@ static void do_macroatom_radrecomb(
   PKT *pkt_ptr, const int modelgridindex, const int element, int *ion, int *level,
   const double rad_recomb)
 {
-  const double t_current = pkt_ptr->prop_time;
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, *ion, *level);
@@ -330,7 +327,7 @@ static void do_macroatom_radrecomb(
   #endif
 
   /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
-  emitt_rpkt(pkt_ptr, t_current);
+  emitt_rpkt(pkt_ptr);
 
   #if (TRACK_ION_STATS)
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
@@ -340,12 +337,12 @@ static void do_macroatom_radrecomb(
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   #endif
 
-  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+  calculate_kappa_rpkt_cont(pkt_ptr, pkt_ptr->prop_time, modelgridindex);
 
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
-  pkt_ptr->em_time = t_current;
+  pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
 }
 
