@@ -34,7 +34,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
     {
       case TYPE_GAMMA:
         //printout("gamma propagation\n");
-        t_current = do_gamma(pkt_ptr, t_current, t2);
+        t_current = do_gamma(pkt_ptr, t2);
         assert(t_current < 0 || t_current == pkt_ptr->prop_time);
   	    /* This returns a flag if the packet gets to t2 without
         changing to something else. If the packet does change it
@@ -51,7 +51,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
 
       case TYPE_RPKT:
         //printout("r-pkt propagation\n");
-        t_current = do_rpkt(pkt_ptr, t_current, t2);
+        t_current = do_rpkt(pkt_ptr, t2);
         assert(t_current < 0 || t_current == pkt_ptr->prop_time);
   //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
   //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
@@ -100,7 +100,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         // It's an active macroatom - apply transition probabilities
         //printout("MA-packet handling\n");
 
-        t_current = do_macroatom(pkt_ptr, pkt_ptr->prop_time, t2, nts);
+        t_current = do_macroatom(pkt_ptr, t2, nts);
         assert(t_current == pkt_ptr->prop_time);
         break;
 
