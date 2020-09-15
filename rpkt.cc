@@ -210,7 +210,6 @@ static double get_event(
           tau += tau_cont + tau_line;
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
-          dummypkt_ptr->prop_time = t_current;
           move_pkt(dummypkt_ptr, ldist, t_current);
           radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
@@ -249,7 +248,6 @@ static double get_event(
           else if (DETAILED_LINE_ESTIMATORS_ON)
           {
             t_current += ldist / CLIGHT_PROP;
-            dummypkt_ptr->prop_time = t_current;
             move_pkt(dummypkt_ptr, ldist, t_current);
             radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
@@ -953,7 +951,6 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       #endif
       /** Move it into the new cell. */
       sdist = sdist / 2.;
-      pkt_ptr->prop_time += sdist / CLIGHT_PROP;
       move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
       update_estimators(pkt_ptr, sdist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
@@ -962,7 +959,6 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         rlc_emiss_rpkt(pkt_ptr, sdist, pkt_ptr->prop_time);
         sdist = sdist / 2.;
       }
-      pkt_ptr->prop_time += sdist / CLIGHT_PROP;
       move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
       sdist = sdist * 2.;
 
@@ -995,7 +991,6 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       #endif
       // Doesn't reach boundary
       tdist = tdist / 2.;
-      pkt_ptr->prop_time += tdist / CLIGHT_PROP;
       move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
       update_estimators(pkt_ptr, tdist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
@@ -1004,8 +999,8 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         rlc_emiss_rpkt(pkt_ptr, tdist, pkt_ptr->prop_time);
         tdist = tdist / 2.;
       }
+      move_pkt(pkt_ptr, tdist, t2);
       pkt_ptr->prop_time = t2;
-      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
       tdist = tdist * 2.;
       #ifdef DEBUG_ON
         pkt_ptr->last_event = pkt_ptr->last_event + 1000;
@@ -1023,7 +1018,6 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
       #endif
       edist = edist / 2.;
-      pkt_ptr->prop_time += edist / CLIGHT_PROP;
       move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
       update_estimators(pkt_ptr, edist * 2, pkt_ptr->prop_time);
       if (do_rlc_est != 0 && do_rlc_est != 3)
@@ -1032,7 +1026,6 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         rlc_emiss_rpkt(pkt_ptr, edist, pkt_ptr->prop_time);
         edist = edist / 2.;
       }
-      pkt_ptr->prop_time += edist / CLIGHT_PROP;
       move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
       edist = edist * 2.;
 
