@@ -15,15 +15,13 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
 //   it is given the time at start of inverval and at end - when it finishes,
 //   everything the packet does during this time should be sorted out.
 {
-
-  double t_current = t1;
+  assert(t1 == pkt_ptr->prop_time);
 
   /* 0 the scatter counter for the packet. */
   pkt_ptr->scat_count = 0;
 
-  while (pkt_ptr->type != TYPE_ESCAPE && t_current < t2)
+  while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < t2)
   {
-    assert(t_current == pkt_ptr->prop_time);
 
     /* Start by sorting out what sort of packet it is.*/
     //printout("start of packet_prop loop %d\n", pkt_ptr->type );
@@ -33,7 +31,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
     {
       case TYPE_GAMMA:
         //printout("gamma propagation\n");
-        t_current = do_gamma(pkt_ptr, t2);
+        do_gamma(pkt_ptr, t2);
   	    /* This returns a flag if the packet gets to t2 without
         changing to something else. If the packet does change it
         returns the time of change and sets everything for the
@@ -49,7 +47,7 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
 
       case TYPE_RPKT:
         //printout("r-pkt propagation\n");
-        t_current = do_rpkt(pkt_ptr, t2);
+        do_rpkt(pkt_ptr, t2);
   //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
   //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
   //       else
@@ -77,13 +75,11 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
         if (pkt_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
         {
-          t_current = do_kpkt_bb(pkt_ptr);
-          assert(t_current < 0 || t_current == pkt_ptr->prop_time);
+          do_kpkt_bb(pkt_ptr);
         }
         else if (pkt_type == TYPE_KPKT)
         {
-          t_current = do_kpkt(pkt_ptr, t2, nts);
-          assert(t_current < 0 || t_current == pkt_ptr->prop_time);
+          do_kpkt(pkt_ptr, t2, nts);
         }
         else
         {
@@ -94,17 +90,15 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         break;
 
       case TYPE_MA:
-        t_current = do_macroatom(pkt_ptr, t2, nts);
-        assert(t_current == pkt_ptr->prop_time);
+        do_macroatom(pkt_ptr, t2, nts);
         break;
 
       default:
         printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
         abort();
     }
-    assert(t_current < 0 || t_current == pkt_ptr->prop_time || pkt_ptr->type == TYPE_ESCAPE);
   }
-  assert(pkt_ptr->type == TYPE_ESCAPE || t_current == t2);
+  assert(pkt_ptr->type == TYPE_ESCAPE || pkt_ptr->prop_time == t2);
 }
 
 
