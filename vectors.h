@@ -81,11 +81,7 @@ vec_copy(double destination[3], const double source[3])
 
 inline double doppler_packetpos(const PKT *const pkt_ptr, const double t)
 {
-  // assert(pkt_ptr->prop_time == t);
-  if (pkt_ptr->prop_time != t)
-  {
-    printout("doppler_packetpos type %d\n", pkt_ptr->type);
-  }
+  assert(pkt_ptr->prop_time == t);
   double vel_vec[3];
   get_velocity(pkt_ptr->pos, vel_vec, t); // homologous flow velocity
   const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
