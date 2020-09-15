@@ -521,6 +521,7 @@ static void compton_scatter(PKT *pkt_ptr, double t_current)
     // It's converted to an e-minus packet.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -3;
+    nt_stat_from_gamma++;
   }
 }
 
