@@ -120,6 +120,7 @@ void move_pkt(PKT *pkt_ptr, const double distance, const double time)
 /// dir vector). The distance moved is in the rest frame. Time must be the
 /// time at the end of distance travelled.
 {
+  pkt_ptr->prop_time += distance / CLIGHT_PROP;
   /// First update pos.
   assert(distance >= 0);
 

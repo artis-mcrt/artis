@@ -612,7 +612,6 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
   if ((sdist < tdist) && (sdist < edist))
   {
     sdist = sdist / 2.;
-    pkt_ptr->prop_time += sdist / CLIGHT_PROP;
     move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
 
     // Move it into the new cell.
@@ -633,7 +632,6 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       }
     }
 
-    pkt_ptr->prop_time += sdist / CLIGHT_PROP;
     move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
     sdist = sdist * 2.;
     if (snext != pkt_ptr->where)
@@ -645,7 +643,6 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
   {
     // Doesn't reach boundary.
     tdist = tdist / 2.;
-    pkt_ptr->prop_time += tdist  / CLIGHT_PROP;
     move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
 
     if (kap_tot > 0)
@@ -664,15 +661,14 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
         tdist = tdist / 2.;
       }
     }
+    move_pkt(pkt_ptr, tdist, t2);
     pkt_ptr->prop_time = t2;
-    move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
     tdist = tdist * 2.;
     end_packet = true;
   }
   else if ((edist < sdist) && (edist < tdist))
   {
     edist = edist / 2.;
-    pkt_ptr->prop_time += edist / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
     if (kap_tot > 0)
     {
@@ -690,7 +686,6 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
         edist = edist / 2.;
       }
     }
-    pkt_ptr->prop_time += edist / CLIGHT_PROP;
     move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
     edist = edist * 2.;
 
