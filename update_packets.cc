@@ -17,8 +17,6 @@ static void packet_prop(PKT *const pkt_ptr, const double t2, const int nts)
 
   while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < t2)
   {
-    /* Start by sorting out what sort of packet it is.*/
-    //printout("start of packet_prop loop %d\n", pkt_ptr->type );
     const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
 
     switch (pkt_type)
@@ -97,23 +95,22 @@ static void packet_prop(PKT *const pkt_ptr, const double t2, const int nts)
 
 
 static void update_pellet(
-  PKT *pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double ts, const double tw)
+  PKT *pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double t2)
 {
   // Handle inactive pellets. Need to do two things (a) check if it
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
   // this time step then just move the packet along with the matter for the
   // start of the next time step.
 
-  assert(ts == pkt_ptr->prop_time);
-
   assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
+  const double ts = pkt_ptr->prop_time;
 
   const double tdecay = pkt_ptr->tdecay; // after packet_init(), this value never changes
-  if (tdecay > (ts + tw))
+  if (tdecay > t2)
   {
     // It won't decay in this timestep, so just need to move it on with the flow.
-    vec_scale(pkt_ptr->pos, (ts + tw) / ts);
-    pkt_ptr->prop_time = ts + tw;
+    vec_scale(pkt_ptr->pos, t2 / ts);
+    pkt_ptr->prop_time = t2;
 
     // That's all that needs to be done for the inactive pellet.
   }
@@ -170,7 +167,7 @@ static void update_pellet(
   }
   else
   {
-    printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g tw %g (ts + tw) %g\n", tdecay, ts, tw, ts + tw);
+    printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
     abort();
   }
 }
@@ -293,19 +290,19 @@ void update_packets(const int nts, PKT *pkt)
           case TYPE_48CR_PELLET:
           case TYPE_48V_PELLET:
             // decay to gamma ray
-            update_pellet(pkt_ptr, false, false, nts, ts, tw);
+            update_pellet(pkt_ptr, false, false, nts, ts + tw);
             break;
 
           case TYPE_52FE_PELLET:
           case TYPE_52MN_PELLET:
             // convert to kpkts
-            update_pellet(pkt_ptr, true, false, nts, ts, tw);
+            update_pellet(pkt_ptr, true, false, nts, ts + tw);
             break;
 
           case TYPE_57NI_POSITRON_PELLET:
           case TYPE_56CO_POSITRON_PELLET:
             // convert to to non-thermal leptons
-            update_pellet(pkt_ptr, false, true, nts, ts, tw);
+            update_pellet(pkt_ptr, false, true, nts, ts + tw);
             break;
 
           case TYPE_ESCAPE:
