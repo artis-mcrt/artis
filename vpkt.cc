@@ -241,8 +241,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
       //printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
 
       t_future += (sdist / CLIGHT_PROP);
-      dummy_ptr->prop_time = t_future;
-      move_pkt(dummy_ptr, sdist);
+      move_pkt(dummy_ptr, sdist, t_future);
 
       //printout("About to change vpkt cell\n");
       change_cell_vpkt(dummy_ptr, snext, &end_packet, t_future);

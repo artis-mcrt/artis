@@ -81,10 +81,12 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         if (pkt_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
         {
           t_current = do_kpkt_bb(pkt_ptr);
+          assert(t_current < 0 || t_current == pkt_ptr->prop_time);
         }
         else if (pkt_type == TYPE_KPKT)
         {
           t_current = do_kpkt(pkt_ptr, t2, nts);
+          assert(t_current < 0 || t_current == pkt_ptr->prop_time);
         }
         else
         {
@@ -99,12 +101,14 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         //printout("MA-packet handling\n");
 
         t_current = do_macroatom(pkt_ptr, pkt_ptr->prop_time, t2, nts);
+        assert(t_current == pkt_ptr->prop_time);
         break;
 
       default:
         printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
         abort();
     }
+    assert(t_current < 0 || t_current == pkt_ptr->prop_time);
   }
   assert(t_current == PACKET_SAME);
 }
@@ -327,7 +331,11 @@ void update_packets(const int nts, PKT *pkt)
         case TYPE_KPKT:
           /**Stuff for processing photons. */
           //printout("further propagate a photon packet via packet_prop\n");
-
+          if (ts != pkt_ptr->prop_time)
+          {
+            printout("ts %g prop_time %g type %d\n", ts, pkt_ptr->prop_time, pkt_ptr->type);
+          }
+          assert(ts == pkt_ptr->prop_time);
           packet_prop(pkt_ptr, ts, ts + tw, nts);
           break;
 

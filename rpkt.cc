@@ -93,6 +93,7 @@ static double get_event(
 // returns edist, the distance to the next physical event (continuum or bound-bound)
 // BE AWARE THAT THIS PROCEDURE SHOULD BE ONLY CALLED FOR NON EMPTY CELLS!!
 {
+  assert(t_current == pkt_ptr->prop_time);
   /// initialize loop variables
   double tau = 0.;        ///initial optical depth along path
   double dist = 0.;       ///initial position on path
@@ -101,7 +102,7 @@ static double get_event(
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
   bool endloop = false;
-  calculate_kappa_rpkt_cont(pkt_ptr, pkt_ptr->prop_time, modelgridindex);
+  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
   const double kap_cont = kappa_rpkt_cont[tid].total;
   while (!endloop)
   {
@@ -148,7 +149,7 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:     ldist %g\n",ldist);
       #endif
 
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, dummypkt_ptr->prop_time);
+      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
       ///restore values which were changed by calculate_kappa_rpkt_cont to those set by closest_transition
       //mastate[tid].element = element;
       //mastate[tid].ion = ion;
@@ -211,9 +212,8 @@ static double get_event(
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
           dummypkt_ptr->prop_time = t_current;
-          move_pkt(dummypkt_ptr, ldist);
-          dummypkt_ptr->prop_time = t_current;
-          radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+          move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
+          radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           #ifdef DEBUG_ON
             if (debuglevel == 2)
@@ -251,8 +251,7 @@ static double get_event(
           {
             t_current += ldist / CLIGHT_PROP;
             dummypkt_ptr->prop_time = t_current;
-            move_pkt(dummypkt_ptr, ldist);
-            dummypkt_ptr->prop_time = t_current;
+            move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
             radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
 
@@ -284,7 +283,7 @@ static double get_event(
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     line interaction impossible\n");
       #endif
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, dummypkt_ptr->prop_time);
+      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
       ///no need to restore values set by closest_transition, as nothing was set in this case
       const double tau_cont = kap_cont * (abort_dist - dist);
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
@@ -328,9 +327,8 @@ static double get_event(
 }
 
 
-static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
+static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
 {
-  assert(t_current == pkt_ptr->prop_time);
   const double nu = pkt_ptr->nu_cmf;
 
   const double kappa_cont = kappa_rpkt_cont_thisthread.total;
@@ -397,7 +395,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     pkt_ptr->absorptiontype = -2;
 
     /// Update the bf-opacity for the packets current frequency
-    //calculate_kappa_rpkt_cont(pkt_ptr, pkt_ptr->prop_time);
+    //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
     const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf_inrest;
 
     /// Determine in which continuum the bf-absorption occurs
@@ -750,12 +748,11 @@ static double closest_transition_empty(PKT *pkt_ptr)
 }
 
 
-static void update_estimators(const PKT *pkt_ptr, const double distance, const double t_current)
+static void update_estimators(PKT *pkt_ptr, const double distance, const double t_current)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
 {
-  assert(pkt_ptr->prop_time == t_current);
   const int cellindex = pkt_ptr->where;
   const int modelgridindex = cell[cellindex].modelgridindex;
 
@@ -765,7 +762,7 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
     const double distance_e_cmf = distance * pkt_ptr->e_cmf;
     const double nu = pkt_ptr->nu_cmf;
     //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
-
+    pkt_ptr->prop_time = t_current;
     radfield_update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, t_current);
 
     #ifndef FORCE_LTE
@@ -833,6 +830,8 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
 
+  double t_current = t1; ///this will keep track of time in the calculation
+
   bool end_packet = false; ///means "keep working"
 
   #ifdef DEBUG_ON
@@ -852,20 +851,21 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
   int snext;
-  double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
+  double sdist = boundary_cross(pkt_ptr, t_current, &snext);
 
   if (sdist == 0)
   {
-    change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
+    pkt_ptr->prop_time = t_current;
+    change_cell(pkt_ptr, snext, &end_packet, t_current);
     const int cellindexnew = pkt_ptr->where;
     mgi = cell[cellindexnew].modelgridindex;
   }
   else
   {
-    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / tmin : rmax * pkt_ptr->prop_time / tmin;
+    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
     if (sdist > maxsdist)
     {
-      printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, pkt_ptr->prop_time/tmin, sdist);
+      printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
       abort();
     }
 
@@ -877,10 +877,10 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
       printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
       printout("[warning] r_pkt: cell corner %g %g %g\n",
-               get_cellcoordmin(cellindexnew, 0) * pkt_ptr->prop_time / tmin,
-               get_cellcoordmin(cellindexnew, 1) * pkt_ptr->prop_time / tmin,
-               get_cellcoordmin(cellindexnew, 2) * pkt_ptr->prop_time / tmin);
-      printout("[warning] r_pkt: cell width %g\n",wid_init(0)*pkt_ptr->prop_time/tmin);
+               get_cellcoordmin(cellindexnew, 0) * t_current / tmin,
+               get_cellcoordmin(cellindexnew, 1) * t_current / tmin,
+               get_cellcoordmin(cellindexnew, 2) * t_current / tmin);
+      printout("[warning] r_pkt: cell width %g\n",wid_init(0)*t_current/tmin);
       //abort();
     }
     if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
@@ -902,7 +902,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
 
     // Find how far it can travel during the time inverval.
 
-    double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+    double tdist = (t2 - t_current) * CLIGHT_PROP;
 
     assert(tdist >= 0);
 
@@ -925,6 +925,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
       /// Get distance to the next physical event in this case only electron scattering
       //kappa = SIGMA_T*get_nne(mgi);
+      pkt_ptr->prop_time = t_current;
       const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr);
       const double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
@@ -936,7 +937,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
     else
     {
       // get distance to the next physical event (continuum or bound-bound)
-      edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, pkt_ptr->prop_time, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+      edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
       #ifdef DEBUG_ON
         if (debuglevel == 2)
         {
@@ -955,20 +956,26 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       #endif
       /** Move it into the new cell. */
       sdist = sdist / 2.;
-      move_pkt(pkt_ptr, sdist);
-      update_estimators(pkt_ptr, sdist * 2, pkt_ptr->prop_time);
+      t_current += sdist / CLIGHT_PROP;
+      pkt_ptr->prop_time = t_current;
+      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, sdist * 2, t_current);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         sdist = sdist * 2.;
+        pkt_ptr->prop_time = t_current;
         rlc_emiss_rpkt(pkt_ptr, sdist);
         sdist = sdist / 2.;
       }
-      move_pkt(pkt_ptr, sdist);
+      t_current += sdist / CLIGHT_PROP;
+      pkt_ptr->prop_time = t_current;
+      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
       sdist = sdist * 2.;
 
       if (snext != pkt_ptr->where)
       {
-        change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
+        pkt_ptr->prop_time = t_current;
+        change_cell(pkt_ptr, snext, &end_packet, t_current);
         const int cellindexnew = pkt_ptr->where;
         mgi = cell[cellindexnew].modelgridindex;
       }
@@ -995,17 +1002,20 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       #endif
       // Doesn't reach boundary
       tdist = tdist / 2.;
-      move_pkt(pkt_ptr, tdist);
-      update_estimators(pkt_ptr, tdist * 2, pkt_ptr->prop_time);
+      t_current += tdist / CLIGHT_PROP;
+      pkt_ptr->prop_time = t_current;
+      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, tdist * 2, t_current);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         tdist = tdist * 2.;
+        pkt_ptr->prop_time = t_current;
         rlc_emiss_rpkt(pkt_ptr, tdist);
         tdist = tdist / 2.;
       }
-      pkt_ptr->prop_time = t2;
-      move_pkt(pkt_ptr, tdist);
-      pkt_ptr->prop_time = t2;
+      t_current = t2;
+      pkt_ptr->prop_time = t_current;
+      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
       tdist = tdist * 2.;
       #ifdef DEBUG_ON
         pkt_ptr->last_event = pkt_ptr->last_event + 1000;
@@ -1023,15 +1033,20 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
       #endif
       edist = edist / 2.;
-      move_pkt(pkt_ptr, edist);
-      update_estimators(pkt_ptr, edist * 2, pkt_ptr->prop_time);
+      t_current += edist / CLIGHT_PROP;
+      pkt_ptr->prop_time = t_current;
+      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, edist * 2, t_current);
       if (do_rlc_est != 0 && do_rlc_est != 3)
       {
         edist = edist * 2.;
+        pkt_ptr->prop_time = t_current;
         rlc_emiss_rpkt(pkt_ptr, edist);
         edist = edist / 2.;
       }
-      move_pkt(pkt_ptr, edist);
+      t_current += edist / CLIGHT_PROP;
+      pkt_ptr->prop_time = t_current;
+      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
       edist = edist * 2.;
 
       // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
@@ -1045,7 +1060,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       }
       else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
       {
-        rpkt_event_continuum(pkt_ptr, pkt_ptr->prop_time, kappa_rpkt_cont[tid], mgi);
+        rpkt_event_continuum(pkt_ptr, kappa_rpkt_cont[tid], mgi);
       }
       else
       {
@@ -1055,7 +1070,8 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       if (pkt_ptr->type != TYPE_RPKT)
       {
         // It's not an r-packet any more - return.
-        return pkt_ptr->prop_time;
+        pkt_ptr->prop_time = t_current;
+        return t_current;
       }
     }
     else
@@ -1176,11 +1192,11 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
 
     t_future += (sdist / CLIGHT_PROP);
-    vpkt.prop_time = t_future;
-    move_pkt(&vpkt, sdist);
+    move_pkt(&vpkt, sdist, t_future);
 
     if (snext != vpkt.where)
     {
+      vpkt.prop_time = t_future;
       change_cell(&vpkt, snext, &end_packet, t_future);
     }
   }
@@ -1240,7 +1256,7 @@ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
 }
 
 
-void emitt_rpkt(PKT *pkt_ptr, double t_current)
+void emitt_rpkt(PKT *pkt_ptr, const double t_current)
 {
   assert(t_current == pkt_ptr->prop_time);
   /// now make the packet a r-pkt and set further flags
@@ -1835,6 +1851,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
         }
 
         /// Now need to convert between frames.
+        assert(t_current == pkt_ptr->prop_time);
         const double dopplerfactor = doppler_packetpos(pkt_ptr);
         sigma = sigma * dopplerfactor;
         kappa_ff = kappa_ff * dopplerfactor;
