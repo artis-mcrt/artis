@@ -89,11 +89,9 @@ static void update_pellet(
 }
 
 
-static void packet_prop(PKT *const pkt_ptr, const double t2, const int nts)
+static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
 // propagate a packet up to time t2
 {
-  pkt_ptr->scat_count = 0;
-
   while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < t2)
   {
     const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
@@ -301,9 +299,11 @@ void update_packets(const int nts, PKT *pkt)
       //printout("[debug] update_packets: target position of homologous flow (%g, %g, %g)\n",pkt_ptr->pos[0]*(ts + tw)/ts,pkt_ptr->pos[1]*(ts + tw)/ts,pkt_ptr->pos[2]*(ts + tw)/ts);
       //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
+      pkt_ptr->scat_count = 0;
+
       while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
       {
-        packet_prop(pkt_ptr, ts + tw, nts);
+        do_packet(pkt_ptr, ts + tw, nts);
       }
 
       // if (debuglevel == 10 || debuglevel == 2)

@@ -905,16 +905,16 @@ static void normalise_ion_estimators(const int mgi, const double deltat, const d
       for (int i = 0; i < ION_COUNTER_COUNT; i++)
       {
         // energy or event count per volume per second
-        const double ratedensity = get_ion_stats(mgi, element, ion, i) / deltaV / deltat / nprocs;
+        const double ratedensity = get_ion_stats(mgi, element, ion, (enum ionstatscounters)i) / deltaV / deltat / nprocs;
 
         if (i < nstatcounters_ratecoeff)
         {
           // convert photon event counters into rate coefficients
-          set_ion_stats(mgi, element, ion, i, ratedensity / ionstagepop(mgi, element, ion));
+          set_ion_stats(mgi, element, ion, (enum ionstatscounters)i, ratedensity / ionstagepop(mgi, element, ion));
         }
         else
         {
-          set_ion_stats(mgi, element, ion, i, ratedensity);
+          set_ion_stats(mgi, element, ion, (enum ionstatscounters)i, ratedensity);
         }
       }
     }
