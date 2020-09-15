@@ -80,11 +80,11 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
         if (pkt_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
         {
-          t_current = do_kpkt_bb(pkt_ptr, pkt_ptr->prop_time);
+          t_current = do_kpkt_bb(pkt_ptr);
         }
         else if (pkt_type == TYPE_KPKT)
         {
-          t_current = do_kpkt(pkt_ptr, pkt_ptr->prop_time, t2, nts);
+          t_current = do_kpkt(pkt_ptr, t2, nts);
         }
         else
         {
