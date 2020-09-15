@@ -179,7 +179,7 @@ void zero_estimators(void)
         {
           for (int i = 0; i < ION_COUNTER_COUNT; i++)
           {
-            set_ion_stats(n, element, ion, i, 0.);
+            set_ion_stats(n, element, ion, (enum ionstatscounters)i, 0.);
           }
         }
         #endif

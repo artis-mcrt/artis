@@ -332,7 +332,7 @@ static void do_macroatom_radrecomb(
   #if (TRACK_ION_STATS)
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
 
-  const double escape_prob = get_rpkt_escape_prob(pkt_ptr, t_current);
+  const double escape_prob = get_rpkt_escape_prob(pkt_ptr, pkt_ptr->prop_time);
 
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   #endif

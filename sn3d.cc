@@ -1043,7 +1043,7 @@ int main(int argc, char** argv)
 //  #endif
 
   #if TRACK_ION_STATS
-  ionstats = calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
+  ionstats = (double *) calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
   #endif
 
   /// As a precaution, explicitly zero all the estimators here
