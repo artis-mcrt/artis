@@ -531,8 +531,6 @@ double do_gamma(PKT *pkt_ptr, double t2)
 // a gamma packet with known properties at time t1 and we want to follow it
 // until time t2.
 {
-  bool end_packet = false; //tells us when to stop working on this packet
-
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
   double zrand = gsl_rng_uniform_pos(rng);
@@ -637,6 +635,7 @@ double do_gamma(PKT *pkt_ptr, double t2)
     sdist = sdist * 2.;
     if (snext != pkt_ptr->where)
     {
+      bool end_packet = false; //tells us when to stop working on this packet
       change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
     }
   }
@@ -666,7 +665,6 @@ double do_gamma(PKT *pkt_ptr, double t2)
     pkt_ptr->prop_time = t2;
     move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
     tdist = tdist * 2.;
-    end_packet = true;
   }
   else if ((edist < sdist) && (edist < tdist))
   {
@@ -742,11 +740,6 @@ double do_gamma(PKT *pkt_ptr, double t2)
   {
     printout("Failed to identify event. Gamma (2). edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
     abort();
-  }
-
-  if (end_packet)
-  {
-    return PACKET_SAME;
   }
 
   return pkt_ptr->prop_time;

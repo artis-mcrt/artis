@@ -2074,6 +2074,4 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
 //       }
 //     }
 //   }
-//
-//   return PACKET_SAME;
 // }
