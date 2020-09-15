@@ -10,90 +10,6 @@
 #include "vectors.h"
 
 
-static void packet_prop(PKT *const pkt_ptr, const double t2, const int nts)
-// propagate a packet up to time t2
-{
-  pkt_ptr->scat_count = 0;
-
-  while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < t2)
-  {
-    const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
-
-    switch (pkt_type)
-    {
-      case TYPE_GAMMA:
-        //printout("gamma propagation\n");
-        do_gamma(pkt_ptr, t2);
-  	    /* This returns a flag if the packet gets to t2 without
-        changing to something else. If the packet does change it
-        returns the time of change and sets everything for the
-        new packet.*/
-        if (pkt_ptr->type != TYPE_GAMMA && pkt_ptr->type != TYPE_ESCAPE)
-        {
-          #ifdef _OPENMP
-            #pragma omp atomic
-          #endif
-          time_step[nts].gamma_dep += pkt_ptr->e_cmf;
-        }
-        break;
-
-      case TYPE_RPKT:
-        //printout("r-pkt propagation\n");
-        do_rpkt(pkt_ptr, t2);
-  //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
-  //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
-  //       else
-  //         t_change_type = do_rpkt( pkt_ptr, t_current, t2);
-
-        if (pkt_ptr->type == TYPE_ESCAPE)
-        {
-          #ifdef _OPENMP
-            #pragma omp atomic
-          #endif
-          time_step[nts].cmf_lum += pkt_ptr->e_cmf;
-        }
-        break;
-
-      case TYPE_NTLEPTON:
-        do_ntlepton(pkt_ptr);
-        break;
-
-      case TYPE_KPKT:
-      case TYPE_PRE_KPKT:
-      case TYPE_GAMMA_KPKT:
-        /*It's a k-packet - convert to r-packet (low freq).*/
-        //printout("k-packet propagation\n");
-
-        //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
-        if (pkt_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
-        {
-          do_kpkt_bb(pkt_ptr);
-        }
-        else if (pkt_type == TYPE_KPKT)
-        {
-          do_kpkt(pkt_ptr, t2, nts);
-        }
-        else
-        {
-          printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
-          abort();
-          //t_change_type = do_kpkt_ffonly(pkt_ptr, t_current, t2);
-        }
-        break;
-
-      case TYPE_MA:
-        do_macroatom(pkt_ptr, nts);
-        break;
-
-      default:
-        printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
-        abort();
-    }
-  }
-  assert(pkt_ptr->type == TYPE_ESCAPE || pkt_ptr->prop_time == t2);
-}
-
-
 static void update_pellet(
   PKT *pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double t2)
 {
@@ -170,6 +86,112 @@ static void update_pellet(
     printout("ERROR: Something gone wrong with decaying pellets. tdecay %g ts %g (ts + tw) %g\n", tdecay, ts, t2);
     abort();
   }
+}
+
+
+static void packet_prop(PKT *const pkt_ptr, const double t2, const int nts)
+// propagate a packet up to time t2
+{
+  pkt_ptr->scat_count = 0;
+
+  while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < t2)
+  {
+    const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
+
+    switch (pkt_type)
+    {
+      case TYPE_56NI_PELLET:
+      case TYPE_56CO_PELLET:
+      case TYPE_57NI_PELLET:
+      case TYPE_57CO_PELLET:
+      case TYPE_48CR_PELLET:
+      case TYPE_48V_PELLET:
+        // decay to gamma ray
+        update_pellet(pkt_ptr, false, false, nts, t2);
+        break;
+
+      case TYPE_52FE_PELLET:
+      case TYPE_52MN_PELLET:
+        // convert to kpkts
+        update_pellet(pkt_ptr, true, false, nts, t2);
+        break;
+
+      case TYPE_57NI_POSITRON_PELLET:
+      case TYPE_56CO_POSITRON_PELLET:
+        // convert to to non-thermal leptons
+        update_pellet(pkt_ptr, false, true, nts, t2);
+        break;
+
+      case TYPE_GAMMA:
+        //printout("gamma propagation\n");
+        do_gamma(pkt_ptr, t2);
+  	    /* This returns a flag if the packet gets to t2 without
+        changing to something else. If the packet does change it
+        returns the time of change and sets everything for the
+        new packet.*/
+        if (pkt_ptr->type != TYPE_GAMMA && pkt_ptr->type != TYPE_ESCAPE)
+        {
+          #ifdef _OPENMP
+            #pragma omp atomic
+          #endif
+          time_step[nts].gamma_dep += pkt_ptr->e_cmf;
+        }
+        break;
+
+      case TYPE_RPKT:
+        //printout("r-pkt propagation\n");
+        do_rpkt(pkt_ptr, t2);
+  //       if (modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
+  //         t_change_type = do_rpkt_thickcell( pkt_ptr, t_current, t2);
+  //       else
+  //         t_change_type = do_rpkt( pkt_ptr, t_current, t2);
+
+        if (pkt_ptr->type == TYPE_ESCAPE)
+        {
+          #ifdef _OPENMP
+            #pragma omp atomic
+          #endif
+          time_step[nts].cmf_lum += pkt_ptr->e_cmf;
+        }
+        break;
+
+      case TYPE_NTLEPTON:
+        do_ntlepton(pkt_ptr);
+        break;
+
+      case TYPE_KPKT:
+      case TYPE_PRE_KPKT:
+      case TYPE_GAMMA_KPKT:
+        /*It's a k-packet - convert to r-packet (low freq).*/
+        //printout("k-packet propagation\n");
+
+        //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
+        if (pkt_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
+        {
+          do_kpkt_bb(pkt_ptr);
+        }
+        else if (pkt_type == TYPE_KPKT)
+        {
+          do_kpkt(pkt_ptr, t2, nts);
+        }
+        else
+        {
+          printout("kpkt not of type TYPE_KPKT or TYPE_PRE_KPKT\n");
+          abort();
+          //t_change_type = do_kpkt_ffonly(pkt_ptr, t_current, t2);
+        }
+        break;
+
+      case TYPE_MA:
+        do_macroatom(pkt_ptr, nts);
+        break;
+
+      default:
+        printout("packet_prop: Unknown packet type %d. Abort.\n", pkt_ptr->type);
+        abort();
+    }
+  }
+  assert(pkt_ptr->type == TYPE_ESCAPE || pkt_ptr->prop_time == t2);
 }
 
 
@@ -281,37 +303,7 @@ void update_packets(const int nts, PKT *pkt)
 
       while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
       {
-        switch (pkt_ptr->type)
-        {
-          case TYPE_56NI_PELLET:
-          case TYPE_56CO_PELLET:
-          case TYPE_57NI_PELLET:
-          case TYPE_57CO_PELLET:
-          case TYPE_48CR_PELLET:
-          case TYPE_48V_PELLET:
-            // decay to gamma ray
-            update_pellet(pkt_ptr, false, false, nts, ts + tw);
-            break;
-
-          case TYPE_52FE_PELLET:
-          case TYPE_52MN_PELLET:
-            // convert to kpkts
-            update_pellet(pkt_ptr, true, false, nts, ts + tw);
-            break;
-
-          case TYPE_57NI_POSITRON_PELLET:
-          case TYPE_56CO_POSITRON_PELLET:
-            // convert to to non-thermal leptons
-            update_pellet(pkt_ptr, false, true, nts, ts + tw);
-            break;
-
-          case TYPE_ESCAPE:
-            break;
-
-          default:
-            packet_prop(pkt_ptr, ts + tw, nts);
-            break;
-        }
+        packet_prop(pkt_ptr, ts + tw, nts);
       }
 
       // if (debuglevel == 10 || debuglevel == 2)
