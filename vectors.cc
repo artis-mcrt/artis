@@ -129,7 +129,7 @@ void move_pkt(PKT *pkt_ptr, const double distance)
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 }

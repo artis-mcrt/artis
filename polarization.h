@@ -3,6 +3,6 @@
 
 #include "types.h"
 
-void escat_rpkt(PKT *pkt_ptr, double t_current);
+void escat_rpkt(PKT *pkt_ptr);
 
 #endif //POLARIZATION_H
