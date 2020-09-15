@@ -36,6 +36,13 @@ static void packet_prop(PKT *const pkt_ptr, const double t1, const double t2, co
         changing to something else. If the packet does change it
         returns the time of change and sets everything for the
         new packet.*/
+        if (pkt_ptr->type != TYPE_GAMMA && pkt_ptr->type != TYPE_ESCAPE)
+        {
+          #ifdef _OPENMP
+            #pragma omp atomic
+          #endif
+          time_step[nts].gamma_dep += pkt_ptr->e_cmf;
+        }
         break;
 
       case TYPE_RPKT:
