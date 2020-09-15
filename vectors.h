@@ -9,7 +9,7 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
 double doppler(const double dir1[3], const double vel[3]);
 void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
 void get_rand_isotropic_unitvec(double vecout[3]);
-void move_pkt(PKT *pkt_ptr, double distance, double time);
+void move_pkt(PKT *pkt_ptr, double distance);
 
 // #define vec_len(x)   (cblas_dnrm2(3, x, 1))
 inline double vec_len(const double x[3])

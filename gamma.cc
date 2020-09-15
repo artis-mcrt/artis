@@ -612,7 +612,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
   if ((sdist < tdist) && (sdist < edist))
   {
     sdist = sdist / 2.;
-    move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, sdist);
 
     // Move it into the new cell.
     if (kap_tot > 0)
@@ -627,12 +627,12 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       if (do_rlc_est != 0)
       {
         sdist = sdist * 2.;
-        rlc_emiss_gamma(pkt_ptr, sdist, pkt_ptr->prop_time);
+        rlc_emiss_gamma(pkt_ptr, sdist);
         sdist = sdist / 2.;
       }
     }
 
-    move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, sdist);
     sdist = sdist * 2.;
     if (snext != pkt_ptr->where)
     {
@@ -643,7 +643,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
   {
     // Doesn't reach boundary.
     tdist = tdist / 2.;
-    move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, tdist);
 
     if (kap_tot > 0)
     {
@@ -657,12 +657,12 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       if (do_rlc_est != 0)
       {
         tdist = tdist * 2.;
-        rlc_emiss_gamma(pkt_ptr, tdist, pkt_ptr->prop_time);
+        rlc_emiss_gamma(pkt_ptr, tdist);
         tdist = tdist / 2.;
       }
     }
     pkt_ptr->prop_time = t2;
-    move_pkt(pkt_ptr, tdist, t2);
+    move_pkt(pkt_ptr, tdist);
     pkt_ptr->prop_time = t2;
     tdist = tdist * 2.;
     end_packet = true;
@@ -670,7 +670,7 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
   else if ((edist < sdist) && (edist < tdist))
   {
     edist = edist / 2.;
-    move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, edist);
     if (kap_tot > 0)
     {
       if (do_comp_est)
@@ -683,11 +683,11 @@ double do_gamma(PKT *pkt_ptr, double t1, double t2)
       if (do_rlc_est != 0)
       {
         edist = edist * 2.;
-        rlc_emiss_gamma(pkt_ptr, edist, pkt_ptr->prop_time);
+        rlc_emiss_gamma(pkt_ptr, edist);
         edist = edist / 2.;
       }
     }
-    move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+    move_pkt(pkt_ptr, edist);
     edist = edist * 2.;
 
     // event occurs. Choose which event and call the appropriate subroutine.
