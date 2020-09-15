@@ -115,6 +115,7 @@ static double get_shellcrossdist(
 double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
+  assert(tstart == pkt_ptr->prop_time);
   //double close, close_try;
 
   /** There are six possible boundary crossings. Each of the three
@@ -394,7 +395,6 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
     /// as we do it on the rpkts way through a cell
     //if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
-    //if (pkt_ptr->type == TYPE_RPKT) calculate_kappa_rpkt_cont(pkt_ptr,pkt_ptr->prop_time);
 
     /// check for empty cells
     if (mgi != MMODELGRID)
@@ -423,7 +423,7 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
         /// This only needs to be done for non-grey cells
         if (modelgrid[mgi].thick != 1)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr, pkt_ptr->prop_time, mgi);
+          calculate_kappa_rpkt_cont(pkt_ptr, mgi);
         }
       }
     }
