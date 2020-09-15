@@ -79,11 +79,10 @@ vec_copy(double destination[3], const double source[3])
   cblas_dcopy(3, source, 1, destination, 1);
 }
 
-inline double doppler_packetpos(const PKT *const pkt_ptr, const double t)
+inline double doppler_packetpos(const PKT *const pkt_ptr)
 {
-  assert(pkt_ptr->prop_time == t);
   double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, t); // homologous flow velocity
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time); // homologous flow velocity
   const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
   return dopplerfactor;
 }

@@ -263,7 +263,7 @@ void pellet_decay(const int nts, PKT *pkt_ptr)
   // that it's now a gamma ray.
 
   pkt_ptr->prop_time = pkt_ptr->tdecay;
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -329,7 +329,7 @@ static double sig_comp(const PKT *pkt_ptr)
 
   // Now need to convert between frames.
 
-  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
+  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr);
 
   return sigma_rf;
 }
@@ -511,7 +511,7 @@ static void compton_scatter(PKT *pkt_ptr)
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
-    const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
+    const double dopplerfactor = doppler_packetpos(pkt_ptr);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 

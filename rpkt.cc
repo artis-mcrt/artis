@@ -361,7 +361,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     #endif
 
     //pkt_ptr->nu_cmf = 3.7474058e+14;
-    escat_rpkt(pkt_ptr, pkt_ptr->prop_time);
+    escat_rpkt(pkt_ptr);
     /// Electron scattering does not modify the last emission flag
     //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
     /// but it updates the last emission position
@@ -925,7 +925,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
       /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
       /// Get distance to the next physical event in this case only electron scattering
       //kappa = SIGMA_T*get_nne(mgi);
-      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
+      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr);
       const double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
       find_nextline = true;
@@ -1088,7 +1088,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
   vec_copy(vpkt.pos, startpos);
 
   vpkt.prop_time = tstart;
-  const double dopplerfactor = doppler_packetpos(&vpkt, tstart);
+  const double dopplerfactor = doppler_packetpos(&vpkt);
   vpkt.nu_rf = vpkt.nu_cmf / dopplerfactor;
 
   double t_future = tstart;
@@ -1283,7 +1283,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
   #endif
 
   assert(pkt_ptr->prop_time == t_current);
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -1561,8 +1561,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current,
     }
 
     // convert between frames.
-    assert(pkt_ptr->prop_time == t_current);
-    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+    const double dopplerfactor = doppler_packetpos(pkt_ptr);
     sigma *= dopplerfactor;
     kappa_ff *= dopplerfactor;
     kappa_bf *= dopplerfactor;
@@ -1836,8 +1835,7 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
         }
 
         /// Now need to convert between frames.
-        assert(pkt_ptr->prop_time == t_current);
-        const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+        const double dopplerfactor = doppler_packetpos(pkt_ptr);
         sigma = sigma * dopplerfactor;
         kappa_ff = kappa_ff * dopplerfactor;
         kappa_bf = kappa_bf * dopplerfactor;

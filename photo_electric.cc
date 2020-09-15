@@ -46,7 +46,7 @@ double sig_photo_electric(const PKT *pkt_ptr)
 
   /* Now need to convert between frames. */
 
-  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
+  const double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr);
   return sigma_rf;
 }
 
@@ -117,7 +117,7 @@ double sig_pair_prod(const PKT *pkt_ptr)
 
   // Now need to convert between frames.
 
-  double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
+  double sigma_rf = sigma_cmf * doppler_packetpos(pkt_ptr);
 
   if (sigma_rf < 0)
   {
@@ -178,7 +178,7 @@ void pair_prod(PKT *pkt_ptr)
     pkt_ptr->prop_time = pkt_ptr->tdecay;
 
     // possible bug: should this be prop_time instead of tdecay?
-    const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->tdecay);
+    const double dopplerfactor = doppler_packetpos(pkt_ptr);
     pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
     pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
