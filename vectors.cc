@@ -120,6 +120,7 @@ void move_pkt(PKT *pkt_ptr, const double distance, const double time)
 /// dir vector). The distance moved is in the rest frame. Time must be the
 /// time at the end of distance travelled.
 {
+  assert(pkt_ptr->prop_time == time);
   pkt_ptr->prop_time += distance / CLIGHT_PROP;
   /// First update pos.
   assert(distance >= 0);
@@ -130,7 +131,7 @@ void move_pkt(PKT *pkt_ptr, const double distance, const double time)
 
   /// During motion, rest frame energy and frequency are conserved.
   /// But need to update the co-moving ones.
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, time);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr, pkt_ptr->prop_time);
   pkt_ptr->nu_cmf = pkt_ptr->nu_rf * dopplerfactor;
   pkt_ptr->e_cmf = pkt_ptr->e_rf * dopplerfactor;
 }

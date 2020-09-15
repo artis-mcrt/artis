@@ -210,7 +210,9 @@ static double get_event(
           tau += tau_cont + tau_line;
           //dummypkt_ptr->next_trans += 1;
           t_current += ldist / CLIGHT_PROP;
+          dummypkt_ptr->prop_time = t_current;
           move_pkt(dummypkt_ptr, ldist, t_current);
+          dummypkt_ptr->prop_time = t_current;
           radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           #ifdef DEBUG_ON
@@ -248,7 +250,9 @@ static double get_event(
           else if (DETAILED_LINE_ESTIMATORS_ON)
           {
             t_current += ldist / CLIGHT_PROP;
+            dummypkt_ptr->prop_time = t_current;
             move_pkt(dummypkt_ptr, ldist, t_current);
+            dummypkt_ptr->prop_time = t_current;
             radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
 
@@ -999,6 +1003,7 @@ double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
         rlc_emiss_rpkt(pkt_ptr, tdist, pkt_ptr->prop_time);
         tdist = tdist / 2.;
       }
+      pkt_ptr->prop_time = t2;
       move_pkt(pkt_ptr, tdist, t2);
       pkt_ptr->prop_time = t2;
       tdist = tdist * 2.;
@@ -1082,6 +1087,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
   vec_copy(vpkt.dir, dirvec);
   vec_copy(vpkt.pos, startpos);
 
+  vpkt.prop_time = tstart;
   const double dopplerfactor = doppler_packetpos(&vpkt, tstart);
   vpkt.nu_rf = vpkt.nu_cmf / dopplerfactor;
 

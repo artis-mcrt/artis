@@ -12,6 +12,7 @@
 
 void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   // Subroutine to add contribution to the MC estimator for the
   // compton emissivity. Called with a packet that is about to travel a
   // distance dist in the lab frame. Time at start of distance is t_current.
@@ -122,6 +123,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 
 void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   // New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
   // emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something
   // which, when normalised by the volume and time step, will give the energy going into the .511 MeV
