@@ -17,7 +17,6 @@ static void packet_prop(PKT *const pkt_ptr, const double t2, const int nts)
 
   while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < t2)
   {
-
     /* Start by sorting out what sort of packet it is.*/
     //printout("start of packet_prop loop %d\n", pkt_ptr->type );
     const int pkt_type = pkt_ptr->type; // avoid dereferencing multiple times
@@ -150,7 +149,6 @@ static void update_pellet(
       pellet_decay(nts, pkt_ptr);
       //printout("pellet to photon packet and propagation by packet_prop\n");
     }
-    packet_prop(pkt_ptr, ts + tw, nts);
   }
   else if ((tdecay > 0) && (nts == 0))
   {
@@ -169,7 +167,6 @@ static void update_pellet(
 
     //printout("already decayed packets and propagation by packet_prop\n");
     pkt_ptr->prop_time = tmin;
-    packet_prop(pkt_ptr, ts + tw, nts);
   }
   else
   {
@@ -258,9 +255,6 @@ void update_packets(const int nts, PKT *pkt)
       // }
       //pkt_ptr->timestep = nts;
 
-//        if (pkt_ptr->number == debug_packet) debuglevel = 2;
-//        else debuglevel = 4;
-      //if (n % 10000 == 0) debuglevel = 2;
 
       if (debuglevel == 2) printout("[debug] update_packets: updating packet %d for timestep %d __________________________\n",n,nts);
 
@@ -269,7 +263,6 @@ void update_packets(const int nts, PKT *pkt)
       /// for non empty cells update the global available level populations and cooling terms
       if (mgi != MMODELGRID)
       {
-        //printout("thread%d _ pkt %d in cell %d with density %g\n",tid,n,pkt_ptr->where,cell[pkt_ptr->where].rho);
         /// Reset cellhistory if packet starts up in another than the last active cell
         if (cellhistory[tid].cellnumber != mgi)
         {
@@ -289,45 +282,39 @@ void update_packets(const int nts, PKT *pkt)
       //printout("[debug] update_packets: target position of homologous flow (%g, %g, %g)\n",pkt_ptr->pos[0]*(ts + tw)/ts,pkt_ptr->pos[1]*(ts + tw)/ts,pkt_ptr->pos[2]*(ts + tw)/ts);
       //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
 
-      switch (pkt_ptr->type)
+      while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
       {
-        case TYPE_56NI_PELLET:
-        case TYPE_56CO_PELLET:
-        case TYPE_57NI_PELLET:
-        case TYPE_57CO_PELLET:
-        case TYPE_48CR_PELLET:
-        case TYPE_48V_PELLET:
-          // decay to gamma ray
-          update_pellet(pkt_ptr, false, false, nts, ts, tw);
-          break;
+        switch (pkt_ptr->type)
+        {
+          case TYPE_56NI_PELLET:
+          case TYPE_56CO_PELLET:
+          case TYPE_57NI_PELLET:
+          case TYPE_57CO_PELLET:
+          case TYPE_48CR_PELLET:
+          case TYPE_48V_PELLET:
+            // decay to gamma ray
+            update_pellet(pkt_ptr, false, false, nts, ts, tw);
+            break;
 
-        case TYPE_52FE_PELLET:
-        case TYPE_52MN_PELLET:
-          // convert to kpkts
-          update_pellet(pkt_ptr, true, false, nts, ts, tw);
-          break;
+          case TYPE_52FE_PELLET:
+          case TYPE_52MN_PELLET:
+            // convert to kpkts
+            update_pellet(pkt_ptr, true, false, nts, ts, tw);
+            break;
 
-        case TYPE_57NI_POSITRON_PELLET:
-        case TYPE_56CO_POSITRON_PELLET:
-          // convert to to non-thermal leptons
-          update_pellet(pkt_ptr, false, true, nts, ts, tw);
-          break;
+          case TYPE_57NI_POSITRON_PELLET:
+          case TYPE_56CO_POSITRON_PELLET:
+            // convert to to non-thermal leptons
+            update_pellet(pkt_ptr, false, true, nts, ts, tw);
+            break;
 
-        case TYPE_GAMMA:
-        case TYPE_RPKT:
-        case TYPE_KPKT:
-          /**Stuff for processing photons. */
-          //printout("further propagate a photon packet via packet_prop\n");
-          assert(ts == pkt_ptr->prop_time);
-          packet_prop(pkt_ptr, ts + tw, nts);
-          break;
+          case TYPE_ESCAPE:
+            break;
 
-        case TYPE_ESCAPE:
-          break;
-
-        default:
-          printout("update_packets: Unknown packet type %d for pkt number %d. Abort.\n", pkt_ptr->type, n);
-          abort();
+          default:
+            packet_prop(pkt_ptr, ts + tw, nts);
+            break;
+        }
       }
 
       // if (debuglevel == 10 || debuglevel == 2)
