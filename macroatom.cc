@@ -230,10 +230,8 @@ static void do_macroatom_raddeexcitation(
   emitt_rpkt(pkt_ptr);
 
   if (linelistindex == activatingline)
-    resonancescatterings++;
-  else
   {
-    calculate_kappa_rpkt_cont(pkt_ptr, modelgridindex);
+    resonancescatterings++;
   }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
@@ -337,8 +335,6 @@ static void do_macroatom_radrecomb(
   increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   #endif
 
-  calculate_kappa_rpkt_cont(pkt_ptr, modelgridindex);
-
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
   pkt_ptr->emissiontype = get_continuumindex(element, *ion, lower, upperionlevel);
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
@@ -401,11 +397,11 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
   /// not sure whether this reduces the number of calculations, as number of grid cells
   /// is much larger than number of pellets (next question: connection to number of
   /// photons)
-  const int element = mastate[tid].element;
-  int ion = mastate[tid].ion;
-  int level = mastate[tid].level;
+  const int element = pkt_ptr->mastate.element;
+  int ion = pkt_ptr->mastate.ion;
+  int level = pkt_ptr->mastate.level;
 
-  const int activatingline = mastate[tid].activatingline;
+  const int activatingline = pkt_ptr->mastate.activatingline;
   if (pkt_ptr->absorptiontype > 0 && activatingline > 0 && activatingline != pkt_ptr->absorptiontype)
   {
     printout("error: mismatched absorptiontype %d != activatingline = %d pkt last_event %d emissiontype %d\n",
@@ -463,6 +459,10 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       if (debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
     #endif
 
+    if (!(cellhistory[tid].cellnumber == modelgridindex))
+    {
+      printout("cellhistory[tid].cellnumber %d modelgridindex %d\n", cellhistory[tid].cellnumber, modelgridindex);
+    }
     assert(cellhistory[tid].cellnumber == modelgridindex);
 
     double *processrates = cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
@@ -1066,8 +1066,8 @@ double rad_excitation_ratecoeff(
     {
       double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
       //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
-      //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,mastate[tid].nnlevel);
-      //R = (B_lu*mastate[tid].nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
+      //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,pkt_ptr->mastate.nnlevel);
+      //R = (B_lu*pkt_ptr->mastate.nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
 
       const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
 
@@ -1342,7 +1342,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
       //printout("[debug] col_exc: g_bar %g, fac1 %g, test %g, %g, %g, %g\n",g_bar,fac1,test,0.276 * exp(fac1),-0.5772156649 - log(fac1),0.276 * exp(fac1) * (-0.5772156649 - log(fac1)));
-    //  printout("[debug] col_exc: get_coll_str(lineindex) %g statw_upper(lineindex) %g mastate[tid].statweight %g\n", get_coll_str(lineindex),statw_upper(lineindex),mastate[tid].statweight);
+    //  printout("[debug] col_exc: get_coll_str(lineindex) %g statw_upper(lineindex) %g pkt_ptr->mastate.statweight %g\n", get_coll_str(lineindex),statw_upper(lineindex),pkt_ptr->mastate.statweight);
     //  abort();
     //}
   #endif

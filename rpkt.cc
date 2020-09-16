@@ -228,10 +228,10 @@ static double get_event(
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
           #endif
-          mastate[tid].element = element;
-          mastate[tid].ion     = ion;
-          mastate[tid].level   = upper;  ///if the MA will be activated it must be in the transitions upper level
-          mastate[tid].activatingline = lineindex;
+          pkt_ptr->mastate.element = element;
+          pkt_ptr->mastate.ion     = ion;
+          pkt_ptr->mastate.level   = upper;  ///if the MA will be activated it must be in the transitions upper level
+          pkt_ptr->mastate.activatingline = lineindex;
 
           edist = dist + ldist;
           if (edist > abort_dist)
@@ -491,12 +491,12 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
           #ifndef FORCE_LTE
             //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
           #endif
-          mastate[tid].element = element;
-          mastate[tid].ion     = ion + 1;
+          pkt_ptr->mastate.element = element;
+          pkt_ptr->mastate.ion     = ion + 1;
           const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-          mastate[tid].level   = upper;
-          // mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
-          mastate[tid].activatingline = -99;
+          pkt_ptr->mastate.level   = upper;
+          // pkt_ptr->mastate.nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
+          pkt_ptr->mastate.activatingline = -99;
           //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         }
         /// or to the thermal pool
@@ -559,10 +559,10 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
         #ifndef FORCE_LTE
           //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         #endif
-        mastate[tid].element = element;
-        mastate[tid].ion     = ion;
-        mastate[tid].level   = level;
-        mastate[tid].activatingline = -99;
+        pkt_ptr->mastate.element = element;
+        pkt_ptr->mastate.ion     = ion;
+        pkt_ptr->mastate.level   = level;
+        pkt_ptr->mastate.activatingline = -99;
         //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         return;
       }
@@ -593,7 +593,7 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
     pkt_ptr->last_event = 1;
   #endif
 
-  pkt_ptr->absorptiontype = mastate[tid].activatingline;
+  pkt_ptr->absorptiontype = pkt_ptr->mastate.activatingline;
   pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
   pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
   pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
@@ -601,8 +601,8 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
   pkt_ptr->type = TYPE_MA;
 
   #if (TRACK_ION_STATS)
-  const int element = mastate[tid].element;
-  const int ion = mastate[tid].ion;
+  const int element = pkt_ptr->mastate.element;
+  const int ion = pkt_ptr->mastate.ion;
   increment_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
 
   const int et = pkt_ptr->emissiontype;
@@ -623,9 +623,9 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
                                                          /// reduction this could be extended to all threads. However, I'm not
                                                          /// sure if this is worth the additional computational expenses.
   #endif
-  //mastate[tid].element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
-  //mastate[tid].ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
-  //mastate[tid].level   = pkt_ptr->nextrans_uppper;
+  //pkt_ptr->mastate.element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
+  //pkt_ptr->mastate.ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
+  //pkt_ptr->mastate.level   = pkt_ptr->nextrans_uppper;
 }
 
 
@@ -715,10 +715,10 @@ static double closest_transition_empty(PKT *pkt_ptr)
   /// to the macro atoms state variables. This has no influence until
   /// the macro atom becomes activated by rpkt_event.
   const double nu_trans = linelist[match].nu;
-  //mastate[tid].element = linelist[match].elementindex;
-  //mastate[tid].ion     = linelist[match].ionindex;
-  //mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
-  //mastate[tid].activatedfromlevel   = linelist[match].lowerlevelindex;  ///helper variable for the transitions lower level
+  //pkt_ptr->mastate.element = linelist[match].elementindex;
+  //pkt_ptr->mastate.ion     = linelist[match].ionindex;
+  //pkt_ptr->mastate.level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
+  //pkt_ptr->mastate.activatedfromlevel   = linelist[match].lowerlevelindex;  ///helper variable for the transitions lower level
 
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
   /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
@@ -806,11 +806,13 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
 }
 
 
-void do_rpkt(PKT *pkt_ptr, const double t2)
+bool do_rpkt(PKT *pkt_ptr, const double t2)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
+// return value - true if only a cell crossing but not mgi change, false otherwise
 {
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
+  const int oldmgi = mgi;
 
   bool end_packet = false; ///means "keep working"
 
@@ -996,6 +998,8 @@ void do_rpkt(PKT *pkt_ptr, const double t2)
       /// find the next possible line interaction.
       if (find_nextline)
         closest_transition_empty(pkt_ptr);
+
+      return false;
     }
     else if ((edist < sdist) && (edist < tdist))
     {
@@ -1042,6 +1046,9 @@ void do_rpkt(PKT *pkt_ptr, const double t2)
       abort();
     }
   }
+
+  // send continue flag if still and RPKT and no model grid cell change occurs
+  return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
 }
 
 
@@ -1306,6 +1313,10 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
         //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1 - exp(-HOVERKB*nu/T_e));
         /// heating without level dependence
         //kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
+        if (!isfinite(kappa_ff))
+        {
+          printout("kappa_ff %g nne %g T_e %g mgi %d element %d ion %d nnion %g\n", kappa_ff, nne, T_e, modelgridindex, element, ion, nnion);
+        }
         assert(isfinite(kappa_ff));
       }
     }
@@ -1464,6 +1475,10 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 
 void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const int modelgridindex)
 {
+  const int cellindex = pkt_ptr->where;
+  const int pkt_mgi = cell[cellindex].modelgridindex;
+  assert(modelgridindex == pkt_mgi);
+  assert(modelgridindex != MMODELGRID);
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
   if ((modelgridindex == kappa_rpkt_cont[tid].modelgridindex) && (!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))

@@ -17,7 +17,7 @@ static void update_pellet(
   // decays in this time step and if it does handle that. (b) if it doesn't decay in
   // this time step then just move the packet along with the matter for the
   // start of the next time step.
-
+  assert(pkt_ptr->prop_time < t2);
   assert(!decay_to_kpkt || !decay_to_ntlepton); // can't decay to both!
   const double ts = pkt_ptr->prop_time;
 
@@ -134,7 +134,10 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
       break;
 
     case TYPE_RPKT:
-      do_rpkt(pkt_ptr, t2);
+      while (do_rpkt(pkt_ptr, t2))
+      {
+        ;
+      }
 
       if (pkt_ptr->type == TYPE_ESCAPE)
       {
@@ -203,13 +206,15 @@ static int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
   const int a1_where = ((PKT *) p1)->where;
   const int a2_where = ((PKT *) p2)->where;
 
-  const double rho_diff = get_rho(cell[a1_where].modelgridindex) - get_rho(cell[a2_where].modelgridindex);
+  const int mgi1 = cell[a1_where].modelgridindex;
+  const int mgi2 = cell[a2_where].modelgridindex;
+  const double rho_diff = get_rho(mgi1) - get_rho(mgi2);
   if (rho_diff < 0)
     return 1;
   else if (rho_diff > 0)
     return -1;
   else
-    return 0;
+    return (mgi1 - mgi2);
 }
 
 
@@ -226,15 +231,32 @@ void update_packets(const int nts, PKT *pkt)
 
   //qsort(pkt,npkts,sizeof(PKT),compare_packets_bymodelgridposition);
   /// For 2D and 3D models sorting by the modelgrid cell's density should be most efficient
-  qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
 
   printout("start of parallel update_packets loop %ld\n", time(NULL));
   /// Initialise the OpenMP reduction target to zero
+  bool timestepcomplete = false;
+  int passnumber = 0;
   #ifdef _OPENMP
     #pragma omp parallel
     //copyin(debuglevel,nuJ,J)
   #endif
+  while (!timestepcomplete)
   {
+    timestepcomplete = true;
+
+    const bool photonpkt_pass = (passnumber % 2 == 1);
+
+    // after a !photonpkt_pass, packets have not propagated and changed cells
+    printout("sorting...");
+    if (passnumber == 0 || !photonpkt_pass)
+    {
+      qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
+    }
+    printout("done\n");
+
+    int count_photpktupdates = 0;
+    int count_otherupdates = 0;
+
     // time_t time_of_last_packet_printout = 0;
     #ifdef _OPENMP
     #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_ntcollexc,ma_stat_activation_ntcollion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_activation_fb,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,nt_stat_from_gamma,k_stat_from_earlierdecay)
@@ -242,14 +264,13 @@ void update_packets(const int nts, PKT *pkt)
     for (int n = 0; n < npkts; n++)
     {
       // if ((time(NULL) - time_of_last_packet_printout > 1) || n == npkts - 1)
-      if ((n % 10000 == 0) || n == npkts - 1)
-      {
-        // time_of_last_packet_printout = time(NULL);
-        printout("[debug] update_packets: updating packet %d for timestep %d at time %ld...\n", n, nts, time(NULL));
-      }
+      // if ((n % 10000 == 0) || n == npkts - 1)
+      // {
+      //   // time_of_last_packet_printout = time(NULL);
+      //   printout("[debug] update_packets pass %d: updating packet %d for timestep %d at time %ld...\n", passnumber, n, nts, time(NULL));
+      // }
 
       PKT *pkt_ptr = &pkt[n];
-      pkt_ptr->interactions = 0;
 
       // if (pkt_ptr->type == TYPE_ESCAPE)
       // {
@@ -262,46 +283,62 @@ void update_packets(const int nts, PKT *pkt)
       // }
       //pkt_ptr->timestep = nts;
 
-
-      if (debuglevel == 2) printout("[debug] update_packets: updating packet %d for timestep %d __________________________\n",n,nts);
-
-      const int cellindex = pkt_ptr->where;
-      const int mgi = cell[cellindex].modelgridindex;
-      /// for non empty cells update the global available level populations and cooling terms
-      if (mgi != MMODELGRID)
+      if (passnumber == 0)
       {
+        pkt_ptr->interactions = 0;
+        pkt_ptr->scat_count = 0;
+      }
+
+      if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
+      {
+        const int cellindex = pkt_ptr->where;
+        const int mgi = cell[cellindex].modelgridindex;
+        /// for non empty cells update the global available level populations and cooling terms
         /// Reset cellhistory if packet starts up in another than the last active cell
-        if (cellhistory[tid].cellnumber != mgi)
+        if (mgi != MMODELGRID && cellhistory[tid].cellnumber != mgi)
         {
+          printout("cellhistory_reset(mgi %d)...", mgi);
           updatecellcounter++;
-
           cellhistory_reset(mgi, false);
+          printout("done\n");
         }
 
-        /// rpkt's continuum opacity depends on nu, therefore it must be calculated by packet
-        if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1)
+        timestepcomplete = false;
+        if (!photonpkt_pass && pkt_ptr->type != TYPE_RPKT && pkt_ptr->type != TYPE_GAMMA)
         {
-          calculate_kappa_rpkt_cont(pkt_ptr, mgi);
+          bool workedonpacket = false;
+          while (pkt_ptr->type != TYPE_RPKT && pkt_ptr->type != TYPE_GAMMA && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type != TYPE_ESCAPE)
+          {
+            workedonpacket = true;
+            do_packet(pkt_ptr, ts + tw, nts);
+          }
+
+          count_otherupdates += workedonpacket ? 1 : 0;
+        }
+        else if (photonpkt_pass && (pkt_ptr->type == TYPE_RPKT || pkt_ptr->type == TYPE_GAMMA))
+        {
+          count_photpktupdates++;
+          if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1 && mgi != MMODELGRID)
+          {
+            // printout("calculate_kappa_rpkt_cont(mgi %d)...", mgi);
+            calculate_kappa_rpkt_cont(pkt_ptr, mgi);
+            // printout("done\n");
+          }
+          enum packet_type oldtype = pkt_ptr->type;
+          int newmgi = mgi;
+          while ((newmgi == mgi || newmgi == MMODELGRID) && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type == oldtype)
+          {
+            do_packet(pkt_ptr, ts + tw, nts);
+            const int newcellnum = pkt_ptr->where;
+            newmgi = cell[newcellnum].modelgridindex;
+          }
         }
       }
-
-      //printout("[debug] update_packets: current position of packet %d (%g, %g, %g)\n",n,pkt_ptr->pos[0],pkt_ptr->pos[1],pkt_ptr->pos[2]);
-      //printout("[debug] update_packets: target position of homologous flow (%g, %g, %g)\n",pkt_ptr->pos[0]*(ts + tw)/ts,pkt_ptr->pos[1]*(ts + tw)/ts,pkt_ptr->pos[2]*(ts + tw)/ts);
-      //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
-
-      pkt_ptr->scat_count = 0;
-
-      while (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
-      {
-        do_packet(pkt_ptr, ts + tw, nts);
-      }
-
-      // if (debuglevel == 10 || debuglevel == 2)
-      //   printout("[debug] update_packets: packet %d had %d interactions during timestep %d\n",
-      //            n, pkt_ptr->interactions, nts);
-
     }
-    printout("last packet updated at %ld\n", time(NULL));
+    printout("[debug] update_packets pass %d: updated %d photon packets and %d other packets at %ld\n",
+             passnumber, count_photpktupdates, count_otherupdates, time(NULL));
+
+    passnumber++;
   }
 
   printout("end of update_packets parallel for loop %ld\n", time(NULL));
