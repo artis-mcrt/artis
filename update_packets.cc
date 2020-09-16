@@ -9,6 +9,7 @@
 #include "rpkt.h"
 #include "vectors.h"
 
+#include <algorithm>
 
 static void update_pellet(
   PKT *pkt_ptr, const bool decay_to_kpkt, const bool decay_to_ntlepton, const int nts, const double t2)
@@ -217,6 +218,32 @@ static int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
     return (mgi1 - mgi2);
 }
 
+static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
+{
+  // true if p1 goes before the element pointed by p2
+
+  // move escaped packets to the end of the list for better performance
+  const bool esc1 = (p1.type == TYPE_ESCAPE);
+  const bool esc2 = (p2.type == TYPE_ESCAPE);
+  if (!esc1 && esc2)
+    return true;
+  else if (esc1 && !esc2)
+    return false;
+
+  // for both non-escaped packets, order by descending cell density
+  const int a1_where = p1.where;
+  const int a2_where = p2.where;
+
+  const int mgi1 = cell[a1_where].modelgridindex;
+  const int mgi2 = cell[a2_where].modelgridindex;
+  if (get_rho(mgi1) > get_rho(mgi2))
+    return true;
+  else if (get_rho(mgi1) < get_rho(mgi2))
+    return false;
+  else
+    return (mgi1 < mgi2);
+}
+
 
 void update_packets(const int nts, PKT *pkt)
 // Subroutine to move and update packets during the current timestep (nts)
@@ -228,9 +255,6 @@ void update_packets(const int nts, PKT *pkt)
 
   const double ts = time_step[nts].start;
   const double tw = time_step[nts].width;
-
-  //qsort(pkt,npkts,sizeof(PKT),compare_packets_bymodelgridposition);
-  /// For 2D and 3D models sorting by the modelgrid cell's density should be most efficient
 
   printout("start of parallel update_packets loop %ld\n", time(NULL));
   /// Initialise the OpenMP reduction target to zero
@@ -251,6 +275,7 @@ void update_packets(const int nts, PKT *pkt)
     if (passnumber == 0 || !photonpkt_pass)
     {
       qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
+      // std::sort(pkt, pkt + npkts, std_compare_packets_bymodelgriddensity);
     }
     printout("done\n");
 
