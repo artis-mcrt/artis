@@ -357,8 +357,6 @@ double do_kpkt_bb(PKT *pkt_ptr)
   if (debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
-  if (modelgrid[modelgridindex].thick != 1)
-    calculate_kappa_rpkt_cont(pkt_ptr, modelgridindex);
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb++;
   k_stat_to_r_bb++;
@@ -552,8 +550,6 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       }
       /// and then emitt the packet randomly in the comoving frame
       emitt_rpkt(pkt_ptr);
-      if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
-      calculate_kappa_rpkt_cont(pkt_ptr, modelgridindex);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_ff++;
       k_stat_to_r_ff++;
@@ -614,7 +610,6 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       increment_ion_stats(modelgridindex, element, lowerion + 1, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
       #endif
 
-      calculate_kappa_rpkt_cont(pkt_ptr, modelgridindex);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_fb++;
       k_stat_to_r_fb++;
@@ -633,10 +628,10 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       const int element = cellhistory[tid].coolinglist[i].element;
       const int ion = cellhistory[tid].coolinglist[i].ion;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
-      mastate[tid].element = element;
-      mastate[tid].ion = ion;
-      mastate[tid].level = upper;
-      mastate[tid].activatingline = -99;
+      pkt_ptr->mastate.element = element;
+      pkt_ptr->mastate.ion = ion;
+      pkt_ptr->mastate.level = upper;
+      pkt_ptr->mastate.activatingline = -99;
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC, pkt_ptr->e_cmf);
@@ -663,10 +658,10 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       const int element = cellhistory[tid].coolinglist[i].element;
       const int ion = cellhistory[tid].coolinglist[i].ion + 1;
       const int upper = cellhistory[tid].coolinglist[i].upperlevel;
-      mastate[tid].element = element;
-      mastate[tid].ion = ion;
-      mastate[tid].level = upper;
-      mastate[tid].activatingline = -99;
+      pkt_ptr->mastate.element = element;
+      pkt_ptr->mastate.ion = ion;
+      pkt_ptr->mastate.level = upper;
+      pkt_ptr->mastate.activatingline = -99;
 
       #if (TRACK_ION_STATS)
       increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_COLLION, pkt_ptr->e_cmf);
@@ -749,9 +744,9 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
   double nu_threshold = (epsilon(element,ion+1,0) - epsilon(element,ion,level)) / H;
   nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
-  mastate[tid].element = element;
-  mastate[tid].ion = ion;
-  mastate[tid].level = level;
+  pkt_ptr->mastate.element = element;
+  pkt_ptr->mastate.ion = ion;
+  pkt_ptr->mastate.level = level;
   intparas.T = T_e;
   intparas.nu_edge = nu_threshold;   /// Global variable which passes the threshold to the integrator
   F_bfcooling.params = &intparas;

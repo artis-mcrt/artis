@@ -550,8 +550,6 @@ static void precalculate_rate_coefficient_integrals(void)
 
       gsl_error_handler_t *previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
 
-      mastate[tid].element = element;   /// Global variable which passes the current element to all subfunctions of macroatom.c
-      mastate[tid].ion = ion;   /// Global variable which passes the current ion to all subfunctions of macroatom.c
       for (int level = 0; level < nlevels; level++)
       {
         if ((level > 0) && (level % 50 == 0))
@@ -565,7 +563,6 @@ static void precalculate_rate_coefficient_integrals(void)
 
           //printout("element %d, ion %d, level %d, upperlevel %d, epsilon %g, continuum %g, nlevels %d\n",element,ion,level,upperlevel,epsilon(element,ion,level),epsilon(element,ion+1,upperlevel),nlevels);
 
-          mastate[tid].level = level;                   // Global variable which passes the current level to all subfunctions of macroatom.c
           // const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
           const double nu_threshold = E_threshold / H;
@@ -1697,11 +1694,11 @@ void check_interpolation(double T_min, double T_max)
   setvbuf(gamma_file, NULL, _IOLBF, 1);
 
   /// Works so far only for hydrogen or the first ionisation stage of any element!
-  mastate[tid].element = 0;
-  mastate[tid].ion = 0;
+  pkt_ptr->mastate.element = 0;
+  pkt_ptr->mastate.ion = 0;
   for (level = 0; level < get_nlevels(0,0); level++)
   {
-    mastate[tid].level = level;
+    pkt_ptr->mastate.level = level;
     double E_threshold = epsilon(0,1,0) - epsilon(0,0,level);
     double nu_threshold = E_threshold/H;
     intparas.nu_edge = nu_threshold;
