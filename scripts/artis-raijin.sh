@@ -6,8 +6,8 @@
 #PBS -l mem=1920GB
 #PBS -l ncpus=960
 #PBS -l wd
-#PBS -m abe
-#PBS -M luke.shingles@gmail.com
+##PBS -m abe
+##PBS -M luke.shingles@gmail.com
 
 # ncpus must be a factor of the cores per node
 # mem is total memory (all cores combined)
@@ -44,4 +44,8 @@ mkdir ${PBS_JOBID}
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
     qsub $PBS_JOBNAME
+fi
+
+if [ -f packets00_0000.out ]; then
+    qsub ./artis/scripts/exspec-gzip-gadi_raijin.sh
 fi
