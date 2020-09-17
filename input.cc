@@ -1618,7 +1618,7 @@ static void read_atomicdata(void)
       int photoiontransitions = 0;
       for (int level = 0; level < get_nlevels(element,ion); level++)
         photoiontransitions += get_nphixstargets(element,ion,level);
-      printout("[input.c]     ion_stage %d with %4d levels (%d in groundterm, %4d ionising) and %d photoionisation transitions (epsilon_ground %7.2f eV)\n",
+      printout("[input.c]     ion_stage %d with %4d levels (%d in groundterm, %4d ionising) and %6d photoionisation transitions (epsilon_ground %7.2f eV)\n",
                get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_groundterm(element, ion),
                get_ionisinglevels(element, ion), photoiontransitions, epsilon(element, ion, 0) / EV);
       includedlevels += get_nlevels(element,ion);
