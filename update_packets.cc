@@ -289,19 +289,11 @@ void update_packets(const int nts, PKT *pkt)
     int count_otherupdates = 0;
     const int updatecellcounter_beforepass = updatecellcounter;
 
-    // time_t time_of_last_packet_printout = 0;
     #ifdef _OPENMP
     #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_ntcollexc,ma_stat_activation_ntcollion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_activation_fb,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,nt_stat_from_gamma,k_stat_from_earlierdecay)
     #endif
     for (int n = 0; n < npkts; n++)
     {
-      // if ((time(NULL) - time_of_last_packet_printout > 1) || n == npkts - 1)
-      // if ((n % 10000 == 0) || n == npkts - 1)
-      // {
-      //   // time_of_last_packet_printout = time(NULL);
-      //   printout("[debug] update_packets pass %d: updating packet %d for timestep %d at time %ld...\n", passnumber, n, nts, time(NULL));
-      // }
-
       PKT *pkt_ptr = &pkt[n];
 
       // if (pkt_ptr->type == TYPE_ESCAPE)
