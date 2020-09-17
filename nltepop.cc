@@ -357,8 +357,8 @@ static void print_level_rates(
   const int selected_ionstage = get_ionstage(element, selected_ion);
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
   const double pop_selectedlevel = gsl_vector_get(popvec, selected_index);
-  printout("timestep %d cell %d Te %g nne %g NLTE level diagnostics for Z=%d ion_stage %d level %d (vector_index %d): rates into and out of this level\n",
-           timestep, modelgridindex, get_Te(modelgridindex), get_nne(modelgridindex), atomic_number, selected_ionstage, selected_level, selected_index);
+  printout("timestep %d cell %d Te %g nne %g NLTE level diagnostics for Z=%d ion_stage %d level %d rates into and out of this level\n",
+           timestep, modelgridindex, get_Te(modelgridindex), get_nne(modelgridindex), atomic_number, selected_ionstage, selected_level);
 
   const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bb, popvec);
   const double coll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bb, popvec);
