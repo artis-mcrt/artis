@@ -357,7 +357,7 @@ void update_packets(const int nts, PKT *pkt)
         }
       }
     }
-    printout("  update_packets pass %d: updated photon packets %7d other packets %7d cellhistoryresets %7d at %ld\n",
+    printout("  update_packets pass %3d: updated %7d photon packets %7d other packets %7d cellhistoryresets at %ld\n",
              passnumber, count_photpktupdates, count_otherupdates, updatecellcounter - updatecellcounter_beforepass, time(NULL));
 
     passnumber++;
