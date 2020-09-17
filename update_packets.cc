@@ -271,16 +271,23 @@ void update_packets(const int nts, PKT *pkt)
     const bool photonpkt_pass = (passnumber % 2 == 1);
 
     // after a !photonpkt_pass, packets have not propagated and changed cells
-    printout("sorting...");
     if (passnumber == 0 || !photonpkt_pass)
     {
+      const time_t sys_time_start_sort = time(NULL);
+
       qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
       // std::sort(pkt, pkt + npkts, std_compare_packets_bymodelgriddensity);
+
+      const int duration_sortpackets = time(NULL) - sys_time_start_sort;
+      if (duration_sortpackets > 1)
+      {
+        printout("sorting packets took %ds\n", duration_sortpackets);
+      }
     }
-    printout("done\n");
 
     int count_photpktupdates = 0;
     int count_otherupdates = 0;
+    const int updatecellcounter_beforepass = updatecellcounter;
 
     // time_t time_of_last_packet_printout = 0;
     #ifdef _OPENMP
@@ -322,10 +329,8 @@ void update_packets(const int nts, PKT *pkt)
         /// Reset cellhistory if packet starts up in another than the last active cell
         if (mgi != MMODELGRID && cellhistory[tid].cellnumber != mgi)
         {
-          printout("cellhistory_reset(mgi %d)...", mgi);
           updatecellcounter++;
           cellhistory_reset(mgi, false);
-          printout("done\n");
         }
 
         timestepcomplete = false;
@@ -360,8 +365,8 @@ void update_packets(const int nts, PKT *pkt)
         }
       }
     }
-    printout("[debug] update_packets pass %d: updated %d photon packets and %d other packets at %ld\n",
-             passnumber, count_photpktupdates, count_otherupdates, time(NULL));
+    printout("[debug] update_packets pass %d: updated %d photon packets and %d other packets cellhistoryresets %d at %ld\n",
+             passnumber, count_photpktupdates, count_otherupdates, updatecellcounter - updatecellcounter_beforepass, time(NULL));
 
     passnumber++;
   }
