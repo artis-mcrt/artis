@@ -214,7 +214,8 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
   if (get_rho(mgi1) == get_rho(mgi2) && (mgi1 < mgi2))
     return true;
 
-  return (p1.type > p2.type);
+  return false;
+  // return (p1.type > p2.type);
 }
 
 
