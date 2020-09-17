@@ -66,13 +66,11 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
   if (UNIFORM_PELLET_ENERGIES)
   {
-    printout("UNIFORM_PELLET_ENERGIES is true");
     pkt_ptr->tdecay = sample_decaytime(decaypath, tdecaymin, tmax);
     pkt_ptr->e_cmf = e0;
   }
   else
   {
-    printout("UNIFORM_PELLET_ENERGIES is false");
     // use uniform decay time distribution (scale the packet energies instead)
     // keeping the pellet decay rate constant will give better statistics at very late times when very little
     // energy is released
@@ -102,6 +100,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
+  printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
+
   const int pktnumberoffset = middle_iteration * npkts;
   float cont[MGRID + 1];
 
