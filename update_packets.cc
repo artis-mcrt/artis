@@ -187,47 +187,19 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
 }
 
 
-static int compare_packets_bymodelgriddensity(const void *p1, const void *p2)
-{
-  // <0 The element pointed by p1 goes before the element pointed by p2
-  // 0  The element pointed by p1 is equivalent to the element pointed by p2
-  // >0 The element pointed by p1 goes after the element pointed by p2
-
-  // move escaped packets to the end of the list for better performance
-  const bool esc1 = (((PKT *) p1)->type == TYPE_ESCAPE);
-  const bool esc2 = (((PKT *) p2)->type == TYPE_ESCAPE);
-  if (esc1 && !esc2)
-    return 1;
-  else if (!esc1 && esc2)
-    return -1;
-  else if (esc1 && esc2)
-    return 0;
-
-  // for both non-escaped packets, order by descending cell density
-  const int a1_where = ((PKT *) p1)->where;
-  const int a2_where = ((PKT *) p2)->where;
-
-  const int mgi1 = cell[a1_where].modelgridindex;
-  const int mgi2 = cell[a2_where].modelgridindex;
-  const double rho_diff = get_rho(mgi1) - get_rho(mgi2);
-  if (rho_diff < 0)
-    return 1;
-  else if (rho_diff > 0)
-    return -1;
-  else
-    return (mgi1 - mgi2);
-}
-
 static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
 {
-  // true if p1 goes before the element pointed by p2
+  // return true if packet p1 goes before p2
 
   // move escaped packets to the end of the list for better performance
   const bool esc1 = (p1.type == TYPE_ESCAPE);
   const bool esc2 = (p2.type == TYPE_ESCAPE);
+
   if (!esc1 && esc2)
     return true;
   else if (esc1 && !esc2)
+    return false;
+  else if (esc1 && esc2)
     return false;
 
   // for both non-escaped packets, order by descending cell density
@@ -238,10 +210,11 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
   const int mgi2 = cell[a2_where].modelgridindex;
   if (get_rho(mgi1) > get_rho(mgi2))
     return true;
-  else if (get_rho(mgi1) < get_rho(mgi2))
-    return false;
-  else
-    return (mgi1 < mgi2);
+
+  if (get_rho(mgi1) == get_rho(mgi2) && (mgi1 < mgi2))
+    return true;
+
+  return (p1.type > p2.type);
 }
 
 
@@ -275,8 +248,7 @@ void update_packets(const int nts, PKT *pkt)
     {
       const time_t sys_time_start_sort = time(NULL);
 
-      qsort(pkt, npkts, sizeof(PKT), compare_packets_bymodelgriddensity);
-      // std::sort(pkt, pkt + npkts, std_compare_packets_bymodelgriddensity);
+      std::sort(pkt, pkt + npkts, std_compare_packets_bymodelgriddensity);
 
       const int duration_sortpackets = time(NULL) - sys_time_start_sort;
       if (duration_sortpackets > 1)
@@ -357,8 +329,8 @@ void update_packets(const int nts, PKT *pkt)
         }
       }
     }
-    printout("  update_packets pass %3d: updated %7d photon packets %7d other packets %7d cellhistoryresets at %ld\n",
-             passnumber, count_photpktupdates, count_otherupdates, updatecellcounter - updatecellcounter_beforepass, time(NULL));
+    printout("  update_packets timestep %d pass %3d: updated %7d photon packets %7d other packets %7d cellhistoryresets at %ld\n",
+             nts, passnumber, count_photpktupdates, count_otherupdates, updatecellcounter - updatecellcounter_beforepass, time(NULL));
 
     passnumber++;
   }
