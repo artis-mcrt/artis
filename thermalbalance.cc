@@ -238,7 +238,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
   //int nlevels_lowerion = 0;
   for (int element = 0; element < nelements; element++)
   {
-    // mastate[tid].element = element;
+    // pkt_ptr->mastate.element = element;
     const int nions = get_nions(element);
     #ifdef DIRECT_COL_HEAT
     for (int ion = 0; ion < nions; ion++)
@@ -682,18 +682,18 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //   nlevels_lowerion = 0;
 //   for (element = 0; element < nelements; element++)
 //   {
-//     mastate[tid].element = element;
+//     pkt_ptr->mastate.element = element;
 //     nions = get_nions(element);
 //     for (ion = 0; ion < nions; ion++)
 //     {
-//       mastate[tid].ion = ion;
+//       pkt_ptr->mastate.ion = ion;
 //       nlevels_currention = get_nlevels(element,ion);
 //       if (ion > 0) nlevels_lowerion = get_nlevels(element,ion-1);
 //
 // //       for (level = 0; level < nlevels_currention; level++)
 // //       {
 // //         epsilon_current = epsilon(element,ion,level);
-// //         mastate[tid].level = level;
+// //         pkt_ptr->mastate.level = level;
 // //         nnlevel = calculate_exclevelpop(cellnumber,element,ion,level);
 // //
 // //

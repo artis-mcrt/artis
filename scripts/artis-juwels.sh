@@ -4,8 +4,8 @@
 #SBATCH --time=24:00:00
 #SBATCH --partition=batch
 #SBATCH --account=hmu14
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=luke.shingles@gmail.com
+##SBATCH --mail-type=ALL
+##SBATCH --mail-user=luke.shingles@gmail.com
 
 module load Intel ParaStationMPI GSL
 
@@ -21,3 +21,6 @@ then
     sbatch $SLURM_JOB_NAME
 fi
 
+if [ -f packets00_0000.out ]; then
+    sbatch ./artis/scripts/exspec-gzip-juwels.sh
+fi

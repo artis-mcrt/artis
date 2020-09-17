@@ -186,6 +186,15 @@ enum cell_boundary {
   NONE = 107,
 };
 
+typedef struct mastate_t
+{
+  int element;              /// macro atom of type element (this is an element index)
+  int ion;                  /// in ionstage ion (this is an ion index)
+  int level;                /// and level=level (this is a level index)
+  int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
+} mastate_t;
+
+
 typedef struct packet
 {
   int where;      /// The grid cell that the packet is in.
@@ -205,6 +214,7 @@ typedef struct packet
   int emissiontype;   /// records how the packet was emitted if it is a r-pkt
   double em_pos[3];   /// Position of the packet (x,y,z).
   int em_time;
+  double prop_time; // internal clock to track how far in time the packet has been propagated
   int absorptiontype;     /// records linelistindex of the last absorption
                           /// negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
                           /// photoelectric effect of gammas (-4), pair production of gammas (-5)
@@ -226,6 +236,7 @@ typedef struct packet
   int number;     /// A unique number to identify which packet caused potential troubles.
   bool originated_from_positron; // first-non-pellet packet type was positron
   float trueemissionvelocity;
+  mastate_t mastate;
 } PKT;
 
 enum ma_action {
@@ -249,14 +260,6 @@ enum ma_action {
   MA_ACTION_INTERNALUPHIGHERNT = 8,
   MA_ACTION_COUNT = 9,
 };
-
-typedef struct mastate_t
-{
-  int element;              /// macro atom of type element (this is an element index)
-  int ion;                  /// in ionstage ion (this is an ion index)
-  int level;                /// and level=level (this is a level index)
-  int activatingline;       /// Linelistindex of the activating line for bb activated MAs, -99 else.
-} mastate_t;
 
 
 /// GRID

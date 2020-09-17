@@ -13,6 +13,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   /// n is the index of the packet. m is the index for the grid cell.
   pkt_ptr->where = cellindex;
   pkt_ptr->number = pktnumber;  ///record the packets number for debugging
+  pkt_ptr->prop_time = tmin;
   pkt_ptr->originated_from_positron = false;
 
   if (grid_type == GRID_SPHERICAL1D)
@@ -89,7 +90,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->originated_from_positron = from_positron;
 
   /// Now assign the energy to the pellet.
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, tmin);
+  pkt_ptr->prop_time = tmin;
+  const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
   pkt_ptr->trueemissiontype = -1;
 }
@@ -98,6 +100,8 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 /// Subroutine that initialises the packets if we start a new simulation.
 {
+  printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
+
   const int pktnumberoffset = middle_iteration * npkts;
   float cont[MGRID + 1];
 

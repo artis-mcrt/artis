@@ -86,7 +86,6 @@ static double get_event(
   const int modelgridindex,
   PKT *pkt_ptr,             // pointer to packet object
   int *rpkt_eventtype,
-  double t_current,         // current time
   const double tau_rnd,     // random optical depth until which the packet travels
   const double abort_dist   // maximal travel distance before packet leaves cell or time step ends
 )
@@ -101,7 +100,7 @@ static double get_event(
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
   bool endloop = false;
-  calculate_kappa_rpkt_cont(pkt_ptr, t_current, modelgridindex);
+  calculate_kappa_rpkt_cont(pkt_ptr, modelgridindex);
   const double kap_cont = kappa_rpkt_cont[tid].total;
   while (!endloop)
   {
@@ -138,7 +137,7 @@ static double get_event(
       }
       else
       {
-        ldist = CLIGHT * t_current * (dummypkt_ptr->nu_cmf / nu_trans - 1);
+        ldist = CLIGHT * dummypkt_ptr->prop_time * (dummypkt_ptr->nu_cmf / nu_trans - 1);
       }
       //fprintf(ldist_file,"%25.16e %25.16e\n",dummypkt_ptr->nu_cmf,ldist);
       if (ldist < 0.) printout("[warning] get_event: ldist < 0 %g\n",ldist);
@@ -147,11 +146,6 @@ static double get_event(
         if (debuglevel == 2) printout("[debug] get_event:     ldist %g\n",ldist);
       #endif
 
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
-      ///restore values which were changed by calculate_kappa_rpkt_cont to those set by closest_transition
-      //mastate[tid].element = element;
-      //mastate[tid].ion = ion;
-      //mastate[tid].level = upper;
       const double tau_cont = kap_cont * ldist;
 
       #ifdef DEBUG_ON
@@ -167,7 +161,7 @@ static double get_event(
         const double n_u = calculate_exclevelpop(modelgridindex, element, ion, upper);
         const double n_l = calculate_exclevelpop(modelgridindex, element, ion, lower);
 
-        double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * t_current;
+        double tau_line = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * dummypkt_ptr->prop_time;
 
         if (tau_line < 0)
         {
@@ -208,9 +202,9 @@ static double get_event(
 
           tau += tau_cont + tau_line;
           //dummypkt_ptr->next_trans += 1;
-          t_current += ldist / CLIGHT_PROP;
-          move_pkt(dummypkt_ptr, ldist, t_current);
-          radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+          dummypkt_ptr->prop_time += ldist / CLIGHT_PROP;
+          move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
+          radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           #ifdef DEBUG_ON
             if (debuglevel == 2)
@@ -234,10 +228,10 @@ static double get_event(
           #ifdef DEBUG_ON
             if (debuglevel == 2) printout("[debug] get_event:         tau_rnd - tau <= tau_cont + tau_line: bb-process occurs\n");
           #endif
-          mastate[tid].element = element;
-          mastate[tid].ion     = ion;
-          mastate[tid].level   = upper;  ///if the MA will be activated it must be in the transitions upper level
-          mastate[tid].activatingline = lineindex;
+          pkt_ptr->mastate.element = element;
+          pkt_ptr->mastate.ion     = ion;
+          pkt_ptr->mastate.level   = upper;  ///if the MA will be activated it must be in the transitions upper level
+          pkt_ptr->mastate.activatingline = lineindex;
 
           edist = dist + ldist;
           if (edist > abort_dist)
@@ -246,9 +240,9 @@ static double get_event(
           }
           else if (DETAILED_LINE_ESTIMATORS_ON)
           {
-            t_current += ldist / CLIGHT_PROP;
-            move_pkt(dummypkt_ptr, ldist, t_current);
-            radfield_increment_lineestimator(modelgridindex, lineindex, t_current * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+            dummypkt_ptr->prop_time += ldist / CLIGHT_PROP;
+            move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
+            radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
@@ -279,8 +273,6 @@ static double get_event(
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] get_event:     line interaction impossible\n");
       #endif
-      //calculate_kappa_rpkt_cont(dummypkt_ptr, t_current);
-      ///no need to restore values set by closest_transition, as nothing was set in this case
       const double tau_cont = kap_cont * (abort_dist - dist);
       //printout("nu_cmf %g, opticaldepths in ff %g, es %g\n",pkt_ptr->nu_cmf,kappa_rpkt_cont[tid].ff*(abort_dist-dist),kappa_rpkt_cont[tid].es*(abort_dist-dist));
       #ifdef DEBUG_ON
@@ -323,7 +315,7 @@ static double get_event(
 }
 
 
-static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
+static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rpkt_cont_thisthread, int modelgridindex)
 {
   const double nu = pkt_ptr->nu_cmf;
 
@@ -355,12 +347,12 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     #endif
 
     //pkt_ptr->nu_cmf = 3.7474058e+14;
-    escat_rpkt(pkt_ptr,t_current);
+    escat_rpkt(pkt_ptr);
     /// Electron scattering does not modify the last emission flag
     //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
     /// but it updates the last emission position
     vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
-    pkt_ptr->em_time = t_current;
+    pkt_ptr->em_time = pkt_ptr->prop_time;
 
     /// Set some flags
     //pkt_ptr->next_trans = 0;   ///packet's comoving frame frequency is conserved during electron scattering
@@ -390,8 +382,6 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     #endif
     pkt_ptr->absorptiontype = -2;
 
-    /// Update the bf-opacity for the packets current frequency
-    //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
     const double kappa_bf_inrest = kappa_rpkt_cont_thisthread.bf_inrest;
 
     /// Determine in which continuum the bf-absorption occurs
@@ -501,12 +491,12 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
           #ifndef FORCE_LTE
             //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
           #endif
-          mastate[tid].element = element;
-          mastate[tid].ion     = ion + 1;
+          pkt_ptr->mastate.element = element;
+          pkt_ptr->mastate.ion     = ion + 1;
           const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-          mastate[tid].level   = upper;
-          // mastate[tid].nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
-          mastate[tid].activatingline = -99;
+          pkt_ptr->mastate.level   = upper;
+          // pkt_ptr->mastate.nnlevel = calculate_exclevelpop(modelgridindex,element,ion+1,upper);
+          pkt_ptr->mastate.activatingline = -99;
           //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         }
         /// or to the thermal pool
@@ -543,8 +533,6 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
     #endif
     pkt_ptr->absorptiontype = -2;
 
-    /// Update the bf-opacity for the packets current frequency
-    //calculate_kappa_rpkt_cont(pkt_ptr, t_current);
     const double kappa_fb_inrest = kappa_rpkt_cont_thisthread.fb_inrest;
 
     /// Determine in which continuum the bf-absorption occurs
@@ -571,10 +559,10 @@ static void rpkt_event_continuum(PKT *pkt_ptr, const double t_current, rpkt_cont
         #ifndef FORCE_LTE
           //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
         #endif
-        mastate[tid].element = element;
-        mastate[tid].ion     = ion;
-        mastate[tid].level   = level;
-        mastate[tid].activatingline = -99;
+        pkt_ptr->mastate.element = element;
+        pkt_ptr->mastate.ion     = ion;
+        pkt_ptr->mastate.level   = level;
+        pkt_ptr->mastate.activatingline = -99;
         //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
         return;
       }
@@ -605,7 +593,7 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
     pkt_ptr->last_event = 1;
   #endif
 
-  pkt_ptr->absorptiontype = mastate[tid].activatingline;
+  pkt_ptr->absorptiontype = pkt_ptr->mastate.activatingline;
   pkt_ptr->absorptionfreq = pkt_ptr->nu_rf;//pkt_ptr->nu_cmf;
   pkt_ptr->absorptiondir[0] = pkt_ptr->dir[0];
   pkt_ptr->absorptiondir[1] = pkt_ptr->dir[1];
@@ -613,8 +601,8 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
   pkt_ptr->type = TYPE_MA;
 
   #if (TRACK_ION_STATS)
-  const int element = mastate[tid].element;
-  const int ion = mastate[tid].ion;
+  const int element = pkt_ptr->mastate.element;
+  const int ion = pkt_ptr->mastate.ion;
   increment_ion_stats(mgi, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_RADEXC, pkt_ptr->e_cmf);
 
   const int et = pkt_ptr->emissiontype;
@@ -635,13 +623,13 @@ static void rpkt_event_boundbound(PKT *pkt_ptr, const int mgi)
                                                          /// reduction this could be extended to all threads. However, I'm not
                                                          /// sure if this is worth the additional computational expenses.
   #endif
-  //mastate[tid].element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
-  //mastate[tid].ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
-  //mastate[tid].level   = pkt_ptr->nextrans_uppper;
+  //pkt_ptr->mastate.element = pkt_ptr->nextrans_element;   //store all these nextrans data to MA to save memory!!!!
+  //pkt_ptr->mastate.ion     = pkt_ptr->nextrans_ion;       //MA info becomes important just after activating!
+  //pkt_ptr->mastate.level   = pkt_ptr->nextrans_uppper;
 }
 
 
-static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
+static void rpkt_event_thickcell(PKT *pkt_ptr)
 /// Event handling for optically thick cells. Those cells are treated in a grey
 /// approximation with electron scattering only.
 /// The packet stays an R_PKT of same nu_cmf than before (coherent scattering)
@@ -655,12 +643,12 @@ static void rpkt_event_thickcell(PKT *pkt_ptr, const double t_current)
     escounter++;
   #endif
 
-  emitt_rpkt(pkt_ptr, t_current);
+  emitt_rpkt(pkt_ptr);
   /// Electron scattering does not modify the last emission flag
   //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
   /// but it updates the last emission position
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
-  pkt_ptr->em_time = t_current;
+  pkt_ptr->em_time = pkt_ptr->prop_time;
 }
 
 
@@ -727,10 +715,10 @@ static double closest_transition_empty(PKT *pkt_ptr)
   /// to the macro atoms state variables. This has no influence until
   /// the macro atom becomes activated by rpkt_event.
   const double nu_trans = linelist[match].nu;
-  //mastate[tid].element = linelist[match].elementindex;
-  //mastate[tid].ion     = linelist[match].ionindex;
-  //mastate[tid].level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
-  //mastate[tid].activatedfromlevel   = linelist[match].lowerlevelindex;  ///helper variable for the transitions lower level
+  //pkt_ptr->mastate.element = linelist[match].elementindex;
+  //pkt_ptr->mastate.ion     = linelist[match].ionindex;
+  //pkt_ptr->mastate.level   = linelist[match].upperlevelindex;  ///if the MA will be activated it must be in the transitions upper level
+  //pkt_ptr->mastate.activatedfromlevel   = linelist[match].lowerlevelindex;  ///helper variable for the transitions lower level
 
   /// For the empty case it's match not match+1: a line interaction is only possible in the next iteration
   /// of the propagation loop. We just have to make sure that the next "normal" line search knows about the
@@ -744,7 +732,7 @@ static double closest_transition_empty(PKT *pkt_ptr)
 }
 
 
-static void update_estimators(const PKT *pkt_ptr, const double distance, const double t_current)
+static void update_estimators(PKT *pkt_ptr, const double distance)
 /// Update the volume estimators J and nuJ
 /// This is done in another routine than move, as we sometimes move dummy
 /// packets which do not contribute to the radiation field.
@@ -758,8 +746,7 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
     const double distance_e_cmf = distance * pkt_ptr->e_cmf;
     const double nu = pkt_ptr->nu_cmf;
     //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
-
-    radfield_update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, t_current);
+    radfield_update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, pkt_ptr->prop_time);
 
     #ifndef FORCE_LTE
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
@@ -819,254 +806,249 @@ static void update_estimators(const PKT *pkt_ptr, const double distance, const d
 }
 
 
-double do_rpkt(PKT *pkt_ptr, const double t1, const double t2)
+bool do_rpkt(PKT *pkt_ptr, const double t2)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
+// return value - true if only a cell crossing but not mgi change, false otherwise
 {
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
-
-  double t_current = t1; ///this will keep track of time in the calculation
+  const int oldmgi = mgi;
 
   bool end_packet = false; ///means "keep working"
-  while (!end_packet)
-  {
-    #ifdef DEBUG_ON
-      if (pkt_ptr->next_trans > 0)
-      {
-        //if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
-        if (debuglevel == 2) printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n", (pkt_ptr->nu_cmf-linelist[pkt_ptr->next_trans-1].nu)/pkt_ptr->nu_cmf);
-      }
-    #endif
 
-    // Assign optical depth to next physical event. And start counter of
-    // optical depth for this path.
-    double zrand = gsl_rng_uniform_pos(rng);
-    double tau_next = -1. * log(zrand);
-
-    // Start by finding the distance to the crossing of the grid cell
-    // boundaries. sdist is the boundary distance and snext is the
-    // grid cell into which we pass.
-    int snext;
-    double sdist = boundary_cross(pkt_ptr, t_current, &snext);
-
-    if (sdist == 0)
+  #ifdef DEBUG_ON
+    if (pkt_ptr->next_trans > 0)
     {
-      change_cell(pkt_ptr, snext, &end_packet, t_current);
+      //if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
+      if (debuglevel == 2) printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n", (pkt_ptr->nu_cmf-linelist[pkt_ptr->next_trans-1].nu)/pkt_ptr->nu_cmf);
+    }
+  #endif
+
+  // Assign optical depth to next physical event. And start counter of
+  // optical depth for this path.
+  double zrand = gsl_rng_uniform_pos(rng);
+  double tau_next = -1. * log(zrand);
+
+  // Start by finding the distance to the crossing of the grid cell
+  // boundaries. sdist is the boundary distance and snext is the
+  // grid cell into which we pass.
+  int snext;
+  double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
+
+  if (sdist == 0)
+  {
+    change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
+    const int cellindexnew = pkt_ptr->where;
+    mgi = cell[cellindexnew].modelgridindex;
+  }
+  else
+  {
+    const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / tmin : rmax * pkt_ptr->prop_time / tmin;
+    if (sdist > maxsdist)
+    {
+      printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, pkt_ptr->prop_time/tmin, sdist);
+      abort();
+    }
+
+    if (sdist < 1)
+    {
       const int cellindexnew = pkt_ptr->where;
-      mgi = cell[cellindexnew].modelgridindex;
+      printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
+      printout("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
+      printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
+      printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
+      printout("[warning] r_pkt: cell corner %g %g %g\n",
+               get_cellcoordmin(cellindexnew, 0) * pkt_ptr->prop_time / tmin,
+               get_cellcoordmin(cellindexnew, 1) * pkt_ptr->prop_time / tmin,
+               get_cellcoordmin(cellindexnew, 2) * pkt_ptr->prop_time / tmin);
+      printout("[warning] r_pkt: cell width %g\n",wid_init(0)*pkt_ptr->prop_time/tmin);
+      //abort();
+    }
+    if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
+    {
+      printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
+      printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
+      abort();
+    }
+
+    if (sdist > max_path_step)
+    {
+      sdist = max_path_step;
+      snext = pkt_ptr->where;
+    }
+
+
+    // At present there is no scattering/destruction process so all that needs to
+    // happen is that we determine whether the packet reaches the boundary during the timestep.
+
+    // Find how far it can travel during the time inverval.
+
+    double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+
+    assert(tdist >= 0);
+
+    //if (cell[pkt_ptr->where].nne < 1e-40)
+    //if (get_nne(cell[pkt_ptr->where].modelgridindex) < 1e-40)
+    double edist;
+    int rpkt_eventtype;
+    bool find_nextline = false;
+    if (mgi == MMODELGRID)
+    {
+      /// for empty cells no physical event occurs. The packets just propagate.
+      edist = 1e99;
+      find_nextline = true;
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
+      #endif
+    }
+    else if (modelgrid[mgi].thick == 1)
+    {
+      /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
+      /// Get distance to the next physical event in this case only electron scattering
+      //kappa = SIGMA_T*get_nne(mgi);
+      pkt_ptr->prop_time = pkt_ptr->prop_time;
+      const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr);
+      const double tau_current = 0.0;
+      edist = (tau_next - tau_current) / kappa;
+      find_nextline = true;
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
+      #endif
     }
     else
     {
-      const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (t_current + sdist / CLIGHT_PROP) / tmin : rmax * t_current / tmin;
-      if (sdist > maxsdist)
-      {
-        printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
-        abort();
-      }
-
-      if (sdist < 1)
-      {
-        const int cellindexnew = pkt_ptr->where;
-        printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-        printout("[warning] r_pkt: cell %d snext %d\n", cellindexnew, snext);
-        printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
-        printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-        printout("[warning] r_pkt: cell corner %g %g %g\n",
-                 get_cellcoordmin(cellindexnew, 0) * t_current / tmin,
-                 get_cellcoordmin(cellindexnew, 1) * t_current / tmin,
-                 get_cellcoordmin(cellindexnew, 2) * t_current / tmin);
-        printout("[warning] r_pkt: cell width %g\n",wid_init(0)*t_current/tmin);
-        //abort();
-      }
-      if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
-      {
-        printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
-        printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-        abort();
-      }
-
-      if (sdist > max_path_step)
-      {
-        sdist = max_path_step;
-        snext = pkt_ptr->where;
-      }
-
-
-      // At present there is no scattering/destruction process so all that needs to
-      // happen is that we determine whether the packet reaches the boundary during the timestep.
-
-      // Find how far it can travel during the time inverval.
-
-      double tdist = (t2 - t_current) * CLIGHT_PROP;
-
-      assert(tdist >= 0);
-
-      //if (cell[pkt_ptr->where].nne < 1e-40)
-      //if (get_nne(cell[pkt_ptr->where].modelgridindex) < 1e-40)
-      double edist;
-      int rpkt_eventtype;
-      bool find_nextline = false;
-      if (mgi == MMODELGRID)
-      {
-        /// for empty cells no physical event occurs. The packets just propagate.
-        edist = 1e99;
-        find_nextline = true;
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: propagating through empty cell, set edist=1e99\n");
-        #endif
-      }
-      else if (modelgrid[mgi].thick == 1)
-      {
-        /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
-        /// Get distance to the next physical event in this case only electron scattering
-        //kappa = SIGMA_T*get_nne(mgi);
-        const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr, t_current);
-        const double tau_current = 0.0;
-        edist = (tau_next - tau_current) / kappa;
-        find_nextline = true;
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: propagating through grey cell, edist  %g\n",edist);
-        #endif
-      }
-      else
-      {
-        // get distance to the next physical event (continuum or bound-bound)
-        edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, t_current, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
-        #ifdef DEBUG_ON
-          if (debuglevel == 2)
-          {
-            const int next_trans = pkt_ptr->next_trans;
-            printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
-          }
-        #endif
-      }
-      assert(edist >= 0);
-      //printout("[debug] do_rpkt: sdist, tdist, edist %g, %g, %g\n",sdist,tdist,edist);
-
-      if ((sdist < tdist) && (sdist < edist))
-      {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
-        #endif
-        /** Move it into the new cell. */
-        sdist = sdist / 2.;
-        t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, sdist, t_current);
-        update_estimators(pkt_ptr, sdist * 2, t_current);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
+      // get distance to the next physical event (continuum or bound-bound)
+      edist = get_event(mgi, pkt_ptr, &rpkt_eventtype, tau_next, fmin(tdist, sdist)); //, kappacont_ptr, sigma_ptr, kappaff_ptr, kappabf_ptr);
+      #ifdef DEBUG_ON
+        if (debuglevel == 2)
         {
-          sdist = sdist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
-          sdist = sdist / 2.;
+          const int next_trans = pkt_ptr->next_trans;
+          printout("[debug] do_rpkt: after edist: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g\n", pkt_ptr->nu_cmf, next_trans, linelist[next_trans].nu);
         }
-        t_current += sdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, sdist, t_current);
+      #endif
+    }
+    assert(edist >= 0);
+    //printout("[debug] do_rpkt: sdist, tdist, edist %g, %g, %g\n",sdist,tdist,edist);
+
+    if ((sdist < tdist) && (sdist < edist))
+    {
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
+      #endif
+      /** Move it into the new cell. */
+      sdist = sdist / 2.;
+      pkt_ptr->prop_time += sdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, sdist * 2);
+      if (do_rlc_est != 0 && do_rlc_est != 3)
+      {
         sdist = sdist * 2.;
-
-        if (snext != pkt_ptr->where)
-        {
-          change_cell(pkt_ptr, snext, &end_packet, t_current);
-          const int cellindexnew = pkt_ptr->where;
-          mgi = cell[cellindexnew].modelgridindex;
-        }
-        // New cell so reset the scat_counter
-        pkt_ptr->scat_count = 0;
-        //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
-        pkt_ptr->last_event = pkt_ptr->last_event + 100;
-
-        /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
-        /// find the next possible line interaction.
-        if (find_nextline)
-        {
-          /// However, this is only required if the new cell is non-empty or non-grey
-          if (mgi != MMODELGRID && modelgrid[mgi].thick != 1)
-          {
-            closest_transition_empty(pkt_ptr);
-          }
-        }
+        rlc_emiss_rpkt(pkt_ptr, sdist);
+        sdist = sdist / 2.;
       }
-      else if ((tdist < sdist) && (tdist < edist))
+      pkt_ptr->prop_time += sdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
+      sdist = sdist * 2.;
+
+      if (snext != pkt_ptr->where)
       {
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
-        #endif
-        // Doesn't reach boundary
-        tdist = tdist / 2.;
-        t_current += tdist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, tdist, t_current);
-        update_estimators(pkt_ptr, tdist * 2, t_current);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
+        change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
+        const int cellindexnew = pkt_ptr->where;
+        mgi = cell[cellindexnew].modelgridindex;
+      }
+      // New cell so reset the scat_counter
+      pkt_ptr->scat_count = 0;
+      //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
+      pkt_ptr->last_event = pkt_ptr->last_event + 100;
+
+      /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
+      /// find the next possible line interaction.
+      if (find_nextline)
+      {
+        /// However, this is only required if the new cell is non-empty or non-grey
+        if (mgi != MMODELGRID && modelgrid[mgi].thick != 1)
         {
-          tdist = tdist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
-          tdist = tdist / 2.;
-        }
-        t_current = t2;
-        move_pkt(pkt_ptr, tdist, t_current);
-        tdist = tdist * 2.;
-        #ifdef DEBUG_ON
-          pkt_ptr->last_event = pkt_ptr->last_event + 1000;
-        #endif
-        /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
-        /// find the next possible line interaction.
-        if (find_nextline)
           closest_transition_empty(pkt_ptr);
-        end_packet = true;
+        }
       }
-      else if ((edist < sdist) && (edist < tdist))
+    }
+    else if ((tdist < sdist) && (tdist < edist))
+    {
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
+      #endif
+      // Doesn't reach boundary
+      tdist = tdist / 2.;
+      pkt_ptr->prop_time += tdist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, tdist * 2);
+      if (do_rlc_est != 0 && do_rlc_est != 3)
       {
-        // bound-bound or continuum event
-        #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
-        #endif
-        edist = edist / 2.;
-        t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, edist, t_current);
-        update_estimators(pkt_ptr, edist * 2, t_current);
-        if (do_rlc_est != 0 && do_rlc_est != 3)
-        {
-          edist = edist * 2.;
-          rlc_emiss_rpkt(pkt_ptr, edist, t_current);
-          edist = edist / 2.;
-        }
-        t_current += edist / CLIGHT_PROP;
-        move_pkt(pkt_ptr, edist, t_current);
+        tdist = tdist * 2.;
+        rlc_emiss_rpkt(pkt_ptr, tdist);
+        tdist = tdist / 2.;
+      }
+      pkt_ptr->prop_time = t2;
+      move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
+      tdist = tdist * 2.;
+      #ifdef DEBUG_ON
+        pkt_ptr->last_event = pkt_ptr->last_event + 1000;
+      #endif
+      /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
+      /// find the next possible line interaction.
+      if (find_nextline)
+        closest_transition_empty(pkt_ptr);
+
+      return false;
+    }
+    else if ((edist < sdist) && (edist < tdist))
+    {
+      // bound-bound or continuum event
+      #ifdef DEBUG_ON
+        if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
+      #endif
+      edist = edist / 2.;
+      pkt_ptr->prop_time += edist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+      update_estimators(pkt_ptr, edist * 2);
+      if (do_rlc_est != 0 && do_rlc_est != 3)
+      {
         edist = edist * 2.;
+        rlc_emiss_rpkt(pkt_ptr, edist);
+        edist = edist / 2.;
+      }
+      pkt_ptr->prop_time += edist / CLIGHT_PROP;
+      move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
+      edist = edist * 2.;
 
-        // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
-        if (modelgrid[mgi].thick == 1)
-        {
-          rpkt_event_thickcell(pkt_ptr, t_current);
-        }
-        else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
-        {
-          rpkt_event_boundbound(pkt_ptr, mgi);
-        }
-        else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
-        {
-          rpkt_event_continuum(pkt_ptr, t_current, kappa_rpkt_cont[tid], mgi);
-        }
-        else
-        {
-          assert(false);
-        }
-
-        if (pkt_ptr->type != TYPE_RPKT)
-        {
-          // It's not an r-packet any more - return.
-          return t_current;
-        }
+      // The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
+      if (modelgrid[mgi].thick == 1)
+      {
+        rpkt_event_thickcell(pkt_ptr);
+      }
+      else if (rpkt_eventtype == RPKT_EVENTTYPE_BB)
+      {
+        rpkt_event_boundbound(pkt_ptr, mgi);
+      }
+      else if (rpkt_eventtype == RPKT_EVENTTYPE_CONT)
+      {
+        rpkt_event_continuum(pkt_ptr, kappa_rpkt_cont[tid], mgi);
       }
       else
       {
-        printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-        printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-        abort();
+        assert(false);
       }
+    }
+    else
+    {
+      printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
+      printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
+      abort();
     }
   }
 
-  return PACKET_SAME;
+  // send continue flag if still and RPKT and no model grid cell change occurs
+  return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
 }
 
 
@@ -1082,7 +1064,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
   vec_copy(vpkt.dir, dirvec);
   vec_copy(vpkt.pos, startpos);
 
-  const double dopplerfactor = doppler_packetpos(&vpkt, tstart);
+  vpkt.prop_time = tstart;
+  const double dopplerfactor = doppler_packetpos(&vpkt);
   vpkt.nu_rf = vpkt.nu_cmf / dopplerfactor;
 
   double t_future = tstart;
@@ -1110,7 +1093,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
       }
     }
 
-    calculate_kappa_rpkt_cont(&vpkt, t_future, mgi);
+    vpkt.prop_time = t_future;
+    calculate_kappa_rpkt_cont(&vpkt, mgi);
 
     const double kappa_cont = kappa_rpkt_cont[tid].total;
 
@@ -1174,6 +1158,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
 
     if (snext != vpkt.where)
     {
+      vpkt.prop_time = t_future;
       change_cell(&vpkt, snext, &end_packet, t_future);
     }
   }
@@ -1227,13 +1212,11 @@ double get_rpkt_escape_prob(PKT *pkt_ptr, const double tstart)
   // reset the cell history and rpkt opacities back to values for the start point
   cellhistory_reset(mgi, false);
 
-  // calculate_kappa_rpkt_cont(pkt_ptr, tstart, mgi);
-
   return escape_prob_avg;
 }
 
 
-void emitt_rpkt(PKT *pkt_ptr, double t_current)
+void emitt_rpkt(PKT *pkt_ptr)
 {
   /// now make the packet a r-pkt and set further flags
   pkt_ptr->type = TYPE_RPKT;
@@ -1248,7 +1231,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
   /// This direction is in the cmf - we want to convert it to the rest
   /// frame - use aberation of angles. We want to convert from cmf to
   /// rest so need -ve velocity.
-  get_velocity(pkt_ptr->pos, vel_vec, -1. * t_current);
+  get_velocity(pkt_ptr->pos, vel_vec, -1. * pkt_ptr->prop_time);
   ///negative time since we want the backwards transformation here
 
   angle_ab(dir_cmf, vel_vec, pkt_ptr->dir);
@@ -1274,7 +1257,7 @@ void emitt_rpkt(PKT *pkt_ptr, double t_current)
     }
   #endif
 
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
@@ -1330,6 +1313,10 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
         //kappa_ffheating += 3.69255e8 * pow(Z,2) / sqrt(T_e) * pow(nu,-3) * g_ff * nne * nnion * (1 - exp(-HOVERKB*nu/T_e));
         /// heating without level dependence
         //kappa_ffheating += 3.69255e8 * pow(Z,2) * pow(nu,-3) * g_ff * (1-exp(-HOVERKB*nu/T_e));
+        if (!isfinite(kappa_ff))
+        {
+          printout("kappa_ff %g nne %g T_e %g mgi %d element %d ion %d nnion %g\n", kappa_ff, nne, T_e, modelgridindex, element, ion, nnion);
+        }
         assert(isfinite(kappa_ff));
       }
     }
@@ -1486,8 +1473,12 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 }
 
 
-void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current, const int modelgridindex)
+void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const int modelgridindex)
 {
+  const int cellindex = pkt_ptr->where;
+  const int pkt_mgi = cell[cellindex].modelgridindex;
+  assert(modelgridindex == pkt_mgi);
+  assert(modelgridindex != MMODELGRID);
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
   if ((modelgridindex == kappa_rpkt_cont[tid].modelgridindex) && (!kappa_rpkt_cont[tid].recalculate_required) && (fabs(kappa_rpkt_cont[tid].nu / nu_cmf - 1.0) < 1e-4))
@@ -1551,7 +1542,7 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const double t_current,
     }
 
     // convert between frames.
-    const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+    const double dopplerfactor = doppler_packetpos(pkt_ptr);
     sigma *= dopplerfactor;
     kappa_ff *= dopplerfactor;
     kappa_bf *= dopplerfactor;
@@ -1825,7 +1816,8 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
         }
 
         /// Now need to convert between frames.
-        const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+        assert(t_current == pkt_ptr->prop_time);
+        const double dopplerfactor = doppler_packetpos(pkt_ptr);
         sigma = sigma * dopplerfactor;
         kappa_ff = kappa_ff * dopplerfactor;
         kappa_bf = kappa_bf * dopplerfactor;
@@ -2083,6 +2075,4 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
 //       }
 //     }
 //   }
-//
-//   return PACKET_SAME;
 // }

@@ -2115,10 +2115,10 @@ void do_ntlepton(PKT *pkt_ptr)
       const int upperion = nt_random_upperion(modelgridindex, element, lowerion, true);
       // const int upperion = lowerion + 1;
 
-      mastate[tid].element = element;
-      mastate[tid].ion = upperion;
-      mastate[tid].level = 0;
-      mastate[tid].activatingline = -99;
+      pkt_ptr->mastate.element = element;
+      pkt_ptr->mastate.ion = upperion;
+      pkt_ptr->mastate.level = 0;
+      pkt_ptr->mastate.activatingline = -99;
       pkt_ptr->type = TYPE_MA;
       ma_stat_activation_ntcollion++;
       pkt_ptr->interactions += 1;
@@ -2158,10 +2158,10 @@ void do_ntlepton(PKT *pkt_ptr)
           // const int lower = linelist[lineindex].lowerlevelindex;
           const int upper = linelist[lineindex].upperlevelindex;
 
-          mastate[tid].element = element;
-          mastate[tid].ion = ion;
-          mastate[tid].level = upper;
-          mastate[tid].activatingline = -99;
+          pkt_ptr->mastate.element = element;
+          pkt_ptr->mastate.ion = ion;
+          pkt_ptr->mastate.level = upper;
+          pkt_ptr->mastate.activatingline = -99;
           pkt_ptr->type = TYPE_MA;
           ma_stat_activation_ntcollexc++;
           pkt_ptr->interactions += 1;
