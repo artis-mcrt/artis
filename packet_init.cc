@@ -66,11 +66,13 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
   if (UNIFORM_PELLET_ENERGIES)
   {
+    printout("UNIFORM_PELLET_ENERGIES is true");
     pkt_ptr->tdecay = sample_decaytime(decaypath, tdecaymin, tmax);
     pkt_ptr->e_cmf = e0;
   }
   else
   {
+    printout("UNIFORM_PELLET_ENERGIES is false");
     // use uniform decay time distribution (scale the packet energies instead)
     // keeping the pellet decay rate constant will give better statistics at very late times when very little
     // energy is released

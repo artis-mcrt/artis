@@ -228,9 +228,9 @@ static void print_level_rates_summary(
       }
       else
       {
-        printout("    level+1%5d  ", selected_level + 1);
+        printout("    level%7d ", selected_level);
       }
-      printout(" %9.1e ", gsl_vector_get(popvec, selected_index));
+      printout(" %10.2e ", gsl_vector_get(popvec, selected_index));
     }
     else
     {
@@ -273,7 +273,7 @@ static void print_level_rates_summary(
       }
     }
 
-    printout("%9.1e %9.1e %9.1e %9.1e %9.1e %9.1e\n",
+    printout("%10.2e %10.2e %10.2e %10.2e %10.2e %10.2e\n",
              rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total);
   }
 }
@@ -307,8 +307,8 @@ static void print_element_rates_summary(
     {
       if (level == 0)
       {
-        printout("  modelgridindex %d timestep %d NLTE iteration %d: NLTE summary stats for Z=%d ion_stage %d:\n",
-                 modelgridindex, timestep, nlte_iter, atomic_number, ionstage);
+        printout("  modelgridindex %d timestep %d NLTE iteration %d Te %g nne %g: NLTE summary for Z=%d ion_stage %d:\n",
+                 modelgridindex, timestep, nlte_iter, get_Te(modelgridindex), get_nne(modelgridindex), atomic_number, ionstage);
         printout("                         pop       rates    bb_rad    bb_col  bb_ntcol    bf_rad    bf_col  bf_ntcol\n");
       }
 
@@ -357,8 +357,8 @@ static void print_level_rates(
   const int selected_ionstage = get_ionstage(element, selected_ion);
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level);
   const double pop_selectedlevel = gsl_vector_get(popvec, selected_index);
-  printout("timestep %d cell %d NLTE level diagnostics for Z=%d ion_stage %d level %d (vector_index %d): rates into and out of this level\n",
-           timestep, modelgridindex, atomic_number, selected_ionstage, selected_level, selected_index);
+  printout("timestep %d cell %d Te %g nne %g NLTE level diagnostics for Z=%d ion_stage %d level %d (vector_index %d): rates into and out of this level\n",
+           timestep, modelgridindex, get_Te(modelgridindex), get_nne(modelgridindex), atomic_number, selected_ionstage, selected_level, selected_index);
 
   const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrix_rad_bb, popvec);
   const double coll_bb_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bb, popvec);
@@ -367,7 +367,7 @@ static void print_level_rates(
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrix_ntcoll_bf, popvec);
   const double total_rate_in = rad_bb_in_total + coll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
-  printout("  TOTAL rates in:             rad_bb_in  %7.1e coll_bb_in  %7.1e ntcoll_bb_in  %7.1e rad_bf_in  %7.1e coll_bf_in  %7.1e ntcoll_bf_in  %7.1e\n",
+  printout("  TOTAL rates in:             rad_bb_in  %8.2e coll_bb_in  %8.2e ntcoll_bb_in  %8.2e rad_bf_in  %8.2e coll_bf_in  %8.2e ntcoll_bf_in  %8.2e\n",
            rad_bb_in_total, coll_bb_in_total, ntcoll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total);
 
   const double rad_bb_out_total = get_total_rate_out(selected_index, rate_matrix_rad_bb, popvec);
@@ -377,7 +377,7 @@ static void print_level_rates(
   const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_coll_bf, popvec);
   const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrix_ntcoll_bf, popvec);
   const double total_rate_out = rad_bb_out_total + coll_bb_out_total + rad_bf_out_total + coll_bf_out_total + ntcoll_bf_out_total;
-  printout("  TOTAL rates out:            rad_bb_out %7.1e coll_bb_out %7.1e ntcoll_bb_out %7.1e rad_bf_out %7.1e coll_bf_out %7.1e ntcoll_bf_out %7.1e\n",
+  printout("  TOTAL rates out:            rad_bb_out %8.2e coll_bb_out %8.2e ntcoll_bb_out %8.2e rad_bf_out %8.2e coll_bf_out %8.2e ntcoll_bf_out %8.2e\n",
           rad_bb_out_total, coll_bb_out_total, ntcoll_bb_out_total, rad_bf_out_total, coll_bf_out_total, ntcoll_bf_out_total);
 
   for (int index = 0; index < nlte_dimension; index++)
@@ -412,12 +412,12 @@ static void print_level_rates(
       const double lambda = 1e8 * CLIGHT / nu_trans; // should be in Angstroms
       const double level_rate_in = rad_bb_in + coll_bb_in + ntcoll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in;
       const double level_rate_out = rad_bb_out + coll_bb_out + ntcoll_bb_in + rad_bf_out + coll_bf_out + ntcoll_bf_out;
-      const int level_percent_in = round(level_rate_in / total_rate_in * 100);
-      const int level_percent_out = round(level_rate_out / total_rate_out * 100);
+      const double level_percent_in = level_rate_in / total_rate_in * 100.;
+      const double level_percent_out = level_rate_out / total_rate_out * 100.;
 
-      printout("  ionstage %d level %4d (%3d%% of in)  rad_bb_in  %7.1e coll_bb_in  %7.1e ntcoll_bb_in  %7.1e rad_bf_in  %7.1e coll_bf_in  %7.1e ntcoll_bf_in  %7.1e lambda %5.0f\n",
+      printout("  ionstage %d level %4d (%5.1f%% of in)  rad_bb_in  %8.2e coll_bb_in  %8.2e ntcoll_bb_in  %8.2e rad_bf_in  %8.2e coll_bf_in  %8.2e ntcoll_bf_in  %8.2e lambda %6.0f\n",
                ionstage, level, level_percent_in, rad_bb_in, coll_bb_in, ntcoll_bb_in, rad_bf_in, coll_bf_in, ntcoll_bf_in, lambda);
-      printout("  ionstage %d level %4d (%3d%% of out) rad_bb_out %7.1e coll_bb_out %7.1e ntcoll_bb_out %7.1e rad_bf_out %7.1e coll_bf_out %7.1e ntcoll_bf_out %7.1e lambda %5.0f\n",
+      printout("  ionstage %d level %4d (%5.1f%% of out) rad_bb_out %8.2e coll_bb_out %8.2e ntcoll_bb_out %8.2e rad_bf_out %8.2e coll_bf_out %8.2e ntcoll_bf_out %8.2e lambda %6.0f\n",
                ionstage, level, level_percent_out, rad_bb_out, coll_bb_out, ntcoll_bb_out, rad_bf_out, coll_bf_out, ntcoll_bf_out, lambda);
     }
   }
@@ -734,7 +734,7 @@ static bool lumatrix_is_singular(const gsl_matrix *LU, const int element)
       int ion = -1;
       int level = -1;
       get_ion_level_of_nlte_vector_index(i, element, &ion, &level);
-      printout("NLTE disconnected level: Z=%d ionstage %d level+1 %d\n", get_element(element), get_ionstage(element, ion), level + 1);
+      printout("NLTE disconnected level: Z=%d ionstage %d level %d\n", get_element(element), get_ionstage(element, ion), level);
       is_singular = true;
     }
   }
@@ -1120,19 +1120,29 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
       print_element_rates_summary(element, modelgridindex, timestep, nlte_iter, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
     }
 
-    // if (individual_process_matricies && (atomic_number == 26 && timestep % 2 == 0))
-    // {
-    //   const int ionstage = 2;
-    //   const int ion = ionstage - get_ionstage(element, 0);
-    //
-    //   print_level_rates(modelgridindex, timestep, element, ion, 0, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(modelgridindex, timestep, element, ion, 1, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(modelgridindex, timestep, element, ion, 28, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
-    //   print_level_rates(modelgridindex, timestep, element, ion, 29, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+    bool print_detailed_level_stats = false;
 
-    //   const int slindex = get_nlevels_nlte(element, ion) + 1;
-    //   print_level_rates(modelgridindex, timestep, element, ion, slindex, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+    // if ((atomic_number == 26) && ((timestep % 5) == 0) && (nlte_iter == 0))
+    // {
+    //   print_detailed_level_stats = true;
     // }
+
+    if (individual_process_matricies && print_detailed_level_stats)
+    {
+      const int ionstage = 2;
+      const int ion = ionstage - get_ionstage(element, 0);
+
+      for (int level = 0; level < get_nlevels_nlte(element, ion); level++)
+      {
+        print_level_rates(modelgridindex, timestep, element, ion, 0, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      }
+
+      if (ion_has_superlevel(element, ion))
+      {
+        const int slindex = get_nlevels_nlte(element, ion) + 1;
+        print_level_rates(modelgridindex, timestep, element, ion, slindex, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+      }
+    }
   }
 
   if (individual_process_matricies)
