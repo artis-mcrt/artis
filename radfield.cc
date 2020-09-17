@@ -795,10 +795,11 @@ void radfield_zero_estimators(int modelgridindex)
 #if (DETAILED_BF_ESTIMATORS_ON)
 static void radfield_increment_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf, const PKT *const pkt_ptr, const double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   if (distance_e_cmf == 0)
     return;
 
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr);
   // const double dopplerfactor = 1.;
 
   // const double deltaV = vol_init_modelcell(modelgridindex) * pow(time_step[nts_global].mid / tmin, 3);
@@ -868,6 +869,7 @@ static void radfield_increment_bfestimators(const int modelgridindex, const doub
 
 void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *const pkt_ptr, double t_current)
 {
+  assert(pkt_ptr->prop_time == t_current);
   #ifdef _OPENMP
     #pragma omp atomic
   #endif

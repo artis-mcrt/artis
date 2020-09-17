@@ -969,11 +969,6 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  if ((mastate = (mastate_t *) calloc(nthreads, sizeof(mastate_t))) == NULL)
-  {
-    printout("[fatal] input: error initializing macro atom state variables ... abort\n");
-    abort();
-  }
   if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
@@ -1043,7 +1038,7 @@ int main(int argc, char** argv)
 //  #endif
 
   #if TRACK_ION_STATS
-  ionstats = calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
+  ionstats = (double *) calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
   #endif
 
   /// As a precaution, explicitly zero all the estimators here

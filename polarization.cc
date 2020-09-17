@@ -4,7 +4,7 @@
 #include "vpkt.h"
 
 
-void escat_rpkt(PKT *pkt_ptr, double t_current)
+void escat_rpkt(PKT *pkt_ptr)
 {
   double dummy_dir[3], vel_vec[3], vel_rev[3];
   double old_dir_cmf[3],new_dir_cmf[3];
@@ -22,7 +22,7 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
   pkt_ptr->last_cross = NONE;  /// allow all further cell crossings
 
 
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
 
 
   // Transform Stokes Parameters from the RF to the CMF
@@ -179,7 +179,7 @@ void escat_rpkt(PKT *pkt_ptr, double t_current)
     }
   #endif
 
-  const double dopplerfactor = doppler_packetpos(pkt_ptr, t_current);
+  const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->nu_rf = pkt_ptr->nu_cmf / dopplerfactor;
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
  }

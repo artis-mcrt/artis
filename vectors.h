@@ -9,7 +9,7 @@ void angle_ab(const double dir1[3], const double vel[3], double dir2[3]);
 double doppler(const double dir1[3], const double vel[3]);
 void scatter_dir(const double dir_in[3], double cos_theta, double dir_out[3]);
 void get_rand_isotropic_unitvec(double vecout[3]);
-void move_pkt(PKT *pkt_ptr, double distance, double time);
+void move_pkt(PKT *pkt_ptr, double distance, const double time);
 
 // #define vec_len(x)   (cblas_dnrm2(3, x, 1))
 inline double vec_len(const double x[3])
@@ -79,11 +79,10 @@ vec_copy(double destination[3], const double source[3])
   cblas_dcopy(3, source, 1, destination, 1);
 }
 
-inline double
-doppler_packetpos(const PKT *const pkt_ptr, const double t)
+inline double doppler_packetpos(const PKT *const pkt_ptr)
 {
   double vel_vec[3];
-  get_velocity(pkt_ptr->pos, vel_vec, t); // homologous flow velocity
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time); // homologous flow velocity
   const double dopplerfactor = doppler(pkt_ptr->dir, vel_vec);
   return dopplerfactor;
 }

@@ -26,8 +26,8 @@
 #! interrupted by node failure or system downtime):
 #SBATCH --no-requeue
 
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=luke.shingles@gmail.com
+##SBATCH --mail-type=ALL
+##SBATCH --mail-user=luke.shingles@gmail.com
 
 #! For 6GB per CPU, set "-p skylake"; for 12GB per CPU, set "-p skylake-himem":
 #SBATCH -p skylake
@@ -138,4 +138,8 @@ mkdir ${SLURM_JOBID}.slurm
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
     sbatch $SLURM_JOB_NAME
+fi
+
+if [ -f packets00_0000.out ]; then
+    sbatch ./artis/scripts/exspec-gzip-gadi_raijin.sh
 fi

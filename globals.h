@@ -179,8 +179,6 @@ extern int n_middle_it;
 extern int total_nlte_levels;
 extern int n_super_levels;
 
-extern mastate_t *mastate;
-
 extern CELL cell[MGRID+1];
 
 

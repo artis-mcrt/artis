@@ -10,11 +10,11 @@
 #include "vectors.h"
 
 
-void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
+void compton_emiss_cont(const PKT *pkt_ptr, double dist)
 {
   // Subroutine to add contribution to the MC estimator for the
   // compton emissivity. Called with a packet that is about to travel a
-  // distance dist in the lab frame. Time at start of distance is t_current.
+  // distance dist in the lab frame.
 
   double vel_vec[3];
   double cmf_dir[3];
@@ -25,7 +25,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
   // mu_cmf (it's a cosine). To get it convert both the direction of
   // motion and the local velocity vectors to the cmf.
 
-  get_velocity(pkt_ptr->pos, vel_vec, t_current);
+  get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
   angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
   angle_ab(syn_dir, vel_vec, cmf_syn_dir);
 
@@ -120,7 +120,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
 }
 
 
-void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
+void pp_emiss_cont(const PKT *pkt_ptr, double dist)
 {
   // New routine for getting a pair production emissivity. Closely based on compton_emiss but simpler. The
   // emissivity itself is stored in the last row of the compton emissivity structure. Idea here is to get something
@@ -128,9 +128,9 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist, double t_current)
   // gamma rays from pair production per unit volume per unit time in the cmf.
 
   // Called with a packet that is about to travel a
-  // distance dist in the lab frame. Time at start of distance is t_current.
+  // distance dist in the lab frame.
 
-  const double emiss_cont = sig_pair_prod(pkt_ptr, t_current) * (2.46636e+20 / pkt_ptr->nu_cmf) * pkt_ptr->e_rf * dist;
+  const double emiss_cont = sig_pair_prod(pkt_ptr) * (2.46636e+20 / pkt_ptr->nu_cmf) * pkt_ptr->e_rf * dist;
 
   // For normalisation this needs to be
   //  1) divided by volume
@@ -179,7 +179,7 @@ void zero_estimators(void)
         {
           for (int i = 0; i < ION_COUNTER_COUNT; i++)
           {
-            set_ion_stats(n, element, ion, i, 0.);
+            set_ion_stats(n, element, ion, (enum ionstatscounters)i, 0.);
           }
         }
         #endif

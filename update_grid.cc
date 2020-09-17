@@ -461,18 +461,22 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       }
       fprintf(estimators_file, "\n");
 
-      fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_element(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
-        fprintf(estimators_file, "              ");
-      for (int ion = 0; ion < nions - 1; ion++)
+      // this is expensive!
+      if (timestep % 20 == 0)
       {
-        // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
-        const bool printdebug_gammar = false;
-        fprintf(estimators_file, "  %d: %9.3e",
-                get_ionstage(element, ion),
-                calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
+        fprintf(estimators_file, "gamma_R_integral   Z=%2d", get_element(element));
+        for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
+          fprintf(estimators_file, "              ");
+        for (int ion = 0; ion < nions - 1; ion++)
+        {
+          // const bool printdebug_gammar = (get_element(element) == 26 && get_ionstage(element, ion) == 2);
+          const bool printdebug_gammar = false;
+          fprintf(estimators_file, "  %d: %9.3e",
+                  get_ionstage(element, ion),
+                  calculate_iongamma_per_ionpop(mgi, T_e, element, ion, assume_lte, false, printdebug_gammar, false));
+        }
+        fprintf(estimators_file, "\n");
       }
-      fprintf(estimators_file, "\n");
 
       #if (DETAILED_BF_ESTIMATORS_ON)
       fprintf(estimators_file, "gamma_R_bfest      Z=%2d", get_element(element));
@@ -905,16 +909,16 @@ static void normalise_ion_estimators(const int mgi, const double deltat, const d
       for (int i = 0; i < ION_COUNTER_COUNT; i++)
       {
         // energy or event count per volume per second
-        const double ratedensity = get_ion_stats(mgi, element, ion, i) / deltaV / deltat / nprocs;
+        const double ratedensity = get_ion_stats(mgi, element, ion, (enum ionstatscounters)i) / deltaV / deltat / nprocs;
 
         if (i < nstatcounters_ratecoeff)
         {
           // convert photon event counters into rate coefficients
-          set_ion_stats(mgi, element, ion, i, ratedensity / ionstagepop(mgi, element, ion));
+          set_ion_stats(mgi, element, ion, (enum ionstatscounters)i, ratedensity / ionstagepop(mgi, element, ion));
         }
         else
         {
-          set_ion_stats(mgi, element, ion, i, ratedensity);
+          set_ion_stats(mgi, element, ion, (enum ionstatscounters)i, ratedensity);
         }
       }
     }

@@ -201,8 +201,6 @@ int n_middle_it;
 int total_nlte_levels;            ///total number of nlte levels
 int n_super_levels;
 
-mastate_t *mastate;
-
 CELL cell[MGRID+1];
 
 
