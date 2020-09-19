@@ -162,7 +162,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           /// correction may be evaluated at T_R!
           const double T_R = get_TR(modelgridindex);
           const double W = get_W(modelgridindex);
-          double bfheatingcoeff = W * get_bfheatingcoeff_ana(element,ion,level,phixstargetindex, T_R, W);
+          double bfheatingcoeff = W * get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
           const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
             bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
