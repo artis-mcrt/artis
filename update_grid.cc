@@ -1204,14 +1204,10 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           #endif
 
           // Get radiation field parameters out of the full-spectrum and binned J and nuJ estimators
-          const time_t sys_time_start_radfield_fit_parameters = time(NULL);
           radfield_fit_parameters(mgi, nts);
-          printout("radfield_fit_parameters for cell %d timestep %d took %ld seconds\n", mgi, nts, time(NULL) - sys_time_start_radfield_fit_parameters);
 
           #if (DETAILED_BF_ESTIMATORS_ON)
-          const time_t sys_time_start_radfield_normalise_bf_estimators = time(NULL);
           radfield_normalise_bf_estimators(mgi, estimator_normfactor / H);
-          printout("radfield_normalise_bf_estimators for cell %d timestep %d took %ld seconds\n", mgi, nts, time(NULL) - sys_time_start_radfield_normalise_bf_estimators);
           #endif
 
           #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
