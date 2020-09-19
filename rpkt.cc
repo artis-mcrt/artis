@@ -325,7 +325,7 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
   const double kappa_bf = kappa_rpkt_cont_thisthread.bf;
 
   /// continuum process happens. select due to its probabilities sigma/kappa_cont, kappa_ff/kappa_cont, kappa_bf/kappa_cont
-  double zrand = gsl_rng_uniform(rng);
+  const double zrand = gsl_rng_uniform(rng);
   #ifdef DEBUG_ON
     if (debuglevel == 2)
     {
@@ -806,9 +806,9 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
 }
 
 
-bool do_rpkt(PKT *pkt_ptr, const double t2)
+static bool do_rpkt_step(PKT *pkt_ptr, const double t2)
 // Routine for moving an r-packet. Similar to do_gamma in objective.
-// return value - true if only a cell crossing but not mgi change, false otherwise
+// return value - true if no mgi change, no pkttype change and not reached end of timestep, false otherwise
 {
   const int cellindex = pkt_ptr->where;
   int mgi = cell[cellindex].modelgridindex;
@@ -824,8 +824,8 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
 
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
-  double zrand = gsl_rng_uniform_pos(rng);
-  double tau_next = -1. * log(zrand);
+  const double zrand = gsl_rng_uniform_pos(rng);
+  const double tau_next = -1. * log(zrand);
 
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
@@ -838,6 +838,8 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
     change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
     const int cellindexnew = pkt_ptr->where;
     mgi = cell[cellindexnew].modelgridindex;
+
+    return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
   }
   else
   {
@@ -875,7 +877,6 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
       snext = pkt_ptr->where;
     }
 
-
     // At present there is no scattering/destruction process so all that needs to
     // happen is that we determine whether the packet reaches the boundary during the timestep.
 
@@ -901,10 +902,9 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
     }
     else if (modelgrid[mgi].thick == 1)
     {
-      /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
+      /// In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
       /// Get distance to the next physical event in this case only electron scattering
       //kappa = SIGMA_T*get_nne(mgi);
-      pkt_ptr->prop_time = pkt_ptr->prop_time;
       const double kappa = get_kappagrey(mgi) * get_rho(mgi) * doppler_packetpos(pkt_ptr);
       const double tau_current = 0.0;
       edist = (tau_next - tau_current) / kappa;
@@ -933,7 +933,7 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
       #ifdef DEBUG_ON
         if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
       #endif
-      /** Move it into the new cell. */
+      // Move it into the new cell.
       sdist = sdist / 2.;
       pkt_ptr->prop_time += sdist / CLIGHT_PROP;
       move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
@@ -956,7 +956,6 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
       }
       // New cell so reset the scat_counter
       pkt_ptr->scat_count = 0;
-      //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
       pkt_ptr->last_event = pkt_ptr->last_event + 100;
 
       /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
@@ -969,6 +968,8 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
           closest_transition_empty(pkt_ptr);
         }
       }
+
+      return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
     }
     else if ((tdist < sdist) && (tdist < edist))
     {
@@ -992,6 +993,7 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
       #ifdef DEBUG_ON
         pkt_ptr->last_event = pkt_ptr->last_event + 1000;
       #endif
+
       /// For empty or grey cells a photon can travel over several bb-lines. Thus we need to
       /// find the next possible line interaction.
       if (find_nextline)
@@ -1036,17 +1038,26 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
       {
         assert(false);
       }
+
+      return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
     }
     else
     {
       printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
       printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
       abort();
+      return false;
     }
   }
+}
 
-  // send continue flag if still and RPKT and no model grid cell change occurs
-  return (pkt_ptr->type == TYPE_RPKT && (mgi == MMODELGRID || mgi == oldmgi));
+
+void do_rpkt(PKT *pkt_ptr, const double t2)
+{
+  while (do_rpkt_step(pkt_ptr, t2))
+  {
+    ;
+  }
 }
 
 
