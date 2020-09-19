@@ -135,10 +135,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
       break;
 
     case TYPE_RPKT:
-      while (do_rpkt(pkt_ptr, t2))
-      {
-        ;
-      }
+      do_rpkt(pkt_ptr, t2);
 
       if (pkt_ptr->type == TYPE_ESCAPE)
       {
@@ -296,12 +293,6 @@ void update_packets(const int nts, PKT *pkt)
         bool workedonpacket = false;
         while ((newmgi == mgi || newmgi == MMODELGRID) && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type != TYPE_ESCAPE)
         {
-          if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1 && mgi != MMODELGRID)
-          {
-            // printout("calculate_kappa_rpkt_cont(mgi %d)...", mgi);
-            calculate_kappa_rpkt_cont(pkt_ptr, mgi);
-            // printout("done\n");
-          }
           workedonpacket = true;
           do_packet(pkt_ptr, ts + tw, nts);
           const int newcellnum = pkt_ptr->where;
