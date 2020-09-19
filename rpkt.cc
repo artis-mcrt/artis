@@ -814,8 +814,6 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
   int mgi = cell[cellindex].modelgridindex;
   const int oldmgi = mgi;
 
-  bool end_packet = false; ///means "keep working"
-
   #ifdef DEBUG_ON
     if (pkt_ptr->next_trans > 0)
     {
@@ -837,7 +835,7 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
 
   if (sdist == 0)
   {
-    change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
+    change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
     const int cellindexnew = pkt_ptr->where;
     mgi = cell[cellindexnew].modelgridindex;
   }
@@ -952,7 +950,7 @@ bool do_rpkt(PKT *pkt_ptr, const double t2)
 
       if (snext != pkt_ptr->where)
       {
-        change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
+        change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
         const int cellindexnew = pkt_ptr->where;
         mgi = cell[cellindexnew].modelgridindex;
       }
@@ -1159,7 +1157,8 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     if (snext != vpkt.where)
     {
       vpkt.prop_time = t_future;
-      change_cell(&vpkt, snext, &end_packet, t_future);
+      change_cell(&vpkt, snext, t_future);
+      end_packet = (vpkt.type == TYPE_ESCAPE);
     }
   }
 
