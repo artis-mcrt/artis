@@ -453,7 +453,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
       if (timestep % 20 == 0)
       {
-        const time_t sys_time_start_calculate_kappabf = time(NULL);
         fprintf(estimators_file, "kappa_bf(nuedge)   Z=%2d", get_element(element));
         for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++)
           fprintf(estimators_file, "              ");
@@ -469,7 +468,6 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
                   kappa_bf);
         }
         fprintf(estimators_file, "\n");
-        printout("calculating kappa_bf(nuedge) for cell %d timestep %d took %ld seconds\n", mgi, timestep, time(NULL) - sys_time_start_calculate_kappabf);
       }
 
       // this is expensive
