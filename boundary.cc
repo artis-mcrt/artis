@@ -358,7 +358,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 }
 
 
-void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
+void change_cell(PKT *pkt_ptr, int snext, double t_current)
 /// Routine to take a packet across a boundary.
 {
   assert(pkt_ptr->prop_time == t_current);
@@ -379,7 +379,6 @@ void change_cell(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
     pkt_ptr->escape_time = pkt_ptr->prop_time;
     pkt_ptr->type = TYPE_ESCAPE;
     nesc++;
-    *end_packet = true;
   }
   else
   {

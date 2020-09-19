@@ -633,8 +633,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     sdist = sdist * 2.;
     if (snext != pkt_ptr->where)
     {
-      bool end_packet = false; //tells us when to stop working on this packet
-      change_cell(pkt_ptr, snext, &end_packet, pkt_ptr->prop_time);
+      change_cell(pkt_ptr, snext, pkt_ptr->prop_time);
     }
   }
   else if ((tdist < sdist) && (tdist < edist))
