@@ -242,24 +242,17 @@ void update_packets(const int nts, PKT *pkt)
   {
     timestepcomplete = true;
 
-    const bool photonpkt_pass = (passnumber % 2 == 1);
+    const time_t sys_time_start_sort = time(NULL);
 
-    // after a !photonpkt_pass, packets have not propagated and changed cells
-    if (passnumber == 0 || !photonpkt_pass)
+    std::sort(pkt, pkt + npkts, std_compare_packets_bymodelgriddensity);
+
+    const int duration_sortpackets = time(NULL) - sys_time_start_sort;
+    if (duration_sortpackets > 1)
     {
-      const time_t sys_time_start_sort = time(NULL);
-
-      std::sort(pkt, pkt + npkts, std_compare_packets_bymodelgriddensity);
-
-      const int duration_sortpackets = time(NULL) - sys_time_start_sort;
-      if (duration_sortpackets > 1)
-      {
-        printout("sorting packets took %ds\n", duration_sortpackets);
-      }
+      printout("sorting packets took %ds\n", duration_sortpackets);
     }
 
-    int count_photpktupdates = 0;
-    int count_otherupdates = 0;
+    int count_pktupdates = 0;
     const int updatecellcounter_beforepass = updatecellcounter;
 
     #ifdef _OPENMP
@@ -298,40 +291,32 @@ void update_packets(const int nts, PKT *pkt)
           cellhistory_reset(mgi, false);
         }
 
-        timestepcomplete = false;
-        if (!photonpkt_pass && pkt_ptr->type != TYPE_RPKT && pkt_ptr->type != TYPE_GAMMA)
+        // enum packet_type oldtype = pkt_ptr->type;
+        int newmgi = mgi;
+        bool workedonpacket = false;
+        while ((newmgi == mgi || newmgi == MMODELGRID) && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type != TYPE_ESCAPE)
         {
-          bool workedonpacket = false;
-          while (pkt_ptr->type != TYPE_RPKT && pkt_ptr->type != TYPE_GAMMA && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type != TYPE_ESCAPE)
-          {
-            workedonpacket = true;
-            do_packet(pkt_ptr, ts + tw, nts);
-          }
-
-          count_otherupdates += workedonpacket ? 1 : 0;
-        }
-        else if (photonpkt_pass && (pkt_ptr->type == TYPE_RPKT || pkt_ptr->type == TYPE_GAMMA))
-        {
-          count_photpktupdates++;
           if (pkt_ptr->type == TYPE_RPKT && modelgrid[mgi].thick != 1 && mgi != MMODELGRID)
           {
             // printout("calculate_kappa_rpkt_cont(mgi %d)...", mgi);
             calculate_kappa_rpkt_cont(pkt_ptr, mgi);
             // printout("done\n");
           }
-          enum packet_type oldtype = pkt_ptr->type;
-          int newmgi = mgi;
-          while ((newmgi == mgi || newmgi == MMODELGRID) && pkt_ptr->prop_time < (ts + tw) && pkt_ptr->type == oldtype)
-          {
-            do_packet(pkt_ptr, ts + tw, nts);
-            const int newcellnum = pkt_ptr->where;
-            newmgi = cell[newcellnum].modelgridindex;
-          }
+          workedonpacket = true;
+          do_packet(pkt_ptr, ts + tw, nts);
+          const int newcellnum = pkt_ptr->where;
+          newmgi = cell[newcellnum].modelgridindex;
+        }
+        count_pktupdates += workedonpacket ? 1 : 0;
+
+        if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
+        {
+          timestepcomplete = false;
         }
       }
     }
-    printout("  update_packets timestep %d pass %3d: updated %7d photon packets %7d other packets %7d cellhistoryresets at %ld\n",
-             nts, passnumber, count_photpktupdates, count_otherupdates, updatecellcounter - updatecellcounter_beforepass, time(NULL));
+    printout("  update_packets timestep %d pass %3d: updated packets %7d cellhistoryresets %7d at %ld\n",
+             nts, passnumber, count_pktupdates, updatecellcounter - updatecellcounter_beforepass, time(NULL));
 
     passnumber++;
   }
