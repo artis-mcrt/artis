@@ -1100,10 +1100,9 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     {
       /// Update abundances of radioactive isotopes
       //printout("call update abundances for timestep %d in model cell %d\n",m,n);
-      const time_t sys_time_start_update_abundances = time(NULL);
       update_abundances(mgi, nts, time_step[nts].mid);
       calculate_deposition_rate_density(mgi, nts);
-      printout("update_abundances for cell %d timestep %d took %ld seconds\n", mgi, nts, time(NULL) - sys_time_start_update_abundances);
+      printout("update_abundances for cell %d timestep %d\n", mgi, nts);
 
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
