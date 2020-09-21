@@ -795,7 +795,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
 {
   // bfheating coefficients are needed for the T_e solver, but
   // they only depend on the radiation field, which is fixed during the iterations below
-  printout("calculate_bfheatingcoeffs for cell %d timestep %d...", n, nts);
+  printout("calculate_bfheatingcoeffs for timestep %d cell %d...", nts, n);
   const time_t sys_time_start_calculate_bfheatingcoeffs = time(NULL);
   calculate_bfheatingcoeffs(n);
   printout("took %ld seconds\n", time(NULL) - sys_time_start_calculate_bfheatingcoeffs);
