@@ -134,11 +134,11 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
 }
 
 
-static double get_bfheatingcoeff(int element, int ion, int level, int phixstargetindex)
+static double get_bfheatingcoeff(int element, int ion, int level)
 // depends only the radiation field
 // no dependence on T_e or populations
 {
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff;
+  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff;
 }
 
 
@@ -152,31 +152,31 @@ void calculate_bfheatingcoeffs(int modelgridindex)
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
+        double bfheatingcoeff = 0.;
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
+
         #if NO_LUT_BFHEATING
-          const double bfheatingcoeff = calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
+          const double bfheatingcoeff_thistarget = calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
+
         #else
+
           /// The correction factor for stimulated emission in gammacorr is set to its
           /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
           /// correction may be evaluated at T_R!
           const double T_R = get_TR(modelgridindex);
           const double W = get_W(modelgridindex);
-          double bfheatingcoeff = W * get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
+          double bfheatingcoeff_thistarget = W * get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
           const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
-            bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
+            bfheatingcoeff_thistarget *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
 
-          if (!isfinite(bfheatingcoeff))
-          {
-            printout("[fatal] get_bfheatingcoeff returns a NaN! W %g get_bfheatingcoeff(element,ion,level,phixstargetindex) %g index_in_groundlevelcontestimator %d bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator] %g",
-                     W,get_bfheatingcoeff(element,ion,level,phixstargetindex),index_in_groundlevelcontestimator,bfheatingestimator[modelgridindex*nelements*maxion+index_in_groundlevelcontestimator]);
-            abort();
-          }
         #endif
 
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].bfheatingcoeff = bfheatingcoeff;
+          bfheatingcoeff += bfheatingcoeff_thistarget;
         }
+        assert(isfinite(bfheatingcoeff));
+        cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
       }
     }
   }
@@ -184,7 +184,8 @@ void calculate_bfheatingcoeffs(int modelgridindex)
 }
 
 
-static double get_heating_ion_coll_deexc(const int modelgridindex, const int element, const int ion, const double T_e, const double nne)
+static double get_heating_ion_coll_deexc(
+  const int modelgridindex, const int element, const int ion, const double T_e, const double nne)
 {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
@@ -211,23 +212,11 @@ static double get_heating_ion_coll_deexc(const int modelgridindex, const int ele
 }
 
 
-static void calculate_heating_rates(const int modelgridindex, const double T_e, const double nne, heatingcoolingrates_t *heatingcoolingrates)
+static void calculate_heating_rates(
+  const int modelgridindex, const double T_e, const double nne, heatingcoolingrates_t *heatingcoolingrates)
 /// Calculate the heating rates for a given cell. Results are returned
-/// via the elements of the global heatingrates data structure.
+/// via the elements of the heatingrates data structure.
 {
-  /*
-  gsl_function F_bfheating;
-  F_bfheating.function = &bfheating_integrand_gsl;
-  gslintegration_bfheatingparas bfheatingparas;
-  bfheatingparas.cellnumber = cellnumber;
-  double bfhelper;
-  */
-
-/*  PKT dummypkt;
-  dummypkt.where = cellnumber;
-  PKT *pkt_ptr;
-  pkt_ptr = &dummypkt;*/
-
   double C_deexc = 0.;
   //double C_recomb = 0.;
   double bfheating = 0.;
@@ -235,10 +224,8 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
 
   assert(cellhistory[tid].bfheating_mgi == modelgridindex);
 
-  //int nlevels_lowerion = 0;
   for (int element = 0; element < nelements; element++)
   {
-    // pkt_ptr->mastate.element = element;
     const int nions = get_nions(element);
     #ifdef DIRECT_COL_HEAT
     for (int ion = 0; ion < nions; ion++)
@@ -314,9 +301,6 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
         /// There this condition is needed as we can only ionise to existing ionisation
         /// stage even if there would be further ionisation stages in nature which
         /// are not included in the model atom.
-        //nlevels_currention = get_nlevels(element,ion);
-        //nlevels_currention = get_ionisinglevels(element,ion);
-  //      if (ion > 0) nlevels_lowerion = get_nlevels(element,ion-1);
 
     for (int ion = 0; ion < nions - 1; ion++)
     {
@@ -324,14 +308,7 @@ static void calculate_heating_rates(const int modelgridindex, const double T_e, 
       for (int level = 0; level < nbflevels; level++)
       {
         const double nnlevel = calculate_exclevelpop(modelgridindex,element,ion,level);
-        const int nphixstargets = get_nphixstargets(element,ion,level);
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-        {
-          //int upper = get_phixsupperlevel(element,ion,level,phixstargetindex);
-          //double epsilon_upper = epsilon(element,ion+1,upper);
-          //double epsilon_trans = epsilon_upper - epsilon_current;
-          bfheating += nnlevel * get_bfheatingcoeff(element, ion, level, phixstargetindex);
-        }
+        bfheating += nnlevel * get_bfheatingcoeff(element, ion, level);
       }
     }
   }

@@ -790,11 +790,15 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 
 
 static void solve_Te_nltepops(const int n, const int nts, const int titer, heatingcoolingrates_t *heatingcoolingrates)
+// n is the modelgridindex (TODO: rename to mgi)
+// nts is the timestep number
 {
-  // needed for the T_e solver, but only depends on the radiation field, which is fixed during the iterations below
+  // bfheating coefficients are needed for the T_e solver, but
+  // they only depend on the radiation field, which is fixed during the iterations below
+  printout("calculate_bfheatingcoeffs for cell %d timestep %d...", n, nts);
   const time_t sys_time_start_calculate_bfheatingcoeffs = time(NULL);
   calculate_bfheatingcoeffs(n);
-  printout("calculate_bfheatingcoeffs for cell %d timestep %d took %ld seconds\n", n, nts, time(NULL) - sys_time_start_calculate_bfheatingcoeffs);
+  printout("took %ld seconds\n", time(NULL) - sys_time_start_calculate_bfheatingcoeffs);
 
   const double covergence_tolerance = 0.04;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++)
