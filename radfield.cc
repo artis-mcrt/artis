@@ -89,7 +89,7 @@ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the 
   #endif
 #endif
 
-static double J[MMODELGRID + 1];
+static double J[MMODELGRID + 1]; // after normalisation: [ergs/s/sr/cm2/Hz]
 #ifdef DO_TITER
   static double J_reduced_save[MMODELGRID + 1];
 #endif
@@ -975,7 +975,7 @@ double radfield_dbb_mgi(double nu, int modelgridindex)
 
 
 double radfield(double nu, int modelgridindex)
-// mean intensity J_nu
+// returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
   if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {

@@ -14,7 +14,7 @@
 #include "ratecoeff.h"
 #include "update_grid.h"
 
-static FILE *nlte_file;
+static FILE *nlte_file = NULL;
 
 
 static inline
