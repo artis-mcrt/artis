@@ -40,7 +40,7 @@ int radfield_integrate(
 
 
 inline double radfield_dbb(double nu, float T, float W)
-// returns J_nu for a diluted black body
+// returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
 {
   return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
 }
