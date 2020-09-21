@@ -509,7 +509,6 @@ typedef struct rpkt_cont_opacity_struct
 
 typedef struct
 {
-  double bfheatingcoeff;
   double corrphotoioncoeff;
 #if (SEPARATE_STIMRECOMB)
   double stimrecombcoeff;
@@ -524,6 +523,7 @@ typedef struct chlevels_struct
   double *individ_internal_down_same;
   double *individ_internal_up_same;
   chphixstargets_struct *chphixstargets;
+  double bfheatingcoeff;
 } chlevels_struct;
 
 typedef struct chions_struct
