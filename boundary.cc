@@ -116,20 +116,18 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 /// Basic routine to compute distance to a cell boundary.
 {
   assert(tstart == pkt_ptr->prop_time);
-  //double close, close_try;
 
-  /** There are six possible boundary crossings. Each of the three
-  cartesian coordinates may be taken in turn. For x, the packet
-  trajectory is
-  x = x0 + (dir.x) * c * (t - tstart)
-  the boundries follow
-  x+/- = x+/-(tmin) * (t/tmin)
-  so the crossing occurs when
-  t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
-   */
+  // There are six possible boundary crossings. Each of the three
+  // cartesian coordinates may be taken in turn. For x, the packet
+  // trajectory is
+  // x = x0 + (dir.x) * c * (t - tstart)
+  // the boundries follow
+  // x+/- = x+/-(tmin) * (t/tmin)
+  // so the crossing occurs when
+  // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
 
-  /* Modified so that it also returns the distance to the closest cell
-  boundary, regardless of direction. */
+  // Modified so that it also returns the distance to the closest cell
+  // boundary, regardless of direction.
 
   // d is used to loop over the coordinate indicies 0,1,2 for x,y,z
 
@@ -280,7 +278,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
   }
 
   // printout("comparing distances. not_allowed = %d\n", not_allowed);
-  /** We now need to identify the shortest +ve time - that's the one we want. */
+  //We now need to identify the shortest +ve time - that's the one we want.
   int choice = 0;         ///just a control variable to
   double time = 1.e99;
   //close = 1.e99;
@@ -349,10 +347,10 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
   }
 
 
-  /** Now we know what happens. The distance to crossing is....*/
+  // Now we know what happens. The distance to crossing is....
   double distance = CLIGHT_PROP * time;
   // printout("boundary_cross: time %g distance %g\n", time, distance);
-  //*closest = close;
+  // closest = close;
 
   return distance;
 }
@@ -448,8 +446,8 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
 
   if (snext == -99)
   {
-    /* Then the packet is exiting the grid. We need to record
-     where and at what time it leaves the grid. */
+    // Then the packet is exiting the grid. We need to record
+    // where and at what time it leaves the grid.
     pkt_ptr->escape_type = pkt_ptr->type;
     pkt_ptr->escape_time = pkt_ptr->prop_time;
     pkt_ptr->type = TYPE_ESCAPE;
@@ -457,7 +455,7 @@ void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_curren
   }
   else
   {
-    /** Just need to update "where".*/
+    // Just need to update "where"
     //int oldpos = pkt_ptr->where;
     //int old_mgi = cell[pkt_ptr->where].modelgridindex;
     pkt_ptr->where = snext;
