@@ -2522,7 +2522,7 @@ int compare_linelistentry(const void *p1, const void *p2)
 void update_parameterfile(int nts)
 /// Subroutine to read in input parameters from input.txt.
 {
-  printout("Update input.txt for restart at time step %d\n", nts);
+  printout("Update input.txt for restart at timestep %d...", nts);
 
   FILE *input_file = fopen_required("input.txt", "r+");
   //setvbuf(input_file, NULL, _IOLBF, 0);
@@ -2559,7 +2559,7 @@ void update_parameterfile(int nts)
 
   fclose(input_file);
 
-  printout("input.txt successfully updated\n");
+  printout("done\n");
 }
 
 

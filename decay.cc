@@ -511,7 +511,7 @@ double get_positroninjection_rate_density(const int modelgridindex, const double
     enum radionuclides nuclide = (enum radionuclides)(n);
     if (nucdecayenergypositrons(nuclide) > 0. && get_modelradioabund_at_time(modelgridindex, nuclide, t) > 0.)
     {
-      printout("positrons coming from nuclide %d en %g abund %g\n", nuclide, nucdecayenergypositrons(nuclide), get_modelradioabund_at_time(modelgridindex, nuclide, t));
+      // printout("positrons coming from nuclide %d en %g abund %g\n", nuclide, nucdecayenergypositrons(nuclide), get_modelradioabund_at_time(modelgridindex, nuclide, t));
       const double decayratefactor = get_modelradioabund_at_time(modelgridindex, nuclide, t) / meanlife(nuclide);
       pos_dep_sum += decayratefactor * nucdecayenergypositrons(nuclide) * rho / nucmass(nuclide);
     }
