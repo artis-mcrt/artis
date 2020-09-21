@@ -1804,24 +1804,24 @@ static void read_1d_model(void)
 {
   FILE *model_input = fopen_required("model.txt", "r");
 
-  /* 1st read the number of data points in the table of input model. */
+  // 1st read the number of data points in the table of input model.
   fscanf(model_input, "%d", &npts_model);
   if (npts_model > MMODELGRID)
   {
     printout("Too many points in input model. Abort.\n");
     abort();
   }
-  /* Now read the time (in days) at which the model is specified. */
+  // Now read the time (in days) at which the model is specified.
   double t_model_days;
   fscanf(model_input, "%lg\n", &t_model_days);
   t_model = t_model_days * DAY;
 
-  /* Now read in the lines of the model. Each line has 5 entries: the
-     cell number (integer) the velocity at outer boundary of cell (float),
-     the mass density in the cell (float), the abundance of Ni56 by mass
-     in the cell (float) and the total abundance of all Fe-grp elements
-     in the cell (float). For now, the last number is recorded but never
-     used. */
+  // Now read in the lines of the model. Each line has 5 entries: the
+  // cell number (integer) the velocity at outer boundary of cell (float),
+  // the mass density in the cell (float), the abundance of Ni56 by mass
+  // in the cell (float) and the total abundance of all Fe-grp elements
+  // in the cell (float). For now, the last number is recorded but never
+  // used.
 
   int mgi = 0;
   while (!feof(model_input))
@@ -1906,7 +1906,7 @@ static void read_2d_model(void)
 {
   FILE *model_input = fopen_required("model.txt", "r");
 
-  /* 1st read the number of data points in the table of input model. */
+  // 1st read the number of data points in the table of input model.
   fscanf(model_input, "%d %d", &ncoord1_model, &ncoord2_model);  // r and z (cylindrical polar)
 
   npts_model = ncoord1_model * ncoord2_model;
@@ -1915,20 +1915,20 @@ static void read_2d_model(void)
     printout("Too many points in input model. Abort.\n");
     abort();
   }
-  /* Now read the time (in days) at which the model is specified. */
+  // Now read the time (in days) at which the model is specified.
   double t_model_days;
   fscanf(model_input, "%lg", &t_model_days);
   t_model = t_model_days * DAY;
 
-  /* Now read in vmax (in cm/s) */
+  // Now read in vmax (in cm/s)
   fscanf(model_input, "%lg\n", &vmax);
   dcoord1 = vmax * t_model / ncoord1_model; //dr for input model
   dcoord2 = 2. * vmax * t_model / ncoord2_model; //dz for input model
 
-  /* Now read in the model. Each point in the model has two lines of input.
-     First is an index for the cell then its r-mid point then its z-mid point
-     then its total mass density.
-     Second is the total FeG mass, initial 56Ni mass, initial 56Co mass */
+  // Now read in the model. Each point in the model has two lines of input.
+  // First is an index for the cell then its r-mid point then its z-mid point
+  // then its total mass density.
+  // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
 
   int mgi = 0;
   while (!feof(model_input))
@@ -2009,7 +2009,8 @@ static void read_3d_model(void)
   /// Now read in the lines of the model.
   min_den = 1.e99;
 
-  /*mgi is the index to the model grid - empty cells are sent to MMODELGRID, otherwise each input cell is one modelgrid cell */
+  // mgi is the index to the model grid - empty cells are sent to MMODELGRID,
+  // otherwise each input cell is one modelgrid cell
   int mgi = 0;
   int n = 0;
   while (!feof(model_input))

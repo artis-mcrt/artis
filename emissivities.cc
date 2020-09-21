@@ -51,9 +51,9 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
 
   //  printout("compton reducion factor %g freq %g mu %g\n", f, H*pkt_ptr->nu_cmf/MEV, mu_cmf );
 
-  /* Now work out in which frequency bin this'll happen. The scattered
-     light will have frequency (nu_cmf / f) in the cmf frame. And it
-     travels in direction syn_dir in the rf. */
+  // Now work out in which frequency bin this'll happen. The scattered
+  // light will have frequency (nu_cmf / f) in the cmf frame. And it
+  // travels in direction syn_dir in the rf.
 
   const double freq_out = pkt_ptr->nu_cmf / f; /// doppler(syn_dir, vel_vec);
   // do we want ?/ doppler(syn_dir, vel_vec)
@@ -72,36 +72,33 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
   if ((lindex > emiss_offset - 1) && (lindex < emiss_offset + emiss_max - 1))
   {
 
-    /* Then get partial crossection dsigma_domega in cmf */
-    /* Coeff is 3 / 16 / PI */
+    // Then get partial crossection dsigma_domega in cmf
+    // Coeff is 3 / 16 / PI
 
     const double dsigma_domega_cmf = 0.0596831 * SIGMA_T / f / f * (f + (1./f) + (mu_cmf * mu_cmf) - 1.);
 
     //speed = vec_len(vel_vec);
     //solid_angle_factor =  doppler(pkt_ptr->dir, vel_vec) * doppler(pkt_ptr->dir, vel_vec);
 
-    /*
-      pow((1 + (dot(vel_vec, syn_dir)/CLIGHT)),2)
-      / (1.0 - (speed* speed / CLIGHT / CLIGHT));
-    */
+    //   pow((1 + (dot(vel_vec, syn_dir)/CLIGHT)),2)
+    //   / (1.0 - (speed* speed / CLIGHT / CLIGHT));
 
     //dsigma_domega_rf = dsigma_domega_cmf //* doppler(pkt_ptr->dir, vel_vec)
     //* solid_angle_factor;
 
-    /* so now determine the contribution to the emissivity and which
- frequency bin it should be in */
+    // so now determine the contribution to the emissivity and which
+    // frequency bin it should be in
 
     const double dop_fac = doppler(pkt_ptr->dir, vel_vec);
 
     const double emiss_cont = pkt_ptr->e_rf * dsigma_domega_cmf * dist * dop_fac * dop_fac / f;
 
-    /* For normalisation this needs to be
-       1) divided by volume
-       2) divided by frequency bin size
-       3) multiplied by the cell electron number density
-       4) divided by the length of the time step
-       This will all be done later
-    */
+    // For normalisation this needs to be
+    //    1) divided by volume
+    //    2) divided by frequency bin size
+    //    3) multiplied by the cell electron number density
+    //    4) divided by the length of the time step
+    //    This will all be done later
 
     if (lindex < emiss_offset)
     {
@@ -287,7 +284,6 @@ void write_compton_estimators(int nts)
 
   est_file = fopen_required(filename, "wb+");
 
-  //for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
     for (int m = 0; m < emiss_max; m++)
