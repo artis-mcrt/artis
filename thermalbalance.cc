@@ -151,6 +151,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
     {
       printout("skipping Z=%d X=%g, ", get_element(element), get_abundance(modelgridindex, element));
     }
+
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
@@ -162,26 +163,28 @@ void calculate_bfheatingcoeffs(int modelgridindex)
         {
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {
-          #if NO_LUT_BFHEATING
-              const double bfheatingcoeff_thistarget = calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
+            #if NO_LUT_BFHEATING
 
-          #else
+            bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, modelgridindex);
+
+            #else
 
             /// The correction factor for stimulated emission in gammacorr is set to its
             /// LTE value. Because the T_e dependence of gammacorr is weak, this correction
             /// correction may be evaluated at T_R!
             const double T_R = get_TR(modelgridindex);
             const double W = get_W(modelgridindex);
-            double bfheatingcoeff_thistarget = W * get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
-            const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-            if (index_in_groundlevelcontestimator >= 0)
-              bfheatingcoeff_thistarget *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
+            bfheatingcoeff += W * get_bfheatingcoeff_ana(element, ion, level, phixstargetindex, T_R, W);
 
-          #endif
-
-            bfheatingcoeff += bfheatingcoeff_thistarget;
+            #endif
           }
           assert(isfinite(bfheatingcoeff));
+
+          #if !NO_LUT_BFHEATING
+          const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
+          if (index_in_groundlevelcontestimator >= 0)
+            bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
+          #endif
         }
         cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
       }
