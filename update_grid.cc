@@ -1087,7 +1087,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     /// Update current mass density of cell
     //n = nonemptycells[my_rank+ncl*nprocs];
     if (log_this_cell)
-      printout("[info] update_grid: working on cell %d before timestep %d ...\n", mgi, nts);
+      printout("[info] update_grid: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
     //n = nonemptycells[ncl];
     //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
     modelgrid[mgi].rho = get_rhoinit(mgi) / pow(tratmid, 3);
@@ -1356,51 +1356,8 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   // nts_prev is the previous timestep, unless this is timestep zero
   const double deltat = time_step[nts_prev].width;
 
-  printout("timestep %d, titer %d\n", nts, titer);
-  printout("deltat %g\n", deltat);
-
-  /*
-  FILE *photoion_file;
-  FILE *bf_file;
-  char photoion_filename[100],bf_filename[100];
-  if (m != itstep)
-  {
-    sprintf(photoion_filename,"photoion_%.2d.out",m);
-    photoion_file = fopen_required(photoion_filename, "w");
-    setvbuf(photoion_file, NULL, _IOLBF, 1);
-    sprintf(bf_filename,"bf_%.2d.out",m);
-    bf_file = fopen_required(bf_filename, "w");
-    setvbuf(bf_file, NULL, _IOLBF, 1);
-
-    for (ncl = 0; ncl < nblock; ncl++)
-    {
-      n = nonemptycells[my_rank+ncl*nprocs];
-      fprintf(photoion_file,"%d ",n);
-      fprintf(bf_file,"%d ",n);
-      for (int i = 0; i < 9; i++)
-      {
-        fprintf(photoion_file,"%g %g ",cell[n].photoion[i],cell[n].radrecomb[i]);
-        fprintf(bf_file,"%g %g ",cell[n].bfabs[i],cell[n].bfem[i]);
-      }
-      fprintf(photoion_file,"\n");
-      fprintf(bf_file,"\n");
-    }
-    fclose(photoion_file);
-    fclose(bf_file);
-  }
-  */
-
-
-  /// Compare values of rate coefficients obtained by the tabulated values to
-  /// directly integrated values.
-  //check_interpolation(T_min,T_max);
-
-//   #ifndef FORCE_LTE
-//     //sprintf(Alphaspfilename,"bfcount%.2d-%.2d_%.4d.out",m,titer,my_rank);
-//     sprintf(Alphaspfilename,"bfcount%d-%d_%.4d.out",m,titer,my_rank);
-//     bfcount_file = fopen_required(Alphaspfilename, "w");
-//     setvbuf(bfcount_file, NULL, _IOLBF, 1);
-//   #endif
+  // printout("timestep %d, titer %d\n", nts, titer);
+  // printout("deltat %g\n", deltat);
 
   #ifdef _OPENMP
   #pragma omp parallel
