@@ -86,8 +86,6 @@ int opacity_case; // 0 normally, 1 for Fe-grp dependence.
                   ///MK: 4 non-grey treatment
 
 
-double dlogt;
-
 
 /// ATOMIC DATA
 ///============================================================================
@@ -180,10 +178,9 @@ int itstep;       /// Initial timestep's number
 int ftstep;       /// Final timestep's number
 int nts_global;   /// Current time step
 
-int ntbins, nnubins; //number of bins for spectrum
+int nnubins; //number of bins for spectrum
 double nu_min_r, nu_max_r; //limits on frequency range for r-pkt spectrum
 
-int ntlcbins; //number of bins for light curve
 
 double nusyn_min, nusyn_max; //limits on range for syn
 int nfake_gam; //# of fake gamma ray lines for syn

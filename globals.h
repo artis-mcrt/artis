@@ -79,7 +79,6 @@ extern double max_path_step;
 
 extern int opacity_case;
 
-extern double dlogt;
 extern int maxion;
 extern short elements_uppermost_ion[MTHREADS][MELEMENTS];
 extern int nelements;
@@ -161,10 +160,8 @@ extern int itstep;
 extern int ftstep;
 extern int nts_global;
 
-extern int ntbins, nnubins;
+extern int nnubins;
 extern double nu_min_r, nu_max_r;
-
-extern int ntlcbins;
 
 extern double nusyn_min, nusyn_max;
 extern int nfake_gam;

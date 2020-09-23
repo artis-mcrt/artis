@@ -31,9 +31,6 @@ int nepkts;
 
 double dlognu;
 
-double dlogtlc;
-double dlogtlc_angle;
-
 
 // threadprivate variables
 FILE *output_file;
@@ -171,7 +168,9 @@ int main(int argc, char** argv)
 
         if (a == -1)
         {
+          printout("gather_light_curve\n");
           gather_light_curve(epkts, nepkts);
+          printout("gather_spectrum\n");
           gather_spectrum(epkts, nepkts, -1, do_emission_res);
         }
         else

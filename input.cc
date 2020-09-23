@@ -2212,8 +2212,6 @@ void input(int rank)
   /// Read in parameters from input.txt
   ///======================================================
   read_parameterfile(rank);
-  ntbins = ntstep;   ///time bins for spectrum equal #(timesteps)
-  ntlcbins = ntstep; ///time bins for light curve #(timesteps)
 
   read_atomicdata();
 

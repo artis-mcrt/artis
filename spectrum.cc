@@ -4,25 +4,6 @@
 #include "spectrum.h"
 #include "vectors.h"
 
-/*int make_spectrum()
-/// Routine to make a MC spectrum from the packets.
-{
-  gather_spectrum(0);
-  write_spectrum();
-
-  return 0;
-}*/
-
-struct spec
-{
-  float lower_freq[MNUBINS];
-  float delta_freq[MNUBINS];
-  double flux[MNUBINS];
-  float lower_time;
-  float delta_t;
-  //int packets[MNUBINS];
-  emstat_t stat[MNUBINS];
-};
 
 static struct spec spectra[MTBINS];
 // static struct spec spectra_res[MTBINS][MABINS];
@@ -109,7 +90,7 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
     spec_file = fopen_required("spec.out", "r");
     fscanf(spec_file, "%g ", &dum1);
 
-    for (p = 0; p < ntbins; p++)
+    for (p = 0; p < ntstep; p++)
     {
       fscanf(spec_file, "%g ", &dum1);
     }
@@ -118,7 +99,7 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
     {
       fscanf(spec_file, "%g ", &dum1);
 
-      for (p = 0; p < ntbins; p++)
+      for (p = 0; p < ntstep; p++)
       {
         fscanf(spec_file, "%g ",
                 &dum2);
@@ -222,11 +203,11 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
 
 
   fprintf(spec_file, "%g ", 0.0);
-  for (int p = 0; p < ntbins; p++)
+  for (int p = 0; p < ntstep; p++)
   {
     /// ????????????????????????????????????????????????????????????????????????????????????????????????
     /// WHY HERE OTHER CALCULATION OF "SPECTRA.MIDTIME" THAN FOR time_step.mid ?????????????????????????
-    fprintf(spec_file, "%g ", (spectra[p].lower_time + (spectra[p].delta_t/2)) / DAY);
+    fprintf(spec_file, "%g ", time_step[p].mid / DAY);
   }
   fprintf(spec_file, "\n");
 
@@ -234,7 +215,7 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
   {
     fprintf(spec_file, "%g ", ((spectra[0].lower_freq[m] + (spectra[0].delta_freq[m] / 2))));
 
-    for (int p = 0; p < ntbins; p++)
+    for (int p = 0; p < ntstep; p++)
     {
       fprintf(spec_file, "%g ", spectra[p].flux[m]);
       if (do_emission_res)
@@ -305,11 +286,11 @@ static void add_to_spec(const EPKT *const pkt_ptr, const bool do_emission_res)
   const double t_arrive = pkt_ptr->arrive_time;
   if (t_arrive > tmin && t_arrive < tmax)
   {
-    const int nt = (log(t_arrive) - log(tmin)) / dlogt;
+    const int nt = get_timestep(t_arrive);
     if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
     {
       int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-      const double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
+      const double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
       spectra[nt].flux[nnu] += deltaE;
 
       const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
@@ -345,7 +326,7 @@ static void add_to_spec(const EPKT *const pkt_ptr, const bool do_emission_res)
       nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
       if (nnu >= 0 && nnu < MNUBINS)
       {
-        const double deltaE_absorption = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
+        const double deltaE_absorption = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
         const int at = pkt_ptr->absorptiontype;
         if (at >= 0)
         {
@@ -383,12 +364,9 @@ void init_spectrum(void)
     printout("Too many frequency bins in spectrum - reducing.\n");
     nnubins = MNUBINS;
   }
-  if (ntbins > MTBINS)
-  {
-    printout("Too many time bins in spectrum - reducing.\n");
-    ntbins = MTBINS;
-  }
-  for (int n = 0; n < ntbins; n++)
+  assert(ntstep < MTBINS);
+
+  for (int n = 0; n < ntstep; n++)
   {
     for (int m = 0; m < nnubins; m++)
     {
@@ -427,13 +405,10 @@ void init_spectrum(void)
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
   ///Should be moved to input.c or exspec.c
-  dlogt = (log(tmax) - log(tmin)) / ntbins;
   dlognu = (log(nu_max_r) - log(nu_min_r)) / nnubins;
 
-  for (int n = 0; n < ntbins; n++)
+  for (int n = 0; n < ntstep; n++)
   {
-    spectra[n].lower_time = exp(log(tmin) + (n * (dlogt)));
-    spectra[n].delta_t = exp(log(tmin) + ((n + 1) * (dlogt))) - spectra[n].lower_time;
     for (int m = 0; m < nnubins; m++)
     {
       spectra[n].lower_freq[m] = exp(log(nu_min_r) + (m * (dlognu)));
@@ -546,13 +521,13 @@ static void add_to_spec_res(const EPKT *const pkt_ptr, int current_abin)
     const double t_arrive = pkt_ptr->arrive_time;
     if (t_arrive > tmin && t_arrive < tmax)
     {
-      const int nt = (log(t_arrive) - log(tmin)) / dlogt;
+      const int nt = get_timestep(t_arrive);
 
       /// and the correct frequency bin.
       if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
       {
         int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-        double deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
+        double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
         spectra[nt].flux[nnu] += deltaE;
 
         if (do_emission_res == 1)
@@ -566,7 +541,7 @@ static void add_to_spec_res(const EPKT *const pkt_ptr, int current_abin)
           nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
           if (nnu >= 0 && nnu < MNUBINS)
           {
-            deltaE = pkt_ptr->e_rf / spectra[nt].delta_t / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
+            deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
             const int at = pkt_ptr->absorptiontype;
             if (at >= 0)
             {

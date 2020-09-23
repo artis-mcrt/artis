@@ -18,14 +18,12 @@ typedef struct
 
 ///Specpol
 
-struct specpol
+struct spec
 {
-    float lower_freq[MNUBINS];
-    float delta_freq[MNUBINS];
-    double flux[MNUBINS];
-    float lower_time;
-    float delta_t;
-    emstat_t stat[MNUBINS];
+  float lower_freq[MNUBINS];
+  float delta_freq[MNUBINS];
+  double flux[MNUBINS];
+  emstat_t stat[MNUBINS];
 };
 
 typedef struct
@@ -53,11 +51,9 @@ extern int nepkts;
 
 extern double dlognu;
 
-extern double dlogtlc;
-extern double dlogtlc_angle;
+extern struct spec stokes_i[MTBINS];
+extern struct spec stokes_q[MTBINS];
+extern struct spec stokes_u[MTBINS];
 
-extern struct specpol stokes_i[MTBINS];
-extern struct specpol stokes_q[MTBINS];
-extern struct specpol stokes_u[MTBINS];
 
 #endif //EXSPEC_H
