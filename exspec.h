@@ -6,7 +6,7 @@
 /// Spectrum data structure
 #define MNUBINS   1000
 #define MABINS    100
-#define MTBINS  200
+#define MTBINS    400
 
 typedef struct
 {
