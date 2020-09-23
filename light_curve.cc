@@ -88,7 +88,6 @@ void write_light_curve(char lc_filename[], int current_abin)
 
   /*
   FILE *lc_file;
-  double save2[MTSTEP][2];
   double save[MTLCBINS][2];
   float dum1, dum2, dum3;
 

@@ -2571,11 +2571,8 @@ void time_init(void)
   /// ntstep is the number of time steps wanted. For now the time steps
   /// are logarithmically spaced, but the code should be written such that
   /// they don't have to be.
-  if (ntstep + 1 > MTSTEP)
-  {
-    printout("Error: too many timesteps. (%d) Abort.\n", ntstep);
-    abort();
-  }
+
+  time_step = (struct time *) calloc(ntstep + 1, sizeof(struct time));
 
   /// Now set the individual time steps
   for (int n = 0; n < ntstep; n++)
