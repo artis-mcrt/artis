@@ -114,4 +114,21 @@ inline FILE *fopen_required(const char *filename, const char *mode)
 }
 
 
+inline int get_timestep(const double time)
+{
+  assert(time >= tmin);
+  assert(time < tmax);
+  for (int nts = 0; nts < ntstep; nts++)
+  {
+    const double tsend = time_step[nts].start + time_step[nts].width;
+    if (time >= time_step[nts].start && time < tsend)
+    {
+      return nts;
+    }
+  }
+  assert(false); // could not find matching timestep
+
+  return -1;
+}
+
 #endif // SN3D_H

@@ -10,8 +10,8 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
 
   for (int l = 0; l < 3; l++)
   {
-    for (int p = 0; p < ntbins; p++)
-      fprintf(specpol_file, "%g ", (stokes_i[p].lower_time + (stokes_i[p].delta_t/2))/DAY);
+    for (int p = 0; p < ntstep; p++)
+      fprintf(specpol_file, "%g ", time_step[p].mid / DAY);
   }
 
   fprintf(specpol_file, "\n");
@@ -21,7 +21,7 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
     fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m]+(stokes_i[0].delta_freq[m]/2))));
 
     // Stokes I
-    for (int p = 0; p < ntbins; p++)
+    for (int p = 0; p < ntstep; p++)
     {
       fprintf(specpol_file, "%g ", stokes_i[p].flux[m]);
 
@@ -41,7 +41,7 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
 
 
     // Stokes Q
-    for (int p = 0; p < ntbins; p++)
+    for (int p = 0; p < ntstep; p++)
     {
         fprintf(specpol_file, "%g ", stokes_q[p].flux[m]);
 
@@ -61,7 +61,7 @@ int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpo
 
 
     // Stokes U
-    for (int p = 0; p < ntbins; p++)
+    for (int p = 0; p < ntstep; p++)
     {
         fprintf(specpol_file, "%g ", stokes_u[p].flux[m]);
 
@@ -100,23 +100,16 @@ void init_specpol(void)
     printout("Too many frequency bins in spectrum - reducing.\n");
     nnubins = MNUBINS;
   }
-  if (ntbins > MTBINS)
-  {
-    printout("Too many time bins in spectrum - reducing.\n");
-    ntbins = MTBINS;
-  }
+  assert(ntstep <= MTBINS);
 
   /** start by setting up the time and frequency bins. */
   /** it is all done interms of a logarithmic spacing in both t and nu - get the
   step sizes first. */
   ///Should be moved to input.c or exspec.c
-  dlogt = (log(tmax) - log(tmin))/ntbins;
   dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
 
-  for (n = 0; n < ntbins; n++)
+  for (n = 0; n < ntstep; n++)
   {
-    stokes_i[n].lower_time = exp( log(tmin) + (n * (dlogt)));
-    stokes_i[n].delta_t = exp( log(tmin) + ((n+1) * (dlogt))) - stokes_i[n].lower_time;
     for (m=0; m < nnubins; m++)
     {
       stokes_i[n].lower_freq[m] = exp( log(nu_min_r) + (m * (dlognu)));
@@ -205,7 +198,7 @@ int add_to_specpol(const EPKT *pkt_ptr)
   t_arrive = pkt_ptr->arrive_time;
   if (t_arrive > tmin && t_arrive < tmax)
   {
-    nt = (log(t_arrive) - log(tmin)) / dlogt;
+    nt = get_timestep(t_arrive);
     if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
     {
       nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
@@ -350,15 +343,15 @@ int add_to_specpol_res(const EPKT *pkt_ptr, int current_abin)
     t_arrive = pkt_ptr->arrive_time;
     if (t_arrive > tmin && t_arrive < tmax)
     {
-      nt = (log(t_arrive) - log(tmin)) / dlogt;
+      nt = get_timestep(t_arrive);
 
       /// and the correct frequency bin.
       if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
       {
         nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-        deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
-        deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
-        deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
+        deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
+        deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / time_step[nt].width/ stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
+        deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
         stokes_i[nt].flux[nnu] += deltai;
         stokes_q[nt].flux[nnu] += deltaq;
         stokes_u[nt].flux[nnu] += deltau;
