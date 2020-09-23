@@ -7,7 +7,7 @@
 
 extern double syn_dir[3]; // vector pointing from origin to observer
 
-extern struct time time_step[MTSTEP];
+extern struct time *time_step;
 
 #define MSYN_TIME 100
 extern int nsyn_time;
