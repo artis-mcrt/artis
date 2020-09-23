@@ -23,7 +23,7 @@ struct lc
 };
 
 /// Light curve data structure
-#define MTLCBINS  200
+#define MTLCBINS  400
 #define MALCBINS  100
 #define MANGLCBINS 100
 
