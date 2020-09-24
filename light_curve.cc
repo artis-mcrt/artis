@@ -10,24 +10,23 @@
 const int MALCBINS = 100;
 
 
-static void add_to_lc(
-  const EPKT *pkt_ptr, double *light_curve_lum, double *light_curve_lumcmf)
+void add_to_lc(const PKT *pkt_ptr, double *light_curve_lum, double *light_curve_lumcmf)
 // Add a packet to the outgoing light-curve.
 {
   /// Put this into the time grid
-  const double t_arrive = pkt_ptr->arrive_time;
-  if (t_arrive > tmin && t_arrive < tmax)
+  const double arrive_time = get_arrive_time(pkt_ptr);
+  if (arrive_time > tmin && arrive_time < tmax)
   {
-    const int nt = get_timestep(t_arrive);
+    const int nt = get_timestep(arrive_time);
     light_curve_lum[nt] += pkt_ptr->e_rf / time_step[nt].width / nprocs;
   }
 
   /// Now do the cmf light curve.
   //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-  const double t_arrive_cmf = pkt_ptr->arrive_time_cmf;
-  if (t_arrive_cmf > tmin && t_arrive_cmf < tmax)
+  const double arrive_time_cmf = get_arrive_time_cmf(pkt_ptr);
+  if (arrive_time_cmf > tmin && arrive_time_cmf < tmax)
   {
-    const int nt = get_timestep(t_arrive_cmf);
+    const int nt = get_timestep(arrive_time_cmf);
     light_curve_lumcmf[nt] += pkt_ptr->e_cmf / time_step[nt].width / nprocs / sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
   }
 }
@@ -64,24 +63,7 @@ void write_light_curve(
 }
 
 
-void gather_light_curve(
-  EPKT *epkts, int nepkts,
-  double *light_curve_lum,
-  double *light_curve_lumcmf)
-{
-  //void read_packets(FILE *packets_file);
-  //int i,n,p;
-
-  /// Now add the energy of all the escaping packets to the
-  /// appropriate bins.
-  for (int p = 0; p < nepkts; p++)
-  {
-    add_to_lc(&epkts[p], light_curve_lum, light_curve_lumcmf);
-  }
-}
-
-
-static void add_to_lc_res(const EPKT *pkt_ptr, int current_abin, double *light_curve_lum)
+void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
 {
@@ -116,25 +98,11 @@ static void add_to_lc_res(const EPKT *pkt_ptr, int current_abin, double *light_c
   if (na == current_abin)
   {
     /// Put this into the time grid.
-    double t_arrive = pkt_ptr->arrive_time;
+    double t_arrive = get_arrive_time(pkt_ptr);
     if (t_arrive > tmin && t_arrive < tmax)
     {
       int nt = get_timestep(t_arrive);
       light_curve_lum[nt] += pkt_ptr->e_rf / time_step[nt].width * MALCBINS / nprocs;
     }
-  }
-}
-
-
-void gather_light_curve_res(EPKT *epkts, int nepkts, int current_abin, double *light_curve_lum)
-{
-  //void read_packets(FILE *packets_file);
-  //int i,n,p,nn;
-
-  /// Now add the energy of all the escaping packets to the
-  /// appropriate bins.
-  for (int p = 0; p < nepkts; p++)
-  {
-    add_to_lc_res(&epkts[p], current_abin, light_curve_lum);
   }
 }

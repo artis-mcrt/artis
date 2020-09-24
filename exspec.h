@@ -47,7 +47,6 @@ typedef struct
 
 extern int nprocs_exspec;
 extern bool do_emission_res;
-extern int nepkts;
 
 extern double dlognu;
 
