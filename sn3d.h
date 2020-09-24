@@ -13,6 +13,7 @@
 // #define FORCE_LTE
 
 #include "types.h"
+#include "vectors.h"
 
 #if (DETAILED_BF_ESTIMATORS_ON && !NO_LUT_PHOTOION)
   #error Must use NO_LUT_PHOTOION with DETAILED_BF_ESTIMATORS_ON
@@ -130,5 +131,21 @@ inline int get_timestep(const double time)
 
   return -1;
 }
+
+
+inline double get_arrive_time(const PKT *pkt_ptr)
+/// We know that a packet escaped at "escape_time". However, we have
+/// to allow for travel time. Use the formula in Leon's paper. The extra
+/// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
+{
+  return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+}
+
+
+inline double get_arrive_time_cmf(const PKT *pkt_ptr)
+{
+  return pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
+}
+
 
 #endif // SN3D_H

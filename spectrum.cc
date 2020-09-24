@@ -277,13 +277,13 @@ static int columnindex_from_emissiontype(const int et)
 }
 
 
-static void add_to_spec(const EPKT *const pkt_ptr, const bool do_emission_res)
+void add_to_spec(const PKT *const pkt_ptr, const bool do_emission_res)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
   /// Put this into the time grid.
-  const double t_arrive = pkt_ptr->arrive_time;
+  const double t_arrive = get_arrive_time(pkt_ptr);
   if (t_arrive > tmin && t_arrive < tmax)
   {
     const int nt = get_timestep(t_arrive);
@@ -441,44 +441,7 @@ void init_spectrum(void)
 }
 
 
-void gather_spectrum(const EPKT *const epkts, int nepkts, int depth, bool do_emission_res)
-{
-  if (depth < 0)
-  {
-    /// Do not extract depth-dependent spectra
-    /// Now add the energy of all the escaping packets to the
-    /// appropriate bins.
-    for (int p = 0; p < nepkts; p++)
-    {
-      add_to_spec(&epkts[p], do_emission_res);
-    }
-  }
-  else
-  {
-    /// Extract depth-dependent spectra
-    /// Set velocity cut
-    double vcut;
-    if (depth < 9)
-      vcut = (depth + 1.) * vmax / 10.;
-    else
-      vcut = 100 * vmax;     /// Make sure that all escaping packets are taken for
-                             /// depth=9 . For 2d and 3d models the corners of a
-                             /// simulation box contain material with v>vmax.
-
-    /// Now add the energy of all the escaping packets to the
-    /// appropriate bins.
-    for (int p = 0; p < nepkts; p++)
-    {
-      const double vem = sqrt(pow(epkts[p].em_pos[0],2) + pow(epkts[p].em_pos[1],2) + pow(epkts[p].em_pos[2],2)) / (epkts[p].em_time);
-      //printout("vem %g, vcut %g, vmax %g, time %d\n",vem,vcut,vmax,pkt_ptr->em_time);
-      if (vem < vcut)
-        add_to_spec(&epkts[p], do_emission_res);
-    }
-  }
-}
-
-
-static void add_to_spec_res(const EPKT *const pkt_ptr, int current_abin)
+void add_to_spec_res(const PKT *const pkt_ptr, int current_abin)
 // Routine to add a packet to the outgoing spectrum.
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
@@ -518,7 +481,7 @@ static void add_to_spec_res(const EPKT *const pkt_ptr, int current_abin)
   if (na == current_abin)
   {
     /// Put this into the time grid.
-    const double t_arrive = pkt_ptr->arrive_time;
+    const double t_arrive = get_arrive_time(pkt_ptr);
     if (t_arrive > tmin && t_arrive < tmax)
     {
       const int nt = get_timestep(t_arrive);
@@ -555,16 +518,4 @@ static void add_to_spec_res(const EPKT *const pkt_ptr, int current_abin)
       }
     }
   }
-}
-
-
-void gather_spectrum_res(const EPKT *const epkts, const int nepkts, const int current_abin)
-{
-  /// Now add the energy of all the escaping packets to the
-  /// appropriate bins.
-  for (int p = 0; p < nepkts; p++)
-  {
-    add_to_spec_res(&epkts[p], current_abin);
-  }
-
 }
