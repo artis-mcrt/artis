@@ -202,9 +202,9 @@ int add_to_specpol(const EPKT *pkt_ptr)
     if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
     {
       nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-      deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
-      deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
-      deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+      deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+      deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / time_step[nt].width/ stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+      deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
 
       stokes_i[nt].flux[nnu] += deltai;
       stokes_q[nt].flux[nnu] += deltaq;
@@ -242,9 +242,9 @@ int add_to_specpol(const EPKT *pkt_ptr)
       nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
       if (nnu >= 0 && nnu < MNUBINS)
       {
-        deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
-        deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
-        deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+        deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+        deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
+        deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs;
 
         at = pkt_ptr->absorptiontype;
         if (at >= 0)
@@ -390,9 +390,9 @@ int add_to_specpol_res(const EPKT *pkt_ptr, int current_abin)
           nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
           if (nnu >= 0 && nnu < MNUBINS)
           {
-            deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
-            deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
-            deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / stokes_i[nt].delta_t / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
+            deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
+            deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
+            deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / time_step[nt].width / stokes_i[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC /PARSEC * MABINS / nprocs;
 
             at = pkt_ptr->absorptiontype;
             if (at >= 0)

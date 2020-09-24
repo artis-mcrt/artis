@@ -2,6 +2,7 @@
 #define SPECPOL_H
 
 #include <stdio.h>
+#include "exspec.h"
 
 int write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file);
 void init_specpol(void);

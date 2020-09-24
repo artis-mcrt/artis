@@ -41,6 +41,40 @@ gsl_rng *rng;
 gsl_integration_workspace *gslworkspace;
 
 
+static void set_epkt_from_pkt(const PKT *pkt_ptr, EPKT *epkt_ptr)
+{
+  assert(pkt_ptr->type == TYPE_ESCAPE);
+  /// We know that a packet escaped at "escape_time". However, we have
+  /// to allow for travel time. Use the formula in Leon's paper. The extra
+  /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
+  const double arrive_time = pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+  epkt_ptr->arrive_time = arrive_time;
+
+  /// Now do the cmf time.
+  const double arrive_time_cmf = pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
+  epkt_ptr->arrive_time_cmf = arrive_time_cmf;
+  // printout("add packet %d. arrive_time %g arrive_time_cmf %g nu_rf %g e_rf %g e_cmf %g \n",
+  //          j, arrive_time, arrive_time_cmf, pkt_ptr->nu_rf, pkt_ptr->e_rf, pkt_ptr->nu_cmf);
+
+  epkt_ptr->dir[0] = pkt_ptr->dir[0];
+  epkt_ptr->dir[1] = pkt_ptr->dir[1];
+  epkt_ptr->dir[2] = pkt_ptr->dir[2];
+  epkt_ptr->nu_rf = pkt_ptr->nu_rf;
+  epkt_ptr->e_rf = pkt_ptr->e_rf;
+  epkt_ptr->e_cmf = pkt_ptr->e_cmf;
+  epkt_ptr->em_pos[0] = pkt_ptr->em_pos[0];
+  epkt_ptr->em_pos[1] = pkt_ptr->em_pos[1];
+  epkt_ptr->em_pos[2] = pkt_ptr->em_pos[2];
+  epkt_ptr->trueem_time = pkt_ptr->trueem_time;
+  epkt_ptr->em_time = pkt_ptr->em_time;
+  epkt_ptr->emissiontype = pkt_ptr->emissiontype;
+  epkt_ptr->trueemissiontype = pkt_ptr->trueemissiontype;
+  epkt_ptr->absorptionfreq = pkt_ptr->absorptionfreq;
+  epkt_ptr->absorptiontype = pkt_ptr->absorptiontype;
+  epkt_ptr->trueemissionvelocity = pkt_ptr->trueemissionvelocity;
+}
+
+
 static int get_escaped_packets(int i, int nprocs, PKT pkt[], EPKT *epkts, int npkts, enum packet_type escape_type)
 {
   char filename[100];
@@ -65,38 +99,11 @@ static int get_escaped_packets(int i, int nprocs, PKT pkt[], EPKT *epkts, int np
     // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
     if (pkt[ii].type == TYPE_ESCAPE && pkt[ii].escape_type == escape_type)
     {
-      /// We know that a packet escaped at "escape_time". However, we have
-      /// to allow for travel time. Use the formula in Leon's paper. The extra
-      /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-      const double arrive_time = pkt[ii].escape_time - (dot(pkt[ii].pos, pkt[ii].dir) / CLIGHT_PROP);
-      epkts[nepkts].arrive_time = arrive_time;
-
-      /// Now do the cmf time.
-      const double arrive_time_cmf = pkt[ii].escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
-      epkts[nepkts].arrive_time_cmf = arrive_time_cmf;
-      // printout("add packet %d. arrive_time %g arrive_time_cmf %g nu_rf %g e_rf %g e_cmf %g \n",
-      //          j, arrive_time, arrive_time_cmf, pkt[ii].nu_rf, pkt[ii].e_rf, pkt[ii].nu_cmf);
-
-      epkts[nepkts].dir[0] = pkt[ii].dir[0];
-      epkts[nepkts].dir[1] = pkt[ii].dir[1];
-      epkts[nepkts].dir[2] = pkt[ii].dir[2];
-      epkts[nepkts].nu_rf = pkt[ii].nu_rf;
-      epkts[nepkts].e_rf = pkt[ii].e_rf;
-      epkts[nepkts].e_cmf = pkt[ii].e_cmf;
-      epkts[nepkts].em_pos[0] = pkt[ii].em_pos[0];
-      epkts[nepkts].em_pos[1] = pkt[ii].em_pos[1];
-      epkts[nepkts].em_pos[2] = pkt[ii].em_pos[2];
-      epkts[nepkts].trueem_time = pkt[ii].trueem_time;
-      epkts[nepkts].em_time = pkt[ii].em_time;
-      epkts[nepkts].emissiontype = pkt[ii].emissiontype;
-      epkts[nepkts].trueemissiontype = pkt[ii].trueemissiontype;
-      epkts[nepkts].absorptionfreq = pkt[ii].absorptionfreq;
-      epkts[nepkts].absorptiontype = pkt[ii].absorptiontype;
-      epkts[nepkts].trueemissionvelocity = pkt[ii].trueemissionvelocity;
-
+      set_epkt_from_pkt(&pkt[ii], &epkts[nepkts]);
       nepkts++;
     }
   }
+  printout("  %d of %d packets escaped with type %s\n", nepkts, npkts, MODE_GAMMA ? "TYPE_GAMMA" : "TYPE_RPKT");
   return nepkts;
 }
 
@@ -156,7 +163,8 @@ int main(int argc, char** argv)
     for (int a = -1; a < amax; a++)
     {
       /// Set up the light curve grid and initialise the bins to zero.
-      init_light_curve();
+      double *light_curve_lum = (double *) calloc(ntstep, sizeof(double));
+      double *light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
       /// Set up the spectrum grid and initialise the bins to zero.
       init_spectrum();
 
@@ -164,16 +172,15 @@ int main(int argc, char** argv)
       for (int p = 0; p < nprocs; p++)
       {
         nepkts = get_escaped_packets(p, nprocs, pkts, epkts, npkts, MODE_GAMMA ? TYPE_GAMMA : TYPE_RPKT);
-        printout("  %d of %d packets escaped with type %s\n", nepkts, npkts, MODE_GAMMA ? "TYPE_GAMMA" : "TYPE_RPKT");
 
         if (a == -1)
         {
-          gather_light_curve(epkts, nepkts);
+          gather_light_curve(epkts, nepkts, light_curve_lum, light_curve_lumcmf);
           gather_spectrum(epkts, nepkts, -1, do_emission_res);
         }
         else
         {
-          gather_light_curve_res(epkts, nepkts, a);
+          gather_light_curve_res(epkts, nepkts, a, light_curve_lum);
           gather_spectrum_res(epkts, nepkts, a);
         }
       }
@@ -183,13 +190,13 @@ int main(int argc, char** argv)
         /// Extract angle-averaged spectra and light curves
         if (!MODE_GAMMA)
         {
-          write_light_curve((char *) "light_curve.out", -1);
+          write_light_curve((char *) "light_curve.out", -1, light_curve_lum, light_curve_lumcmf);
           write_spectrum((char *) "spec.out", do_emission_res, (char *) "emission.out",
                          (char *) "emissiontrue.out", (char *) "absorption.out");
         }
         else
         {
-          write_light_curve((char *) "gamma_light_curve.out", -1);
+          write_light_curve((char *) "gamma_light_curve.out", -1, light_curve_lum, light_curve_lumcmf);
           write_spectrum((char *) "gamma_spec.out", do_emission_res, NULL, NULL, NULL);
         }
       }
@@ -220,7 +227,7 @@ int main(int argc, char** argv)
           printout("%s \n", absorption_filename);
         }
 
-        write_light_curve(lc_filename, a);
+        write_light_curve(lc_filename, a, light_curve_lum, light_curve_lumcmf);
         write_spectrum(spec_filename, do_emission_res, emission_filename, trueemission_filename, absorption_filename);
       }
       if (a == -1)
