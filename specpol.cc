@@ -136,56 +136,8 @@ void init_specpol(void)
 }
 
 
-int gather_specpol(int depth)
-{
-  int p;
-  EPKT *pkt_ptr;
-  //int i,n,m,p;
-  //PKT *pkt_ptr;
-  double vcut,vem;
-
-  /// Set up the spectrum grid and initialise the bins to zero.
-  init_specpol();
-
-  if (depth < 0)
-  {
-    /// Do not extract depth-dependent spectra
-    /// Now add the energy of all the escaping packets to the
-    /// appropriate bins.
-    for (p = 0; p < nepkts; p++)
-    {
-      pkt_ptr = &epkts[p];
-      add_to_specpol(pkt_ptr);
-
-    }
-  }
-  else
-  {
-    /// Extract depth-dependent spectra
-    /// Set velocity cut
-    if (depth < 9) vcut=(depth+1.)*vmax/10.;
-    else vcut=100*vmax;  /// Make sure that all escaping packets are taken for
-                        /// depth=9 . For 2d and 3d models the corners of a
-                        /// simulation box contain material with v>vmax.
-
-    /// Now add the energy of all the escaping packets to the
-    /// appropriate bins.
-    for (p = 0; p < nepkts; p++)
-    {
-      pkt_ptr = &epkts[p];
-      vem = sqrt(pow(pkt_ptr->em_pos[0],2)+pow(pkt_ptr->em_pos[1],2)+pow(pkt_ptr->em_pos[2],2))/pkt_ptr->em_time;
-      //printout("vem %g, vcut %g, vmax %g, time %d\n",vem,vcut,vmax,pkt_ptr->em_time);
-      if (vem < vcut) add_to_specpol(pkt_ptr);
-    }
-  }
-
-  return(0);
-}
-
-
-/**********************************************************************/
 /*Routine to add a packet to the outcoming spectrum.*/
-int add_to_specpol(const EPKT *pkt_ptr)
+int add_to_specpol(const PKT *pkt_ptr)
 {
   /** Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
@@ -195,7 +147,7 @@ int add_to_specpol(const EPKT *pkt_ptr)
 
 
   /// Put this into the time grid.
-  t_arrive = pkt_ptr->arrive_time;
+  t_arrive = get_arrive_time((pkt_ptr);
   if (t_arrive > tmin && t_arrive < tmax)
   {
     nt = get_timestep(t_arrive);
@@ -266,35 +218,8 @@ int add_to_specpol(const EPKT *pkt_ptr)
 }
 
 
-
-/***********************************************/
-int gather_specpol_res(int current_abin)
-{
-  //void read_packets(FILE *packets_file);
-  //int i,n,m,nn,p;
-  EPKT *pkt_ptr;
-  int p;
-
-
-  /// Set up the spectrum grid and initialise the bins to zero.
-  init_specpol();
-
-  /// Now add the energy of all the escaping packets to the
-  /// appropriate bins.
-  for (p = 0; p < nepkts; p++)
-  {
-    pkt_ptr = &epkts[p];
-    add_to_specpol_res(pkt_ptr,current_abin);
-  }
-
-  return(0);
-}
-
-
-
-/**********************************************************************/
 /**Routine to add a packet to the outcoming spectrum.*/
-int add_to_specpol_res(const EPKT *pkt_ptr, int current_abin)
+int add_to_specpol_res(const PKT *pkt_ptr, int current_abin)
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
 
@@ -340,7 +265,7 @@ int add_to_specpol_res(const EPKT *pkt_ptr, int current_abin)
   if (na == current_abin)
   {
     /// Put this into the time grid.
-    t_arrive = pkt_ptr->arrive_time;
+    t_arrive = get_arrive_time(pkt_ptr);
     if (t_arrive > tmin && t_arrive < tmax)
     {
       nt = get_timestep(t_arrive);
