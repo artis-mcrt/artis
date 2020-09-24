@@ -582,7 +582,9 @@ static void save_grid_and_packets(
   }
 }
 
-static bool do_timestep(const int outer_iteration, const int nts, const int titer, const int my_rank, PKT* packets, const int walltimelimitseconds)
+static bool do_timestep(
+  const int outer_iteration, const int nts, const int titer,
+  const int my_rank, PKT* packets, const int walltimelimitseconds)
 {
   bool do_this_full_loop = true;
 

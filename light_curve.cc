@@ -9,12 +9,10 @@
 /// Light curve data structure
 const int MALCBINS = 100;
 
-static double *light_curve_lum;
-static double *light_curve_lumcmf;
 
-
-static void add_to_lc(const EPKT *pkt_ptr)
-/**Routine to add a packet to the outcoming light-curve.*/
+static void add_to_lc(
+  const EPKT *pkt_ptr, double *light_curve_lum, double *light_curve_lumcmf)
+// Add a packet to the outgoing light-curve.
 {
   /// Put this into the time grid
   const double t_arrive = pkt_ptr->arrive_time;
@@ -35,93 +33,14 @@ static void add_to_lc(const EPKT *pkt_ptr)
 }
 
 
-void init_light_curve(void)
-{
-  /* start by setting up the time bins. */
-  /* it is all done interms of a logarithmic spacing in t - get the
-     step sizes first. */
-  ///Should be moved to input.c or exspec.c
-
-  light_curve_lum = (double *) calloc(ntstep, sizeof(double));
-  light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
-
-  for (int n = 0; n < ntstep; n++)
-  {
-    light_curve_lum[n] = 0.0;
-    light_curve_lumcmf[n] = 0.0;
-  }
-}
-
-
-void write_light_curve(char lc_filename[], int current_abin)
+void write_light_curve(
+  char lc_filename[], int current_abin,
+  const double *light_curve_lum,
+  const double *light_curve_lumcmf)
 {
   FILE *lc_file = fopen_required(lc_filename, "w");
 
   printout("Writing %s\n", lc_filename);
-
-  /*
-  FILE *lc_file;
-  float dum1, dum2, dum3;
-
-  /// Light curve is done - write it out.
-  /// If needed, start by reading in existing file and storing old numbers.
-  if (file_set)
-  {
-    if ((lc_file = fopen("light_curve.out", "r")) == NULL)
-    {
-      printout("Cannot open lc_file.txt.\n");
-      abort();
-    }
-    for (int m = 0; m < ntstep; m++)
-    {
-        fscanf(lc_file, "%g %g %g\n", &dum1, &dum2, &dum3);
-        save[m][0]=dum2;
-        save[m][1]=dum3;
-  	}
-
-    for (int m = 0; m < ntstep; m++)
-    {
-      fscanf(lc_file, "%g %g %g\n", &dum1, &dum2, &dum3);
-      save2[m][0]=dum2;
-      save2[m][1]=dum3;
-    }
-    fclose(lc_file);
-  }
-  else
-  {
-    for (int m = 0; m < ntstep; m++)
-    {
-      save[m][0]=0.0;
-      save[m][1]=0.0;
-    }
-
-    for (int m = 0; m < ntstep; m++)
-    {
-      save2[m][0]=0.0;
-      save2[m][1]=0.0;
-    }
-  }
-
-
-  if ((lc_file = fopen("light_curve.out", "w+")) == NULL){
-    printout("Cannot open lc_file.txt.\n");
-    abort();
-  }
-
-  for (int m = 0; m < ntstep; m++)
-  {
-    fprintf(lc_file, "%g %g %g\n", sqrt(light_curve[m].lower_time*(light_curve[m].lower_time + light_curve[m].delta_t))/DAY, ((light_curve[m].lum/LSUN) + save[m][0]), ((light_curve_cmf[m].lum/LSUN) + save[m][1]));
-  }
-
-  /// Now print out the gamma ray deposition rate in the same file.
-
-  for (int m = 0; m < ntstep; m++)
-  {
-    fprintf(lc_file, "%g %g %g\n", time_step[m].mid/DAY, save2[m][0] + (time_step[m].gamma_dep/LSUN/time_step[m].width), save2[m][1] + (time_step[m].cmf_lum/time_step[m].width/LSUN));
-  }
-
-  fclose(lc_file);
-  */
 
   /// Print out the UVOIR bolometric light curve.
   for (int nts = 0; nts < ntstep; nts++)
@@ -145,7 +64,10 @@ void write_light_curve(char lc_filename[], int current_abin)
 }
 
 
-void gather_light_curve(EPKT *epkts, int nepkts)
+void gather_light_curve(
+  EPKT *epkts, int nepkts,
+  double *light_curve_lum,
+  double *light_curve_lumcmf)
 {
   //void read_packets(FILE *packets_file);
   //int i,n,p;
@@ -154,12 +76,12 @@ void gather_light_curve(EPKT *epkts, int nepkts)
   /// appropriate bins.
   for (int p = 0; p < nepkts; p++)
   {
-    add_to_lc(&epkts[p]);
+    add_to_lc(&epkts[p], light_curve_lum, light_curve_lumcmf);
   }
 }
 
 
-static void add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
+static void add_to_lc_res(const EPKT *pkt_ptr, int current_abin, double *light_curve_lum)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
 {
@@ -204,7 +126,7 @@ static void add_to_lc_res(const EPKT *pkt_ptr, int current_abin)
 }
 
 
-void gather_light_curve_res(EPKT *epkts, int nepkts, int current_abin)
+void gather_light_curve_res(EPKT *epkts, int nepkts, int current_abin, double *light_curve_lum)
 {
   //void read_packets(FILE *packets_file);
   //int i,n,p,nn;
@@ -213,6 +135,6 @@ void gather_light_curve_res(EPKT *epkts, int nepkts, int current_abin)
   /// appropriate bins.
   for (int p = 0; p < nepkts; p++)
   {
-    add_to_lc_res(&epkts[p], current_abin);
+    add_to_lc_res(&epkts[p], current_abin, light_curve_lum);
   }
 }
