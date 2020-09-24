@@ -309,7 +309,7 @@ static void print_element_rates_summary(
       {
         printout("  modelgridindex %d timestep %d NLTE iteration %d Te %g nne %g: NLTE summary for Z=%d ion_stage %d:\n",
                  modelgridindex, timestep, nlte_iter, get_Te(modelgridindex), get_nne(modelgridindex), atomic_number, ionstage);
-        printout("                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col  bf_ntcol\n");
+        printout("                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   bf_ntcol\n");
       }
 
       print_level_rates_summary(element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
