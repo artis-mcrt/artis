@@ -106,7 +106,7 @@ void init_specpol(void)
   /** it is all done interms of a logarithmic spacing in both t and nu - get the
   step sizes first. */
   ///Should be moved to input.c or exspec.c
-  dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
+  const double dlognu = (log(nu_max_r) - log(nu_min_r))/nnubins;
 
   for (n = 0; n < ntstep; n++)
   {

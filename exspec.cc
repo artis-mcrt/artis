@@ -19,16 +19,8 @@
 #include "spectrum.h"
 #include "vectors.h"
 
-#ifdef DO_EXGAMMA
-const bool MODE_GAMMA = true;
-#else
-const bool MODE_GAMMA = false;
-#endif
-
 int nprocs_exspec;
 bool do_emission_res;
-
-double dlognu;
 
 
 // threadprivate variables
@@ -65,17 +57,13 @@ int main(int argc, char** argv)
   const int my_rank = 0;
   char filename[100];
 
-  sprintf(filename, MODE_GAMMA ? "exgamma.txt" : "exspec.txt");
+  sprintf(filename, "exspec.txt");
   output_file = fopen_required(filename, "w");
   setvbuf(output_file, NULL, _IOLBF, 1);
 
   const time_t sys_time_start = time(NULL);
 
-  #ifdef EXGAMMA
-  printout("Begining do_exspec for gamma rays.\n");
-  #else
   printout("Begining do_exspec.\n");
-  #endif
 
   /// Get input stuff
   printout("time before input %ld\n", time(NULL));
@@ -86,13 +74,6 @@ int main(int argc, char** argv)
   PKT *pkts = (PKT *) malloc(npkts * sizeof(PKT));
 
   nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
-  if (MODE_GAMMA)
-  {
-    /// Spectra settings
-    do_emission_res = 0;         /// We don't record information on gamma packet last interactions, thus create no emission/absorption files.
-    nu_min_r = 0.05 * MEV / H;   /// Lower frequency boundary for gamma spectra (badly named variable)
-    nu_max_r = 4 * MEV / H;      /// Upper frequency boundary for gamma spectra
-  }
 
   for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
   {
@@ -101,15 +82,23 @@ int main(int argc, char** argv)
     //grid_init();
     time_init();
 
-    const int amax = ((model_type == RHO_1D_READ) || MODE_GAMMA) ? 0 : MABINS;
+    const int amax = ((model_type == RHO_1D_READ)) ? 0 : MABINS;
     for (int a = -1; a < amax; a++)
     {
       /// Set up the light curve grid and initialise the bins to zero.
-      double *light_curve_lum = (double *) calloc(ntstep, sizeof(double));
-      double *light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
+      double *rpkt_light_curve_lum = (double *) calloc(ntstep, sizeof(double));
+      double *rpkt_light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
+      double *gamma_light_curve_lum = (double *) calloc(ntstep, sizeof(double));
+      double *gamma_light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
       /// Set up the spectrum grid and initialise the bins to zero.
-      init_spectrum();
 
+      struct spec *rpkt_spectra = (struct spec *) calloc(MTBINS, sizeof(struct spec));
+      init_spectrum(rpkt_spectra, nu_min_r, nu_max_r, do_emission_res);
+
+      struct spec *gamma_spectra = (struct spec *) calloc(MTBINS, sizeof(struct spec));
+      const double nu_min_gamma = 0.05 * MEV / H;
+      const double nu_max_gamma = 4. * MEV / H;
+      init_spectrum(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
       for (int p = 0; p < nprocs; p++)
       {
@@ -121,31 +110,17 @@ int main(int argc, char** argv)
           // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
           if (pkts[ii].type == TYPE_ESCAPE)
           {
-            if (pkts[ii].escape_type == TYPE_GAMMA)
-            {
-              nesc_gamma++;
-            }
-            else if (pkts[ii].escape_type == TYPE_RPKT)
+            if (pkts[ii].escape_type == TYPE_RPKT)
             {
               nesc_rpkt++;
+              add_to_lc_res(&pkts[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+              add_to_spec_res(&pkts[ii], a, do_emission_res, rpkt_spectra, nu_min_r, nu_max_r);
             }
-            else
+            else if (pkts[ii].escape_type == TYPE_GAMMA && a == -1)
             {
-              abort(); // unknown escape type
-            }
-
-            if (pkts[ii].escape_type == (MODE_GAMMA ? TYPE_GAMMA : TYPE_RPKT))
-            {
-              if (a == -1)
-              {
-                add_to_lc(&pkts[ii], light_curve_lum, light_curve_lumcmf);
-                add_to_spec(&pkts[ii], do_emission_res);
-              }
-              else
-              {
-                add_to_lc_res(&pkts[ii], a, light_curve_lum);
-                add_to_spec_res(&pkts[ii], a);
-              }
+              nesc_gamma++;
+              add_to_lc_res(&pkts[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+              add_to_spec_res(&pkts[ii], a, 0, gamma_spectra, nu_min_gamma, nu_max_gamma);
             }
           }
         }
@@ -155,17 +130,12 @@ int main(int argc, char** argv)
       if (a == -1)
       {
         /// Extract angle-averaged spectra and light curves
-        if (!MODE_GAMMA)
-        {
-          write_light_curve((char *) "light_curve.out", -1, light_curve_lum, light_curve_lumcmf);
-          write_spectrum((char *) "spec.out", do_emission_res, (char *) "emission.out",
-                         (char *) "emissiontrue.out", (char *) "absorption.out");
-        }
-        else
-        {
-          write_light_curve((char *) "gamma_light_curve.out", -1, light_curve_lum, light_curve_lumcmf);
-          write_spectrum((char *) "gamma_spec.out", do_emission_res, NULL, NULL, NULL);
-        }
+        write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+        write_light_curve((char *) "gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+
+        write_spectrum((char *) "spec.out", do_emission_res, (char *) "emission.out",
+                       (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra);
+        write_spectrum((char *) "gamma_spec.out", false, NULL, NULL, NULL, gamma_spectra);
       }
       else
       {
@@ -194,8 +164,8 @@ int main(int argc, char** argv)
           printout("%s \n", absorption_filename);
         }
 
-        write_light_curve(lc_filename, a, light_curve_lum, light_curve_lumcmf);
-        write_spectrum(spec_filename, do_emission_res, emission_filename, trueemission_filename, absorption_filename);
+        write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+        write_spectrum(spec_filename, do_emission_res, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra);
       }
       if (a == -1)
       {
@@ -205,6 +175,14 @@ int main(int argc, char** argv)
       {
         printout("Did %d of %d angle bins.\n", a + 1, MABINS);
       }
+
+      free(rpkt_light_curve_lum);
+      free(rpkt_light_curve_lumcmf);
+      free(rpkt_spectra);
+
+      free(gamma_light_curve_lum);
+      free(gamma_light_curve_lumcmf);
+      free(gamma_spectra);
     }
   }
 

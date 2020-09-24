@@ -70,8 +70,7 @@ endif
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE -DGSL_RANGE_CHECK_OFF
 
 
-exspec exgamma: CXXFLAGS += -DDO_EXSPEC
-exgamma: CXXFLAGS += -DDO_EXGAMMA
+exspec: CXXFLAGS += -DDO_EXSPEC
 
 sn3dmpi: CXX = mpicxx
 sn3dmpi: CXXFLAGS += -DMPI_ON
@@ -102,10 +101,6 @@ exspec_files = exspec.cc grid_init.cc globals.cc input.cc vectors.cc packet_init
 
 exspec: clean version
 	$(CXX) $(CXXFLAGS) $(exspec_files) $(LDFLAGS) -o exspec
-
-exgamma: clean version
-	$(CXX) $(CXXFLAGS) $(exspec_files) $(LDFLAGS) -o exgamma
-
 
 .PHONY: clean version
 

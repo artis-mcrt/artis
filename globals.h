@@ -161,7 +161,8 @@ extern int ftstep;
 extern int nts_global;
 
 extern int nnubins;
-extern double nu_min_r, nu_max_r;
+extern double nu_min_r;
+extern double nu_max_r;
 
 extern double nusyn_min, nusyn_max;
 extern int nfake_gam;

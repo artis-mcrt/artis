@@ -30,8 +30,6 @@ struct spec
 extern int nprocs_exspec;
 extern bool do_emission_res;
 
-extern double dlognu;
-
 extern struct spec stokes_i[MTBINS];
 extern struct spec stokes_q[MTBINS];
 extern struct spec stokes_u[MTBINS];
