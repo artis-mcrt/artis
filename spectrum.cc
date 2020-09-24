@@ -5,10 +5,6 @@
 #include "vectors.h"
 
 
-static struct spec spectra[MTBINS];
-// static struct spec spectra_res[MTBINS][MABINS];
-
-
 const bool TRACE_EMISSION_ABSORPTION_REGION_ON = true;
 
 #define traceemissabs_lambdamin 1000.  // in Angstroms
@@ -30,6 +26,8 @@ typedef struct emissionabsorptioncontrib
 struct emissionabsorptioncontrib *traceemissionabsorption;
 double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
+
+
 static int compare_emission(const void *p1, const void *p2)
 {
   const struct emissionabsorptioncontrib *elem1 = (struct emissionabsorptioncontrib *) p1;
@@ -58,7 +56,7 @@ static int compare_absorption(const void *p1, const void *p2)
 
 
 
-void write_spectrum(char spec_filename[], bool do_emission_res, char emission_filename[], char trueemission_filename[], char absorption_filename[])
+void write_spectrum(char spec_filename[], bool do_emission_res, char emission_filename[], char trueemission_filename[], char absorption_filename[], struct spec *spectra)
 {
   FILE *spec_file = fopen_required(spec_filename, "w");
 
@@ -277,29 +275,32 @@ static int columnindex_from_emissiontype(const int et)
 }
 
 
-void add_to_spec(const PKT *const pkt_ptr, const bool do_emission_res)
+static void add_to_spec(const PKT *const pkt_ptr, const bool do_emission_res, struct spec *spectra, const double nu_min, const double nu_max)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
   /// Put this into the time grid.
   const double t_arrive = get_arrive_time(pkt_ptr);
-  if (t_arrive > tmin && t_arrive < tmax)
+  if (t_arrive > tmin && t_arrive < tmax && pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
   {
     const int nt = get_timestep(t_arrive);
-    if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
-    {
-      int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-      const double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
-      spectra[nt].flux[nnu] += deltaE;
+    const double dlognu = (log(nu_max) - log(nu_min)) / nnubins;
 
+    int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
+
+    const double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
+    spectra[nt].flux[nnu] += deltaE;
+
+    if (do_emission_res)
+    {
       const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
       spectra[nt].stat[nnu].emission[nproc] += deltaE;
 
       const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
       spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
 
-      if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res)
+      if (TRACE_EMISSION_ABSORPTION_REGION_ON)
       {
         const int et = pkt_ptr->trueemissiontype;
         if (et >= 0)
@@ -337,7 +338,7 @@ void add_to_spec(const PKT *const pkt_ptr, const bool do_emission_res)
 
           if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
           {
-            if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res && (pkt_ptr->nu_rf >= traceemissabs_nulower) && (pkt_ptr->nu_rf <= traceemissabs_nuupper))
+            if (TRACE_EMISSION_ABSORPTION_REGION_ON && (pkt_ptr->nu_rf >= traceemissabs_nulower) && (pkt_ptr->nu_rf <= traceemissabs_nuupper))
             {
               traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
@@ -355,7 +356,7 @@ void add_to_spec(const PKT *const pkt_ptr, const bool do_emission_res)
 }
 
 
-void init_spectrum(void)
+void init_spectrum(struct spec *spectra, const double nu_min, const double nu_max, const bool do_emission_res)
 {
   /// Check if enough  memory for spectra has been assigned
   /// and allocate memory for the emission statistics
@@ -366,38 +367,43 @@ void init_spectrum(void)
   }
   assert(ntstep < MTBINS);
 
-  for (int n = 0; n < ntstep; n++)
+  if (do_emission_res)
   {
-    for (int m = 0; m < nnubins; m++)
+    for (int n = 0; n < ntstep; n++)
     {
-      if ((spectra[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
+      for (int m = 0; m < nnubins; m++)
       {
-        printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
-        abort();
-      }
-      if ((spectra[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
-      {
-        printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
-        abort();
-      }
-      if ((spectra[n].stat[m].trueemission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
-      {
-        printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
-        abort();
-      }
-      /*
-      if (do_emission_res == 1)
-      {
-        for (nn = 0; nn < MABINS; nn++)
+        if ((spectra[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
         {
-          if ((spectra_res[n][nn].emission[m].count = malloc((2*nelements*maxion+1)*sizeof(int))) == NULL)
-          {
-            printout("[fatal] input: not enough memory to initialise spectra_res structure ... abort\n");
-            abort();
-          }
+          printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
+          abort();
+        }
+        if ((spectra[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
+        {
+          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
+          abort();
+        }
+        if ((spectra[n].stat[m].trueemission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
+        {
+          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
+          abort();
         }
       }
-      */
+    }
+
+    if (TRACE_EMISSION_ABSORPTION_REGION_ON)
+    {
+      traceemission_totalenergy = 0.;
+      traceemissionabsorption = (struct emissionabsorptioncontrib *) malloc(nlines * sizeof(emissionabsorptioncontrib));
+      traceabsorption_totalenergy = 0.;
+      for (int i = 0; i < nlines; i++)
+      {
+        traceemissionabsorption[i].energyemitted = 0.;
+        traceemissionabsorption[i].emission_weightedvelocity_sum = 0.;
+        traceemissionabsorption[i].energyabsorbed = 0.;
+        traceemissionabsorption[i].absorption_weightedvelocity_sum = 0.;
+        traceemissionabsorption[i].lineindex = i; // this will be important when the list gets sorted
+      }
     }
   }
 
@@ -405,43 +411,33 @@ void init_spectrum(void)
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
   ///Should be moved to input.c or exspec.c
-  dlognu = (log(nu_max_r) - log(nu_min_r)) / nnubins;
+  const double dlognu = (log(nu_max) - log(nu_min)) / nnubins;
 
   for (int n = 0; n < ntstep; n++)
   {
     for (int m = 0; m < nnubins; m++)
     {
-      spectra[n].lower_freq[m] = exp(log(nu_min_r) + (m * (dlognu)));
-      spectra[n].delta_freq[m] = exp(log(nu_min_r) + ((m + 1) * (dlognu))) - spectra[n].lower_freq[m];
+      spectra[n].lower_freq[m] = exp(log(nu_min) + (m * (dlognu)));
+      spectra[n].delta_freq[m] = exp(log(nu_min) + ((m + 1) * (dlognu))) - spectra[n].lower_freq[m];
       spectra[n].flux[m] = 0.0;
-      for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+      if (do_emission_res)
       {
-        spectra[n].stat[m].emission[i] = 0;
-        spectra[n].stat[m].trueemission[i] = 0;
+        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+        {
+          spectra[n].stat[m].emission[i] = 0;
+          spectra[n].stat[m].trueemission[i] = 0;
+        }
+        for (int i = 0; i < nelements * maxion; i++)
+        {
+          spectra[n].stat[m].absorption[i] = 0;
+        }
       }
-      for (int i = 0; i < nelements * maxion; i++)
-        spectra[n].stat[m].absorption[i] = 0;
-    }
-  }
-
-  if (TRACE_EMISSION_ABSORPTION_REGION_ON)
-  {
-    traceemission_totalenergy = 0.;
-    traceemissionabsorption = (struct emissionabsorptioncontrib *) malloc(nlines * sizeof(emissionabsorptioncontrib));
-    traceabsorption_totalenergy = 0.;
-    for (int i = 0; i < nlines; i++)
-    {
-      traceemissionabsorption[i].energyemitted = 0.;
-      traceemissionabsorption[i].emission_weightedvelocity_sum = 0.;
-      traceemissionabsorption[i].energyabsorbed = 0.;
-      traceemissionabsorption[i].absorption_weightedvelocity_sum = 0.;
-      traceemissionabsorption[i].lineindex = i; // this will be important when the list gets sorted
     }
   }
 }
 
 
-void add_to_spec_res(const PKT *const pkt_ptr, int current_abin)
+void add_to_spec_res(const PKT *const pkt_ptr, int current_abin, const bool do_emission_res, struct spec *spectra, const double nu_min, const double nu_max)
 // Routine to add a packet to the outgoing spectrum.
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
@@ -450,6 +446,14 @@ void add_to_spec_res(const PKT *const pkt_ptr, int current_abin)
      for travel time. Use the formula in Leon's paper.
      The extra distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
   */
+
+  if (current_abin == -1)
+  {
+    add_to_spec(pkt_ptr, do_emission_res, spectra, nu_min, nu_max);
+    return;
+  }
+
+  const double dlognu = (log(nu_max) - log(nu_min)) / nnubins;
 
   double xhat[3] = {1.0, 0.0, 0.0};
 
@@ -493,7 +497,7 @@ void add_to_spec_res(const PKT *const pkt_ptr, int current_abin)
         double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
         spectra[nt].flux[nnu] += deltaE;
 
-        if (do_emission_res == 1)
+        if (do_emission_res)
         {
           const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
           spectra[nt].stat[nnu].emission[nproc] += deltaE;
@@ -501,7 +505,7 @@ void add_to_spec_res(const PKT *const pkt_ptr, int current_abin)
           const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
           spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
 
-          nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
+          nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min)) /  dlognu;
           if (nnu >= 0 && nnu < MNUBINS)
           {
             deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;

@@ -179,7 +179,8 @@ int ftstep;       /// Final timestep's number
 int nts_global;   /// Current time step
 
 int nnubins; //number of bins for spectrum
-double nu_min_r, nu_max_r; //limits on frequency range for r-pkt spectrum
+double nu_min_r;
+double nu_max_r; //limits on frequency range for r-pkt spectrum
 
 
 double nusyn_min, nusyn_max; //limits on range for syn

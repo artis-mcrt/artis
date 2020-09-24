@@ -10,28 +10,6 @@
 const int MALCBINS = 100;
 
 
-void add_to_lc(const PKT *pkt_ptr, double *light_curve_lum, double *light_curve_lumcmf)
-// Add a packet to the outgoing light-curve.
-{
-  /// Put this into the time grid
-  const double arrive_time = get_arrive_time(pkt_ptr);
-  if (arrive_time > tmin && arrive_time < tmax)
-  {
-    const int nt = get_timestep(arrive_time);
-    light_curve_lum[nt] += pkt_ptr->e_rf / time_step[nt].width / nprocs;
-  }
-
-  /// Now do the cmf light curve.
-  //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-  const double arrive_time_cmf = get_arrive_time_cmf(pkt_ptr);
-  if (arrive_time_cmf > tmin && arrive_time_cmf < tmax)
-  {
-    const int nt = get_timestep(arrive_time_cmf);
-    light_curve_lumcmf[nt] += pkt_ptr->e_cmf / time_step[nt].width / nprocs / sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
-  }
-}
-
-
 void write_light_curve(
   char lc_filename[], int current_abin,
   const double *light_curve_lum,
@@ -63,10 +41,32 @@ void write_light_curve(
 }
 
 
-void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum)
+void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf)
 /**Routine to add a packet to the outcoming light-curve.*/
 /**See add_to_spec.*/
 {
+  if (current_abin == -1)
+  {
+    /// Put this into the time grid
+    const double arrive_time = get_arrive_time(pkt_ptr);
+    if (arrive_time > tmin && arrive_time < tmax)
+    {
+      const int nt = get_timestep(arrive_time);
+      light_curve_lum[nt] += pkt_ptr->e_rf / time_step[nt].width / nprocs;
+    }
+
+    /// Now do the cmf light curve.
+    //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
+    const double arrive_time_cmf = get_arrive_time_cmf(pkt_ptr);
+    if (arrive_time_cmf > tmin && arrive_time_cmf < tmax)
+    {
+      const int nt = get_timestep(arrive_time_cmf);
+      light_curve_lumcmf[nt] += pkt_ptr->e_cmf / time_step[nt].width / nprocs / sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
+    }
+
+    return;
+  }
+
   double vec1[3], vec2[3], xhat[3], vec3[3];
 
   xhat[0] = 1.0;
