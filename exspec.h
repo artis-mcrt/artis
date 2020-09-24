@@ -26,24 +26,6 @@ struct spec
   emstat_t stat[MNUBINS];
 };
 
-typedef struct
-{
-  double dir[3];  /// Direction of propagation. (x,y,z). Always a unit vector.
-  double e_rf;    /// The energy the packet carries in the rest frame.
-  double e_cmf;    /// The energy the packet carries in the rest frame.
-  double nu_rf;   /// The frequency in the rest frame.
-  float arrive_time; /// Time at which is passes out of the grid.
-  float arrive_time_cmf; /// Time at which is passes out of the grid.
-  int emissiontype;   /// records how the packet was emitted if it is a r-pkt
-  int trueemissiontype; /// records how the packet was emitted directly after coming from a kpkt
-  int absorptiontype;   /// records how the packet was emitted if it is a r-pkt
-  double absorptionfreq;   /// records how the packet was emitted if it is a r-pkt
-  double em_pos[3]; /// Position of the packet (x,y,z) at last emission process
-  int em_time;
-  int trueem_time;
-  double stokes[3];
-  float trueemissionvelocity;
-} EPKT;
 
 extern int nprocs_exspec;
 extern bool do_emission_res;

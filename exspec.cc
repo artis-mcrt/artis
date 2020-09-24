@@ -84,13 +84,6 @@ int main(int argc, char** argv)
   nprocs = nprocs_exspec;
 
   PKT *pkts = (PKT *) malloc(npkts * sizeof(PKT));
-  EPKT *epkts = (EPKT *) malloc(npkts * sizeof(EPKT));
-
-  if (epkts == NULL)
-  {
-    printout("[fatal] input: not enough memory to initalise escaping packets data structure ... abort\n");
-    abort();
-  }
 
   nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
   if (MODE_GAMMA)
@@ -108,9 +101,6 @@ int main(int argc, char** argv)
     //grid_init();
     time_init();
 
-    /// Loop over all packets in all the packets files of the simulation and check if
-    /// a packet made it out as a rpkt or not. Escaping r-packets are stored in the
-    /// epkts array, which is then used for the binning.
     const int amax = ((model_type == RHO_1D_READ) || MODE_GAMMA) ? 0 : MABINS;
     for (int a = -1; a < amax; a++)
     {
@@ -224,7 +214,6 @@ int main(int argc, char** argv)
   /* Spec syn. */
   //grid_init();
   //syn_gamma();
-  free(epkts);
   free(pkts);
 
   printout("exspec finished at %ld (tstart + %ld seconds)\n", time(NULL), time(NULL) - sys_time_start);
