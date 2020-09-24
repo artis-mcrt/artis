@@ -1136,7 +1136,7 @@ void solve_nlte_pops_element(const int element, const int modelgridindex, const 
 
       for (int level = 0; level < get_nlevels_nlte(element, ion); level++)
       {
-        print_level_rates(modelgridindex, timestep, element, ion, 0, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
+        print_level_rates(modelgridindex, timestep, element, ion, level, popvec, rate_matrix_rad_bb, rate_matrix_coll_bb, rate_matrix_ntcoll_bb, rate_matrix_rad_bf, rate_matrix_coll_bf, rate_matrix_ntcoll_bf);
       }
 
       if (ion_has_superlevel(element, ion))
