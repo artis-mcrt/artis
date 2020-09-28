@@ -4,6 +4,6 @@
 #include "sn3d.h"
 #include "update_grid.h"
 
-void update_packets(int nts, PKT *pkt);
+void update_packets(const int my_rank, int nts, PKT *pkt);
 
 #endif //UPDATE_PACKETS_H

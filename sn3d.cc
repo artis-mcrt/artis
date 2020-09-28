@@ -18,6 +18,7 @@
 #include "grey_emissivities.h"
 #include "grid_init.h"
 #include "input.h"
+#include "light_curve.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nltepop.h"
@@ -307,74 +308,6 @@ static void mpi_reduce_estimators(int my_rank, int nts)
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
-
-    // MPI_Reduce(MPI_IN_PLACE, &ionfluxestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // MPI_Reduce(MPI_IN_PLACE, &twiddle, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // MPI_Reduce(MPI_IN_PLACE, &stimrecombestimator, MMODELGRID*nelements*maxion, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // MPI_Reduce(&mabfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // if (my_rank == 0)
-    // {
-    //   for (int i = 0; i < MMODELGRID; i++)
-    //   {
-    //     mabfcount[i] = redhelper[i]/p;
-    //   }
-    // }
-    // MPI_Reduce(&mabfcount_thermal, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // if (my_rank == 0)
-    // {
-    //   for (int i = 0; i < MMODELGRID; i++)
-    //   {
-    //     mabfcount_thermal[i] = redhelper[i]/p;
-    //   }
-    // }
-    // MPI_Reduce(&kbfcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // if (my_rank == 0)
-    // {
-    //   for (int i = 0; i < MMODELGRID; i++)
-    //   {
-    //     kbfcount[i] = redhelper[i]/p;
-    //   }
-    // }
-    // MPI_Reduce(&kbfcount_ion, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // if (my_rank == 0)
-    // {
-    //   for (int i = 0; i < MMODELGRID; i++)
-    //   {
-    //     kbfcount_ion[i] = redhelper[i]/p;
-    //   }
-    // }
-    // MPI_Reduce(&kffcount, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // if (my_rank == 0)
-    // {
-    //   for (int i = 0; i < MMODELGRID; i++)
-    //   {
-    //     kffcount[i] = redhelper[i]/p;
-    //   }
-    // }
-    // MPI_Reduce(&kffabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // if (my_rank == 0)
-    // {
-    //   for (int i = 0; i < MMODELGRID; i++)
-    //   {
-    //     kffabs[i] = redhelper[i]/p;
-    //   }
-    // }
-    // MPI_Reduce(&kbfabs, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // if (my_rank == 0)
-    // {
-    //   for (int i = 0; i < MMODELGRID; i++)
-    //   {
-    //     kbfabs[i] = redhelper[i]/p;
-    //   }
-    // }
-    // MPI_Reduce(&kgammadep, &redhelper, MMODELGRID, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    // if (my_rank == 0)
-    // {
-    //   for (int i = 0; i < MMODELGRID; i++)
-    //   {
-    //     kgammadep[i] = redhelper[i]/p;
-    //   }
-    // }
   #endif
 
   #ifdef RECORD_LINESTAT
@@ -394,9 +327,11 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   }
 
   /// Communicate gamma and positron deposition and write to file
+  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+  time_step[nts].cmf_lum /= nprocs;
   time_step[nts].gamma_dep /= nprocs;
   time_step[nts].positron_dep /= nprocs;
 
@@ -690,7 +625,7 @@ static bool do_timestep(
     const time_t time_update_packets_start = time(NULL);
     printout("timestep %d: time before update packets %ld\n", nts, time_update_packets_start);
 
-    update_packets(nts, packets);
+    update_packets(my_rank, nts, packets);
 
     pkt_action_counters_printout(packets, nts);
 
@@ -740,6 +675,7 @@ static bool do_timestep(
       }
       fclose(dep_file);
     }
+    write_partial_lightcurve(my_rank, nts, packets);
 
     #ifdef MPI_ON
       printout("timestep %d: time after estimators have been communicated %ld (took %ld seconds)\n", nts, time(NULL), time(NULL) - time_communicate_estimators_start);

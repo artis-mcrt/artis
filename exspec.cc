@@ -10,6 +10,7 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
+#include <stdio.h>
 #include <stdbool.h>
 #include "exspec.h"
 #include "sn3d.h"
@@ -83,6 +84,7 @@ int main(int argc, char** argv)
     time_init();
 
     const int amax = ((model_type == RHO_1D_READ)) ? 0 : MABINS;
+    // a is the escape direction angle bin
     for (int a = -1; a < amax; a++)
     {
       /// Set up the light curve grid and initialise the bins to zero.
@@ -103,6 +105,7 @@ int main(int argc, char** argv)
       for (int p = 0; p < nprocs; p++)
       {
         get_final_packets(p, nprocs, pkts);
+        int nesc_tot = 0;
         int nesc_gamma = 0;
         int nesc_rpkt = 0;
         for (int ii = 0; ii < npkts; ii++)
@@ -110,6 +113,7 @@ int main(int argc, char** argv)
           // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
           if (pkts[ii].type == TYPE_ESCAPE)
           {
+            nesc_tot++;
             if (pkts[ii].escape_type == TYPE_RPKT)
             {
               nesc_rpkt++;
@@ -124,7 +128,7 @@ int main(int argc, char** argv)
             }
           }
         }
-        printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts))\n", (nesc_gamma + nesc_rpkt), npkts, nesc_gamma, nesc_rpkt);
+        printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, npkts, nesc_gamma, nesc_rpkt);
       }
 
       if (a == -1)
@@ -147,21 +151,13 @@ int main(int argc, char** argv)
         char absorption_filename[100] = "";
 
         sprintf(lc_filename, "light_curve_res_%.2d.out", a);
-        printout("%s \n", lc_filename);
-
         sprintf(spec_filename, "spec_res_%.2d.out", a);
-        printout("%s \n", spec_filename);
 
         if (do_emission_res)
         {
           sprintf(emission_filename, "emission_res_%.2d.out", a);
-          printout("%s \n", emission_filename);
-
           sprintf(trueemission_filename, "emissiontrue_res_%.2d.out", a);
-          printout("%s \n", trueemission_filename);
-
           sprintf(absorption_filename, "absorption_res_%.2d.out", a);
-          printout("%s \n", absorption_filename);
         }
 
         write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
