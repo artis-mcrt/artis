@@ -216,7 +216,7 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
 }
 
 
-void update_packets(const int nts, PKT *pkt)
+void update_packets(const int my_rank, const int nts, PKT *pkt)
 // Subroutine to move and update packets during the current timestep (nts)
 {
   /** At the start, the packets have all either just been initialised or have already been

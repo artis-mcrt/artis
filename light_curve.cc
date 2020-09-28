@@ -106,3 +106,45 @@ void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum
     }
   }
 }
+
+
+void write_partial_lightcurve(int my_rank, int nts, PKT *pkts)
+{
+  const time_t time_func_start = time(NULL);
+
+  double *rpkt_light_curve_lum = (double *) calloc(ntstep, sizeof(double));
+  double *rpkt_light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
+
+  for (int ii = 0; ii < npkts; ii++)
+  {
+    // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
+    if (pkts[ii].type == TYPE_ESCAPE)
+    {
+      if (pkts[ii].escape_type == TYPE_RPKT)
+      {
+        add_to_lc_res(&pkts[ii], -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+      }
+    }
+  }
+
+  #ifdef MPI_ON
+  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lum, ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lumcmf, ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+  for (int i = 0; i < ntstep; i++)
+  {
+    rpkt_light_curve_lum[i] /= nprocs;
+    rpkt_light_curve_lumcmf[i] /= nprocs;
+  }
+  #endif
+
+  if (my_rank == 0)
+  {
+    write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+  }
+
+  free(rpkt_light_curve_lum);
+  free(rpkt_light_curve_lumcmf);
+
+  printout("Saving partial light curve took %lds\n", time(NULL) - time_func_start);
+}

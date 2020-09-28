@@ -19,10 +19,10 @@ struct time
   double start; // time at start of this timestep.
   double width; // Width of timestep.
   double mid; // Mid time in step - computed logarithmically.
-  double gamma_dep; // cmf gamma ray energy deposition rate             ///ATOMIC
-  double positron_dep; // cmf positron energy deposition rate           ///ATOMIC
-  double cmf_lum; // cmf luminosity light curve                         ///ATOMIC
-  int pellet_decays; // Number of pellets that decay in this time step. ///ATOMIC
+  double gamma_dep; // cmf gamma ray energy deposition rate
+  double positron_dep; // cmf positron energy deposition rate
+  double cmf_lum; // cmf luminosity light curve
+  int pellet_decays; // Number of pellets that decay in this time step.
 };
 
 enum model_types {
