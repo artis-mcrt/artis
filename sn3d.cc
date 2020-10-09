@@ -474,10 +474,10 @@ static void save_grid_and_packets(
   else
     sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
 
-  packets_file = fopen_required(filename, "wb");
+  FILE *vspecpol_file = fopen_required(filename, "wb");
 
-  write_vspecpol(packets_file);
-  fclose(packets_file);
+  write_vspecpol(vspecpol_file);
+  fclose(vspecpol_file);
 
   // Write temporary files for vpkt_grid
   if (vgrid_flag == 1)
@@ -487,10 +487,10 @@ static void save_grid_and_packets(
     else
       sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
 
-    packets_file = fopen_required(filename, "wb");
+    FILE *vkptgrid_file = fopen_required(filename, "wb");
 
-    write_vpkt_grid(packets_file);
-    fclose(packets_file);
+    write_vpkt_grid(vkptgrid_file);
+    fclose(vkptgrid_file);
   }
   #endif
 
@@ -1087,20 +1087,28 @@ int main(int argc, char** argv)
         else
           sprintf(filename,"vspecpol_%d_%d_even.tmp", 0 ,my_rank);
 
-        FILE *packets_file = fopen_required(filename, "rb");
+        FILE *vspecpol_file = fopen_required(filename, "rb");
 
-        read_vspecpol(packets_file);
+        read_vspecpol(vspecpol_file);
+
+        fclose(vspecpol_file);
 
         if (vgrid_flag == 1)
         {
           if (nts % 2 == 0)
+          {
             sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
+          }
           else
+          {
             sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
+          }
 
-          packets_file = fopen_required(filename, "rb");
+          FILE *vpktgrid_file = fopen_required(filename, "rb");
 
-          read_vpkt_grid(packets_file);
+          read_vpkt_grid(vpktgrid_file);
+
+          fclose(vpktgrid_file);
         }
       }
     #endif
