@@ -8,6 +8,7 @@
 #include "ratecoeff.h"
 #include "rpkt.h"
 #include "vectors.h"
+#include "vpkt.h"
 
 extern inline int get_coolinglistoffset(int element, int ion);
 
@@ -562,6 +563,13 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       #ifndef FORCE_LTE
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
+
+      /* call the estimator routine - generate a virtual packet */
+      #ifdef VPKT_ON
+        int realtype = 2;
+        call_estimators(pkt_ptr, t_current, realtype);
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      #endif
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
     {
@@ -620,6 +628,13 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
       pkt_ptr->em_time = pkt_ptr->prop_time;
       pkt_ptr->nscatterings = 0;
+
+      /* call the estimator routine - generate a virtual packet */
+      #ifdef VPKT_ON
+        int realtype = 2;
+        call_estimators(pkt_ptr, t_current, realtype);
+        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+      #endif
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
     {

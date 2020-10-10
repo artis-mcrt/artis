@@ -10,6 +10,7 @@
 #include "nltepop.h"
 #include "radfield.h"
 #include "rpkt.h"
+#include "vpkt.h"
 #ifdef DO_EXSPEC
   #include "exspec.h"
 #endif
@@ -2138,6 +2139,207 @@ static void read_ejecta_model(enum model_types model_type)
 }
 
 
+#ifdef VPKT_ON
+static void read_parameterfile_vpkt(void)
+{
+    FILE *input_file;
+    int dum1,dum8;
+    float dum2,dum3,dum4,dum5,dum6,dum7,dum9,dum10,dum11;
+    int i;
+
+    if ((input_file = fopen("vpkt.txt", "r")) == NULL)
+    {
+        printout("Cannot open vpkt.txt.\n");
+        exit(0);
+    }
+
+    // Nobs
+    fscanf(input_file, "%d", &dum1);
+    Nobs = dum1 ;
+
+    if ( Nobs > MOBS ) {
+
+        printout("Too many observers! Nobs > MOBS \n");
+        exit(0);
+    }
+
+
+    // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
+    for (i=0;i<Nobs;i++) {
+
+        fscanf(input_file, "%g", &dum2);
+        nz_obs_vpkt[i] = dum2;
+
+        if ( fabs(nz_obs_vpkt[i])>1 ) {
+
+            printout("Wrong observer direction \n");
+            exit(0);
+        }
+
+        else if ( nz_obs_vpkt[i]==1 ) nz_obs_vpkt[i]=0.9999 ;
+        else if ( nz_obs_vpkt[i]==-1 ) nz_obs_vpkt[i]=-0.9999 ;
+
+    }
+
+
+    // phi to the observer (degrees). A list in the case of many observers
+    for (i=0;i<Nobs;i++) {
+
+        fscanf(input_file, "%g \n", &dum3);
+        phiobs[i] = dum3 * PI / 180 ;
+
+    }
+
+    // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
+    fscanf(input_file, "%g ", &dum4);
+
+    if (dum4!=1) {
+
+        Nspectra = 1;
+        exclude[0] = 0;
+    }
+
+    else {
+
+      fscanf(input_file, "%d ", &dum1);
+      Nspectra = dum1;
+
+      if ( Nspectra > MSPECTRA ) {
+
+          printout("Too many spectra! Nspectra > MSPECTRA \n");
+          exit(0);
+      }
+
+
+      for (i=0;i<Nspectra;i++) {
+
+          fscanf(input_file, "%g ", &dum2);
+          exclude[i] = dum2;
+
+          // The first number should be equal to zero!
+          if (exclude[0]!=0) {
+
+            printout("The first spectrum should allow for all opacities (exclude[i]=0) and is not \n");
+            exit(0);
+          }
+
+      }
+    }
+
+    // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
+    fscanf(input_file, "%g %g %g \n", &dum4, &dum5, &dum6);
+
+    if (dum4==1) {
+
+        tmin_vspec_input = dum5 * DAY;
+        tmax_vspec_input = dum6 * DAY;
+    }
+
+    else {
+
+        tmin_vspec_input = tmin_vspec;
+        tmax_vspec_input = tmax_vspec;
+    }
+
+    if (tmin_vspec_input < tmin_vspec ) {
+
+        printout("tmin_vspec_input is smaller than tmin_vspec \n");
+        exit(0);
+    }
+
+    if (tmax_vspec_input > tmax_vspec ) {
+
+        printout("tmax_vspec_input is larger than tmax_vspec \n");
+        exit(0) ;
+    }
+
+
+    // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
+    // followed by a list of ranges (dum6,dum7)
+    fscanf(input_file, "%g ", &dum4);
+
+    if (dum4==1) {
+
+        fscanf(input_file, "%g ", &dum5);
+
+        Nrange = dum5;
+        if ( Nrange > MRANGE ) {
+
+            printout("Too many ranges! Nrange > MRANGE \n");
+            exit(0);
+        }
+
+        for (i=0;i<Nrange;i++) {
+
+            fscanf(input_file, "%g %g", &dum6, &dum7);
+
+            lmin_vspec_input[i] = dum6;
+            lmax_vspec_input[i] = dum7;
+
+            numin_vspec_input[i] = CLIGHT / (lmax_vspec_input[i]*1e-8) ;
+            numax_vspec_input[i] = CLIGHT / (lmin_vspec_input[i]*1e-8) ;
+
+        }
+
+    }
+
+    else {
+
+        Nrange = 1;
+
+        numin_vspec_input[0] = numin_vspec ;
+        numax_vspec_input[0] = numax_vspec ;
+
+    }
+
+    // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
+    fscanf(input_file, "%g %lg \n", &dum7, &cell_is_optically_thick_vpkt);
+
+    if (dum7!=1) cell_is_optically_thick_vpkt = cell_is_optically_thick ;
+
+    // Maximum optical depth. If a vpkt reaches dum7 is thrown away
+    fscanf(input_file, "%g \n", &dum7);
+    tau_max_vpkt = dum7 ;
+
+
+    // Produce velocity grid map if dum8=1
+    fscanf(input_file, "%d \n", &dum8);
+    vgrid_flag = dum8 ;
+
+    if (dum8==1) {
+
+        // Specify time range for velocity grid map
+        fscanf(input_file, "%g %g \n", &dum9,&dum10);
+        tmin_grid = dum9 * DAY;
+        tmax_grid = dum10 * DAY;
+
+        // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
+        fscanf(input_file, "%g ", &dum9);
+        Nrange_grid = dum9 ;
+
+        if ( Nrange_grid > MRANGE_GRID ) {
+
+            printout("Too many ranges! Nrange_grid > MRANGE_GRID \n");
+            exit(0);
+        }
+
+        for (i=0;i<Nrange_grid;i++) {
+
+            fscanf(input_file, "%g %g", &dum10, &dum11);
+
+            nu_grid_max[i] = CLIGHT / (dum10*1e-8) ;
+            nu_grid_min[i] = CLIGHT / (dum11*1e-8) ;
+
+        }
+
+    }
+
+    fclose(input_file);
+
+}
+#endif
+
+
 void input(int rank)
 /// To govern the input. For now hardwire everything.
 {
@@ -2210,8 +2412,12 @@ void input(int rank)
   nfake_gam = 1; ///# of fake gamma ray lines for syn
 
   /// Read in parameters from input.txt
-  ///======================================================
   read_parameterfile(rank);
+
+  /// Read in parameters from vpkt.txt
+  #ifdef VPKT_ON
+    read_parameterfile_vpkt();
+  #endif
 
   read_atomicdata();
 
@@ -2560,6 +2766,7 @@ void update_parameterfile(int nts)
 
   printout("done\n");
 }
+
 
 
 void time_init(void)

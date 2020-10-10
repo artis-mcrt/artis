@@ -11,4 +11,8 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const int modelgridindex);
 void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, double t_current);
 
+#ifdef VPKT_ON
+int call_estimators(PKT *pkt_ptr, double t_current, int realtype);
+#endif
+
 #endif //RPKT_H
