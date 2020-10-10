@@ -14,6 +14,7 @@
 #include "rpkt.h"
 #include "thermalbalance.h"
 #include "update_grid.h"
+#include "vpkt.h"
 
 
 extern inline double get_abundance(int modelgridindex, int element);
@@ -1242,14 +1243,19 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       }
       modelgrid[mgi].grey_depth = grey_optical_depth;
 
-//          grey_optical_depth = compton_optical_depth;
+      // grey_optical_depth = compton_optical_depth;
+
       if ((grey_optical_depth > cell_is_optically_thick) && (nts < n_grey_timesteps))
       {
         printout("cell %d is treated in grey approximation (tau %g)\n", mgi, grey_optical_depth);
         modelgrid[mgi].thick = 1;
       }
-      // else if (grey_optical_depth > cell_is_optically_thick_vpkt)
-      //   modelgrid[n].thick = 2;
+      #ifdef VPKT_ON
+      else if (grey_optical_depth > cell_is_optically_thick_vpkt)
+      {
+          modelgrid[mgi].thick = 2;
+      }
+      #endif
       else
         modelgrid[mgi].thick = 0;
 

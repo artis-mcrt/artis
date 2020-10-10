@@ -11,6 +11,7 @@
 #include "rpkt.h"
 #include "update_grid.h"
 #include "vectors.h"
+#include "vpkt.h"
 
 // Material for handing r-packet propagation.
 
@@ -344,6 +345,13 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
       pkt_ptr->nscatterings += 1;
       pkt_ptr->last_event = 12;
       escounter++;
+    #endif
+
+    /* call the estimator routine - generate a virtual packet */
+    #ifdef VPKT_ON
+      int realtype = 1;
+      pkt_ptr->last_cross = NONE;
+      call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
     #endif
 
     //pkt_ptr->nu_cmf = 3.7474058e+14;
@@ -2086,3 +2094,72 @@ void calculate_kappa_vpkt_cont(const PKT *pkt_ptr, const double t_current)
 //     }
 //   }
 // }
+
+#ifdef VPKT_ON
+
+int call_estimators(PKT *pkt_ptr, double t_current, int realtype)
+{
+    double t_arrive;
+    double obs[3];
+    int bin;
+    int vflag ;
+    int mgi;
+    double vel_vec[3];
+    int i;
+
+    vflag = 0;
+
+    get_velocity(pkt_ptr->pos, vel_vec, t_current);
+
+    // Cut on vpkts
+    mgi=cell[pkt_ptr->where].modelgridindex;
+    if (modelgrid[mgi].thick != 0) return 0;
+
+    /* this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer) */
+    if (pkt_ptr->next_trans == 0)
+    {
+      const int lineindex = closest_transition(pkt_ptr->nu_cmf, pkt_ptr->next_trans);  ///returns negative
+      if (lineindex < 0)
+      {
+        pkt_ptr->next_trans = lineindex + 1;
+      }
+    }
+
+    for (bin = 0 ; bin < Nobs ; bin++ ) {                   /* loop over different observers */
+
+        obs[0] = sqrt(1-nz_obs_vpkt[bin]*nz_obs_vpkt[bin]) * cos(phiobs[bin]) ;
+        obs[1] = sqrt(1-nz_obs_vpkt[bin]*nz_obs_vpkt[bin]) * sin(phiobs[bin]) ;
+        obs[2] = nz_obs_vpkt[bin] ;
+
+        t_arrive = t_current - (dot(pkt_ptr->pos,obs)/CLIGHT_PROP) ;
+
+        if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input) {       /* time selection */
+
+            for (i=0;i<Nrange;i++){   /* Loop over frequency ranges */
+
+                if (pkt_ptr->nu_cmf / doppler(obs, vel_vec) > numin_vspec_input[i] && pkt_ptr->nu_cmf / doppler(obs, vel_vec) < numax_vspec_input[i] ) {  /* frequency selection */
+
+                    rlc_emiss_vpkt(pkt_ptr, t_current, bin, obs, realtype);
+
+                    vflag = 1;
+
+                    // Need to update the starting cell for next observer
+                    // If previous vpkt reached tau_lim, change_cell (and then update_cell) hasn't been called
+                    mgi = cell[pkt_ptr->where].modelgridindex;
+                    cellhistory_reset(mgi, false);
+
+                }
+
+            }
+
+        }
+
+    }
+
+
+    return vflag;
+
+}
+
+#endif
+

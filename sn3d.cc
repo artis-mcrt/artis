@@ -1069,48 +1069,48 @@ int main(int argc, char** argv)
 
     // Initialise virtual packets file and vspecpol
     #ifdef VPKT_ON
-      if (!simulation_continued_from_saved)
-      {
-        // New simulation
+    if (!simulation_continued_from_saved)
+    {
+      // New simulation
 
-        init_vspecpol();
+      init_vspecpol();
 
-        if (vgrid_flag == 1)
-          init_vpkt_grid();
-      }
+      if (vgrid_flag == 1)
+        init_vpkt_grid();
+    }
+    else
+    {
+      // Continue simulation: read into temporary files
+
+      if (nts % 2 == 0)
+        sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
       else
+        sprintf(filename,"vspecpol_%d_%d_even.tmp", 0 ,my_rank);
+
+      FILE *vspecpol_file = fopen_required(filename, "rb");
+
+      read_vspecpol(vspecpol_file);
+
+      fclose(vspecpol_file);
+
+      if (vgrid_flag == 1)
       {
-        // Continue simulation: read into temporary files
-
         if (nts % 2 == 0)
-          sprintf(filename,"vspecpol_%d_%d_odd.tmp", 0, my_rank);
-        else
-          sprintf(filename,"vspecpol_%d_%d_even.tmp", 0 ,my_rank);
-
-        FILE *vspecpol_file = fopen_required(filename, "rb");
-
-        read_vspecpol(vspecpol_file);
-
-        fclose(vspecpol_file);
-
-        if (vgrid_flag == 1)
         {
-          if (nts % 2 == 0)
-          {
-            sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
-          }
-          else
-          {
-            sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
-          }
-
-          FILE *vpktgrid_file = fopen_required(filename, "rb");
-
-          read_vpkt_grid(vpktgrid_file);
-
-          fclose(vpktgrid_file);
+          sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
         }
+        else
+        {
+          sprintf(filename,"vpkt_grid_%d_%d_even.tmp", 0, my_rank);
+        }
+
+        FILE *vpktgrid_file = fopen_required(filename, "rb");
+
+        read_vpkt_grid(vpktgrid_file);
+
+        fclose(vpktgrid_file);
       }
+    }
     #endif
 
     while (nts < last_loop && !terminate_early)
