@@ -23,6 +23,10 @@
 int nprocs_exspec;
 bool do_emission_res;
 
+struct spec stokes_i[MTBINS];
+struct spec stokes_q[MTBINS];
+struct spec stokes_u[MTBINS];
+
 
 // threadprivate variables
 FILE *output_file;

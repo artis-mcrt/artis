@@ -244,6 +244,90 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
 }
 
 
+void write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file)
+{
+  fprintf(specpol_file, "%g ", 0.0);
+
+  for (int l = 0; l < 3; l++)
+  {
+    for (int p = 0; p < ntstep; p++)
+      fprintf(specpol_file, "%g ", time_step[p].mid / DAY);
+  }
+
+  fprintf(specpol_file, "\n");
+
+  for (int m = 0; m < nnubins; m++)
+  {
+    fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m]+(stokes_i[0].delta_freq[m]/2))));
+
+    // Stokes I
+    for (int p = 0; p < ntstep; p++)
+    {
+      fprintf(specpol_file, "%g ", stokes_i[p].flux[m]);
+
+      if (do_emission_res == 1)
+      {
+        for (int i = 0; i < 2*nelements*maxion+1; i++)
+          fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
+
+        fprintf(emissionpol_file, "\n");
+
+        for (int i = 0; i < nelements*maxion; i++)
+          fprintf(absorptionpol_file, "%g ", stokes_i[p].stat[m].absorption[i]);
+
+        fprintf(absorptionpol_file, "\n");
+      }
+    }
+
+
+    // Stokes Q
+    for (int p = 0; p < ntstep; p++)
+    {
+        fprintf(specpol_file, "%g ", stokes_q[p].flux[m]);
+
+        if (do_emission_res == 1)
+        {
+            for (int i = 0; i < 2*nelements*maxion+1; i++)
+              fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
+
+            fprintf(emissionpol_file, "\n");
+
+            for (int i = 0; i < nelements*maxion; i++)
+              fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
+
+            fprintf(absorptionpol_file, "\n");
+        }
+    }
+
+
+    // Stokes U
+    for (int p = 0; p < ntstep; p++)
+    {
+        fprintf(specpol_file, "%g ", stokes_u[p].flux[m]);
+
+        if (do_emission_res == 1)
+        {
+            for (int i = 0; i < 2*nelements*maxion+1; i++)
+              fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
+
+            fprintf(emissionpol_file, "\n");
+
+            for (int i = 0; i < nelements*maxion; i++)
+              fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
+
+            fprintf(absorptionpol_file, "\n");
+        }
+    }
+
+    fprintf(specpol_file, "\n");
+  }
+
+  /*
+  fclose(specpol_file);
+  fclose(emissionpol_file);
+  */
+}
+
 static int columnindex_from_emissiontype(const int et)
 {
   if (et >= 0)
@@ -280,8 +364,8 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
-  // angle bins contain fewer packets than the full sphere, so must be normalised to match
-  const double anglefactor = current_abin >= 0 ? MABINS : 1;
+  // specific angle bins contain fewer packets than the full sphere, so must be normalised to match
+  const double anglefactor = (current_abin >= 0) ? MABINS : 1.;
 
   const double t_arrive = get_arrive_time(pkt_ptr);
   if (t_arrive > tmin && t_arrive < tmax && pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
@@ -291,7 +375,7 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
 
     const int nnu = (log(pkt_ptr->nu_rf) - log(nu_min)) /  dlognu;
 
-    double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs * anglefactor;
+    const double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs * anglefactor;
 
     spectra[nt].flux[nnu] += deltaE;
 
@@ -302,6 +386,12 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
 
       const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
       spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
+
+      #ifdef POL_ON
+      stokes_i[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[0] * deltaE;
+      stokes_q[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[1] * deltaE;
+      stokes_u[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[2] * deltaE;
+      #endif
 
       if (TRACE_EMISSION_ABSORPTION_REGION_ON && (current_abin == -1))
       {
@@ -317,11 +407,6 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
               traceemissionabsorption[et].emission_weightedvelocity_sum += pkt_ptr->trueemissionvelocity * deltaE;
 
               traceemission_totalenergy += deltaE;
-
-              // const int element = linelist[et].elementindex;
-              // const int ion = linelist[et].ionindex;
-              // printout("packet in range, Z=%d ion_stage %d upperlevel %4d lowerlevel %4d fluxcontrib %g linecontrib %g index %d nlines %d\n",
-              //          get_element(element), get_ionstage(element, ion), linelist[et].upperlevelindex, linelist[et].lowerlevelindex, deltaE, traceemissionabsorption[et].energyemitted, et, nlines);
             }
           }
         }
@@ -339,9 +424,15 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
           const int ion = linelist[at].ionindex;
           spectra[nt].stat[nnu_abs].absorption[element * maxion + ion] += deltaE_absorption;
 
-          if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
+          #ifdef POL_ON
+          stokes_i[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[0] * deltaE_absorption;
+          stokes_q[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[1] * deltaE_absorption;
+          stokes_u[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[2] * deltaE_absorption;
+          #endif
+
+          if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
           {
-            if (TRACE_EMISSION_ABSORPTION_REGION_ON && (current_abin == -1) && (pkt_ptr->nu_rf >= traceemissabs_nulower) && (pkt_ptr->nu_rf <= traceemissabs_nuupper))
+            if ((current_abin == -1) && (pkt_ptr->nu_rf >= traceemissabs_nulower) && (pkt_ptr->nu_rf <= traceemissabs_nuupper))
             {
               traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
@@ -423,16 +514,37 @@ void init_spectrum(struct spec *spectra, const double nu_min, const double nu_ma
       spectra[n].lower_freq[m] = exp(log(nu_min) + (m * (dlognu)));
       spectra[n].delta_freq[m] = exp(log(nu_min) + ((m + 1) * (dlognu))) - spectra[n].lower_freq[m];
       spectra[n].flux[m] = 0.0;
+
       if (do_emission_res)
       {
+        #ifdef POL_ON
+        stokes_i[n].lower_freq[m] = spectra[n].lower_freq[m];
+        stokes_i[n].delta_freq[m] = spectra[n].delta_freq[m];
+
+        stokes_i[n].flux[m] = 0.0;
+        stokes_q[n].flux[m] = 0.0;
+        stokes_u[n].flux[m] = 0.0;
+        #endif
+
         for (int i = 0; i < 2 * nelements * maxion + 1; i++)
         {
           spectra[n].stat[m].emission[i] = 0;
           spectra[n].stat[m].trueemission[i] = 0;
+          #ifdef POL_ON
+          stokes_i[n].stat[m].emission[i] = 0;
+          stokes_q[n].stat[m].emission[i] = 0;
+          stokes_u[n].stat[m].emission[i] = 0;
+          #endif
         }
+
         for (int i = 0; i < nelements * maxion; i++)
         {
           spectra[n].stat[m].absorption[i] = 0;
+          #ifdef POL_ON
+          stokes_i[n].stat[m].absorption[i] = 0;
+          stokes_q[n].stat[m].absorption[i] = 0;
+          stokes_u[n].stat[m].absorption[i] = 0;
+          #endif
         }
       }
     }

@@ -487,10 +487,10 @@ static void save_grid_and_packets(
     else
       sprintf(filename,"vpkt_grid_%d_%d_odd.tmp", 0, my_rank);
 
-    FILE *vkptgrid_file = fopen_required(filename, "wb");
+    FILE *vpkt_grid_file = fopen_required(filename, "wb");
 
-    write_vpkt_grid(vkptgrid_file);
-    fclose(vkptgrid_file);
+    write_vpkt_grid(vpkt_grid_file);
+    fclose(vpkt_grid_file);
   }
   #endif
 
