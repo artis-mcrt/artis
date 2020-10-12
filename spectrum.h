@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include "exspec.h"
+#include "types.h"
 
 void write_spectrum(char spec_filename[], bool do_emission_res, char emission_filename[], char trueemission_filename[], char absorption_filename[], struct spec *spectra);
 void write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file);
