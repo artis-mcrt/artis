@@ -275,21 +275,24 @@ static int columnindex_from_emissiontype(const int et)
 }
 
 
-static void add_to_spec(const PKT *const pkt_ptr, const bool do_emission_res, struct spec *spectra, const double nu_min, const double nu_max)
+static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const bool do_emission_res, struct spec *spectra, const double nu_min, const double nu_max)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
-  /// Put this into the time grid.
+  // angle bins contain fewer packets than the full sphere, so must be normalised to match
+  const double anglefactor = current_abin >= 0 ? MABINS : 1;
+
   const double t_arrive = get_arrive_time(pkt_ptr);
   if (t_arrive > tmin && t_arrive < tmax && pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
   {
     const int nt = get_timestep(t_arrive);
     const double dlognu = (log(nu_max) - log(nu_min)) / nnubins;
 
-    int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
+    const int nnu = (log(pkt_ptr->nu_rf) - log(nu_min)) /  dlognu;
 
-    const double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
+    double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs * anglefactor;
+
     spectra[nt].flux[nnu] += deltaE;
 
     if (do_emission_res)
@@ -300,7 +303,7 @@ static void add_to_spec(const PKT *const pkt_ptr, const bool do_emission_res, st
       const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
       spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
 
-      if (TRACE_EMISSION_ABSORPTION_REGION_ON)
+      if (TRACE_EMISSION_ABSORPTION_REGION_ON && (current_abin == -1))
       {
         const int et = pkt_ptr->trueemissiontype;
         if (et >= 0)
@@ -324,21 +327,21 @@ static void add_to_spec(const PKT *const pkt_ptr, const bool do_emission_res, st
         }
       }
 
-      nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min_r)) /  dlognu;
-      if (nnu >= 0 && nnu < MNUBINS)
+      const int nnu_abs = (log(pkt_ptr->absorptionfreq) - log(nu_min)) /  dlognu;
+      if (nnu_abs >= 0 && nnu_abs < MNUBINS)
       {
-        const double deltaE_absorption = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs;
+        const double deltaE_absorption = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu_abs] / 4.e12 / PI / PARSEC / PARSEC / nprocs * anglefactor;
         const int at = pkt_ptr->absorptiontype;
         if (at >= 0)
         {
           /// bb-emission
           const int element = linelist[at].elementindex;
           const int ion = linelist[at].ionindex;
-          spectra[nt].stat[nnu].absorption[element * maxion + ion] += deltaE_absorption;
+          spectra[nt].stat[nnu_abs].absorption[element * maxion + ion] += deltaE_absorption;
 
           if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
           {
-            if (TRACE_EMISSION_ABSORPTION_REGION_ON && (pkt_ptr->nu_rf >= traceemissabs_nulower) && (pkt_ptr->nu_rf <= traceemissabs_nuupper))
+            if (TRACE_EMISSION_ABSORPTION_REGION_ON && (current_abin == -1) && (pkt_ptr->nu_rf >= traceemissabs_nulower) && (pkt_ptr->nu_rf <= traceemissabs_nuupper))
             {
               traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
 
@@ -449,77 +452,41 @@ void add_to_spec_res(const PKT *const pkt_ptr, int current_abin, const bool do_e
 
   if (current_abin == -1)
   {
-    add_to_spec(pkt_ptr, do_emission_res, spectra, nu_min, nu_max);
-    return;
-  }
-
-  const double dlognu = (log(nu_max) - log(nu_min)) / nnubins;
-
-  double xhat[3] = {1.0, 0.0, 0.0};
-
-  /// Angle resolved case: need to work out the correct angle bin
-  const double costheta = dot(pkt_ptr->dir, syn_dir);
-  const double thetabin = ((costheta + 1.0) * sqrt(MABINS) / 2.0);
-  double vec1[3];
-  cross_prod(pkt_ptr->dir, syn_dir, vec1);
-  double vec2[3];
-  cross_prod(xhat, syn_dir, vec2);
-  const double cosphi = dot(vec1,vec2) / vec_len(vec1) / vec_len(vec2);
-
-  double vec3[3];
-  cross_prod(vec2, syn_dir, vec3);
-  const double testphi = dot(vec1,vec3);
-
-  int phibin;
-  if (testphi > 0)
-  {
-    phibin = (acos(cosphi) / 2. / PI * sqrt(MABINS));
+    // angle averaged spectrum
+    add_to_spec(pkt_ptr, current_abin, do_emission_res, spectra, nu_min, nu_max);
   }
   else
   {
-    phibin = ((acos(cosphi) + PI) / 2. / PI * sqrt(MABINS));
-  }
-  const int na = (thetabin*sqrt(MABINS)) + phibin;
+    double xhat[3] = {1.0, 0.0, 0.0};
 
-  /// Add only packets which escape to the current angle bin
-  if (na == current_abin)
-  {
-    /// Put this into the time grid.
-    const double t_arrive = get_arrive_time(pkt_ptr);
-    if (t_arrive > tmin && t_arrive < tmax)
+    /// Angle resolved case: need to work out the correct angle bin
+    const double costheta = dot(pkt_ptr->dir, syn_dir);
+    const double thetabin = ((costheta + 1.0) * sqrt(MABINS) / 2.0);
+    double vec1[3];
+    cross_prod(pkt_ptr->dir, syn_dir, vec1);
+    double vec2[3];
+    cross_prod(xhat, syn_dir, vec2);
+    const double cosphi = dot(vec1,vec2) / vec_len(vec1) / vec_len(vec2);
+
+    double vec3[3];
+    cross_prod(vec2, syn_dir, vec3);
+    const double testphi = dot(vec1,vec3);
+
+    int phibin;
+    if (testphi > 0)
     {
-      const int nt = get_timestep(t_arrive);
+      phibin = (acos(cosphi) / 2. / PI * sqrt(MABINS));
+    }
+    else
+    {
+      phibin = ((acos(cosphi) + PI) / 2. / PI * sqrt(MABINS));
+    }
+    const int na = (thetabin * sqrt(MABINS)) + phibin;
 
-      /// and the correct frequency bin.
-      if (pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
-      {
-        int nnu = (log(pkt_ptr->nu_rf) - log(nu_min_r)) /  dlognu;
-        double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
-        spectra[nt].flux[nnu] += deltaE;
-
-        if (do_emission_res)
-        {
-          const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
-          spectra[nt].stat[nnu].emission[nproc] += deltaE;
-
-          const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
-          spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
-
-          nnu = (log(pkt_ptr->absorptionfreq) - log(nu_min)) /  dlognu;
-          if (nnu >= 0 && nnu < MNUBINS)
-          {
-            deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC * MABINS / nprocs;
-            const int at = pkt_ptr->absorptiontype;
-            if (at >= 0)
-            {
-              /// bb-emission
-              const int element = linelist[at].elementindex;
-              const int ion = linelist[at].ionindex;
-              spectra[nt].stat[nnu].absorption[element * maxion + ion] += deltaE;
-            }
-          }
-        }
-      }
+    /// Add only packets which escape to the current angle bin
+    if (na == current_abin)
+    {
+      add_to_spec(pkt_ptr, current_abin, do_emission_res, spectra, nu_min, nu_max);
     }
   }
 }
