@@ -165,43 +165,10 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
     printout("Writing %s\n", spec_filename);
   }
 
-  /*
-  float dum1, dum2;
-  /// The spectra are now done - just need to print them out.
-  if (file_set)
-  {
-    spec_file = fopen_required("spec.out", "r");
-    fscanf(spec_file, "%g ", &dum1);
-
-    for (p = 0; p < ntstep; p++)
-    {
-      fscanf(spec_file, "%g ", &dum1);
-    }
-
-    for (m=0; m < nnubins; m++)
-    {
-      fscanf(spec_file, "%g ", &dum1);
-
-      for (p = 0; p < ntstep; p++)
-      {
-        fscanf(spec_file, "%g ",
-                &dum2);
-        spectra[p].flux[m] += dum2;
-      }
-    }
-    fclose(spec_file);
-  }
-
-
-  emission_file = fopen_required("emission.out", "w");
-  /// write to file
-  spec_file = fopen_required("spec.out", "w+");
-  */
   if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res)
   {
     printout_tracemission_stats();
   }
-
 
   fprintf(spec_file, "%g ", 0.0);
   for (int p = 0; p < ntstep; p++)
@@ -248,83 +215,100 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
 
 
 void write_specpol(
-  char spec_filename[], const bool do_emission_res,
-  char emission_filename[], char absorption_filename[])
+  char spec_filename[], const bool do_emission_res, char emission_filename[], char absorption_filename[])
 {
   FILE *specpol_file = fopen_required(spec_filename, "w");
-  FILE *emissionpol_file = fopen_required(emission_filename, "w");
-  FILE *absorptionpol_file = fopen_required(absorption_filename, "w");
+  FILE *emissionpol_file = NULL;
+  FILE *absorptionpol_file = NULL;
+
+  if (do_emission_res)
+  {
+    emissionpol_file = fopen_required(emission_filename, "w");
+    absorptionpol_file = fopen_required(absorption_filename, "w");
+  }
 
   fprintf(specpol_file, "%g ", 0.0);
 
   for (int l = 0; l < 3; l++)
   {
     for (int p = 0; p < ntstep; p++)
+    {
       fprintf(specpol_file, "%g ", time_step[p].mid / DAY);
+    }
   }
 
   fprintf(specpol_file, "\n");
 
   for (int m = 0; m < nnubins; m++)
   {
-    fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m]+(stokes_i[0].delta_freq[m]/2))));
+    fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m] + (stokes_i[0].delta_freq[m] / 2))));
 
     // Stokes I
     for (int p = 0; p < ntstep; p++)
     {
       fprintf(specpol_file, "%g ", stokes_i[p].flux[m]);
 
-      if (do_emission_res == 1)
+      if (do_emission_res)
       {
-        for (int i = 0; i < 2*nelements*maxion+1; i++)
+        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+        {
           fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
+        }
 
         fprintf(emissionpol_file, "\n");
 
-        for (int i = 0; i < nelements*maxion; i++)
+        for (int i = 0; i < nelements * maxion; i++)
+        {
           fprintf(absorptionpol_file, "%g ", stokes_i[p].stat[m].absorption[i]);
+        }
 
         fprintf(absorptionpol_file, "\n");
       }
     }
-
 
     // Stokes Q
     for (int p = 0; p < ntstep; p++)
     {
         fprintf(specpol_file, "%g ", stokes_q[p].flux[m]);
 
-        if (do_emission_res == 1)
+        if (do_emission_res)
         {
-            for (int i = 0; i < 2*nelements*maxion+1; i++)
+            for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+            {
               fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
+            }
 
             fprintf(emissionpol_file, "\n");
 
-            for (int i = 0; i < nelements*maxion; i++)
+            for (int i = 0; i < nelements * maxion; i++)
+            {
               fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
+            }
 
             fprintf(absorptionpol_file, "\n");
         }
     }
-
 
     // Stokes U
     for (int p = 0; p < ntstep; p++)
     {
         fprintf(specpol_file, "%g ", stokes_u[p].flux[m]);
 
-        if (do_emission_res == 1)
+        if (do_emission_res)
         {
-            for (int i = 0; i < 2*nelements*maxion+1; i++)
-              fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
+          for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+          {
+            fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
+          }
 
-            fprintf(emissionpol_file, "\n");
+          fprintf(emissionpol_file, "\n");
 
-            for (int i = 0; i < nelements*maxion; i++)
-              fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
+          for (int i = 0; i < nelements * maxion; i++)
+          {
+            fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
+          }
 
-            fprintf(absorptionpol_file, "\n");
+          fprintf(absorptionpol_file, "\n");
         }
     }
 
