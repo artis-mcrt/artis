@@ -55,6 +55,92 @@ static int compare_absorption(const void *p1, const void *p2)
 }
 
 
+static void printout_tracemission_stats(void)
+{
+  const int maxlinesprinted = 500;
+
+  // mode is 0 for emission and 1 for absorption
+  for (int mode = 0; mode < 2; mode++)
+  {
+    if (mode == 0)
+    {
+      qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_emission);
+      printout("lambda [%5.1f, %5.1f] nu %g %g\n",
+               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper);
+
+      printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
+               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
+               traceemission_totalenergy);
+    }
+    else
+    {
+      qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_absorption);
+      printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
+               traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
+               traceabsorption_totalenergy);
+    }
+
+    // display the top entries of the sorted list
+    int nlines_limited = nlines;
+    if (nlines > maxlinesprinted)
+      nlines_limited = maxlinesprinted;
+    printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
+    for (int i = 0; i < nlines_limited; i++)
+    {
+      double encontrib;
+      double totalenergy;
+      if (mode == 0)
+      {
+        encontrib = traceemissionabsorption[i].energyemitted;
+        totalenergy = traceemission_totalenergy;
+      }
+      else
+      {
+        encontrib = traceemissionabsorption[i].energyabsorbed;
+        totalenergy = traceabsorption_totalenergy;
+      }
+      if (encontrib > 0.) // lines that emit/absorb some energy
+      {
+        const int lineindex = traceemissionabsorption[i].lineindex;
+        const int element = linelist[lineindex].elementindex;
+        const int ion = linelist[lineindex].ionindex;
+        const double linelambda = 1e8 * CLIGHT / linelist[lineindex].nu;
+        // flux-weighted average radial velocity of emission in km/s
+        double v_rad;
+        if (mode == 0)
+          v_rad = traceemissionabsorption[i].emission_weightedvelocity_sum / traceemissionabsorption[i].energyemitted / 1e5;
+        else
+          v_rad = traceemissionabsorption[i].absorption_weightedvelocity_sum / traceemissionabsorption[i].energyabsorbed / 1e5;
+
+        const int lower = linelist[lineindex].lowerlevelindex;
+        const int upper = linelist[lineindex].upperlevelindex;
+
+        const double statweight_target = statw_upper(lineindex);
+        const double statweight_lower = statw_lower(lineindex);
+
+        const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
+        const double A_ul = einstein_spontaneous_emission(lineindex);
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+        const double B_lu = statweight_target / statweight_lower * B_ul;
+
+        // const double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower);
+        // const double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
+        // const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * em_time;
+
+        printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n",
+                 encontrib, 100 * encontrib / totalenergy, get_element(element),
+                 get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
+                 linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden,
+                 linelambda, v_rad, B_lu, B_ul);
+       }
+       else
+        break;
+    }
+    printout("\n");
+  }
+
+  free(traceemissionabsorption);
+}
 
 void write_spectrum(char spec_filename[], bool do_emission_res, char emission_filename[], char trueemission_filename[], char absorption_filename[], struct spec *spectra)
 {
@@ -78,7 +164,6 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
   {
     printout("Writing %s\n", spec_filename);
   }
-  //FILE *spec_file,*emission_file;
 
   /*
   float dum1, dum2;
@@ -114,89 +199,7 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
   */
   if (TRACE_EMISSION_ABSORPTION_REGION_ON && do_emission_res)
   {
-    const int maxlinesprinted = 500;
-
-    // mode is 0 for emission and 1 for absorption
-    for (int mode = 0; mode < 2; mode++)
-    {
-      if (mode == 0)
-      {
-        qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_emission);
-        printout("lambda [%5.1f, %5.1f] nu %g %g\n",
-                 traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper);
-
-        printout("Top line emission contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
-                 traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
-                 traceemission_totalenergy);
-      }
-      else
-      {
-        qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_absorption);
-        printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
-                 traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
-                 traceabsorption_totalenergy);
-      }
-
-      // display the top entries of the sorted list
-      int nlines_limited = nlines;
-      if (nlines > maxlinesprinted)
-        nlines_limited = maxlinesprinted;
-      printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
-      for (int i = 0; i < nlines_limited; i++)
-      {
-        double encontrib;
-        double totalenergy;
-        if (mode == 0)
-        {
-          encontrib = traceemissionabsorption[i].energyemitted;
-          totalenergy = traceemission_totalenergy;
-        }
-        else
-        {
-          encontrib = traceemissionabsorption[i].energyabsorbed;
-          totalenergy = traceabsorption_totalenergy;
-        }
-        if (encontrib > 0.) // lines that emit/absorb some energy
-        {
-          const int lineindex = traceemissionabsorption[i].lineindex;
-          const int element = linelist[lineindex].elementindex;
-          const int ion = linelist[lineindex].ionindex;
-          const double linelambda = 1e8 * CLIGHT / linelist[lineindex].nu;
-          // flux-weighted average radial velocity of emission in km/s
-          double v_rad;
-          if (mode == 0)
-            v_rad = traceemissionabsorption[i].emission_weightedvelocity_sum / traceemissionabsorption[i].energyemitted / 1e5;
-          else
-            v_rad = traceemissionabsorption[i].absorption_weightedvelocity_sum / traceemissionabsorption[i].energyabsorbed / 1e5;
-
-          const int lower = linelist[lineindex].lowerlevelindex;
-          const int upper = linelist[lineindex].upperlevelindex;
-
-          const double statweight_target = statw_upper(lineindex);
-          const double statweight_lower = statw_lower(lineindex);
-
-          const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
-          const double A_ul = einstein_spontaneous_emission(lineindex);
-          const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
-          const double B_lu = statweight_target / statweight_lower * B_ul;
-
-          // const double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower);
-          // const double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
-          // const double tau_sobolev = (B_lu * n_l - B_ul * n_u) * HCLIGHTOVERFOURPI * em_time;
-
-          printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n",
-                   encontrib, 100 * encontrib / totalenergy, get_element(element),
-                   get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
-                   linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden,
-                   linelambda, v_rad, B_lu, B_ul);
-         }
-         else
-          break;
-      }
-      printout("\n");
-    }
-
-    free(traceemissionabsorption);
+    printout_tracemission_stats();
   }
 
 
