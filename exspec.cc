@@ -143,6 +143,10 @@ int main(int argc, char** argv)
 
         write_spectrum((char *) "spec.out", do_emission_res, (char *) "emission.out",
                        (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra);
+        #ifdef POL_ON
+        write_specpol((char *) "specpol.out", do_emission_res,
+                      (char *) "emissionpol.out", (char *) "absorptionpol.out");
+        #endif
         write_spectrum((char *) "gamma_spec.out", false, NULL, NULL, NULL, gamma_spectra);
       }
       else
@@ -154,6 +158,13 @@ int main(int argc, char** argv)
         char trueemission_filename[100] = "";
         char absorption_filename[100] = "";
 
+        #ifdef POL_ON
+        char specpol_filename[100] = "";
+        sprintf(specpol_filename, "specpol_res_%.2d.out", a);
+        char emissionpol_filename[100] = "";
+        char absorptionpol_filename[100] = "";
+        #endif
+
         sprintf(lc_filename, "light_curve_res_%.2d.out", a);
         sprintf(spec_filename, "spec_res_%.2d.out", a);
 
@@ -162,10 +173,18 @@ int main(int argc, char** argv)
           sprintf(emission_filename, "emission_res_%.2d.out", a);
           sprintf(trueemission_filename, "emissiontrue_res_%.2d.out", a);
           sprintf(absorption_filename, "absorption_res_%.2d.out", a);
+          #ifdef POL_ON
+          sprintf(emissionpol_filename, "emission_res_%.2d.out", a);
+          sprintf(absorptionpol_filename, "absorption_res_%.2d.out", a);
+          #endif
         }
 
         write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
         write_spectrum(spec_filename, do_emission_res, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra);
+
+        #ifdef POL_ON
+        write_specpol(specpol_filename, do_emission_res, emissionpol_filename, absorptionpol_filename);
+        #endif
       }
       if (a == -1)
       {

@@ -247,8 +247,14 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
 }
 
 
-void write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionpol_file)
+void write_specpol(
+  char spec_filename[], const bool do_emission_res,
+  char emission_filename[], char absorption_filename[])
 {
+  FILE *specpol_file = fopen_required(spec_filename, "w");
+  FILE *emissionpol_file = fopen_required(emission_filename, "w");
+  FILE *absorptionpol_file = fopen_required(absorption_filename, "w");
+
   fprintf(specpol_file, "%g ", 0.0);
 
   for (int l = 0; l < 3; l++)
@@ -325,10 +331,12 @@ void write_specpol(FILE *specpol_file, FILE *emissionpol_file, FILE *absorptionp
     fprintf(specpol_file, "\n");
   }
 
-  /*
   fclose(specpol_file);
-  fclose(emissionpol_file);
-  */
+  if (do_emission_res)
+  {
+    fclose(emissionpol_file);
+    fclose(absorptionpol_file);
+  }
 }
 
 static int columnindex_from_emissiontype(const int et)
