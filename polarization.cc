@@ -38,7 +38,8 @@ void escat_rpkt(PKT *pkt_ptr)
   /* Assume dipole function (rejecton method, see Code & Whitney 1995) */
   #ifdef DIPOLE
 
-    do {
+    do
+    {
 
         const double zrand = gsl_rng_uniform(rng);
         const double zrand2 = gsl_rng_uniform(rng);
