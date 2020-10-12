@@ -119,6 +119,7 @@ struct nt_solution_struct {
   double E_0;     // the lowest energy ionization or excitation transition in eV
   double *yfunc;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal electron number flux.
                   // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
+                  // y has units of particles / cm2 / s / eV
 
   float frac_heating;              // energy fractions should add up to 1.0 if the solution is good
   float frac_ionization;           // fraction of deposition energy going to ionization
