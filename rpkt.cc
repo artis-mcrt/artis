@@ -101,7 +101,7 @@ static double get_event(
   PKT dummypkt = *pkt_ptr;
   PKT *dummypkt_ptr = &dummypkt;
   bool endloop = false;
-  calculate_kappa_rpkt_cont(pkt_ptr, modelgridindex);
+  calculate_kappa_rpkt_cont(pkt_ptr);
   const double kap_cont = kappa_rpkt_cont[tid].total;
   while (!endloop)
   {
@@ -1111,7 +1111,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
 
     vpkt.prop_time = t_future;
-    calculate_kappa_rpkt_cont(&vpkt, mgi);
+    calculate_kappa_rpkt_cont(&vpkt);
 
     const double kappa_cont = kappa_rpkt_cont[tid].total;
 
@@ -1491,11 +1491,10 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 }
 
 
-void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr, const int modelgridindex)
+void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
 {
   const int cellindex = pkt_ptr->where;
-  const int pkt_mgi = cell[cellindex].modelgridindex;
-  assert(modelgridindex == pkt_mgi);
+  const int modelgridindex = cell[cellindex].modelgridindex;
   assert(modelgridindex != MMODELGRID);
   assert(modelgrid[modelgridindex].thick != 1);
   const double nu_cmf = pkt_ptr->nu_cmf;
