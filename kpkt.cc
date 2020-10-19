@@ -568,7 +568,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       #ifdef VPKT_ON
         int realtype = 2;
         call_estimators(pkt_ptr, t_current, realtype);
-        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        calculate_kappa_rpkt_cont(pkt_ptr);
       #endif
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
@@ -633,7 +633,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       #ifdef VPKT_ON
         int realtype = 2;
         call_estimators(pkt_ptr, t_current, realtype);
-        calculate_kappa_rpkt_cont(pkt_ptr,t_current);
+        calculate_kappa_rpkt_cont(pkt_ptr);
       #endif
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
