@@ -567,8 +567,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       /* call the estimator routine - generate a virtual packet */
       #ifdef VPKT_ON
         int realtype = 2;
-        call_estimators(pkt_ptr, t_current, realtype);
-        calculate_kappa_rpkt_cont(pkt_ptr);
+        vpkt_call_estimators(pkt_ptr, t_current, realtype);
       #endif
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
@@ -632,8 +631,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       /* call the estimator routine - generate a virtual packet */
       #ifdef VPKT_ON
         int realtype = 2;
-        call_estimators(pkt_ptr, t_current, realtype);
-        calculate_kappa_rpkt_cont(pkt_ptr);
+        vpkt_call_estimators(pkt_ptr, t_current, realtype);
       #endif
     }
     else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
