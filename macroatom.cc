@@ -209,20 +209,15 @@ static void do_macroatom_raddeexcitation(
   //}
 
   #ifdef DEBUG_ON
-    if (!isfinite(pkt_ptr->nu_cmf))
-    {
-      printout("[fatal] rad deexcitation of MA: selected frequency not finite ... abort\n");
-      abort();
-    }
+    assert(isfinite(pkt_ptr->nu_cmf));
+
     if (linelistindex < 0)
     {
       printout("[fatal] problem in selecting radiative downward transition of MA zrand %g, rate %g, rad_deexc %g, ndowntrans %d\n", zrand, rate, rad_deexc, ndowntrans);
       printout("[fatal] total_transitions %g, element %d, ion %d, level %d\n", total_transitions, element, ion, level);
       abort();
     }
-    if (debuglevel == 2)
-      printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA deactivation\n");
-    //if (tid == 0) ma_stat_deactivation_bb++;
+
     ma_stat_deactivation_bb++;
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 0;
@@ -243,9 +238,6 @@ static void do_macroatom_raddeexcitation(
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
   //printout("next possible line encounter %d\n",pkt_ptr->next_trans);
-  #ifndef FORCE_LTE
-    //matotem[pkt_ptr->where] += pkt_ptr->e_cmf;
-  #endif
 }
 
 
@@ -323,7 +315,6 @@ static void do_macroatom_radrecomb(
     ma_stat_deactivation_fb++;
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 2;
-    if (debuglevel == 2) printout("[debug] do_ma: calculate_kappa_rpkt_cont after MA recombination\n");
   #endif
 
   /// Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
