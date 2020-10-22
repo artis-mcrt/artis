@@ -1556,7 +1556,11 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 
   // Cut on vpkts
   int mgi = cell[pkt_ptr->where].modelgridindex;
-  if (modelgrid[mgi].thick != 0) return 0;
+
+  if (modelgrid[mgi].thick != 0)
+  {
+    return 0;
+  }
 
   /* this is just to find the next_trans value when is set to 0 (avoid doing that in the vpkt routine for each observer) */
   if (pkt_ptr->next_trans == 0)
@@ -1568,8 +1572,6 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
     }
   }
 
-  printout("Nobs %d\n", Nobs);
-
   for (int bin = 0; bin < Nobs; bin++)
   {
     /* loop over different observers */
@@ -1580,11 +1582,9 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 
     t_arrive = t_current - (dot(pkt_ptr->pos, obs) / CLIGHT_PROP);
 
-    printout("call_est\n");
     if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input)
     {
       // time selection
-      printout("time selection\n");
 
       for (int i = 0; i < Nrange; i++)
       {
