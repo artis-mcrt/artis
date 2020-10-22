@@ -127,9 +127,6 @@ typedef struct fullphixslist_t
   int phixstargetindex;
   int index_in_groundphixslist;
   double kappa_bf_contr;
-#if (SEPARATE_STIMRECOMB)
-  double kappa_fb_contr;
-#endif
 #if (DETAILED_BF_ESTIMATORS_ON)
   double gamma_contr;
 #endif

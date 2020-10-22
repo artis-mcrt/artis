@@ -532,53 +532,6 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
       if (i >= nbfcontinua) printout("[warning] rpkt_event: problem in selecting bf-continuum zrand2 %g, kappa_bf_sum %g, kappa_bf_inrest %g\n",zrand,kappa_bf_sum,kappa_bf_inrest);
     #endif
   }
-#if (SEPARATE_STIMRECOMB)
-  else if (zrand * kappa_cont < sigma + kappa_ff + kappa_bf + kappa_rpkt_cont_thisthread.fb)
-  {
-    /// fb: stimulated recombination
-    #ifdef DEBUG_ON
-      printout("[debug] rpkt_event:   free-bound transition\n");
-    #endif
-    pkt_ptr->absorptiontype = -2;
-
-    const double kappa_fb_inrest = kappa_rpkt_cont_thisthread.fb_inrest;
-
-    /// Determine in which continuum the bf-absorption occurs
-    const double zrand2 = gsl_rng_uniform(rng);
-    double kappa_fb_sum = 0.;
-    int i;
-    for (i = 0; i < nbfcontinua; i++)
-    {
-      kappa_fb_sum += phixslist[tid].allcont[i].kappa_fb_contr;
-      if (kappa_fb_sum > zrand2 * kappa_fb_inrest)
-      {
-        // const double nu_edge = phixslist[tid].allcont[i].nu_edge;
-        // assert(nu >= nu_edge);
-        const int element = phixslist[tid].allcont[i].element;
-        const int ion = phixslist[tid].allcont[i].ion;
-        const int level = phixslist[tid].allcont[i].level;
-
-        #ifdef DEBUG_ON
-          ma_stat_activation_fb++;
-          pkt_ptr->interactions += 1;
-          pkt_ptr->last_event = 3;
-        #endif
-        pkt_ptr->type = TYPE_MA;
-        #ifndef FORCE_LTE
-          //maabs[pkt_ptr->where] += pkt_ptr->e_cmf;
-        #endif
-        pkt_ptr->mastate.element = element;
-        pkt_ptr->mastate.ion     = ion;
-        pkt_ptr->mastate.level   = level;
-        pkt_ptr->mastate.activatingline = -99;
-        //if (element == 6) cell[pkt_ptr->where].photoion[ion] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
-        return;
-      }
-    }
-    printout("ERROR: could not select stimulated recombination process\n");
-    abort();
-  }
-#endif
   else
   {
     printout("ERROR: could not continuum process\n");
@@ -1353,7 +1306,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
 }
 
 
-void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu, double *kappa_bf, double *kappa_fb)
+void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, double *kappa_bf)
 // bound-free opacity
 {
   for (int gphixsindex = 0; gphixsindex < nbfcontinua_ground; gphixsindex++)
@@ -1389,21 +1342,20 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
         //}
         const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
         const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
+
+#if (SEPARATE_STIMRECOMB)
+        const double corrfactor = 1.; // no subtraction of stimulated recombination
+#else
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
         const double nnionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
         const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
         const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
-
-        #if (SEPARATE_STIMRECOMB)
-          const double corrfactor = 1.; // no subtraction of stimulated recombination
-          const double kappa_fb_contr = nnlevel * sigma_bf * probability * stimfactor;
-        #else
-          double corrfactor = 1 - stimfactor; // photoionisation minus stimulated recombination
-          if (corrfactor < 0)
-            corrfactor = 0.;
-          // const double corrfactor = 1.; // no subtraction of stimulated recombination
-        #endif
+        double corrfactor = 1 - stimfactor; // photoionisation minus stimulated recombination
+        if (corrfactor < 0)
+          corrfactor = 0.;
+        // const double corrfactor = 1.; // no subtraction of stimulated recombination
+#endif
 
         const double kappa_bf_contr = nnlevel * sigma_bf * probability * corrfactor;
 
@@ -1432,12 +1384,6 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
 
         phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
         *kappa_bf = *kappa_bf + kappa_bf_contr;
-
-        #if (SEPARATE_STIMRECOMB)
-          phixslist[tid].allcont[i].kappa_fb_contr = kappa_fb_contr;
-          *kappa_fb = *kappa_fb + kappa_fb_contr;
-        #endif
-
       }
       else if (nu < nu_edge) // nu < nu_edge
       {
@@ -1452,9 +1398,6 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
         for (int j = i; j < nbfcontinua; j++)
         {
           phixslist[tid].allcont[j].kappa_bf_contr = 0.;
-          #if (SEPARATE_STIMRECOMB)
-          phixslist[tid].allcont[j].kappa_fb_contr = 0.;
-          #endif
           #if (DETAILED_BF_ESTIMATORS_ON)
           phixslist[tid].allcont[j].gamma_contr = 0.;
           #endif
@@ -1465,9 +1408,6 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
       {
         // ignore this particular process but continue through the list
         phixslist[tid].allcont[i].kappa_bf_contr = 0.;
-        #if (SEPARATE_STIMRECOMB)
-        phixslist[tid].allcont[i].kappa_fb_contr = 0.;
-        #endif
         #if (DETAILED_BF_ESTIMATORS_ON)
         phixslist[tid].allcont[i].gamma_contr = 0.;
         #endif
@@ -1476,9 +1416,6 @@ void calculate_kappa_bf_fb_gammacontr(const int modelgridindex, const double nu,
     else // no element present or not an important level
     {
       phixslist[tid].allcont[i].kappa_bf_contr = 0.;
-      #if (SEPARATE_STIMRECOMB)
-      phixslist[tid].allcont[i].kappa_fb_contr = 0.;
-      #endif
       #if (DETAILED_BF_ESTIMATORS_ON)
       phixslist[tid].allcont[i].gamma_contr = 0.;
       #endif
@@ -1510,7 +1447,6 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
   double sigma = 0.0;
   double kappa_ff = 0.;
   double kappa_bf = 0.;
-  double kappa_fb = 0.;
   double kappa_ffheating = 0.;
 
   if (do_r_lc)
@@ -1530,10 +1466,9 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
       kappa_ffheating = kappa_ff;
 
       /// Third contribution: bound-free absorption
-      calculate_kappa_bf_fb_gammacontr(modelgridindex, nu_cmf, &kappa_bf, &kappa_fb);
+      calculate_kappa_bf_gammacontr(modelgridindex, nu_cmf, &kappa_bf);
 
       kappa_rpkt_cont[tid].bf_inrest = kappa_bf;
-      kappa_rpkt_cont[tid].fb_inrest = kappa_fb;
 
       // const double pkt_lambda = 1e8 * CLIGHT / nu_cmf;
       // if (pkt_lambda < 4000)
@@ -1564,13 +1499,12 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
     sigma *= dopplerfactor;
     kappa_ff *= dopplerfactor;
     kappa_bf *= dopplerfactor;
-    kappa_fb *= dopplerfactor;
   }
 
   kappa_rpkt_cont[tid].nu = nu_cmf;
   kappa_rpkt_cont[tid].modelgridindex = modelgridindex;
   kappa_rpkt_cont[tid].recalculate_required = false;
-  kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_fb + kappa_ff;
+  kappa_rpkt_cont[tid].total = sigma + kappa_bf + kappa_ff;
   #ifdef DEBUG_ON
     //if (debuglevel == 2)
     //  printout("[debug]  ____kappa_rpkt____: kappa_cont %g, sigma %g, kappa_ff %g, kappa_bf %g\n",kappa_rpkt_cont[tid].total,sigma,kappa_ff,kappa_bf);
@@ -1578,7 +1512,6 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
   kappa_rpkt_cont[tid].es = sigma;
   kappa_rpkt_cont[tid].ff = kappa_ff;
   kappa_rpkt_cont[tid].bf = kappa_bf;
-  kappa_rpkt_cont[tid].fb = kappa_fb;
   kappa_rpkt_cont[tid].ffheating = kappa_ffheating;
   //kappa_rpkt_cont[tid].bfheating = kappa_bfheating;
 
