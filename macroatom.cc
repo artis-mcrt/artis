@@ -238,6 +238,11 @@ static void do_macroatom_raddeexcitation(
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
   //printout("next possible line encounter %d\n",pkt_ptr->next_trans);
+
+  #ifdef VPKT_ON
+    const int realtype = 3;
+    vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
+  #endif
 }
 
 
@@ -333,6 +338,11 @@ static void do_macroatom_radrecomb(
   vec_copy(pkt_ptr->em_pos, pkt_ptr->pos);
   pkt_ptr->em_time = pkt_ptr->prop_time;
   pkt_ptr->nscatterings = 0;
+
+  #ifdef VPKT_ON
+    const int realtype = 3;
+    vpkt_call_estimators(pkt_ptr, pkt_ptr->prop_time, realtype);
+  #endif
 }
 
 
