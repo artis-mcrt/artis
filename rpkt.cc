@@ -1314,8 +1314,10 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
     phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
   }
 
+#if (!SEPARATE_STIMRECOMB)
   const double T_e = get_Te(modelgridindex);
   const double nne = get_nne(modelgridindex);
+#endif
   const double nnetot = get_nnetot(modelgridindex);
   for (int i = 0; i < nbfcontinua; i++)
   {
