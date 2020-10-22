@@ -317,7 +317,10 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
     if (mgi == MMODELGRID) break;
 
     /* kill vpkt with pass through a thick cell */
-    if (modelgrid[mgi].thick == 1) return;
+    if (modelgrid[mgi].thick == 1)
+    {
+      return;
+    }
   }
 
 
