@@ -428,44 +428,6 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
 }
 
 
-
-void change_cell_vpkt(PKT *pkt_ptr, int snext, bool *end_packet, double t_current)
-/// Routine to take a VIRTUAL packet across a boundary.
-{
-  assert(pkt_ptr->prop_time == t_current);
-  //int element, ion, level;
-
-  #ifdef DEBUG_ON
-    if (debuglevel == 2)
-    {
-      const int cellindex = pkt_ptr->where;
-      printout("[debug] cellnumber %d nne %g\n",cellindex,get_nne(cell[cellindex].modelgridindex));
-      printout("[debug] snext %d\n",snext);
-    }
-  #endif
-
-  if (snext == -99)
-  {
-    // Then the packet is exiting the grid. We need to record
-    // where and at what time it leaves the grid.
-    pkt_ptr->escape_type = pkt_ptr->type;
-    pkt_ptr->escape_time = pkt_ptr->prop_time;
-    pkt_ptr->type = TYPE_ESCAPE;
-    *end_packet = true;
-  }
-  else
-  {
-    // Just need to update "where"
-    //int oldpos = pkt_ptr->where;
-    //int old_mgi = cell[pkt_ptr->where].modelgridindex;
-    pkt_ptr->where = snext;
-    // mgi = cell[pkt_ptr->where].modelgridindex;
-
-    cellcrossings++;
-  }
-}
-
-
 // static int locate(const PKT *pkt_ptr, double t_current)
 // /// Routine to return which grid cell the packet is in.
 // {

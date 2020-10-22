@@ -1171,6 +1171,7 @@ static double get_rpkt_escapeprob_fromdirection(const double startpos[3], double
     }
 
     t_future += (sdist / CLIGHT_PROP);
+    vpkt.prop_time = t_future;
     move_pkt(&vpkt, sdist, t_future);
 
     if (snext != vpkt.where)
@@ -1605,225 +1606,13 @@ void calculate_kappa_rpkt_cont(const PKT *const pkt_ptr)
 }
 
 
-
-// double do_rpkt_thickcell(PKT *pkt_ptr, double t1, double t2)
-// // Routine for moving an r-packet. Similar to do_gamma in objective.
-// {
-//   double tdist;
-//   double edist;
-//   int snext;
-//
-//   double t_current = t1; ///this will keep track of time in the calculation
-//   //printout("[debug] r-pkt propagation init\n");
-//   //int it = 1;
-//
-//   bool end_packet = false; ///means "keep working"
-//   while (!end_packet)
-//   {
-//
-//     /*
-//     int i;
-//     for (i=0; i < CELLHISTORYSIZE; i++)
-//       printout("thread%d _ do_rpkt: cellhistory[%d].cellnumber = %d\n",tid,i,cellhistory[i].cellnumber);
-//     */
-//
-//     #ifdef DEBUG_ON
-//       if (pkt_ptr->next_trans > 0)
-//       {
-//         if (debuglevel == 2) printout("[debug] do_rpkt: init: pkt_ptr->nu_cmf %g, nu(pkt_ptr->next_trans=%d) %g, nu(pkt_ptr->next_trans-1=%d) %g, pkt_ptr->where %d\n", pkt_ptr->nu_cmf, pkt_ptr->next_trans, linelist[pkt_ptr->next_trans].nu, pkt_ptr->next_trans-1, linelist[pkt_ptr->next_trans-1].nu, pkt_ptr->where );
-//         if (debuglevel == 2) printout("[debug] do_rpkt: init: (pkt_ptr->nu_cmf - nu(pkt_ptr->next_trans-1))/pkt_ptr->nu_cmf %g\n", (pkt_ptr->nu_cmf-linelist[pkt_ptr->next_trans-1].nu)/pkt_ptr->nu_cmf);
-//       }
-//     #endif
-//
-//     //printout("[debug] r-pkt propagation iteration %d\n",it);
-//     //it++;
-//     /** Assign optical depth to next physical event. And start couter of
-//     optical depth for this path.*/
-//     double zrand = gsl_rng_uniform(rng);
-//     double tau_next = -1. * log(zrand);
-//
-//     /** Start by finding the distance to the crossing of the grid cell
-//     boundaries. sdist is the boundary distance and snext is the
-//     grid cell into which we pass.*/
-//     double sdist = boundary_cross(pkt_ptr, t_current, &snext);
-//
-//     if (sdist == 0)
-//       change_cell(pkt_ptr, snext, &end_packet, t_current);
-//     else
-//     {
-//       if (sdist > (rmax * t_current/tmin))
-//       {
-//         printout("[fatal] do_rpkt: Unreasonably large sdist. Rpkt. Abort. %g %g %g\n", rmax, t_current/tmin, sdist);
-//         abort();
-//       }
-//
-//       if (sdist < 1)
-//       {
-//         printout("[warning] r_pkt: Negative distance (sdist = %g). Abort.\n", sdist);
-//         printout("[warning] r_pkt: cell %d snext %d\n", pkt_ptr->where, snext);
-//         printout("[warning] r_pkt: pos %g %g %g\n", pkt_ptr->pos[0], pkt_ptr->pos[1], pkt_ptr->pos[2]);
-//         printout("[warning] r_pkt: dir %g %g %g\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
-//         printout("[warning] r_pkt: cell corner %g %g %g\n",cell[pkt_ptr->where].pos_init[0]*t_current/tmin, cell[pkt_ptr->where].pos_init[1]*t_current/tmin,  cell[pkt_ptr->where].pos_init[2]*t_current/tmin);
-//         printout("[warning] r_pkt: cell width %g %g %g\n",wid_init*t_current/tmin, wid_init*t_current/tmin,  wid_init*t_current/tmin);
-//         //abort();
-//       }
-//       if (((snext != -99) && (snext < 0)) || (snext >= ngrid))
-//       {
-//         printout("[fatal] r_pkt: Heading for inappropriate grid cell. Abort.\n");
-//         printout("[fatal] r_pkt: Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
-//         abort();
-//       }
-//       if (sdist > max_path_step)
-//       {
-//         sdist = max_path_step;
-//         snext = pkt_ptr->where;
-//       }
-//
-//
-//       /// Find how far it can travel during the time inverval.
-//       tdist = (t2 - t_current) * CLIGHT_PROP;
-//       if (tdist < 0)
-//       {
-//         printout("[fatal] do_rpkt: Negative distance (tdist). Abort. \n");
-//         abort();
-//       }
-//
-//       /// Get distance to the next physical event in this case only electron scattering
-//       //kappa = SIGMA_T*get_nne(cell[pkt_ptr->where].modelgridindex);
-//       double kappa = get_kappagrey(cell[pkt_ptr->where].modelgridindex) * get_rho(cell[pkt_ptr->where].modelgridindex);
-//       double vel_vec[3];
-//       get_velocity(pkt_ptr->pos, vel_vec, t_current);
-//       kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
-//       double tau_current = 0.0;
-//       edist = (tau_next - tau_current) / kappa;
-//       if (edist < 0)
-//       {
-//         printout("[fatal] do_rpkt: Negative distance (edist). Abort. \n");
-//         printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-//         abort();
-//       }
-//
-//       if ((sdist < tdist) && (sdist < edist))
-//       {
-//         #ifdef DEBUG_ON
-//           if (debuglevel == 2) printout("[debug] do_rpkt: sdist < tdist && sdist < edist\n");
-//         #endif
-//         /** Move it into the new cell. */
-//         sdist = sdist / 2.;
-//         t_current += sdist / CLIGHT_PROP;
-//         move_pkt(pkt_ptr,sdist,t_current);
-//         update_estimators(pkt_ptr,sdist*2);
-//         if (do_rlc_est != 0 && do_rlc_est != 3)
-//         {
-//           sdist = sdist * 2.;
-//           rlc_emiss_rpkt(pkt_ptr, sdist, t_current);
-//           sdist = sdist / 2.;
-//         }
-//         t_current += sdist / CLIGHT_PROP;
-//         move_pkt(pkt_ptr,sdist,t_current);
-//         sdist = sdist * 2.;
-//
-//         if (snext != pkt_ptr->where)
-//         {
-//           change_cell(pkt_ptr, snext, &end_packet, t_current);
-//         }
-//         #ifdef DEBUG_ON
-//           /** New cell so reset the scat_counter */
-//           pkt_ptr->scat_count = 0;
-//           //if (debuglevel == 2) printout("[debug] do_rpkt:   pkt_ptr->last_event %d\n",pkt_ptr->last_event);
-//           pkt_ptr->last_event = pkt_ptr->last_event + 100;
-//         #endif
-//       }
-//       else if ((tdist < sdist) && (tdist < edist))
-//       {
-//         #ifdef DEBUG_ON
-//           if (debuglevel == 2) printout("[debug] do_rpkt: tdist < sdist && tdist < edist\n");
-//         #endif
-//         /** Doesn't reach boundary. */
-//         tdist = tdist / 2.;
-//         t_current += tdist / CLIGHT_PROP;
-//         move_pkt(pkt_ptr,tdist,t_current);
-//         update_estimators(pkt_ptr,tdist*2);
-//         if (do_rlc_est != 0 && do_rlc_est != 3)
-//         {
-//           tdist = tdist * 2.;
-//           rlc_emiss_rpkt(pkt_ptr, tdist, t_current);
-//           tdist = tdist / 2.;
-//         }
-//         t_current = t2;
-//         move_pkt(pkt_ptr,tdist,t_current);
-//         tdist = tdist * 2.;
-//         #ifdef DEBUG_ON
-//           pkt_ptr->last_event = pkt_ptr->last_event + 1000;
-//         #endif
-//         end_packet = true;
-//       }
-//       else if ((edist < sdist) && (edist < tdist))
-//       {
-//         #ifdef DEBUG_ON
-//           if (debuglevel == 2) printout("[debug] do_rpkt: edist < sdist && edist < tdist\n");
-//         #endif
-//         edist = edist / 2.;
-//         t_current += edist / CLIGHT_PROP;
-//         move_pkt(pkt_ptr,edist,t_current);
-//         update_estimators(pkt_ptr,edist*2);
-//         if (do_rlc_est != 0 && do_rlc_est != 3)
-//         {
-//           edist = edist * 2.;
-//           rlc_emiss_rpkt(pkt_ptr, edist, t_current);
-//           edist = edist / 2.;
-//         }
-//         t_current += edist / CLIGHT_PROP;
-//         move_pkt(pkt_ptr,edist,t_current);
-//         edist = edist * 2.;
-//
-//         /// electron scattering occurs
-//         /// in this case the packet stays a R_PKT of same nu_cmf than before (coherent scattering)
-//         /// but with different direction
-//         #ifdef DEBUG_ON
-//           if (debuglevel == 2) printout("[debug] rpkt_event:   electron scattering\n");
-//           pkt_ptr->interactions += 1;
-//           pkt_ptr->nscatterings += 1;
-//           pkt_ptr->last_event = 12;
-//           escounter++;
-//         #endif
-//
-//         //pkt_ptr->nu_cmf = 3.7474058e+14;
-//         emitt_rpkt(pkt_ptr,t_current);
-//         /// Electron scattering does not modify the last emission flag
-//         //pkt_ptr->emissiontype = get_continuumindex(element,ion-1,lower);
-//         /// but it updates the last emission position
-//         pkt_ptr->em_pos[0] = pkt_ptr->pos[0];
-//         pkt_ptr->em_pos[1] = pkt_ptr->pos[1];
-//         pkt_ptr->em_pos[2] = pkt_ptr->pos[2];
-//         pkt_ptr->em_time = t_current;
-//
-//         /*/// The previously selected and in pkt_ptr stored event occurs. Handling is done by rpkt_event
-//         rpkt_event(pkt_ptr,rpkt_eventtype,t_current);
-//         if (pkt_ptr->type != TYPE_RPKT)
-//         {
-//           /// It's not an r-packet any more - return.
-//           return(t_current);
-//         }*/
-//       }
-//       else
-//       {
-//         printout("[fatal] do_rpkt: Failed to identify event . Rpkt. edist %g, sdist %g, tdist %g Abort.\n", edist, sdist, tdist);
-//         printout("[fatal] do_rpkt: Trouble was due to packet number %d.\n", pkt_ptr->number);
-//         abort();
-//       }
-//     }
-//   }
-// }
-
 #ifdef VPKT_ON
 
 int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
 {
   double t_arrive;
   double obs[3];
-  int bin;
-  int vflag ;
+  int vflag;
 
   vflag = 0;
 
@@ -1844,7 +1633,9 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
     }
   }
 
-  for (bin = 0; bin < Nobs; bin++)
+  printout("Nobs %d\n", Nobs);
+
+  for (int bin = 0; bin < Nobs; bin++)
   {
     /* loop over different observers */
 
@@ -1852,11 +1643,13 @@ int vpkt_call_estimators(PKT *pkt_ptr, double t_current, int realtype)
     obs[1] = sqrt(1 - nz_obs_vpkt[bin] * nz_obs_vpkt[bin]) * sin(phiobs[bin]);
     obs[2] = nz_obs_vpkt[bin];
 
-    t_arrive = t_current - (dot(pkt_ptr->pos,obs) / CLIGHT_PROP);
+    t_arrive = t_current - (dot(pkt_ptr->pos, obs) / CLIGHT_PROP);
 
+    printout("call_est\n");
     if (t_arrive >= tmin_vspec_input  && t_arrive <= tmax_vspec_input)
     {
       // time selection
+      printout("time selection\n");
 
       for (int i = 0; i < Nrange; i++)
       {
