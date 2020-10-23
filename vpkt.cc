@@ -89,7 +89,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   double Qold,Uold,Inew,Qnew,Unew,Itmp,Qtmp,Utmp,I,Q,U,pn,prob;
   double mu,i1,i2,cos2i1,sin2i1,cos2i2,sin2i2;
   double ref1[3],ref2[3];
-  int ind,anumber,tau_flag=0;
+  int anumber,tau_flag=0;
 
   int bin_range;
 
@@ -103,17 +103,20 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
   double ldist = 0;
   double t_future = t_current;
 
-  for (ind = 0; ind < Nspectra; ind++) tau_vpkt[ind] = 0;
+  for (int ind = 0; ind < Nspectra; ind++)
+  {
+    tau_vpkt[ind] = 0;
+  }
 
   dummy_ptr->dir[0] = obs[0];
   dummy_ptr->dir[1] = obs[1];
   dummy_ptr->dir[2] = obs[2];
 
-  nvpkt++;          /* increment the number of virtual packet in the given timestep */
+  nvpkt++;          // increment the number of virtual packet in the given timestep
 
   get_velocity(pkt_ptr->pos, vel_vec, t_current);
 
-  /* rf frequency and energy */
+  // rf frequency and energy
   dummy_ptr->nu_rf = dummy_ptr->nu_cmf / doppler(dummy_ptr->dir, vel_vec);
   dummy_ptr->e_rf = dummy_ptr->e_cmf * dummy_ptr->nu_rf /dummy_ptr->nu_cmf;
 
@@ -148,7 +151,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
     mu = dot(old_dir_cmf,obs_cmf);
 
-    pn=3./(16.*PI)*( 1+pow(mu,2.) + ( pow(mu,2.) - 1 ) * Qold );
+    pn = 3./(16.*PI)*( 1+pow(mu,2.) + ( pow(mu,2.) - 1 ) * Qold );
 
     Inew = 0.75 * ( (mu * mu + 1.0) + Qold * (mu * mu - 1.0) ) ;
     Qnew = 0.75 * ( (mu * mu - 1.0) + Qold * (mu * mu + 1.0) ) ;
@@ -213,7 +216,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
     kap_cont_noff = kap_cont - kappa_rpkt_cont[tid].ff;
     kap_cont_noes = kap_cont - kappa_rpkt_cont[tid].es;
 
-    for (ind = 0; ind < Nspectra; ind++)
+    for (int ind = 0; ind < Nspectra; ind++)
     {
       if (exclude[ind] == -2)
         tau_vpkt[ind] += kap_cont_nobf * s_cont;
@@ -226,8 +229,11 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
     }
 
     /* kill vpkt with high optical depth */
-    tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
-    if (tau_flag == 0) return;
+    tau_flag = check_tau(tau_vpkt, &tau_max_vpkt);
+    if (tau_flag == 0)
+    {
+      return;
+    }
 
     while (ldist < sdist)
     {
@@ -280,20 +286,25 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
         // NB: ldist before need to be computed anyway (I want to move the packets to the
         // line interaction point even if I don't interact)
 
-        for (ind = 0; ind < Nspectra; ind++)
+        for (int ind = 0; ind < Nspectra; ind++)
         {
           // If exclude[ind]==-1, I do not include line opacity
           if (exclude[ind] != -1 && (anumber != exclude[ind]))
+          {
             tau_vpkt[ind] += (B_lu*n_l - B_ul*n_u) * HCLIGHTOVERFOURPI * t_line;
+          }
         }
 
         /* kill vpkt with high optical depth */
-        tau_flag = check_tau(tau_vpkt,&tau_max_vpkt) ;
-        if (tau_flag == 0 ) return ;
+        tau_flag = check_tau(tau_vpkt, &tau_max_vpkt) ;
+        if (tau_flag == 0)
+        {
+          return;
+        }
       }
       else
       {
-        dummy_ptr->next_trans   = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
+        dummy_ptr->next_trans = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
       }
 
     }
@@ -336,7 +347,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
   // -------------- final stokes vector ---------------
 
-  for (ind = 0; ind < Nspectra; ind++)
+  for (int ind = 0; ind < Nspectra; ind++)
   {
     prob = pn * exp( - tau_vpkt[ind] ) ;
 

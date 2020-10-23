@@ -92,7 +92,7 @@ static bool read_ratecoeff_dat(void)
       int in_tablesize;
       int in_nlines;
       fscanf(ratecoeff_file, "%g %g %d %d\n", &T_min, &T_max, &in_tablesize, &in_nlines);
-      printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d", T_min, T_max, in_tablesize, in_nlines);
+      printout("ratecoeff.dat: Tmin %g Tmax %g TABLESIZE %d nlines %d ", T_min, T_max, in_tablesize, in_nlines);
 
       if (T_min == MINTEMP && T_max == MAXTEMP && in_tablesize == TABLESIZE && in_nlines == nlines)
       {
