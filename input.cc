@@ -2224,6 +2224,8 @@ static void read_parameterfile_vpkt(void)
     tmax_vspec_input = tmax_vspec;
   }
 
+  printout("tmin_vspec_input %g tmax_vspec_input %g\n", tmin_vspec_input, tmax_vspec_input);
+
   assert(tmax_vspec_input >= tmin_vspec);
   assert(tmax_vspec_input <= tmax_vspec);
 
@@ -2264,7 +2266,11 @@ static void read_parameterfile_vpkt(void)
   // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
   fscanf(input_file, "%g %lg \n", &dum7, &cell_is_optically_thick_vpkt);
 
-  if (dum7 != 1) cell_is_optically_thick_vpkt = cell_is_optically_thick;
+  if (dum7 != 1)
+  {
+    cell_is_optically_thick_vpkt = cell_is_optically_thick;
+  }
+  printout("cell_is_optically_thick_vpkt %lg\n", cell_is_optically_thick_vpkt);
 
   // Maximum optical depth. If a vpkt reaches dum7 is thrown away
   fscanf(input_file, "%g \n", &dum7);
@@ -2291,8 +2297,8 @@ static void read_parameterfile_vpkt(void)
     {
       fscanf(input_file, "%g %g", &dum10, &dum11);
 
-      nu_grid_max[i] = CLIGHT / (dum10 * 1e-8) ;
-      nu_grid_min[i] = CLIGHT / (dum11 * 1e-8) ;
+      nu_grid_max[i] = CLIGHT / (dum10 * 1e-8);
+      nu_grid_min[i] = CLIGHT / (dum11 * 1e-8);
     }
   }
   fclose(input_file);
