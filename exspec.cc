@@ -174,8 +174,8 @@ int main(int argc, char** argv)
           sprintf(trueemission_filename, "emissiontrue_res_%.2d.out", a);
           sprintf(absorption_filename, "absorption_res_%.2d.out", a);
           #ifdef POL_ON
-          sprintf(emissionpol_filename, "emission_res_%.2d.out", a);
-          sprintf(absorptionpol_filename, "absorption_res_%.2d.out", a);
+          sprintf(emissionpol_filename, "emissionpol_res_%.2d.out", a);
+          sprintf(absorptionpol_filename, "absorptionpol_res_%.2d.out", a);
           #endif
         }
 
