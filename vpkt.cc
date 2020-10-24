@@ -228,7 +228,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
         tau_vpkt[ind] += kap_cont * s_cont;
     }
 
-    /* kill vpkt with high optical depth */
+    // kill vpkt with high optical depth
     tau_flag = check_tau(tau_vpkt, &tau_max_vpkt);
     if (tau_flag == 0)
     {

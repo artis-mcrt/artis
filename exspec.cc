@@ -23,9 +23,9 @@
 int nprocs_exspec;
 bool do_emission_res;
 
-struct spec stokes_i[MTBINS];
-struct spec stokes_q[MTBINS];
-struct spec stokes_u[MTBINS];
+struct spec *stokes_i;
+struct spec *stokes_q;
+struct spec *stokes_u;
 
 
 // threadprivate variables
@@ -80,6 +80,18 @@ int main(int argc, char** argv)
 
   nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
 
+  init_spectrum_trace(); // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
+
+  struct spec *rpkt_spectra = alloc_spectra(do_emission_res);
+
+  #ifdef POL_ON
+  stokes_i = alloc_spectra(do_emission_res);
+  stokes_q = alloc_spectra(do_emission_res);
+  stokes_u = alloc_spectra(do_emission_res);
+  #endif
+
+  struct spec *gamma_spectra = alloc_spectra(do_emission_res);
+
   for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
   {
     /// Initialise the grid. Call routine that sets up the initial positions
@@ -98,13 +110,17 @@ int main(int argc, char** argv)
       double *gamma_light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
       /// Set up the spectrum grid and initialise the bins to zero.
 
-      struct spec *rpkt_spectra = (struct spec *) calloc(MTBINS, sizeof(struct spec));
-      init_spectrum(rpkt_spectra, nu_min_r, nu_max_r, do_emission_res);
+      init_spectra(rpkt_spectra, nu_min_r, nu_max_r, do_emission_res);
 
-      struct spec *gamma_spectra = (struct spec *) calloc(MTBINS, sizeof(struct spec));
+      #ifdef POL_ON
+      init_spectra(stokes_i, nu_min_r, nu_max_r, do_emission_res);
+      init_spectra(stokes_q, nu_min_r, nu_max_r, do_emission_res);
+      init_spectra(stokes_u, nu_min_r, nu_max_r, do_emission_res);
+      #endif
+
       const double nu_min_gamma = 0.05 * MEV / H;
       const double nu_max_gamma = 4. * MEV / H;
-      init_spectrum(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
+      init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
       for (int p = 0; p < nprocs; p++)
       {
@@ -114,7 +130,7 @@ int main(int argc, char** argv)
         int nesc_rpkt = 0;
         for (int ii = 0; ii < npkts; ii++)
         {
-          // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
+          // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
           if (pkts[ii].type == TYPE_ESCAPE)
           {
             nesc_tot++;
@@ -186,6 +202,7 @@ int main(int argc, char** argv)
         write_specpol(specpol_filename, do_emission_res, emissionpol_filename, absorptionpol_filename);
         #endif
       }
+
       if (a == -1)
       {
         printout("finished angle-averaged stuff\n");
@@ -197,13 +214,21 @@ int main(int argc, char** argv)
 
       free(rpkt_light_curve_lum);
       free(rpkt_light_curve_lumcmf);
-      free(rpkt_spectra);
 
       free(gamma_light_curve_lum);
       free(gamma_light_curve_lumcmf);
-      free(gamma_spectra);
     }
   }
+
+  free_spectra(rpkt_spectra, do_emission_res);
+
+  #ifdef POL_ON
+  free_spectra(stokes_i, do_emission_res);
+  free_spectra(stokes_q, do_emission_res);
+  free_spectra(stokes_u, do_emission_res);
+  #endif
+
+  free_spectra(gamma_spectra, false);
 
   //fclose(ldist_file);
   //fclose(output_file);

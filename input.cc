@@ -2194,11 +2194,7 @@ static void read_parameterfile_vpkt(void)
     fscanf(input_file, "%d ", &dum1);
     Nspectra = dum1;
 
-    if (Nspectra > MSPECTRA)
-    {
-      printout("Too many spectra! Nspectra > MSPECTRA \n");
-      abort();
-    }
+    assert(Nspectra <= MSPECTRA);
 
     for (int i = 0; i < Nspectra; i++)
     {
@@ -2238,11 +2234,7 @@ static void read_parameterfile_vpkt(void)
     fscanf(input_file, "%g ", &dum5);
 
     Nrange = dum5;
-    if (Nrange > MRANGE)
-    {
-      printout("Too many ranges! Nrange > MRANGE \n");
-      exit(0);
-    }
+    assert(Nrange <= MRANGE);
 
     for (int i = 0; i < Nrange; i++)
     {
