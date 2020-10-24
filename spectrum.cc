@@ -254,14 +254,12 @@ void write_specpol(
         {
           fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
         }
-
         fprintf(emissionpol_file, "\n");
 
         for (int i = 0; i < nelements * maxion; i++)
         {
           fprintf(absorptionpol_file, "%g ", stokes_i[p].stat[m].absorption[i]);
         }
-
         fprintf(absorptionpol_file, "\n");
       }
     }
@@ -269,47 +267,43 @@ void write_specpol(
     // Stokes Q
     for (int p = 0; p < ntstep; p++)
     {
-        fprintf(specpol_file, "%g ", stokes_q[p].flux[m]);
+      fprintf(specpol_file, "%g ", stokes_q[p].flux[m]);
 
-        if (do_emission_res)
-        {
-            for (int i = 0; i < 2 * nelements * maxion + 1; i++)
-            {
-              fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
-            }
+      if (do_emission_res)
+      {
+          for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+          {
+            fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
+          }
+          fprintf(emissionpol_file, "\n");
 
-            fprintf(emissionpol_file, "\n");
-
-            for (int i = 0; i < nelements * maxion; i++)
-            {
-              fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
-            }
-
-            fprintf(absorptionpol_file, "\n");
-        }
+          for (int i = 0; i < nelements * maxion; i++)
+          {
+            fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
+          }
+          fprintf(absorptionpol_file, "\n");
+      }
     }
 
     // Stokes U
     for (int p = 0; p < ntstep; p++)
     {
-        fprintf(specpol_file, "%g ", stokes_u[p].flux[m]);
+      fprintf(specpol_file, "%g ", stokes_u[p].flux[m]);
 
-        if (do_emission_res)
+      if (do_emission_res)
+      {
+        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
         {
-          for (int i = 0; i < 2 * nelements * maxion + 1; i++)
-          {
-            fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
-          }
-
-          fprintf(emissionpol_file, "\n");
-
-          for (int i = 0; i < nelements * maxion; i++)
-          {
-            fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
-          }
-
-          fprintf(absorptionpol_file, "\n");
+          fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
         }
+        fprintf(emissionpol_file, "\n");
+
+        for (int i = 0; i < nelements * maxion; i++)
+        {
+          fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
+        }
+        fprintf(absorptionpol_file, "\n");
+      }
     }
 
     fprintf(specpol_file, "\n");
@@ -445,57 +439,45 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
 }
 
 
-void init_spectrum(struct spec *spectra, const double nu_min, const double nu_max, const bool do_emission_res)
+void init_spectrum_trace(void)
 {
-  /// Check if enough  memory for spectra has been assigned
-  /// and allocate memory for the emission statistics
-  if (nnubins > MNUBINS)
+  if (TRACE_EMISSION_ABSORPTION_REGION_ON)
   {
-    printout("Too many frequency bins in spectrum - reducing.\n");
-    nnubins = MNUBINS;
+    traceemission_totalenergy = 0.;
+    traceemissionabsorption = (struct emissionabsorptioncontrib *) malloc(nlines * sizeof(emissionabsorptioncontrib));
+    traceabsorption_totalenergy = 0.;
+    for (int i = 0; i < nlines; i++)
+    {
+      traceemissionabsorption[i].energyemitted = 0.;
+      traceemissionabsorption[i].emission_weightedvelocity_sum = 0.;
+      traceemissionabsorption[i].energyabsorbed = 0.;
+      traceemissionabsorption[i].absorption_weightedvelocity_sum = 0.;
+      traceemissionabsorption[i].lineindex = i; // this will be important when the list gets sorted
+    }
   }
-  assert(ntstep < MTBINS);
+}
 
+
+void free_spectra(struct spec *spectra, const bool do_emission_res)
+{
   if (do_emission_res)
   {
     for (int n = 0; n < ntstep; n++)
     {
       for (int m = 0; m < nnubins; m++)
       {
-        if ((spectra[n].stat[m].absorption = (double *) malloc((nelements*maxion)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory to spectrum structure ... abort\n");
-          abort();
-        }
-        if ((spectra[n].stat[m].emission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
-          abort();
-        }
-        if ((spectra[n].stat[m].trueemission = (double *) malloc((2*nelements*maxion+1)*sizeof(double))) == NULL)
-        {
-          printout("[fatal] input: not enough memory for spectrum structure ... abort\n");
-          abort();
-        }
-      }
-    }
-
-    if (TRACE_EMISSION_ABSORPTION_REGION_ON)
-    {
-      traceemission_totalenergy = 0.;
-      traceemissionabsorption = (struct emissionabsorptioncontrib *) malloc(nlines * sizeof(emissionabsorptioncontrib));
-      traceabsorption_totalenergy = 0.;
-      for (int i = 0; i < nlines; i++)
-      {
-        traceemissionabsorption[i].energyemitted = 0.;
-        traceemissionabsorption[i].emission_weightedvelocity_sum = 0.;
-        traceemissionabsorption[i].energyabsorbed = 0.;
-        traceemissionabsorption[i].absorption_weightedvelocity_sum = 0.;
-        traceemissionabsorption[i].lineindex = i; // this will be important when the list gets sorted
+        free(spectra[n].stat[m].absorption);
+        free(spectra[n].stat[m].emission);
+        free(spectra[n].stat[m].trueemission);
       }
     }
   }
 
+  free(spectra);
+}
+
+void init_spectra(struct spec *spectra, const double nu_min, const double nu_max, const bool do_emission_res)
+{
   // start by setting up the time and frequency bins.
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
@@ -512,38 +494,53 @@ void init_spectrum(struct spec *spectra, const double nu_min, const double nu_ma
 
       if (do_emission_res)
       {
-        #ifdef POL_ON
-        stokes_i[n].lower_freq[m] = spectra[n].lower_freq[m];
-        stokes_i[n].delta_freq[m] = spectra[n].delta_freq[m];
-
-        stokes_i[n].flux[m] = 0.0;
-        stokes_q[n].flux[m] = 0.0;
-        stokes_u[n].flux[m] = 0.0;
-        #endif
-
         for (int i = 0; i < 2 * nelements * maxion + 1; i++)
         {
           spectra[n].stat[m].emission[i] = 0;
           spectra[n].stat[m].trueemission[i] = 0;
-          #ifdef POL_ON
-          stokes_i[n].stat[m].emission[i] = 0;
-          stokes_q[n].stat[m].emission[i] = 0;
-          stokes_u[n].stat[m].emission[i] = 0;
-          #endif
         }
 
         for (int i = 0; i < nelements * maxion; i++)
         {
           spectra[n].stat[m].absorption[i] = 0;
-          #ifdef POL_ON
-          stokes_i[n].stat[m].absorption[i] = 0;
-          stokes_q[n].stat[m].absorption[i] = 0;
-          stokes_u[n].stat[m].absorption[i] = 0;
-          #endif
         }
       }
     }
   }
+}
+
+
+struct spec *alloc_spectra(const bool do_emission_res)
+{
+  struct spec *spectra = (struct spec *) calloc(MTBINS, sizeof(struct spec));
+  /// Check if enough  memory for spectra has been assigned
+  /// and allocate memory for the emission statistics
+  if (nnubins > MNUBINS)
+  {
+    printout("WARNING: Too many frequency bins in spectrum - reducing.\n");
+    nnubins = MNUBINS;
+  }
+  assert(ntstep < MTBINS);
+
+  if (do_emission_res)
+  {
+    for (int n = 0; n < ntstep; n++)
+    {
+      for (int m = 0; m < nnubins; m++)
+      {
+        const int emissioncount = 2 * nelements * maxion + 1;
+        spectra[n].stat[m].absorption = (double *) calloc(nelements * maxion, sizeof(double));
+        spectra[n].stat[m].emission = (double *) calloc(emissioncount, sizeof(double));
+        spectra[n].stat[m].trueemission = (double *) calloc(emissioncount, sizeof(double));
+
+        assert(spectra[n].stat[m].absorption != NULL);
+        assert(spectra[n].stat[m].emission != NULL);
+        assert(spectra[n].stat[m].trueemission != NULL);
+      }
+    }
+  }
+
+  return spectra;
 }
 
 
