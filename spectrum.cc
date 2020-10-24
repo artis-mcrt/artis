@@ -368,6 +368,12 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
 
     spectra[nt].flux[nnu] += deltaE;
 
+    #ifdef POL_ON
+    stokes_i[nt].flux[nnu] += pkt_ptr->stokes[0] * deltaE;
+    stokes_q[nt].flux[nnu] += pkt_ptr->stokes[1] * deltaE;
+    stokes_u[nt].flux[nnu] += pkt_ptr->stokes[2] * deltaE;
+    #endif
+
     if (do_emission_res)
     {
       const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
