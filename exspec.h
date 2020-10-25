@@ -16,23 +16,20 @@ typedef struct
 } emstat_t;
 
 
-///Specpol
-
 struct spec
 {
   float lower_freq[MNUBINS];
   float delta_freq[MNUBINS];
   double flux[MNUBINS];
   emstat_t stat[MNUBINS];
+  double nu_min;
+  double nu_max;
+  bool do_emission_res;
 };
 
 
 extern int nprocs_exspec;
 extern bool do_emission_res;
-
-extern struct spec *stokes_i;
-extern struct spec *stokes_q;
-extern struct spec *stokes_u;
 
 
 #endif //EXSPEC_H

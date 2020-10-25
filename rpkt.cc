@@ -1234,12 +1234,15 @@ void emitt_rpkt(PKT *pkt_ptr)
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
 
   // Reset polarization information
-  pkt_ptr->stokes[0] = 1.0;
-  pkt_ptr->stokes[1] = pkt_ptr->stokes[2] = 0.0;
+  pkt_ptr->stokes[0] = 1.;
+  pkt_ptr->stokes[1] = 0.;
+  pkt_ptr->stokes[2] = 0.;
+
   double dummy_dir[3];
   dummy_dir[0] = dummy_dir[1] = 0.0;
   dummy_dir[2] = 1.0;
   cross_prod(pkt_ptr->dir,dummy_dir,pkt_ptr->pol_dir);
+
   if ((dot(pkt_ptr->pol_dir,pkt_ptr->pol_dir)) < 1.e-8)
   {
     dummy_dir[0] = dummy_dir[2]=0.0;

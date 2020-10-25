@@ -23,11 +23,6 @@
 int nprocs_exspec;
 bool do_emission_res;
 
-struct spec *stokes_i;
-struct spec *stokes_q;
-struct spec *stokes_u;
-
-
 // threadprivate variables
 FILE *output_file;
 int tid;
@@ -84,13 +79,17 @@ int main(int argc, char** argv)
 
   struct spec *rpkt_spectra = alloc_spectra(do_emission_res);
 
+  struct spec *stokes_i = NULL;
+  struct spec *stokes_q = NULL;
+  struct spec *stokes_u = NULL;
+
   #ifdef POL_ON
   stokes_i = alloc_spectra(do_emission_res);
   stokes_q = alloc_spectra(do_emission_res);
   stokes_u = alloc_spectra(do_emission_res);
   #endif
 
-  struct spec *gamma_spectra = alloc_spectra(do_emission_res);
+  struct spec *gamma_spectra = alloc_spectra(false);
 
   for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
   {
@@ -138,13 +137,13 @@ int main(int argc, char** argv)
             {
               nesc_rpkt++;
               add_to_lc_res(&pkts[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-              add_to_spec_res(&pkts[ii], a, do_emission_res, rpkt_spectra, nu_min_r, nu_max_r);
+              add_to_spec_res(&pkts[ii], a, rpkt_spectra, stokes_i, stokes_q, stokes_u);
             }
             else if (pkts[ii].escape_type == TYPE_GAMMA && a == -1)
             {
               nesc_gamma++;
               add_to_lc_res(&pkts[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-              add_to_spec_res(&pkts[ii], a, 0, gamma_spectra, nu_min_gamma, nu_max_gamma);
+              add_to_spec_res(&pkts[ii], a, gamma_spectra, NULL, NULL, NULL);
             }
           }
         }
@@ -157,13 +156,13 @@ int main(int argc, char** argv)
         write_light_curve((char *) "light_curve.out", -1, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
         write_light_curve((char *) "gamma_light_curve.out", -1, gamma_light_curve_lum, gamma_light_curve_lumcmf);
 
-        write_spectrum((char *) "spec.out", do_emission_res, (char *) "emission.out",
+        write_spectrum((char *) "spec.out", (char *) "emission.out",
                        (char *) "emissiontrue.out", (char *) "absorption.out", rpkt_spectra);
         #ifdef POL_ON
-        write_specpol((char *) "specpol.out", do_emission_res,
-                      (char *) "emissionpol.out", (char *) "absorptionpol.out");
+        write_specpol((char *) "specpol.out", (char *) "emissionpol.out", (char *) "absorptionpol.out",
+                      stokes_i, stokes_q, stokes_u);
         #endif
-        write_spectrum((char *) "gamma_spec.out", false, NULL, NULL, NULL, gamma_spectra);
+        write_spectrum((char *) "gamma_spec.out", NULL, NULL, NULL, gamma_spectra);
       }
       else
       {
@@ -196,10 +195,12 @@ int main(int argc, char** argv)
         }
 
         write_light_curve(lc_filename, a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-        write_spectrum(spec_filename, do_emission_res, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra);
+        write_spectrum(spec_filename, emission_filename, trueemission_filename, absorption_filename, rpkt_spectra);
 
         #ifdef POL_ON
-        write_specpol(specpol_filename, do_emission_res, emissionpol_filename, absorptionpol_filename);
+        write_specpol(
+          specpol_filename, emissionpol_filename, absorptionpol_filename,
+          stokes_i, stokes_q, stokes_u);
         #endif
       }
 
@@ -220,15 +221,16 @@ int main(int argc, char** argv)
     }
   }
 
-  free_spectra(rpkt_spectra, do_emission_res);
+  free_spectra(rpkt_spectra);
 
-  #ifdef POL_ON
-  free_spectra(stokes_i, do_emission_res);
-  free_spectra(stokes_q, do_emission_res);
-  free_spectra(stokes_u, do_emission_res);
-  #endif
+  if (stokes_i != NULL)
+    free_spectra(stokes_i);
+  if (stokes_q != NULL)
+    free_spectra(stokes_q);
+  if (stokes_u != NULL)
+    free_spectra(stokes_u);
 
-  free_spectra(gamma_spectra, false);
+  free_spectra(gamma_spectra);
 
   //fclose(ldist_file);
   //fclose(output_file);

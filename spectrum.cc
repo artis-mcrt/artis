@@ -142,13 +142,19 @@ static void printout_tracemission_stats(void)
   free(traceemissionabsorption);
 }
 
-void write_spectrum(char spec_filename[], bool do_emission_res, char emission_filename[], char trueemission_filename[], char absorption_filename[], struct spec *spectra)
+
+void write_spectrum(
+  char spec_filename[], char emission_filename[], char trueemission_filename[],
+  char absorption_filename[], struct spec *spectra)
 {
+  printout("write_spectrum %s %s %s %s\n", spec_filename, emission_filename, trueemission_filename, absorption_filename);
   FILE *spec_file = fopen_required(spec_filename, "w");
 
   FILE *emission_file = NULL;
   FILE *trueemission_file = NULL;
   FILE *absorption_file = NULL;
+
+  bool do_emission_res = spectra[0].do_emission_res;
 
   if (do_emission_res)
   {
@@ -215,11 +221,14 @@ void write_spectrum(char spec_filename[], bool do_emission_res, char emission_fi
 
 
 void write_specpol(
-  char spec_filename[], const bool do_emission_res, char emission_filename[], char absorption_filename[])
+  char spec_filename[], char emission_filename[], char absorption_filename[],
+  struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u)
 {
   FILE *specpol_file = fopen_required(spec_filename, "w");
   FILE *emissionpol_file = NULL;
   FILE *absorptionpol_file = NULL;
+
+  bool do_emission_res = stokes_i[0].do_emission_res;
 
   if (do_emission_res)
   {
@@ -348,7 +357,7 @@ static int columnindex_from_emissiontype(const int et)
 }
 
 
-static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const bool do_emission_res, struct spec *spectra, const double nu_min, const double nu_max)
+static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, struct spec *spectra, struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
@@ -360,6 +369,8 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
   if (t_arrive > tmin && t_arrive < tmax && pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
   {
     const int nt = get_timestep(t_arrive);
+    const double nu_min = spectra[nt].nu_min;
+    const double nu_max = spectra[nt].nu_max;
     const double dlognu = (log(nu_max) - log(nu_min)) / nnubins;
 
     const int nnu = (log(pkt_ptr->nu_rf) - log(nu_min)) /  dlognu;
@@ -368,13 +379,26 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
 
     spectra[nt].flux[nnu] += deltaE;
 
-    #ifdef POL_ON
-    stokes_i[nt].flux[nnu] += pkt_ptr->stokes[0] * deltaE;
-    stokes_q[nt].flux[nnu] += pkt_ptr->stokes[1] * deltaE;
-    stokes_u[nt].flux[nnu] += pkt_ptr->stokes[2] * deltaE;
-    #endif
+    if (stokes_i != NULL)
+    {
+      stokes_i[nt].flux[nnu] += pkt_ptr->stokes[0] * deltaE;
+      // assert(spectra[nt].nu_min == stokes_i[nt].nu_min);
+      // assert(spectra[nt].nu_max == stokes_i[nt].nu_max);
+    }
+    if (stokes_q != NULL)
+    {
+      stokes_q[nt].flux[nnu] += pkt_ptr->stokes[1] * deltaE;
+      // assert(spectra[nt].nu_min == stokes_q[nt].nu_min);
+      // assert(spectra[nt].nu_max == stokes_q[nt].nu_max);
+    }
+    if (stokes_u != NULL)
+    {
+      stokes_u[nt].flux[nnu] += pkt_ptr->stokes[2] * deltaE;
+      // assert(spectra[nt].nu_min == stokes_u[nt].nu_min);
+      // assert(spectra[nt].nu_max == stokes_u[nt].nu_max);
+    }
 
-    if (do_emission_res)
+    if (spectra[nt].do_emission_res)
     {
       const int nproc = columnindex_from_emissiontype(pkt_ptr->emissiontype);
       spectra[nt].stat[nnu].emission[nproc] += deltaE;
@@ -382,11 +406,12 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
       const int truenproc = columnindex_from_emissiontype(pkt_ptr->trueemissiontype);
       spectra[nt].stat[nnu].trueemission[truenproc] += deltaE;
 
-      #ifdef POL_ON
-      stokes_i[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[0] * deltaE;
-      stokes_q[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[1] * deltaE;
-      stokes_u[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[2] * deltaE;
-      #endif
+      if (stokes_i != NULL && stokes_i[nt].do_emission_res)
+        stokes_i[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[0] * deltaE;
+      if (stokes_q != NULL && stokes_q[nt].do_emission_res)
+        stokes_q[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[1] * deltaE;
+      if (stokes_u != NULL && stokes_u[nt].do_emission_res)
+        stokes_u[nt].stat[nnu].emission[nproc] += pkt_ptr->stokes[2] * deltaE;
 
       if (TRACE_EMISSION_ABSORPTION_REGION_ON && (current_abin == -1))
       {
@@ -419,11 +444,12 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, const 
           const int ion = linelist[at].ionindex;
           spectra[nt].stat[nnu_abs].absorption[element * maxion + ion] += deltaE_absorption;
 
-          #ifdef POL_ON
-          stokes_i[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[0] * deltaE_absorption;
-          stokes_q[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[1] * deltaE_absorption;
-          stokes_u[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[2] * deltaE_absorption;
-          #endif
+          if (stokes_i != NULL && stokes_i[nt].do_emission_res)
+            stokes_i[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[0] * deltaE_absorption;
+          if (stokes_q != NULL && stokes_q[nt].do_emission_res)
+            stokes_q[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[1] * deltaE_absorption;
+          if (stokes_u != NULL && stokes_u[nt].do_emission_res)
+            stokes_u[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[2] * deltaE_absorption;
 
           if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax)
           {
@@ -464,11 +490,11 @@ void init_spectrum_trace(void)
 }
 
 
-void free_spectra(struct spec *spectra, const bool do_emission_res)
+void free_spectra(struct spec *spectra)
 {
-  if (do_emission_res)
+  for (int n = 0; n < ntstep; n++)
   {
-    for (int n = 0; n < ntstep; n++)
+    if (spectra[n].do_emission_res)
     {
       for (int m = 0; m < nnubins; m++)
       {
@@ -482,6 +508,7 @@ void free_spectra(struct spec *spectra, const bool do_emission_res)
   free(spectra);
 }
 
+
 void init_spectra(struct spec *spectra, const double nu_min, const double nu_max, const bool do_emission_res)
 {
   // start by setting up the time and frequency bins.
@@ -492,6 +519,8 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
 
   for (int n = 0; n < ntstep; n++)
   {
+    spectra[n].nu_min = nu_min;
+    spectra[n].nu_max = nu_max;
     for (int m = 0; m < nnubins; m++)
     {
       spectra[n].lower_freq[m] = exp(log(nu_min) + (m * (dlognu)));
@@ -528,9 +557,10 @@ struct spec *alloc_spectra(const bool do_emission_res)
   }
   assert(ntstep < MTBINS);
 
-  if (do_emission_res)
+  for (int n = 0; n < ntstep; n++)
   {
-    for (int n = 0; n < ntstep; n++)
+    spectra[n].do_emission_res = do_emission_res;
+    if (spectra[n].do_emission_res)
     {
       for (int m = 0; m < nnubins; m++)
       {
@@ -550,7 +580,9 @@ struct spec *alloc_spectra(const bool do_emission_res)
 }
 
 
-void add_to_spec_res(const PKT *const pkt_ptr, int current_abin, const bool do_emission_res, struct spec *spectra, const double nu_min, const double nu_max)
+void add_to_spec_res(
+  const PKT *const pkt_ptr, int current_abin, struct spec *spectra,
+  struct spec *stokes_i, struct spec *stokes_q, struct spec *stokes_u)
 // Routine to add a packet to the outgoing spectrum.
 {
   /* Need to (1) decide which time bin to put it in and (2) which frequency bin. */
@@ -563,7 +595,7 @@ void add_to_spec_res(const PKT *const pkt_ptr, int current_abin, const bool do_e
   if (current_abin == -1)
   {
     // angle averaged spectrum
-    add_to_spec(pkt_ptr, current_abin, do_emission_res, spectra, nu_min, nu_max);
+    add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
   }
   else
   {
@@ -596,7 +628,7 @@ void add_to_spec_res(const PKT *const pkt_ptr, int current_abin, const bool do_e
     /// Add only packets which escape to the current angle bin
     if (na == current_abin)
     {
-      add_to_spec(pkt_ptr, current_abin, do_emission_res, spectra, nu_min, nu_max);
+      add_to_spec(pkt_ptr, current_abin, spectra, stokes_i, stokes_q, stokes_u);
     }
   }
 }
