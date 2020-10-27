@@ -1,3 +1,7 @@
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <string.h>
 #include <stdio.h>
 //#include <math.h>
@@ -35,13 +39,40 @@ typedef struct
   bool forbidden;
 } transitiontable_entry;  /// only used temporarily during input
 
+const int inputlinecommentcount = 24;
+std::string inputlinecomments[inputlinecommentcount] = {
+  "pre_zseed: specific random number seed if > 0 or random if negative",
+  "ntstep: number of timesteps",
+  "itstep ftstep: number of start and end time step",
+  "tmin_days tmax_days: start and end times [day]",
+  "nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]",
+  "nsyn_time: number of times for synthesis",
+  "start and end times for synthesis",
+  "model_type: number of dimensions (1, 2, or 3)",
+  "compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
+  "n_out_it: number of iterations",
+  "CLIGHT_PROP/CLIGHT: change speed of light by some factor",
+  "use grey opacity for gammas?",
+  "syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)",
+  "opacity_case: opacity choice",
+  "rho_crit_para: free parameter for calculation of rho_crit",
+  "UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)",
+  "simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)",
+  "UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field switches from the nebular approximation to LTE.",
+  "n_lte_timesteps",
+  "cell_is_optically_thick n_grey_timesteps",
+  "UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
+  "nprocs_exspec: extract spectra for n MPI tasks",
+  "do_emission_res: Extract line-of-sight dependent information of last emission for spectrum_res (1: yes, 2: no)",
+  "kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y time steps"
+};
+
 
 static void read_phixs_data_table(
   FILE *phixsdata, const int element, const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
   const double phixs_threshold_ev,
   long *mem_usage_phixs, long *mem_usage_phixsderivedcoeffs)
 {
-
   //double phixs_threshold_ev = (epsilon(element, upperion, upperlevel) - epsilon(element, lowerion, lowerlevel)) / EV;
   elements[element].ions[lowerion].levels[lowerlevel].phixs_threshold = phixs_threshold_ev * EV;
   if (upperlevel_in >= 0) // file gives photoionisation to a single target state only
@@ -2414,18 +2445,59 @@ void input(int rank)
 }
 
 
+static bool lineiscommentonly(std::string &line)
+{
+  // if (line.length() == 0)
+  //   return true;
+  // if (line.find('#') != std::string::npos)
+  for (unsigned int i = 0; i < line.find('#'); i++)
+  {
+    if (line[i] != ' ')
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+
+static bool get_noncommentline(std::istream &input, std::string &line)
+{
+  while (true)
+  {
+    bool linefound = !(!std::getline(input, line));
+    printout("LINE: %s   commentonly: %s \n", line.c_str(), lineiscommentonly(line) ? "true" : "false");
+    if (linefound && !lineiscommentonly(line))
+    {
+      return true;
+    }
+    else if (!linefound)
+    {
+      return false;
+    }
+  }
+}
+
+
 void read_parameterfile(int rank)
 /// Subroutine to read in input parameters from input.txt.
 {
   unsigned long int pre_zseed;
 
-  FILE *input_file = fopen_required("input.txt", "r");
+  std::ifstream file("input.txt");
+  assert(file.is_open());
+
+  std::string line;
+
+  assert(get_noncommentline(file, line));
 
   int dum1;
-  fscanf(input_file, "%d", &dum1);
+  std::stringstream(line) >> dum1;
+
   if (dum1 > 0)
   {
     pre_zseed = dum1; // random number seed
+    printout("[debug] using specified random number seed of %lu\n", pre_zseed);
   }
   else
   {
@@ -2448,8 +2520,6 @@ void read_parameterfile(int rank)
       /// call it a few times to get it in motion.
       for (int n = 0; n < 100; n++)
       {
-        //double x = gsl_rng_uniform(rng);
-        //printout("zrand %g\n", x);
         gsl_rng_uniform(rng);
       }
       printout("rng is a '%s' generator\n", gsl_rng_name(rng));
@@ -2457,13 +2527,17 @@ void read_parameterfile(int rank)
     }
   #endif
 
-  fscanf(input_file, "%d", &ntstep); // number of time steps
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> ntstep; // number of time steps
 
-  fscanf(input_file, "%d %d", &itstep, &ftstep); // number of start and end time step
+  assert(get_noncommentline(file, line));
+  printout("line %s\n", line.c_str());
+  std::stringstream(line) >> itstep >> ftstep; // number of start and end time step
 
   float tmin_days = 0.;
   float tmax_days = 0.;
-  fscanf(input_file, "%g %g", &tmin_days, &tmax_days); // start and end times
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> tmin_days >> tmax_days; // start and end times
   assert(tmin_days > 0);
   assert(tmax_days > 0);
   assert(tmin_days < tmax_days);
@@ -2471,19 +2545,23 @@ void read_parameterfile(int rank)
   tmax = tmax_days * DAY;
 
   float dum2, dum3;
-  fscanf(input_file, "%g %g", &dum2, &dum3);
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> dum2 >> dum3;
   nusyn_min = dum2 * MEV / H; // lowest frequency to synthesise
   nusyn_max = dum3 * MEV / H; // highest frequency to synthesise
 
-  fscanf(input_file, "%d", &nsyn_time); // number of times for synthesis
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> nsyn_time; // number of times for synthesis
 
-  fscanf(input_file, "%g %g", &dum2, &dum3); // start and end times for synthesis
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> dum2 >> dum3; // start and end times for synthesis
   for (int i = 0; i < nsyn_time; i++)
   {
     time_syn[i] = exp(log(dum2) + (dum3 * i)) * DAY;
   }
 
-  fscanf(input_file, "%d", &dum1); // model type
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> dum1; // model type
   if (dum1 == 1)
   {
     model_type = RHO_1D_READ;
@@ -2497,45 +2575,36 @@ void read_parameterfile(int rank)
     model_type = RHO_3D_READ;
   }
 
-  fscanf(input_file, "%d", &dum1); ///compute the r-light curve?
-  if (dum1 == 1) /// lc no estimators
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> dum1; // compute the r-light curve?
+  // 1: lc no estimators
+  // 2: lc case with thin cells
+  // 3: lc case with thick cells
+  // 4: gamma-ray heating case
+  do_r_lc = (dum1 != 0);
+  if (dum1 > 0)
   {
-    do_r_lc = true;
-    do_rlc_est = 0;
+    do_rlc_est = dum1 - 1;
   }
-  else if (dum1 == 2)/// lc case with thin cells
-  {
-    do_r_lc = true;
-    do_rlc_est = 1;
-  }
-  else if (dum1 == 3)/// lc case with thick cells
-  {
-    do_r_lc = true;
-    do_rlc_est = 2;
-  }
-  else if (dum1 == 4) /// gamma-ray heating case
-  {
-    do_r_lc = true;
-    do_rlc_est = 3;
-  }
-  else if (dum1 != 0)
-  {
-    printout("Unknown rlc mode. Abort.\n");
-    abort();
-  }
+  assert(dum1 >= 0);
+  assert(dum1 <= 4);
 
-  fscanf(input_file, "%d", &n_out_it); // number of iterations
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> n_out_it; // number of iterations
 
-  fscanf(input_file, "%g", &dum2); // change speed of light?
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> dum2; // change speed of light?
   CLIGHT_PROP = dum2 * CLIGHT;
 
-  fscanf(input_file, "%lg", &gamma_grey); ///use grey opacity for gammas?
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> gamma_grey; // use grey opacity for gammas?
 
   float syn_dir_in[3];
-  fscanf(input_file, "%g %g %g", &syn_dir_in[0], &syn_dir_in[1], &syn_dir_in[2]); // components of syn_dir
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> syn_dir_in[0] >> syn_dir_in[1] >> syn_dir_in[2]; // components of syn_dir
 
   const double rr = (syn_dir_in[0] * syn_dir_in[0]) + (syn_dir_in[1] * syn_dir_in[1]) + (syn_dir_in[2] * syn_dir_in[2]);
-  /// ensure that this vector is normalised.
+  // ensure that this vector is normalised.
   if (rr > 1.e-6)
   {
     syn_dir[0] = syn_dir_in[0] / sqrt(rr);
@@ -2551,20 +2620,22 @@ void read_parameterfile(int rank)
     syn_dir[1] = sqrt( (1. - (z1 * z1))) * sin(z2);
   }
 
-  fscanf(input_file, "%d", &opacity_case); // opacity choice
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> opacity_case; // opacity choice
 
-  ///MK: begin
-  fscanf(input_file, "%lg", &rho_crit_para); ///free parameter for calculation of rho_crit
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> rho_crit_para; //free parameter for calculation of rho_crit
   printout("input: rho_crit_para %g\n", rho_crit_para);
-  ///the calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
+  /// he calculation of rho_crit itself depends on the time, therfore it happens in grid_init and update_grid
 
-  fscanf(input_file, "%d", &debug_packet); /// activate debug output for packet
-                                           /// select a negative value to deactivate
-  ///MK: end
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> debug_packet; // activate debug output for packet
+  // select a negative value to deactivate
 
-  /// Do we start a new simulation or, continue another one?
+  // Do we start a new simulation or, continue another one?
   int continue_flag;
-  fscanf(input_file, "%d", &continue_flag);
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> continue_flag;
   simulation_continued_from_saved = (continue_flag == 1);
   if (simulation_continued_from_saved)
     printout("input: resuming simulation from saved point\n");
@@ -2573,12 +2644,14 @@ void read_parameterfile(int rank)
 
   /// Wavelength (in Angstroms) at which the parameterisation of the radiation field
   /// switches from the nebular approximation to LTE.
-  fscanf(input_file, "%g", &dum2);  // free parameter for calculation of rho_crit
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> dum2;  // free parameter for calculation of rho_crit
   nu_rfcut = CLIGHT / (dum2 * 1e-8);
-  printout("input: nu_rfcut %g\n",nu_rfcut);
+  printout("input: nu_rfcut %g\n", nu_rfcut);
 
   /// Sets the number of initial LTE timesteps for NLTE runs
-  fscanf(input_file, "%d", &n_lte_timesteps);
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> n_lte_timesteps;
   #ifdef FORCE_LTE
     printout("input: this is a pure LTE run\n");
   #else
@@ -2613,11 +2686,13 @@ void read_parameterfile(int rank)
   #endif
 
   /// Set up initial grey approximation?
-  fscanf(input_file, "%lg %d", &cell_is_optically_thick, &n_grey_timesteps);
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> cell_is_optically_thick >> n_grey_timesteps;
   printout("input: cells with Thomson optical depth > %g are treated in grey approximation for the first %d timesteps\n",cell_is_optically_thick,n_grey_timesteps);
 
   /// Limit the number of bf-continua
-  fscanf(input_file, "%d", &max_bf_continua);
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> max_bf_continua;
   if (max_bf_continua == -1)
   {
     printout("input: use all bf-continua\n");
@@ -2630,11 +2705,12 @@ void read_parameterfile(int rank)
 
   /// The following parameters affect the DO_EXSPEC mode only /////////////////
   /// Read number of MPI tasks for exspec
-  fscanf(input_file, "%d", &dum1);
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> dum1;
   #ifdef DO_EXSPEC
     nprocs_exspec = dum1;
-    printout("input: DO_EXSPEC ... extract spectra for %d MPI tasks\n",nprocs_exspec);
-    printout("input: DO_EXSPEC ... and %d packets per task\n",npkts);
+    printout("input: DO_EXSPEC ... extract spectra for %d MPI tasks\n", nprocs_exspec);
+    printout("input: DO_EXSPEC ... and %d packets per task\n", npkts);
   #endif
 
   /// Extract line-of-sight dependent information of last emission for spectrum_res
@@ -2642,7 +2718,8 @@ void read_parameterfile(int rank)
   ///   if 0, no
   /// Only affects runs with DO_EXSPEC. But then it needs huge amounts of memory!!!
   /// Thus be aware to reduce MNUBINS for this mode of operation!
-  fscanf(input_file, "%d", &dum1);
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> dum1;
   #ifdef DO_EXSPEC
     do_emission_res = dum1;
     if (do_emission_res == 1) printout("input: DO_EXSPEC ... extract LOS dependent emission information\n");
@@ -2655,10 +2732,11 @@ void read_parameterfile(int rank)
   /// Parameter one (a float) gives the relative fraction of a time step which individual
   /// kpkts live. Parameter two (an int) gives the number of time steps for which we
   /// want to use this approximation
-  fscanf(input_file, "%g %d", &kpktdiffusion_timescale, &n_kpktdiffusion_timesteps);
+  assert(get_noncommentline(file, line));
+  std::stringstream(line) >> kpktdiffusion_timescale >> n_kpktdiffusion_timesteps;
   printout("input: kpkts diffuse %g of a time step's length for the first %d time steps\n", kpktdiffusion_timescale, n_kpktdiffusion_timesteps);
 
-  fclose(input_file);
+  file.close();
 }
 
 
@@ -2687,40 +2765,69 @@ void update_parameterfile(int nts)
 {
   printout("Update input.txt for restart at timestep %d...", nts);
 
-  FILE *input_file = fopen_required("input.txt", "r+");
+  std::ifstream file("input.txt");
+  assert(file.is_open());
+
+  std::ofstream fileout("input.txt.tmp");
+  assert(fileout.is_open());
+
+  std::string line;
+
+  // FILE *input_file = fopen_required("input.txt", "r+");
   //setvbuf(input_file, NULL, _IOLBF, 0);
 
-  int dum1;
-  fscanf(input_file, "%d\n", &dum1); /// Random number seed
-  fscanf(input_file, "%d\n", &dum1); /// Number of time steps
+  char c_line[1024];
+  int noncomment_linenum = -1;
+  while (std::getline(file, line))
+  {
+    if (!lineiscommentonly(line))
+    {
+      noncomment_linenum++;  // line number starting from 0, ignoring comment and blank lines (that start with '#')
 
-  /// Number of start and end time step, update start time step
-  fseek(input_file,0,SEEK_CUR);
-  fprintf(input_file, "%3.3d %3.3d\n", nts, ftstep);
-  fseek(input_file,0,SEEK_CUR);
+      // if (!preceeding_comment && noncomment_linenum < inputlinecommentcount - 1)
+      // {
+      //   fileout << '#' << inputlinecomments[noncomment_linenum] << '\n';
+      // }
 
-  float dum2, dum3, dum4;
-  fscanf(input_file, "%g %g\n", &dum2, &dum3);  ///start and end times
-  fscanf(input_file, "%g %g\n", &dum2, &dum3);  ///lowest and highest frequency to synthesise in MeV
-  fscanf(input_file, "%d\n", &dum1);            ///number of times for synthesis
-  fscanf(input_file, "%g %g\n", &dum2, &dum3);  ///start and end times for synthesis
-  fscanf(input_file, "%d\n", &dum1);            ///model type
-  fscanf(input_file, "%d\n", &dum1);            ///compute the r-light curve?
-  fscanf(input_file, "%d\n", &dum1);            ///number of iterations
-  fscanf(input_file, "%g\n", &dum2);            ///change speed of light?
-  fscanf(input_file, "%g\n", &dum2);            ///use grey opacity for gammas?
-  fscanf(input_file, "%g %g %g\n", &dum2, &dum3, &dum4); ///components of syn_dir
-  fscanf(input_file, "%d\n", &dum1);            ///opacity choice
-  fscanf(input_file, "%g\n", &dum2);            ///free parameter for calculation of rho_crit
-  fscanf(input_file, "%d\n", &dum1);            /// activate debug output for packet
+      // overwrite particular lines to enable restarting from the current timestep
+      if (noncomment_linenum == 2)
+      {
+        /// Number of start and end time step
+        sprintf(c_line, "%3.3d %3.3d", nts, ftstep);
+        // line.assign(c_line);
+        line.replace(0, strlen(c_line), c_line);
+      }
+      else if (noncomment_linenum == 16)
+      {
+        /// resume from gridsave file
+        sprintf(c_line, "%d", 1); /// Force continuation
+        line.assign(c_line);
+      }
 
-  /// Flag continuation parameter as active
-  fseek(input_file,0,SEEK_CUR);
-  fprintf(input_file, "%d\n", 1); /// Force continuation
-  //  fseek(input_file,0,SEEK_CUR);
-  //fscanf(input_file, "%d", &dum1);  /// Do we start a new simulation or, continue another one?
+      if (noncomment_linenum < inputlinecommentcount)
+      {
+        const int commentstart = 25;
 
-  fclose(input_file);
+        // truncate any existing comment on the line
+        if (line.find("#") != std::string::npos)
+        {
+          line.resize(line.find("#"));
+        }
+
+        line.resize(commentstart, ' ');
+        line.append("# ");
+        line.append(inputlinecomments[noncomment_linenum]);
+      }
+    }
+
+    fileout << line << '\n';
+  }
+
+  fileout.close();
+  file.close();
+
+  std::remove("input.txt");
+  std::rename("input.txt.tmp", "input.txt");
 
   printout("done\n");
 }
