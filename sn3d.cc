@@ -242,7 +242,9 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       printout("mem_usage: MPI_BUFFER: used %d of %d bytes allocated to mpi_grid_buffer\n", position, mpi_grid_buffer_size);
       assert(position <= mpi_grid_buffer_size);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(mpi_grid_buffer, mpi_grid_buffer_size, MPI_PACKED, root, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     position = 0;
     int nlp;
@@ -279,6 +281,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     #if (!NO_LUT_PHOTOION)
       if ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0))
       {
+        MPI_Barrier(MPI_COMM_WORLD);
         /// Reduce the corrphotoionrenorm array.
         printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
         MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
