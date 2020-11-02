@@ -66,6 +66,7 @@ double meanlife(enum radionuclides nuclide_type)
     case FAKE_GAM_LINE_ID:
     case RADIONUCLIDE_COUNT:
       assert(false);
+      return -1;
   }
 }
 
@@ -93,6 +94,7 @@ double nucmass(enum radionuclides nuclide_type)
     case FAKE_GAM_LINE_ID:
     case RADIONUCLIDE_COUNT:
       assert(false);
+      return -1;
   }
 }
 
@@ -133,6 +135,7 @@ enum radionuclides decayparent(enum decaypathways decaypath)
 
     case DECAYPATH_COUNT:
       assert(false);
+      return RADIONUCLIDE_COUNT;
   }
 }
 
@@ -167,7 +170,7 @@ enum radionuclides decaydaughter(enum decaypathways decaypath)
 
 
 static bool decaypath_is_chain(enum decaypathways decaypath)
-// the second nucleus is radioactive
+// return true if the second nuclide in the decay path is also radioactive
 {
   switch (decaypath)
   {
@@ -187,6 +190,7 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
 
     case DECAYPATH_COUNT:
       assert(false);
+      return false;
   }
 }
 
