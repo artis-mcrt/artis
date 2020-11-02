@@ -65,9 +65,10 @@ double meanlife(enum radionuclides nuclide_type)
       return 0.0211395 * DAY;
     case FAKE_GAM_LINE_ID:
     case RADIONUCLIDE_COUNT:
-      assert(false);
-      return -1;
+      ;
   }
+  assert(false);
+  return -1;
 }
 
 
@@ -93,9 +94,10 @@ double nucmass(enum radionuclides nuclide_type)
       return 52 * MH;
     case FAKE_GAM_LINE_ID:
     case RADIONUCLIDE_COUNT:
-      assert(false);
-      return -1;
+      ;
   }
+  assert(false);
+  return -1;
 }
 
 
@@ -134,9 +136,10 @@ enum radionuclides decayparent(enum decaypathways decaypath)
       return NUCLIDE_CO57;
 
     case DECAYPATH_COUNT:
-      assert(false);
-      return RADIONUCLIDE_COUNT;
+      ;
   }
+  assert(false);
+  return RADIONUCLIDE_COUNT;
 }
 
 
@@ -189,9 +192,10 @@ static bool decaypath_is_chain(enum decaypathways decaypath)
       return true;
 
     case DECAYPATH_COUNT:
-      assert(false);
-      return false;
+      ;
   }
+  assert(false);
+  return false;
 }
 
 
