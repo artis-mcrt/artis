@@ -169,6 +169,8 @@ enum radionuclides decaydaughter(enum decaypathways decaypath)
     case DECAY_NI57_CO57:
       return NUCLIDE_CO57;
   }
+  assert(false);
+  return RADIONUCLIDE_COUNT;
 }
 
 
@@ -304,6 +306,8 @@ enum packet_type get_decay_pellet_type(enum decaypathways decaypath, bool *origi
       abort();
     }
   }
+  assert(false);
+  return TYPE_ESCAPE; // will never reach here, but gcc needs a return value
 }
 
 
