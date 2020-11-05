@@ -53,7 +53,7 @@ else ifneq (, $(shell which mpicxx))
 
 	CXX = mpicxx
 	# CXX = c++
-	CXXFLAGS = -std=c++17 -march=native -Wstrict-aliasing -O3 -g -fstrict-aliasing #-fopenmp=libomp
+	CXXFLAGS = -std=c++17 -march=native -O3 -g #-fopenmp=libomp
 	LDFLAGS = -lgsl -lgslcblas
 
 
