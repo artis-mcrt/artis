@@ -2466,7 +2466,7 @@ static bool get_noncommentline(std::istream &input, std::string &line)
   while (true)
   {
     bool linefound = !(!std::getline(input, line));
-    printout("LINE: %s   commentonly: %s \n", line.c_str(), lineiscommentonly(line) ? "true" : "false");
+    // printout("LINE: %s   commentonly: %s \n", line.c_str(), lineiscommentonly(line) ? "true" : "false");
     if (linefound && !lineiscommentonly(line))
     {
       return true;
