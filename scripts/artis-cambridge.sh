@@ -58,7 +58,7 @@ module purge                               # Removes all modules still loaded
 module load rhel7/default-peta4            # REQUIRED - loads the basic environment
 
 #! Insert additional module load commands after this line if needed:
-module load intel/bundles/complib/2019.3
+module load intel/bundles/complib/2020.2
 module load gsl/2.4
 
 #! Full path to application executable:
