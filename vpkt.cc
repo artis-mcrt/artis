@@ -434,7 +434,9 @@ void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
     nt = (log(t_arrive) - log(tmin_vspec)) / dlogt_vspec;
     if (pkt_ptr->nu_rf > numin_vspec && pkt_ptr->nu_rf < numax_vspec)
     {
+      #ifdef _OPENMP
       #pragma omp critical
+      #endif
       {
         nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) /  dlognu_vspec;
 
@@ -665,7 +667,9 @@ void add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, doubl
   mt = ( vmax - vref2 ) / zbin;
 
   // Add contribution
+  #ifdef _OPENMP
   #pragma omp critical
+  #endif
   {
     if (dummy_ptr->nu_rf > nu_grid_min[bin_range] && dummy_ptr->nu_rf < nu_grid_max[bin_range])
     {
