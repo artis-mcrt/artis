@@ -146,7 +146,7 @@ double do_rpkt(PKT *pkt_ptr, double t1, double t2)
         /// In the case ot optically thick cells, we treat the packets in grey approximation to speed up the calculation
         /// Get distance to the next physical event in this case only electron scattering
         //kappa = SIGMA_T*get_nne(mgi);
-        kappa = get_kappagrey(mgi)*get_rho(mgi);
+        kappa = get_kappagrey(mgi)*get_rho(mgi); // cm^2/cm
         get_velocity(pkt_ptr->pos, vel_vec, t_current);
         kappa = kappa * doppler(pkt_ptr->dir, vel_vec);
         edist = (tau_next - tau_current) / kappa;

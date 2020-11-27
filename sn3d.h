@@ -22,6 +22,8 @@
 // Virtual packets
 //#define VPKT_ON
 
+// Generalised energy input
+#define USE_ENERGYINPUTFILE
 
 //#define HUGEE 2000018
 //#define HUGEE 50000
@@ -107,6 +109,7 @@ double E48V;
 #define TYPE_52FE_PELLET   104
 #define TYPE_52MN_PELLET   105
 #define TYPE_COBALT_POSITRON_PELLET   106
+#define TYPE_GENERIC_ENERGY_PELLET 200
 #define TYPE_GAMMA         10
 #define TYPE_RPKT          11
 #define TYPE_KPKT          12
@@ -202,7 +205,7 @@ int get_bfcontinua(int element, int ion);
 
 
 
-
+double get_volinit_modelcell(int modelgridindex);
 float get_rhoinit(int modelgridindex);
 float get_rho(int modelgridindex);
 float get_nne(int modelgridindex);
@@ -224,6 +227,9 @@ float get_Te(int modelgridindex);
 float get_TR(int modelgridindex);
 float get_TJ(int modelgridindex);
 float get_W(int modelgridindex);
+#ifdef USE_ENERGYINPUTFILE
+  float get_modelcell_energydensity_init(int modelgridindex);
+#endif
 void set_rhoinit(int modelgridindex, float x);
 void set_rho(int modelgridindex, float x);
 void set_nne(int modelgridindex, float x);
@@ -245,6 +251,9 @@ void set_Te(int modelgridindex, float x);
 void set_TR(int modelgridindex, float x);
 void set_TJ(int modelgridindex, float x);
 void set_W(int modelgridindex, float x);
+#ifdef USE_ENERGYINPUTFILE
+  void set_modelcell_energydensity_init(int modelgridindex, float x);
+#endif
 
 
 
@@ -439,6 +448,15 @@ double t_model; /* time at which densities in input model are correct. */
 int ncoord1_model, ncoord2_model; /*For 2d model, the input grid dimensions */
 double dcoord1, dcoord2; /*spacings of a 2d model grid - must be uniform grid */
 
+#ifdef USE_ENERGYINPUTFILE
+  double modelcell_energydensity[MMODELGRID]; // energy in model grid cell read from energydistribution.txt / initial model cell volume
+  double etot_fromenergyfile; // total model energy -- used to initialise pellets. Read from energydistribution.txt
+
+  int ntimes_energydep; // number of times included in energyrate.txt
+  float time_energydep[MTSTEP]; // times in seconds from energyrate.txt
+  float energy_fraction_deposited[MTSTEP]; // fraction of energy deposited by time from energyrate.txt
+#endif
+
 //#define MPTS_MODEL_3D 8000000
 
 
@@ -452,7 +470,7 @@ double min_den;
 
 #define GREY_OP 0.1
 
-float cont[MGRID+1];
+//float cont[MGRID+1];
 double max_path_step;
 
 int opacity_case; /* 0 normally, 1 for Fe-grp dependence. */

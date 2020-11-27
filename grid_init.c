@@ -70,6 +70,7 @@ int grid_init ()
 
   /// and assign a temperature to the cells
   assign_temperature();
+//  todo: give this option to depend on energy input files
   
   /// Finally determine which cells are non-empty...
   /*if ((nonemptycells = (int *) malloc(ngrid*sizeof(int))) == NULL)
@@ -597,6 +598,17 @@ int density_1d_read ()
   set_TJ(MMODELGRID,MINTEMP);
   set_TR(MMODELGRID,MINTEMP);
   allocate_compositiondata(MMODELGRID);
+
+#ifdef USE_ENERGYINPUTFILE
+  for (mgi = 0; mgi < npts_model; mgi++)
+  {
+    if (modelgrid[mgi].associated_cells > 0)
+    {
+      set_modelcell_energydensity_init(mgi, modelcell_energydensity[mgi]);
+    }
+  }
+  set_modelcell_energydensity_init(MMODELGRID,0.);
+#endif
   
   
   /// First pass through to get normalisation coefficients
@@ -1820,7 +1832,12 @@ double vol_init (CELL *grid_ptr)
 
 
 
-
+double get_volinit_modelcell(int modelgridindex)
+{
+  ///get volume of a model grid cell at the time tmin
+  return 4./3. * PI * (pow(tmin * vout_model[modelgridindex], 3)
+         - pow(tmin * (modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.), 3));
+}
 
 float get_rhoinit(int modelgridindex)
 {
@@ -1926,6 +1943,13 @@ float get_W(int modelgridindex)
 {
   return modelgrid[modelgridindex].W;
 }
+
+#ifdef USE_ENERGYINPUTFILE
+  float get_modelcell_energydensity_init(int modelgridindex)
+  {
+    return modelgrid[modelgridindex].modelcell_energydensity_init;
+  }
+#endif
 
 
 
@@ -2090,9 +2114,12 @@ void set_W(int modelgridindex, float x)
   modelgrid[modelgridindex].W = x;
 }
 
-
-
-
+#ifdef USE_ENERGYINPUTFILE
+  void set_modelcell_energydensity_init(int modelgridindex, float x)
+  {
+    modelgrid[modelgridindex].modelcell_energydensity_init = x;
+  }
+#endif
 
 
 

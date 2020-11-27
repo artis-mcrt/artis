@@ -138,7 +138,7 @@ int update_packets(int nts)
               #pragma omp atomic
             #endif
             time_step[nts].dep += pkt_ptr->e_cmf;
-	    if ((pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET))
+	    if ((pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET)) //TODO: add general type
 	      {  
 		pkt_ptr->pos[0] = pkt_ptr->pos[0] * pkt_ptr->tdecay / ts;
 		pkt_ptr->pos[1] = pkt_ptr->pos[1] * pkt_ptr->tdecay / ts;
@@ -173,7 +173,7 @@ int update_packets(int nts)
 	      }
 	    else
 	      {
-		pellet_decay(nts,pkt_ptr);
+		pellet_decay(nts,pkt_ptr);  ///decay to gamma
 		//printout("pellet to photon packet and propagation by packet_prop\n");
 		packet_prop(pkt_ptr,pkt_ptr->tdecay,ts+tw,nts);
 	      }
