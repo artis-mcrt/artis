@@ -113,7 +113,10 @@ int update_packets(int nts)
         //printout("[debug] update_packets: current direction of packet %d (%g, %g, %g)\n",n,pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
         
         
-        if ((pkt_ptr->type == TYPE_NICKEL_PELLET) || (pkt_ptr->type == TYPE_COBALT_PELLET) || (pkt_ptr->type == TYPE_48CR_PELLET) || (pkt_ptr->type == TYPE_48V_PELLET)|| (pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET))
+        if ((pkt_ptr->type == TYPE_NICKEL_PELLET) || (pkt_ptr->type == TYPE_COBALT_PELLET)
+            || (pkt_ptr->type == TYPE_48CR_PELLET) || (pkt_ptr->type == TYPE_48V_PELLET)
+            || (pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET)
+            || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET) || (pkt_ptr->type == TYPE_GENERIC_ENERGY_PELLET))
         {
           //printout("inactive pellet\n");
           /**It's still an inactive pellet. Need to do two things (a) check if it
@@ -138,7 +141,8 @@ int update_packets(int nts)
               #pragma omp atomic
             #endif
             time_step[nts].dep += pkt_ptr->e_cmf;
-	    if ((pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET) || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET)) //TODO: add general type
+	    if ((pkt_ptr->type == TYPE_52FE_PELLET) || (pkt_ptr->type == TYPE_52MN_PELLET)
+                || (pkt_ptr->type == TYPE_COBALT_POSITRON_PELLET) || (pkt_ptr->type == TYPE_GENERIC_ENERGY_PELLET))
 	      {  
 		pkt_ptr->pos[0] = pkt_ptr->pos[0] * pkt_ptr->tdecay / ts;
 		pkt_ptr->pos[1] = pkt_ptr->pos[1] * pkt_ptr->tdecay / ts;
