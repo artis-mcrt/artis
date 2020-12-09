@@ -1747,7 +1747,7 @@ double nt_ionization_upperion_probability(
   assert(upperion > lowerion);
   assert(upperion < get_nions(element));
   assert(upperion <= nt_ionisation_maxupperion(element, lowerion));
-  if (NT_MAX_AUGER_ELECTRONS > 0)
+  if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0)
   {
     const int numaugerelec = upperion - lowerion - 1; // number of Auger electrons to go from lowerin to upper ion
     const int uniqueionindex = get_uniqueionindex(element, lowerion);
