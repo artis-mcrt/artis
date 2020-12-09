@@ -513,6 +513,9 @@ static void zero_all_effionpot(const int modelgridindex)
 
 void nt_init(const int my_rank)
 {
+  assert(nonthermal_initialized == false);
+  nonthermal_initialized = true;
+
   deposition_rate_density = (double *) calloc(npts_model, sizeof(double));
   deposition_rate_density_timestep = (int *) calloc(npts_model, sizeof(int));
 
@@ -523,159 +526,159 @@ void nt_init(const int my_rank)
   }
 
   if (!NT_ON)
+  {
     return;
+  }
 
   read_binding_energies();
 
   if (!NT_SOLVE_SPENCERFANO)
-    return;
-
-  if (nonthermal_initialized == false)
   {
-    printout("Initializing non-thermal solver with:\n");
-    printout("  NT_EXCITATION %s\n", NT_EXCITATION_ON ? "on" : "off");
-    printout("  MAX_NT_EXCITATIONS_STORED %d\n", MAX_NT_EXCITATIONS_STORED);
-    printout("  NTEXCITATION_MAXNLEVELS_LOWER %d\n", NTEXCITATION_MAXNLEVELS_LOWER);
-    printout("  NTEXCITATION_MAXNLEVELS_UPPER %d\n", NTEXCITATION_MAXNLEVELS_UPPER);
-    printout("  SFPTS %d\n", SFPTS);
-    printout("  SF_EMIN %g eV\n", SF_EMIN);
-    printout("  SF_EMAX %g eV\n", SF_EMAX);
-    printout("  SF_USE_LOG_E_INCREMENT %s\n", SF_USE_LOG_E_INCREMENT ? "on" : "off");
-    printout("  STORE_NT_SPECTRUM %s\n", STORE_NT_SPECTRUM ? "on" : "off");
-    printout("  NT_USE_VALENCE_IONPOTENTIAL %s\n", NT_USE_VALENCE_IONPOTENTIAL ? "on" : "off");
-    printout("  NT_MAX_AUGER_ELECTRONS %d\n", NT_MAX_AUGER_ELECTRONS);
-    printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
-    printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
-
-    char filename[100];
-    sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
-    nonthermalfile = fopen_required(filename, "w");
-    fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
-            "timestep","modelgridindex","index","energy_ev","source","y");
-    fflush(nonthermalfile);
-
-    nt_solution = (struct nt_solution_struct *) calloc(npts_model, sizeof(struct nt_solution_struct));
-
-    long mem_usage_yfunc = 0;
-    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
-    {
-      // should make these negative?
-      nt_solution[modelgridindex].frac_heating = 0.97;
-      nt_solution[modelgridindex].frac_ionization = 0.03;
-      nt_solution[modelgridindex].frac_excitation = 0.0;
-
-      nt_solution[modelgridindex].E_0 = 0.;
-
-      nt_solution[modelgridindex].nneperion_when_solved = -1.;
-      nt_solution[modelgridindex].timestep_last_solved = -1;
-
-      if (get_numassociatedcells(modelgridindex) > 0)
-      {
-        nt_solution[modelgridindex].eff_ionpot = (float *) calloc(includedions, sizeof(float));
-        nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(includedions, sizeof(double));
-
-        nt_solution[modelgridindex].prob_num_auger = (float *) calloc(includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
-        nt_solution[modelgridindex].ionenfrac_num_auger = (float *) calloc(includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
-
-        if (STORE_NT_SPECTRUM)
-        {
-          nt_solution[modelgridindex].yfunc = (double *) calloc(SFPTS, sizeof(double));
-          assert(nt_solution[modelgridindex].yfunc != NULL);
-          mem_usage_yfunc += SFPTS * sizeof(double);
-        }
-
-        zero_all_effionpot(modelgridindex);
-      }
-      else
-      {
-        nt_solution[modelgridindex].eff_ionpot = NULL;
-        nt_solution[modelgridindex].fracdep_ionization_ion = NULL;
-
-        nt_solution[modelgridindex].prob_num_auger = NULL;
-        nt_solution[modelgridindex].ionenfrac_num_auger = NULL;
-
-        nt_solution[modelgridindex].yfunc = NULL;
-      }
-
-      nt_solution[modelgridindex].frac_excitations_list = NULL;
-      nt_solution[modelgridindex].frac_excitations_list_size = 0;
-    }
-
-    if (STORE_NT_SPECTRUM)
-      printout("mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n", mem_usage_yfunc / 1024 / 1024.);;
-
-    envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
-    logenvec = gsl_vector_calloc(SFPTS);
-    sourcevec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
-
-    #if (SF_USE_LOG_E_INCREMENT)
-    {
-      delta_envec = gsl_vector_calloc(SFPTS);
-      delta_log_e = log(SF_EMAX / SF_EMIN) / (SFPTS - 1);
-    }
-    #endif
-
-    #if (SF_USE_LOG_E_INCREMENT)
-      const double source_spread_en_target = ceil(SFPTS * 0.03333) * (SF_EMAX - SF_EMIN) / (SFPTS - 1);
-      const int sourcelowerindex = round(log((SF_EMAX - source_spread_en_target) / SF_EMIN) / delta_log_e);
-      // source_spread_en will be close to source_spread_en_target but lie exactly on an energy grid point
-      const double source_spread_en = SF_EMAX - SF_EMIN * exp(sourcelowerindex * delta_log_e);
-    #else
-      // const int source_spread_pts = ceil(SFPTS / 20);
-      const int source_spread_pts = ceil(SFPTS * 0.03333); // KF92 OXYGEN TEST
-      const double source_spread_en = source_spread_pts * DELTA_E;
-      const int sourcelowerindex = SFPTS - source_spread_pts;
-    #endif
-
-    for (int s = 0; s < SFPTS; s++)
-    {
-      #if (SF_USE_LOG_E_INCREMENT)
-        const double energy_ev = SF_EMIN * exp(delta_log_e * s);
-        const double energy_ev_next = SF_EMIN * exp(delta_log_e * (s + 1));
-
-        gsl_vector_set(delta_envec, s, energy_ev_next - energy_ev);
-      #else
-        const double energy_ev = SF_EMIN + s * DELTA_E;
-      #endif
-
-      gsl_vector_set(envec, s, energy_ev);
-      gsl_vector_set(logenvec, s, log(energy_ev));
-
-      // spread the source over some energy width
-      if (s < sourcelowerindex)
-        gsl_vector_set(sourcevec, s, 0.);
-      else
-        gsl_vector_set(sourcevec, s, 1. / source_spread_en);
-    }
-
-    gsl_vector *integralvec = gsl_vector_alloc(SFPTS);
-    gsl_vector_memcpy(integralvec, sourcevec);
-    #if (SF_USE_LOG_E_INCREMENT)
-      gsl_vector_mul(integralvec, delta_envec);
-    #else
-      gsl_vector_scale(integralvec, DELTA_E);
-    #endif
-    const double sourceintegral = gsl_blas_dasum(integralvec); // integral of S(e) dE
-
-    gsl_vector_mul(integralvec, envec);
-    E_init_ev = gsl_blas_dasum(integralvec); // integral of E * S(e) dE
-    gsl_vector_free(integralvec);
-
-    // or put all of the source into one point at SF_EMAX
-    // gsl_vector_set_zero(sourcevec);
-    // gsl_vector_set(sourcevec, SFPTS - 1, 1 / DELTA_E);
-    // E_init_ev = SF_EMAX;
-
-    printout("E_init: %14.7e eV\n", E_init_ev);
-    printout("source function integral: %14.7e\n", sourceintegral);
-
-    read_collion_data();
-
-    nonthermal_initialized = true;
-    printout("Finished initializing non-thermal solver\n");
+    return;
   }
-  else
-    printout("Tried to initialize the non-thermal solver more than once!\n");
+
+
+  printout("Initializing non-thermal solver with:\n");
+  printout("  NT_EXCITATION %s\n", NT_EXCITATION_ON ? "on" : "off");
+  printout("  MAX_NT_EXCITATIONS_STORED %d\n", MAX_NT_EXCITATIONS_STORED);
+  printout("  NTEXCITATION_MAXNLEVELS_LOWER %d\n", NTEXCITATION_MAXNLEVELS_LOWER);
+  printout("  NTEXCITATION_MAXNLEVELS_UPPER %d\n", NTEXCITATION_MAXNLEVELS_UPPER);
+  printout("  SFPTS %d\n", SFPTS);
+  printout("  SF_EMIN %g eV\n", SF_EMIN);
+  printout("  SF_EMAX %g eV\n", SF_EMAX);
+  printout("  SF_USE_LOG_E_INCREMENT %s\n", SF_USE_LOG_E_INCREMENT ? "on" : "off");
+  printout("  STORE_NT_SPECTRUM %s\n", STORE_NT_SPECTRUM ? "on" : "off");
+  printout("  NT_USE_VALENCE_IONPOTENTIAL %s\n", NT_USE_VALENCE_IONPOTENTIAL ? "on" : "off");
+  printout("  NT_MAX_AUGER_ELECTRONS %d\n", NT_MAX_AUGER_ELECTRONS);
+  printout("  SF_AUGER_CONTRIBUTION %s\n", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
+  printout("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN %s\n", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
+
+  char filename[100];
+  sprintf(filename,"nonthermalspec_%.4d.out", my_rank);
+  nonthermalfile = fopen_required(filename, "w");
+  fprintf(nonthermalfile,"%8s %15s %8s %11s %11s %11s\n",
+          "timestep","modelgridindex","index","energy_ev","source","y");
+  fflush(nonthermalfile);
+
+  nt_solution = (struct nt_solution_struct *) calloc(npts_model, sizeof(struct nt_solution_struct));
+
+  long mem_usage_yfunc = 0;
+  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  {
+    // should make these negative?
+    nt_solution[modelgridindex].frac_heating = 0.97;
+    nt_solution[modelgridindex].frac_ionization = 0.03;
+    nt_solution[modelgridindex].frac_excitation = 0.0;
+
+    nt_solution[modelgridindex].E_0 = 0.;
+
+    nt_solution[modelgridindex].nneperion_when_solved = -1.;
+    nt_solution[modelgridindex].timestep_last_solved = -1;
+
+    if (get_numassociatedcells(modelgridindex) > 0)
+    {
+      nt_solution[modelgridindex].eff_ionpot = (float *) calloc(includedions, sizeof(float));
+      nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(includedions, sizeof(double));
+
+      nt_solution[modelgridindex].prob_num_auger = (float *) calloc(includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+      nt_solution[modelgridindex].ionenfrac_num_auger = (float *) calloc(includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+
+      if (STORE_NT_SPECTRUM)
+      {
+        nt_solution[modelgridindex].yfunc = (double *) calloc(SFPTS, sizeof(double));
+        assert(nt_solution[modelgridindex].yfunc != NULL);
+        mem_usage_yfunc += SFPTS * sizeof(double);
+      }
+
+      zero_all_effionpot(modelgridindex);
+    }
+    else
+    {
+      nt_solution[modelgridindex].eff_ionpot = NULL;
+      nt_solution[modelgridindex].fracdep_ionization_ion = NULL;
+
+      nt_solution[modelgridindex].prob_num_auger = NULL;
+      nt_solution[modelgridindex].ionenfrac_num_auger = NULL;
+
+      nt_solution[modelgridindex].yfunc = NULL;
+    }
+
+    nt_solution[modelgridindex].frac_excitations_list = NULL;
+    nt_solution[modelgridindex].frac_excitations_list_size = 0;
+  }
+
+  if (STORE_NT_SPECTRUM)
+    printout("mem_usage: storing non-thermal spectra for all allocated cells occupies %.3f MB\n", mem_usage_yfunc / 1024 / 1024.);;
+
+  envec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
+  logenvec = gsl_vector_calloc(SFPTS);
+  sourcevec = gsl_vector_calloc(SFPTS); // energy grid on which solution is sampled
+
+  #if (SF_USE_LOG_E_INCREMENT)
+  {
+    delta_envec = gsl_vector_calloc(SFPTS);
+    delta_log_e = log(SF_EMAX / SF_EMIN) / (SFPTS - 1);
+  }
+  #endif
+
+  #if (SF_USE_LOG_E_INCREMENT)
+    const double source_spread_en_target = ceil(SFPTS * 0.03333) * (SF_EMAX - SF_EMIN) / (SFPTS - 1);
+    const int sourcelowerindex = round(log((SF_EMAX - source_spread_en_target) / SF_EMIN) / delta_log_e);
+    // source_spread_en will be close to source_spread_en_target but lie exactly on an energy grid point
+    const double source_spread_en = SF_EMAX - SF_EMIN * exp(sourcelowerindex * delta_log_e);
+  #else
+    // const int source_spread_pts = ceil(SFPTS / 20);
+    const int source_spread_pts = ceil(SFPTS * 0.03333); // KF92 OXYGEN TEST
+    const double source_spread_en = source_spread_pts * DELTA_E;
+    const int sourcelowerindex = SFPTS - source_spread_pts;
+  #endif
+
+  for (int s = 0; s < SFPTS; s++)
+  {
+    #if (SF_USE_LOG_E_INCREMENT)
+      const double energy_ev = SF_EMIN * exp(delta_log_e * s);
+      const double energy_ev_next = SF_EMIN * exp(delta_log_e * (s + 1));
+
+      gsl_vector_set(delta_envec, s, energy_ev_next - energy_ev);
+    #else
+      const double energy_ev = SF_EMIN + s * DELTA_E;
+    #endif
+
+    gsl_vector_set(envec, s, energy_ev);
+    gsl_vector_set(logenvec, s, log(energy_ev));
+
+    // spread the source over some energy width
+    if (s < sourcelowerindex)
+      gsl_vector_set(sourcevec, s, 0.);
+    else
+      gsl_vector_set(sourcevec, s, 1. / source_spread_en);
+  }
+
+  gsl_vector *integralvec = gsl_vector_alloc(SFPTS);
+  gsl_vector_memcpy(integralvec, sourcevec);
+  #if (SF_USE_LOG_E_INCREMENT)
+    gsl_vector_mul(integralvec, delta_envec);
+  #else
+    gsl_vector_scale(integralvec, DELTA_E);
+  #endif
+  const double sourceintegral = gsl_blas_dasum(integralvec); // integral of S(e) dE
+
+  gsl_vector_mul(integralvec, envec);
+  E_init_ev = gsl_blas_dasum(integralvec); // integral of E * S(e) dE
+  gsl_vector_free(integralvec);
+
+  // or put all of the source into one point at SF_EMAX
+  // gsl_vector_set_zero(sourcevec);
+  // gsl_vector_set(sourcevec, SFPTS - 1, 1 / DELTA_E);
+  // E_init_ev = SF_EMAX;
+
+  printout("E_init: %14.7e eV\n", E_init_ev);
+  printout("source function integral: %14.7e\n", sourceintegral);
+
+  read_collion_data();
+
+  nonthermal_initialized = true;
+  printout("Finished initializing non-thermal solver\n");
 }
 
 
@@ -1833,7 +1836,7 @@ int nt_random_upperion(const int modelgridindex, const int element, const int lo
 {
   const int nions = get_nions(element);
   assert(lowerion < nions - 1);
-  if (NT_MAX_AUGER_ELECTRONS > 0)
+  if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0)
   {
     while (true)
     {
@@ -3129,7 +3132,7 @@ void nt_read_restart_data(FILE *gridsave_file)
 #ifdef MPI_ON
 void nt_MPI_Bcast(const int modelgridindex, const int root)
 {
-  if (!nonthermal_initialized || (get_numassociatedcells(modelgridindex) == 0))
+  if (get_numassociatedcells(modelgridindex) == 0)
     return;
 
   // printout("nonthermal_MPI_Bcast cell %d before: ratecoeff(Z=%d ion_stage %d): %g, eff_ionpot %g eV\n",
@@ -3142,6 +3145,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
 
   if (NT_ON && NT_SOLVE_SPENCERFANO)
   {
+    assert(nonthermal_initialized);
     MPI_Bcast(&nt_solution[modelgridindex].nneperion_when_solved, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[modelgridindex].timestep_last_solved, 1, MPI_INT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[modelgridindex].frac_heating, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
