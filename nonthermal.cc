@@ -2087,7 +2087,7 @@ void do_ntlepton(PKT *pkt_ptr)
   const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
 
   // macroatom should not be activated in thick cells
-  if (NT_ON && modelgrid[modelgridindex].thick != 1)
+  if (NT_ON && NT_SOLVE_SPENCERFANO && modelgrid[modelgridindex].thick != 1)
   {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
