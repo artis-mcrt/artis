@@ -1813,9 +1813,18 @@ int nt_ionisation_maxupperion(const int element, const int lowerion)
 {
   const int nions = get_nions(element);
   assert(lowerion < nions - 1);
-  int maxupper = lowerion + 1 + NT_MAX_AUGER_ELECTRONS;
+  int maxupper = lowerion + 1;
+
+  if (NT_SOLVE_SPENCERFANO)
+  {
+    maxupper = lowerion + 1 + NT_MAX_AUGER_ELECTRONS;
+  }
+
   if (maxupper > nions - 1)
+  {
     maxupper = nions - 1;
+  }
+
   return maxupper;
 }
 
