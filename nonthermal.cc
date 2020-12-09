@@ -2491,6 +2491,10 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   const double frac_sum = frac_heating + frac_excitation_total + frac_ionization_total;
   printout("  frac_sum:            %g (should be close to 1.0)\n", frac_sum);
 
+  nt_solution[modelgridindex].frac_heating = 1. - frac_excitation_total - frac_ionization_total;
+  printout("  (replacing calculated frac_heating_tot with %g to make frac_sum = 1.0)\n",
+           nt_solution[modelgridindex].frac_heating);
+
   // const double nnion = ionstagepop(modelgridindex, element, ion);
   // double ntexcit_in_a = 0.;
   // for (int level = 0; level < get_nlevels(0, 1); level++)
