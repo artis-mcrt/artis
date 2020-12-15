@@ -1195,6 +1195,9 @@ int main(int argc, char** argv)
     printout("No need for restart\n");
   }
 
+  #ifdef MPI_ON
+    MPI_Barrier(MPI_COMM_WORLD);
+  #endif
 
   printout("simulation finished at %ld\n", time(NULL));
   //fclose(tb_file);
