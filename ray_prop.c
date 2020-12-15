@@ -434,7 +434,7 @@ move_one_ray(ray_ptr, nray, dist, single_pos, single_t)
   single_pos[2] += syn_dir[2] * dist;
   
   get_velocity(single_pos, vel_vec, single_t);
-  
+
   ray_ptr->nu_cmf[nray] = ray_ptr->nu_rf[nray] * doppler(syn_dir, vel_vec);
   // again, rmoving next line since e_cmf seems redundant.
   //ray_ptr->e_cmf[nray] = ray_ptr->e_rf[nray] * ray_ptr->nu_cmf[nray] / ray_ptr->nu_rf[nray];

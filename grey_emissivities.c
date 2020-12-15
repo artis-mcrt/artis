@@ -457,7 +457,7 @@ grey_rt(ray_ptr, nray, ldist, single_pos, single_t, lindex)
    /* Now adding the emissivity term. */
   /* I think it's a doppler^3 term because it's a doppler^2 term in Castor + there's an 
      extra doppler from the integration over frequency of the RT equation. */
-  
+
    if (tau_cont > 1.e-6)
     {
       ray_ptr->e_rf[nray] += (rpkt_emiss[cell[dummy.where].modelgridindex] / 

@@ -137,6 +137,7 @@ int update_packets(int nts)
           else if (pkt_ptr->tdecay > ts)
           {
             /**These are the packets decaying in this timestep.*/
+//            printout("packet type %d tdecay %g ts %g\n", pkt_ptr->type, pkt_ptr->tdecay, ts);
             #ifdef _OPENMP 
               #pragma omp atomic
             #endif

@@ -1705,7 +1705,7 @@ void assign_temperature()
     /// means furthermore LTE, so that both temperatures can be evaluated 
     /// according to the local energy density resulting from the 56Ni decay. 
     /// The dilution factor is W=1 in LTE.
-    
+    #ifndef USE_ENERGYINPUTFILE
     tstart = time_step[0].mid;
     factor = CLIGHT/4/STEBO * 1./56/MH * pow(tmin/tstart,3);
     factor *= -1./(tstart*(-TCOBALT+TNICKEL));
@@ -1718,13 +1718,18 @@ void assign_temperature()
     factor48cr = CLIGHT/4/STEBO * 1./48/MH * pow(tmin/tstart,3);
     factor48cr *= -1./(tstart*(-T48V+T48CR));
     factor48cr *= (-E48CR*exp(-tstart/T48CR)*tstart*T48V - E48CR*exp(-tstart/T48CR)*T48CR*T48V + E48CR*exp(-tstart/T48CR)*tstart*T48CR + pow(T48CR,2)*E48CR*exp(-tstart/T48CR) - T48V*tstart*E48V*exp(-tstart/T48V) - pow(T48V,2)*E48V*exp(-tstart/T48V) + E48V*tstart*T48CR*exp(-tstart/T48CR) + pow(T48CR,2)*E48V*exp(-tstart/T48CR) + E48CR*T48V*T48CR - E48CR*pow(T48CR,2) - pow(T48CR,2)*E48V + E48V*pow(T48V,2));
-
+    #endif
     //factor = CLIGHT/4/STEBO * ENICKEL/56/MH;
     /// This works only for the inbuilt Lucy model
     //factor = CLIGHT/4/STEBO * 3*mtot/4/PI * ENICKEL/56/MH  / pow(vmax,3);
     //for (n = 0; n < ngrid; n++)
     for (n = 0; n < npts_model; n++)
     {
+    #ifdef USE_ENERGYINPUTFILE
+      T_initial = pow((CLIGHT/4/STEBO * modelcell_energydensity[n]), 1./4.);
+//      todo: come back to this, seems to be much higher temp than normal case
+//      printout("T_initial %g", T_initial);
+    #else
       //mgi = cell[n].modelgridindex;
       T_initial = pow(((factor * get_fni(n) * get_rhoinit(n))
 		       + (factor52fe * get_f52fe(n) * get_rhoinit(n))
@@ -1732,6 +1737,7 @@ void assign_temperature()
       //T_initial = pow(factor * cell[n].f_ni * cell[n].rho_init * (1.-exp(-tmin/TNICKEL)), 1./4.);
       //T_initial = pow(factor * cell[n].f_ni * (1.-exp(-tmin/TNICKEL))/pow(tmin,3), 1./4.);
       //T_initial = 30615.5;
+    #endif
       if (T_initial < MINTEMP)
       {
         set_Te(n, MINTEMP);

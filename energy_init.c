@@ -22,8 +22,8 @@ void energy_in_cells_1d_read()
 #ifdef USE_ENERGYINPUTFILE
   FILE *cell_energies_file;
   /// energy released in simulation during start time and end time
-  int start_time; //todo: change to model read in time
-  int end_time; //todo: do I need this?
+  float start_time; //todo: change to model read in time
+  float end_time; //todo: do I need this?
 
   int number_of_cells; // number of model grid cells
   int cellnumber; // dummy value - this isn't saved
@@ -37,10 +37,11 @@ void energy_in_cells_1d_read()
   }
 
   /// read start and end times in days
-  fscanf(cell_energies_file, "%d", &start_time);
-  fscanf(cell_energies_file, "%d", &end_time);
+  fscanf(cell_energies_file, "%g", &start_time);
+  fscanf(cell_energies_file, "%g", &end_time);
 
   fscanf(cell_energies_file, "%lf", &etot_fromenergyfile);
+//  todo:remove, just get from summing energies
 
   fscanf(cell_energies_file, "%d", &number_of_cells);
   if (number_of_cells != npts_model)
@@ -52,15 +53,17 @@ void energy_in_cells_1d_read()
   }
 
   double cell_energies[number_of_cells];
-
+  double energy_counter = 0;
   for (int mgi = 0; mgi < number_of_cells; mgi++)
   {
     fscanf(cell_energies_file, "%d %lf",
            &cellnumber, &cell_energies[mgi]);
+    energy_counter += cell_energies[mgi];
     modelcell_energydensity[mgi] = cell_energies[mgi] / get_volinit_modelcell(mgi);
     printout("modelcell_energydensity %g get_volinit_modelcell %g \n",
              modelcell_energydensity[mgi], get_volinit_modelcell(mgi));
   }
+  etot_fromenergyfile = energy_counter;
 
 //  printout("start %d end %d ncells %d \n",
 //           start_time, end_time, number_of_cells);

@@ -153,14 +153,16 @@ doppler (dir1,vel)
   //vsqr = dot(vel,vel)/CLIGHT2;
   //gamma_rel = 1./(sqrt(1 - vsqr));
   gamma_rel = 1.;
-
+//  printout("vel (in doppler fn) %g\n",vel[0]);
   ndotv = dot(dir1,vel);
  
   fact1 = gamma_rel * (1. - (ndotv/CLIGHT));
 
-  if (fabs(fact1-1) > 0.5)
+  if (fabs(fact1-1) > 0.99999)
     {
-      printout("Dopper factor > 1.05?? Abort.\n");
+//    todo: if that needs to be as high need correct gamma_rel
+      printout("Dopper factor > 1.05?? fact1 = %g vel0 %g vel1 %g vel2 %g ndotv %g Abort.\n",
+             fact1, vel[0], vel[1], vel[2], ndotv);
       exit(0);
     }
 

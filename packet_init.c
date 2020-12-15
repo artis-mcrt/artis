@@ -94,11 +94,33 @@ int setup_packets (int pktnumberoffset)
   etot += ECOBALT * mco56 / MNI56;
   etot += (E48V + E48CR) * mcr48 / MCR48;
   etot += (E52FE + E52MN) * mfe52 / MFE52;
-  printout("etot %g\n", etot);
   printout("ENICKEL, ECOBALT ECOBALT_GAMMA%g %g %g\n",ENICKEL/MEV, ECOBALT/MEV, ECOBALT_GAMMA/MEV);
   printout("E48CR, E48V %g %g\n",E48CR/MEV, E48V/MEV);
   printout("E52FE, E52MN %g %g\n",E52FE/MEV, E52MN/MEV);
 #endif
+  printout("etot %g\n", etot);
+
+  ///Get energy in each model cell
+//  double mass_in_shell;
+//  double cell_energy;
+//  mass_in_shell = rho_model[0] * (pow(vout_model[0],3.)) * 4. * PI * pow(t_model,3.) / 3.;
+//  cell_energy = (ENICKEL + ECOBALT) * (mass_in_shell * fni_model[0]) / MNI56
+//                + ECOBALT * (mass_in_shell * fco_model[0]) / MNI56
+//                + (E48V + E48CR) * (mass_in_shell * f48cr_model[0]) / MCR48
+//                + (E52FE + E52MN) * (mass_in_shell * f52fe_model[0]) / MFE52;
+//  printout("0    %g \n", cell_energy);
+//
+//  for (n = 1; n < npts_model; n++)
+//  {
+//    mass_in_shell = rho_model[n] * (pow(vout_model[n],3.)
+//         - pow(vout_model[n-1],3.)) * 4. * PI * pow(t_model,3.) / 3.;
+//    cell_energy = (ENICKEL + ECOBALT) * (mass_in_shell * fni_model[n]) / MNI56
+//                  + ECOBALT * (mass_in_shell * fco_model[n]) / MNI56
+//                  + (E48V + E48CR) * (mass_in_shell * f48cr_model[n]) / MCR48
+//                  + (E52FE + E52MN) * (mass_in_shell * f52fe_model[n]) / MFE52;
+//    printout("%d    %g \n",n, cell_energy);
+//  }
+//  exit(0);
 
   /// So energy per pellet is
   e0 = etot / npkts / n_out_it / n_middle_it;
@@ -466,6 +488,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
     ii++;
   }
   pkt[n].tdecay = time_energydep[ii];
+//  printout("tdecay pellet %g \n", pkt[n].tdecay/DAY);
   //todo: may want to change this to a fancier search if the list of times gets bigger
 //  printout("ii %d zrand %g energy_fraction_deposited %g time_energydep %g \n",
 //           ii, zrand, energy_fraction_deposited[ii], time_energydep[ii]/DAY);
@@ -509,6 +532,7 @@ int place_pellet(struct grid *grid_ptr, double e0, int m, int n, int pktnumberof
           {
             zrand = gsl_rng_uniform(rng);
             pkt[n].tdecay = -TNICKEL * log(zrand);
+//            printout("tdecay 56Ni pellet %g \n", pkt[n].tdecay/DAY);
           }
         else if (pkt[n].type == TYPE_COBALT_PELLET || pkt[n].type == TYPE_COBALT_POSITRON_PELLET)
           {

@@ -194,7 +194,7 @@ double boundary_cross (pkt_ptr, tstart, snext)
 
   tz_plus = ((z0 - (vz * tstart))/(cellzmax - (vz * tmin)) * tmin) - tstart;
   tz_minus = ((z0 - (vz * tstart))/(cellzmin - (vz * tmin)) * tmin) - tstart;
-
+  printout("mgi %d\n", cell[pkt_ptr->where].modelgridindex);
   /** We now need to identify the shortest +ve time - that's the one we want. */
   choice = 0;         ///just a control variable to
   time = 1.e99;
@@ -335,7 +335,10 @@ double boundary_cross (pkt_ptr, tstart, snext)
     printout("tz_plus %g tz_minus %g \n", tz_plus, tz_minus);
     printout("x0 %g y0 %g z0 %g \n", x0, y0, z0);
     printout("vx %g vy %g vy %g \n", vx, vy, vz);
-    printout("tstart %g\n", tstart);
+    printout("cellxmax %g cellymax %g cellzmax %g\n", cellxmax, cellymax, cellzmax);
+    printout("cellxmin %g cellymin %g cellzmin %g\n", cellxmin, cellymin, cellzmin);
+    printout("tstart %g tmin %g\n", tstart, tmin);
+    printout("mgi %d", cell[pkt_ptr->where].modelgridindex);
       
     exit(0);
   }
