@@ -13,7 +13,7 @@ ifeq ($(SYSNAME),Darwin)
 	# CXX = icpc
 	# CXX = mpicxx
 	CXX = clang++
-	CXXFLAGS += -std=c++17 -O3 -fstrict-aliasing -ftree-vectorize -flto $(shell pkg-config --cflags gsl)
+	CXXFLAGS += -std=c++17 -O3 -fstrict-aliasing -ftree-vectorize -flto
 
 	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
@@ -28,7 +28,7 @@ ifeq ($(SYSNAME),Darwin)
 	# maybe  -fopt-info-vec-missed
 	#  -fwhole-program
 	# add -lprofiler for gperftools
-	LDFLAGS += $(LIB) $(shell pkg-config --libs gsl)
+	LDFLAGS += $(LIB)
 	# LDFLAGS += -lprofiler
 
 else ifneq (,$(findstring kelvin,$(HOSTNAME)))
@@ -39,8 +39,7 @@ else ifneq (,$(findstring kelvin,$(HOSTNAME)))
 	#  libs/gsl/1.16/gcc-4.4.7
 
 	CXX = mpicxx
-	CXXFLAGS = -std=c++17 -mcmodel=medium -O3 -I$(GSLINCLUDE) #-fopenmp=libomp
-	LDFLAGS = -lgsl -lgslcblas -lm -L$(GSLLIB)
+	CXXFLAGS = -std=c++17 -mcmodel=medium -O3 #-fopenmp=libomp
 sn3d: CXXFLAGS += -DMPI_ON
 
 else ifneq (, $(shell which mpicxx))
@@ -49,17 +48,19 @@ else ifneq (, $(shell which mpicxx))
 	CXX = mpicxx
 	# CXX = c++
 	CXXFLAGS = -std=c++17 -march=native -O3 -g #-fopenmp=libomp
-	LDFLAGS = -lgsl -lgslcblas
-
 
 sn3d sn3dcuda: CXXFLAGS += -DMPI_ON
 else
 	CXX = c++
 	# CXX = icpc
 	CXXFLAGS = -std=c++17 -march=native -Wstrict-aliasing -O3 -fstrict-aliasing #-fopenmp=libomp
-	LDFLAGS= -lgsl -lgslcblas -lm
 endif
 
+# if this doesn't work, fix pkg-config or change to
+# LDFLAGS += -lgsl -lgslcblas -lm
+LDFLAGS += $(shell pkg-config --libs gsl)
+
+CXXFLAGS += $(shell pkg-config --cflags gsl)
 
 # Use GSL inline functions and skip array range checking for performance
 CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE -DGSL_RANGE_CHECK_OFF
