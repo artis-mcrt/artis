@@ -9,16 +9,11 @@ SYSNAME := $(shell uname -s)
 ifeq ($(SYSNAME),Darwin)
 	# macOS
 
-	#if using homebrew gsl, gperftools, etc, you might need to add:
-	# export CPATH=$CPATH:/usr/local/include/
-	# export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/lib/
-	# to your .zshrc/.bashrc startup script
-
 	# CXX = gcc-10
 	# CXX = icpc
 	# CXX = mpicxx
 	CXX = clang++
-	CXXFLAGS = -std=c++17 -O3 -fstrict-aliasing -ftree-vectorize -flto
+	CXXFLAGS += -std=c++17 -O3 -fstrict-aliasing -ftree-vectorize -flto $(shell pkg-config --cflags gsl)
 
 	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
@@ -33,7 +28,7 @@ ifeq ($(SYSNAME),Darwin)
 	# maybe  -fopt-info-vec-missed
 	#  -fwhole-program
 	# add -lprofiler for gperftools
-	LDFLAGS = $(LIB) -lgsl -lgslcblas
+	LDFLAGS += $(LIB) $(shell pkg-config --libs gsl)
 	# LDFLAGS += -lprofiler
 
 else ifneq (,$(findstring kelvin,$(HOSTNAME)))
