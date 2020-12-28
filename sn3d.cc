@@ -12,7 +12,8 @@
 
 #include <cstdbool>
 #include <getopt.h>
-#include <filesystem>
+#include <unistd.h>
+// #include <filesystem>
 #include "sn3d.h"
 #include "emissivities.h"
 #include "grey_emissivities.h"
@@ -367,7 +368,8 @@ static void remove_temp_packetsfile(const int timestep, const int my_rank)
   char filename[100];
   sprintf(filename, "packets_%.4d_ts%d.tmp", my_rank, timestep);
 
-  if (std::filesystem::exists(filename))
+  if (!access(filename, F_OK))
+  // if (std::filesystem::exists(filename))
   {
     remove(filename);
     printout("Deleted %s\n", filename);
@@ -379,7 +381,9 @@ static void remove_grid_restart_data(const int timestep)
 {
   char prevfilename[100];
   sprintf(prevfilename, "gridsave_ts%d.tmp", timestep);
-  if (std::filesystem::exists(prevfilename))
+
+  if (!access(prevfilename, F_OK))
+  // if (std::filesystem::exists(prevfilename))
   {
     remove(prevfilename);
     printout("Deleted %s\n", prevfilename);
