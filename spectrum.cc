@@ -64,7 +64,7 @@ static void printout_tracemission_stats(void)
   {
     if (mode == 0)
     {
-      qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_emission);
+      qsort(traceemissionabsorption, globals::nlines, sizeof(emissionabsorptioncontrib), compare_emission);
       printout("lambda [%5.1f, %5.1f] nu %g %g\n",
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper);
 
@@ -74,15 +74,15 @@ static void printout_tracemission_stats(void)
     }
     else
     {
-      qsort(traceemissionabsorption, nlines, sizeof(emissionabsorptioncontrib), compare_absorption);
+      qsort(traceemissionabsorption, globals::nlines, sizeof(emissionabsorptioncontrib), compare_absorption);
       printout("Top line absorption contributions in the range lambda [%5.1f, %5.1f] time [%5.1fd, %5.1fd] (%g erg)\n",
                traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
                traceabsorption_totalenergy);
     }
 
     // display the top entries of the sorted list
-    int nlines_limited = nlines;
-    if (nlines > maxlinesprinted)
+    int nlines_limited = globals::nlines;
+    if (globals::nlines > maxlinesprinted)
       nlines_limited = maxlinesprinted;
     printout("%17s %4s %9s %5s %5s %8s %8s %4s %7s %7s %7s %7s\n", "energy", "Z", "ion_stage", "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
     for (int i = 0; i < nlines_limited; i++)
@@ -102,9 +102,9 @@ static void printout_tracemission_stats(void)
       if (encontrib > 0.) // lines that emit/absorb some energy
       {
         const int lineindex = traceemissionabsorption[i].lineindex;
-        const int element = linelist[lineindex].elementindex;
-        const int ion = linelist[lineindex].ionindex;
-        const double linelambda = 1e8 * CLIGHT / linelist[lineindex].nu;
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const double linelambda = 1e8 * CLIGHT / globals::linelist[lineindex].nu;
         // flux-weighted average radial velocity of emission in km/s
         double v_rad;
         if (mode == 0)
@@ -112,8 +112,8 @@ static void printout_tracemission_stats(void)
         else
           v_rad = traceemissionabsorption[i].absorption_weightedvelocity_sum / traceemissionabsorption[i].energyabsorbed / 1e5;
 
-        const int lower = linelist[lineindex].lowerlevelindex;
-        const int upper = linelist[lineindex].upperlevelindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
 
         const double statweight_target = statw_upper(lineindex);
         const double statweight_lower = statw_lower(lineindex);
@@ -129,8 +129,8 @@ static void printout_tracemission_stats(void)
 
         printout("%7.2e (%5.1f%%) %4d %9d %5d %5d %8.1f %8.2e %4d %7.1f %7.1f %7.1e %7.1e\n",
                  encontrib, 100 * encontrib / totalenergy, get_element(element),
-                 get_ionstage(element, ion), linelist[lineindex].upperlevelindex, linelist[lineindex].lowerlevelindex,
-                 linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), linelist[lineindex].forbidden,
+                 get_ionstage(element, ion), globals::linelist[lineindex].upperlevelindex, globals::linelist[lineindex].lowerlevelindex,
+                 globals::linelist[lineindex].coll_str, einstein_spontaneous_emission(lineindex), globals::linelist[lineindex].forbidden,
                  linelambda, v_rad, B_lu, B_ul);
        }
        else
@@ -177,32 +177,32 @@ void write_spectrum(
   }
 
   fprintf(spec_file, "%g ", 0.0);
-  for (int p = 0; p < ntstep; p++)
+  for (int p = 0; p < globals::ntstep; p++)
   {
     /// ????????????????????????????????????????????????????????????????????????????????????????????????
     /// WHY HERE OTHER CALCULATION OF "SPECTRA.MIDTIME" THAN FOR time_step.mid ?????????????????????????
-    fprintf(spec_file, "%g ", time_step[p].mid / DAY);
+    fprintf(spec_file, "%g ", globals::time_step[p].mid / DAY);
   }
   fprintf(spec_file, "\n");
 
-  for (int m = 0; m < nnubins; m++)
+  for (int m = 0; m < globals::nnubins; m++)
   {
     fprintf(spec_file, "%g ", ((spectra[0].lower_freq[m] + (spectra[0].delta_freq[m] / 2))));
 
-    for (int p = 0; p < ntstep; p++)
+    for (int p = 0; p < globals::ntstep; p++)
     {
       fprintf(spec_file, "%g ", spectra[p].flux[m]);
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
           fprintf(emission_file, "%g ", spectra[p].stat[m].emission[i]);
         fprintf(emission_file, "\n");
 
-        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
           fprintf(trueemission_file, "%g ", spectra[p].stat[m].trueemission[i]);
         fprintf(trueemission_file, "\n");
 
-        for (int i = 0; i < nelements * maxion; i++)
+        for (int i = 0; i < globals::nelements * globals::maxion; i++)
           fprintf(absorption_file, "%g ", spectra[p].stat[m].absorption[i]);
         fprintf(absorption_file, "\n");
       }
@@ -240,32 +240,32 @@ void write_specpol(
 
   for (int l = 0; l < 3; l++)
   {
-    for (int p = 0; p < ntstep; p++)
+    for (int p = 0; p < globals::ntstep; p++)
     {
-      fprintf(specpol_file, "%g ", time_step[p].mid / DAY);
+      fprintf(specpol_file, "%g ", globals::time_step[p].mid / DAY);
     }
   }
 
   fprintf(specpol_file, "\n");
 
-  for (int m = 0; m < nnubins; m++)
+  for (int m = 0; m < globals::nnubins; m++)
   {
     fprintf(specpol_file, "%g ", ((stokes_i[0].lower_freq[m] + (stokes_i[0].delta_freq[m] / 2))));
 
     // Stokes I
-    for (int p = 0; p < ntstep; p++)
+    for (int p = 0; p < globals::ntstep; p++)
     {
       fprintf(specpol_file, "%g ", stokes_i[p].flux[m]);
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
         {
           fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
         }
         fprintf(emissionpol_file, "\n");
 
-        for (int i = 0; i < nelements * maxion; i++)
+        for (int i = 0; i < globals::nelements * globals::maxion; i++)
         {
           fprintf(absorptionpol_file, "%g ", stokes_i[p].stat[m].absorption[i]);
         }
@@ -274,19 +274,19 @@ void write_specpol(
     }
 
     // Stokes Q
-    for (int p = 0; p < ntstep; p++)
+    for (int p = 0; p < globals::ntstep; p++)
     {
       fprintf(specpol_file, "%g ", stokes_q[p].flux[m]);
 
       if (do_emission_res)
       {
-          for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+          for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
           {
             fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
           }
           fprintf(emissionpol_file, "\n");
 
-          for (int i = 0; i < nelements * maxion; i++)
+          for (int i = 0; i < globals::nelements * globals::maxion; i++)
           {
             fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
           }
@@ -295,19 +295,19 @@ void write_specpol(
     }
 
     // Stokes U
-    for (int p = 0; p < ntstep; p++)
+    for (int p = 0; p < globals::ntstep; p++)
     {
       fprintf(specpol_file, "%g ", stokes_u[p].flux[m]);
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
         {
           fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
         }
         fprintf(emissionpol_file, "\n");
 
-        for (int i = 0; i < nelements * maxion; i++)
+        for (int i = 0; i < globals::nelements * globals::maxion; i++)
         {
           fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
         }
@@ -331,28 +331,28 @@ static int columnindex_from_emissiontype(const int et)
   if (et >= 0)
   {
     /// bb-emission
-    const int element = linelist[et].elementindex;
-    const int ion = linelist[et].ionindex;
-    return element * maxion + ion;
+    const int element = globals::linelist[et].elementindex;
+    const int ion = globals::linelist[et].ionindex;
+    return element * globals::maxion + ion;
   }
   else if (et == -9999999)
   {
     /// ff-emission
-    return 2 * nelements * maxion;
+    return 2 * globals::nelements * globals::maxion;
   }
   else
   {
     /// bf-emission
     const int et_new = -1 - et;
-    const int element = bflist[et_new].elementindex;
-    const int ion = bflist[et_new].ionindex;
-    const int level = bflist[et_new].levelindex;
-    const int phixstargetindex = bflist[et_new].phixstargetindex;
+    const int element = globals::bflist[et_new].elementindex;
+    const int ion = globals::bflist[et_new].ionindex;
+    const int level = globals::bflist[et_new].levelindex;
+    const int phixstargetindex = globals::bflist[et_new].phixstargetindex;
     const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
     assert(get_continuumindex(element, ion, level, upperionlevel) == et);
 
-    return nelements * maxion + element * maxion + ion;
+    return globals::nelements * globals::maxion + element * globals::maxion + ion;
   }
 }
 
@@ -366,16 +366,16 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, struct
   const double anglefactor = (current_abin >= 0) ? MABINS : 1.;
 
   const double t_arrive = get_arrive_time(pkt_ptr);
-  if (t_arrive > tmin && t_arrive < tmax && pkt_ptr->nu_rf > nu_min_r && pkt_ptr->nu_rf < nu_max_r)
+  if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt_ptr->nu_rf > globals::nu_min_r && pkt_ptr->nu_rf < globals::nu_max_r)
   {
     const int nt = get_timestep(t_arrive);
     const double nu_min = spectra[nt].nu_min;
     const double nu_max = spectra[nt].nu_max;
-    const double dlognu = (log(nu_max) - log(nu_min)) / nnubins;
+    const double dlognu = (log(nu_max) - log(nu_min)) / globals::nnubins;
 
     const int nnu = (log(pkt_ptr->nu_rf) - log(nu_min)) /  dlognu;
 
-    const double deltaE = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / nprocs * anglefactor;
+    const double deltaE = pkt_ptr->e_rf / globals::time_step[nt].width / spectra[nt].delta_freq[nnu] / 4.e12 / PI / PARSEC / PARSEC / globals::nprocs * anglefactor;
 
     spectra[nt].flux[nnu] += deltaE;
 
@@ -435,14 +435,14 @@ static void add_to_spec(const PKT *const pkt_ptr, const int current_abin, struct
       const int nnu_abs = (log(pkt_ptr->absorptionfreq) - log(nu_min)) /  dlognu;
       if (nnu_abs >= 0 && nnu_abs < MNUBINS)
       {
-        const double deltaE_absorption = pkt_ptr->e_rf / time_step[nt].width / spectra[nt].delta_freq[nnu_abs] / 4.e12 / PI / PARSEC / PARSEC / nprocs * anglefactor;
+        const double deltaE_absorption = pkt_ptr->e_rf / globals::time_step[nt].width / spectra[nt].delta_freq[nnu_abs] / 4.e12 / PI / PARSEC / PARSEC / globals::nprocs * anglefactor;
         const int at = pkt_ptr->absorptiontype;
         if (at >= 0)
         {
           /// bb-emission
-          const int element = linelist[at].elementindex;
-          const int ion = linelist[at].ionindex;
-          spectra[nt].stat[nnu_abs].absorption[element * maxion + ion] += deltaE_absorption;
+          const int element = globals::linelist[at].elementindex;
+          const int ion = globals::linelist[at].ionindex;
+          spectra[nt].stat[nnu_abs].absorption[element * globals::maxion + ion] += deltaE_absorption;
 
           if (stokes_i != NULL && stokes_i[nt].do_emission_res)
             stokes_i[nt].stat[nnu].absorption[nproc] += pkt_ptr->stokes[0] * deltaE_absorption;
@@ -476,9 +476,9 @@ void init_spectrum_trace(void)
   if (TRACE_EMISSION_ABSORPTION_REGION_ON)
   {
     traceemission_totalenergy = 0.;
-    traceemissionabsorption = (struct emissionabsorptioncontrib *) malloc(nlines * sizeof(emissionabsorptioncontrib));
+    traceemissionabsorption = (struct emissionabsorptioncontrib *) malloc(globals::nlines * sizeof(emissionabsorptioncontrib));
     traceabsorption_totalenergy = 0.;
-    for (int i = 0; i < nlines; i++)
+    for (int i = 0; i < globals::nlines; i++)
     {
       traceemissionabsorption[i].energyemitted = 0.;
       traceemissionabsorption[i].emission_weightedvelocity_sum = 0.;
@@ -492,11 +492,11 @@ void init_spectrum_trace(void)
 
 void free_spectra(struct spec *spectra)
 {
-  for (int n = 0; n < ntstep; n++)
+  for (int n = 0; n < globals::ntstep; n++)
   {
     if (spectra[n].do_emission_res)
     {
-      for (int m = 0; m < nnubins; m++)
+      for (int m = 0; m < globals::nnubins; m++)
       {
         free(spectra[n].stat[m].absorption);
         free(spectra[n].stat[m].emission);
@@ -515,13 +515,13 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
   ///Should be moved to input.c or exspec.c
-  const double dlognu = (log(nu_max) - log(nu_min)) / nnubins;
+  const double dlognu = (log(nu_max) - log(nu_min)) / globals::nnubins;
 
-  for (int n = 0; n < ntstep; n++)
+  for (int n = 0; n < globals::ntstep; n++)
   {
     spectra[n].nu_min = nu_min;
     spectra[n].nu_max = nu_max;
-    for (int m = 0; m < nnubins; m++)
+    for (int m = 0; m < globals::nnubins; m++)
     {
       spectra[n].lower_freq[m] = exp(log(nu_min) + (m * (dlognu)));
       spectra[n].delta_freq[m] = exp(log(nu_min) + ((m + 1) * (dlognu))) - spectra[n].lower_freq[m];
@@ -529,13 +529,13 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * nelements * maxion + 1; i++)
+        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
         {
           spectra[n].stat[m].emission[i] = 0;
           spectra[n].stat[m].trueemission[i] = 0;
         }
 
-        for (int i = 0; i < nelements * maxion; i++)
+        for (int i = 0; i < globals::nelements * globals::maxion; i++)
         {
           spectra[n].stat[m].absorption[i] = 0;
         }
@@ -550,22 +550,22 @@ struct spec *alloc_spectra(const bool do_emission_res)
   struct spec *spectra = (struct spec *) calloc(MTBINS, sizeof(struct spec));
   /// Check if enough  memory for spectra has been assigned
   /// and allocate memory for the emission statistics
-  if (nnubins > MNUBINS)
+  if (globals::nnubins > MNUBINS)
   {
     printout("WARNING: Too many frequency bins in spectrum - reducing.\n");
-    nnubins = MNUBINS;
+    globals::nnubins = MNUBINS;
   }
-  assert(ntstep < MTBINS);
+  assert(globals::ntstep < MTBINS);
 
-  for (int n = 0; n < ntstep; n++)
+  for (int n = 0; n < globals::ntstep; n++)
   {
     spectra[n].do_emission_res = do_emission_res;
     if (spectra[n].do_emission_res)
     {
-      for (int m = 0; m < nnubins; m++)
+      for (int m = 0; m < globals::nnubins; m++)
       {
-        const int emissioncount = 2 * nelements * maxion + 1;
-        spectra[n].stat[m].absorption = (double *) calloc(nelements * maxion, sizeof(double));
+        const int emissioncount = 2 * globals::nelements * globals::maxion + 1;
+        spectra[n].stat[m].absorption = (double *) calloc(globals::nelements * globals::maxion, sizeof(double));
         spectra[n].stat[m].emission = (double *) calloc(emissioncount, sizeof(double));
         spectra[n].stat[m].trueemission = (double *) calloc(emissioncount, sizeof(double));
 
@@ -602,16 +602,16 @@ void add_to_spec_res(
     double xhat[3] = {1.0, 0.0, 0.0};
 
     /// Angle resolved case: need to work out the correct angle bin
-    const double costheta = dot(pkt_ptr->dir, syn_dir);
+    const double costheta = dot(pkt_ptr->dir, globals::syn_dir);
     const double thetabin = ((costheta + 1.0) * sqrt(MABINS) / 2.0);
     double vec1[3];
-    cross_prod(pkt_ptr->dir, syn_dir, vec1);
+    cross_prod(pkt_ptr->dir, globals::syn_dir, vec1);
     double vec2[3];
-    cross_prod(xhat, syn_dir, vec2);
+    cross_prod(xhat, globals::syn_dir, vec2);
     const double cosphi = dot(vec1,vec2) / vec_len(vec1) / vec_len(vec2);
 
     double vec3[3];
-    cross_prod(vec2, syn_dir, vec3);
+    cross_prod(vec2, globals::syn_dir, vec3);
     const double testphi = dot(vec1,vec3);
 
     int phibin;

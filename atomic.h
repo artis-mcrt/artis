@@ -17,7 +17,7 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
 inline int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
 {
-  return elements[element].anumber;
+  return globals::elements[element].anumber;
 }
 
 
@@ -26,10 +26,10 @@ inline int get_elementindex(int Z)
 /// If there is no element with the given atomic number in the atomic data
 /// a negative value is returned to flag this event.
 {
-  for (int i = 0; i < nelements; i++)
+  for (int i = 0; i < globals::nelements; i++)
   {
     //printf("i %d, Z %d, elements[i].anumber %d\n",i,Z,elements[i].anumber);
-    if (Z == elements[i].anumber)
+    if (Z == globals::elements[i].anumber)
       return i;
   }
 
@@ -44,7 +44,7 @@ inline int get_nions(int element)
 /// Returns the number of ions associated with a specific element given by
 /// its elementindex.
 {
-  return elements[element].nions;
+  return globals::elements[element].nions;
 }
 
 
@@ -52,7 +52,7 @@ inline int get_ionstage(int element, int ion)
 /// Returns the ionisation stage of an ion specified by its elementindex and
 /// ionindex.
 {
-  return elements[element].ions[ion].ionstage;
+  return globals::elements[element].ions[ion].ionstage;
 }
 
 
@@ -60,7 +60,7 @@ inline int get_nlevels(int element, int ion)
 /// Returns the number of levels associated with with a specific ion given
 /// its elementindex and ionindex.
 {
-  return elements[element].ions[ion].nlevels;
+  return globals::elements[element].ions[ion].nlevels;
 }
 
 
@@ -68,13 +68,13 @@ inline int get_nlevels_nlte(int element, int ion)
 // Returns the number of NLTE levels associated with with a specific ion given
 // its elementindex and ionindex. Includes the superlevel if there is one but does not include the ground state
 {
-  return elements[element].ions[ion].nlevels_nlte;
+  return globals::elements[element].ions[ion].nlevels_nlte;
 }
 
 
 inline int get_nlevels_groundterm(int element, int ion)
 {
-  return elements[element].ions[ion].nlevels_groundterm;
+  return globals::elements[element].ions[ion].nlevels_groundterm;
 }
 
 
@@ -82,7 +82,7 @@ inline int get_ionisinglevels(int element, int ion)
 /// Returns the number of levels associated with an ion that
 /// have energies below the ionisation threshold.
 {
-  return elements[element].ions[ion].ionisinglevels;
+  return globals::elements[element].ions[ion].ionisinglevels;
 }
 
 
@@ -96,7 +96,7 @@ inline int get_uniqueionindex(const int element, const int ion)
   }
   index += ion;
 
-  assert(index == elements[element].ions[ion].uniqueionindex);
+  assert(index == globals::elements[element].ions[ion].uniqueionindex);
   // assert(index < includedions);
   return index;
 }
@@ -105,7 +105,7 @@ inline int get_uniqueionindex(const int element, const int ion)
 inline void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion)
 {
   int allionsindex_thiselementfirstion = 0;
-  for (int e = 0; e < nelements; e++)
+  for (int e = 0; e < globals::nelements; e++)
   {
     if ((allionsindex - allionsindex_thiselementfirstion) >= get_nions(e))
     {
@@ -127,7 +127,7 @@ inline void get_ionfromuniqueionindex(const int allionsindex, int *element, int 
 inline double epsilon(int element, int ion, int level)
 /// Returns the energy of (element,ion,level).
 {
-  return elements[element].ions[ion].levels[level].epsilon;
+  return globals::elements[element].ions[ion].levels[level].epsilon;
 }
 
 
@@ -135,16 +135,16 @@ inline double stat_weight(int element, int ion, int level)
 /// Returns the statistical weight of (element,ion,level).
 {
   #ifdef DEBUG_ON
-  assert(level <= elements[element].ions[ion].nlevels);
+  assert(level <= globals::elements[element].ions[ion].nlevels);
   #endif
-  return elements[element].ions[ion].levels[level].stat_weight;
+  return globals::elements[element].ions[ion].levels[level].stat_weight;
 }
 
 
 inline int get_maxrecombininglevel(int element, int ion)
 /// Returns the number of bf-continua associated with ion ion of element element.
 {
-  return elements[element].ions[ion].maxrecombininglevel;
+  return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
 
@@ -157,28 +157,28 @@ inline bool ion_has_superlevel(const int element, const int ion)
 inline int get_ndowntrans(int element, int ion, int level)
 // the number of downward bound-bound transitions from the specified level
 {
-  return elements[element].ions[ion].levels[level].ndowntrans;
+  return globals::elements[element].ions[ion].levels[level].ndowntrans;
 }
 
 
 inline int get_nuptrans(int element, int ion, int level)
 // the number of upward bound-bound transitions from the specified level
 {
-  return elements[element].ions[ion].levels[level].nuptrans;
+  return globals::elements[element].ions[ion].levels[level].nuptrans;
 }
 
 
 inline void set_ndowntrans(const int element, const int ion, const int level, const int ndowntrans)
 // the number of downward bound-bound transitions from the specified level
 {
-  elements[element].ions[ion].levels[level].ndowntrans = ndowntrans;
+  globals::elements[element].ions[ion].levels[level].ndowntrans = ndowntrans;
 }
 
 
 inline void set_nuptrans(const int element, const int ion, const int level, const int nuptrans)
 // the number of upward bound-bound transitions from the specified level
 {
-  elements[element].ions[ion].levels[level].nuptrans = nuptrans;
+  globals::elements[element].ions[ion].levels[level].nuptrans = nuptrans;
 }
 
 
@@ -188,7 +188,7 @@ inline int get_nphixstargets(const int element, const int ion, const int level)
   const int nions = get_nions(element);
   const int nionisinglevels = get_ionisinglevels(element,ion);
   if ((ion < nions-1) && (level < nionisinglevels))
-    return elements[element].ions[ion].levels[level].nphixstargets;
+    return globals::elements[element].ions[ion].levels[level].nphixstargets;
   else
   {
     return 0;
@@ -208,14 +208,14 @@ inline int get_phixsupperlevel(const int element, const int ion, const int level
     }
   #endif
 
-  return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
+  return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].levelindex;
 }
 
 
 inline double get_phixs_threshold(int element, int ion, int level, int phixstargetindex)
 /// Returns the energy of (element,ion,level).
 {
-  // const double phixs_threshold_stored = elements[element].ions[ion].levels[level].phixs_threshold;
+  // const double phixs_threshold_stored = globals::elements[element].ions[ion].levels[level].phixs_threshold;
   // if (phixs_threshold_stored > 0.)
   //   return phixs_threshold_stored;
   // else
@@ -239,7 +239,7 @@ inline double get_phixsprobability(int element, int ion, int level, int phixstar
     }
   #endif
 
-  return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
+  return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].probability;
 }
 
 
@@ -250,9 +250,9 @@ inline double einstein_spontaneous_emission(int lineindex)
 {
 /*
   int index = (upper-lower) - 1;
-  double A_ul = elements[element].ions[ion].levels[upper].transitions[index].einstein_A;
+  double A_ul = globals::elements[element].ions[ion].levels[upper].transitions[index].einstein_A;
 */
-  return linelist[lineindex].einstein_A;
+  return globals::linelist[lineindex].einstein_A;
 }
 
 
@@ -261,37 +261,37 @@ inline double osc_strength(int lineindex)
 /// reads f_lu from levellist which consists of
 /// (epsilon_upper; 0) | (g_upper; 0) | (A_upper,upper-1; f_upper,upper-1) | (A_uppper,upper-2; f_upper,upper-2) | ... | (A_upper,1; f_upper,1)
 {
-  return linelist[lineindex].osc_strength;
+  return globals::linelist[lineindex].osc_strength;
 }
 
 
 inline double get_coll_str(int lineindex)
 {
-  return linelist[lineindex].coll_str;
+  return globals::linelist[lineindex].coll_str;
 }
 
 
 inline double statw_upper(int lineindex)
 {
-  const int element = linelist[lineindex].elementindex;
-  const int ion = linelist[lineindex].ionindex;
-  const int upper = linelist[lineindex].upperlevelindex;
-  return elements[element].ions[ion].levels[upper].stat_weight;
+  const int element = globals::linelist[lineindex].elementindex;
+  const int ion = globals::linelist[lineindex].ionindex;
+  const int upper = globals::linelist[lineindex].upperlevelindex;
+  return globals::elements[element].ions[ion].levels[upper].stat_weight;
 }
 
 
 inline double statw_lower(int lineindex)
 {
-  const int element = linelist[lineindex].elementindex;
-  const int ion = linelist[lineindex].ionindex;
-  const int lower = linelist[lineindex].lowerlevelindex;
-  return elements[element].ions[ion].levels[lower].stat_weight;
+  const int element = globals::linelist[lineindex].elementindex;
+  const int ion = globals::linelist[lineindex].ionindex;
+  const int lower = globals::linelist[lineindex].lowerlevelindex;
+  return globals::elements[element].ions[ion].levels[lower].stat_weight;
 }
 
 
 inline double photoionization_crosssection(int element, int ion, int level, double nu_edge, double nu)
 {
-  return photoionization_crosssection_fromtable(elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);
+  return photoionization_crosssection_fromtable(globals::elements[element].ions[ion].levels[level].photoion_xs, nu_edge, nu);
 }
 
 
@@ -302,7 +302,7 @@ inline double photoionization_crosssection(int element, int ion, int level, doub
 {
 
   int index = (upper-lower) - 1;
-  double f_ul = elements[element].ions[ion].levels[upper].transitions[index].oscillator_strength;
+  double f_ul = globals::elements[element].ions[ion].levels[upper].transitions[index].oscillator_strength;
 
   return f_ul;
 }*/

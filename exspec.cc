@@ -50,8 +50,8 @@ static void get_final_packets(int rank, int nprocs, PKT pkt[])
   }
   else
   {
-    printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ", filename, itstep);
-    read_temp_packetsfile(itstep, rank, pkt);
+    printout("   WARNING %s does not exist - trying temp packets file at beginning of timestep %d...\n   ", filename, globals::itstep);
+    read_temp_packetsfile(globals::itstep, rank, pkt);
   }
 }
 
@@ -73,11 +73,11 @@ int main(int argc, char** argv)
   printout("time before input %ld\n", time(NULL));
   input(my_rank);
   printout("time after input %ld\n", time(NULL));
-  nprocs = nprocs_exspec;
+  globals::nprocs = nprocs_exspec;
 
-  PKT *pkts = (PKT *) malloc(npkts * sizeof(PKT));
+  PKT *pkts = (PKT *) malloc(globals::npkts * sizeof(PKT));
 
-  nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
+  globals::nnubins = MNUBINS; //1000;  /// frequency bins for spectrum
 
   init_spectrum_trace(); // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
@@ -95,25 +95,25 @@ int main(int argc, char** argv)
 
   struct spec *gamma_spectra = alloc_spectra(false);
 
-  for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
+  for (int outer_iteration = 0; outer_iteration < globals::n_out_it; outer_iteration++)
   {
     /// Initialise the grid. Call routine that sets up the initial positions
     /// and sizes of the grid cells.
     //grid_init();
     time_init();
 
-    const int amax = ((model_type == RHO_1D_READ)) ? 0 : MABINS;
+    const int amax = ((globals::model_type == RHO_1D_READ)) ? 0 : MABINS;
     // a is the escape direction angle bin
     for (int a = -1; a < amax; a++)
     {
       /// Set up the light curve grid and initialise the bins to zero.
-      double *rpkt_light_curve_lum = (double *) calloc(ntstep, sizeof(double));
-      double *rpkt_light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
-      double *gamma_light_curve_lum = (double *) calloc(ntstep, sizeof(double));
-      double *gamma_light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
+      double *rpkt_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
+      double *rpkt_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
+      double *gamma_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
+      double *gamma_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
       /// Set up the spectrum grid and initialise the bins to zero.
 
-      init_spectra(rpkt_spectra, nu_min_r, nu_max_r, do_emission_res);
+      init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
 
       #ifdef POL_ON
       init_spectra(stokes_i, nu_min_r, nu_max_r, do_emission_res);
@@ -125,13 +125,13 @@ int main(int argc, char** argv)
       const double nu_max_gamma = 4. * MEV / H;
       init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
 
-      for (int p = 0; p < nprocs; p++)
+      for (int p = 0; p < globals::nprocs; p++)
       {
-        get_final_packets(p, nprocs, pkts);
+        get_final_packets(p, globals::nprocs, pkts);
         int nesc_tot = 0;
         int nesc_gamma = 0;
         int nesc_rpkt = 0;
-        for (int ii = 0; ii < npkts; ii++)
+        for (int ii = 0; ii < globals::npkts; ii++)
         {
           // printout("packet %d escape_type %d type %d", ii, pkts[ii].escape_type, pkts[ii].type);
           if (pkts[ii].type == TYPE_ESCAPE)
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
             }
           }
         }
-        printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, npkts, nesc_gamma, nesc_rpkt);
+        printout("  %d of %d packets escaped (%d gamma-pkts and %d r-pkts)\n", nesc_tot, globals::npkts, nesc_gamma, nesc_rpkt);
       }
 
       if (a == -1)

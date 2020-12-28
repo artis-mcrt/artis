@@ -27,7 +27,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
 
   get_velocity(pkt_ptr->pos, vel_vec, pkt_ptr->prop_time);
   angle_ab(pkt_ptr->dir, vel_vec, cmf_dir);
-  angle_ab(syn_dir, vel_vec, cmf_syn_dir);
+  angle_ab(globals::syn_dir, vel_vec, cmf_syn_dir);
 
   //  printout("pos %g %g %g\n", pkt_ptr->pos[0],pkt_ptr->pos[1], pkt_ptr->pos[2]);
   //  printout("dir %g %g %g\n", pkt_ptr->dir[0],pkt_ptr->dir[1], pkt_ptr->dir[2]);
@@ -69,7 +69,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
   // printout("frequency %g\n", freq_out*H/MEV);
   // printout("lindex %d, emiss_max %d, emiss_offset %d\n", lindex, emiss_max, emiss_offset);
 
-  if ((lindex > emiss_offset - 1) && (lindex < emiss_offset + emiss_max - 1))
+  if ((lindex > globals::emiss_offset - 1) && (lindex < globals::emiss_offset + globals::emiss_max - 1))
   {
 
     // Then get partial crossection dsigma_domega in cmf
@@ -100,9 +100,9 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
     //    4) divided by the length of the time step
     //    This will all be done later
 
-    if (lindex < emiss_offset)
+    if (lindex < globals::emiss_offset)
     {
-      printout("scarily bad error here! %d %d\n", lindex, emiss_offset);
+      printout("scarily bad error here! %d %d\n", lindex, globals::emiss_offset);
     }
     else
     {
@@ -110,7 +110,7 @@ void compton_emiss_cont(const PKT *pkt_ptr, double dist)
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
-      compton_emiss[cell[cellindex].modelgridindex][lindex - emiss_offset] += emiss_cont;
+      globals::compton_emiss[globals::cell[cellindex].modelgridindex][lindex - globals::emiss_offset] += emiss_cont;
     }
 
   }
@@ -138,7 +138,7 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist)
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
-  compton_emiss[cell[cellindex].modelgridindex][emiss_max - 1] += 1.e-20 * emiss_cont;
+  globals::compton_emiss[globals::cell[cellindex].modelgridindex][globals::emiss_max - 1] += 1.e-20 * emiss_cont;
 
   //  printf("emiss_cont %g\n", emiss_cont);
 
@@ -150,13 +150,13 @@ void pp_emiss_cont(const PKT *pkt_ptr, double dist)
 void zero_estimators(void)
 {
   // for (n=0; n < ngrid; n++)
-  for (int n = 0; n < npts_model; n++)
+  for (int n = 0; n < globals::npts_model; n++)
   {
     radfield::zero_estimators(n);
 
     #ifndef FORCE_LTE
-      ffheatingestimator[n] = 0.;
-      colheatingestimator[n] = 0.;
+      globals::ffheatingestimator[n] = 0.;
+      globals::colheatingestimator[n] = 0.;
 
       // mabfcount[n] = 0.;
       // mabfcount_thermal[n] = 0.;
@@ -169,7 +169,7 @@ void zero_estimators(void)
       // kbfabs[n] = 0.;
       // kgammadep[n] = 0.;
 
-      for (int element = 0; element < nelements; element++)
+      for (int element = 0; element < globals::nelements; element++)
       {
         #if (TRACK_ION_STATS)
         for (int ion = 0; ion < get_nions(element); ion++)
@@ -180,28 +180,28 @@ void zero_estimators(void)
           }
         }
         #endif
-        for (int ion = 0; ion < maxion; ion++)
+        for (int ion = 0; ion < globals::maxion; ion++)
         {
           #if (!NO_LUT_PHOTOION)
-            gammaestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+            gammaestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
           #endif
           #if (!NO_LUT_BFHEATING)
-            bfheatingestimator[n*nelements*maxion+element*maxion+ion] = 0.;
+            bfheatingestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
           #endif
 
-          // photoionestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-          // stimrecombestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-          // ionfluxestimator[n*nelements*maxion+element*maxion+ion] = 0.;
-          // twiddle[n*nelements*maxion+element*maxion+ion] = 0.;
+          // photoionestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
+          // stimrecombestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
+          // ionfluxestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
+          // twiddle[n*globals::nelements*maxion+element*maxion+ion] = 0.;
         }
       }
     #endif
-    for (int m = 0; m < emiss_max; m++)
+    for (int m = 0; m < globals::emiss_max; m++)
     {
-      compton_emiss[n][m] = 0.0;
+      globals::compton_emiss[n][m] = 0.0;
     }
 
-    rpkt_emiss[n] = 0.0;
+    globals::rpkt_emiss[n] = 0.0;
   }
 }
 
@@ -210,11 +210,11 @@ void normalise_compton_estimators(const int nts, struct time *time_step)
 {
   double dfreq[EMISS_MAX];
 
-  const double time_factor = 1. / pow(time_step[nts].mid / tmin, 3.0) / time_step[nts].width;
+  const double time_factor = 1. / pow(globals::time_step[nts].mid / globals::tmin, 3.0) / globals::time_step[nts].width;
 
-  for (int m = 0; m < emiss_max; m++)
+  for (int m = 0; m < globals::emiss_max; m++)
   {
-    dfreq[m] = get_gam_freq(m + emiss_offset + 1) - get_gam_freq(m + emiss_offset);
+    dfreq[m] = get_gam_freq(m + globals::emiss_offset + 1) - get_gam_freq(m + globals::emiss_offset);
     if (dfreq[m] < 0)
     {
       printout("Problem with normalisation of estimators. Abort.\n");
@@ -224,17 +224,17 @@ void normalise_compton_estimators(const int nts, struct time *time_step)
   }
 
   // for (n=0; n < ngrid; n++)
-  for (int n = 0; n < npts_model; n++)
+  for (int n = 0; n < globals::npts_model; n++)
   {
     const double volume = vol_init_modelcell(n);
-    for (int m = 0; m < emiss_max; m++)
+    for (int m = 0; m < globals::emiss_max; m++)
     {
-      compton_emiss[n][m] = compton_emiss[n][m] * time_factor / volume / nprocs;
+      globals::compton_emiss[n][m] = globals::compton_emiss[n][m] * time_factor / volume / globals::nprocs;
 
-      if (m < emiss_max - 1)
+      if (m < globals::emiss_max - 1)
       // (emiss_max - 1) contains the pair production case so it doesn't need the nne nor the dfreq
       {
-        compton_emiss[n][m] = compton_emiss[n][m] * get_nne(n) * dfreq[m];
+        globals::compton_emiss[n][m] = globals::compton_emiss[n][m] * get_nne(n) * dfreq[m];
       }
     }
   }
@@ -264,19 +264,19 @@ void write_compton_estimators(int nts)
   strcat(filename, junk);
   strcat(filename, ".out");
 
-  if (file_set)
+  if (globals::file_set)
   {
     est_file = fopen_required(filename, "rb");
 
       //for (n=0; n < ngrid; n++)
-    for (int n = 0; n < npts_model; n++)
+    for (int n = 0; n < globals::npts_model; n++)
     {
-      for (int m = 0; m < emiss_max; m++)
+      for (int m = 0; m < globals::emiss_max; m++)
       {
         float dum;
         fread(&dum, sizeof(float), 1, est_file);
         //fscanf(est_file, "%g", &dum);
-        compton_emiss[n][m] += dum;
+        globals::compton_emiss[n][m] += dum;
       }
     }
     fclose(est_file);
@@ -284,11 +284,11 @@ void write_compton_estimators(int nts)
 
   est_file = fopen_required(filename, "wb+");
 
-  for (int n = 0; n < npts_model; n++)
+  for (int n = 0; n < globals::npts_model; n++)
   {
-    for (int m = 0; m < emiss_max; m++)
+    for (int m = 0; m < globals::emiss_max; m++)
     {
-      fwrite(&compton_emiss[n][m], sizeof(float), 1, est_file);
+      fwrite(&globals::compton_emiss[n][m], sizeof(float), 1, est_file);
     }
   }
   fclose(est_file);
@@ -297,11 +297,11 @@ void write_compton_estimators(int nts)
 
 bool estim_switch(int nts, struct time *time_step)
 {
-  const double tstart = time_step[nts].start;
-  const double tend = time_step[nts].start + time_step[nts].width;
+  const double tstart = globals::time_step[nts].start;
+  const double tend = globals::time_step[nts].start + globals::time_step[nts].width;
 
-  const double ts_want = time_syn[0] * ((1. - rmax / tmin / CLIGHT_PROP));
-  const double te_want = time_syn[nsyn_time - 1] * (1. + rmax / tmin / CLIGHT_PROP);
+  const double ts_want = globals::time_syn[0] * ((1. - globals::rmax / globals::tmin / globals::CLIGHT_PROP));
+  const double te_want = globals::time_syn[globals::nsyn_time - 1] * (1. + globals::rmax / globals::tmin / globals::CLIGHT_PROP);
 
   return ((tstart > te_want) || (tend < ts_want));
 }
@@ -388,12 +388,12 @@ bool estim_switch(int nts, struct time *time_step)
 //
 //     if (tau_cont > 1.e-6)
 //     {
-//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] *
+//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[globals::cell[dummy.where].modelgridindex][lindex - emiss_offset] *
 //           (1. - exp(-1. * tau_cont)) / kap_tot);
 //     }
 //     else
 //     {
-//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[cell[dummy.where].modelgridindex][lindex - emiss_offset] *
+//       ray_ptr->e_rf[nray] += (dop_fac * dop_fac * compton_emiss[globals::cell[dummy.where].modelgridindex][lindex - emiss_offset] *
 //             ldist);
 //     }
 //   }
@@ -408,8 +408,8 @@ bool estim_switch(int nts, struct time *time_step)
 //   double emitt_energy;
 //   struct grid *grid_ptr;
 //
-//   grid_ptr = &cell[ray_ptr->where];
-//   double tfact = pow((tmin/single_t), 3);
+//   grid_ptr = &globals::cell[ray_ptr->where];
+//   double tfact = pow((globals::tmin/single_t), 3);
 //
 //   if (gam_line_list.type[lindex] == NUCLIDE_NI56)
 //   {

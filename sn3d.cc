@@ -66,24 +66,24 @@ static void initialise_linestat_file(void)
 {
   linestat_file = fopen_required("linestat.out", "w");
 
-  for (int i = 0; i < nlines; i++)
-    fprintf(linestat_file, "%g ", CLIGHT/linelist[i].nu);
+  for (int i = 0; i < globals::nlines; i++)
+    fprintf(linestat_file, "%g ", CLIGHT / globals::linelist[i].nu);
   fprintf(linestat_file,"\n");
 
-  for (int i = 0; i < nlines; i++)
-    fprintf(linestat_file, "%d ", get_element(linelist[i].elementindex));
+  for (int i = 0; i < globals::nlines; i++)
+    fprintf(linestat_file, "%d ", get_element(globals::linelist[i].elementindex));
   fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < nlines; i++)
-    fprintf(linestat_file, "%d ", get_ionstage(linelist[i].elementindex, linelist[i].ionindex));
+  for (int i = 0; i < globals::nlines; i++)
+    fprintf(linestat_file, "%d ", get_ionstage(globals::linelist[i].elementindex, globals::linelist[i].ionindex));
   fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < nlines; i++)
-    fprintf(linestat_file, "%d ", linelist[i].upperlevelindex + 1);
+  for (int i = 0; i < globals::nlines; i++)
+    fprintf(linestat_file, "%d ", globals::linelist[i].upperlevelindex + 1);
   fprintf(linestat_file, "\n");
 
-  for (int i = 0; i < nlines; i++)
-    fprintf(linestat_file, "%d ", linelist[i].lowerlevelindex + 1);
+  for (int i = 0; i < globals::nlines; i++)
+    fprintf(linestat_file, "%d ", globals::linelist[i].lowerlevelindex + 1);
   fprintf(linestat_file, "\n");
 
   fflush(linestat_file);
@@ -93,94 +93,94 @@ static void initialise_linestat_file(void)
 
 static void pkt_action_counters_reset(void)
 {
-  ma_stat_activation_collexc = 0;
-  ma_stat_activation_collion = 0;
-  ma_stat_activation_ntcollexc = 0;
-  ma_stat_activation_ntcollion = 0;
-  ma_stat_activation_bb = 0;
-  ma_stat_activation_bf = 0;
-  ma_stat_activation_fb = 0;
-  ma_stat_deactivation_colldeexc = 0;
-  ma_stat_deactivation_collrecomb = 0;
-  ma_stat_deactivation_bb = 0;
-  ma_stat_deactivation_fb = 0;
-  ma_stat_internaluphigher = 0;
-  ma_stat_internaluphighernt = 0;
-  ma_stat_internaldownlower = 0;
-  k_stat_to_ma_collexc = 0;
-  k_stat_to_ma_collion = 0;
-  k_stat_to_r_ff = 0;
-  k_stat_to_r_fb = 0;
-  k_stat_to_r_bb = 0;
-  k_stat_from_ff = 0;
-  k_stat_from_bf = 0;
-  k_stat_from_earlierdecay = 0;
+  globals::ma_stat_activation_collexc = 0;
+  globals::ma_stat_activation_collion = 0;
+  globals::ma_stat_activation_ntcollexc = 0;
+  globals::ma_stat_activation_ntcollion = 0;
+  globals::ma_stat_activation_bb = 0;
+  globals::ma_stat_activation_bf = 0;
+  globals::ma_stat_activation_fb = 0;
+  globals::ma_stat_deactivation_colldeexc = 0;
+  globals::ma_stat_deactivation_collrecomb = 0;
+  globals::ma_stat_deactivation_bb = 0;
+  globals::ma_stat_deactivation_fb = 0;
+  globals::ma_stat_internaluphigher = 0;
+  globals::ma_stat_internaluphighernt = 0;
+  globals::ma_stat_internaldownlower = 0;
+  globals::k_stat_to_ma_collexc = 0;
+  globals::k_stat_to_ma_collion = 0;
+  globals::k_stat_to_r_ff = 0;
+  globals::k_stat_to_r_fb = 0;
+  globals::k_stat_to_r_bb = 0;
+  globals::k_stat_from_ff = 0;
+  globals::k_stat_from_bf = 0;
+  globals::k_stat_from_earlierdecay = 0;
 
   nonthermal::nt_reset_stats();
 
-  escounter = 0;
-  cellcrossings = 0;
-  updatecellcounter = 0;
-  coolingratecalccounter = 0;
-  resonancescatterings = 0;
-  upscatter = 0;
-  downscatter = 0;
-  nesc = 0;
+  globals::escounter = 0;
+  globals::cellcrossings = 0;
+  globals::updatecellcounter = 0;
+  globals::coolingratecalccounter = 0;
+  globals::resonancescatterings = 0;
+  globals::upscatter = 0;
+  globals::downscatter = 0;
+  globals::nesc = 0;
 }
 
 
 static void pkt_action_counters_printout(const PKT *const pkt, const int nts)
 {
   int allpktinteractions = 0;
-  for (int i = 0; i < npkts; i++)
+  for (int i = 0; i < globals::npkts; i++)
   {
     allpktinteractions += pkt[i].interactions;
   }
-  const double meaninteractions = (double) allpktinteractions / npkts;
+  const double meaninteractions = (double) allpktinteractions / globals::npkts;
   printout("mean number of interactions per packet = %g\n", meaninteractions);
 
-  const double deltat = time_step[nts].width;
+  const double deltat = globals::time_step[nts].width;
   double modelvolume = 0.;
-  for (int mgi = 0; mgi < npts_model; mgi++)
+  for (int mgi = 0; mgi < globals::npts_model; mgi++)
   {
-    modelvolume += vol_init_modelcell(mgi) * pow(time_step[nts].mid / tmin, 3);
+    modelvolume += vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
   }
 
   /// Printout packet statistics
-  printout("ma_stat_activation_collexc = %d\n", ma_stat_activation_collexc);
-  printout("ma_stat_activation_collion = %d\n", ma_stat_activation_collion);
-  printout("ma_stat_activation_ntcollexc = %d\n", ma_stat_activation_ntcollexc);
-  printout("ma_stat_activation_ntcollion = %d\n", ma_stat_activation_ntcollion);
-  printout("ma_stat_activation_bb = %d\n", ma_stat_activation_bb);
-  printout("ma_stat_activation_bf = %d\n", ma_stat_activation_bf);
-  printout("ma_stat_activation_fb = %d\n", ma_stat_activation_fb);
-  printout("ma_stat_deactivation_colldeexc = %d\n", ma_stat_deactivation_colldeexc);
-  printout("ma_stat_deactivation_collrecomb = %d\n", ma_stat_deactivation_collrecomb);
-  printout("ma_stat_deactivation_bb = %d\n", ma_stat_deactivation_bb);
-  printout("ma_stat_deactivation_fb = %d\n", ma_stat_deactivation_fb);
-  printout("ma_stat_internaluphigher = %d\n", ma_stat_internaluphigher);
-  printout("ma_stat_internaluphighernt = %d\n", ma_stat_internaluphighernt);
-  printout("ma_stat_internaldownlower = %d\n", ma_stat_internaldownlower);
+  printout("ma_stat_activation_collexc = %d\n", globals::ma_stat_activation_collexc);
+  printout("ma_stat_activation_collion = %d\n", globals::ma_stat_activation_collion);
+  printout("ma_stat_activation_ntcollexc = %d\n", globals::ma_stat_activation_ntcollexc);
+  printout("ma_stat_activation_ntcollion = %d\n", globals::ma_stat_activation_ntcollion);
+  printout("ma_stat_activation_bb = %d\n", globals::ma_stat_activation_bb);
+  printout("ma_stat_activation_bf = %d\n", globals::ma_stat_activation_bf);
+  printout("ma_stat_activation_fb = %d\n", globals::ma_stat_activation_fb);
+  printout("ma_stat_deactivation_colldeexc = %d\n", globals::ma_stat_deactivation_colldeexc);
+  printout("ma_stat_deactivation_collrecomb = %d\n", globals::ma_stat_deactivation_collrecomb);
+  printout("ma_stat_deactivation_bb = %d\n", globals::ma_stat_deactivation_bb);
+  printout("ma_stat_deactivation_fb = %d\n", globals::ma_stat_deactivation_fb);
+  printout("ma_stat_internaluphigher = %d\n", globals::ma_stat_internaluphigher);
+  printout("ma_stat_internaluphighernt = %d\n", globals::ma_stat_internaluphighernt);
+  printout("ma_stat_internaldownlower = %d\n", globals::ma_stat_internaldownlower);
 
-  printout("k_stat_to_ma_collexc = %d\n", k_stat_to_ma_collexc);
-  printout("k_stat_to_ma_collion = %d\n", k_stat_to_ma_collion);
-  printout("k_stat_to_r_ff = %d\n", k_stat_to_r_ff);
-  printout("k_stat_to_r_fb = %d\n", k_stat_to_r_fb);
-  printout("k_stat_to_r_bb = %d\n", k_stat_to_r_bb);
-  printout("k_stat_from_ff = %d\n", k_stat_from_ff);
-  printout("k_stat_from_bf = %d\n", k_stat_from_bf);
-  printout("k_stat_from_earlierdecay = %d\n", k_stat_from_earlierdecay);
+  printout("k_stat_to_ma_collexc = %d\n", globals::k_stat_to_ma_collexc);
+  printout("k_stat_to_ma_collion = %d\n", globals::k_stat_to_ma_collion);
+  printout("k_stat_to_r_ff = %d\n", globals::k_stat_to_r_ff);
+  printout("k_stat_to_r_fb = %d\n", globals::k_stat_to_r_fb);
+  printout("k_stat_to_r_bb = %d\n", globals::k_stat_to_r_bb);
+  printout("k_stat_from_ff = %d\n", globals::k_stat_from_ff);
+  printout("k_stat_from_bf = %d\n", globals::k_stat_from_bf);
+  printout("k_stat_from_earlierdecay = %d\n", globals::k_stat_from_earlierdecay);
 
   nonthermal::nt_print_stats(nts, modelvolume, deltat);
 
-  printout("escounter = %d\n", escounter);
-  printout("cellcrossing  = %d\n", cellcrossings);
-  printout("updatecellcounter  = %d\n", updatecellcounter);
-  printout("coolingratecalccounter = %d\n", coolingratecalccounter);
-  printout("resonancescatterings  = %d\n", resonancescatterings);
+  printout("escounter = %d\n", globals::escounter);
+  printout("cellcrossing  = %d\n", globals::cellcrossings);
+  printout("updatecellcounter  = %d\n", globals::updatecellcounter);
+  printout("coolingratecalccounter = %d\n", globals::coolingratecalccounter);
+  printout("resonancescatterings  = %d\n", globals::resonancescatterings);
 
-  printout("upscatterings  = %d\n", upscatter);
-  printout("downscatterings  = %d\n", downscatter);
+  printout("upscatterings  = %d\n", globals::upscatter);
+  printout("downscatterings  = %d\n", globals::downscatter);
 }
 
 #ifdef MPI_ON
@@ -204,7 +204,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
         if (NLTE_POPS_ON)
         {
-          MPI_Bcast(modelgrid[modelgridindex].nlte_pops, total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(globals::modelgrid[modelgridindex].nlte_pops, total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
         }
       }
     }
@@ -218,25 +218,25 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
       {
         //nn = nonemptycells[my_rank+nncl*nprocs];
         MPI_Pack(&mgi, 1, MPI_INT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-        //if (cell[nn].rho > MINDENSITY)
+        //if (globals::cell[nn].rho > MINDENSITY)
         if (get_numassociatedcells(mgi) > 0)
         {
-          MPI_Pack(&modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].TJ, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].W, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].rho, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].nne, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].nnetot, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].kappagrey, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-          MPI_Pack(&modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].Te, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].TR, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].TJ, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].W, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].rho, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].nne, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].nnetot, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+          MPI_Pack(&globals::modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
-          for (int element = 0; element < nelements; element++)
+          for (int element = 0; element < globals::nelements; element++)
           {
-            MPI_Pack(modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
-            MPI_Pack(modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            MPI_Pack(globals::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            MPI_Pack(globals::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
+            MPI_Pack(globals::modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           }
         }
       }
@@ -254,25 +254,25 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
     {
       int mgi;
       MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &mgi, 1, MPI_INT, MPI_COMM_WORLD);
-      //if (cell[ncl].rho > MINDENSITY)
+      //if (globals::cell[ncl].rho > MINDENSITY)
       if (get_numassociatedcells(mgi) > 0)
       {
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].Te, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].TR, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].TJ, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].W, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].rho, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].nne, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].nnetot, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].kappagrey, 1, MPI_FLOAT, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
 
-        for (int element = 0; element < nelements; element++)
+        for (int element = 0; element < globals::nelements; element++)
         {
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
-          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, globals::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, globals::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
+          MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, globals::modelgrid[mgi].cooling[element].contrib, get_nions(element), MPI_DOUBLE, MPI_COMM_WORLD);
         }
       }
     }
@@ -285,11 +285,11 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         MPI_Barrier(MPI_COMM_WORLD);
         /// Reduce the corrphotoionrenorm array.
         printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * globals::nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         /// Reduce the gammaestimator array. Only needed to write restart data.
         printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * globals::nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
     #endif
   #endif
@@ -306,11 +306,11 @@ static void mpi_reduce_estimators(int my_rank, int nts)
     MPI_Barrier(MPI_COMM_WORLD);
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * globals::nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     #if (!NO_LUT_BFHEATING)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * globals::nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
   #endif
 
@@ -319,8 +319,8 @@ static void mpi_reduce_estimators(int my_rank, int nts)
     MPI_Allreduce(MPI_IN_PLACE, acounter, nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
-  //double deltaV = pow(wid_init * time_step[nts].mid/tmin, 3.0);
-  //double deltat = time_step[nts].width;
+  //double deltaV = pow(wid_init * globals::time_step[nts].mid/globals::tmin, 3.0);
+  //double deltat = globals::time_step[nts].width;
   if (do_rlc_est != 0)
   {
     MPI_Allreduce(MPI_IN_PLACE, &rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -331,13 +331,13 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   }
 
   /// Communicate gamma and positron deposition and write to file
-  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].cmf_lum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  time_step[nts].cmf_lum /= nprocs;
-  time_step[nts].gamma_dep /= nprocs;
-  time_step[nts].positron_dep /= nprocs;
+  globals::time_step[nts].cmf_lum /= nprocs;
+  globals::time_step[nts].gamma_dep /= nprocs;
+  globals::time_step[nts].positron_dep /= nprocs;
 
   #if TRACK_ION_STATS
   MPI_Allreduce(MPI_IN_PLACE, ionstats, npts_model * includedions * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -357,7 +357,7 @@ static void write_temp_packetsfile(const int timestep, const int my_rank, const 
   printout("Writing %s...", filename);
   FILE *packets_file = fopen_required(filename, "wb");
 
-  fwrite(pkt, sizeof(PKT), npkts, packets_file);
+  fwrite(pkt, sizeof(PKT), globals::npkts, packets_file);
   fclose(packets_file);
   printout("done\n");
 }
@@ -406,7 +406,7 @@ void increment_ion_stats(const int modelgridindex, const int element, const int 
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
-  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
+  ionstats[modelgridindex * globals::includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] += increment;
 }
 
 
@@ -415,7 +415,7 @@ double get_ion_stats(const int modelgridindex, const int element, const int ion,
   assert(ion < get_nions(element));
   assert(ion_counter_type < ION_COUNTER_COUNT);
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  return ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
+  return ionstats[modelgridindex * globals::includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type];
 }
 
 
@@ -427,7 +427,7 @@ void set_ion_stats(const int modelgridindex, const int element, const int ion, e
   #ifdef _OPENMP
     #pragma omp atomic
   #endif
-  ionstats[modelgridindex * includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
+  ionstats[modelgridindex * globals::includedions * ION_COUNTER_COUNT + uniqueionindex * ION_COUNTER_COUNT + ion_counter_type] = newvalue;
 }
 #endif
 
@@ -531,7 +531,7 @@ static bool do_timestep(
   bool do_this_full_loop = true;
 
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
-  if ((titer > 0) || (simulation_continued_from_saved && (nts == itstep)))
+  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::itstep)))
   {
     /// Read the packets file to reset before each additional iteration on the timestep
     read_temp_packetsfile(nts, my_rank, packets);
@@ -547,14 +547,14 @@ static bool do_timestep(
 
   #ifdef RECORD_LINESTAT
     // The same for absorption/emission of r-pkts in lines
-    for (int i = 0; i < nlines; i++)
+    for (int i = 0; i < globals::nlines; i++)
     {
-      acounter[i] = 0;
-      ecounter[i] = 0;
+      globals::acounter[i] = 0;
+      globals::ecounter[i] = 0;
     }
   #endif
 
-  do_comp_est = do_r_lc ? false : estim_switch(nts, time_step);
+  globals::do_comp_est = globals::do_r_lc ? false : estim_switch(nts, globals::time_step);
 
   // Update the matter quantities in the grid for the new timestep.
 
@@ -571,7 +571,7 @@ static bool do_timestep(
       if ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0))
       {
         printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-        for (int i = 0; i < MMODELGRID * nelements * maxion; i++)
+        for (int i = 0; i < MMODELGRID * globals::nelements * maxion; i++)
         {
           corrphotoionrenorm[i] = 0.;
         }
@@ -613,7 +613,7 @@ static bool do_timestep(
   /// If this is not the 0th time step of the current job step,
   /// write out a snapshot of the grid properties for further restarts
   /// and update input.txt accordingly
-  if (((nts - itstep) != 0))
+  if (((nts - globals::itstep) != 0))
   {
     save_grid_and_packets(nts, my_rank, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
@@ -626,7 +626,7 @@ static bool do_timestep(
   zero_estimators();
 
   // MPI_Barrier(MPI_COMM_WORLD);
-  if ((nts < ftstep) && do_this_full_loop)
+  if ((nts < globals::ftstep) && do_this_full_loop)
   {
     /// Now process the packets.
     const time_t time_update_packets_start = time(NULL);
@@ -652,19 +652,19 @@ static bool do_timestep(
 
     // The estimators have been summed across all proceses and distributed.
     // They will now be normalised independently on all processes
-    if (do_comp_est)
+    if (globals::do_comp_est)
     {
-      normalise_compton_estimators(nts, time_step);
+      normalise_compton_estimators(nts, globals::time_step);
       if (my_rank == 0)
       {
         write_compton_estimators(nts);
       }
     }
 
-    if (do_rlc_est != 0)
+    if (globals::do_rlc_est != 0)
     {
       normalise_grey(nts);
-      if ((do_rlc_est != 3) && (my_rank == 0))
+      if ((globals::do_rlc_est != 3) && (my_rank == 0))
       {
         write_grey(nts);
       }
@@ -675,10 +675,10 @@ static bool do_timestep(
       FILE *dep_file = fopen_required("deposition.out", "w");
       for (int i = 0; i <= nts; i++)
       {
-        fprintf(dep_file, "%g %g %g %g\n", time_step[i].mid / DAY,
-                time_step[i].gamma_dep / time_step[i].width / LSUN,
-                time_step[i].positron_dep / time_step[i].width / LSUN,
-                (time_step[i].gamma_dep + time_step[i].positron_dep) / time_step[i].width / LSUN);
+        fprintf(dep_file, "%g %g %g %g\n", globals::time_step[i].mid / DAY,
+                globals::time_step[i].gamma_dep / globals::time_step[i].width / LSUN,
+                globals::time_step[i].positron_dep / globals::time_step[i].width / LSUN,
+                (globals::time_step[i].gamma_dep + globals::time_step[i].positron_dep) / globals::time_step[i].width / LSUN);
       }
       fclose(dep_file);
     }
@@ -689,7 +689,7 @@ static bool do_timestep(
     #endif
 
     printout("%d: During timestep %d on MPI process %d, %d pellets decayed and %d packets escaped. (t=%gd)\n",
-             outer_iteration, nts, my_rank, time_step[nts].pellet_decays, nesc, time_step[nts].mid / DAY);
+             outer_iteration, nts, my_rank, globals::time_step[nts].pellet_decays, globals::nesc, globals::time_step[nts].mid / DAY);
 
     #ifdef VPKT_ON
       printout("%d: During timestep %d on MPI process %d, %d virtual packets were generated and %d escaped. \n",
@@ -710,17 +710,17 @@ static bool do_timestep(
         /// Print net absorption/emission in lines to the linestat_file
         /// Currently linestat information is only properly implemented for MPI only runs
         /// For hybrid runs only data from thread 0 is recorded
-        for (int i = 0; i < nlines; i++)
-          fprintf(linestat_file, "%d ", ecounter[i]);
+        for (int i = 0; i < globals::nlines; i++)
+          fprintf(linestat_file, "%d ", globals::ecounter[i]);
         fprintf(linestat_file, "\n");
-        for (int i = 0; i < nlines; i++)
-          fprintf(linestat_file, "%d ", acounter[i]);
+        for (int i = 0; i < globals::nlines; i++)
+          fprintf(linestat_file, "%d ", globals::acounter[i]);
         fprintf(linestat_file, "\n");
         fflush(linestat_file);
       }
     #endif
 
-    if (nts == ftstep - 1)
+    if (nts == globals::ftstep - 1)
     {
       char filename[100];
       sprintf(filename, "packets%.2d_%.4d.out", 0, my_rank);
@@ -763,24 +763,24 @@ static void get_nstart_ndo(int my_rank, int nprocesses, int *nstart, int *ndo, i
   #ifndef MPI_ON
     // no MPI, single process updates all cells
     *nstart = 0;
-    *ndo = npts_model;
+    *ndo = globals::npts_model;
     return;
   #endif
 
   int n_leftover = 0;
 
-  int nblock = npts_model / nprocesses; // integer division, minimum cells for any process
+  int nblock = globals::npts_model / nprocesses; // integer division, minimum cells for any process
   const int numtot = nblock * nprocesses; // cells counted if all processes do the minimum number of cells
-  if (numtot > npts_model) // LJS: should never be the case?
+  if (numtot > globals::npts_model) // LJS: should never be the case?
   {
     nblock = nblock - 1;
     *maxndo = nblock + 1;
-    n_leftover = npts_model - (nblock * nprocesses);
+    n_leftover = globals::npts_model - (nblock * nprocesses);
   }
-  else if (numtot < npts_model)
+  else if (numtot < globals::npts_model)
   {
     *maxndo = nblock + 1;
-    n_leftover = npts_model - (nblock * nprocesses);
+    n_leftover = globals::npts_model - (nblock * nprocesses);
   }
   else
   {
@@ -825,8 +825,8 @@ int main(int argc, char** argv)
     int p = 1;
   #endif
 
-  nprocs = p;              /// Global variable which holds the number of MPI processes
-  rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
+  globals::nprocs = p;              /// Global variable which holds the number of MPI processes
+  globals::rank_global = my_rank;   /// Global variable which holds the rank of the active MPI process
 
 #ifdef _OPENMP
   /// Explicitly turn off dynamic threads because we use the threadprivate directive!!!
@@ -843,14 +843,14 @@ int main(int argc, char** argv)
     setvbuf(output_file, NULL, _IOLBF, 1);
 
     /// Get the total number of active threads
-    nthreads = omp_get_num_threads();
-    if (nthreads > MTHREADS)
+    globals::nthreads = omp_get_num_threads();
+    if (globals::nthreads > MTHREADS)
     {
-      printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n", MTHREADS, nthreads);
+      printout("[Fatal] too many threads. Set MTHREADS (%d) > nthreads (%d). Abort.\n", MTHREADS, globals::nthreads);
       abort();
     }
 #   ifdef _OPENMP
-    printout("OpenMP parallelisation active with %d threads\n", nthreads);
+    printout("OpenMP parallelisation active with %d threads\n", globals::nthreads);
 #   endif
 
     gslworkspace = gsl_integration_workspace_alloc(GSLWSIZE);
@@ -914,7 +914,7 @@ int main(int argc, char** argv)
     printout("MPI disabled\n");
   #endif
 
-  if ((kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
+  if ((globals::kappa_rpkt_cont = (rpkt_cont_opacity_struct *) calloc(globals::nthreads, sizeof(rpkt_cont_opacity_struct))) == NULL)
   {
     printout("[fatal] input: error initializing continuum opacity communication variables ... abort\n");
     abort();
@@ -963,8 +963,8 @@ int main(int argc, char** argv)
 
   printout("time after input %ld\n", time(NULL));
   printout("simulation propagates %d packets per process through a %d x %d x %d grid\n",
-           npkts, ncoordgrid[0], ncoordgrid[1], ncoordgrid[2]);
-  printout("timesteps %d\n", ntstep);
+           globals::npkts, globals::ncoordgrid[0], globals::ncoordgrid[1], globals::ncoordgrid[2]);
+  printout("timesteps %d\n", globals::ntstep);
 
   /// Precalculate the rate coefficients for spontaneous and stimulated recombination
   /// and for photoionisation. With the nebular approximation they only depend on T_e
@@ -983,7 +983,7 @@ int main(int argc, char** argv)
 //  #endif
 
   #if TRACK_ION_STATS
-  ionstats = (double *) calloc(npts_model * includedions * ION_COUNTER_COUNT, sizeof(double));
+  ionstats = (double *) calloc(globals::npts_model * globals::includedions * ION_COUNTER_COUNT, sizeof(double));
   #endif
 
   /// As a precaution, explicitly zero all the estimators here
@@ -993,14 +993,14 @@ int main(int argc, char** argv)
 
   /// Record the chosen syn_dir
   FILE *syn_file = fopen_required("syn_dir.txt", "w");
-  fprintf(syn_file, "%g %g %g", syn_dir[0], syn_dir[1], syn_dir[2]);
+  fprintf(syn_file, "%g %g %g", globals::syn_dir[0], globals::syn_dir[1], globals::syn_dir[2]);
   fclose(syn_file);
   printout("time read syn file %ld\n", time(NULL));
 
   bool terminate_early = false;
-  file_set = false; // LJS: deprecate this switch?
-  debuglevel = 4;  /// Selects detail level of debug output, needs still some work.
-  for (int outer_iteration = 0; outer_iteration < n_out_it; outer_iteration++)
+  globals::file_set = false; // LJS: deprecate this switch?
+  globals::debuglevel = 4;  /// Selects detail level of debug output, needs still some work.
+  for (int outer_iteration = 0; outer_iteration < globals::n_out_it; outer_iteration++)
   {
     /// Initialise the grid. Call routine that sets up the initial positions
     /// and sizes of the grid cells.
@@ -1014,12 +1014,12 @@ int main(int argc, char** argv)
 
     printout("mem_usage: packets occupy %.1f MB\n", MPKTS * sizeof(PKT) / 1024. / 1024.);
 
-    if (!simulation_continued_from_saved)
+    if (!globals::simulation_continued_from_saved)
     {
       /// Next we want to initialise the packets.
       /// To overcome memory limitations for large numbers of packets, which need to be
       /// propagated on the _same_ grid, this middle_iteration loop was introduced.
-      for (int middle_iteration = 0; middle_iteration < n_middle_it; middle_iteration++)
+      for (int middle_iteration = 0; middle_iteration < globals::n_middle_it; middle_iteration++)
       {
         /// Create a bunch of npkts packets
         /// and write them to a binary file for later readin.
@@ -1033,7 +1033,7 @@ int main(int argc, char** argv)
     /// cells are sent to processes 0 ... process n_leftover -1.
     int maxndo = 0;
     get_nstart_ndo(my_rank, p, &nstart, &ndo, &maxndo);
-    printout("process rank %d (of %d) doing %d cells", my_rank, nprocs, ndo);
+    printout("process rank %d (of %d) doing %d cells", my_rank, globals::nprocs, ndo);
     if (ndo > 0)
     {
       printout(": numbers %d to %d\n", nstart, nstart + ndo - 1);
@@ -1071,12 +1071,12 @@ int main(int argc, char** argv)
     //{
 
     /// Now use while loop to allow for timed restarts
-    const int last_loop = ftstep;
-    int nts = itstep;
+    const int last_loop = globals::ftstep;
+    int nts = globals::itstep;
 
     // Initialise virtual packets file and vspecpol
     #ifdef VPKT_ON
-    if (!simulation_continued_from_saved)
+    if (!globals::simulation_continued_from_saved)
     {
       // New simulation
 
@@ -1122,7 +1122,7 @@ int main(int argc, char** argv)
 
     while (nts < last_loop && !terminate_early)
     {
-      nts_global = nts;
+      globals::nts_global = nts;
       #ifdef MPI_ON
 //        const time_t time_before_barrier = time(NULL);
         MPI_Barrier(MPI_COMM_WORLD);
@@ -1150,11 +1150,11 @@ int main(int argc, char** argv)
           n_titer = 1;
           initial_iteration = false;
         }*/
-        n_titer = 1;
-        initial_iteration = (nts < n_lte_timesteps);
+        globals::n_titer = 1;
+        globals::initial_iteration = (nts < globals::n_lte_timesteps);
       #endif
 
-      for (int titer = 0; titer < n_titer; titer++)
+      for (int titer = 0; titer < globals::n_titer; titer++)
       {
         terminate_early = do_timestep(outer_iteration, nts, titer, my_rank, packets, walltimelimitseconds);
       }
@@ -1190,7 +1190,7 @@ int main(int argc, char** argv)
   //grid_init();
   //syn_gamma();
 
-  if ((ntstep != ftstep) || (terminate_early))
+  if ((globals::ntstep != globals::ftstep) || (terminate_early))
   {
     printout("RESTART_NEEDED to continue model\n");
   }
@@ -1254,10 +1254,10 @@ extern inline FILE *fopen_required(const char *filename, const char *mode);
   double n_u,n_l,tau_line,A_ul,B_ul,B_lu;
   FILE *tau_file;
 
-  double t_current = time_step[timestep].mid;
-  float T_e = cell[cellnumber].T_e;
-  double T_R = cell[cellnumber].T_R;
-  double W = cell[cellnumber].W;
+  double t_current = globals::time_step[timestep].mid;
+  float T_e = globals::cell[cellnumber].T_e;
+  double T_R = globals::cell[cellnumber].T_R;
+  double W = globals::cell[cellnumber].W;
 
 
 

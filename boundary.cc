@@ -22,7 +22,7 @@ static double get_shellcrossdist(
     printout("get_shellcrossdist isinnerboundary %d\n", isinnerboundary);
     printout("shellradius %g tstart %g len(pos) %g\n", shellradius, tstart, vec_len(pos));
   }
-  const double speed = vec_len(dir) * CLIGHT_PROP;
+  const double speed = vec_len(dir) * globals::CLIGHT_PROP;
   const double a = dot(dir, dir) - pow(shellradius / tstart / speed, 2);
   const double b = 2 * (dot(dir, pos) - pow(shellradius, 2) / tstart / speed);
   const double c = dot(pos, pos) - pow(shellradius, 2);
@@ -122,9 +122,9 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
   // trajectory is
   // x = x0 + (dir.x) * c * (t - tstart)
   // the boundries follow
-  // x+/- = x+/-(tmin) * (t/tmin)
+  // x+/- = x+/-(globals::tmin) * (t/globals::tmin)
   // so the crossing occurs when
-  // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
+  // t = (x0 - (dir.x)*c*tstart)/(x+/-(globals::tmin)/globals::tmin - (dir.x)c)
 
   // Modified so that it also returns the distance to the closest cell
   // boundary, regardless of direction.
@@ -137,24 +137,24 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
   const int ndim = get_ngriddimensions();
   double initpos[ndim];       // pkt_ptr->pos converted to grid coordinates
   double cellcoordmax[ndim];
-  double vel[ndim];           // pkt_ptr->dir * CLIGHT_PROP converted to grid coordinates
+  double vel[ndim];           // pkt_ptr->dir * globals::CLIGHT_PROP converted to grid coordinates
 
-  if (grid_type == GRID_UNIFORM)
+  if (globals::grid_type == GRID_UNIFORM)
   {
     // XYZ coordinates
     for (int d = 0; d < ndim; d++)
     {
       initpos[d] = pkt_ptr->pos[d];
       cellcoordmax[d] = get_cellcoordmin(cellindex, d) + wid_init(0);
-      vel[d] = pkt_ptr->dir[d] * CLIGHT_PROP;
+      vel[d] = pkt_ptr->dir[d] * globals::CLIGHT_PROP;
     }
   }
-  else if (grid_type == GRID_SPHERICAL1D)
+  else if (globals::grid_type == GRID_SPHERICAL1D)
   {
     // the only coordinate is radius from the origin
     initpos[0] = vec_len(pkt_ptr->pos);
     cellcoordmax[0] = get_cellcoordmin(cellindex, 0) + wid_init(cellindex);
-    vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * CLIGHT_PROP; // radial velocity
+    vel[0] = dot(pkt_ptr->pos, pkt_ptr->dir) / vec_len(pkt_ptr->pos) * globals::CLIGHT_PROP; // radial velocity
   }
 
   // for (int d = 0; d < ndim; d++)
@@ -192,28 +192,28 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 
       bool isoutside;
       if (flip)
-        isoutside = initpos[d] - (get_cellcoordmin(cellindex, d) / tmin * tstart) < -10.; // 10 cm accuracy tolerance
+        isoutside = initpos[d] - (get_cellcoordmin(cellindex, d) / globals::tmin * tstart) < -10.; // 10 cm accuracy tolerance
       else
-        isoutside = initpos[d] - (cellcoordmax[d] / tmin * tstart) > -10.;
+        isoutside = initpos[d] - (cellcoordmax[d] / globals::tmin * tstart) > -10.;
 
       if (isoutside && (not_allowed != direction))
       {
         for (int d2 = 0; d2 < ndim; d2++)
         {
           printout("[warning] outside coord %d boundary of cell %d. type %d initpos %g, vel %g, cellcoordmin %g, cellcoordmax %g. Abort?\n",
-                   d, cellindex, pkt_ptr->type, initpos[d2] * tmin/tstart, vel[d2], get_cellcoordmin(cellindex, d2), cellcoordmax[d2]);
+                   d, cellindex, pkt_ptr->type, initpos[d2] * globals::tmin/tstart, vel[d2], get_cellcoordmin(cellindex, d2), cellcoordmax[d2]);
         }
-        printout("tmin %g tstart %g tstart/tmin %g tdecay %g\n", tmin, tstart, tstart/tmin, pkt_ptr->tdecay);
+        printout("globals::tmin %g tstart %g tstart/globals::tmin %g tdecay %g\n", globals::tmin, tstart, tstart/globals::tmin, pkt_ptr->tdecay);
         // printout("[warning] pkt_ptr->number %d\n", pkt_ptr->number);
         if (flip == 0)
-          printout("[warning] delta %g\n", cellcoordmax[d] - (initpos[d] * tmin / tstart));
+          printout("[warning] delta %g\n", cellcoordmax[d] - (initpos[d] * globals::tmin / tstart));
         else
-          printout("[warning] delta %g\n",  (initpos[d] * tmin / tstart) - get_cellcoordmin(cellindex, d));
+          printout("[warning] delta %g\n",  (initpos[d] * globals::tmin / tstart) - get_cellcoordmin(cellindex, d));
 
         printout("[warning] dir [%g, %g, %g]\n", pkt_ptr->dir[0], pkt_ptr->dir[1], pkt_ptr->dir[2]);
         if ((vel[d] - (initpos[d] / tstart)) > 0)
         {
-          if ((get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1) && cellindexdiff > 0) ||
+          if ((get_cellcoordpointnum(cellindex, d) == (globals::ncoordgrid[d] - 1) && cellindexdiff > 0) ||
               (get_cellcoordpointnum(cellindex, d) == 0 && cellindexdiff < 0))
           {
             *snext = -99;
@@ -236,44 +236,44 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 
 
   #ifdef DEBUG_ON
-    if (debuglevel == 2)
+    if (globals::debuglevel == 2)
     {
       printout("pkt_ptr->number %d\n", pkt_ptr->number);
-      printout("delta1x %g delta2x %g\n",  (initpos[0] * tmin/tstart)-get_cellcoordmin(cellindex, 0), cellcoordmax[0] - (initpos[0] * tmin/tstart));
-      printout("delta1y %g delta2y %g\n",  (initpos[1] * tmin/tstart)-get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] * tmin/tstart));
-      printout("delta1z %g delta2z %g\n",  (initpos[2] * tmin/tstart)-get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] * tmin/tstart));
+      printout("delta1x %g delta2x %g\n",  (initpos[0] * globals::tmin/tstart)-get_cellcoordmin(cellindex, 0), cellcoordmax[0] - (initpos[0] * globals::tmin/tstart));
+      printout("delta1y %g delta2y %g\n",  (initpos[1] * globals::tmin/tstart)-get_cellcoordmin(cellindex, 1), cellcoordmax[1] - (initpos[1] * globals::tmin/tstart));
+      printout("delta1z %g delta2z %g\n",  (initpos[2] * globals::tmin/tstart)-get_cellcoordmin(cellindex, 2), cellcoordmax[2] - (initpos[2] * globals::tmin/tstart));
       printout("dir [%g, %g, %g]\n", pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2]);
     }
   #endif
 
   double t_plus_coordboundary[ndim];  // time to reach the cell's upper boundary on each coordinate
   double t_minus_coordboundary[ndim];  // likewise, the lower boundaries (smallest x,y,z or radius value in the cell)
-  if (grid_type == GRID_SPHERICAL1D)
+  if (globals::grid_type == GRID_SPHERICAL1D)
   {
     not_allowed = NONE; // we will handle this separately by setting d_minus and d_plus negative for invalid directions
-    const double r_inner = get_cellcoordmin(cellindex, 0) * tstart / tmin;
+    const double r_inner = get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
 
     const double d_minus = (r_inner > 0.) ? get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_inner, true, tstart) : -1.;
-    t_minus_coordboundary[0] = d_minus / CLIGHT_PROP;
+    t_minus_coordboundary[0] = d_minus / globals::CLIGHT_PROP;
 
-    const double r_outer = cellcoordmax[0] * tstart / tmin;
+    const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_plus = get_shellcrossdist(pkt_ptr->pos, pkt_ptr->dir, r_outer, false, tstart);
-    t_plus_coordboundary[0] = d_plus / CLIGHT_PROP;
+    t_plus_coordboundary[0] = d_plus / globals::CLIGHT_PROP;
 
     // printout("cell %d\n", pkt_ptr->where);
     // printout("initradius %g: velrad %g\n", initpos[0], vel[0]);
     // printout("d_plus %g d_minus %g \n", d_plus, d_minus);
     // printout("t_plus %g t_minus %g \n", t_plus_coordboundary[0], t_minus_coordboundary[0]);
     // printout("cellrmin %g cellrmax %g\n",
-    //          get_cellcoordmin(cellindex, 0) * tstart / tmin, cellcoordmax[0] * tstart / tmin);
+    //          get_cellcoordmin(cellindex, 0) * tstart / globals::tmin, cellcoordmax[0] * tstart / globals::tmin);
     // printout("tstart %g\n", tstart);
   }
   else
   {
     for (int d = 0; d < 3; d++)
     {
-      t_plus_coordboundary[d] = ((initpos[d] - (vel[d] * tstart)) / (cellcoordmax[d] - (vel[d] * tmin)) * tmin) - tstart;
-      t_minus_coordboundary[d] = ((initpos[d] - (vel[d] * tstart)) / (get_cellcoordmin(cellindex, d) - (vel[d] * tmin)) * tmin) - tstart;
+      t_plus_coordboundary[d] = ((initpos[d] - (vel[d] * tstart)) / (cellcoordmax[d] - (vel[d] * globals::tmin)) * globals::tmin) - tstart;
+      t_minus_coordboundary[d] = ((initpos[d] - (vel[d] * tstart)) / (get_cellcoordmin(cellindex, d) - (vel[d] * globals::tmin)) * globals::tmin) - tstart;
     }
   }
 
@@ -289,9 +289,9 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
     {
       choice = posdirections[d];
       time = t_plus_coordboundary[d];
-      // equivalently if (nxyz[d] == (ncoordgrid[d] - 1))
+      // equivalently if (nxyz[d] == (globals::ncoordgrid[d] - 1))
       // if (get_cellcoordmin(cellindex, d) + 1.5 * wid_init > coordmax[d])
-      if (get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1))
+      if (get_cellcoordpointnum(cellindex, d) == (globals::ncoordgrid[d] - 1))
       {
         *snext = -99;
       }
@@ -326,7 +326,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
     printout("Something wrong in boundary crossing - didn't find anything.\n");
     printout("packet %d cell %d or %d\n", pkt_ptr->number, cellindex, pkt_ptr->where);
     printout("choice %d\n", choice);
-    printout("tmin %g tstart %g\n", tmin, tstart);
+    printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
     printout("not_allowed %d, type %d\n", not_allowed, pkt_ptr->type);
     for (int d2 = 0; d2 < 3; d2++)
     {
@@ -339,7 +339,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
     {
       printout("coord %d: txyz_plus %g txyz_minus %g \n", d2, t_plus_coordboundary[d2], t_minus_coordboundary[d2]);
       printout("coord %d: cellcoordmin %g cellcoordmax %g\n",
-               d2, get_cellcoordmin(cellindex, d2) * tstart / tmin, cellcoordmax[d2] * tstart / tmin);
+               d2, get_cellcoordmin(cellindex, d2) * tstart / globals::tmin, cellcoordmax[d2] * tstart / globals::tmin);
     }
     printout("tstart %g\n", tstart);
 
@@ -348,7 +348,7 @@ double boundary_cross(PKT *const pkt_ptr, const double tstart, int *snext)
 
 
   // Now we know what happens. The distance to crossing is....
-  double distance = CLIGHT_PROP * time;
+  double distance = globals::CLIGHT_PROP * time;
   // printout("boundary_cross: time %g distance %g\n", time, distance);
   // closest = close;
 
@@ -361,10 +361,10 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
 {
   assert(pkt_ptr->prop_time == t_current);
   #ifdef DEBUG_ON
-    if (debuglevel == 2)
+    if (globals::debuglevel == 2)
     {
       const int cellindex = pkt_ptr->where;
-      printout("[debug] cellnumber %d nne %g\n",cellindex,get_nne(cell[cellindex].modelgridindex));
+      printout("[debug] cellnumber %d nne %g\n",cellindex,get_nne(globals::cell[cellindex].modelgridindex));
       printout("[debug] snext %d\n",snext);
     }
   #endif
@@ -376,22 +376,22 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
     pkt_ptr->escape_type = pkt_ptr->type;
     pkt_ptr->escape_time = pkt_ptr->prop_time;
     pkt_ptr->type = TYPE_ESCAPE;
-    nesc++;
+    globals::nesc++;
   }
   else
   {
     // Just need to update "where".
     // const int cellnum = pkt_ptr->where;
-    // const int old_mgi = cell[cellnum].modelgridindex;
+    // const int old_mgi = globals::cell[cellnum].modelgridindex;
     pkt_ptr->where = snext;
-    // const int mgi = cell[snext].modelgridindex;
+    // const int mgi = globals::cell[snext].modelgridindex;
 
-    cellcrossings++;
+    globals::cellcrossings++;
 
     /// and calculate the continuums opacity in the new cell if the packet is a rpkt
     /// for isothermal homogeneous grids this could be omitted if we neglect the time dependency
     /// as we do it on the rpkts way through a cell
-    //if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
+    //if (globals::debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
 
     /// check for empty cells
     // if (mgi != MMODELGRID)
@@ -401,7 +401,7 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
     //     /// Update the level populations and reset the precalculated rate coefficients
     //     //printout("change cell: cellnumber %d\n",pkt_ptr->where);
     //     /// This only needs to be done for non-grey cells
-    //     if (modelgrid[mgi].thick != 1)
+    //     if (globals::modelgrid[mgi].thick != 1)
     //     {
     //       updatecellcounter++;
     //
@@ -415,10 +415,10 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
       // if (pkt_ptr->type == TYPE_RPKT)
       // {
       //   #ifdef DEBUG_ON
-      //     if (debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
+      //     if (globals::debuglevel == 2) printout("[debug] calculate_kappa_rpkt after cell crossing\n");
       //   #endif
       //   /// This only needs to be done for non-grey cells
-      //   if (modelgrid[mgi].thick != 1)
+      //   if (globals::modelgrid[mgi].thick != 1)
       //   {
       //     calculate_kappa_rpkt_cont(pkt_ptr);
       //   }
@@ -432,9 +432,9 @@ void change_cell(PKT *pkt_ptr, int snext, double t_current)
 // /// Routine to return which grid cell the packet is in.
 // {
 //   // Cheap and nasty version for now - assume a uniform grid.
-//   int xx = (pkt_ptr->pos[0] - (cell[0].pos_init[0]*t_current/tmin)) / (wid_init*t_current/tmin);
-//   int yy = (pkt_ptr->pos[1] - (cell[0].pos_init[1]*t_current/tmin)) / (wid_init*t_current/tmin);
-//   int zz = (pkt_ptr->pos[2] - (cell[0].pos_init[2]*t_current/tmin)) / (wid_init*t_current/tmin);
+//   int xx = (pkt_ptr->pos[0] - (globals::cell[0].pos_init[0]*t_current/globals::tmin)) / (wid_init*t_current/globals::tmin);
+//   int yy = (pkt_ptr->pos[1] - (globals::cell[0].pos_init[1]*t_current/globals::tmin)) / (wid_init*t_current/globals::tmin);
+//   int zz = (pkt_ptr->pos[2] - (globals::cell[0].pos_init[2]*t_current/globals::tmin)) / (wid_init*t_current/globals::tmin);
 //
-//   return xx + (ncoordgrid[0] * yy) + (ncoordgrid[0] * ncoordgrid[1] * zz);
+//   return xx + (globals::ncoordgrid[0] * yy) + (globals::ncoordgrid[0] * globals::ncoordgrid[1] * zz);
 // }

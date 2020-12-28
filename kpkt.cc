@@ -15,7 +15,7 @@ extern inline int get_coolinglistoffset(int element, int ion);
 
 static int get_ncoolingterms(int element, int ion)
 {
-  return elements[element].ions[ion].ncoolingterms;
+  return globals::elements[element].ions[ion].ncoolingterms;
 }
 
 
@@ -33,8 +33,8 @@ static double get_cooling_ion_coll_exc(const int modelgridindex, const int eleme
     const int nuptrans = get_nuptrans(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++)
     {
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
-      const int upper = linelist[lineindex].upperlevelindex;
+      const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+      const int upper = globals::linelist[lineindex].upperlevelindex;
       //printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element,ion,upper) - epsilon_current;
       const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
@@ -55,13 +55,13 @@ static double get_bfcoolingcoeff(int element, int ion, int level, int phixstarge
     const double T_lower =  MINTEMP * exp(lowerindex * T_step_log);
     const double T_upper =  MINTEMP * exp(upperindex * T_step_log);
 
-    const double f_upper = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[upperindex];
-    const double f_lower = elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[lowerindex];
+    const double f_upper = globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[upperindex];
+    const double f_lower = globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[lowerindex];
 
     return (f_lower + (f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   }
   else
-    return elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[TABLESIZE-1];
+    return globals::elements[element].ions[ion].levels[level].phixstargets[phixstargetindex].bfcooling_coeff[TABLESIZE-1];
 }
 
 
@@ -77,7 +77,7 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
   double C_fb_all = 0.;   /// free-bound creation of rpkt
   double C_exc_all = 0.;  /// collisional excitation of macroatoms
   double C_ionization_all = 0.;  /// collisional ionisation of macroatoms
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
@@ -135,10 +135,10 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
       }
 
       C_total += C_ion;
-      modelgrid[modelgridindex].cooling[element].contrib[ion] = C_ion;
+      globals::modelgrid[modelgridindex].cooling[element].contrib[ion] = C_ion;
     }
   }
-  modelgrid[modelgridindex].totalcooling = C_total;
+  globals::modelgrid[modelgridindex].totalcooling = C_total;
 
   // only used in the T_e solver and write_to_estimators file
   if (heatingcoolingrates != NULL)
@@ -184,15 +184,15 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     const double C = 1.426e-27 * sqrt(T_e) * pow(ioncharge,2) * nncurrention * nne;
     //C_ff += C;
     //C_ion += C;
-    //cellhistory[tid].coolinglist[i].contribution = C;
+    //globals::cellhistory[tid].coolinglist[i].contribution = C;
     contrib += C;
-    cellhistory[tid].coolinglist[i].contribution = contrib;
-    cellhistory[tid].coolinglist[i].type = COOLINGTYPE_FF;
-    cellhistory[tid].coolinglist[i].element = element;
-    cellhistory[tid].coolinglist[i].ion = ion;
-    cellhistory[tid].coolinglist[i].level = -99;
-    cellhistory[tid].coolinglist[i].upperlevel = -99;
-    //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,-99,cellhistory[tid].coolinglist[i].type,i,low);
+    globals::cellhistory[tid].coolinglist[i].contribution = contrib;
+    globals::cellhistory[tid].coolinglist[i].type = COOLINGTYPE_FF;
+    globals::cellhistory[tid].coolinglist[i].element = element;
+    globals::cellhistory[tid].coolinglist[i].ion = ion;
+    globals::cellhistory[tid].coolinglist[i].level = -99;
+    globals::cellhistory[tid].coolinglist[i].upperlevel = -99;
+    //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,-99,globals::cellhistory[tid].coolinglist[i].type,i,low);
     i++;
   }
 
@@ -207,20 +207,20 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
     int nuptrans = get_nuptrans(element, ion, level);
     for (int ii = 0; ii < nuptrans; ii++)
     {
-      const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
-      const int upper = linelist[lineindex].upperlevelindex;
+      const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+      const int upper = globals::linelist[lineindex].upperlevelindex;
       //printout("    excitation to level %d possible\n",upper);
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
       const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
       contrib += C;
-      cellhistory[tid].coolinglist[i].contribution = contrib;
-      cellhistory[tid].coolinglist[i].type = COOLINGTYPE_COLLEXC;
-      cellhistory[tid].coolinglist[i].element = element;
-      cellhistory[tid].coolinglist[i].ion = ion;
-      cellhistory[tid].coolinglist[i].level = level;
-      cellhistory[tid].coolinglist[i].upperlevel = upper;
-      cellhistory[tid].coolinglist[i].lineindex = lineindex;
-      //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,cellhistory[tid].coolinglist[i].type,i,low);
+      globals::cellhistory[tid].coolinglist[i].contribution = contrib;
+      globals::cellhistory[tid].coolinglist[i].type = COOLINGTYPE_COLLEXC;
+      globals::cellhistory[tid].coolinglist[i].element = element;
+      globals::cellhistory[tid].coolinglist[i].ion = ion;
+      globals::cellhistory[tid].coolinglist[i].level = level;
+      globals::cellhistory[tid].coolinglist[i].upperlevel = upper;
+      globals::cellhistory[tid].coolinglist[i].lineindex = lineindex;
+      //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,globals::cellhistory[tid].coolinglist[i].type,i,low);
       i++;
       //linecounter++;
     }
@@ -244,18 +244,18 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
         const double C = nnlevel * col_ionization_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) * epsilon_trans;
 
         contrib += C;
-        cellhistory[tid].coolinglist[i].contribution = contrib;
-        cellhistory[tid].coolinglist[i].type = COOLINGTYPE_COLLION;
-        cellhistory[tid].coolinglist[i].element = element;
-        cellhistory[tid].coolinglist[i].ion = ion;
-        cellhistory[tid].coolinglist[i].level = level;
-        cellhistory[tid].coolinglist[i].upperlevel = upper;
-        //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,cellhistory[tid].coolinglist[i].type,i,low);
+        globals::cellhistory[tid].coolinglist[i].contribution = contrib;
+        globals::cellhistory[tid].coolinglist[i].type = COOLINGTYPE_COLLION;
+        globals::cellhistory[tid].coolinglist[i].element = element;
+        globals::cellhistory[tid].coolinglist[i].ion = ion;
+        globals::cellhistory[tid].coolinglist[i].level = level;
+        globals::cellhistory[tid].coolinglist[i].upperlevel = upper;
+        //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,globals::cellhistory[tid].coolinglist[i].type,i,low);
         i++;
       }
       //C_ion += C;
       //C = 0.;
-      //cellhistory[tid].coolinglist[i].contribution = C;
+      //globals::cellhistory[tid].coolinglist[i].contribution = C;
       //}
 
 
@@ -269,37 +269,37 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
 
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * nnupperlevel * nne;
         contrib += C;
-        cellhistory[tid].coolinglist[i].contribution = contrib;
-        cellhistory[tid].coolinglist[i].type = COOLINGTYPE_FB;
-        cellhistory[tid].coolinglist[i].element = element;
-        cellhistory[tid].coolinglist[i].ion = ion;
-        cellhistory[tid].coolinglist[i].level = level;
-        cellhistory[tid].coolinglist[i].upperlevel = upper;
+        globals::cellhistory[tid].coolinglist[i].contribution = contrib;
+        globals::cellhistory[tid].coolinglist[i].type = COOLINGTYPE_FB;
+        globals::cellhistory[tid].coolinglist[i].element = element;
+        globals::cellhistory[tid].coolinglist[i].ion = ion;
+        globals::cellhistory[tid].coolinglist[i].level = level;
+        globals::cellhistory[tid].coolinglist[i].upperlevel = upper;
         i++;
       }
       //printout("element %d, ion %d, level %d, T_e %g, alpha_E - alpha %g, bfcoolingcoeff %g\n",element,ion,level,T_e,C/E_threshold,C);
       //double interpolate_stimulated_recomb(int element, int ion, int level, double T);
       //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * W * interpolate_stimulated_bfcoolingcoeff(element,ion,level,T_R));
       //printout("nonE %g, E %g \n",interpolate_bfcoolingcoeff(element,ion,level,T_e), interpolate_stimulated_bfcoolingcoeff(element,ion,level,T_R));
-      //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * (stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]) * E_threshold);
-      //printout("element %d, ion %d, modified %g, usual %g, diff %g, nonE %g\n",element,ion,stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion],stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion],(stimrecombestimator_E_save[pkt_ptr->where*nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+ion])*E_threshold,interpolate_bfcoolingcoeff(element,ion,level,T_e));
+      //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * (stimrecombestimator_E_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion]) * E_threshold);
+      //printout("element %d, ion %d, modified %g, usual %g, diff %g, nonE %g\n",element,ion,stimrecombestimator_E_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion],stimrecombestimator_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion],(stimrecombestimator_E_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion])*E_threshold,interpolate_bfcoolingcoeff(element,ion,level,T_e));
       //printout("alpha_sp %g , alpha_st %g\n",get_spontrecombcoeff(element,ion,level,T_e),interpolate_stimulated_recomb(element,ion,level,T_R));
       //epsilon_upper = epsilon(element,ion+1,0);
       //E_threshold = epsilon_upper - epsilon_current;
       //C = interpolate_spontrecombcoeff(element,ion,level,T_e) * E_threshold * nnnextionlevel*nne;
       //C_ion += C;
       //C_fb += C;
-      //cellhistory[tid].coolinglist[i].contribution = C;
-      //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,cellhistory[tid].coolinglist[i].type,i,low);
+      //globals::cellhistory[tid].coolinglist[i].contribution = C;
+      //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,globals::cellhistory[tid].coolinglist[i].type,i,low);
     }
   }
 
   assert(indexionstart == get_coolinglistoffset(element, ion));
   assert(i == indexionstart + get_ncoolingterms(element, ion));
-  assert(fabs((modelgrid[modelgridindex].cooling[element].contrib[ion] + oldcoolingsum - contrib) / contrib) < 1e-3);
+  assert(fabs((globals::modelgrid[modelgridindex].cooling[element].contrib[ion] + oldcoolingsum - contrib) / contrib) < 1e-3);
 
   //importantcoolingterms = ncoolingterms;
-  //cellhistory[tid].totalcooling = contrib;
+  //globals::cellhistory[tid].totalcooling = contrib;
 }
 
 
@@ -316,7 +316,7 @@ static double sample_planck(const double T)
 /// distribution of temperature T
 {
   const double nu_peak = 5.879e10 * T;
-  if (nu_peak > nu_max_r || nu_peak < nu_min_r)
+  if (nu_peak > globals::nu_max_r || nu_peak < globals::nu_min_r)
     printout("[warning] sample_planck: intensity peaks outside frequency range\n");
 
   const double B_peak = planck(nu_peak, T);
@@ -329,7 +329,7 @@ static double sample_planck(const double T)
     // i++;
     double zrand = gsl_rng_uniform(rng);
     double zrand2 = gsl_rng_uniform(rng);
-    nu = nu_min_r + zrand * (nu_max_r - nu_min_r);
+    nu = globals::nu_min_r + zrand * (globals::nu_max_r - globals::nu_min_r);
     if (zrand2 * B_peak <= planck(nu, T))
       endloop = true;
     //printout("[debug] sample_planck: planck_sampling %d\n", i);
@@ -342,9 +342,9 @@ static double sample_planck(const double T)
 double do_kpkt_bb(PKT *pkt_ptr)
 /// Now routine to deal with a k-packet. Similar idea to do_gamma.
 {
-  //double nne = cell[pkt_ptr->where].nne ;
+  //double nne = globals::cell[pkt_ptr->where].nne ;
   int cellindex = pkt_ptr->where;
-  const int modelgridindex = cell[cellindex].modelgridindex;
+  const int modelgridindex = globals::cell[cellindex].modelgridindex;
   const float T_e = get_Te(modelgridindex);
 
   pkt_ptr->nu_cmf = sample_planck(T_e);
@@ -355,12 +355,12 @@ double do_kpkt_bb(PKT *pkt_ptr)
   }
   /// and then emitt the packet randomly in the comoving frame
   emitt_rpkt(pkt_ptr);
-  if (debuglevel == 2)
+  if (globals::debuglevel == 2)
     printout("[debug] calculate_kappa_rpkt after kpkt to rpkt by ff\n");
   cellindex = pkt_ptr->where;
   pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
   //if (tid == 0) k_stat_to_r_bb++;
-  k_stat_to_r_bb++;
+  globals::k_stat_to_r_bb++;
   pkt_ptr->interactions++;
   pkt_ptr->last_event = 6;
   pkt_ptr->emissiontype = -9999999;
@@ -381,20 +381,20 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 {
   const double t1 = pkt_ptr->prop_time;
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = cell[cellindex].modelgridindex;
+  const int modelgridindex = globals::cell[cellindex].modelgridindex;
 
   /// don't calculate cooling rates after each cell crossings anylonger
   /// but only if we really get a kpkt and they hadn't been calculated already
-  //if (cellhistory[tid].totalcooling == COOLING_UNDEFINED)
+  //if (globals::cellhistory[tid].totalcooling == COOLING_UNDEFINED)
 /*  int ondemand = 1;
-  if (modelgrid[modelgridindex].totalcooling == COOLING_UNDEFINED)
+  if (globals::modelgrid[modelgridindex].totalcooling == COOLING_UNDEFINED)
   {
     //printout("initial calculation of all cooling rates\n");
     coolingratecalccounter++;
     ondemand = 0;
     calculate_kpkt_rates(modelgridindex);
   }*/
-  //printout("totalcooling %g\n",modelgrid[modelgridindex].totalcooling );
+  //printout("totalcooling %g\n",globals::modelgrid[modelgridindex].totalcooling );
 
   //printout("[debug] do_kpkt: propagate k-pkt\n");
   //double cut = 0.99; //1.;
@@ -402,8 +402,8 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 
   const float T_e = get_Te(modelgridindex);
   double deltat = 0.;
-  if (nts < n_kpktdiffusion_timesteps)
-    deltat = kpktdiffusion_timescale * time_step[nts].width;
+  if (nts < globals::n_kpktdiffusion_timesteps)
+    deltat = globals::kpktdiffusion_timescale * globals::time_step[nts].width;
   //double deltat = 1./(nne*1.02e-12*pow(T_e/1e4,0.843));
   //printout("kpkt diffusion time simple %g, advanced %g\n",deltat,1/(nne*1.02e-12*pow(T_e/1e4,0.843)));
   double t_current = t1 + deltat;
@@ -416,29 +416,29 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     /// Randomly select the occuring cooling process out of the important ones
     double coolingsum = 0.;
     double zrand = gsl_rng_uniform(rng);
-    //if (debuglevel == 2) printout("do_kpkt: totalcooling %g, zrand %g, cut %g\n",cellhistory[tid].totalcooling,zrand,COOLINGCUT);
-    //printout("do_kpkt: totalcooling %g, zrand %g, cut %g\n",cellhistory[tid].totalcooling,zrand,COOLINGCUT);
+    //if (globals::debuglevel == 2) printout("do_kpkt: totalcooling %g, zrand %g, cut %g\n",globals::cellhistory[tid].totalcooling,zrand,COOLINGCUT);
+    //printout("do_kpkt: totalcooling %g, zrand %g, cut %g\n",globals::cellhistory[tid].totalcooling,zrand,COOLINGCUT);
     /*for (i = 0; i < importantcoolingterms; i++)
     {
-      coolingsum += cellhistory[tid].coolinglist[i].contribution;
-      if (debuglevel == 2) printout("do_kpkt: loop i %d, coolingsum %g\n",i,coolingsum);
-      //printout("do_kpkt: loop i %d, coolingsum %g, contr %g\n",i,coolingsum,cellhistory[tid].coolinglist[i].contribution);
-      if (zrand*cellhistory[tid].totalcooling < coolingsum) break;
+      coolingsum += globals::cellhistory[tid].coolinglist[i].contribution;
+      if (globals::debuglevel == 2) printout("do_kpkt: loop i %d, coolingsum %g\n",i,coolingsum);
+      //printout("do_kpkt: loop i %d, coolingsum %g, contr %g\n",i,coolingsum,globals::cellhistory[tid].coolinglist[i].contribution);
+      if (zrand*globals::cellhistory[tid].totalcooling < coolingsum) break;
     }*/
 
 
-    const double rndcool = zrand * modelgrid[modelgridindex].totalcooling;
+    const double rndcool = zrand * globals::modelgrid[modelgridindex].totalcooling;
     //printout("rndcool %g\n",rndcool);
     double oldcoolingsum;
     int element;
     int ion;
-    for (element = 0; element < nelements; element++)
+    for (element = 0; element < globals::nelements; element++)
     {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++)
       {
         oldcoolingsum = coolingsum;
-        coolingsum += modelgrid[modelgridindex].cooling[element].contrib[ion];
+        coolingsum += globals::modelgrid[modelgridindex].cooling[element].contrib[ion];
         // printout("Z=%d, ionstage %d, coolingsum %g\n", get_element(element), get_ionstage(element, ion), coolingsum);
         if (coolingsum > rndcool) break;
       }
@@ -447,58 +447,58 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
 
   //  #ifdef DEBUG_ON
-      if (element >= nelements || ion >= get_nions(element))
+      if (element >= globals::nelements || ion >= get_nions(element))
       {
         printout("do_kpkt: problem selecting a cooling process ... abort\n");
         printout("do_kpkt: tried to select element %d, ion %d (Z=%d ionstage %d)\n",element, ion, get_element(element), get_ionstage(element, ion));
-        printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool %g\n",modelgrid[modelgridindex].totalcooling,coolingsum,rndcool);
+        printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool %g\n",globals::modelgrid[modelgridindex].totalcooling,coolingsum,rndcool);
         printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n",modelgridindex,pkt_ptr->where,get_nne(modelgridindex));
-        for (element = 0; element < nelements; element++)
+        for (element = 0; element < globals::nelements; element++)
         {
           const int nions = get_nions(element);
           for (ion = 0; ion < nions; ion++)
           {
-            printout("do_kpkt: element %d, ion %d, coolingcontr %g\n",element,ion,modelgrid[modelgridindex].cooling[element].contrib[ion]);
+            printout("do_kpkt: element %d, ion %d, coolingcontr %g\n",element,ion,globals::modelgrid[modelgridindex].cooling[element].contrib[ion]);
           }
         }
         abort();
       }
   //  #endif
 
-    // debuglevel = 2;
+    // globals::debuglevel = 2;
     //printout("element %d, ion %d, coolingsum %g\n",element,ion,coolingsum);
     int ilow = get_coolinglistoffset(element,ion);
     int low = ilow;
     int high = low + get_ncoolingterms(element,ion)-1;
     //printout("element %d, ion %d, low %d, high %d\n",element,ion,low,high);
-    if (cellhistory[tid].coolinglist[low].contribution == COOLING_UNDEFINED)
+    if (globals::cellhistory[tid].coolinglist[low].contribution == COOLING_UNDEFINED)
     {
       //printout("calculate kpkt rates on demand\n");
       calculate_kpkt_rates_ion(modelgridindex,element,ion,low,oldcoolingsum);
     }
-    //if (cellhistory[tid].coolinglist[high].contribution != coolingsum);
+    //if (globals::cellhistory[tid].coolinglist[high].contribution != coolingsum);
     //{
     //  printout("ondemand %d\n",ondemand);
     //  printout("element %d, ion %d, oldcoolingsum %g, coolingsum %g\n",element,ion,oldcoolingsum,coolingsum);
-    //  printout("contrib[ilow] %g, contrib[high] %g\n",cellhistory[tid].coolinglist[ilow].contribution,cellhistory[tid].coolinglist[high].contribution);
+    //  printout("contrib[ilow] %g, contrib[high] %g\n",globals::cellhistory[tid].coolinglist[ilow].contribution,globals::cellhistory[tid].coolinglist[high].contribution);
     //}
     //low = 0;
     //high = importantcoolingterms - 1;
-    //rndcool = zrand*cellhistory[tid].totalcooling;
+    //rndcool = zrand*globals::cellhistory[tid].totalcooling;
     int i = -1;
     while (low <= high)
     {
       i = (low + high) / 2;
-      if (cellhistory[tid].coolinglist[i].contribution > rndcool)
+      if (globals::cellhistory[tid].coolinglist[i].contribution > rndcool)
       {
-        if (i == ilow || cellhistory[tid].coolinglist[i-1].contribution < rndcool)
+        if (i == ilow || globals::cellhistory[tid].coolinglist[i-1].contribution < rndcool)
           break; /// found (1)
         else
           high = i - 1;
       }
       else
         low = i + 1;
-      //else if (cellhistory[tid].coolinglist[i].contribution < rndcool)
+      //else if (globals::cellhistory[tid].coolinglist[i].contribution < rndcool)
       //  low = i + 1;
       //else
       //  break; /// found (2)
@@ -509,27 +509,27 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       printout("element %d, ion %d, offset %d, terms %d, coolingsum %g\n",element,ion,get_coolinglistoffset(element,ion),get_ncoolingterms(element,ion),coolingsum);
       printout("oldcoolingsum %g, coolingsum %g\n",oldcoolingsum,coolingsum);
       //for (i=ilow-1; i<=ilow+get_ncoolingterms(element,ion); i++)
-      //  printout("  i %d, contrib %g\n",i,cellhistory[tid].coolinglist[i].contribution);
+      //  printout("  i %d, contrib %g\n",i,globals::cellhistory[tid].coolinglist[i].contribution);
 
       //printout("ondemand %d\n",ondemand);
 
-      printout("lower %g, %g, %g\n",cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)-1].contribution,cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution,cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)+1].contribution);
+      printout("lower %g, %g, %g\n",globals::cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)-1].contribution,globals::cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution,globals::cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)+1].contribution);
       int finalpos = get_coolinglistoffset(element,ion)+get_ncoolingterms(element,ion)-1;
-      printout("upper %g, %g, %g\n",cellhistory[tid].coolinglist[finalpos-1].contribution,cellhistory[tid].coolinglist[finalpos].contribution,cellhistory[tid].coolinglist[finalpos+1].contribution);
+      printout("upper %g, %g, %g\n",globals::cellhistory[tid].coolinglist[finalpos-1].contribution,globals::cellhistory[tid].coolinglist[finalpos].contribution,globals::cellhistory[tid].coolinglist[finalpos+1].contribution);
     }
 
 
-    if (debuglevel == 2) printout("do_kpkt: selected process %d, coolingsum %g, importantcoolingterms %d\n",i,coolingsum,importantcoolingterms);
-    //printout("do_kpkt: selected process %d, coolingsum %g, importantcoolingterms %d, type %d\n",i,coolingsum,importantcoolingterms,cellhistory[tid].coolinglist[i].type);
+    if (globals::debuglevel == 2) printout("do_kpkt: selected process %d, coolingsum %g, importantcoolingterms %d\n",i,coolingsum,globals::importantcoolingterms);
+    //printout("do_kpkt: selected process %d, coolingsum %g, importantcoolingterms %d, type %d\n",i,coolingsum,importantcoolingterms,globals::cellhistory[tid].coolinglist[i].type);
 
     // printout("element Z=%d, ion_stage %d, leve %d upper %d offset %d, terms %d, coolingsum %g\n",
-    //   get_element(cellhistory[tid].coolinglist[i].element),
-    //   get_ionstage(cellhistory[tid].coolinglist[i].element, cellhistory[tid].coolinglist[i].ion),
-    //   cellhistory[tid].coolinglist[i].level,
-    //   cellhistory[tid].coolinglist[i].upperlevel,
+    //   get_element(globals::cellhistory[tid].coolinglist[i].element),
+    //   get_ionstage(globals::cellhistory[tid].coolinglist[i].element, globals::cellhistory[tid].coolinglist[i].ion),
+    //   globals::cellhistory[tid].coolinglist[i].level,
+    //   globals::cellhistory[tid].coolinglist[i].upperlevel,
     //   get_coolinglistoffset(element,ion), get_ncoolingterms(element,ion), coolingsum);
 
-    if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FF)
+    if (globals::cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FF)
     {
       /// The k-packet converts directly into a r-packet by free-free-emission.
       /// Need to select the r-packets frequency and a random direction in the
@@ -553,7 +553,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       emitt_rpkt(pkt_ptr);
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_ff++;
-      k_stat_to_r_ff++;
+      globals::k_stat_to_r_ff++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 6;
       pkt_ptr->emissiontype = -9999999;
@@ -570,15 +570,15 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
         vpkt_call_estimators(pkt_ptr, t_current, realtype);
       #endif
     }
-    else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
+    else if (globals::cellhistory[tid].coolinglist[i].type == COOLINGTYPE_FB)
     {
       /// The k-packet converts directly into a r-packet by free-bound-emission.
       /// Need to select the r-packets frequency and a random direction in the
       /// co-moving frame.
-      const int element = cellhistory[tid].coolinglist[i].element;
-      const int lowerion = cellhistory[tid].coolinglist[i].ion;
-      const int level = cellhistory[tid].coolinglist[i].level;
-      const int upper = cellhistory[tid].coolinglist[i].upperlevel;
+      const int element = globals::cellhistory[tid].coolinglist[i].element;
+      const int lowerion = globals::cellhistory[tid].coolinglist[i].ion;
+      const int level = globals::cellhistory[tid].coolinglist[i].level;
+      const int upper = globals::cellhistory[tid].coolinglist[i].upperlevel;
       // const double nu_threshold = get_phixs_threshold(element, ion, level, phixstargetindex)
 
       #ifdef DEBUG_ON
@@ -619,7 +619,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 
       pkt_ptr->next_trans = 0;      ///FLAG: transition history here not important, cont. process
       //if (tid == 0) k_stat_to_r_fb++;
-      k_stat_to_r_fb++;
+      globals::k_stat_to_r_fb++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 7;
       pkt_ptr->emissiontype = get_continuumindex(element, lowerion, level, upper);
@@ -634,13 +634,13 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
         vpkt_call_estimators(pkt_ptr, t_current, realtype);
       #endif
     }
-    else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
+    else if (globals::cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
     {
       /// the k-packet activates a macro-atom due to collisional excitation
-      if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
-      const int element = cellhistory[tid].coolinglist[i].element;
-      const int ion = cellhistory[tid].coolinglist[i].ion;
-      const int upper = cellhistory[tid].coolinglist[i].upperlevel;
+      if (globals::debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
+      const int element = globals::cellhistory[tid].coolinglist[i].element;
+      const int ion = globals::cellhistory[tid].coolinglist[i].ion;
+      const int upper = globals::cellhistory[tid].coolinglist[i].upperlevel;
       pkt_ptr->mastate.element = element;
       pkt_ptr->mastate.ion = ion;
       pkt_ptr->mastate.level = upper;
@@ -652,9 +652,9 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
 
       pkt_ptr->type = TYPE_MA;
       //if (tid == 0) ma_stat_activation_collexc++;
-      ma_stat_activation_collexc++;
+      globals::ma_stat_activation_collexc++;
       //if (tid == 0) k_stat_to_ma_collexc++;
-      k_stat_to_ma_collexc++;
+      globals::k_stat_to_ma_collexc++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 8;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
@@ -664,13 +664,13 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
         //kffcount[pkt_ptr->where] += pkt_ptr->e_cmf;
       #endif
     }
-    else if (cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLION)
+    else if (globals::cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLION)
     {
       /// the k-packet activates a macro-atom due to collisional ionisation
-      if (debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
-      const int element = cellhistory[tid].coolinglist[i].element;
-      const int ion = cellhistory[tid].coolinglist[i].ion + 1;
-      const int upper = cellhistory[tid].coolinglist[i].upperlevel;
+      if (globals::debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional ionisation of MA\n");
+      const int element = globals::cellhistory[tid].coolinglist[i].element;
+      const int ion = globals::cellhistory[tid].coolinglist[i].ion + 1;
+      const int upper = globals::cellhistory[tid].coolinglist[i].upperlevel;
       pkt_ptr->mastate.element = element;
       pkt_ptr->mastate.ion = ion;
       pkt_ptr->mastate.level = upper;
@@ -681,10 +681,8 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       #endif
 
       pkt_ptr->type = TYPE_MA;
-      //if (tid == 0) ma_stat_activation_collion++;
-      ma_stat_activation_collion++;
-      //if (tid == 0) k_stat_to_ma_collion++;
-      k_stat_to_ma_collion++;
+      globals::ma_stat_activation_collion++;
+      globals::k_stat_to_ma_collion++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 9;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
@@ -697,9 +695,9 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     else
     {
       printout("[fatal] do_kpkt: coolinglist.type mismatch\n");
-      printout("[fatal] do_kpkt: zrand %g, modelgrid[modelgridindex].totalcooling %g, coolingsum %g, i %d\n",zrand,modelgrid[modelgridindex].totalcooling,  coolingsum,i);
-      printout("[fatal] do_kpkt: COOLINGCUT %lg, importantcoolingterms %d, tid %d\n",COOLINGCUT,importantcoolingterms,tid);
-      printout("[fatal] do_kpkt: cellhistory[tid].coolinglist[i].type %d\n",cellhistory[tid].coolinglist[i].type);
+      printout("[fatal] do_kpkt: zrand %g, globals::modelgrid[modelgridindex].totalcooling %g, coolingsum %g, i %d\n", zrand, globals::modelgrid[modelgridindex].totalcooling, coolingsum,i);
+      printout("[fatal] do_kpkt: COOLINGCUT %lg, importantcoolingterms %d, tid %d\n",COOLINGCUT,globals::importantcoolingterms,tid);
+      printout("[fatal] do_kpkt: globals::cellhistory[tid].coolinglist[i].type %d\n",globals::cellhistory[tid].coolinglist[i].type);
       printout("[fatal] do_kpkt: pkt_ptr->where %d, mgi %d\n",pkt_ptr->where,modelgridindex);
       abort();
     }
@@ -750,10 +748,10 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
   double error;
   double nu_max_phixs;
 
-  float T_e = cell[cellnumber].T_e;
-  float nne = cell[cellnumber].nne;
+  float T_e = globals::cell[cellnumber].T_e;
+  float nne = globals::cell[cellnumber].nne;
   double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
-  //upper = cellhistory[tid].coolinglist[i].upperlevel;
+  //upper = globals::cellhistory[tid].coolinglist[i].upperlevel;
   double nu_threshold = (epsilon(element,ion+1,0) - epsilon(element,ion,level)) / H;
   nu_max_phixs = nu_threshold * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 

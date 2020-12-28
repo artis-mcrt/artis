@@ -34,7 +34,7 @@ inline double ionstagepop(int modelgridindex, int element, int ion)
 /// Calculates the given ionstages total population in nebular approximation for modelgridindex
 /// The precalculated ground level population and partition function are used.
 {
-  return get_groundlevelpop(modelgridindex,element,ion) * modelgrid[modelgridindex].composition[element].partfunct[ion]
+  return get_groundlevelpop(modelgridindex,element,ion) * globals::modelgrid[modelgridindex].composition[element].partfunct[ion]
           / stat_weight(element,ion,0);
 }
 

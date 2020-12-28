@@ -11,10 +11,10 @@ double sig_photo_electric(const PKT *pkt_ptr)
   /* Start by working out the x-section in the co-moving frame.*/
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = cell[cellindex].modelgridindex;
+  const int mgi = globals::cell[cellindex].modelgridindex;
   const double rho = get_rho(mgi);
 
-  if (gamma_grey < 0)
+  if (globals::gamma_grey < 0)
   {
     //double sigma_cmf_cno = 0.0448e-24 * pow(pkt_ptr->nu_cmf / 2.41326e19, -3.2);
 
@@ -41,7 +41,7 @@ double sig_photo_electric(const PKT *pkt_ptr)
   }
   else
   {
-    sigma_cmf = gamma_grey * rho;
+    sigma_cmf = globals::gamma_grey * rho;
   }
 
   /* Now need to convert between frames. */
@@ -59,10 +59,10 @@ double sig_pair_prod(const PKT *pkt_ptr)
   /* Start by working out the x-section in the co-moving frame.*/
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = cell[cellindex].modelgridindex;
+  const int mgi = globals::cell[cellindex].modelgridindex;
   const double rho = get_rho(mgi);
 
-  if (gamma_grey < 0)
+  if (globals::gamma_grey < 0)
   {
     /* 2.46636e+20 = 1022 keV in frequency */
     /* 3.61990e+20 = 1500 keV in frequency */
@@ -98,7 +98,7 @@ double sig_pair_prod(const PKT *pkt_ptr)
       sigma_cmf_si *= rho / MH / 28;
       /* Assumes Z = 14. So mass = 28. */
 
-      //sigma_cmf_fe *= cell[pkt_ptr->where].rho * cell[pkt_ptr->where].f_fe / MH / 56;
+      //sigma_cmf_fe *= globals::cell[pkt_ptr->where].rho * globals::cell[pkt_ptr->where].f_fe / MH / 56;
       /* Assumes Z = 28. So mass = 56. */
 
       sigma_cmf_fe *= rho / MH / 56;
@@ -153,7 +153,7 @@ void pair_prod(PKT *pkt_ptr)
     // for consistency with compton_scatter.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -5;
-    nt_stat_from_gamma++;
+    globals::nt_stat_from_gamma++;
   }
   else
   {

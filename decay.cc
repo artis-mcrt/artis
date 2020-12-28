@@ -471,10 +471,10 @@ double get_simtime_endecay_per_ejectamass(const int mgi, enum decaypathways deca
 // get the decay energy released during the simulation time
 {
 #ifdef NO_INITIAL_PACKETS
-  return get_endecay_per_ejectamass_between_times(mgi, decaypath, tmin, tmax);
+  return get_endecay_per_ejectamass_between_times(mgi, decaypath, globals::tmin, globals::tmax);
 #else
   // allow decays from time zero
-  return get_endecay_per_ejectamass_between_times(mgi, decaypath, 0., tmax);
+  return get_endecay_per_ejectamass_between_times(mgi, decaypath, 0., globals::tmax);
 #endif
 }
 
@@ -538,7 +538,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 /// Parameters: - modelgridindex: the grid cell for which to update the abundances
 ///             - t_current: current time (here mid of current timestep)
 {
-  assert(!homogeneous_abundances); // no longer supported
+  assert(!globals::homogeneous_abundances); // no longer supported
 
   const double timediff = t_current; // subtract t_model?
 
@@ -569,50 +569,50 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
   // printout("model cell %d, has input radioactive ni56_init %g, co56_init %g, fe52_init %g\n",modelgridindex,ni56_init,co56_init,fe52_in);
 
-  for (int element = nelements - 1; element >= 0; element--)
+  for (int element = globals::nelements - 1; element >= 0; element--)
   {
     const int atomic_number = get_element(element);
     if (atomic_number == 28)
     {
       const double nifrac = get_stable_abund(modelgridindex, atomic_number) + ni56frac + ni57frac;
-      modelgrid[modelgridindex].composition[element].abundance = nifrac;
+      globals::modelgrid[modelgridindex].composition[element].abundance = nifrac;
     }
     else if (atomic_number == 27)
     {
       const double cofrac = get_stable_abund(modelgridindex, atomic_number) + co56frac + co57frac;
-      modelgrid[modelgridindex].composition[element].abundance = cofrac;
+      globals::modelgrid[modelgridindex].composition[element].abundance = cofrac;
     }
     else if (atomic_number == 26)
     {
       const double fefrac = get_stable_abund(modelgridindex, atomic_number) + fe52frac + fe56frac_fromdecay + fe57frac_fromdecay;
-      modelgrid[modelgridindex].composition[element].abundance = fefrac;
+      globals::modelgrid[modelgridindex].composition[element].abundance = fefrac;
     }
     else if (atomic_number == 25)
     {
       const double mnfrac = get_stable_abund(modelgridindex, atomic_number) + mn52frac;
-      modelgrid[modelgridindex].composition[element].abundance = mnfrac;
+      globals::modelgrid[modelgridindex].composition[element].abundance = mnfrac;
     }
     else if (atomic_number == 24)
     {
       const double crfrac = get_stable_abund(modelgridindex, atomic_number) + cr48frac + cr52frac_fromdecay;
-      modelgrid[modelgridindex].composition[element].abundance = crfrac;
+      globals::modelgrid[modelgridindex].composition[element].abundance = crfrac;
     }
     else if (atomic_number == 23)
     {
       const double vfrac = get_stable_abund(modelgridindex, atomic_number) + v48frac;
-      modelgrid[modelgridindex].composition[element].abundance = vfrac;
+      globals::modelgrid[modelgridindex].composition[element].abundance = vfrac;
     }
     else if (atomic_number == 22)
     {
       const double tifrac = get_stable_abund(modelgridindex, atomic_number) + ti48frac_fromdecay;
-      modelgrid[modelgridindex].composition[element].abundance = tifrac;
+      globals::modelgrid[modelgridindex].composition[element].abundance = tifrac;
     }
   }
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
   //          modelgridindex, t_current,
-  //          modelgrid[modelgridindex].composition[get_elementindex(28)].abundance,
-  //          modelgrid[modelgridindex].composition[get_elementindex(27)].abundance,
-  //          modelgrid[modelgridindex].composition[get_elementindex(26)].abundance,
+  //          globals::modelgrid[modelgridindex].composition[get_elementindex(28)].abundance,
+  //          globals::modelgrid[modelgridindex].composition[get_elementindex(27)].abundance,
+  //          globals::modelgrid[modelgridindex].composition[get_elementindex(26)].abundance,
   //          get_fnistabel(modelgridindex), get_fcostable(modelgridindex), get_ffestable(modelgridindex));
 }
 

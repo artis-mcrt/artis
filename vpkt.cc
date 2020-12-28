@@ -199,7 +199,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
   // --------- compute the optical depth to boundary ----------------
 
-  mgi = cell[dummy_ptr->where].modelgridindex;
+  mgi = globals::cell[dummy_ptr->where].modelgridindex;
 
   while (end_packet == false)
   {
@@ -211,10 +211,10 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
     calculate_kappa_rpkt_cont(dummy_ptr);
 
-    kap_cont = kappa_rpkt_cont[tid].total;
-    kap_cont_nobf = kap_cont - kappa_rpkt_cont[tid].bf;
-    kap_cont_noff = kap_cont - kappa_rpkt_cont[tid].ff;
-    kap_cont_noes = kap_cont - kappa_rpkt_cont[tid].es;
+    kap_cont = globals::kappa_rpkt_cont[tid].total;
+    kap_cont_nobf = kap_cont - globals::kappa_rpkt_cont[tid].bf;
+    kap_cont_noff = kap_cont - globals::kappa_rpkt_cont[tid].ff;
+    kap_cont_noes = kap_cont - globals::kappa_rpkt_cont[tid].es;
 
     for (int ind = 0; ind < Nspectra; ind++)
     {
@@ -241,15 +241,15 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
       const int lineindex = closest_transition(dummy_ptr->nu_cmf, dummy_ptr->next_trans);
 
-      const double nutrans = linelist[lineindex].nu;
+      const double nutrans = globals::linelist[lineindex].nu;
 
       if (lineindex >= 0)
       {
-        element = linelist[lineindex].elementindex;
-        ion = linelist[lineindex].ionindex;
-        upper = linelist[lineindex].upperlevelindex;
-        lower = linelist[lineindex].lowerlevelindex;
-        A_ul = linelist[lineindex].einstein_A;
+        element = globals::linelist[lineindex].elementindex;
+        ion = globals::linelist[lineindex].ionindex;
+        upper = globals::linelist[lineindex].upperlevelindex;
+        lower = globals::linelist[lineindex].lowerlevelindex;
+        A_ul = globals::linelist[lineindex].einstein_A;
 
         anumber = get_element(element);
 
@@ -304,7 +304,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
       }
       else
       {
-        dummy_ptr->next_trans = nlines + 1;  ///helper variable to overcome numerical problems after line scattering
+        dummy_ptr->next_trans = globals::nlines + 1;  ///helper variable to overcome numerical problems after line scattering
       }
 
     }
@@ -313,7 +313,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
     // move it to cell boundary and go to next cell
     //printf("I'm changing cell. I'm going from nu_cmf = %.e ",dummy_ptr->nu_cmf);
 
-    t_future += (sdist / CLIGHT_PROP);
+    t_future += (sdist / globals::CLIGHT_PROP);
     dummy_ptr->prop_time = t_future;
     move_pkt(dummy_ptr, sdist, t_future);
 
@@ -323,12 +323,12 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
     //printout("Completed change vpkt cell\n");
 
     //printout("dummy->nu_cmf = %g \n",dummy_ptr->nu_cmf);
-    mgi = cell[dummy_ptr->where].modelgridindex;
+    mgi = globals::cell[dummy_ptr->where].modelgridindex;
     // break if you reach an empty cell
     if (mgi == MMODELGRID) break;
 
     /* kill vpkt with pass through a thick cell */
-    if (modelgrid[mgi].thick == 1)
+    if (globals::modelgrid[mgi].thick == 1)
     {
       return;
     }
@@ -363,7 +363,7 @@ void rlc_emiss_vpkt(PKT *pkt_ptr, double t_current, int bin, double *obs, int re
 
     /* bin on fly and produce file with spectrum */
 
-    t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/CLIGHT_PROP) ;
+    t_arrive = t_current - (dot(pkt_ptr->pos, dummy_ptr->dir)/globals::CLIGHT_PROP) ;
 
     add_to_vspecpol(dummy_ptr,bin,ind,t_arrive);
   }
@@ -440,9 +440,9 @@ void add_to_vspecpol(PKT *pkt_ptr, int bin, int ind, double t_arrive)
       {
         nnu = (log(pkt_ptr->nu_rf) - log(numin_vspec)) /  dlognu_vspec;
 
-        deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
-        deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
-        deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / nprocs * 4 * PI ;
+        deltai = pkt_ptr->stokes[0]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / globals::nprocs * 4 * PI ;
+        deltaq = pkt_ptr->stokes[1]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / globals::nprocs * 4 * PI ;
+        deltau = pkt_ptr->stokes[2]*pkt_ptr->e_rf / vstokes_i[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /PARSEC / globals::nprocs * 4 * PI ;
 
         vstokes_i[nt][ind_comb].flux[nnu] += deltai;
         vstokes_q[nt][ind_comb].flux[nnu] += deltaq;
@@ -594,8 +594,8 @@ void read_vspecpol(FILE *specpol_file)
 
 void init_vpkt_grid(void)
 {
-  const double ybin = 2 * vmax / NY_VGRID ;
-  const double zbin = 2 * vmax / NZ_VGRID ;
+  const double ybin = 2 * globals::vmax / NY_VGRID ;
+  const double zbin = 2 * globals::vmax / NZ_VGRID ;
 
   for (int bin = 0; bin < MOBS; bin++)
   {
@@ -609,8 +609,8 @@ void init_vpkt_grid(void)
           vgrid_q[n][m].flux[bin_range][bin] = 0.0;
           vgrid_u[n][m].flux[bin_range][bin] = 0.0;
 
-          vgrid_i[n][m].yvel[bin_range][bin] = vmax - (n+0.5) * ybin ;
-          vgrid_i[n][m].zvel[bin_range][bin] = vmax - (m+0.5) * zbin ;
+          vgrid_i[n][m].yvel[bin_range][bin] = globals::vmax - (n+0.5) * ybin ;
+          vgrid_i[n][m].zvel[bin_range][bin] = globals::vmax - (m+0.5) * zbin ;
         }
       }
     }
@@ -656,15 +656,15 @@ void add_to_vpkt_grid(PKT *dummy_ptr, double *vel, int bin_range, int bin, doubl
   }
 
   // Outside the grid
-  if (fabs(vref1) >= vmax || fabs(vref2) >= vmax) return;
+  if (fabs(vref1) >= globals::vmax || fabs(vref2) >= globals::vmax) return;
 
   // Bin size
-  ybin = 2 * vmax / NY_VGRID;
-  zbin = 2 * vmax / NZ_VGRID;
+  ybin = 2 * globals::vmax / NY_VGRID;
+  zbin = 2 * globals::vmax / NZ_VGRID;
 
   // Grid cell
-  nt = ( vmax - vref1 ) / ybin;
-  mt = ( vmax - vref2 ) / zbin;
+  nt = ( globals::vmax - vref1 ) / ybin;
+  mt = ( globals::vmax - vref2 ) / zbin;
 
   // Add contribution
   #ifdef _OPENMP

@@ -51,7 +51,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
   // dummy.last_cross = NONE;
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = cell[cellindex].modelgridindex;
+  const int mgi = globals::cell[cellindex].modelgridindex;
 
   if (dist > 0)
   {
@@ -75,7 +75,7 @@ void rlc_emiss_gamma(const PKT *pkt_ptr, const double dist)
     #ifdef _OPENMP
       #pragma omp atomic
     #endif
-    rpkt_emiss[mgi] += 1.e-20 * heating_cont;
+    globals::rpkt_emiss[mgi] += 1.e-20 * heating_cont;
   }
 }
 
@@ -102,7 +102,7 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
   dummy.last_cross = NONE;*/
 
   const int cellindex = pkt_ptr->where;
-  const int mgi = cell[cellindex].modelgridindex;
+  const int mgi = globals::cell[cellindex].modelgridindex;
 
   if (dist > 0.0)
   {
@@ -125,19 +125,19 @@ void rlc_emiss_rpkt(const PKT *pkt_ptr, double dist)
     #ifdef _OPENMP
       #pragma omp atomic
     #endif
-    rpkt_emiss[mgi] += 1.e-20 * cont;
+    globals::rpkt_emiss[mgi] += 1.e-20 * cont;
   }
 }
 
 
 void normalise_grey(int nts)
 {
-  const double dt = time_step[nts].width;
-  for (int mgi = 0; mgi < npts_model; mgi++)
+  const double dt = globals::time_step[nts].width;
+  for (int mgi = 0; mgi < globals::npts_model; mgi++)
   {
-    const double dV = vol_init_modelcell(mgi) * pow(time_step[nts].mid / tmin, 3);
+    const double dV = vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
 
-    rpkt_emiss[mgi] = rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / nprocs;
+    globals::rpkt_emiss[mgi] = globals::rpkt_emiss[mgi] * ONEOVER4PI / dV / dt / globals::nprocs;
   }
 }
 
@@ -173,7 +173,7 @@ void write_grey(int nts)
   strcat(filename, junk);
   strcat(filename, ".out");
 
-  if (file_set)
+  if (globals::file_set)
   {
     if ((est_file = fopen(filename, "r")) == NULL)
     {
@@ -182,11 +182,11 @@ void write_grey(int nts)
     }
 
     //for (n=0; n < ngrid; n++)
-    for (int n = 0; n < npts_model; n++)
+    for (int n = 0; n < globals::npts_model; n++)
     {
       float dum;
       fscanf(est_file, "%g", &dum);
-      rpkt_emiss[n] += dum;
+      globals::rpkt_emiss[n] += dum;
     }
     fclose(est_file);
   }
@@ -198,9 +198,9 @@ void write_grey(int nts)
   }
 
   //for (n=0; n < ngrid; n++)
-  for (int n = 0; n < npts_model; n++)
+  for (int n = 0; n < globals::npts_model; n++)
   {
-    fprintf(est_file, " %g\n ", rpkt_emiss[n]);
+    fprintf(est_file, " %g\n ", globals::rpkt_emiss[n]);
   }
   fclose(est_file);
 }
@@ -303,13 +303,13 @@ void write_grey(int nts)
 
   if (tau_cont > 1.e-6)
   {
-    ray_ptr->e_rf[nray] += (rpkt_emiss[cell[dummy.where].modelgridindex] /
+    ray_ptr->e_rf[nray] += (rpkt_emiss[globals::cell[dummy.where].modelgridindex] /
       doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec)
       *(1. - exp(-1. * tau_cont)) / kap_tot);
   }
   else
   {
-    ray_ptr->e_rf[nray] += (rpkt_emiss[cell[dummy.where].modelgridindex]   /
+    ray_ptr->e_rf[nray] += (rpkt_emiss[globals::cell[dummy.where].modelgridindex]   /
         doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec) / doppler(syn_dir, vel_vec)
           * ldist);
   }

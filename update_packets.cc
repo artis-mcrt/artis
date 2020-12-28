@@ -37,7 +37,7 @@ static void update_pellet(
     #ifdef _OPENMP
       #pragma omp atomic
     #endif
-    time_step[nts].pellet_decays++;
+    globals::time_step[nts].pellet_decays++;
 
     pkt_ptr->prop_time = tdecay;
     vec_scale(pkt_ptr->pos, tdecay / ts);
@@ -52,7 +52,7 @@ static void update_pellet(
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
-      time_step[nts].positron_dep += pkt_ptr->e_cmf;
+      globals::time_step[nts].positron_dep += pkt_ptr->e_cmf;
 
       pkt_ptr->type = TYPE_NTLEPTON;
       pkt_ptr->absorptiontype = -10;
@@ -69,18 +69,17 @@ static void update_pellet(
     // These are pellets whose decay times were before the first time step
     // They will be made into r-packets with energy reduced for doing work on the
     // ejecta following Lucy 2004.
-    // The position is already set at tmin so don't need to move it. Assume
-    // that it is fixed in place from decay to tmin - i.e. short mfp.
+    // The position is already set at globals::tmin so don't need to move it. Assume
+    // that it is fixed in place from decay to globals::tmin - i.e. short mfp.
 
-    pkt_ptr->e_cmf *= tdecay / tmin;
+    pkt_ptr->e_cmf *= tdecay / globals::tmin;
     //pkt_ptr->type = TYPE_KPKT;
     pkt_ptr->type = TYPE_PRE_KPKT;
     pkt_ptr->absorptiontype = -7;
-    //if (tid == 0) k_stat_from_earlierdecay++;
-    k_stat_from_earlierdecay++;
+    globals::k_stat_from_earlierdecay++;
 
     //printout("already decayed packets and propagation by packet_prop\n");
-    pkt_ptr->prop_time = tmin;
+    pkt_ptr->prop_time = globals::tmin;
   }
   else
   {
@@ -130,7 +129,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
         #ifdef _OPENMP
           #pragma omp atomic
         #endif
-        time_step[nts].gamma_dep += pkt_ptr->e_cmf;
+        globals::time_step[nts].gamma_dep += pkt_ptr->e_cmf;
       }
       break;
 
@@ -142,7 +141,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
         #ifdef _OPENMP
           #pragma omp atomic
         #endif
-        time_step[nts].cmf_lum += pkt_ptr->e_cmf;
+        globals::time_step[nts].cmf_lum += pkt_ptr->e_cmf;
       }
       break;
 
@@ -157,7 +156,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
       //printout("k-packet propagation\n");
 
       //t_change_type = do_kpkt(pkt_ptr, t_current, t2);
-      if (pkt_type == TYPE_PRE_KPKT || modelgrid[cell[pkt_ptr->where].modelgridindex].thick == 1)
+      if (pkt_type == TYPE_PRE_KPKT || globals::modelgrid[globals::cell[pkt_ptr->where].modelgridindex].thick == 1)
       {
         do_kpkt_bb(pkt_ptr);
       }
@@ -203,8 +202,8 @@ static bool std_compare_packets_bymodelgriddensity(const PKT &p1, const PKT &p2)
   const int a1_where = p1.where;
   const int a2_where = p2.where;
 
-  const int mgi1 = cell[a1_where].modelgridindex;
-  const int mgi2 = cell[a2_where].modelgridindex;
+  const int mgi1 = globals::cell[a1_where].modelgridindex;
+  const int mgi2 = globals::cell[a2_where].modelgridindex;
   if (get_rho(mgi1) > get_rho(mgi2))
     return true;
 
@@ -224,8 +223,8 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
   matter. Those that are photons (or one sort or another) will already have a position and
   a direction.*/
 
-  const double ts = time_step[nts].start;
-  const double tw = time_step[nts].width;
+  const double ts = globals::time_step[nts].start;
+  const double tw = globals::time_step[nts].width;
 
   printout("start of parallel update_packets loop %ld\n", time(NULL));
   /// Initialise the OpenMP reduction target to zero
@@ -233,7 +232,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
   int passnumber = 0;
   #ifdef _OPENMP
     #pragma omp parallel
-    //copyin(debuglevel,nuJ,J)
+    //copyin(globals::debuglevel,nuJ,J)
   #endif
   while (!timestepcomplete)
   {
@@ -241,7 +240,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
 
     const time_t sys_time_start_sort = time(NULL);
 
-    std::sort(pkt, pkt + npkts, std_compare_packets_bymodelgriddensity);
+    std::sort(pkt, pkt + globals::npkts, std_compare_packets_bymodelgriddensity);
 
     const int duration_sortpackets = time(NULL) - sys_time_start_sort;
     if (duration_sortpackets > 1)
@@ -250,19 +249,19 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
     }
 
     int count_pktupdates = 0;
-    const int updatecellcounter_beforepass = updatecellcounter;
+    const int updatecellcounter_beforepass = globals::updatecellcounter;
 
     #ifdef _OPENMP
-    #pragma omp for schedule(dynamic) reduction(+:escounter,resonancescatterings,cellcrossings,nesc,updatecellcounter,coolingratecalccounter,upscatter,downscatter,ma_stat_activation_collexc,ma_stat_activation_collion,ma_stat_activation_ntcollexc,ma_stat_activation_ntcollion,ma_stat_activation_bb,ma_stat_activation_bf,ma_stat_activation_fb,ma_stat_deactivation_colldeexc,ma_stat_deactivation_collrecomb,ma_stat_deactivation_bb,ma_stat_deactivation_fb,k_stat_to_ma_collexc,k_stat_to_ma_collion,k_stat_to_r_ff,k_stat_to_r_fb,k_stat_from_ff,k_stat_from_bf,nt_stat_from_gamma,k_stat_from_earlierdecay)
+    #pragma omp for schedule(dynamic) reduction(+:globals::escounter, globals::resonancescatterings, globals::cellcrossings, globals::nesc, globals::updatecellcounter, globals::coolingratecalccounter, globals::upscatter, globals::downscatter, globals::ma_stat_activation_collexc, globals::ma_stat_activation_collion, globals::ma_stat_activation_ntcollexc, globals::ma_stat_activation_ntcollion, globals::ma_stat_activation_bb, globals::ma_stat_activation_bf, globals::ma_stat_activation_fb, globals::ma_stat_deactivation_colldeexc, globals::ma_stat_deactivation_collrecomb, globals::ma_stat_deactivation_bb, globals::ma_stat_deactivation_fb, globals::k_stat_to_ma_collexc, globals::k_stat_to_ma_collion, globals::k_stat_to_r_ff, globals::k_stat_to_r_fb, globals::k_stat_from_ff, globals::k_stat_from_bf, globals::nt_stat_from_gamma, globals::k_stat_from_earlierdecay)
     #endif
-    for (int n = 0; n < npkts; n++)
+    for (int n = 0; n < globals::npkts; n++)
     {
       PKT *pkt_ptr = &pkt[n];
 
       // if (pkt_ptr->type == TYPE_ESCAPE)
       // {
       //   printout("packet index %d already escaped. Skipping rest of packets (which are all escaped).\n", n);
-      //   // for (int n2 = n; n2 < npkts; n2++)
+      //   // for (int n2 = n; n2 < globals::npkts; n2++)
       //   // {
       //   //   assert(pkt[n2].type == TYPE_ESCAPE);
       //   // }
@@ -279,12 +278,12 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
       if (pkt_ptr->type != TYPE_ESCAPE && pkt_ptr->prop_time < (ts + tw))
       {
         const int cellindex = pkt_ptr->where;
-        const int mgi = cell[cellindex].modelgridindex;
+        const int mgi = globals::cell[cellindex].modelgridindex;
         /// for non empty cells update the global available level populations and cooling terms
         /// Reset cellhistory if packet starts up in another than the last active cell
-        if (mgi != MMODELGRID && cellhistory[tid].cellnumber != mgi)
+        if (mgi != MMODELGRID && globals::cellhistory[tid].cellnumber != mgi)
         {
-          updatecellcounter++;
+          globals::updatecellcounter++;
           cellhistory_reset(mgi, false);
         }
 
@@ -296,7 +295,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
           workedonpacket = true;
           do_packet(pkt_ptr, ts + tw, nts);
           const int newcellnum = pkt_ptr->where;
-          newmgi = cell[newcellnum].modelgridindex;
+          newmgi = globals::cell[newcellnum].modelgridindex;
         }
         count_pktupdates += workedonpacket ? 1 : 0;
 
@@ -307,7 +306,7 @@ void update_packets(const int my_rank, const int nts, PKT *pkt)
       }
     }
     printout("  update_packets timestep %d pass %3d: updated packets %7d cellhistoryresets %7d at %ld\n",
-             nts, passnumber, count_pktupdates, updatecellcounter - updatecellcounter_beforepass, time(NULL));
+             nts, passnumber, count_pktupdates, globals::updatecellcounter - updatecellcounter_beforepass, time(NULL));
 
     passnumber++;
   }
@@ -338,7 +337,7 @@ static int compare_packets_bymodelgridposition(const void *p1, const void *p2)
   const PKT *a1 = (PKT *)(p1);
   const PKT *a2 = (PKT *)(p2);
 
-  int mgi_diff = cell[a1->where].modelgridindex - cell[a2->where].modelgridindex;
+  int mgi_diff = globals::cell[a1->where].modelgridindex - globals::cell[a2->where].modelgridindex;
   if (mgi_diff < 0)
     return -1;
   else if (mgi_diff > 0)

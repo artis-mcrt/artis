@@ -40,7 +40,7 @@ extern inline double get_phixs_threshold(int element, int ion, int level, int ph
 static int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
 /// Returns the index of the continuum associated to the given level.
 {
-  return elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
+  return globals::elements[element].ions[ion].levels[level].cont_index - phixstargetindex;
 }
 
 
@@ -66,10 +66,10 @@ int get_continuumindex(int element, int ion, int level, int upperionlevel)
 
 double get_tau_sobolev(int modelgridindex, int lineindex, double t_current)
 {
-  const int element = linelist[lineindex].elementindex;
-  const int ion = linelist[lineindex].ionindex;
-  const int lower = linelist[lineindex].lowerlevelindex;
-  const int upper = linelist[lineindex].upperlevelindex;
+  const int element = globals::linelist[lineindex].elementindex;
+  const int ion = globals::linelist[lineindex].ionindex;
+  const int lower = globals::linelist[lineindex].lowerlevelindex;
+  const int upper = globals::linelist[lineindex].upperlevelindex;
 
   const double n_l = calculate_exclevelpop(modelgridindex,element,ion,lower);
   const double n_u = calculate_exclevelpop(modelgridindex,element,ion,upper);
@@ -89,9 +89,9 @@ double get_nntot(int modelgridindex)
 {
   const double rho = get_rho(modelgridindex);
   int nntot = 0.;
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
-    nntot += get_abundance(modelgridindex, element) / elements[element].mass * rho;
+    nntot += get_abundance(modelgridindex, element) / globals::elements[element].mass * rho;
   }
 
   return nntot;
@@ -132,7 +132,7 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
   // return 1. * pow(nu_edge / nu, 3);
 
   float sigma_bf;
-  const double ireal = (nu / nu_edge - 1.0) / NPHIXSNUINCREMENT;
+  const double ireal = (nu / nu_edge - 1.0) / globals::NPHIXSNUINCREMENT;
   const int i = floor(ireal);
 
   if (i < 0)
@@ -144,7 +144,7 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
     //printout("[warning]   photoionization_crosssection %g\n",sigma_bf);
     //abort();
   }
-  else if (i < NPHIXSPOINTS - 1)
+  else if (i < globals::NPHIXSPOINTS - 1)
   {
     // sigma_bf = elements[element].ions[ion].levels[level].photoion_xs[i];
 
@@ -159,7 +159,7 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
     /// which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     /// so far the highest grid point, otherwise the cross-section is not continuous
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
-    sigma_bf = photoion_xs[NPHIXSPOINTS-1] * pow(nu_max_phixs / nu, 3);
+    sigma_bf = photoion_xs[globals::NPHIXSPOINTS-1] * pow(nu_max_phixs / nu, 3);
   }
 
 #ifdef DEBUG_ON
