@@ -3,6 +3,8 @@
 #include "grid_init.h"
 #include "decay.h"
 
+namespace decay
+{
 
 double arr_nucdecayenergygamma[RADIONUCLIDE_COUNT] = {0};
 
@@ -625,4 +627,6 @@ double get_decayedenergy_per_ejectamass(const int modelgridindex, const double t
     endecaytot += get_endecay_per_ejectamass_between_times(modelgridindex, (enum decaypathways)(i), 0., tstart);
   }
   return endecaytot;
+}
+
 }

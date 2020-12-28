@@ -58,7 +58,7 @@ static void read_gamma_spectrum(enum radionuclides isotope, const char filename[
   }
   fclose(filein);
 
-  set_nucdecayenergygamma(isotope, E_gamma_avg);
+  decay::set_nucdecayenergygamma(isotope, E_gamma_avg);
 }
 
 
@@ -69,7 +69,7 @@ static void read_decaydata(void)
     gamma_spectra[iso].nlines = 0;
     gamma_spectra[iso].energy = NULL;
     gamma_spectra[iso].probability = NULL;
-    set_nucdecayenergygamma((enum radionuclides) iso, 0.);
+    decay::set_nucdecayenergygamma((enum radionuclides) iso, 0.);
   }
 
   read_gamma_spectrum(NUCLIDE_NI56, "ni_lines.txt");
@@ -84,8 +84,8 @@ static void read_decaydata(void)
 
   read_gamma_spectrum(NUCLIDE_CO57, "co57_lines.txt");
 
-  set_nucdecayenergygamma(NUCLIDE_FE52, 0.86 * MEV);
-  set_nucdecayenergygamma(NUCLIDE_MN52, 3.415 * MEV);
+  decay::set_nucdecayenergygamma(NUCLIDE_FE52, 0.86 * MEV);
+  decay::set_nucdecayenergygamma(NUCLIDE_MN52, 3.415 * MEV);
 }
 
 
@@ -199,7 +199,7 @@ static void choose_gamma_ray(PKT *pkt_ptr)
       abort();
   }
 
-  double E_gamma = nucdecayenergygamma(iso); // Average energy per gamma line of a decay
+  double E_gamma = decay::nucdecayenergygamma(iso); // Average energy per gamma line of a decay
 
   const double zrand = gsl_rng_uniform(rng);
   int nselected = -1;
