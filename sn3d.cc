@@ -10,8 +10,8 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-#include <unistd.h>
-#include <stdbool.h>
+// #include <unistd.h>
+#include <cstdbool>
 #include <getopt.h>
 #include "sn3d.h"
 #include "emissivities.h"
@@ -115,7 +115,7 @@ static void pkt_action_counters_reset(void)
   k_stat_from_bf = 0;
   k_stat_from_earlierdecay = 0;
 
-  nt_reset_stats();
+  nonthermal::nt_reset_stats();
 
   escounter = 0;
   cellcrossings = 0;
@@ -170,7 +170,7 @@ static void pkt_action_counters_printout(const PKT *const pkt, const int nts)
   printout("k_stat_from_bf = %d\n", k_stat_from_bf);
   printout("k_stat_from_earlierdecay = %d\n", k_stat_from_earlierdecay);
 
-  nt_print_stats(nts, modelvolume, deltat);
+  nonthermal::nt_print_stats(nts, modelvolume, deltat);
 
   printout("escounter = %d\n", escounter);
   printout("cellcrossing  = %d\n", cellcrossings);
@@ -196,11 +196,11 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 
     for (int modelgridindex = root_nstart; modelgridindex < (root_nstart + root_ndo); modelgridindex++)
     {
-      radfield_MPI_Bcast(modelgridindex, root);
+      radfield::MPI_Bcast(modelgridindex, root);
 
       if (get_numassociatedcells(modelgridindex) > 0)
       {
-        nt_MPI_Bcast(modelgridindex, root);
+        nonthermal::nt_MPI_Bcast(modelgridindex, root);
         if (NLTE_POPS_ON)
         {
           MPI_Bcast(modelgrid[modelgridindex].nlte_pops, total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
@@ -298,7 +298,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 
 static void mpi_reduce_estimators(int my_rank, int nts)
 {
-  radfield_reduce_estimators();
+  radfield::reduce_estimators();
   #ifndef FORCE_LTE
     MPI_Allreduce(MPI_IN_PLACE, &ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, &colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -538,7 +538,7 @@ static bool do_timestep(
 
   if (nts == 0)
   {
-    initialise_prev_titer_photoionestimators();
+    radfield::initialise_prev_titer_photoionestimators();
   }
 
   #ifdef RECORD_LINESTAT
@@ -1205,8 +1205,8 @@ int main(int argc, char** argv)
   macroatom_close_file();
   if (NLTE_POPS_ON)
     nltepop_close_file();
-  radfield_close_file();
-  nt_close_file();
+  radfield::close_file();
+  nonthermal::nt_close_file();
 
   #ifdef _OPENMP
     #pragma omp parallel
@@ -1223,13 +1223,13 @@ int main(int argc, char** argv)
     gsl_integration_workspace_free(gslworkspace);
   }
 
-  #ifdef MPI_ON
-    MPI_Finalize();
-  #endif
-
   free(packets);
   #if TRACK_ION_STATS
   free(ionstats);
+  #endif
+
+  #ifdef MPI_ON
+    MPI_Finalize();
   #endif
 
   return 0;

@@ -205,7 +205,7 @@ static double get_event(
           //dummypkt_ptr->next_trans += 1;
           dummypkt_ptr->prop_time += ldist / CLIGHT_PROP;
           move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
-          radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+          radfield::increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
 
           #ifdef DEBUG_ON
             if (debuglevel == 2)
@@ -243,7 +243,7 @@ static double get_event(
           {
             dummypkt_ptr->prop_time += ldist / CLIGHT_PROP;
             move_pkt(dummypkt_ptr, ldist, dummypkt_ptr->prop_time);
-            radfield_increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
+            radfield::increment_lineestimator(modelgridindex, lineindex, dummypkt_ptr->prop_time * CLIGHT * dummypkt_ptr->e_cmf / dummypkt_ptr->nu_cmf);
           }
 
           *rpkt_eventtype = RPKT_EVENTTYPE_BB;
@@ -707,7 +707,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
     const double distance_e_cmf = distance * pkt_ptr->e_cmf;
     const double nu = pkt_ptr->nu_cmf;
     //double bf = exp(-HOVERKB*nu/cell[modelgridindex].T_e);
-    radfield_update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, pkt_ptr->prop_time);
+    radfield::update_estimators(modelgridindex, distance_e_cmf, nu, pkt_ptr, pkt_ptr->prop_time);
 
     #ifndef FORCE_LTE
       ///ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
@@ -1340,11 +1340,6 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
       if (nu >= nu_edge && nu <= nu_max_phixs && nnlevel > 0)
       {
         //printout("element %d, ion %d, level %d, nnlevel %g\n",element,ion,level,nnlevel);
-        //if (fabs(nnlevel - phixslist[tid].allcont[i].nnlevel) > 0)
-        //{
-        //  printout("history value %g, phixslist value %g\n",nnlevel,phixslist[tid].allcont[i].nnlevel);
-        //  printout("pkt_ptr->number %d\n",pkt_ptr->number);
-        //}
         const double sigma_bf = photoionization_crosssection(element, ion, level, nu_edge, nu);
         const double probability = get_phixsprobability(element, ion, level, phixstargetindex);
 
@@ -1352,9 +1347,9 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
         const double corrfactor = 1.; // no subtraction of stimulated recombination
 #else
         const int upper = get_phixsupperlevel(element, ion, level, phixstargetindex);
-        const double nnionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
+        const double nnupperionlevel = calculate_exclevelpop(modelgridindex, element, ion + 1, upper);
         const double sf = calculate_sahafact(element, ion, level, upper, T_e, H * nu_edge);
-        const double departure_ratio = nnionlevel / nnlevel * nne * sf; // put that to phixslist
+        const double departure_ratio = nnupperionlevel / nnlevel * nne * sf; // put that to phixslist
         const double stimfactor = departure_ratio * exp(-HOVERKB * nu / T_e);
         double corrfactor = 1 - stimfactor; // photoionisation minus stimulated recombination
         if (corrfactor < 0)
@@ -1392,7 +1387,7 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
       }
       else if (nu < nu_edge) // nu < nu_edge
       {
-        /// The phixslist is sorted by nu_edge in ascending order
+        /// The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
         /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
         /// is possible, therefore leave the loop.
 

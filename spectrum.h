@@ -1,7 +1,7 @@
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
 
-#include <stdio.h>
+#include <cstdio>
 #include "exspec.h"
 #include "types.h"
 

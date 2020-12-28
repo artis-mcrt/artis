@@ -118,7 +118,7 @@ static void get_macroatom_transitionrates(
     double individ_internal_up_same = 0.;
     const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
     const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
-    // const double NT = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+    // const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
     const double NT = 0.;
 
     individ_internal_up_same = (R + C + NT) * epsilon_current;
@@ -143,7 +143,7 @@ static void get_macroatom_transitionrates(
   {
     if (NT_ON)
     {
-      processrates[MA_ACTION_INTERNALUPHIGHERNT] = nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
+      processrates[MA_ACTION_INTERNALUPHIGHERNT] = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion) * epsilon_current;
     }
 
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, ion, level); phixstargetindex++)
@@ -914,7 +914,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
-        ion = nt_random_upperion(modelgridindex, element, ion, false);
+        ion = nonthermal::nt_random_upperion(modelgridindex, element, ion, false);
         level = 0;
         ma_stat_internaluphighernt++;
 
@@ -1071,14 +1071,14 @@ double rad_excitation_ratecoeff(
       double beta = 1.0 / tau_sobolev * (-expm1(-tau_sobolev));
       //printout("[check] rad_excitation: %g, %g, %g\n",1.0/tau_sobolev,exp(-tau_sobolev),1.0/tau_sobolev * (1. - exp(-tau_sobolev)));
       //n_u2 = calculate_levelpop_fromreflevel(pkt_ptr->where,element,ion,upper,lower,pkt_ptr->mastate.nnlevel);
-      //R = (B_lu*pkt_ptr->mastate.nnlevel - B_ul * n_u2) * beta * radfield(nu_trans,pkt_ptr->where);
+      //R = (B_lu*pkt_ptr->mastate.nnlevel - B_ul * n_u2) * beta * radfield::radfield::radfield(nu_trans,pkt_ptr->where);
 
       const double R_over_J_nu = n_l > 0. ? (B_lu - B_ul * n_u / n_l) * beta : B_lu * beta;
 
       // const double linelambda = 1e8 * CLIGHT / nu_trans;
       // if (use_cellhist && false) //  || (linelambda > 7000)
       {
-        R = R_over_J_nu * radfield(nu_trans, modelgridindex);
+        R = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
       }
       // else
       {
@@ -1088,13 +1088,13 @@ double rad_excitation_ratecoeff(
       if (!initial_iteration)
       {
         // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
-        const int jblueindex = radfield_get_Jblueindex(lineindex);
+        const int jblueindex = radfield::get_Jblueindex(lineindex);
         if (jblueindex >= 0)
         {
-          const double Jb_lu = radfield_get_Jb_lu(modelgridindex, jblueindex);
+          const double Jb_lu = radfield::get_Jb_lu(modelgridindex, jblueindex);
           const double R_Jb = R_over_J_nu * Jb_lu;
           // const int contribcount = radfield_get_Jb_lu_contribcount(modelgridindex, jblueindex);
-          // const double R_radfield = R_over_J_nu * radfield(nu_trans, modelgridindex);
+          // const double R_radfield = R_over_J_nu * radfield::radfield(nu_trans, modelgridindex);
           // const double linelambda = 1e8 * CLIGHT / nu_trans;
           // printout("Using detailed rad excitation lambda %5.1f contribcont %d R(Jblue) %g R(radfield) %g R_Jb/R %g\n",
           //          linelambda, contribcount, R_Jb, R_radfield, R_Jb / R_radfield);
@@ -1126,7 +1126,7 @@ double rad_excitation_ratecoeff(
       printout("Negative excitation rate from level %d to %d\n", lower, upper);
       printout("n_l %g, n_u %g, g_l %g (?=%g), g_u %g (?=%g)\n", n_l, n_u, g_l, g_l2, g_u, g_u2);
       printout("n_u/n_l %g, g_u/g_l %g\n", n_u / n_l, g_u / g_l);
-      printout("radfield(nutrans=%g) = %g\n", nu_trans, radfield(nu_trans, modelgridindex));
+      printout("radfield::radfield(nutrans=%g) = %g\n", nu_trans, radfield::radfield(nu_trans, modelgridindex));
       abort();
     }
     if (debuglevel == 2)
@@ -1134,15 +1134,15 @@ double rad_excitation_ratecoeff(
       // printout("[debug] rad_rates_up: Z=%d, ionstage %d, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",
       //          get_element(element), get_ionstage(element, ion), upper, lower, A_ul, n_l);
       // printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",
-      //          A_ul, tau_sobolev, n_u, n_l, radfield(nu_trans,modelgridindex));
+      //          A_ul, tau_sobolev, n_u, n_l, radfield::radfield(nu_trans,modelgridindex));
     }
     else if (debuglevel == 777)
-      printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n", A_ul, tau_sobolev, n_u, n_l, radfield(nu_trans, modelgridindex));
+      printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n", A_ul, tau_sobolev, n_u, n_l, radfield::radfield(nu_trans, modelgridindex));
     if (!isfinite(R))
     {
       printout("[fatal] rad_excitation: abort\n");
       printout("[fatal] rad_excitation: R %g, B_lu %g, B_ul %g, n_u %g, n_l %g, radfield %g,tau_sobolev %g, t_current %g\n",
-               R,B_lu,B_ul,n_u,n_l,radfield(nu_trans,modelgridindex),tau_sobolev,t_current);
+               R,B_lu,B_ul,n_u,n_l,radfield::radfield(nu_trans,modelgridindex),tau_sobolev,t_current);
       printout("[fatal] rad_excitation: %g, %g, %g\n", 1.0 / tau_sobolev, exp(-tau_sobolev), 1.0 / tau_sobolev * (1. - exp(-tau_sobolev)));
       abort();
     }

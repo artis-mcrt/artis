@@ -10,8 +10,8 @@
 /* This is a code copied from Lucy 2004 paper on t-dependent supernova
    explosions. */
 
-#include <stdio.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cstdbool>
 #include "exspec.h"
 #include "sn3d.h"
 #include "input.h"

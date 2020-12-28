@@ -1,7 +1,7 @@
 #ifndef VPKT_H
 #define VPKT_H
 
-#include <stdio.h>
+#include <cstdio>
 #include "types.h"
 
 double rot_angle(double *n1, double *n2, double *ref1, double *ref2);

@@ -1,7 +1,7 @@
 #ifndef LIGHT_CURVE_H
 #define LIGHT_CURVE_H
 
-#include <stdio.h>
+#include <cstdio>
 #include "exspec.h"
 
 void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum, double *light_curve_lumcmf);

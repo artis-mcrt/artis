@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <cstdio>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_linalg.h>
@@ -530,7 +530,7 @@ static void nltepop_matrix_add_boundbound(const int modelgridindex, const int el
 
       const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid) * s_renorm[level];
       const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * s_renorm[level];
-      // const double NTC = nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) * s_renorm[level];
+      // const double NTC = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex) * s_renorm[level];
       const double NTC = 0.;
 
       // if ((Z == 26) && (ionstage == 1) && (level == 0) && (upper <= 5))
@@ -625,7 +625,7 @@ static void nltepop_matrix_add_nt_ionisation(
   // collisional ionization by non-thermal electrons
 
   assert(ion + 1 < get_nions(element)); // can't ionise the top ion
-  const double Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
+  const double Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
   if (Y_nt < 0.)
   {
     printout("  WARNING: Negative NT_ionization rate from ion_stage %d\n", get_ionstage(element, ion));
@@ -633,9 +633,9 @@ static void nltepop_matrix_add_nt_ionisation(
 
   const int nlevels = get_nlevels(element, ion);
 
-  for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++)
+  for (int upperion = ion + 1; upperion <= nonthermal::nt_ionisation_maxupperion(element, ion); upperion++)
   {
-    const double Y_nt_thisupperion = Y_nt * nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
+    const double Y_nt_thisupperion = Y_nt * nonthermal::nt_ionization_upperion_probability(modelgridindex, element, ion, upperion, false);
 
     if (Y_nt_thisupperion > 0.)
     {
@@ -1347,7 +1347,7 @@ double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timeste
 
         if (NT_ON && ion < get_nions(element)-1)
         {
-          double Y = nt_ionization_ratecoeff(modelgridindex,element,ion);
+          double Y = nonthermal::nt_ionization_ratecoeff(modelgridindex,element,ion);
 
           if ((level == 0) || (is_nlte(element, ion, level) == 1))
           {

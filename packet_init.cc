@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include "sn3d.h"
 #include "grid_init.h"
 #include "decay.h"

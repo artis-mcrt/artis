@@ -1,7 +1,7 @@
 #ifndef DECAY_H
 #define DECAY_H
 
-// #include <stdio.h>
+// #include <cstdio>
 
 enum radionuclides {
   NUCLIDE_NI57 = 0,

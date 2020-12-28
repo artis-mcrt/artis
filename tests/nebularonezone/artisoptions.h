@@ -1,8 +1,8 @@
 #ifndef ARTISOPTIONS_H
 #define ARTISOPTIONS_H
 
-#include <stdbool.h>
-#include <stdlib.h>
+#include <cstdbool>
+#include <cstdlib>
 #include "constants.h"
 
 // Number of energy packets per process (OpenMP threads share these pacekts)

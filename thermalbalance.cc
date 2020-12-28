@@ -72,9 +72,9 @@ static double integrand_bfheatingcoeff_custom_radfield(double nu, void *voidpara
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
   // const float T_e = get_Te(modelgridindex);
-  // return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
+  // return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - Te_TR_factor * exp(-HOVERKB * nu / T_e));
 
-  return sigma_bf * (1 - nu_edge/nu) * radfield(nu,modelgridindex) * (1 - exp(-HOVERKB*nu/T_R));
+  return sigma_bf * (1 - nu_edge/nu) * radfield::radfield(nu,modelgridindex) * (1 - exp(-HOVERKB*nu/T_R));
 }
 
 
@@ -384,8 +384,8 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   /// If selected take direct gamma heating into account
   if (do_rlc_est == 3)
   {
-    const double nt_frac_heating = get_nt_frac_heating(modelgridindex);
-    heatingcoolingrates->heating_gamma = get_deposition_rate_density(modelgridindex) * nt_frac_heating;
+    const double nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
+    heatingcoolingrates->heating_gamma = nonthermal::get_deposition_rate_density(modelgridindex) * nt_frac_heating;
     heatingcoolingrates->nt_frac_heating = nt_frac_heating;
   }
   else

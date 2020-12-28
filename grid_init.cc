@@ -879,8 +879,8 @@ static void read_grid_restart_data(const int timestep)
   }
 
   // the order of these calls is very important!
-  radfield_read_restart_data(gridsave_file);
-  nt_read_restart_data(gridsave_file);
+  radfield::read_restart_data(gridsave_file);
+  nonthermal::nt_read_restart_data(gridsave_file);
   nltepop_read_restart_data(gridsave_file);
   fclose(gridsave_file);
 }
@@ -1135,8 +1135,8 @@ void grid_init(int my_rank)
     abundances_read();
   }
 
-  radfield_init(my_rank);
-  nt_init(my_rank);
+  radfield::init(my_rank);
+  nonthermal::nt_init(my_rank);
 
   /// and assign a temperature to the cells
   if (simulation_continued_from_saved)

@@ -201,7 +201,7 @@ double phi(const int element, const int ion, const int modelgridindex)
 
     if (NT_ON)
     {
-      Y_nt = nt_ionization_ratecoeff(modelgridindex, element, ion);
+      Y_nt = nonthermal::nt_ionization_ratecoeff(modelgridindex, element, ion);
     }
 
     // || !isfinite(Gamma))

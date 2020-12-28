@@ -10,10 +10,10 @@
 *********************************************************************/
 
 /*************************** HEADER FILES ***************************/
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
 #include "md5.h"
 #include "sn3d.h"
 

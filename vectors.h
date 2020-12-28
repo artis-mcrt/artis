@@ -1,7 +1,7 @@
 #ifndef VECTORS_H
 #define VECTORS_H
 
-#include <math.h>
+#include <cmath>
 #include <gsl/gsl_blas.h>
 #include "types.h"
 

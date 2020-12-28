@@ -1,4 +1,4 @@
-#include <unistd.h>
+// #include <unistd.h>
 #include <gsl/gsl_roots.h>
 #include "sn3d.h"
 #include "atomic.h"
@@ -663,7 +663,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
           fprintf(estimators_file, "              ");
         for (int ion = 0; ion < nions - 1; ion++)
         {
-          const double Y_nt = nt_ionization_ratecoeff(mgi, element, ion);
+          const double Y_nt = nonthermal::nt_ionization_ratecoeff(mgi, element, ion);
           fprintf(estimators_file, "  %d: %9.3e", get_ionstage(element, ion), Y_nt);
         }
         fprintf(estimators_file, "\n");
@@ -806,7 +806,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
     const time_t sys_time_start_spencerfano = time(NULL);
     if (NT_ON && NT_SOLVE_SPENCERFANO)
     {
-      nt_solve_spencerfano(n, nts, nlte_iter);  // depends on the ionization balance, and weakly on nne
+      nonthermal::nt_solve_spencerfano(n, nts, nlte_iter);  // depends on the ionization balance, and weakly on nne
     }
     const int duration_solve_spencerfano = time(NULL) - sys_time_start_spencerfano;
 
@@ -1101,7 +1101,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       /// Update abundances of radioactive isotopes
       //printout("call update abundances for timestep %d in model cell %d\n",m,n);
       update_abundances(mgi, nts, time_step[nts].mid);
-      calculate_deposition_rate_density(mgi, nts);
+      nonthermal::calculate_deposition_rate_density(mgi, nts);
       printout("update_abundances for cell %d timestep %d\n", mgi, nts);
 
       /// For timestep 0 we calculate the level populations straight forward wihout
@@ -1159,11 +1159,11 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
         const time_t sys_time_start_temperature_corrections = time(NULL);
 
-        radfield_normalise_J(mgi, estimator_normfactor_over4pi); // this applies normalisation to the fullspec J
-        radfield_set_J_normfactor(mgi, estimator_normfactor_over4pi); // this stores the factor that will be applied later for the J bins but not fullspec J
+        radfield::normalise_J(mgi, estimator_normfactor_over4pi); // this applies normalisation to the fullspec J
+        radfield::set_J_normfactor(mgi, estimator_normfactor_over4pi); // this stores the factor that will be applied later for the J bins but not fullspec J
 
         #ifdef DO_TITER
-          radfield_titer_J(mgi);
+          radfield::titer_J(mgi);
         #endif
 
         #if (TRACK_ION_STATS)
@@ -1174,7 +1174,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         if (initial_iteration || modelgrid[mgi].thick == 1)
         #endif
         {
-          const double T_R = get_T_R_from_J(mgi);
+          const double T_R = radfield::get_T_R_from_J(mgi);
           set_TR(mgi, T_R);
           set_Te(mgi, T_R);
           set_TJ(mgi, T_R);
@@ -1194,21 +1194,21 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         {
           /// Calculate estimators
 
-          radfield_normalise_nuJ(mgi, estimator_normfactor_over4pi);
+          radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
 
           ffheatingestimator[mgi] *= estimator_normfactor;
           colheatingestimator[mgi] *= estimator_normfactor;
 
           #ifdef DO_TITER
-            radfield_titer_nuJ(mgi);
+            radfield::titer_nuJ(mgi);
             titer_average_estimators(mgi);
           #endif
 
           // Get radiation field parameters out of the full-spectrum and binned J and nuJ estimators
-          radfield_fit_parameters(mgi, nts);
+          radfield::fit_parameters(mgi, nts);
 
           #if (DETAILED_BF_ESTIMATORS_ON)
-          radfield_normalise_bf_estimators(mgi, estimator_normfactor / H);
+          radfield::normalise_bf_estimators(mgi, estimator_normfactor / H);
           #endif
 
           #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
@@ -1952,8 +1952,8 @@ void write_grid_restart_data(const int timestep)
   }
 
   // the order of these calls is very important!
-  radfield_write_restart_data(gridsave_file);
-  nt_write_restart_data(gridsave_file);
+  radfield::write_restart_data(gridsave_file);
+  nonthermal::nt_write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
   printout("done in %ld seconds.\n", time(NULL) - sys_time_start_write_restart);

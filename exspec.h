@@ -1,7 +1,7 @@
 #ifndef EXSPEC_H
 #define EXSPEC_H
 
-#include <stdbool.h>
+#include <cstdbool>
 
 /// Spectrum data structure
 #define MNUBINS   1000

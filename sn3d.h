@@ -3,9 +3,9 @@
 
 #include "globals.h"
 
-#include <unistd.h>
+// #include <unistd.h>
 #include <stdarg.h>  /// MK: needed for printout()
-#include <stdbool.h>
+#include <cstdbool>
 #include <gsl/gsl_integration.h>
 
 #define DEBUG_ON

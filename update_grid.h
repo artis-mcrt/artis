@@ -1,7 +1,7 @@
 #ifndef UPDATE_GRID_H
 #define UPDATE_GRID_H
 
-#include <stdio.h>
+#include <cstdio>
 #include "sn3d.h"
 
 void update_grid(FILE *estimators_file, int nts, int nts_prev, int my_rank, int nstart, int ndo, int titer);
