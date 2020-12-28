@@ -25,8 +25,8 @@ jobs:
     - name: "diagnostic info"
       run: |
         git status
-        which cc
-        cc --version
+        which c++
+        c++ --version
 
     - name: "compile sn3d and exspec"
       run: make sn3d exspec
