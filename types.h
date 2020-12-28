@@ -537,7 +537,7 @@ typedef struct cellhistory_struct
 {
   cellhistorycoolinglist_t *coolinglist;    /// Cooling contributions by the different processes.
   chelements_struct *chelements;            /// Pointer to a nested list which helds compositional
-                                            /// information for all the elements=0,1,...,nelements-1
+                                            /// information for all the elements=0,1,...,globals::nelements-1
   int cellnumber;                           /// Identifies the cell the data is valid for.
   int bfheating_mgi;
 } cellhistory_struct;

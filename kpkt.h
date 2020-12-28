@@ -10,7 +10,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts);
 
 inline int get_coolinglistoffset(int element, int ion)
 {
-  return elements[element].ions[ion].coolingoffset;
+  return globals::elements[element].ions[ion].coolingoffset;
 }
 
 #endif //KPKT_H

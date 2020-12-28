@@ -13,10 +13,10 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   /// n is the index of the packet. m is the index for the grid cell.
   pkt_ptr->where = cellindex;
   pkt_ptr->number = pktnumber;  ///record the packets number for debugging
-  pkt_ptr->prop_time = tmin;
+  pkt_ptr->prop_time = globals::tmin;
   pkt_ptr->originated_from_positron = false;
 
-  if (grid_type == GRID_SPHERICAL1D)
+  if (globals::grid_type == GRID_SPHERICAL1D)
   {
     const double zrand3 = gsl_rng_uniform(rng);
     const double r_inner = get_cellcoordmin(cellindex, 0);
@@ -37,7 +37,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     }
   }
 
-  const int mgi = cell[cellindex].modelgridindex;
+  const int mgi = globals::cell[cellindex].modelgridindex;
 
   double cumulative_decay_energy_per_mass[DECAYPATH_COUNT];
   for (int i = 0; i < DECAYPATH_COUNT; i++)
@@ -59,14 +59,14 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   assert(decaypath != DECAYPATH_COUNT); // Failed to select pellet
 
   #ifdef NO_INITIAL_PACKETS
-  const double tdecaymin = tmin;
+  const double tdecaymin = globals::tmin;
   #else
   const double tdecaymin = 0.; // allow decays before the first timestep
   #endif
 
   if (UNIFORM_PELLET_ENERGIES)
   {
-    pkt_ptr->tdecay = sample_decaytime(decaypath, tdecaymin, tmax);
+    pkt_ptr->tdecay = sample_decaytime(decaypath, tdecaymin, globals::tmax);
     pkt_ptr->e_cmf = e0;
   }
   else
@@ -75,12 +75,12 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // keeping the pellet decay rate constant will give better statistics at very late times when very little
     // energy is released
     const double zrand = gsl_rng_uniform(rng);
-    pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * tmax;
+    pkt_ptr->tdecay = zrand * tdecaymin + (1. - zrand) * globals::tmax;
 
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
-    const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypath) / (tmax - tdecaymin);
+    const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypath) / (globals::tmax - tdecaymin);
     pkt_ptr->e_cmf = e0 * get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
     // assert(pkt_ptr->e_cmf >= 0);
   }
@@ -90,7 +90,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   pkt_ptr->originated_from_positron = from_positron;
 
   /// Now assign the energy to the pellet.
-  pkt_ptr->prop_time = tmin;
+  pkt_ptr->prop_time = globals::tmin;
   const double dopplerfactor = doppler_packetpos(pkt_ptr);
   pkt_ptr->e_rf = pkt_ptr->e_cmf / dopplerfactor;
   pkt_ptr->trueemissiontype = -1;
@@ -102,26 +102,26 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 {
   printout("UNIFORM_PELLET_ENERGIES is %s\n", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
-  const int pktnumberoffset = middle_iteration * npkts;
+  const int pktnumberoffset = middle_iteration * globals::npkts;
   float cont[MGRID + 1];
 
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
   const double etot_tinf = (
-    (nucdecayenergy(NUCLIDE_NI56) + nucdecayenergy(NUCLIDE_CO56)) * totmassradionuclide[NUCLIDE_NI56] / nucmass(NUCLIDE_NI56) +
-    nucdecayenergy(NUCLIDE_CO56) * totmassradionuclide[NUCLIDE_CO56] / nucmass(NUCLIDE_CO56) +
-    (nucdecayenergy(NUCLIDE_NI57) + nucdecayenergy(NUCLIDE_CO57)) * totmassradionuclide[NUCLIDE_NI57] / nucmass(NUCLIDE_NI57) +
-    nucdecayenergy(NUCLIDE_CO57) * totmassradionuclide[NUCLIDE_CO57] / nucmass(NUCLIDE_CO57) +
-    (nucdecayenergy(NUCLIDE_V48) + nucdecayenergy(NUCLIDE_CR48)) * totmassradionuclide[NUCLIDE_CR48] / nucmass(NUCLIDE_CR48) +
-    (nucdecayenergy(NUCLIDE_FE52) + nucdecayenergy(NUCLIDE_MN52)) * totmassradionuclide[NUCLIDE_FE52] / nucmass(NUCLIDE_FE52));
+    (nucdecayenergy(NUCLIDE_NI56) + nucdecayenergy(NUCLIDE_CO56)) * globals::totmassradionuclide[NUCLIDE_NI56] / nucmass(NUCLIDE_NI56) +
+    nucdecayenergy(NUCLIDE_CO56) * globals::totmassradionuclide[NUCLIDE_CO56] / nucmass(NUCLIDE_CO56) +
+    (nucdecayenergy(NUCLIDE_NI57) + nucdecayenergy(NUCLIDE_CO57)) * globals::totmassradionuclide[NUCLIDE_NI57] / nucmass(NUCLIDE_NI57) +
+    nucdecayenergy(NUCLIDE_CO57) * globals::totmassradionuclide[NUCLIDE_CO57] / nucmass(NUCLIDE_CO57) +
+    (nucdecayenergy(NUCLIDE_V48) + nucdecayenergy(NUCLIDE_CR48)) * globals::totmassradionuclide[NUCLIDE_CR48] / nucmass(NUCLIDE_CR48) +
+    (nucdecayenergy(NUCLIDE_FE52) + nucdecayenergy(NUCLIDE_MN52)) * globals::totmassradionuclide[NUCLIDE_FE52] / nucmass(NUCLIDE_FE52));
   printout("etot %g (t_0 ot t_inf)\n", etot_tinf);
   printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI56) / MEV, nucdecayenergy(NUCLIDE_CO56) / MEV, nucdecayenergygamma(NUCLIDE_CO56) / MEV);
   printout("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI57) / MEV, nucdecayenergygamma(NUCLIDE_NI57) / MEV, nucdecayenergy(NUCLIDE_CO57) / MEV);
   printout("decayenergy(CR48), decayenergy(V48): %g %g\n", nucdecayenergy(NUCLIDE_CR48) / MEV, nucdecayenergy(NUCLIDE_V48) / MEV);
   printout("decayenergy(FE52), decayenergy(MN52): %g %g\n", nucdecayenergy(NUCLIDE_FE52) / MEV, nucdecayenergy(NUCLIDE_MN52) / MEV);
 
-  double modelcell_decay_energy_density[npts_model];
-  for (int mgi = 0; mgi < npts_model; mgi++)
+  double modelcell_decay_energy_density[globals::npts_model];
+  for (int mgi = 0; mgi < globals::npts_model; mgi++)
   {
     modelcell_decay_energy_density[mgi] = 0.;
     for (int i = 0; i < DECAYPATH_COUNT; i++)
@@ -130,40 +130,40 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     }
   }
 
-  const double e0_tinf = etot_tinf / npkts / n_out_it / n_middle_it;
+  const double e0_tinf = etot_tinf / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (t_0 to t_inf) %g erg\n", e0_tinf);
 
   // Need to get a normalisation factor.
   float norm = 0.0;
-  for (int m = 0; m < ngrid; m++)
+  for (int m = 0; m < globals::ngrid; m++)
   {
     cont[m] = norm;
-    const int mgi = cell[m].modelgridindex;
+    const int mgi = globals::cell[m].modelgridindex;
 
     norm += vol_init_gridcell(m) * modelcell_decay_energy_density[mgi];
   }
-  cont[ngrid] = norm;
+  cont[globals::ngrid] = norm;
 
   const double etot = norm / MH;
   /// So energy per pellet is
-  const double e0 = etot / npkts / n_out_it / n_middle_it;
+  const double e0 = etot / globals::npkts / globals::n_out_it / globals::n_middle_it;
   printout("packet e0 (in time range) %g\n", e0);
 
   printout("etot %g erg (in time range)\n", etot);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
-  if (npkts > MPKTS)
+  if (globals::npkts > MPKTS)
   {
     printout("Too many packets. Abort.\n");
     abort();
   }
 
   printout("Placing pellets...\n");
-  for (int n = 0; n < npkts; n++)
+  for (int n = 0; n < globals::npkts; n++)
   {
     // Get random number.
-    int mabove = ngrid;
+    int mabove = globals::ngrid;
     int mbelow = 0;
     double zrand = gsl_rng_uniform(rng);
 
@@ -187,7 +187,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
       printout("mbelow %d cont[mbelow] %g zrand*norm %g\n", mbelow, cont[mbelow], zrand*norm);
       abort();
     }
-    if ((cont[mabove] < (zrand * norm)) && (mabove != ngrid))
+    if ((cont[mabove] < (zrand * norm)) && (mabove != globals::ngrid))
     {
       printout("mabove %d cont[mabove] %g zrand*norm %g\n", mabove, cont[mabove], zrand*norm);
       abort();
@@ -201,20 +201,20 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     double runtot = 0.0;
     while (runtot < (zrand))
     {
-      grid_ptr = &cell[m];
+      grid_ptr = &globals::cell[m];
       runtot += grid_ptr->rho_init * f56ni(grid_ptr) * vol_init() / norm;
       m++;
     }
     m = m - 1;
     */
 
-    assert(cellindex < ngrid);
+    assert(cellindex < globals::ngrid);
 
     place_pellet(e0, cellindex, n + pktnumberoffset, &pkt[n]);
   }
 
   double e_cmf_total = 0.;
-  for (int n = 0; n < npkts; n++)
+  for (int n = 0; n < globals::npkts; n++)
   {
     pkt[n].interactions = 0;
     e_cmf_total += pkt[n].e_cmf;
@@ -222,7 +222,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   const double e_ratio = etot / e_cmf_total;
   printout("packet energy sum %g should be %g normalisation factor: %g\n", e_cmf_total, etot, e_ratio);
   e_cmf_total *= e_ratio;
-  for (int n = 0; n < npkts; n++)
+  for (int n = 0; n < globals::npkts; n++)
   {
     pkt[n].e_cmf *= e_ratio;
     pkt[n].e_rf *= e_ratio;
@@ -234,7 +234,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
 void write_packets(char filename[], PKT *pkt)
 {
   FILE *packets_file = fopen_required(filename, "w");
-  for (int i = 0; i < npkts; i++)
+  for (int i = 0; i < globals::npkts; i++)
   {
     fprintf(packets_file, "%d ", pkt[i].number);
     fprintf(packets_file, "%d ", pkt[i].where);
@@ -279,7 +279,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, PKT *const pkt
 
   printout("Reading %s...", filename);
   FILE *packets_file = fopen_required(filename, "rb");
-  fread(pkt, sizeof(PKT), npkts, packets_file);
+  fread(pkt, sizeof(PKT), globals::npkts, packets_file);
   //read_packets(packets_file);
   fclose(packets_file);
   printout("done\n");
@@ -300,10 +300,10 @@ void read_packets(char filename[], PKT *pkt)
     packets_read++;
     const int i = packets_read - 1;
 
-    if (i > npkts - 1)
+    if (i > globals::npkts - 1)
     {
       printout("ERROR: More data found beyond packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n",
-               packets_read, npkts);
+               packets_read, globals::npkts);
       abort();
     }
 
@@ -374,10 +374,10 @@ void read_packets(char filename[], PKT *pkt)
 
   }
 
-  if (packets_read < npkts)
+  if (packets_read < globals::npkts)
   {
     printout("ERROR: Read failed after packet %d (expecting %d packets). Recompile exspec with the correct number of packets. Run (wc -l < packets00_0000.out) to count them.\n",
-             packets_read, npkts);
+             packets_read, globals::npkts);
     abort();
   }
   free(line);

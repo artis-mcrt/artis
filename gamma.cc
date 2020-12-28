@@ -95,14 +95,14 @@ void init_gamma_linelist(void)
   read_decaydata();
 
   /* Start by setting up the grid of fake lines and their energies. */
-  gamma_spectra[FAKE_GAM_LINE_ID].nlines = nfake_gam;
-  gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *) malloc(nfake_gam * sizeof(double));
-  gamma_spectra[FAKE_GAM_LINE_ID].probability = (double *) malloc(nfake_gam * sizeof(double));
+  gamma_spectra[FAKE_GAM_LINE_ID].nlines = globals::nfake_gam;
+  gamma_spectra[FAKE_GAM_LINE_ID].energy = (double *) malloc(globals::nfake_gam * sizeof(double));
+  gamma_spectra[FAKE_GAM_LINE_ID].probability = (double *) malloc(globals::nfake_gam * sizeof(double));
 
-  const double deltanu = (nusyn_max - nusyn_min) / (gamma_spectra[FAKE_GAM_LINE_ID].nlines - 3);
+  const double deltanu = (globals::nusyn_max - globals::nusyn_min) / (gamma_spectra[FAKE_GAM_LINE_ID].nlines - 3);
   for (int i = 0; i < gamma_spectra[FAKE_GAM_LINE_ID].nlines; i++)
   {
-    gamma_spectra[FAKE_GAM_LINE_ID].energy[i] = (nusyn_min + deltanu * (i - 1)) * H;
+    gamma_spectra[FAKE_GAM_LINE_ID].energy[i] = (globals::nusyn_min + deltanu * (i - 1)) * H;
     gamma_spectra[FAKE_GAM_LINE_ID].probability[i] = 0.0;
   }
 
@@ -322,7 +322,7 @@ static double sig_comp(const PKT *pkt_ptr)
 
   // Now need to multiply by the electron number density.
   const int cellindex = pkt_ptr->where;
-  sigma_cmf *= get_nnetot(cell[cellindex].modelgridindex);
+  sigma_cmf *= get_nnetot(globals::cell[cellindex].modelgridindex);
 
   // Now need to convert between frames.
 
@@ -519,7 +519,7 @@ static void compton_scatter(PKT *pkt_ptr)
     // It's converted to an e-minus packet.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -3;
-    nt_stat_from_gamma++;
+    globals::nt_stat_from_gamma++;
   }
 }
 
@@ -542,10 +542,10 @@ void do_gamma(PKT *pkt_ptr, double t2)
   int snext;
   double sdist = boundary_cross(pkt_ptr, pkt_ptr->prop_time, &snext);
 
-  const double maxsdist = (grid_type == GRID_SPHERICAL1D) ? 2 * rmax * (pkt_ptr->prop_time + sdist / CLIGHT_PROP) / tmin : rmax * pkt_ptr->prop_time / tmin;
+  const double maxsdist = (globals::grid_type == GRID_SPHERICAL1D) ? 2 * globals::rmax * (pkt_ptr->prop_time + sdist / globals::CLIGHT_PROP) / globals::tmin : globals::rmax * pkt_ptr->prop_time / globals::tmin;
   if (sdist > maxsdist)
   {
-    printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", rmax, pkt_ptr->prop_time/tmin, sdist);
+    printout("Unreasonably large sdist (gamma). Abort. %g %g %g\n", globals::rmax, pkt_ptr->prop_time/globals::tmin, sdist);
     abort();
   }
 
@@ -555,16 +555,16 @@ void do_gamma(PKT *pkt_ptr, double t2)
     sdist = 0;
   }
 
-  if (((snext < 0) && (snext != -99)) || (snext >= ngrid))
+  if (((snext < 0) && (snext != -99)) || (snext >= globals::ngrid))
   {
     printout("Heading for inappropriate grid cell. Abort.\n");
     printout("Current cell %d, target cell %d.\n", pkt_ptr->where, snext);
     abort();
   }
 
-  if (sdist > max_path_step)
+  if (sdist > globals::max_path_step)
   {
-    sdist = max_path_step;
+    sdist = globals::max_path_step;
     snext = pkt_ptr->where;
   }
 
@@ -573,7 +573,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
   /* Routine returns the value in the rest frame. */
 
   double kap_compton = 0.0;
-  if (gamma_grey < 0)
+  if (globals::gamma_grey < 0)
   {
     kap_compton = sig_comp(pkt_ptr);
   }
@@ -594,7 +594,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
 
   // Find how far it can travel during the time inverval.
 
-  double tdist = (t2 - pkt_ptr->prop_time) * CLIGHT_PROP;
+  double tdist = (t2 - pkt_ptr->prop_time) * globals::CLIGHT_PROP;
 
   if (tdist < 0)
   {
@@ -607,20 +607,20 @@ void do_gamma(PKT *pkt_ptr, double t2)
   if ((sdist < tdist) && (sdist < edist))
   {
     sdist = sdist / 2.;
-    pkt_ptr->prop_time += sdist / CLIGHT_PROP;
+    pkt_ptr->prop_time += sdist / globals::CLIGHT_PROP;
     move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
 
     // Move it into the new cell.
     if (kap_tot > 0)
     {
-      if (do_comp_est)
+      if (globals::do_comp_est)
       {
         sdist = sdist * 2.;
         compton_emiss_cont(pkt_ptr, sdist);
         pp_emiss_cont(pkt_ptr, sdist);
         sdist = sdist / 2.;
       }
-      if (do_rlc_est != 0)
+      if (globals::do_rlc_est != 0)
       {
         sdist = sdist * 2.;
         rlc_emiss_gamma(pkt_ptr, sdist);
@@ -628,7 +628,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
       }
     }
 
-    pkt_ptr->prop_time += sdist / CLIGHT_PROP;
+    pkt_ptr->prop_time += sdist / globals::CLIGHT_PROP;
     move_pkt(pkt_ptr, sdist, pkt_ptr->prop_time);
     sdist = sdist * 2.;
     if (snext != pkt_ptr->where)
@@ -640,19 +640,19 @@ void do_gamma(PKT *pkt_ptr, double t2)
   {
     // Doesn't reach boundary.
     tdist = tdist / 2.;
-    pkt_ptr->prop_time += tdist / CLIGHT_PROP;
+    pkt_ptr->prop_time += tdist / globals::CLIGHT_PROP;
     move_pkt(pkt_ptr, tdist, pkt_ptr->prop_time);
 
     if (kap_tot > 0)
     {
-      if (do_comp_est)
+      if (globals::do_comp_est)
       {
         tdist = tdist * 2.;
         compton_emiss_cont(pkt_ptr, tdist);
         pp_emiss_cont(pkt_ptr, tdist);
         tdist = tdist / 2.;
       }
-      if (do_rlc_est != 0)
+      if (globals::do_rlc_est != 0)
       {
         tdist = tdist * 2.;
         rlc_emiss_gamma(pkt_ptr, tdist);
@@ -666,25 +666,25 @@ void do_gamma(PKT *pkt_ptr, double t2)
   else if ((edist < sdist) && (edist < tdist))
   {
     edist = edist / 2.;
-    pkt_ptr->prop_time += edist / CLIGHT_PROP;
+    pkt_ptr->prop_time += edist / globals::CLIGHT_PROP;
     move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
     if (kap_tot > 0)
     {
-      if (do_comp_est)
+      if (globals::do_comp_est)
       {
         edist = edist * 2.;
         compton_emiss_cont(pkt_ptr, edist);
         pp_emiss_cont(pkt_ptr, edist);
         edist = edist / 2.;
       }
-      if (do_rlc_est != 0)
+      if (globals::do_rlc_est != 0)
       {
         edist = edist * 2.;
         rlc_emiss_gamma(pkt_ptr, edist);
         edist = edist / 2.;
       }
     }
-    pkt_ptr->prop_time += edist / CLIGHT_PROP;
+    pkt_ptr->prop_time += edist / globals::CLIGHT_PROP;
     move_pkt(pkt_ptr, edist, pkt_ptr->prop_time);
     edist = edist * 2.;
 
@@ -706,7 +706,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
       //pkt_ptr->type = TYPE_PRE_KPKT;
       //pkt_ptr->type = TYPE_GAMMA_KPKT;
       //if (tid == 0) nt_stat_from_gamma++;
-      nt_stat_from_gamma++;
+      globals::nt_stat_from_gamma++;
     }
     else if ((kap_compton + kap_photo_electric + kap_pair_prod) > (zrand * kap_tot))
     {
@@ -717,7 +717,7 @@ void do_gamma(PKT *pkt_ptr, double t2)
     {
       printout("Failed to identify event. Gamma (1). kap_compton %g kap_photo_electric %g kap_tot %g zrand %g Abort.\n", kap_compton, kap_photo_electric, kap_tot, zrand);
       const int cellindex = pkt_ptr->where;
-      printout(" /*cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(cell[cellindex].modelgridindex), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
+      printout(" /*globals::cell[*/pkt_ptr->where].rho %g pkt_ptr->nu_cmf %g pkt_ptr->dir[0] %g pkt_ptr->dir[1] %g pkt_ptr->dir[2] %g pkt_ptr->pos[0] %g pkt_ptr->pos[1] %g pkt_ptr->pos[2] %g \n",get_rho(globals::cell[cellindex].modelgridindex), pkt_ptr->nu_cmf,pkt_ptr->dir[0],pkt_ptr->dir[0],pkt_ptr->dir[1],pkt_ptr->dir[2],pkt_ptr->pos[1],pkt_ptr->pos[2]);
 
       abort();
     }
@@ -772,18 +772,18 @@ int get_nul(double freq)
     int too_low = 0;
 
     while (too_high != too_low + 1)
-  	{
-  	  const int tryindex = (too_high + too_low) / 2;
-  	  const double freq_try = get_gam_freq(tryindex);
-  	  if (freq_try >= freq)
-	    {
-	      too_high = tryindex;
-	    }
-  	  else
-	    {
-	      too_low = tryindex;
-	    }
-  	}
+    {
+      const int tryindex = (too_high + too_low) / 2;
+      const double freq_try = get_gam_freq(tryindex);
+      if (freq_try >= freq)
+      {
+        too_high = tryindex;
+      }
+      else
+      {
+        too_low = tryindex;
+      }
+    }
 
     return too_low;
   }

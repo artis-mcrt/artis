@@ -26,14 +26,14 @@ void precalculate_partfuncts(int modelgridindex)
 {
   /// Precalculate partition functions for each ion in every cell
   /// this saves a factor 10 in calculation time of Saha-Boltzman populations
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
       //printout("precalc element %d, ion %d, mgi %d\n",element,ion,modelgridindex);
-      //cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
-      modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
+      //globals::cell[cellnumber].composition[element].ltepartfunct[ion] = calculate_ltepartfunct(element,ion,T_R);
+      globals::modelgrid[modelgridindex].composition[element].partfunct[ion] = calculate_partfunct(element, ion, modelgridindex);
     }
   }
 }
@@ -45,10 +45,10 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
   {
     const float T_e = get_Te(mgi);
     const float nne = get_nne(mgi);
-    //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),modelgrid[n].thick);
+    //fprintf(estimators_file,"%d %g %g %g %g %d ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),globals::modelgrid[n].thick);
     //fprintf(estimators_file,"%d %g %g %g %g %g ",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth);
     fprintf(estimators_file, "timestep %d modelgridindex %d titeration %d TR %g Te %g W %g TJ %g grey_depth %g nne %g tdays %7.2f\n",
-            timestep, mgi, titer, get_TR(mgi), T_e, get_W(mgi), get_TJ(mgi), modelgrid[mgi].grey_depth, nne, time_step[timestep].mid / DAY);
+            timestep, mgi, titer, get_TR(mgi), T_e, get_W(mgi), get_TJ(mgi), globals::modelgrid[mgi].grey_depth, nne, globals::time_step[timestep].mid / DAY);
     //fprintf(estimators_file,"%d %g %g %g %g %g %g %g
     //",n,get_TR(n),get_Te(n),get_W(n),get_TJ(n),grey_optical_depth,grey_optical_deptha,compton_optical_depth);
 
@@ -57,7 +57,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
       nltepop_write_to_file(mgi, timestep);
     }
 
-    for (int element = 0; element < nelements; element++)
+    for (int element = 0; element < globals::nelements; element++)
     {
       if (get_abundance(mgi, element) <= 0.) // skip elements with no abundance
         continue;
@@ -685,22 +685,22 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
     #ifndef FORCE_LTE
       #if (!NO_LUT_PHOTOION)
         fprintf(estimators_file, "corrphotoionrenorm: ");
-        for (int element = 0; element < nelements; element++)
+        for (int element = 0; element < globals::nelements; element++)
         {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
-            fprintf(estimators_file,"%g ", corrphotoionrenorm[mgi*nelements*maxion+element*maxion+ion]);
+            fprintf(estimators_file,"%g ", corrphotoionrenorm[mgi*globals::nelements*maxion+element*maxion+ion]);
           }
         }
         fprintf(estimators_file, "\n");
         fprintf(estimators_file, "gammaestimator: ");
-        for (int element = 0; element < nelements; element++)
+        for (int element = 0; element < globals::nelements; element++)
         {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
-            fprintf(estimators_file,"%g ", gammaestimator[mgi*nelements*maxion+element*maxion+ion]);
+            fprintf(estimators_file,"%g ", gammaestimator[mgi*globals::nelements*maxion+element*maxion+ion]);
           }
         }
         fprintf(estimators_file,"\n");
@@ -729,62 +729,62 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
   /// onset of the new timestep. Also, boundary crossing?
   /// Calculate the level populations for this cell, and flag the other entries
   /// as empty.
-  /// Make known that cellhistory[tid] contains information about the
+  /// Make known that globals::cellhistory[tid] contains information about the
   /// cell given by cellnumber. (-99 if invalid)
-  if ((modelgridindex == cellhistory[tid].cellnumber) && !new_timestep)
+  if ((modelgridindex == globals::cellhistory[tid].cellnumber) && !new_timestep)
   {
     return;
   }
 
   // force rpkt opacities to be recalculated next time they are accessed
-  kappa_rpkt_cont[tid].recalculate_required = true;
+  globals::kappa_rpkt_cont[tid].recalculate_required = true;
 
-  cellhistory[tid].cellnumber = modelgridindex;
-  //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
-  for (int element = 0; element < nelements; element++)
+  globals::cellhistory[tid].cellnumber = modelgridindex;
+  //globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
+  for (int element = 0; element < globals::nelements; element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
-      cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution = COOLING_UNDEFINED;
+      globals::cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution = COOLING_UNDEFINED;
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
 #if (SEPARATE_STIMRECOMB)
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
 #endif
         }
         /// This is the only flag needed for all of the following MA stuff!
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
         /*
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower = -99.;
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_recomb = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].col_recomb = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_same = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_same = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_down_lower = -99.;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].internal_up_higher = -99.;
 
         ndowntrans = get_ndowntrans(element, ion, level);
         nuptrans = get_nuptrans(element, ion, level);
         for (i = 0; i < ndowntrans; i++)
         {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = -99.;
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = -99.;
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i] = -99.;
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i] = -99.;
         }
         for (i = 0; i < nuptrans; i++)
         {
-          cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = -99.;
+          globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i] = -99.;
         }
         */
       }
     }
   }
-  //cellhistory[tid].totalcooling = COOLING_UNDEFINED;
-  //cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
+  //globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
+  //globals::cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
 }
 
 
@@ -818,12 +818,12 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
     else if ((nlte_iter != 0))
     {
       // recalculate the Gammas using the current population estimates
-      for (int element = 0; element < nelements; element++)
+      for (int element = 0; element < globals::nelements; element++)
       {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++)
         {
-          gammaestimator[n * nelements * maxion + element * maxion + ion] = calculate_iongamma_per_gspop(n, element, ion);
+          gammaestimator[n * globals::nelements * maxion + element * maxion + ion] = calculate_iongamma_per_gspop(n, element, ion);
         }
       }
     }
@@ -835,7 +835,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
     const time_t sys_time_start_Te = time(NULL);
     const int nts_for_te = (titer == 0) ? nts - 1 : nts;
 
-    call_T_e_finder(n, nts, time_step[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates);
+    call_T_e_finder(n, nts, globals::time_step[nts_for_te].mid, MINTEMP, MAXTEMP, heatingcoolingrates);
 
     const int duration_solve_T_e = time(NULL) - sys_time_start_Te;
     const double fracdiff_T_e = fabs((get_Te(n) / prev_T_e) - 1);
@@ -859,14 +859,14 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
       double nlte_test;
       if (NLTE_POPS_ALL_IONS_SIMULTANEOUS)
       {
-        for (int element = 0; element < nelements; element++)
+        for (int element = 0; element < globals::nelements; element++)
         {
           solve_nlte_pops_element(element, n, nts, nlte_iter);
         }
       }
       else
       {
-        for (int element = 0; element < nelements; element++)
+        for (int element = 0; element < globals::nelements; element++)
         {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions-1; ion++)
@@ -917,14 +917,14 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
 #if (TRACK_ION_STATS)
 static void normalise_ion_estimators(const int mgi, const double deltat, const double deltaV)
 {
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     for (int ion = 0; ion < get_nions(element); ion++)
     {
       for (int i = 0; i < ION_COUNTER_COUNT; i++)
       {
         // energy or event count per volume per second
-        const double ratedensity = get_ion_stats(mgi, element, ion, (enum ionstatscounters)i) / deltaV / deltat / nprocs;
+        const double ratedensity = get_ion_stats(mgi, element, ion, (enum ionstatscounters)i) / deltaV / deltat / globals::nprocs;
 
         if (i < nstatcounters_ratecoeff)
         {
@@ -946,12 +946,12 @@ static void normalise_ion_estimators(const int mgi, const double deltat, const d
 static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, const double estimator_normfactor)
 {
   #if (!NO_LUT_PHOTOION)
-    for (int element = 0; element < nelements; element++)
+    for (int element = 0; element < globals::nelements; element++)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++)
       {
-        const int ionestimindex = n * nelements * maxion + element * maxion + ion;
+        const int ionestimindex = n * globals::nelements * maxion + element * maxion + ion;
         //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[ionestimindex]);
         gammaestimator[ionestimindex] *= estimator_normfactor / H;
         //printout("mgi %d, element %d, ion %d, gammaest %g\n",n,element,ion,gammaestimator[ionestimindex]);
@@ -981,7 +981,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
   #endif
   #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
     /// Then reopen the same loops again.
-    for (int element = 0; element < nelements; element++)
+    for (int element = 0; element < globals::nelements; element++)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions-1; ion++)
@@ -991,7 +991,7 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
         /// the next timesteps gamma estimators.
         //nlevels = get_nlevels(element,ion);
         //nlevels = get_ionisinglevels(element,ion);
-        const int ionestimindex = n * nelements * maxion + element * maxion + ion;
+        const int ionestimindex = n * globals::nelements * maxion + element * maxion + ion;
 
         #if (!NO_LUT_PHOTOION)
           gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(n, element, ion);
@@ -1050,21 +1050,21 @@ static void update_gamma_corrphotoionrenorm_bfheating_estimators(const int n, co
 #if (!NO_LUT_PHOTOION)
   static void zero_gammaestimator(const int modelgridindex)
   {
-    for (int element = 0; element < nelements; element++)
+    for (int element = 0; element < globals::nelements; element++)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)
-        gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion] = 0.;
+        gammaestimator[modelgridindex * globals::nelements * maxion + element * maxion + ion] = 0.;
     }
   }
 
   static void set_all_corrphotoionrenorm(const int modelgridindex, const double value)
   {
-    for (int element = 0; element < nelements; element++)
+    for (int element = 0; element < globals::nelements; element++)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)
-        corrphotoionrenorm[modelgridindex * nelements * maxion + element * maxion + ion] = value;
+        corrphotoionrenorm[modelgridindex * globals::nelements * maxion + element * maxion + ion] = value;
     }
   }
 #endif
@@ -1078,7 +1078,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
   if (assoc_cells > 0)
   {
     // estimators were accumulated in nts_prev, but radiation density, etc should be scaled to the cell volume at nts
-    const double deltaV = vol_init_modelcell(mgi) * pow(time_step[nts].mid / tmin, 3);
+    const double deltaV = vol_init_modelcell(mgi) * pow(globals::time_step[nts].mid / globals::tmin, 3);
     const time_t sys_time_start_update_cell = time(NULL);
     // const bool log_this_cell = ((n % 50 == 0) || (npts_model < 50));
     const bool log_this_cell = true;
@@ -1088,24 +1088,24 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     if (log_this_cell)
       printout("[info] update_grid: working on cell %d before timestep %d titeration %d...\n", mgi, nts, titer);
     //n = nonemptycells[ncl];
-    //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,cell[n].T_e,cell[n].rho);
-    modelgrid[mgi].rho = get_rhoinit(mgi) / pow(tratmid, 3);
-    //cell[n].rho = cell[n].rho_init / pow(tratmid,3);
-    //rho = cell[n].rho;
+    //printout("[debug] update_grid: ncl %d is %d non-empty cell updating grid cell %d ... T_e %g, rho %g\n",ncl,my_rank+ncl*nprocs,n,globals::cell[n].T_e,globals::cell[n].rho);
+    globals::modelgrid[mgi].rho = get_rhoinit(mgi) / pow(tratmid, 3);
+    //globals::cell[n].rho = globals::cell[n].rho_init / pow(tratmid,3);
+    //rho = globals::cell[n].rho;
     /// This is done outside update grid now
-    //modelgrid[n].totalcooling = COOLING_UNDEFINED;
+    //globals::modelgrid[n].totalcooling = COOLING_UNDEFINED;
 
-    if (opacity_case == 4)
+    if (globals::opacity_case == 4)
     {
       /// Update abundances of radioactive isotopes
       //printout("call update abundances for timestep %d in model cell %d\n",m,n);
-      update_abundances(mgi, nts, time_step[nts].mid);
+      update_abundances(mgi, nts, globals::time_step[nts].mid);
       nonthermal::calculate_deposition_rate_density(mgi, nts);
       printout("update_abundances for cell %d timestep %d\n", mgi, nts);
 
       /// For timestep 0 we calculate the level populations straight forward wihout
       /// applying any temperature correction
-      if ((nts - itstep) == 0 && titer == 0)
+      if ((nts - globals::itstep) == 0 && titer == 0)
       {
         /// Determine renormalisation factor for corrected photoionization cross-sections
         #ifndef FORCE_LTE
@@ -1120,22 +1120,22 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         /// W == 1 indicates that this modelgrid cell was treated grey in the
         /// last timestep. Therefore it has no valid Gamma estimators and must
         /// be treated in LTE at restart.
-        if (modelgrid[mgi].thick == 0 && get_W(mgi) == 1)
+        if (globals::modelgrid[mgi].thick == 0 && get_W(mgi) == 1)
         {
           if (log_this_cell)
             printout("force modelgrid cell to be grey at restart\n");
-          modelgrid[mgi].thick = 1;
+          globals::modelgrid[mgi].thick = 1;
         }
         if (log_this_cell)
         {
-          printout("initial_iteration %d\n",initial_iteration);
-          printout("modelgrid.thick: %d\n",modelgrid[mgi].thick);
+          printout("initial_iteration %d\n", globals::initial_iteration);
+          printout("modelgrid.thick: %d\n", globals::modelgrid[mgi].thick);
         }
 
         precalculate_partfuncts(mgi);
-        //printout("abundance in cell %d is %g\n",n,cell[n].composition[0].abundance);
+        //printout("abundance in cell %d is %g\n",n,globals::cell[n].composition[0].abundance);
 
-        if (!simulation_continued_from_saved || !NLTE_POPS_ON)
+        if (!globals::simulation_continued_from_saved || !NLTE_POPS_ON)
         {
           calculate_populations(mgi);  // these were not read from the gridsave file, so calculate them now
         }
@@ -1154,7 +1154,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         /// Then update T_R and W using the estimators.
         /// (This could in principle also be done for empty cells)
 
-        const double estimator_normfactor = 1 / deltaV / deltat / nprocs;
+        const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
         const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
         const time_t sys_time_start_temperature_corrections = time(NULL);
 
@@ -1170,7 +1170,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         #endif
 
         #ifndef FORCE_LTE
-        if (initial_iteration || modelgrid[mgi].thick == 1)
+        if (globals::initial_iteration || globals::modelgrid[mgi].thick == 1)
         #endif
         {
           const double T_R = radfield::get_T_R_from_J(mgi);
@@ -1189,14 +1189,14 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
           calculate_populations(mgi);
         }
         #ifndef FORCE_LTE
-        else // not (initial_iteration || modelgrid[n].thick == 1)
+        else // not (initial_iteration || globals::modelgrid[n].thick == 1)
         {
           /// Calculate estimators
 
           radfield::normalise_nuJ(mgi, estimator_normfactor_over4pi);
 
-          ffheatingestimator[mgi] *= estimator_normfactor;
-          colheatingestimator[mgi] *= estimator_normfactor;
+          globals::ffheatingestimator[mgi] *= estimator_normfactor;
+          globals::colheatingestimator[mgi] *= estimator_normfactor;
 
           #ifdef DO_TITER
             radfield::titer_nuJ(mgi);
@@ -1223,8 +1223,8 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
       const float nne = get_nne(mgi);
       const double compton_optical_depth = SIGMA_T * nne * wid_init(mgi) * tratmid;
 
-      double radial_pos = modelgrid[mgi].initial_radial_pos * tratmid / assoc_cells;
-      if (grid_type == GRID_SPHERICAL1D)
+      double radial_pos = globals::modelgrid[mgi].initial_radial_pos * tratmid / assoc_cells;
+      if (globals::grid_type == GRID_SPHERICAL1D)
       {
         const double r_inner = get_cellcoordmin(mgi, 0) * tratmid / assoc_cells;
         const double r_outer = r_inner + wid_init(mgi) * tratmid;
@@ -1232,30 +1232,30 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
         // printout("r_inner %g r_outer %g tratmid %g assoc_cells %d\n", r_inner, r_outer, tratmid, assoc_cells);
       }
       const double grey_optical_deptha = get_kappagrey(mgi) * get_rho(mgi) * wid_init(mgi) * tratmid;
-      const double grey_optical_depth = get_kappagrey(mgi) * get_rho(mgi) * (rmax * tratmid - radial_pos);
+      const double grey_optical_depth = get_kappagrey(mgi) * get_rho(mgi) * (globals::rmax * tratmid - radial_pos);
       if (log_this_cell)
       {
         printout("modelgridcell %d, compton optical depth (/propgridcell) %g, grey optical depth (/propgridcell) %g\n", mgi, compton_optical_depth, grey_optical_deptha);
-        printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, rmax * tratmid - radial_pos, grey_optical_depth);
+        printout("radial_pos %g, distance_to_obs %g, tau_dist %g\n", radial_pos, globals::rmax * tratmid - radial_pos, grey_optical_depth);
         //printout("rmax %g, tratmid %g\n",rmax,tratmid);
       }
-      modelgrid[mgi].grey_depth = grey_optical_depth;
+      globals::modelgrid[mgi].grey_depth = grey_optical_depth;
 
       // grey_optical_depth = compton_optical_depth;
 
-      if ((grey_optical_depth > cell_is_optically_thick) && (nts < n_grey_timesteps))
+      if ((grey_optical_depth > globals::cell_is_optically_thick) && (nts < globals::n_grey_timesteps))
       {
         printout("cell %d is treated in grey approximation (tau %g)\n", mgi, grey_optical_depth);
-        modelgrid[mgi].thick = 1;
+        globals::modelgrid[mgi].thick = 1;
       }
       #ifdef VPKT_ON
       else if (grey_optical_depth > cell_is_optically_thick_vpkt)
       {
-          modelgrid[mgi].thick = 2;
+          globals::modelgrid[mgi].thick = 2;
       }
       #endif
       else
-        modelgrid[mgi].thick = 0;
+        globals::modelgrid[mgi].thick = 0;
 
       /// Cooling rates depend only on cell properties, precalculate total cooling
       /// and ion contributions inside update grid and communicate between MPI tasks
@@ -1266,22 +1266,22 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
 
       printout("calculate_kpkt_rates for cell %d timestep %d took %ld seconds\n", mgi, nts, time(NULL) - sys_time_start_calc_kpkt_rates);
     }
-    else if (opacity_case == 3)
+    else if (globals::opacity_case == 3)
     {
       /// MK Begin
-      //printout("update_grid: opacity_case 3 ... updating cell[n].kappa_grey"); //MK
-      if (get_rho(mgi) > rho_crit)
+      //printout("update_grid: opacity_case 3 ... updating globals::cell[n].kappa_grey"); //MK
+      if (get_rho(mgi) > globals::rho_crit)
       {
-        set_kappagrey(mgi, opcase3_normal * (0.9 * get_ffegrp(mgi) + 0.1) * rho_crit/get_rho(mgi));
+        set_kappagrey(mgi, globals::opcase3_normal * (0.9 * get_ffegrp(mgi) + 0.1) * globals::rho_crit / get_rho(mgi));
       }
       else
       {
-        set_kappagrey(mgi, opcase3_normal * (0.9 * get_ffegrp(mgi) + 0.1));
+        set_kappagrey(mgi, globals::opcase3_normal * (0.9 * get_ffegrp(mgi) + 0.1));
       }
       /// MK End
     }
 
-    if (do_rlc_est == 2 && get_nne(mgi) > 0)
+    if (globals::do_rlc_est == 2 && get_nne(mgi) > 0)
     {
       const double cell_len_scale_a = 0.1 / get_nne(mgi) / SIGMA_T;
       if (cell_len_scale_a < mps[tid])
@@ -1321,12 +1321,12 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
 /// m timestep
 {
   //printout("[debug] update_grid: starting update for timestep %d...\n",m);
-  const double trat = time_step[nts].start / tmin;
-  const double tratmid = time_step[nts].mid / tmin;
+  const double trat = globals::time_step[nts].start / globals::tmin;
+  const double tratmid = globals::time_step[nts].mid / globals::tmin;
 
   double mps[MTHREADS];  /// Thread private substitution of max_path_step. Its minimum is
                          /// assigned to max_path_step after the parallel update_grid finished.
-  for (int i = 0; i < nthreads; i++)
+  for (int i = 0; i < globals::nthreads; i++)
   {
     mps[i] = 1.e35;
   }
@@ -1350,15 +1350,15 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   ///Calculate the critical opacity at which opacity_case 3 switches from a
   ///regime proportional to the density to a regime independent of the density
   ///This is done by solving for tau_sobolev == 1
-  ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * time_step[m].mid;
-  rho_crit = ME * CLIGHT * nucmass(NUCLIDE_NI56) / (PI * QE * QE * rho_crit_para * 3000e-8 * time_step[nts].mid);
-  printout("update_grid: rho_crit = %g\n", rho_crit);
+  ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
+  globals::rho_crit = ME * CLIGHT * nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
+  printout("update_grid: rho_crit = %g\n", globals::rho_crit);
 
-  // const double t_current = time_step[nts].start;
+  // const double t_current = globals::time_step[nts].start;
 
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero
-  const double deltat = time_step[nts_prev].width;
+  const double deltat = globals::time_step[nts_prev].width;
 
   // printout("timestep %d, titer %d\n", nts, titer);
   // printout("deltat %g\n", deltat);
@@ -1383,7 +1383,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
     //for (ncl = nstart; ncl < nstart+nblock; ncl++)
     //for (n = nstart; n < nstart+nblock; n++)
 
-    for (int mgi = 0; mgi < npts_model; mgi++)
+    for (int mgi = 0; mgi < globals::npts_model; mgi++)
     {
       /// Check if this task should work on the current model grid cell.
       /// If yes, update the cell and write out the estimators
@@ -1439,7 +1439,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   int mgi;
   for (n=0; n < ngrid; n++)
   {
-    mgi=cell[n].modelgridindex;
+    mgi=globals::cell[n].modelgridindex;
     check1 = check1 + (get_kappagrey(mgi)  * get_rho(mgi));
     check2 = check2 + get_rho(mgi);
   }
@@ -1447,24 +1447,24 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   */
 
   /// Assign the minimum of thread private mps to the global variable max_path_step
-  max_path_step = mps[0];
-  for (int i = 1; i < nthreads; i++)
+  globals::max_path_step = mps[0];
+  for (int i = 1; i < globals::nthreads; i++)
   {
-    if (mps[i] < max_path_step)
+    if (mps[i] < globals::max_path_step)
     {
-      max_path_step = mps[i];
+      globals::max_path_step = mps[i];
     }
   }
 
-  if (do_rlc_est == 2)
+  if (globals::do_rlc_est == 2)
   {
-    if (max_path_step < (wid_init(0) * trat / 10.))
+    if (globals::max_path_step < (wid_init(0) * trat / 10.))
     {
-      max_path_step = wid_init(0) / 10. * trat;
+      globals::max_path_step = wid_init(0) / 10. * trat;
     }
   }
-  max_path_step = fmin(max_path_step, rmax / 10.);
-  printout("max_path_step %g\n", max_path_step);
+  globals::max_path_step = fmin(globals::max_path_step, globals::rmax / 10.);
+  printout("max_path_step %g\n", globals::max_path_step);
 
   //#ifndef FORCE_LTE
   //  fclose(heating_file);
@@ -1500,11 +1500,11 @@ double calculate_populations(const int modelgridindex)
   /// The following section of uppermost_ion is (so far) NOT thread safe!!!!!!!!!!!!!!!!!!!!!!!
   int only_neutral_ions = 0;
   int nelements_in_cell = 0;
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     const int nions = get_nions(element);
     //elements[element].uppermost_ion = nions-1;
-    elements_uppermost_ion[tid][element] = nions - 1;
+    globals::elements_uppermost_ion[tid][element] = nions - 1;
     const double abundance = get_abundance(modelgridindex,element);
     if (abundance > 0)
     {
@@ -1512,7 +1512,7 @@ double calculate_populations(const int modelgridindex)
 #     ifdef FORCE_LTE
       uppermost_ion = get_nions(element) - 1;
 #     else
-      if (initial_iteration || modelgrid[modelgridindex].thick == 1)
+      if (globals::initial_iteration || globals::modelgrid[modelgridindex].thick == 1)
       {
         uppermost_ion = get_nions(element) - 1;
       }
@@ -1521,16 +1521,16 @@ double calculate_populations(const int modelgridindex)
         int ion;
         for (ion = 0; ion < nions-1; ion++)
         {
-          //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
-          //if (photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion] == 0) break;
+          //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*globals::nelements*maxion+element*maxion+ion]);
+          //if (photoionestimator[modelgridindex*globals::nelements*maxion+element*maxion+ion] == 0) break;
           #if NO_LUT_PHOTOION
             const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
           #else
-            const double Gamma = gammaestimator[modelgridindex * nelements * maxion + element * maxion + ion];
+            const double Gamma = gammaestimator[modelgridindex * globals::nelements * maxion + element * maxion + ion];
           #endif
 
           if ((Gamma == 0) &&
-             (!NT_ON || ((rpkt_emiss[modelgridindex] == 0.) && (get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) == 0.) && (get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) == 0.))))
+             (!NT_ON || ((globals::rpkt_emiss[modelgridindex] == 0.) && (get_modelinitradioabund(modelgridindex, NUCLIDE_CR48) == 0.) && (get_modelinitradioabund(modelgridindex, NUCLIDE_NI56) == 0.))))
             break;
         }
         uppermost_ion = ion;
@@ -1554,7 +1554,7 @@ double calculate_populations(const int modelgridindex)
       uppermost_ion = ion;
       //printout("cell %d, element %d, final uppermost_ion is %d, factor %g\n",modelgridindex,element,uppermost_ion,factor);
       //elements[element].uppermost_ion = uppermost_ion;
-      elements_uppermost_ion[tid][element] = uppermost_ion;
+      globals::elements_uppermost_ion[tid][element] = uppermost_ion;
       if (uppermost_ion == 0)
         only_neutral_ions++;
       nelements_in_cell++;
@@ -1576,11 +1576,11 @@ double calculate_populations(const int modelgridindex)
     //printout("[warning] calculate_populations: only neutral ions in cell %d modelgridindex\n",modelgridindex);
     //abort();
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
-    for (int element = 0; element < nelements; element++)
+    for (int element = 0; element < globals::nelements; element++)
     {
       const double abundance = get_abundance(modelgridindex,element);
       /// calculate number density of the current element (abundances are given by mass)
-      const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
+      const double nnelement = abundance / globals::elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
 
       const int nions = get_nions(element);
@@ -1596,10 +1596,10 @@ double calculate_populations(const int modelgridindex)
           nnion = 0.;
         nntot += nnion;
         nne += nnion * (get_ionstage(element,ion)-1);
-        modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
-          nnion * stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
+        globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (
+          nnion * stat_weight(element,ion,0) / globals::modelgrid[modelgridindex].composition[element].partfunct[ion]);
 
-        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
+        if (!isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
@@ -1614,7 +1614,7 @@ double calculate_populations(const int modelgridindex)
     /// Search solution for nne in [nne_lo,nne_hi]
     //printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
     //printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
-    //printout("n, x_lo, x_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n",modelgridindex,x_lo,x_hi,T_R,T_e,W,cell[modelgridindex].rho);
+    //printout("n, x_lo, x_hi, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n",modelgridindex,x_lo,x_hi,T_R,T_e,W,globals::cell[modelgridindex].rho);
     double nne_lo = 0.;  //MINPOP;
     if (nne_solution_f(nne_lo,f.params)*nne_solution_f(nne_hi,f.params) > 0)
     {
@@ -1622,16 +1622,16 @@ double calculate_populations(const int modelgridindex)
       printout("nne@x_lo %g\n", nne_solution_f(nne_lo,f.params));
       printout("nne@x_hi %g\n", nne_solution_f(nne_hi,f.params));
 #     ifndef FORCE_LTE
-      for (int element = 0; element < nelements; element++)
+      for (int element = 0; element < globals::nelements; element++)
       {
         //printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements[element].uppermost_ion);
-        printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,elements_uppermost_ion[tid][element]);
+        printout("cell %d, element %d, uppermost_ion is %d\n",modelgridindex,element,globals::elements_uppermost_ion[tid][element]);
         //for (ion=0; ion <= elements[element].uppermost_ion; ion++)
         #if (!NO_LUT_PHOTOION)
           for (int ion = 0; ion <= elements_uppermost_ion[tid][element]; ion++)
           {
-            //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
-            printout("element %d, ion %d, photoionest %g\n",element,ion,gammaestimator[modelgridindex*nelements*maxion+element*maxion+ion]);
+            //printout("element %d, ion %d, photoionest %g\n",element,ion,photoionestimator[modelgridindex*globals::nelements*maxion+element*maxion+ion]);
+            printout("element %d, ion %d, photoionest %g\n",element,ion,gammaestimator[modelgridindex*globals::nelements*maxion+element*maxion+ion]);
           }
         #endif
       }
@@ -1660,11 +1660,11 @@ double calculate_populations(const int modelgridindex)
       nne = MINPOP;
 
     set_nne(modelgridindex,nne);
-    //cell[modelgridindex].nne = nne;
+    //globals::cell[modelgridindex].nne = nne;
     if (status == GSL_CONTINUE)
       printout("[warning] calculate_populations: nne did not converge within %d iterations\n",maxit);
     //printout("[debug] update_grid:   status = %s\n",gsl_strerror(status));
-    //printout("[debug] update_grid:   converged nne %g\n",cell[modelgridindex].nne);
+    //printout("[debug] update_grid:   converged nne %g\n",globals::cell[modelgridindex].nne);
 
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
     //double nne_check = 0.;
@@ -1672,15 +1672,15 @@ double calculate_populations(const int modelgridindex)
                     /// targets for compton scattering of gamma rays
 
     nntot = nne;
-    for (int element = 0; element < nelements; element++)
+    for (int element = 0; element < globals::nelements; element++)
     {
       const double abundance = get_abundance(modelgridindex, element);
       const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
-      const double nnelement = abundance / elements[element].mass * get_rho(modelgridindex);
+      const double nnelement = abundance / globals::elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
 
-      const int uppermost_ion = elements_uppermost_ion[tid][element];
+      const int uppermost_ion = globals::elements_uppermost_ion[tid][element];
       double ionfractions[uppermost_ion + 1];
       get_ionfractions(element, modelgridindex, nne, ionfractions, uppermost_ion);
 
@@ -1689,7 +1689,7 @@ double calculate_populations(const int modelgridindex)
       {
         double nnion;
         //if (ion <= elements[element].uppermost_ion)
-        if (ion <= elements_uppermost_ion[tid][element])
+        if (ion <= globals::elements_uppermost_ion[tid][element])
         {
           if (abundance > 0)
           {
@@ -1704,11 +1704,11 @@ double calculate_populations(const int modelgridindex)
           nnion = MINPOP;  /// uppermost_ion is only < nions-1 in cells with nonzero abundance of the given species
         nntot += nnion;
         //nne_check += nnion * (get_ionstage(element,ion)-1);
-        //if (modelgrid[modelgridindex].composition[element].groundlevelpop[ion] < 0)
-        //if (initial_iteration || modelgrid[modelgridindex].thick == 1)
+        //if (globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] < 0)
+        //if (initial_iteration || globals::modelgrid[modelgridindex].thick == 1)
         {
-          modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (nnion *
-                stat_weight(element,ion,0) / modelgrid[modelgridindex].composition[element].partfunct[ion]);
+          globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion] = (nnion *
+                stat_weight(element,ion,0) / globals::modelgrid[modelgridindex].composition[element].partfunct[ion]);
           //printout("calculate_populations: setting groundlevelpop of ion %d\n",ion);
         }
         //else
@@ -1718,13 +1718,13 @@ double calculate_populations(const int modelgridindex)
   /*
   if (element == 21)
     {
-      printout("Setting ion %d to have glp %g in cell %d\n", ion, modelgrid[modelgridindex].composition[element].groundlevelpop[ion], modelgridindex);
-      printout("ion pop was %g and partfn was %g\n", nnion, modelgrid[modelgridindex].composition[element].partfunct[ion]);
+      printout("Setting ion %d to have glp %g in cell %d\n", ion, globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion], modelgridindex);
+      printout("ion pop was %g and partfn was %g\n", nnion, globals::modelgrid[modelgridindex].composition[element].partfunct[ion]);
       printout("the ion frac was %g, abundance %g and density %g\n",ionfractions[ion], abundance, get_rho(modelgridindex));
     }
   */
 
-        if (!isfinite(modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
+        if (!isfinite(globals::modelgrid[modelgridindex].composition[element].groundlevelpop[ion]))
           printout("[warning] calculate_populations: groundlevelpop infinite in connection with MINPOP\n");
       }
     }
@@ -1743,11 +1743,11 @@ double calculate_electron_densities(const int modelgridindex)
   double nne_tot = 0.; // total electron density
   float nne = 0.;     // free electron density
 
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     const double elem_abundance = get_abundance(modelgridindex,element);
     // calculate number density of the current element (abundances are given by mass)
-    const double nnelement = elem_abundance / elements[element].mass * get_rho(modelgridindex);
+    const double nnelement = elem_abundance / globals::elements[element].mass * get_rho(modelgridindex);
     nne_tot += nnelement * get_element(element);
 
     // Use ionization fractions to calculate the free electron contributions
@@ -1795,8 +1795,8 @@ double get_ffcooling(int element, int ion, int cellnumber)
 
   ion++;
   nncurrention = ionstagepop(cellnumber,element,ion);
-  nne = cell[cellnumber].nne;
-  T_e = cell[cellnumber].T_e;
+  nne = globals::cell[cellnumber].nne;
+  T_e = globals::cell[cellnumber].T_e;
 
   C_ff = 0.;
   ioncharge = get_ionstage(element,ion) - 1;
@@ -1814,12 +1814,12 @@ double get_adcool(int cellnumber, int nts)
   double t_current,nntot,T_e;
   double p,dV,V;
 
-  t_current = time_step[nts].mid;
-  nntot = cell[cellnumber].nn_tot;
-  T_e = cell[cellnumber].T_e;
+  t_current = globals::time_step[nts].mid;
+  nntot = globals::cell[cellnumber].nn_tot;
+  T_e = globals::cell[cellnumber].T_e;
   p = nntot*KB*T_e;
-  dV = 3*pow(wid_init/tmin,3)*pow(t_current,2);
-  V = pow(wid_init*t_current/tmin,3);
+  dV = 3*pow(wid_init/globals::tmin,3)*pow(t_current,2);
+  V = pow(wid_init*t_current/globals::tmin,3);
 
   return p*dV/V;
 }
@@ -1828,13 +1828,13 @@ double get_radrecomb(int element, int ion, int level, int cellnumber)
 {
   double T_e,nne,nnion,E_threshold,alpha_sp;
 
-  T_e = cell[cellnumber].T_e;
-  nne = cell[cellnumber].nne;
+  T_e = globals::cell[cellnumber].T_e;
+  nne = globals::cell[cellnumber].nne;
   nnion = get_groundlevelpop(cellnumber,element,ion+1);
   E_threshold = epsilon(element,ion+1,0) - epsilon(element,ion,level);
   alpha_sp = interpolate_spontrecombcoeff(element,ion,level,T_e);
   ///// This is ion-wise Alpha_st is the sum of the level-wise alpha_st, so it should be added only once if mulitple levels are present
-  //double Alpha_st = stimrecombestimator_save[cellnumber*nelements*maxion+element*maxion+ion];
+  //double Alpha_st = stimrecombestimator_save[cellnumber*globals::nelements*maxion+element*maxion+ion];
 
   //return nnion*nne*(alpha_sp+Alpha_st)*E_threshold;
   return nnion*nne*alpha_sp*E_threshold;
@@ -1847,7 +1847,7 @@ double get_thermalratio(int element, int ion, int level, int cellnumber)
 {
   double T_e,alpha_sp,alpha_sp_E;
 
-  T_e = cell[cellnumber].T_e;
+  T_e = globals::cell[cellnumber].T_e;
   alpha_sp = interpolate_spontrecombcoeff(element,ion,level,T_e);
   alpha_sp_E = interpolate_spontrecombcoeff_E(element,ion,level,T_e);
 
@@ -1908,16 +1908,16 @@ void write_grid_restart_data(const int timestep)
 
   FILE *gridsave_file = fopen_required(filename, "w");
 
-  fprintf(gridsave_file, "%d ", ntstep);
+  fprintf(gridsave_file, "%d ", globals::ntstep);
 
-  for (int i = 0; i < ntstep; i++)
+  for (int i = 0; i < globals::ntstep; i++)
   {
-    fprintf(gridsave_file, "%lg %lg ", time_step[i].gamma_dep, time_step[i].positron_dep);
+    fprintf(gridsave_file, "%lg %lg ", globals::time_step[i].gamma_dep, globals::time_step[i].positron_dep);
   }
 
   fprintf(gridsave_file, "%d ", timestep);
 
-  for (int mgi = 0; mgi < npts_model; mgi++)
+  for (int mgi = 0; mgi < globals::npts_model; mgi++)
   {
     const bool nonemptycell = (get_numassociatedcells(mgi) > 0);
 
@@ -1925,7 +1925,7 @@ void write_grid_restart_data(const int timestep)
     {
       fprintf(gridsave_file, "%d %g %g %g %g %hd %lg",
               mgi, get_TR(mgi), get_Te(mgi), get_W(mgi), get_TJ(mgi),
-              modelgrid[mgi].thick, rpkt_emiss[mgi]);
+              globals::modelgrid[mgi].thick, globals::rpkt_emiss[mgi]);
     }
     else
     {
@@ -1934,12 +1934,12 @@ void write_grid_restart_data(const int timestep)
 
     #ifndef FORCE_LTE
       #if (!NO_LUT_PHOTOION)
-        for (int element = 0; element < nelements; element++)
+        for (int element = 0; element < globals::nelements; element++)
         {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
-            const int estimindex = mgi * nelements * maxion + element * maxion + ion;
+            const int estimindex = mgi * globals::nelements * maxion + element * maxion + ion;
             fprintf(gridsave_file, " %lg %lg",
                     (nonemptycell ? corrphotoionrenorm[estimindex] : 0.),
                     (nonemptycell ? gammaestimator[estimindex] : 0.));
@@ -1965,41 +1965,41 @@ void write_grid_restart_data(const int timestep)
   // Original version of this was general but very slow. Modifying to be
   // faster but only work for regular grid.
 
-  double trat = t / tmin;
-  int nx = (x - (cell[0].pos_init[0] * trat))/(wid_init * trat);
-  int ny = (y - (cell[0].pos_init[1] * trat))/(wid_init * trat);
-  int nz = (z - (cell[0].pos_init[2] * trat))/(wid_init * trat);
+  double trat = t / globals::tmin;
+  int nx = (x - (globals::cell[0].pos_init[0] * trat))/(wid_init * trat);
+  int ny = (y - (globals::cell[0].pos_init[1] * trat))/(wid_init * trat);
+  int nz = (z - (globals::cell[0].pos_init[2] * trat))/(wid_init * trat);
 
-  int n = nx + (ncoordgrid[0] * ny) + (ncoordgrid[0] * ncoordgrid[1] * nz);
+  int n = nx + (globals::ncoordgrid[0] * ny) + (globals::ncoordgrid[0] * globals::ncoordgrid[1] * nz);
 
   // do a check
 
-  if (x < cell[n].pos_init[0] * trat)
+  if (x < globals::cell[n].pos_init[0] * trat)
   {
     printout("Problem with get_cell (1).\n");
     abort();
   }
-  if (x > (cell[n].pos_init[0]+wid_init) * trat)
+  if (x > (globals::cell[n].pos_init[0]+wid_init) * trat)
   {
     printout("Problem with get_cell (2).\n");
     abort();
   }
-  if (y < cell[n].pos_init[1] * trat)
+  if (y < globals::cell[n].pos_init[1] * trat)
   {
     printout("Problem with get_cell (3).\n");
     abort();
   }
-  if (y > (cell[n].pos_init[1]+wid_init) * trat)
+  if (y > (globals::cell[n].pos_init[1]+wid_init) * trat)
   {
     printout("Problem with get_cell (4).\n");
     abort();
   }
-  if (z < cell[n].pos_init[2] * trat)
+  if (z < globals::cell[n].pos_init[2] * trat)
   {
     printout("Problem with get_cell (5).\n");
     abort();
   }
-  if (z > (cell[n].pos_init[2]+wid_init) * trat)
+  if (z > (globals::cell[n].pos_init[2]+wid_init) * trat)
   {
     printout("Problem with get_cell (6).\n");
     abort();
@@ -2008,17 +2008,17 @@ void write_grid_restart_data(const int timestep)
 
 
   // OLD
-        //   trat = t / tmin;
+        //   trat = t / globals::tmin;
         //
         //   for (n = 0; n < ngrid; n++)
         //   {
         //   if (
-        //   (x > cell[n].pos_init[0] * trat) &&
-        //   (x < (cell[n].pos_init[0] + wid_init) *trat) &&
-        //   (y > cell[n].pos_init[1] * trat) &&
-        //   (y < (cell[n].pos_init[1] + wid_init) *trat) &&
-        //   (z > cell[n].pos_init[2] * trat) &&
-        //   (z < (cell[n].pos_init[2] + wid_init) *trat))
+        //   (x > globals::cell[n].pos_init[0] * trat) &&
+        //   (x < (globals::cell[n].pos_init[0] + wid_init) *trat) &&
+        //   (y > globals::cell[n].pos_init[1] * trat) &&
+        //   (y < (globals::cell[n].pos_init[1] + wid_init) *trat) &&
+        //   (z > globals::cell[n].pos_init[2] * trat) &&
+        //   (z < (globals::cell[n].pos_init[2] + wid_init) *trat))
         //   {
         //   return(n);
         // }
@@ -2027,9 +2027,9 @@ void write_grid_restart_data(const int timestep)
 
   printout("Failed to find cell (get_cell). \n");
   printout("x %g, y %g, z %g, t %g\n", x, y, z, t);
-  printout("xend %g yend %g zend %g\n", cell[ngrid-1].pos_init[0] * trat, cell[ngrid-1].pos_init[1] * trat,cell[ngrid-1].pos_init[2] * trat);
-  printout("xend %g yend %g zend %g\n", cell[0].pos_init[0] * trat, cell[0].pos_init[1] * trat,cell[0].pos_init[2] * trat);
-  printout("xend %g yend %g zend %g\n", (cell[0].pos_init[0]+wid_init) * trat, (cell[0].pos_init[1]+wid_init) * trat,(cell[0].pos_init[2]+wid_init) * trat);
+  printout("xend %g yend %g zend %g\n", globals::cell[ngrid-1].pos_init[0] * trat, globals::cell[ngrid-1].pos_init[1] * trat,globals::cell[ngrid-1].pos_init[2] * trat);
+  printout("xend %g yend %g zend %g\n", globals::cell[0].pos_init[0] * trat, globals::cell[0].pos_init[1] * trat,globals::cell[0].pos_init[2] * trat);
+  printout("xend %g yend %g zend %g\n", (globals::cell[0].pos_init[0]+wid_init) * trat, (globals::cell[0].pos_init[1]+wid_init) * trat,(globals::cell[0].pos_init[2]+wid_init) * trat);
   printout("xwid %g ywid %g zwid %g\n", (wid_init) * trat, (wid_init) * trat,(wid_init) * trat);
 
   abort();

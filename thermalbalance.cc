@@ -101,7 +101,7 @@ static double calculate_bfheatingcoeff(int element, int ion, int level, int phix
   intparas.nu_edge = nu_threshold;
   intparas.modelgridindex = modelgridindex;
   intparas.T_R = get_TR(modelgridindex);
-  intparas.photoion_xs = elements[element].ions[ion].levels[level].photoion_xs;
+  intparas.photoion_xs = globals::elements[element].ions[ion].levels[level].photoion_xs;
   // intparas.Te_TR_factor = sqrt(T_e/T_R) * sf_Te / sf_TR;
 
   double bfheating = 0.0;
@@ -138,14 +138,14 @@ static double get_bfheatingcoeff(int element, int ion, int level)
 // depends only the radiation field
 // no dependence on T_e or populations
 {
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff;
+  return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff;
 }
 
 
 void calculate_bfheatingcoeffs(int modelgridindex)
 {
   const double minelfrac = 0.01;
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     if (!(get_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING))
     {
@@ -183,14 +183,14 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           #if !NO_LUT_BFHEATING
           const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
-            bfheatingcoeff *= bfheatingestimator[modelgridindex*nelements*maxion + index_in_groundlevelcontestimator];
+            bfheatingcoeff *= bfheatingestimator[modelgridindex*globals::nelements*maxion + index_in_groundlevelcontestimator];
           #endif
         }
-        cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
+        globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
       }
     }
   }
-  cellhistory[tid].bfheating_mgi = modelgridindex;
+  globals::cellhistory[tid].bfheating_mgi = modelgridindex;
 }
 
 
@@ -209,8 +209,8 @@ static double get_heating_ion_coll_deexc(
     const int ndowntrans = get_ndowntrans(element, ion, level);
     for (int ii = 0; ii < ndowntrans; ii++)
     {
-      const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[ii];
-      const int lower = linelist[lineindex].lowerlevelindex;
+      const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[ii];
+      const int lower = globals::linelist[lineindex].lowerlevelindex;
       const double epsilon_trans = epsilon_level - epsilon(element, ion, lower);
       const double C = nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex) * epsilon_trans;
       C_deexc += C;
@@ -232,9 +232,9 @@ static void calculate_heating_rates(
   double bfheating = 0.;
   double ffheating = 0.;
 
-  assert(cellhistory[tid].bfheating_mgi == modelgridindex);
+  assert(globals::cellhistory[tid].bfheating_mgi == modelgridindex);
 
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     const int nions = get_nions(element);
     #ifdef DIRECT_COL_HEAT
@@ -302,7 +302,7 @@ static void calculate_heating_rates(
 
         /// Bound-free heating (from estimators)
         /// ------------------------------------
-        //if (ion < nions-1) bfheating += bfheatingestimator[cellnumber*nelements*maxion+element*maxion+ion];
+        //if (ion < nions-1) bfheating += bfheatingestimator[cellnumber*globals::nelements*maxion+element*maxion+ion];
 
         /// Bound-free heating (renormalised analytical calculation)
         /// --------------------------------------------------------
@@ -327,7 +327,7 @@ static void calculate_heating_rates(
   /// Free-free heating
   /// -----------------
   /// From estimators
-  ffheating = ffheatingestimator[modelgridindex];
+  ffheating = globals::ffheatingestimator[modelgridindex];
 
   /// Analytical calculation using T, and populations
   /// This is always taken as an additional process to the other importantheatingterms
@@ -368,7 +368,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   heatingcoolingrates_t *heatingcoolingrates = ((Te_solution_paras *) paras)->heatingcoolingrates;
 
   /// Set new T_e guess for the current cell and update populations
-  //cell[cellnumber].T_e = T_e;
+  //globals::cell[cellnumber].T_e = T_e;
   set_Te(modelgridindex, T_e);
   double nntot;
   if (NLTE_POPS_ON && NLTE_POPS_ALL_IONS_SIMULTANEOUS)
@@ -382,7 +382,7 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   calculate_heating_rates(modelgridindex, T_e, nne, heatingcoolingrates);
 
   /// If selected take direct gamma heating into account
-  if (do_rlc_est == 3)
+  if (globals::do_rlc_est == 3)
   {
     const double nt_frac_heating = nonthermal::get_nt_frac_heating(modelgridindex);
     heatingcoolingrates->heating_gamma = nonthermal::get_deposition_rate_density(modelgridindex) * nt_frac_heating;
@@ -396,8 +396,8 @@ static double T_e_eqn_heating_minus_cooling(const double T_e, void *paras)
   /// Adiabatic cooling term
   const double p = nntot * KB * T_e;
   const double volumetmin = vol_init_modelcell(modelgridindex);
-  const double dV = 3 * volumetmin / pow(tmin, 3) * pow(t_current, 2);
-  const double V = volumetmin * pow(t_current / tmin, 3);
+  const double dV = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);
+  const double V = volumetmin * pow(t_current / globals::tmin, 3);
   //printout("nntot %g, p %g, dV %g, V %g\n",nntot,p,dV,V);
   heatingcoolingrates->cooling_adiabatic = p * dV / V;
 
@@ -525,7 +525,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
     T_e = MAXTEMP;
     //if (nts_global >= 15) T_e = MINTEMP; ///DEBUG ONLY!!!!!!!!!!!!!!!!!!!!!!!!! invert boundaries!
     printout("[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [%g,%g] in modelcell %d (T_R=%g,W=%g). T_e forced to be MAXTEMP\n",MINTEMP,MAXTEMP,modelgridindex,get_TR(modelgridindex),get_W(modelgridindex));
-    //printout("hot cell %d, with T_R %g, T_e %g, W %g, nne %g\n",cellnumber,cell[cellnumber].T_R,T_e,cell[cellnumber].W,cell[cellnumber].nne);
+    //printout("hot cell %d, with T_R %g, T_e %g, W %g, nne %g\n",cellnumber,globals::cell[cellnumber].T_R,T_e,globals::cell[cellnumber].W,globals::cell[cellnumber].nne);
   }
 
   /// Otherwise the more expensive solver style _might_ work
@@ -578,7 +578,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
           iter2++;
           status = gsl_root_fsolver_iterate(T_e_solver);
           T_e = gsl_root_fsolver_root(T_e_solver);
-          //cell[cellnumber].T_e = T_e;
+          //globals::cell[cellnumber].T_e = T_e;
           set_Te(modelgridindex,T_e);
           T_e_min = gsl_root_fsolver_x_lower(T_e_solver);
           T_e_max = gsl_root_fsolver_x_upper(T_e_solver);
@@ -588,7 +588,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
         while (status == GSL_CONTINUE && iter2 < maxit);
         if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
         gsl_root_fsolver_free(T_e_solver);
-        //printout("%d %g %g %g %g %g %g %g %g %g %g %g %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*nelements*maxion+0*maxion+0],bfheatingestimator[cellnumber*nelements*maxion+0*maxion+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*nelements*maxion+0*maxion+0]+bfheatingestimator[cellnumber*nelements*maxion+0*maxion+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
+        //printout("%d %g %g %g %g %g %g %g %g %g %g %g %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*globals::nelements*maxion+0*maxion+0],bfheatingestimator[cellnumber*globals::nelements*maxion+0*maxion+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*globals::nelements*maxion+0*maxion+0]+bfheatingestimator[cellnumber*globals::nelements*maxion+0*maxion+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
       }
   }
   */
@@ -655,11 +655,11 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //   PKT *pkt_ptr;
 //   pkt_ptr = &dummypkt;
 //
-//   T_e = cell[cellnumber].T_e; ///WHY EQUALED THAT T_R ??? TYPO OR DEEPER SENSE ????????????????????????????????????????????????????????????????????
-//   T_R = cell[cellnumber].T_R;
-// //  T_D = cell[cellnumber].T_D;
-//   W = cell[cellnumber].W;
-// //  W_D = cell[cellnumber].W_D;
+//   T_e = globals::cell[cellnumber].T_e; ///WHY EQUALED THAT T_R ??? TYPO OR DEEPER SENSE ????????????????????????????????????????????????????????????????????
+//   T_R = globals::cell[cellnumber].T_R;
+// //  T_D = globals::cell[cellnumber].T_D;
+//   W = globals::cell[cellnumber].W;
+// //  W_D = globals::cell[cellnumber].W_D;
 //
 //   double C_deexc = 0.;
 //   double C_recomb = 0.;
@@ -667,7 +667,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //   double ffheating = 0.;
 //
 //   nlevels_lowerion = 0;
-//   for (element = 0; element < nelements; element++)
+//   for (element = 0; element < globals::nelements; element++)
 //   {
 //     pkt_ptr->mastate.element = element;
 //     nions = get_nions(element);
@@ -755,7 +755,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //
 //       /// Bound-free heating (from estimators)
 //       /// ------------------------------------
-//       if (ion < nions-1) bfheating += bfheatingestimator_save[cellnumber*nelements*maxion+element*maxion+ion];
+//       if (ion < nions-1) bfheating += bfheatingestimator_save[cellnumber*globals::nelements*maxion+element*maxion+ion];
 //     }
 //   }
 //

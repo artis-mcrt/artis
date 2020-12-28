@@ -116,12 +116,12 @@ inline FILE *fopen_required(const char *filename, const char *mode)
 
 inline int get_timestep(const double time)
 {
-  assert(time >= tmin);
-  assert(time < tmax);
-  for (int nts = 0; nts < ntstep; nts++)
+  assert(time >= globals::tmin);
+  assert(time < globals::tmax);
+  for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    const double tsend = time_step[nts].start + time_step[nts].width;
-    if (time >= time_step[nts].start && time < tsend)
+    const double tsend = globals::time_step[nts].start + globals::time_step[nts].width;
+    if (time >= globals::time_step[nts].start && time < tsend)
     {
       return nts;
     }
@@ -137,13 +137,13 @@ inline double get_arrive_time(const PKT *pkt_ptr)
 /// to allow for travel time. Use the formula in Leon's paper. The extra
 /// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
 {
-  return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / CLIGHT_PROP);
+  return pkt_ptr->escape_time - (dot(pkt_ptr->pos, pkt_ptr->dir) / globals::CLIGHT_PROP);
 }
 
 
 inline double get_arrive_time_cmf(const PKT *pkt_ptr)
 {
-  return pkt_ptr->escape_time * sqrt(1. - (vmax * vmax / CLIGHTSQUARED));
+  return pkt_ptr->escape_time * sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 }
 
 

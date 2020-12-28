@@ -181,9 +181,9 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2)
 static double get_tot_nion(const int modelgridindex)
 {
   double result = 0.;
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
-    result += modelgrid[modelgridindex].composition[element].abundance / elements[element].mass * get_rho(modelgridindex);
+    result += globals::modelgrid[modelgridindex].composition[element].abundance / globals::elements[element].mass * get_rho(modelgridindex);
 
     // alternative method is to add the ion populations
     // const int nions = get_nions(element);
@@ -245,7 +245,7 @@ static void check_auger_probabilities(int modelgridindex)
 {
   bool problem_found = false;
 
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     for (int ion = 0; ion < get_nions(element) - 1; ion++)
     {
@@ -491,7 +491,7 @@ static void zero_all_effionpot(const int modelgridindex)
   assert(nt_solution[modelgridindex].prob_num_auger);
   assert(nt_solution[modelgridindex].ionenfrac_num_auger);
 
-  for (int uniqueionindex = 0; uniqueionindex < includedions; uniqueionindex++)
+  for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
   {
     nt_solution[modelgridindex].eff_ionpot[uniqueionindex] = 0.;
 
@@ -518,10 +518,10 @@ void init(const int my_rank)
   assert(nonthermal_initialized == false);
   nonthermal_initialized = true;
 
-  deposition_rate_density = (double *) calloc(npts_model, sizeof(double));
-  deposition_rate_density_timestep = (int *) calloc(npts_model, sizeof(int));
+  deposition_rate_density = (double *) calloc(globals::npts_model, sizeof(double));
+  deposition_rate_density_timestep = (int *) calloc(globals::npts_model, sizeof(int));
 
-  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
   {
     deposition_rate_density[modelgridindex] = -1.;
     deposition_rate_density_timestep[modelgridindex] = -1;
@@ -562,10 +562,10 @@ void init(const int my_rank)
           "timestep","modelgridindex","index","energy_ev","source","y");
   fflush(nonthermalfile);
 
-  nt_solution = (struct nt_solution_struct *) calloc(npts_model, sizeof(struct nt_solution_struct));
+  nt_solution = (struct nt_solution_struct *) calloc(globals::npts_model, sizeof(struct nt_solution_struct));
 
   long mem_usage_yfunc = 0;
-  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
   {
     // should make these negative?
     nt_solution[modelgridindex].frac_heating = 0.97;
@@ -577,11 +577,11 @@ void init(const int my_rank)
 
     if (get_numassociatedcells(modelgridindex) > 0)
     {
-      nt_solution[modelgridindex].eff_ionpot = (float *) calloc(includedions, sizeof(float));
-      nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(includedions, sizeof(double));
+      nt_solution[modelgridindex].eff_ionpot = (float *) calloc(globals::includedions, sizeof(float));
+      nt_solution[modelgridindex].fracdep_ionization_ion = (double *) calloc(globals::includedions, sizeof(double));
 
-      nt_solution[modelgridindex].prob_num_auger = (float *) calloc(includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
-      nt_solution[modelgridindex].ionenfrac_num_auger = (float *) calloc(includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+      nt_solution[modelgridindex].prob_num_auger = (float *) calloc(globals::includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
+      nt_solution[modelgridindex].ionenfrac_num_auger = (float *) calloc(globals::includedions * (NT_MAX_AUGER_ELECTRONS + 1), sizeof(float));
 
       if (STORE_NT_SPECTRUM)
       {
@@ -685,9 +685,9 @@ void init(const int my_rank)
 void calculate_deposition_rate_density(const int modelgridindex, const int timestep)
 // should be in erg / s / cm^3
 {
-  const double gamma_deposition = rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
+  const double gamma_deposition = globals::rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
 
-  const double tdiff = time_step[timestep].mid - t_model;
+  const double tdiff = globals::time_step[timestep].mid - globals::t_model;
   const double positron_deposition = get_positroninjection_rate_density(modelgridindex, tdiff);
 
   deposition_rate_density[modelgridindex] = gamma_deposition + positron_deposition;
@@ -707,7 +707,7 @@ double get_deposition_rate_density(const int modelgridindex)
   //   printout("No deposition_rate_density for cell %d. Calculated value of %g has been stored.\n",
   //            modelgridindex, deposition_rate_density[modelgridindex]);
   // }
-  assert(deposition_rate_density_timestep[modelgridindex] == nts_global);
+  assert(deposition_rate_density_timestep[modelgridindex] == globals::nts_global);
   assert(deposition_rate_density[modelgridindex] >= 0);
   return deposition_rate_density[modelgridindex];
 }
@@ -792,7 +792,7 @@ void close_file(void)
   fclose(nonthermalfile);
   gsl_vector_free(envec);
   gsl_vector_free(sourcevec);
-  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -924,7 +924,7 @@ static double xs_excitation(const int lineindex, const double epsilon_trans, con
     // Li et al. 2012 equation 11
     return pow(H_ionpot / energy, 2) / statw_lower(lineindex) * coll_str * PI * A_naught_squared;
   }
-  else if (!linelist[lineindex].forbidden)
+  else if (!globals::linelist[lineindex].forbidden)
   {
     const double fij = osc_strength(lineindex);
     // permitted E1 electric dipole transitions
@@ -970,7 +970,7 @@ static int get_xs_excitation_vector(gsl_vector *const xs_excitation_vec, const i
     }
     return en_startindex;
   }
-  else if (!linelist[lineindex].forbidden)
+  else if (!globals::linelist[lineindex].forbidden)
   {
     const double fij = osc_strength(lineindex);
     // permitted E1 electric dipole transitions
@@ -1110,7 +1110,7 @@ static double N_e(const int modelgridindex, const double energy)
   const double tot_nion = get_tot_nion(modelgridindex);
   double N_e = 0.;
 
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     const int Z = get_element(element);
     const int nions = get_nions(element);
@@ -1136,8 +1136,8 @@ static double N_e(const int modelgridindex, const double energy)
         const double epsilon_lower = epsilon(element, ion, lower);
         for (int t = 0; t < nuptrans; t++)
         {
-          const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
-          const int upper = linelist[lineindex].upperlevelindex;
+          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+          const int upper = globals::linelist[lineindex].upperlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER)
           {
             continue;
@@ -1419,7 +1419,7 @@ static double get_mean_binding_energy(const int element, const int ion)
       if ((electronsinshell) > 0)
       {
         double use2 = electron_binding[get_element(element) - 1][electron_loop];
-        const double use3 = elements[element].ions[ion].ionpot;
+        const double use3 = globals::elements[element].ions[ion].ionpot;
         if (use2 <= 0)
         {
           use2 = electron_binding[get_element(element) - 1][electron_loop-1];
@@ -1468,9 +1468,9 @@ static double get_oneoverw(const int element, const int ion, const int modelgrid
   // denominator is extremely simplified. Need to get the mean Z value.
 
   double Zbar = 0.0;  // mass-weighted average atomic number
-  for (int ielement = 0; ielement < nelements; ielement++)
+  for (int ielement = 0; ielement < globals::nelements; ielement++)
   {
-    Zbar += modelgrid[modelgridindex].composition[ielement].abundance * elements[ielement].anumber;
+    Zbar += globals::modelgrid[modelgridindex].composition[ielement].abundance * globals::elements[ielement].anumber;
   }
   //printout("cell %d has Zbar of %g\n", modelgridindex, Zbar);
 
@@ -2016,7 +2016,7 @@ static void select_nt_ionization(int modelgridindex, int *element, int *lowerion
   // keep subtracting off deposition fractions of ionizations transitions until we hit the right one
   // e.g. if zrand was less than frac_dep_trans1, then use the first transition
   // e.g. if zrand was between frac_dep_trans1 and frac_dep_trans2 then use the second transition, etc
-  for (int allionindex = 0; allionindex < includedions; allionindex++)
+  for (int allionindex = 0; allionindex < globals::includedions; allionindex++)
   {
     frac_deposition_ion_sum += nt_solution[modelgridindex].fracdep_ionization_ion[allionindex];
     if (frac_deposition_ion_sum >= zrand)
@@ -2055,7 +2055,7 @@ static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion
 static double get_ntion_energyrate(int modelgridindex)
 {
   double ratetotal = 0.;
-  for (int ielement = 0; ielement < nelements; ielement++)
+  for (int ielement = 0; ielement < globals::nelements; ielement++)
   {
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++)
@@ -2073,7 +2073,7 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
 
   const double zrand = gsl_rng_uniform(rng);
   double ratesum = 0.;
-  for (int ielement = 0; ielement < nelements; ielement++)
+  for (int ielement = 0; ielement < globals::nelements; ielement++)
   {
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++)
@@ -2095,10 +2095,10 @@ void do_ntlepton(PKT *pkt_ptr)
 {
   nt_energy_deposited += pkt_ptr->e_cmf;
 
-  const int modelgridindex = cell[pkt_ptr->where].modelgridindex;
+  const int modelgridindex = globals::cell[pkt_ptr->where].modelgridindex;
 
   // macroatom should not be activated in thick cells
-  if (NT_ON && NT_SOLVE_SPENCERFANO && modelgrid[modelgridindex].thick != 1)
+  if (NT_ON && NT_SOLVE_SPENCERFANO && globals::modelgrid[modelgridindex].thick != 1)
   {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
@@ -2132,7 +2132,7 @@ void do_ntlepton(PKT *pkt_ptr)
       pkt_ptr->mastate.level = 0;
       pkt_ptr->mastate.activatingline = -99;
       pkt_ptr->type = TYPE_MA;
-      ma_stat_activation_ntcollion++;
+      globals::ma_stat_activation_ntcollion++;
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 20;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
@@ -2165,17 +2165,17 @@ void do_ntlepton(PKT *pkt_ptr)
         if (zrand < frac_deposition_exc)
         {
           const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-          const int element = linelist[lineindex].elementindex;
-          const int ion = linelist[lineindex].ionindex;
+          const int element = globals::linelist[lineindex].elementindex;
+          const int ion = globals::linelist[lineindex].ionindex;
           // const int lower = linelist[lineindex].lowerlevelindex;
-          const int upper = linelist[lineindex].upperlevelindex;
+          const int upper = globals::linelist[lineindex].upperlevelindex;
 
           pkt_ptr->mastate.element = element;
           pkt_ptr->mastate.ion = ion;
           pkt_ptr->mastate.level = upper;
           pkt_ptr->mastate.activatingline = -99;
           pkt_ptr->type = TYPE_MA;
-          ma_stat_activation_ntcollexc++;
+          globals::ma_stat_activation_ntcollexc++;
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 21;
           pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
@@ -2236,7 +2236,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   double frac_ionization_total = 0.;
 
   int excitationindex = 0; // unique index for every included excitation transition
-  for (int element = 0; element < nelements; element++)
+  for (int element = 0; element < globals::nelements; element++)
   {
     const int Z = get_element(element);
     const int nions = get_nions(element);
@@ -2312,8 +2312,8 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 
         for (int t = 0; t < nuptrans; t++)
         {
-          const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
-          const int upper = linelist[lineindex].upperlevelindex;
+          const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+          const int upper = globals::linelist[lineindex].upperlevelindex;
           if (upper >= NTEXCITATION_MAXNLEVELS_UPPER)
           {
             continue;
@@ -2440,16 +2440,16 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
       if (frac_deposition > 0.)
       {
         const int lineindex = nt_solution[modelgridindex].frac_excitations_list[excitationindex].lineindex;
-        const int element = linelist[lineindex].elementindex;
-        const int ion = linelist[lineindex].ionindex;
-        const int lower = linelist[lineindex].lowerlevelindex;
-        const int upper = linelist[lineindex].upperlevelindex;
+        const int element = globals::linelist[lineindex].elementindex;
+        const int ion = globals::linelist[lineindex].ionindex;
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
+        const int upper = globals::linelist[lineindex].upperlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon(element, ion, lower);
 
         const double ratecoeffperdeposition = nt_solution[modelgridindex].frac_excitations_list[excitationindex].ratecoeffperdeposition;
         const double ntcollexc_ratecoeff = ratecoeffperdeposition * deposition_rate_density;
 
-        const double t_current = time_step[timestep].start;
+        const double t_current = globals::time_step[timestep].start;
         const double radexc_ratecoeff = rad_excitation_ratecoeff(modelgridindex, element, ion, lower, upper, epsilon_trans, lineindex, t_current);
 
         const double collexc_ratecoeff = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
@@ -2536,8 +2536,8 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
     const int nuptrans = get_nuptrans(element, ion, lower);
     for (int t = 0; t < nuptrans; t++)
     {
-      const int lineindex = elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
-      const int upper = linelist[lineindex].upperlevelindex;
+      const int lineindex = globals::elements[element].ions[ion].levels[lower].uptrans_lineindicies[t];
+      const int upper = globals::linelist[lineindex].upperlevelindex;
       if (upper >= NTEXCITATION_MAXNLEVELS_UPPER)
       {
         continue;
@@ -2814,7 +2814,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   printout("Spencer-Fano solver at timestep %d (last solution was at timestep %d) nne/niontot = %g, at last solution was %g fracdiff %g\n",
            timestep, timestep_last_solved, nne_per_ion, nne_per_ion_last, nne_per_ion_fracdiff);
 
-  if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) && (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) && timestep_last_solved > n_lte_timesteps)
+  if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) && (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) && timestep_last_solved > globals::n_lte_timesteps)
   {
     printout("Keeping Spencer-Fano solution from timestep %d because x_e fracdiff %g < %g and because timestep %d - %d < %d\n",
              timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep, timestep_last_solved, SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
@@ -2830,7 +2830,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   bool enable_sfexcitation = true;
   bool enable_sfionization = true;
-  if (timestep <= n_lte_timesteps)
+  if (timestep <= globals::n_lte_timesteps)
   {
     // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
     // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
@@ -2840,7 +2840,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
     printout("Doing a fast initial solution without ionization or excitation in the SF equation for the first NLTE timestep.\n");
   }
-  else if (timestep <= n_lte_timesteps + 2)
+  else if (timestep <= globals::n_lte_timesteps + 2)
   {
     // run the solver in a faster mode for the first couple of NLTE timesteps
     // nt_solution[modelgridindex].nneperion_when_solved = -1.;
@@ -2884,7 +2884,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   if (enable_sfexcitation || enable_sfionization)
   {
-    for (int element = 0; element < nelements; element++)
+    for (int element = 0; element < globals::nelements; element++)
     {
       const int Z = get_element(element);
       const int nions = get_nions(element);
@@ -2970,7 +2970,7 @@ void write_restart_data(FILE *gridsave_file)
   fprintf(gridsave_file, "%d\n", 24724518); // special number marking the beginning of NT data
   fprintf(gridsave_file, "%d %lg %lg\n", SFPTS, SF_EMIN, SF_EMAX);
 
-  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -2989,7 +2989,7 @@ void write_restart_data(FILE *gridsave_file)
                 nt_solution[modelgridindex].frac_ionization,
                 nt_solution[modelgridindex].frac_excitation);
 
-        for (int uniqueionindex = 0; uniqueionindex < includedions; uniqueionindex++)
+        for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
         {
           fprintf(gridsave_file, "%lg ", nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]);
           fprintf(gridsave_file, "%g ", nt_solution[modelgridindex].eff_ionpot[uniqueionindex]);
@@ -3053,7 +3053,7 @@ void read_restart_data(FILE *gridsave_file)
     abort();
   }
 
-  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -3077,7 +3077,7 @@ void read_restart_data(FILE *gridsave_file)
           abort();
         }
 
-        for (int uniqueionindex = 0; uniqueionindex < includedions; uniqueionindex++)
+        for (int uniqueionindex = 0; uniqueionindex < globals::includedions; uniqueionindex++)
         {
           fscanf(gridsave_file, "%lg ", &nt_solution[modelgridindex].fracdep_ionization_ion[uniqueionindex]),
           fscanf(gridsave_file, "%g ", &nt_solution[modelgridindex].eff_ionpot[uniqueionindex]);
@@ -3184,7 +3184,7 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
 
 void nt_reset_stats(void)
 {
-  nt_stat_from_gamma = 0;
+  globals::nt_stat_from_gamma = 0;
   nt_stat_to_ionization = 0;
   nt_stat_to_excitation = 0;
   nt_stat_to_kpkt = 0;
@@ -3194,7 +3194,7 @@ void nt_reset_stats(void)
 
 void nt_print_stats(const int timestep, const double modelvolume, const double deltat)
 {
-  printout("nt_stat_from_gamma = %d\n", nt_stat_from_gamma);
+  printout("nt_stat_from_gamma = %d\n", globals::nt_stat_from_gamma);
   printout("nt_stat_to_ionization = %d\n", nt_stat_to_ionization);
   printout("nt_stat_to_excitation = %d\n", nt_stat_to_excitation);
   printout("nt_stat_to_kpkt = %d\n", nt_stat_to_kpkt);

@@ -2,6 +2,9 @@
 #include "sn3d.h"
 #include "globals.h"
 
+namespace globals
+{
+
 double syn_dir[3]; // vector pointing from origin to observer
 
 //#define NRAYS_SYN 1 // number of rays traced in a syn calculation
@@ -217,3 +220,5 @@ bool initial_iteration;
 int max_bf_continua;
 int n_kpktdiffusion_timesteps;
 float kpktdiffusion_timescale;
+
+}

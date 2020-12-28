@@ -35,7 +35,7 @@ int check_tau(double *tau, double *tau_max);
 #define VMNUBINS 2500
 
 /* TIME */
-/* dlogt = (log(tmin) - log(tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d) */
+/* dlogt = (log(globals::tmin) - log(globals::tmax)) / VMTBINS ~ 3.69e-2 (111 over 2-120 d) */
 #define tmin_vspec (10 * DAY)
 #define tmax_vspec (30 * DAY)
 #define VMTBINS 30

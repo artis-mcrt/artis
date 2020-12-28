@@ -78,8 +78,8 @@ static double *bfrate_raw[MMODELGRID + 1];   // unnormalised estimators for the 
 
   static int compare_bfrate_raw_bytype(const void *p1, const void *p2)
   {
-    const struct bfratecontrib *elem1 = p1;
-    const struct bfratecontrib *elem2 = p2;
+    const struct bfratecontrib *elem1 = (struct bfratecontrib *) p1;
+    const struct bfratecontrib *elem2 = (struct bfratecontrib *) p2;
 
    if (elem1->ratecontrib < elem2->ratecontrib)
       return 1;
@@ -289,13 +289,13 @@ void init(int my_rank)
 
   if (DETAILED_LINE_ESTIMATORS_ON)
   {
-    for (int i = 0; i < nlines; i++)
+    for (int i = 0; i < globals::nlines; i++)
     {
-      const int element = linelist[i].elementindex;
+      const int element = globals::linelist[i].elementindex;
       const int Z = get_element(element);
       if (Z == 26)
       {
-        const int lowerlevel = linelist[i].lowerlevelindex;
+        const int lowerlevel = globals::linelist[i].lowerlevelindex;
         // const int upperlevel = linelist[i].upperlevelindex;
         // const int ion = linelist[i].ionindex;
         // const int ionstage = get_ionstage(element, ion);
@@ -366,13 +366,13 @@ void init(int my_rank)
     {
       #if (DETAILED_BF_ESTIMATORS_ON)
       {
-        bfrate_raw[modelgridindex] = (double *) calloc(nbfcontinua, sizeof(double));
-        prev_bfrate_normed[modelgridindex] = (float *) calloc(nbfcontinua, sizeof(float));
+        bfrate_raw[modelgridindex] = (double *) calloc(globals::nbfcontinua, sizeof(double));
+        prev_bfrate_normed[modelgridindex] = (float *) calloc(globals::nbfcontinua, sizeof(float));
 
         #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(nbfcontinua, sizeof(struct bfratecontrib *));
-        bfrate_raw_bytype_size[modelgridindex] = (int *) calloc(nbfcontinua, sizeof(int));
-        for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
+        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(globals::nbfcontinua, sizeof(struct bfratecontrib *));
+        bfrate_raw_bytype_size[modelgridindex] = (int *) calloc(globals::nbfcontinua, sizeof(int));
+        for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
         {
           bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
           bfrate_raw_bytype_size[modelgridindex][allcontindex] = 0.;
@@ -406,7 +406,7 @@ void init(int my_rank)
 void initialise_prev_titer_photoionestimators(void)
 {
   //for (n = 0; n < ngrid; n++)
-  for (int n = 0; n < npts_model; n++)
+  for (int n = 0; n < globals::npts_model; n++)
   {
     //double T_e = get_Te(n);
     #ifdef DO_TITER
@@ -418,7 +418,7 @@ void initialise_prev_titer_photoionestimators(void)
         ffheatingestimator_save[n] = -1.;
         colheatingestimator_save[n] = -1.;
       #endif
-      for (int element = 0; element < nelements; element++)
+      for (int element = 0; element < globals::nelements; element++)
       {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++)
@@ -430,18 +430,18 @@ void initialise_prev_titer_photoionestimators(void)
           //Gamma = Alpha_sp * sw_ratio / SAHACONST * pow(T_e,1.5) * exp(-ionpot/KB/T_e);
           ////gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) + interpolate_photoioncoeff_above(element,ion,0,T_e);
           ////zeta = interpolate_zeta(element,ion,T_e);
-          //gammaestimator[n*nelements*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
-          ////corrphotoionrenorm[n*nelements*maxion+element*maxion+ion] = 1.;
-          ////photoionestimator[n*nelements*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
+          //gammaestimator[n*globals::nelements*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
+          ////corrphotoionrenorm[n*globals::nelements*maxion+element*maxion+ion] = 1.;
+          ////photoionestimator[n*globals::nelements*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
 
           #ifdef DO_TITER
-            gammaestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+            gammaestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
             if (!NO_LUT_BFHEATING)
-              bfheatingestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+              bfheatingestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
             /*
-            photoionestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
-            stimrecombestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
-            ionfluxestimator_save[n*nelements*maxion+element*maxion+ion] = -1.;
+            photoionestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
+            stimrecombestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
+            ionfluxestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
             */
           #endif
         }
@@ -700,7 +700,7 @@ void write_to_file(int modelgridindex, int timestep)
       {
         const int jblueindex = -2 - binindex; // -2 is the first detailed line, -3 is the second, etc
         const int lineindex = detailed_lineindicies[jblueindex];
-        const double nu_trans = linelist[lineindex].nu;
+        const double nu_trans = globals::linelist[lineindex].nu;
         nu_lower = nu_trans;
         nu_upper = nu_trans;
         nuJ_out = -1.;
@@ -761,7 +761,7 @@ void zero_estimators(int modelgridindex)
   #if (DETAILED_BF_ESTIMATORS_ON)
   if (initialized && (get_numassociatedcells(modelgridindex) > 0))
   {
-    for (int i = 0; i < nbfcontinua; i++)
+    for (int i = 0; i < globals::nbfcontinua; i++)
     {
       bfrate_raw[modelgridindex][i] = 0.;
     }
@@ -795,7 +795,9 @@ void zero_estimators(int modelgridindex)
 
 
 #if (DETAILED_BF_ESTIMATORS_ON)
-static void increment_bfestimators(const int modelgridindex, const double distance_e_cmf, const double nu_cmf, const PKT *const pkt_ptr, const double t_current)
+static void increment_bfestimators(
+  const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
+  const PKT *const pkt_ptr, const double t_current, fullphixslist_t *allcont)
 {
   assert(pkt_ptr->prop_time == t_current);
   if (distance_e_cmf == 0)
@@ -804,14 +806,14 @@ static void increment_bfestimators(const int modelgridindex, const double distan
   const double dopplerfactor = doppler_packetpos(pkt_ptr);
   // const double dopplerfactor = 1.;
 
-  // const double deltaV = vol_init_modelcell(modelgridindex) * pow(time_step[nts_global].mid / tmin, 3);
-  // const double deltat = time_step[nts_global].width;
+  // const double deltaV = vol_init_modelcell(modelgridindex) * pow(globals::time_step[nts_global].mid / globals::tmin, 3);
+  // const double deltat = globals::time_step[nts_global].width;
   // const double estimator_normfactor_over_H = 1 / deltaV / deltat / nprocs / H;
 
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
-  for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
+  for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
   {
-    const double nu_edge = phixslist[tid].allcont[allcontindex].nu_edge;
+    const double nu_edge = allcont[allcontindex].nu_edge;
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs)
@@ -819,11 +821,11 @@ static void increment_bfestimators(const int modelgridindex, const double distan
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
-      bfrate_raw[modelgridindex][allcontindex] += phixslist[tid].allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu;
+      bfrate_raw[modelgridindex][allcontindex] += allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu;
 
       #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-      const int element = phixslist[tid].allcont[allcontindex].element;
-      // const int ion = phixslist[tid].allcont[allcontindex].ion;
+      const int element = allcont[allcontindex].element;
+      // const int ion = allcont[allcontindex].ion;
       // const int ionstage = get_ionstage(element, ion);
       const int atomic_number = get_element(element);
       if ((atomic_number == 26)) //  && ionstage == 2
@@ -855,7 +857,7 @@ static void increment_bfestimators(const int modelgridindex, const double distan
           bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib = 0;
         }
 
-        bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib += (phixslist[tid].allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu);
+        bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib += (allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu);
       }
       #endif
     }
@@ -898,7 +900,7 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
   #endif
 
   #if (DETAILED_BF_ESTIMATORS_ON)
-  increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current);
+  increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current, globals::phixslist[tid].allcont);
   #endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
@@ -979,7 +981,7 @@ double dbb_mgi(double nu, int modelgridindex)
 double radfield(double nu, int modelgridindex)
 // returns mean intensity J_nu [ergs/s/sr/cm2/Hz]
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
+  if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {
     // const double lambda = 1e8 * CLIGHT / nu;
     // if (lambda < 1085) // Fe II ground state edge
@@ -1437,7 +1439,7 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 {
   #if (DETAILED_BF_ESTIMATORS_ON)
   printout("normalise_bf_estimators for cell %d with factor %g\n", modelgridindex, estimator_normfactor_over_H);
-  for (int i = 0; i < nbfcontinua; i++)
+  for (int i = 0; i < globals::nbfcontinua; i++)
   {
     prev_bfrate_normed[modelgridindex][i] = bfrate_raw[modelgridindex][i] * estimator_normfactor_over_H;
 
@@ -1455,7 +1457,7 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 
   if (!normed_bfrates_available)
   {
-    for (int i = 0; i < nbfcontinua; i++)
+    for (int i = 0; i < globals::nbfcontinua; i++)
     {
       if (prev_bfrate_normed[modelgridindex][i] > 0.)
       {
@@ -1473,15 +1475,15 @@ void normalise_bf_estimators(const int modelgridindex, const double estimator_no
 static int get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex)
 {
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
-  for (int i = 0; i < nbfcontinua; i++)
+  for (int i = 0; i < globals::nbfcontinua; i++)
   {
-    if ((phixslist[tid].allcont[i].element == element) && (phixslist[tid].allcont[i].ion == lowerion) &&
-        (phixslist[tid].allcont[i].level == lower) && (phixslist[tid].allcont[i].phixstargetindex == phixstargetindex))
+    if ((globals::phixslist[tid].allcont[i].element == element) && (globals::phixslist[tid].allcont[i].ion == lowerion) &&
+        (globals::phixslist[tid].allcont[i].level == lower) && (globals::phixslist[tid].allcont[i].phixstargetindex == phixstargetindex))
     {
       return i;
     }
 
-    if (nu_edge > phixslist[tid].allcont[i].nu_edge)
+    if (nu_edge > globals::phixslist[tid].allcont[i].nu_edge)
       break;
   }
   return -1;
@@ -1490,7 +1492,7 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
 #if (DETAILED_BF_ESTIMATORS_BYTYPE)
 void reset_bfrate_contributions(const int modelgridindex)
 {
-  for (int allcontindex = 0; allcontindex < nbfcontinua; allcontindex++)
+  for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
   {
     free(bfrate_raw_bytype[modelgridindex][allcontindex]);
     bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;
@@ -1522,11 +1524,11 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
       if (et >= 0)
       {
         /// bb-emission
-        const int element = linelist[et].elementindex;
-        const int ion = linelist[et].ionindex;
-        const int upper = linelist[et].upperlevelindex;
-        const int lower = linelist[et].lowerlevelindex;
-        const double lambda_trans = 1e8 * CLIGHT / linelist[et].nu;
+        const int element = globals::linelist[et].elementindex;
+        const int ion = globals::linelist[et].ionindex;
+        const int upper = globals::linelist[et].upperlevelindex;
+        const int lower = globals::linelist[et].lowerlevelindex;
+        const double lambda_trans = 1e8 * CLIGHT / globals::linelist[et].nu;
         printout("%7d bound-bound Z=%2d ion_stage %d upper+1 %4d lower+1 %4d lambda %5.1f\n",
                  et, get_element(element), get_ionstage(element, ion), upper + 1, lower + 1, lambda_trans);
       }
@@ -1539,10 +1541,10 @@ void print_bfrate_contributions(const int element, const int lowerion, const int
       {
         /// bf-emission
         const int bfindex = -1 - et;
-        const int element = bflist[bfindex].elementindex;
-        const int ion = bflist[bfindex].ionindex;
-        const int lower = bflist[bfindex].levelindex;
-        const int phixstargetindex = bflist[bfindex].phixstargetindex;
+        const int element = globals::bflist[bfindex].elementindex;
+        const int ion = globals::bflist[bfindex].ionindex;
+        const int lower = globals::bflist[bfindex].levelindex;
+        const int phixstargetindex = globals::bflist[bfindex].phixstargetindex;
 
         const double nuthreshold = get_phixs_threshold(element, ion, lower, phixstargetindex) / H;
         const double lambda_trans = 1e8 * CLIGHT / nuthreshold;
@@ -1577,15 +1579,15 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
 
   // TODO: speed this up with a binary search
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
-  for (int i = 0; i < nbfcontinua; i++)
+  for (int i = 0; i < globals::nbfcontinua; i++)
   {
-    if ((phixslist[tid].allcont[i].element == element) && (phixslist[tid].allcont[i].ion == lowerion) &&
-        (phixslist[tid].allcont[i].level == lower) && (phixslist[tid].allcont[i].phixstargetindex == phixstargetindex))
+    if ((globals::phixslist[tid].allcont[i].element == element) && (globals::phixslist[tid].allcont[i].ion == lowerion) &&
+        (globals::phixslist[tid].allcont[i].level == lower) && (globals::phixslist[tid].allcont[i].phixstargetindex == phixstargetindex))
     {
       return prev_bfrate_normed[modelgridindex][i];
     }
 
-    if (nu_edge > phixslist[tid].allcont[i].nu_edge)
+    if (nu_edge > globals::phixslist[tid].allcont[i].nu_edge)
       break;
   }
   printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_element(element), get_ionstage(element, lowerion), lower, phixstargetindex);
@@ -1771,14 +1773,14 @@ void write_restart_data(FILE *gridsave_file)
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    fprintf(gridsave_file, "%d\n", nbfcontinua);
+    fprintf(gridsave_file, "%d\n", globals::nbfcontinua);
 
-    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
         fprintf(gridsave_file, "%d\n", modelgridindex);
-        for (int i = 0; i < nbfcontinua; i++)
+        for (int i = 0; i < globals::nbfcontinua; i++)
         {
           fprintf(gridsave_file, "%g ", prev_bfrate_normed[modelgridindex][i]);
         }
@@ -1797,7 +1799,7 @@ void write_restart_data(FILE *gridsave_file)
     }
   }
 
-  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -1886,16 +1888,16 @@ void read_restart_data(FILE *gridsave_file)
   {
     int gridsave_nbf_in;
     fscanf(gridsave_file, "%d\n", &gridsave_nbf_in);
-    assert(gridsave_nbf_in == nbfcontinua);
+    assert(gridsave_nbf_in == globals::nbfcontinua);
 
-    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
         int mgi_in;
         fscanf(gridsave_file, "%d\n", &mgi_in);
         assert(mgi_in == modelgridindex);
-        for (int i = 0; i < nbfcontinua; i++)
+        for (int i = 0; i < globals::nbfcontinua; i++)
         {
           fscanf(gridsave_file, "%g ", &prev_bfrate_normed[modelgridindex][i]);
           if (!normed_bfrates_available && prev_bfrate_normed[modelgridindex][i] > 0.)
@@ -1931,7 +1933,7 @@ void read_restart_data(FILE *gridsave_file)
     }
   }
 
-  for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+  for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
   {
     if (get_numassociatedcells(modelgridindex) > 0)
     {
@@ -1991,7 +1993,7 @@ int integrate(
   double epsrel, size_t limit, int key, gsl_integration_workspace *workspace,
   double *result, double *abserr)
 {
-  if (MULTIBIN_RADFIELD_MODEL_ON && (nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
+  if (MULTIBIN_RADFIELD_MODEL_ON && (globals::nts_global >= FIRST_NLTE_RADFIELD_TIMESTEP))
   {
     double *pts = (double *) malloc((RADFIELDBINCOUNT + 3) * sizeof(double));
     int binindex_a = select_bin(nu_a);
@@ -2030,4 +2032,5 @@ int integrate(
   else
     return gsl_integration_qag(f, nu_a, nu_b, epsabs, epsrel, limit, key, workspace, result, abserr);
 }
+
 }

@@ -20,20 +20,20 @@ void write_light_curve(
   printout("Writing %s\n", lc_filename);
 
   /// Print out the UVOIR bolometric light curve.
-  for (int nts = 0; nts < ntstep; nts++)
+  for (int nts = 0; nts < globals::ntstep; nts++)
   {
-    fprintf(lc_file, "%g %g %g\n", time_step[nts].mid / DAY,
+    fprintf(lc_file, "%g %g %g\n", globals::time_step[nts].mid / DAY,
             (light_curve_lum[nts] / LSUN), (light_curve_lumcmf[nts] / LSUN));
   }
 
   if (current_abin == -1)
   {
     /// Now print out the gamma ray deposition rate in the same file.
-    for (int m = 0; m < ntstep; m++)
+    for (int m = 0; m < globals::ntstep; m++)
     {
-      fprintf(lc_file, "%g %g %g\n", time_step[m].mid / DAY,
-              (time_step[m].gamma_dep / LSUN / time_step[m].width),
-              (time_step[m].cmf_lum / time_step[m].width/LSUN));
+      fprintf(lc_file, "%g %g %g\n", globals::time_step[m].mid / DAY,
+              (globals::time_step[m].gamma_dep / LSUN / globals::time_step[m].width),
+              (globals::time_step[m].cmf_lum / globals::time_step[m].width/LSUN));
     }
   }
 
@@ -49,19 +49,19 @@ void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum
   {
     /// Put this into the time grid
     const double arrive_time = get_arrive_time(pkt_ptr);
-    if (arrive_time > tmin && arrive_time < tmax)
+    if (arrive_time > globals::tmin && arrive_time < globals::tmax)
     {
       const int nt = get_timestep(arrive_time);
-      light_curve_lum[nt] += pkt_ptr->e_rf / time_step[nt].width / nprocs;
+      light_curve_lum[nt] += pkt_ptr->e_rf / globals::time_step[nt].width / globals::nprocs;
     }
 
     /// Now do the cmf light curve.
     //t_arrive = pkt_ptr->escape_time * sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
     const double arrive_time_cmf = get_arrive_time_cmf(pkt_ptr);
-    if (arrive_time_cmf > tmin && arrive_time_cmf < tmax)
+    if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax)
     {
       const int nt = get_timestep(arrive_time_cmf);
-      light_curve_lumcmf[nt] += pkt_ptr->e_cmf / time_step[nt].width / nprocs / sqrt(1. - (vmax*vmax/CLIGHTSQUARED));
+      light_curve_lumcmf[nt] += pkt_ptr->e_cmf / globals::time_step[nt].width / globals::nprocs / sqrt(1. - (globals::vmax * globals::vmax/CLIGHTSQUARED));
     }
 
     return;
@@ -74,13 +74,13 @@ void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum
   xhat[2] = 0;
 
   /// Angle resolved case: need to work out the correct angle bin too. */
-  double costheta = dot(pkt_ptr->dir, syn_dir);
+  double costheta = dot(pkt_ptr->dir, globals::syn_dir);
   int thetabin = ((costheta + 1.0) * sqrt(MALCBINS) / 2.0);
-  cross_prod(pkt_ptr->dir, syn_dir, vec1);
-  cross_prod(xhat, syn_dir, vec2);
+  cross_prod(pkt_ptr->dir, globals::syn_dir, vec1);
+  cross_prod(xhat, globals::syn_dir, vec2);
   double cosphi = dot(vec1,vec2)/vec_len(vec1)/vec_len(vec2);
 
-  cross_prod(vec2, syn_dir, vec3);
+  cross_prod(vec2, globals::syn_dir, vec3);
   double testphi = dot(vec1,vec3);
 
   int phibin;
@@ -99,10 +99,10 @@ void add_to_lc_res(const PKT *pkt_ptr, int current_abin, double *light_curve_lum
   {
     /// Put this into the time grid.
     double t_arrive = get_arrive_time(pkt_ptr);
-    if (t_arrive > tmin && t_arrive < tmax)
+    if (t_arrive > globals::tmin && t_arrive < globals::tmax)
     {
       int nt = get_timestep(t_arrive);
-      light_curve_lum[nt] += pkt_ptr->e_rf / time_step[nt].width * MALCBINS / nprocs;
+      light_curve_lum[nt] += pkt_ptr->e_rf / globals::time_step[nt].width * MALCBINS / globals::nprocs;
     }
   }
 }
@@ -112,10 +112,10 @@ void write_partial_lightcurve(int my_rank, int nts, PKT *pkts)
 {
   const time_t time_func_start = time(NULL);
 
-  double *rpkt_light_curve_lum = (double *) calloc(ntstep, sizeof(double));
-  double *rpkt_light_curve_lumcmf = (double *) calloc(ntstep, sizeof(double));
+  double *rpkt_light_curve_lum = (double *) calloc(globals::ntstep, sizeof(double));
+  double *rpkt_light_curve_lumcmf = (double *) calloc(globals::ntstep, sizeof(double));
 
-  for (int ii = 0; ii < npkts; ii++)
+  for (int ii = 0; ii < globals::npkts; ii++)
   {
     // printout("packet %d escape_type %d type %d", ii, pkt[ii].escape_type, pkt[ii].type);
     if (pkts[ii].type == TYPE_ESCAPE)
@@ -128,10 +128,10 @@ void write_partial_lightcurve(int my_rank, int nts, PKT *pkts)
   }
 
   #ifdef MPI_ON
-  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lum, ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lumcmf, ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lum, globals::ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, rpkt_light_curve_lumcmf, globals::ntstep, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  for (int i = 0; i < ntstep; i++)
+  for (int i = 0; i < globals::ntstep; i++)
   {
     rpkt_light_curve_lum[i] /= nprocs;
     rpkt_light_curve_lumcmf[i] /= nprocs;

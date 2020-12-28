@@ -21,19 +21,19 @@ static FILE *macroatom_file;
 
 static inline double get_individ_rad_deexc(int element, int ion, int level, int i)
 {
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
+  return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
 }
 
 
 static inline double get_individ_internal_down_same(int element, int ion, int level, int i)
 {
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
+  return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
 }
 
 
 static inline double get_individ_internal_up_same(int element, int ion, int level, int i)
 {
-  return cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
+  return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
 }
 
 
@@ -53,8 +53,8 @@ static void get_macroatom_transitionrates(
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++)
   {
-    const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
-    const int lower = linelist[lineindex].lowerlevelindex;
+    const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+    const int lower = globals::linelist[lineindex].lowerlevelindex;
     const double epsilon_target = epsilon(element, ion, lower);
     const double epsilon_trans = epsilon_current - epsilon_target;
 
@@ -74,7 +74,7 @@ static void get_macroatom_transitionrates(
     processrates[MA_ACTION_INTERNALDOWNSAME] += individ_internal_down_same;
 
     #ifdef DEBUG_ON
-      if (debuglevel == 2)
+      if (globals::debuglevel == 2)
         printout("checking downtrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,lower,R,C,epsilon_trans);
     #endif
   }
@@ -111,8 +111,8 @@ static void get_macroatom_transitionrates(
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++)
   {
-    const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
-    const int upper = linelist[lineindex].upperlevelindex;
+    const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+    const int upper = globals::linelist[lineindex].upperlevelindex;
     const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
 
     double individ_internal_up_same = 0.;
@@ -128,7 +128,7 @@ static void get_macroatom_transitionrates(
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
 
     #ifdef DEBUG_ON
-      if (debuglevel == 2)
+      if (globals::debuglevel == 2)
         printout("checking uptrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,upper,R,C,epsilon_trans);
     #endif
   }
@@ -176,20 +176,20 @@ static void do_macroatom_raddeexcitation(
     rate += get_individ_rad_deexc(element, ion, level, i);
     if (zrand * rad_deexc < rate)
     {
-      linelistindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+      linelistindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
       break;
     }
   }
   assert(linelistindex >= 0);
   #ifdef RECORD_LINESTAT
-    if (tid == 0) ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
+    if (tid == 0) globals::ecounter[linelistindex]++;    /// This way we will only record line statistics from OMP-thread 0
                                                 /// With an atomic pragma or a thread-private structure with subsequent
                                                 /// reduction this could be extended to all threads. However, I'm not
                                                 /// sure if this is worth the additional computational expenses.
   #endif
-  const int lower = linelist[linelistindex].lowerlevelindex;
+  const int lower = globals::linelist[linelistindex].lowerlevelindex;
   #ifdef DEBUG_ON
-    if (debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
+    if (globals::debuglevel == 2) printout("[debug] do_ma:   jump to level %d\n", lower);
   #endif
   const double epsilon_trans = epsilon(element, ion, level) - epsilon(element, ion, lower);
 
@@ -202,9 +202,9 @@ static void do_macroatom_raddeexcitation(
   if (pkt_ptr->last_event == 1)
   {
     if (oldnucmf < pkt_ptr->nu_cmf)
-      upscatter++;
+      globals::upscatter++;
     else
-      downscatter++;
+      globals::downscatter++;
   }
   //}
 
@@ -218,7 +218,7 @@ static void do_macroatom_raddeexcitation(
       abort();
     }
 
-    ma_stat_deactivation_bb++;
+    globals::ma_stat_deactivation_bb++;
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 0;
   #endif
@@ -228,7 +228,7 @@ static void do_macroatom_raddeexcitation(
 
   if (linelistindex == activatingline)
   {
-    resonancescatterings++;
+    globals::resonancescatterings++;
   }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
@@ -267,7 +267,7 @@ static void do_macroatom_radrecomb(
 
     rate += R * epsilon_trans;
     #ifdef DEBUG_ON
-      if (debuglevel == 2)
+      if (globals::debuglevel == 2)
       {
         printout("[debug] do_ma:   R %g, deltae %g\n",R,(epsilon(element, upperion, upperionlevel) - epsilon(element, upperion - 1, lower)));
         printout("[debug] do_ma:   rate to level %d of ion %d = %g\n", lower, upperion - 1, rate);
@@ -301,11 +301,11 @@ static void do_macroatom_radrecomb(
 /*      if (element == 6)
   {
     //printout("%g, %g, %g\n",pkt_ptr->e_cmf,nu_threshold,pkt_ptr->e_cmf/nu_threshold/H);
-    cell[pkt_ptr->where].radrecomb[ion-1] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
+    globals::cell[pkt_ptr->where].radrecomb[ion-1] += pkt_ptr->e_cmf/pkt_ptr->nu_cmf/H;
   }*/
 
   #ifdef DEBUG_ON
-    if (debuglevel == 2)
+    if (globals::debuglevel == 2)
     {
       printout("%s: From Z=%d ionstage %d, recombining to ionstage %d level %d\n",
                __func__, get_element(element), get_ionstage(element, *ion + 1), get_ionstage(element, *ion), lower);
@@ -317,7 +317,7 @@ static void do_macroatom_radrecomb(
       abort();
     }
     //if (tid == 0) ma_stat_deactivation_fb++;
-    ma_stat_deactivation_fb++;
+    globals::ma_stat_deactivation_fb++;
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 2;
   #endif
@@ -384,16 +384,16 @@ static void do_macroatom_ionisation(
 void do_macroatom(PKT *pkt_ptr, const int timestep)
 /// Material for handling activated macro atoms.
 {
-  const double t_mid = time_step[timestep].mid;
+  const double t_mid = globals::time_step[timestep].mid;
 
   //printout("[debug] do MA\n");
 
   const int cellindex = pkt_ptr->where;
-  const int modelgridindex = cell[cellindex].modelgridindex;
+  const int modelgridindex = globals::cell[cellindex].modelgridindex;
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
 
-  assert(modelgrid[modelgridindex].thick != 1); // macroatom should not be used in thick cells
+  assert(globals::modelgrid[modelgridindex].thick != 1); // macroatom should not be used in thick cells
 
   /// calculate occupation number for active MA level ////////////////////////////////////
   /// general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
@@ -424,9 +424,9 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
   /// initialization we should see errors
 
-  // debuglevel = 2;
+  // globals::debuglevel = 2;
   #ifdef DEBUG_ON
-    if (debuglevel == 2)
+    if (globals::debuglevel == 2)
       printout("[debug] =============entering do_ma\n");
     int jumps = 0;
     int jump = -99;
@@ -444,9 +444,9 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
 
     #ifdef DEBUG_ON
       const int ionstage = get_ionstage(element,ion);
-      // if (Z == 26 && ionstage == 1) debuglevel = 2000;
+      // if (Z == 26 && ionstage == 1) globals::debuglevel = 2000;
 
-      if (debuglevel == 2000)
+      if (globals::debuglevel == 2000)
         printout("[debug] %s Z=%d ionstage %d level %d, jumps %d\n", __func__, get_element(element), ionstage, level, jumps);
 
       assert(ion >= 0);
@@ -460,22 +460,22 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
     //nlevels_lowerion ///only needed if level = 0, this won't happen too often
 
     #ifdef DEBUG_ON
-      if (debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
+      if (globals::debuglevel == 2) printout("[debug] do_ma: ndowntrans %d, nuptrans %d\n",ndowntrans,nuptrans);
     #endif
 
-    if (!(cellhistory[tid].cellnumber == modelgridindex))
+    if (!(globals::cellhistory[tid].cellnumber == modelgridindex))
     {
-      printout("cellhistory[tid].cellnumber %d modelgridindex %d\n", cellhistory[tid].cellnumber, modelgridindex);
+      printout("globals::cellhistory[tid].cellnumber %d modelgridindex %d\n", globals::cellhistory[tid].cellnumber, modelgridindex);
     }
-    assert(cellhistory[tid].cellnumber == modelgridindex);
+    assert(globals::cellhistory[tid].cellnumber == modelgridindex);
 
-    double *processrates = cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
+    double *processrates = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
 
     /// If there are no precalculated rates available then calculate them
     if (processrates[MA_ACTION_COLDEEXC] < 0)
       get_macroatom_transitionrates(
         modelgridindex, element, ion, level, t_mid, processrates,
-        &cellhistory[tid].chelements[element].chions[ion].chlevels[level]);
+        &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level]);
 
     // for debugging the transition rates:
     // {
@@ -524,7 +524,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       printout("[debug]    jumps %d\n",jumps);
       printout("[debug]    pkt_ptr->number %d\n",pkt_ptr->number);
 
-      debuglevel = 777;
+      globals::debuglevel = 777;
 
       if (ion > 0) ///checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
       {
@@ -546,8 +546,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       printout("[debug]    ndowntrans %d %d\n", ndowntrans, get_ndowntrans(element, ion, level));
       for (int i = 0; i < ndowntrans; i++)
       {
-        const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
-        const int lower = linelist[lineindex].lowerlevelindex;
+        const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+        const int lower = globals::linelist[lineindex].lowerlevelindex;
         const double epsilon_trans = epsilon_current - epsilon(element, ion, lower);
         const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
         const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
@@ -558,8 +558,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       printout("[debug]    nuptrans %d %d\n",nuptrans,get_nuptrans(element, ion, level));
       for (int i = 0; i < nuptrans; i++)
       {
-        const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
-        const int upper = linelist[lineindex].upperlevelindex;
+        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+        const int upper = globals::linelist[lineindex].upperlevelindex;
         const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
         const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
         const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
@@ -584,7 +584,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
     }
 
     #ifdef DEBUG_ON
-      if (debuglevel == 2)
+      if (globals::debuglevel == 2)
       {
         printout("[debug] do_ma: element %d, ion %d, level %d\n",element,ion,level);
         printout(
@@ -601,7 +601,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         printout("[debug]    zrand %g\n",zrand);
         printout("[debug]    jumps %d, jump %d\n",jumps,jump);
         printout("[debug]    pkt_ptr->number %d, pkt_ptr->where %d\n",pkt_ptr->number,cellindex);
-        printout("[debug]    groundlevelpop of current ion in current cell %g\n",modelgrid[cell[cellindex].modelgridindex].composition[element].groundlevelpop[ion]);
+        printout("[debug]    groundlevelpop of current ion in current cell %g\n",globals::modelgrid[globals::cell[cellindex].modelgridindex].composition[element].groundlevelpop[ion]);
 
         double R = 0.0;
         double C = 0.0;
@@ -619,8 +619,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         printout("modelgridindex %d, T_R %g, T_e %g, W %g, T_J %g\n",modelgridindex,T_R,get_Te(modelgridindex),W,get_TJ(modelgridindex));
         #if (!NO_LUT_PHOTOION)
           const double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
-          const int index_in_groundlevelcontestimor = elements[element].ions[ion].levels[level].closestgroundlevelcont;
-          const double renorm  = corrphotoionrenorm[modelgridindex * nelements * maxion + index_in_groundlevelcontestimor];
+          const int index_in_groundlevelcontestimor = globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
+          const double renorm  = corrphotoionrenorm[modelgridindex * globals::nelements * maxion + index_in_groundlevelcontestimor];
           printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
         #endif
 
@@ -633,7 +633,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       case MA_ACTION_RADDEEXC:
       {
         #ifdef DEBUG_ON
-        // if (debuglevel == 2)
+        // if (globals::debuglevel == 2)
         // {
         //   printout("[debug] do_ma:   radiative deexcitation\n");
         //   printout("[debug] do_ma:   jumps = %d\n",jumps);
@@ -665,13 +665,13 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       {
         ///collisional deexcitation of macro atom => convert the packet into a k-packet
         #ifdef DEBUG_ON
-          if (debuglevel == 2)
+          if (globals::debuglevel == 2)
           {
             printout("[debug] do_ma:   collisonal deexcitation\n");
             printout("[debug] do_ma: jumps = %d\n", jumps);
           }
           //if (tid == 0) ma_stat_deactivation_colldeexc++;
-          ma_stat_deactivation_colldeexc++;
+          globals::ma_stat_deactivation_colldeexc++;
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 10;
         #endif
@@ -688,7 +688,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
           #ifdef _OPENMP
             #pragma omp atomic
           #endif
-          colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
+          globals::colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
         #endif
         break;
       }
@@ -696,7 +696,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       case MA_ACTION_INTERNALDOWNSAME:
       {
         #ifdef DEBUG_ON
-          if (debuglevel == 2)
+          if (globals::debuglevel == 2)
             printout("[debug] do_ma:   internal downward jump within current ionstage\n");
           pkt_ptr->interactions += 1;
           jumps++;
@@ -712,8 +712,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
           rate += get_individ_internal_down_same(element, ion, level, i);
           if (zrand * processrates[MA_ACTION_INTERNALDOWNSAME] < rate)
           {
-            const int lineindex = elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
-            lower = linelist[lineindex].lowerlevelindex;
+            const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+            lower = globals::linelist[lineindex].lowerlevelindex;
             break;
           }
         }
@@ -721,14 +721,14 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         level = lower;
 
         #ifdef DEBUG_ON
-          if (debuglevel == 2)
+          if (globals::debuglevel == 2)
             printout("[debug] do_ma:   to level %d\n", lower);
           if (get_ionstage(element,ion) == 0 && lower == 0)
           {
             printout("internal downward transition to ground level occured ... abort\n");
             printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
             printout("Z %d, ionstage %d, energy %g\n",
-                     get_element(element), get_ionstage(element,ion), elements[element].ions[ion].levels[lower].epsilon);
+                     get_element(element), get_ionstage(element,ion), globals::elements[element].ions[ion].levels[lower].epsilon);
             printout("[debug] do_ma:   internal downward jump within current ionstage\n");
             abort();
           }
@@ -740,7 +740,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       {
         /// Radiative recombination of MA: emitt a continuum-rpkt
         #ifdef DEBUG_ON
-          // if (debuglevel == 2)
+          // if (globals::debuglevel == 2)
           // {
           //   printout("[debug] do_ma:   radiative recombination\n");
           //   printout("[debug] do_ma:   jumps = %d\n",jumps);
@@ -762,13 +762,13 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       {
         ///collisional recombination of macro atom => convert the packet into a k-packet
         #ifdef DEBUG_ON
-          if (debuglevel == 2)
+          if (globals::debuglevel == 2)
           {
             printout("[debug] do_ma:   collisonal recombination\n");
             printout("[debug] do_ma: jumps = %d\n",jumps);
           }
           //if (tid == 0) ma_stat_deactivation_collrecomb++;
-          ma_stat_deactivation_collrecomb++;
+          globals::ma_stat_deactivation_collrecomb++;
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 11;
         #endif
@@ -785,7 +785,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
           #ifdef _OPENMP
             #pragma omp atomic
           #endif
-          colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
+          globals::colheatingestimator[modelgridindex] += pkt_ptr->e_cmf;
         #endif
         break;
       }
@@ -793,14 +793,14 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       case MA_ACTION_INTERNALDOWNLOWER:
       {
         #ifdef DEBUG_ON
-          if (debuglevel == 2)
+          if (globals::debuglevel == 2)
             printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
           pkt_ptr->interactions += 1;
           jumps++;
           jump = 1;
         #endif
 
-        ma_stat_internaldownlower++;
+        globals::ma_stat_internaldownlower++;
 
         /// Randomly select the occuring transition
         zrand = gsl_rng_uniform(rng);
@@ -846,7 +846,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
           {
             printout("internal downward transition to ground level occured ... abort\n");
             printout("element %d, ion %d, level %d, lower %d\n",element,ion,level,lower);
-            printout("Z %d, ionstage %d, energy %g\n",get_element(element),get_ionstage(element,ion-1),elements[element].ions[ion-1].levels[lower].epsilon);
+            printout("Z %d, ionstage %d, energy %g\n",get_element(element),get_ionstage(element,ion-1),globals::elements[element].ions[ion-1].levels[lower].epsilon);
             printout("[debug] do_ma:   internal downward jump to lower ionstage\n");
             abort();
           }
@@ -857,7 +857,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       case MA_ACTION_INTERNALUPSAME:
       {
         #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_ma:   internal upward jump within current ionstage\n");
+          if (globals::debuglevel == 2) printout("[debug] do_ma:   internal upward jump within current ionstage\n");
           pkt_ptr->interactions += 1;
           jumps++;
           jump = 2;
@@ -872,8 +872,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
           rate += get_individ_internal_up_same(element, ion, level, i);
           if (zrand * processrates[MA_ACTION_INTERNALUPSAME] < rate)
           {
-            const int lineindex = elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
-            upper = linelist[lineindex].upperlevelindex;
+            const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+            upper = globals::linelist[lineindex].upperlevelindex;
             break;
           }
         }
@@ -885,13 +885,13 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
       case MA_ACTION_INTERNALUPHIGHER:
       {
         #ifdef DEBUG_ON
-          if (debuglevel == 2) printout("[debug] do_ma:   internal upward jump to next ionstage\n");
+          if (globals::debuglevel == 2) printout("[debug] do_ma:   internal upward jump to next ionstage\n");
           pkt_ptr->interactions += 1;
           jumps++;
           jump = 3;
         #endif
 
-        ma_stat_internaluphigher++;
+        globals::ma_stat_internaluphigher++;
 
         #if (TRACK_ION_STATS)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
@@ -916,7 +916,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
 
         ion = nonthermal::nt_random_upperion(modelgridindex, element, ion, false);
         level = 0;
-        ma_stat_internaluphighernt++;
+        globals::ma_stat_internaluphighernt++;
 
         #if (TRACK_ION_STATS)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
@@ -934,8 +934,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
   }///endwhile
 
   #ifdef DEBUG_ON
-    //debuglevel = 4;
-    //debuglevel = 2;
+    //globals::debuglevel = 4;
+    //globals::debuglevel = 2;
   #endif
 
   if (pkt_ptr->trueemissiontype < 0)
@@ -1021,12 +1021,12 @@ double rad_deexcitation_ratecoeff(
     }
 
     #ifdef DEBUG_ON
-      if (debuglevel == 2)
+      if (globals::debuglevel == 2)
       {
         // printout("[debug] rad_rates_down: Z=%d, ionstage %d, upper %d, lower %d\n", get_element(element), get_ionstage(element, ion), upper, lower);
         // printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n", A_ul, tau_sobolev, n_u);
       }
-      else if (debuglevel == 777)
+      else if (globals::debuglevel == 777)
         printout("[debug] rad_deexc: A_ul %g, tau_sobolev %g, n_u %g\n", A_ul, tau_sobolev, n_u);
       if (!isfinite(R))
       {
@@ -1085,7 +1085,7 @@ double rad_excitation_ratecoeff(
         // R = R_over_J_nu * radfield_dbb_mgi(nu_trans, modelgridindex);
         // R = 0.;
       }
-      if (!initial_iteration)
+      if (!globals::initial_iteration)
       {
         // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
         const int jblueindex = radfield::get_Jblueindex(lineindex);
@@ -1129,14 +1129,14 @@ double rad_excitation_ratecoeff(
       printout("radfield::radfield(nutrans=%g) = %g\n", nu_trans, radfield::radfield(nu_trans, modelgridindex));
       abort();
     }
-    if (debuglevel == 2)
+    if (globals::debuglevel == 2)
     {
       // printout("[debug] rad_rates_up: Z=%d, ionstage %d, upper, lower, A_ul, n_u: %d, %d, %d, %d, %g, %g\n",
       //          get_element(element), get_ionstage(element, ion), upper, lower, A_ul, n_l);
       // printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n",
       //          A_ul, tau_sobolev, n_u, n_l, radfield::radfield(nu_trans,modelgridindex));
     }
-    else if (debuglevel == 777)
+    else if (globals::debuglevel == 777)
       printout("[debug] rad_exc: A_ul %g, tau_sobolev %g, n_u %g, n_l %g, radfield %g\n", A_ul, tau_sobolev, n_u, n_l, radfield::radfield(nu_trans, modelgridindex));
     if (!isfinite(R))
     {
@@ -1169,7 +1169,7 @@ double rad_recombination_ratecoeff(
   {
     if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
     {
-      R = nne * get_spontrecombcoeff(element, upperion - 1, lower, phixstargetindex, T_e);// + stimrecombestimator_save[pkt_ptr->where*nelements*maxion+element*maxion+(ion-1)]);
+      R = nne * get_spontrecombcoeff(element, upperion - 1, lower, phixstargetindex, T_e);// + stimrecombestimator_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+(ion-1)]);
       //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,nne,get_spontrecombcoeff(element, ion-1, lower, T_e));
 
       if (modelgridindex >= 0 && SEPARATE_STIMRECOMB)
@@ -1228,7 +1228,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
   if (coll_str_thisline < 0)
   {
     const double statweight_target = statw_lower(lineindex);
-    const bool forbidden = linelist[lineindex].forbidden;
+    const bool forbidden = globals::linelist[lineindex].forbidden;
     if (!forbidden) // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       ///permitted E1 electric dipole transitions
@@ -1270,7 +1270,7 @@ double col_deexcitation_ratecoeff(const float T_e, const float nne, const double
   }
 
   #ifdef DEBUG_ON
-    /*if (debuglevel == 2)
+    /*if (globals::debuglevel == 2)
     {
       //printout("[debug] col_deexc: element %d, ion %d, upper %d, lower %d\n",element,ion,upper,lower);
       printout("[debug] col_deexc: n_u %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g, g_ratio %g\n",n_u,nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma,g_ratio);
@@ -1300,7 +1300,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
 
   if (coll_strength < 0)
   {
-    const bool forbidden = linelist[lineindex].forbidden;
+    const bool forbidden = globals::linelist[lineindex].forbidden;
     if (!forbidden) // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       /// permitted E1 electric dipole transitions
@@ -1334,7 +1334,7 @@ double col_excitation_ratecoeff(const float T_e, const float nne, const int line
   }
 
   #ifdef DEBUG_ON
-    // if (debuglevel == 2)
+    // if (globals::debuglevel == 2)
     // {
       //printout("[debug] col_exc: element %d, ion %d, lower %d, upper %d\n",element,ion,lower,upper);
       //printout("[debug] col_exc: n_l %g, nne %g, T_e %g, f_ul %g, epsilon_trans %g, Gamma %g\n",n_l, nne,T_e,osc_strength(lineindex),epsilon_trans,Gamma);
@@ -1385,7 +1385,7 @@ double col_recombination_ratecoeff(
         g = 0.3;
 
       const double sigma_bf = (
-        elements[element].ions[upperion - 1].levels[lower].photoion_xs[0] *
+        globals::elements[element].ions[upperion - 1].levels[lower].photoion_xs[0] *
         get_phixsprobability(element, upperion - 1, lower, phixstargetindex));
 
       double C = nne * nne * calculate_sahafact(element, upperion - 1, lower, upper, T_e, epsilon_trans) *
@@ -1427,11 +1427,11 @@ double col_ionization_ratecoeff(
 
   const double fac1 = epsilon_trans / KB / T_e;
 
-  const double sigma_bf = elements[element].ions[ion].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion,lower,phixstargetindex);
+  const double sigma_bf = globals::elements[element].ions[ion].levels[lower].photoion_xs[0] * get_phixsprobability(element,ion,lower,phixstargetindex);
   const double C = nne * 1.55e13 * pow(T_e,-0.5) * g * sigma_bf * exp(-fac1) / fac1; ///photoionization at the edge
 
   #ifdef DEBUG_ON
-    if (debuglevel == 777)
+    if (globals::debuglevel == 777)
       printout("[debug] col_ion: nne %g, T_e %g, g %g, epsilon_trans %g, sigma_bf %g\n", nne,T_e,g,epsilon_trans,sigma_bf);
     assert(isfinite(C));
   #endif

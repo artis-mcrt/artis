@@ -13,7 +13,7 @@ void write_grid_restart_data(const int timestep);
 
 inline double get_abundance(const int modelgridindex, const int element)
 {
-  return modelgrid[modelgridindex].composition[element].abundance;
+  return globals::modelgrid[modelgridindex].composition[element].abundance;
 }
 
 #endif //UPDATE_GRID_H
