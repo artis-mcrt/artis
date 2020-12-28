@@ -13,7 +13,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
-#include <memory>
+#include <memory.h>
 #include "md5.h"
 #include "sn3d.h"
 
