@@ -688,7 +688,7 @@ void calculate_deposition_rate_density(const int modelgridindex, const int times
   const double gamma_deposition = globals::rpkt_emiss[modelgridindex] * 1.e20 * FOURPI;
 
   const double tdiff = globals::time_step[timestep].mid - globals::t_model;
-  const double positron_deposition = get_positroninjection_rate_density(modelgridindex, tdiff);
+  const double positron_deposition = decay::get_positroninjection_rate_density(modelgridindex, tdiff);
 
   deposition_rate_density[modelgridindex] = gamma_deposition + positron_deposition;
 

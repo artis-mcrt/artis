@@ -43,7 +43,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
   for (int i = 0; i < DECAYPATH_COUNT; i++)
   {
     const double lower_sum = ((i > 0) ? cumulative_decay_energy_per_mass[i - 1] : 0);
-    cumulative_decay_energy_per_mass[i] = lower_sum + get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways) i);
+    cumulative_decay_energy_per_mass[i] = lower_sum + decay::get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways) i);
   }
 
   const double zrand_chain = gsl_rng_uniform(rng) * cumulative_decay_energy_per_mass[DECAYPATH_COUNT - 1];
@@ -66,7 +66,7 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
 
   if (UNIFORM_PELLET_ENERGIES)
   {
-    pkt_ptr->tdecay = sample_decaytime(decaypath, tdecaymin, globals::tmax);
+    pkt_ptr->tdecay = decay::sample_decaytime(decaypath, tdecaymin, globals::tmax);
     pkt_ptr->e_cmf = e0;
   }
   else
@@ -80,13 +80,13 @@ static void place_pellet(const double e0, const int cellindex, const int pktnumb
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e0 is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
-    const double avgpower = get_simtime_endecay_per_ejectamass(mgi, decaypath) / (globals::tmax - tdecaymin);
-    pkt_ptr->e_cmf = e0 * get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
+    const double avgpower = decay::get_simtime_endecay_per_ejectamass(mgi, decaypath) / (globals::tmax - tdecaymin);
+    pkt_ptr->e_cmf = e0 * decay::get_decay_power_per_ejectamass(decaypath, mgi, pkt_ptr->tdecay) / avgpower;
     // assert(pkt_ptr->e_cmf >= 0);
   }
 
   bool from_positron;
-  pkt_ptr->type = get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
+  pkt_ptr->type = decay::get_decay_pellet_type(decaypath, &from_positron); // set the packet tdecay and type
   pkt_ptr->originated_from_positron = from_positron;
 
   /// Now assign the energy to the pellet.
@@ -108,17 +108,23 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
   /// The total number of pellets that we want to start with is just
   /// npkts. The total energy of the pellets is given by etot.
   const double etot_tinf = (
-    (nucdecayenergy(NUCLIDE_NI56) + nucdecayenergy(NUCLIDE_CO56)) * globals::totmassradionuclide[NUCLIDE_NI56] / nucmass(NUCLIDE_NI56) +
-    nucdecayenergy(NUCLIDE_CO56) * globals::totmassradionuclide[NUCLIDE_CO56] / nucmass(NUCLIDE_CO56) +
-    (nucdecayenergy(NUCLIDE_NI57) + nucdecayenergy(NUCLIDE_CO57)) * globals::totmassradionuclide[NUCLIDE_NI57] / nucmass(NUCLIDE_NI57) +
-    nucdecayenergy(NUCLIDE_CO57) * globals::totmassradionuclide[NUCLIDE_CO57] / nucmass(NUCLIDE_CO57) +
-    (nucdecayenergy(NUCLIDE_V48) + nucdecayenergy(NUCLIDE_CR48)) * globals::totmassradionuclide[NUCLIDE_CR48] / nucmass(NUCLIDE_CR48) +
-    (nucdecayenergy(NUCLIDE_FE52) + nucdecayenergy(NUCLIDE_MN52)) * globals::totmassradionuclide[NUCLIDE_FE52] / nucmass(NUCLIDE_FE52));
+    (decay::nucdecayenergy(NUCLIDE_NI56) + decay::nucdecayenergy(NUCLIDE_CO56)) * globals::totmassradionuclide[NUCLIDE_NI56] / decay::nucmass(NUCLIDE_NI56) +
+    decay::nucdecayenergy(NUCLIDE_CO56) * globals::totmassradionuclide[NUCLIDE_CO56] / decay::nucmass(NUCLIDE_CO56) +
+    (decay::nucdecayenergy(NUCLIDE_NI57) + decay::nucdecayenergy(NUCLIDE_CO57)) * globals::totmassradionuclide[NUCLIDE_NI57] / decay::nucmass(NUCLIDE_NI57) +
+    decay::nucdecayenergy(NUCLIDE_CO57) * globals::totmassradionuclide[NUCLIDE_CO57] / decay::nucmass(NUCLIDE_CO57) +
+    (decay::nucdecayenergy(NUCLIDE_V48) + decay::nucdecayenergy(NUCLIDE_CR48)) * globals::totmassradionuclide[NUCLIDE_CR48] / decay::nucmass(NUCLIDE_CR48) +
+    (decay::nucdecayenergy(NUCLIDE_FE52) + decay::nucdecayenergy(NUCLIDE_MN52)) * globals::totmassradionuclide[NUCLIDE_FE52] / decay::nucmass(NUCLIDE_FE52));
   printout("etot %g (t_0 ot t_inf)\n", etot_tinf);
-  printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI56) / MEV, nucdecayenergy(NUCLIDE_CO56) / MEV, nucdecayenergygamma(NUCLIDE_CO56) / MEV);
-  printout("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): %g, %g, %g\n", nucdecayenergy(NUCLIDE_NI57) / MEV, nucdecayenergygamma(NUCLIDE_NI57) / MEV, nucdecayenergy(NUCLIDE_CO57) / MEV);
-  printout("decayenergy(CR48), decayenergy(V48): %g %g\n", nucdecayenergy(NUCLIDE_CR48) / MEV, nucdecayenergy(NUCLIDE_V48) / MEV);
-  printout("decayenergy(FE52), decayenergy(MN52): %g %g\n", nucdecayenergy(NUCLIDE_FE52) / MEV, nucdecayenergy(NUCLIDE_MN52) / MEV);
+  printout("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): %g, %g, %g\n",
+           decay::nucdecayenergy(NUCLIDE_NI56) / MEV, decay::nucdecayenergy(NUCLIDE_CO56) / MEV,
+           decay::nucdecayenergygamma(NUCLIDE_CO56) / MEV);
+  printout("decayenergy(NI57), decayenergy_gamma(NI57), decay::nucdecayenergy(CO57): %g, %g, %g\n",
+           decay::nucdecayenergy(NUCLIDE_NI57) / MEV, decay::nucdecayenergygamma(NUCLIDE_NI57) / MEV,
+           decay::nucdecayenergy(NUCLIDE_CO57) / MEV);
+  printout("decayenergy(CR48), decayenergy(V48): %g %g\n",
+           decay::nucdecayenergy(NUCLIDE_CR48) / MEV, decay::nucdecayenergy(NUCLIDE_V48) / MEV);
+  printout("decayenergy(FE52), decayenergy(MN52): %g %g\n",
+           decay::nucdecayenergy(NUCLIDE_FE52) / MEV, decay::nucdecayenergy(NUCLIDE_MN52) / MEV);
 
   double modelcell_decay_energy_density[globals::npts_model];
   for (int mgi = 0; mgi < globals::npts_model; mgi++)
@@ -126,7 +132,7 @@ void packet_init(int middle_iteration, int my_rank, PKT *pkt)
     modelcell_decay_energy_density[mgi] = 0.;
     for (int i = 0; i < DECAYPATH_COUNT; i++)
     {
-      modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways)(i)) * MH;
+      modelcell_decay_energy_density[mgi] += get_rhoinit(mgi) * decay::get_simtime_endecay_per_ejectamass(mgi, (enum decaypathways)(i)) * MH;
     }
   }
 

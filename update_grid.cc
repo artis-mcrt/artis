@@ -1099,7 +1099,7 @@ static void update_grid_cell(const int mgi, const int nts, const int nts_prev, c
     {
       /// Update abundances of radioactive isotopes
       //printout("call update abundances for timestep %d in model cell %d\n",m,n);
-      update_abundances(mgi, nts, globals::time_step[nts].mid);
+      decay::update_abundances(mgi, nts, globals::time_step[nts].mid);
       nonthermal::calculate_deposition_rate_density(mgi, nts);
       printout("update_abundances for cell %d timestep %d\n", mgi, nts);
 
@@ -1351,7 +1351,7 @@ void update_grid(FILE *estimators_file, const int nts, const int nts_prev, const
   ///regime proportional to the density to a regime independent of the density
   ///This is done by solving for tau_sobolev == 1
   ///tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/nucmass(NUCLIDE_NI56) * 3000e-8 * globals::time_step[m].mid;
-  globals::rho_crit = ME * CLIGHT * nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
+  globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::time_step[nts].mid);
   printout("update_grid: rho_crit = %g\n", globals::rho_crit);
 
   // const double t_current = globals::time_step[nts].start;
