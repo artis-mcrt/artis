@@ -550,7 +550,7 @@ static bool do_timestep(
     }
   #endif
 
-  do_comp_est = do_r_lc ? false : estim_switch(nts);
+  do_comp_est = do_r_lc ? false : estim_switch(nts, time_step);
 
   // Update the matter quantities in the grid for the new timestep.
 
@@ -650,7 +650,7 @@ static bool do_timestep(
     // They will now be normalised independently on all processes
     if (do_comp_est)
     {
-      normalise_compton_estimators(nts);
+      normalise_compton_estimators(nts, time_step);
       if (my_rank == 0)
       {
         write_compton_estimators(nts);
@@ -1206,7 +1206,7 @@ int main(int argc, char** argv)
   if (NLTE_POPS_ON)
     nltepop_close_file();
   radfield::close_file();
-  nonthermal::nt_close_file();
+  nonthermal::close_file();
 
   #ifdef _OPENMP
     #pragma omp parallel
