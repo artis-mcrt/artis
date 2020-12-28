@@ -3,7 +3,6 @@
 
 #include "globals.h"
 
-// #include <unistd.h>
 #include <stdarg.h>  /// MK: needed for printout()
 #include <cstdbool>
 #include <gsl/gsl_integration.h>
