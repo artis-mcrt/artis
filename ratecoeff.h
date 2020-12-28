@@ -1,7 +1,7 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
-#include <stdbool.h>
+#include <cstdbool>
 
 void ratecoefficients_init(void);
 

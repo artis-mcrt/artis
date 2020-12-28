@@ -2,10 +2,10 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <string.h>
-#include <stdio.h>
-//#include <math.h>
-//#include <stdlib.h>
+#include <cstring>
+#include <cstdio>
+//#include <cmath>
+//#include <cstdlib>
 #include "sn3d.h"
 #include "atomic.h"
 #include "gamma.h"
@@ -723,7 +723,7 @@ static int calculate_nlevels_groundterm(int element, int ion)
 
 static void read_atomicdata_files(void)
 {
-  radfield_jblue_init();
+  radfield::jblue_init();
   int totaluptrans = 0;
   int totaldowntrans = 0;
 

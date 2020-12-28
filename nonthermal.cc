@@ -1,5 +1,5 @@
-#include <math.h>
-#include <stdbool.h>
+#include <cmath>
+#include <cstdbool>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_blas.h>
@@ -16,6 +16,9 @@
 #include "update_grid.h"
 #include "sn3d.h"
 
+
+namespace nonthermal
+{
 
 // THESE OPTIONS ARE USED TO TEST THE SF SOLVER
 // Compare to Kozma & Fransson (1992) pure-oxygen plasma, nne = 1e8, x_e = 0.01
@@ -116,7 +119,6 @@ struct nt_excitation_struct
 };
 
 struct nt_solution_struct {
-  double E_0;     // the lowest energy ionization or excitation transition in eV
   double *yfunc;  // Samples of the Spencer-Fano solution function. Multiply by energy to get non-thermal electron number flux.
                   // y(E) * dE is the flux of electrons with energy in the range (E, E + dE)
                   // y has units of particles / cm2 / s / eV
@@ -570,8 +572,6 @@ void nt_init(const int my_rank)
     nt_solution[modelgridindex].frac_ionization = 0.03;
     nt_solution[modelgridindex].frac_excitation = 0.0;
 
-    nt_solution[modelgridindex].E_0 = 0.;
-
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
 
@@ -897,13 +897,13 @@ static double electron_loss_rate(const double energy, const double nne)
     return 0;
   const double omegap = sqrt(4 * PI * nne * pow(QE, 2) / ME);
   const double zetae = H * omegap / 2 / PI;
-  const double v = sqrt(2 * energy / ME);
   if (energy > 14 * EV)
   {
     return nne * 2 * PI * pow(QE, 4) / energy * log(2 * energy / zetae);
   }
   else
   {
+    const double v = sqrt(2 * energy / ME);
     const double eulergamma = 0.577215664901532;
     return nne * 2 * PI * pow(QE, 4) / energy * log(ME * pow(v, 3) / (eulergamma * pow(QE, 2) * omegap));
   }
@@ -1104,7 +1104,7 @@ static double get_J(const int Z, const int ionstage, const double ionpot_ev)
 static double N_e(const int modelgridindex, const double energy)
 // Kozma & Fransson equation 6.
 // Something related to a number of electrons, needed to calculate the heating fraction in equation 3
-// not valid for energy > E_0
+// not valid for energy > SF_EMIN
 {
   const double energy_ev = energy / EV;
   const double tot_nion = get_tot_nion(modelgridindex);
@@ -1206,10 +1206,9 @@ static float calculate_frac_heating(const int modelgridindex)
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
 
-  const float nne = get_nne(modelgridindex);
+  // const float nne = get_nne(modelgridindex);
+  const float nnetot = get_nnetot(modelgridindex);
 
-  // TODO: which is correct here?
-  // const double E_0 = nt_solution[modelgridindex].E_0;
   const double E_0 = SF_EMIN;
 
   const int startindex = get_energyindex_ev_lteq(E_0);
@@ -1227,11 +1226,11 @@ static float calculate_frac_heating(const int modelgridindex)
       deltaendash = endash + deltaendash - E_0;
     }
     // first term
-    frac_heating_Einit += get_y_sample(modelgridindex, i) * (electron_loss_rate(endash * EV, nne) / EV) * deltaendash;
+    frac_heating_Einit += get_y_sample(modelgridindex, i) * (electron_loss_rate(endash * EV, nnetot) / EV) * deltaendash;
   }
 
   // second term
-  frac_heating_Einit += E_0 * get_y(modelgridindex, E_0) * (electron_loss_rate(E_0 * EV, nne) / EV);
+  frac_heating_Einit += E_0 * get_y(modelgridindex, E_0) * (electron_loss_rate(E_0 * EV, nnetot) / EV);
 
   // third term (integral from zero to E_0)
   const int nsteps = 100;
@@ -2228,6 +2227,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 {
   const float nne = get_nne(modelgridindex);
   const double nntot = get_tot_nion(modelgridindex);
+  const double nnetot = get_nnetot(modelgridindex);
 
   // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
   nt_solution[modelgridindex].frac_heating = calculate_frac_heating(modelgridindex);
@@ -2491,10 +2491,10 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   nt_solution[modelgridindex].frac_excitation = frac_excitation_total;
   nt_solution[modelgridindex].frac_ionization = frac_ionization_total;
 
-  printout("  E_0:         %9.4f eV\n", nt_solution[modelgridindex].E_0);
   printout("  E_init:      %9.2f eV/s/cm^3\n", E_init_ev);
   printout("  deposition:  %9.2f eV/s/cm^3\n", deposition_rate_density_ev);
   printout("  nne:         %9.3e e-/cm^3\n", nne);
+  printout("  nnetot:      %9.3e e-/cm^3\n", nnetot);
   printout("  nne_nt     < %9.3e e-/cm^3\n", nne_nt_max);
   printout("  nne_nt/nne < %9.3e\n", nne_nt_max / nne);
   printout("  frac_heating_tot:    %g\n", frac_heating);
@@ -2520,7 +2520,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
 }
 
 
-static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion, double *E_0)
+static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelgridindex, const int element, const int ion)
 {
   // excitation terms
   gsl_vector *vec_xs_excitation_deltae = gsl_vector_alloc(SFPTS);
@@ -2544,9 +2544,10 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
       }
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
       const double epsilon_trans_ev = epsilon_trans / EV;
-
-      if (epsilon_trans / EV < *E_0 || *E_0 <= 0.)
-        *E_0 = epsilon_trans / EV;
+      if (epsilon_trans_ev < SF_EMIN)
+      {
+        continue;
+      }
 
       const int xsstartindex = get_xs_excitation_vector(vec_xs_excitation_deltae, lineindex, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0)
@@ -2586,9 +2587,8 @@ static void sfmatrix_add_excitation(gsl_matrix *const sfmatrix, const int modelg
 }
 
 
-static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int ionstage, const double nnion, double *E_0)
+static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, const int ionstage, const double nnion)
 // add the ionization terms to the Spencer-Fano matrix
-// also, update the value of E_0, the minimum energy for excitation/ionization
 {
   gsl_vector *const vec_xs_ionization = gsl_vector_alloc(SFPTS);
   for (int collionindex = 0; collionindex < colliondatacount; collionindex++)
@@ -2600,8 +2600,7 @@ static void sfmatrix_add_ionization(gsl_matrix *const sfmatrix, const int Z, con
       // const double n_auger_elec_avg = colliondata[n].n_auger_elec_avg;
       const double J = get_J(Z, ionstage, ionpot_ev);
 
-      if (ionpot_ev < *E_0 || *E_0 <= 0.)
-        *E_0 = ionpot_ev; // this ionization potential is the new minimum energy
+      assert(ionpot_ev >= SF_EMIN);
 
       // printout("Z=%2d ion_stage %d n %d l %d ionpot %g eV\n",
       //          Z, ionstage, colliondata[n].n, colliondata[n].l, ionpot_ev);
@@ -2794,7 +2793,6 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
     nt_solution[modelgridindex].frac_heating = 0.97;
     nt_solution[modelgridindex].frac_ionization = 0.03;
     nt_solution[modelgridindex].frac_excitation = 0.;
-    nt_solution[modelgridindex].E_0 = 0.;
 
     nt_solution[modelgridindex].nneperion_when_solved = -1.;
     nt_solution[modelgridindex].timestep_last_solved = -1;
@@ -2807,6 +2805,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
   }
 
   const float nne = get_nne(modelgridindex); // electrons per cm^3
+  const double nnetot = get_nnetot(modelgridindex);
   const double nne_per_ion = nne / get_tot_nion(modelgridindex);
   const double nne_per_ion_last = nt_solution[modelgridindex].nneperion_when_solved;
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
@@ -2859,7 +2858,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
   {
     const double en = gsl_vector_get(envec, i);
 
-    *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
+    *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nnetot) / EV;
 
     double source_integral_to_SF_EMAX;
     if (i < SFPTS - 1)
@@ -2882,8 +2881,6 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
     gsl_vector_set(rhsvec, i, source_integral_to_SF_EMAX);
   }
   // gsl_vector_set_all(rhsvec, 1.); // alternative if all electrons are injected at SF_EMAX
-
-  double E_0 = 0.; // reset E_0 so it can be found it again
 
   if (enable_sfexcitation || enable_sfionization)
   {
@@ -2913,10 +2910,10 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
         printout("%d ", ionstage);
 
         if (enable_sfexcitation)
-          sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion, &E_0);
+          sfmatrix_add_excitation(sfmatrix, modelgridindex, element, ion);
 
         if (enable_sfionization && (ion < nions - 1))
-          sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion, &E_0);
+          sfmatrix_add_ionization(sfmatrix, Z, ionstage, nnion);
       }
       if (!first_included_ion_of_element)
         printout("\n");
@@ -2957,8 +2954,6 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
   if (timestep % 10 == 0)
     nt_write_to_file(modelgridindex, timestep, iteration);
 
-  nt_solution[modelgridindex].E_0 = E_0;
-
   analyse_sf_solution(modelgridindex, timestep);
 
   if (!STORE_NT_SPECTRUM)
@@ -2988,9 +2983,8 @@ void nt_write_restart_data(FILE *gridsave_file)
       {
         check_auger_probabilities(modelgridindex);
 
-        fprintf(gridsave_file, "%g %lg %g %g %g\n",
+        fprintf(gridsave_file, "%g %g %g %g\n",
                 nt_solution[modelgridindex].nneperion_when_solved,
-                nt_solution[modelgridindex].E_0,
                 nt_solution[modelgridindex].frac_heating,
                 nt_solution[modelgridindex].frac_ionization,
                 nt_solution[modelgridindex].frac_excitation);
@@ -3071,9 +3065,8 @@ void nt_read_restart_data(FILE *gridsave_file)
 
       if (NT_ON && NT_SOLVE_SPENCERFANO)
       {
-        fscanf(gridsave_file, "%g %lg %g %g %g\n",
+        fscanf(gridsave_file, "%g %g %g %g\n",
                &nt_solution[modelgridindex].nneperion_when_solved,
-               &nt_solution[modelgridindex].E_0,
                &nt_solution[modelgridindex].frac_heating,
                &nt_solution[modelgridindex].frac_ionization,
                &nt_solution[modelgridindex].frac_excitation);
@@ -3152,8 +3145,6 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
     MPI_Bcast(&nt_solution[modelgridindex].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[modelgridindex].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
 
-    MPI_Bcast(&nt_solution[modelgridindex].E_0, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-
     MPI_Bcast(nt_solution[modelgridindex].fracdep_ionization_ion, includedions, MPI_DOUBLE, root, MPI_COMM_WORLD);
     MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, includedions, MPI_FLOAT, root, MPI_COMM_WORLD);
 
@@ -3217,3 +3208,5 @@ void nt_print_stats(const int timestep, const double modelvolume, const double d
   // }
   printout("nt_energy_deposited = %9.2f eV/s/cm^3\n", deposition_rate_density_montecarlo);
 }
+
+}  // namespace nonthermal

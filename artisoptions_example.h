@@ -1,8 +1,8 @@
 #ifndef ARTISOPTIONS_H
 #define ARTISOPTIONS_H
 
-#include <stdbool.h>
-#include <stdlib.h>
+#include <cstdbool>
+#include <cstdlib>
 #include "constants.h"
 
 // Number of energy packets per process (OpenMP threads share these pacekts)
@@ -100,7 +100,7 @@ static const double nu_upper_superbin = (CLIGHT /  (10e-8)); // very top end sup
 static const double T_R_min = 500;
 static const double T_R_max = 250000;
 
-// store Jb_lu estimators for particular lines chosen in radfield.c:radfield_init()
+// store Jb_lu estimators for particular lines chosen in radfield::init()
 static const bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 // store detailed bound-free rate estimators

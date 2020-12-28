@@ -4,7 +4,7 @@
 #include "nonthermal.h"
 #include "photo_electric.h"
 #include "vectors.h"
-#include <string.h>
+#include <cstring>
 
 
 static double meanf_sigma(const double x)

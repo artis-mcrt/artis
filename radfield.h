@@ -1,49 +1,51 @@
 #ifndef RADFIELD_H
 #define RADFIELD_H
 
-#include <stdio.h>
+#include <cstdio>
 #include <gsl/gsl_integration.h>
 #include "types.h"
 #include "sn3d.h"
 
-void radfield_zero_estimators(int modelgridindex);
-void radfield_jblue_init(void);
-void radfield_init(int my_rank);
-void initialise_prev_titer_photoionestimators(void);
-void radfield_write_to_file(int modelgridindex, int timestep);
-void radfield_close_file(void);
-void radfield_update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr, double t_current);
-void radfield_increment_lineestimator(int modelgridindex, int lineindex, double increment);
-double radfield(double nu, int modelgridindex);
-double radfield_dbb_mgi(double nu, int modelgridindex);
-void radfield_fit_parameters(int modelgridindex, int timestep);
-void radfield_set_J_normfactor(int modelgridindex, double normfactor);
-void radfield_normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
-void radfield_normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
-double get_T_R_from_J(int modelgridindex);
-int radfield_get_Jblueindex(int lineindex);
-double radfield_get_Jb_lu(int modelgridindex, int jblueindex);
-int radfield_get_Jb_lu_contribcount(int modelgridindex, int jblueindex);
-void radfield_titer_J(int modelgridindex);
-void radfield_titer_nuJ(int modelgridindex);
-void radfield_reduce_estimators(void);
-void radfield_MPI_Bcast(int modelgridindex, int root);
-void radfield_write_restart_data(FILE *gridsave_file);
-void radfield_read_restart_data(FILE *gridsave_file);
-void radfield_normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
-double get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex);
-void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex, double nnlowerlevel, double nnlowerion);
-void reset_bfrate_contributions(const int modelgridindex);
-int radfield_integrate(
-  const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
-  size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);
-
-
-inline double radfield_dbb(double nu, float T, float W)
-// returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
+namespace radfield
 {
-  return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
-}
+  void zero_estimators(int modelgridindex);
+  void jblue_init(void);
+  void init(int my_rank);
+  void initialise_prev_titer_photoionestimators(void);
+  void write_to_file(int modelgridindex, int timestep);
+  void close_file(void);
+  void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf, const PKT *pkt_ptr, double t_current);
+  void increment_lineestimator(int modelgridindex, int lineindex, double increment);
+  double radfield(double nu, int modelgridindex);
+  double dbb_mgi(double nu, int modelgridindex);
+  void fit_parameters(int modelgridindex, int timestep);
+  void set_J_normfactor(int modelgridindex, double normfactor);
+  void normalise_J(int modelgridindex, double estimator_normfactor_over4pi);
+  void normalise_nuJ(int modelgridindex, double estimator_normfactor_over4pi);
+  double get_T_R_from_J(int modelgridindex);
+  int get_Jblueindex(int lineindex);
+  double get_Jb_lu(int modelgridindex, int jblueindex);
+  int get_Jb_lu_contribcount(int modelgridindex, int jblueindex);
+  void titer_J(int modelgridindex);
+  void titer_nuJ(int modelgridindex);
+  void reduce_estimators(void);
+  void MPI_Bcast(int modelgridindex, int root);
+  void write_restart_data(FILE *gridsave_file);
+  void read_restart_data(FILE *gridsave_file);
+  void normalise_bf_estimators(int modelgridindex, double estimator_normfactor_over_H);
+  double get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex);
+  void print_bfrate_contributions(int element, int lowerion, int lower, int phixstargetindex, int modelgridindex, double nnlowerlevel, double nnlowerion);
+  void reset_bfrate_contributions(const int modelgridindex);
+  int integrate(
+    const gsl_function *f, double nu_a, double nu_b, double epsabs, double epsrel,
+    size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr);
 
+
+  inline double dbb(double nu, float T, float W)
+  // returns J_nu for a dilute black body [ergs/s/sr/cm2/Hz]
+  {
+    return W * TWOHOVERCLIGHTSQUARED * pow(nu, 3) / expm1(HOVERKB * nu / T);
+  }
+}
 
 #endif //RADFIELD_H

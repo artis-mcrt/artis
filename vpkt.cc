@@ -5,7 +5,7 @@
 #include "ltepop.h"
 #include "vectors.h"
 #include "atomic.h"
-#include <string.h>
+#include <cstring>
 
 
 #ifdef VPKT_ON

@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include <gsl/gsl_randist.h>
 #include "sn3d.h"
 #include "vectors.h"

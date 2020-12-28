@@ -1,8 +1,8 @@
-#include <string.h>
+#include <cstring>
 #include <gsl/gsl_integration.h>
 // #define  _XOPEN_SOURCE
 #define D_POSIX_SOURCE
-#include <stdio.h>
+#include <cstdio>
 #include "md5.h"
 #include "sn3d.h"
 #include "atomic.h"
@@ -311,8 +311,8 @@ static double alpha_sp_E_integrand_gsl(double nu, void *voidparas)
 
   /// Dependence on dilution factor W is linear. This allows to set it here to
   /// 1. and scale to its actual value later on.
-  double x = sigma_bf / H / nu * radfield_dbb(nu,T,1.);
-  //x = sigma_bf/H/nu * radfield_dbb(nu,T,1.);
+  double x = sigma_bf / H / nu * radfield::dbb(nu,T,1.);
+  //x = sigma_bf/H/nu * radfield::dbb(nu,T,1.);
   //if (HOVERKB*nu/T < 1e-2) x = sigma_bf * pow(nu,2)/(HOVERKB*nu/T);
   //else if (HOVERKB*nu/T >= 1e2) x = sigma_bf * pow(nu,2)*exp(-HOVERKB*nu/T);
   //else x = sigma_bf * pow(nu,2)/(exp(HOVERKB*nu/T)-1);
@@ -336,7 +336,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
   /// Dependence on dilution factor W is linear. This allows to set it here to
   /// 1. and scale to its actual value later on.
   /// Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
-  return sigma_bf * ONEOVERH / nu * radfield_dbb(nu, T, 1) * (1 - exp(- HOVERKB * nu / T));
+  return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(- HOVERKB * nu / T));
 }
 #endif
 
@@ -356,7 +356,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
     const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge, nu);
 
     /// Precalculation for T_e=T_R and W=1
-    const double x = sigma_bf * (1-nu_edge/nu) * radfield_dbb(nu,T,1) * (1-exp(-HOVERKB*nu/T));
+    const double x = sigma_bf * (1-nu_edge/nu) * radfield::dbb(nu,T,1) * (1-exp(-HOVERKB*nu/T));
 
     /// Information about the current level is passed via the global variable
     /// mastate[tid] and its child values element, ion, level
@@ -369,7 +369,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
     double E_threshold = nu_edge*H;
     double sf_Te = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
     double sf_TR = calculate_sahafact(element,ion,level,upperionlevel,T_R,E_threshold);
-    x = sigma_bf*(1-nu_edge/nu)*radfield_dbb(nu,T_R,1) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-H*nu/KB/T_e));*/
+    x = sigma_bf*(1-nu_edge/nu)*radfield::dbb(nu,T_R,1) * (1 - sqrt(T_e/T_R) * sf_Te/sf_TR * exp(-H*nu/KB/T_e));*/
 
     return x;
   }
@@ -395,7 +395,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
   double sfac = calculate_sahafact(element,ion,level,upperionlevel,T_e,E_threshold);
   double nnionlevel = get_groundlevelpop(cellnumber,element,ion+1);
 
-  x = sigma_bf*(1-nu_edge/nu)*radfield_dbb(nu,T_R,W) * (1-nnionlevel*nne/nnlevel*sf*exp(-H*nu/KB/T_e));
+  x = sigma_bf*(1-nu_edge/nu)*radfield::dbb(nu,T_R,W) * (1-nnionlevel*nne/nnlevel*sf*exp(-H*nu/KB/T_e));
   return x;
 }*/
 
@@ -444,9 +444,9 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
   }
   kappa_ff *= 3.69255e8 / sqrt(T_e) * pow(nu,-3) * g_ff * nne * (1-exp(-HOVERKB*nu/T_e));
 //  if (nu <= nu_rfcut)
-    x = kappa_ff * radfield_dbb(nu,T_R,W);
+    x = kappa_ff * radfield::dbb(nu,T_R,W);
 //  else
-//    x = kappa_ff * radfield_dbb(nu,T_D,W_D);
+//    x = kappa_ff * radfield::dbb(nu,T_D,W_D);
 
   return x;
 }*/
@@ -500,7 +500,7 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
 
-  return sigma_bf * (1-nu_edge/nu) * radfield_dbb(nu, T, 1) * exp(-HOVERKB*nu/T);
+  return sigma_bf * (1-nu_edge/nu) * radfield::dbb(nu, T, 1) * exp(-HOVERKB*nu/T);
 }*/
 
 
@@ -517,7 +517,7 @@ static double bfcooling_integrand_gsl(double nu, void *voidparas)
   /// mastate[tid] and its child values element, ion, level
   /// MAKE SURE THAT THESE ARE SET IN THE CALLING FUNCTION!!!!!!!!!!!!!!!!!
   double sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, nu_edge,nu);
-  double x = sigma_bf / H / nu * radfield_dbb(nu,T,1) * exp(-HOVERKB*nu/T);
+  double x = sigma_bf / H / nu * radfield::dbb(nu,T,1) * exp(-HOVERKB*nu/T);
   ///in formula this looks like
   ///x = sigma_bf/H/nu * 2*H*pow(nu,3)/pow(CLIGHT,2) * exp(-H*nu/KB/T);
 
@@ -1222,7 +1222,7 @@ static double integrand_stimrecombination_custom_radfield(const double nu, void 
 
     const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
-    const double Jnu = radfield(nu, modelgridindex);
+    const double Jnu = radfield::radfield(nu, modelgridindex);
 
     //TODO: MK thesis page 41, use population ratios and Te?
     return ONEOVERH * sigma_bf / nu * Jnu * exp(-HOVERKB * nu / T_e);
@@ -1330,8 +1330,8 @@ static double integrand_corrphotoioncoeff_custom_radfield(const double nu, void 
 
   const float sigma_bf = photoionization_crosssection_fromtable(params->photoion_xs, params->nu_edge, nu);
 
-  // const double Jnu = use_cellhist ? radfield(nu, modelgridindex) : radfield_dbb_mgi(nu, modelgridindex);
-  const double Jnu = radfield(nu, modelgridindex);
+  // const double Jnu = use_cellhist ? radfield::radfield(nu, modelgridindex) : radfield::dbb_mgi(nu, modelgridindex);
+  const double Jnu = radfield::radfield(nu, modelgridindex);
 
   //TODO: MK thesis page 41, use population ratios and Te?
   return ONEOVERH * sigma_bf / nu * Jnu * corrfactor;
@@ -1418,7 +1418,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
 
   if (DETAILED_BF_ESTIMATORS_ON && nts_global >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP)
   {
-    gammacorr = get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
+    gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, modelgridindex);
     //gammacorr will be -1 if no estimators available
     if (gammacorr > 0)
       return gammacorr;
@@ -1569,7 +1569,7 @@ double calculate_iongamma_per_ionpop(
       else
       {
         gamma_coeff_used += get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, modelgridindex); // whatever ARTIS uses internally
-        gamma_coeff_bfest += get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
+        gamma_coeff_bfest += radfield::get_bfrate_estimator(element, lowerion, lower, phixstargetindex, modelgridindex);
 
         // use the cellhistory but not the detailed bf estimators
         double gamma_coeff_integral_level_ch = cellhistory[tid].chelements[element].chions[lowerion].chlevels[lower].chphixstargets[phixstargetindex].corrphotoioncoeff;

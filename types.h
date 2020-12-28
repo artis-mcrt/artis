@@ -5,10 +5,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstdbool>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include <time.h>
 #include <gsl/gsl_rng.h>
 //#include <gsl/gsl_sf_expint.h>

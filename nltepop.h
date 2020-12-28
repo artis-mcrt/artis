@@ -1,7 +1,7 @@
 #ifndef NLTEPOP_H
 #define NLTEPOP_H
 
-#include <stdio.h>
+#include <cstdio>
 
 void solve_nlte_pops_element(int element, int modelgridindex, int timestep, int nlte_iter);
 double solve_nlte_pops_ion(int element, int ion, int modelgridindex, int timestep);

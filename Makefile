@@ -15,7 +15,7 @@ ifeq ($(SYSNAME),Darwin)
 	CXX = clang++
 	CXXFLAGS += -std=c++17 -O3 -fstrict-aliasing -ftree-vectorize -flto
 
-	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
+	CXXFLAGS += -Winline -Wall -Wextra -Wredundant-decls -Wundef -Wno-unused-parameter -Wno-unused-function -Wstrict-aliasing
 
 	# CXXFLAGS += -fopenmp-simd
 	# CXXFLAGS += -fvectorize

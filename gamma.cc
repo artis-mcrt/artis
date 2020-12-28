@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include "sn3d.h"
 #include "boundary.h"
 #include "emissivities.h"

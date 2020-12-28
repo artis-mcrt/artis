@@ -147,7 +147,7 @@ static void do_packet(PKT *const pkt_ptr, const double t2, const int nts)
       break;
 
     case TYPE_NTLEPTON:
-      do_ntlepton(pkt_ptr);
+      nonthermal::do_ntlepton(pkt_ptr);
       break;
 
     case TYPE_KPKT:

@@ -1,5 +1,5 @@
 #include "sn3d.h"
-#include <string.h>
+#include <cstring>
 #include "atomic.h"
 #include "grid_init.h"
 #include "emissivities.h"
@@ -152,7 +152,7 @@ void zero_estimators(void)
   // for (n=0; n < ngrid; n++)
   for (int n = 0; n < npts_model; n++)
   {
-    radfield_zero_estimators(n);
+    radfield::zero_estimators(n);
 
     #ifndef FORCE_LTE
       ffheatingestimator[n] = 0.;
