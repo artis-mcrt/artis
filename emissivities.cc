@@ -206,7 +206,7 @@ void zero_estimators(void)
 }
 
 
-void normalise_compton_estimators(int nts)
+void normalise_compton_estimators(const int nts, struct time *time_step)
 {
   double dfreq[EMISS_MAX];
 
@@ -295,7 +295,7 @@ void write_compton_estimators(int nts)
 }
 
 
-bool estim_switch(int nts)
+bool estim_switch(int nts, struct time *time_step)
 {
   const double tstart = time_step[nts].start;
   const double tend = time_step[nts].start + time_step[nts].width;

@@ -806,7 +806,7 @@ static void solve_Te_nltepops(const int n, const int nts, const int titer, heati
     const time_t sys_time_start_spencerfano = time(NULL);
     if (NT_ON && NT_SOLVE_SPENCERFANO)
     {
-      nonthermal::nt_solve_spencerfano(n, nts, nlte_iter);  // depends on the ionization balance, and weakly on nne
+      nonthermal::solve_spencerfano(n, nts, nlte_iter);  // depends on the ionization balance, and weakly on nne
     }
     const int duration_solve_spencerfano = time(NULL) - sys_time_start_spencerfano;
 
@@ -1953,7 +1953,7 @@ void write_grid_restart_data(const int timestep)
 
   // the order of these calls is very important!
   radfield::write_restart_data(gridsave_file);
-  nonthermal::nt_write_restart_data(gridsave_file);
+  nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
   printout("done in %ld seconds.\n", time(NULL) - sys_time_start_write_restart);

@@ -880,7 +880,7 @@ static void read_grid_restart_data(const int timestep)
 
   // the order of these calls is very important!
   radfield::read_restart_data(gridsave_file);
-  nonthermal::nt_read_restart_data(gridsave_file);
+  nonthermal::read_restart_data(gridsave_file);
   nltepop_read_restart_data(gridsave_file);
   fclose(gridsave_file);
 }
@@ -1136,7 +1136,7 @@ void grid_init(int my_rank)
   }
 
   radfield::init(my_rank);
-  nonthermal::nt_init(my_rank);
+  nonthermal::init(my_rank);
 
   /// and assign a temperature to the cells
   if (simulation_continued_from_saved)
@@ -1150,7 +1150,8 @@ void grid_init(int my_rank)
     assign_temperature();
   }
 
-  // scale up the radioactive abundances to account for the missing masses in the model cells that are not associated with any propagation cells
+  // scale up the radioactive abundances to account for the missing masses in
+  // the model cells that are not associated with any propagation cells
   for (int iso = 0; iso < RADIONUCLIDE_COUNT; iso++)
   {
     if (totmassradionuclide[iso] <= 0)

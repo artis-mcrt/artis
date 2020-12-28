@@ -67,8 +67,10 @@ int n_out_it; // # of sets of 1,000,000 photons to run.
 int npts_model; // number of points in 1-D input model
 double vout_model[MMODELGRID];
 double t_model; // time at which densities in input model are correct.
-int ncoord1_model, ncoord2_model; // For 2D model, the input grid dimensions
-double dcoord1, dcoord2; // spacings of a 2D model grid - must be uniform grid
+int ncoord1_model;
+int ncoord2_model; // For 2D model, the input grid dimensions
+double dcoord1;
+double dcoord2; // spacings of a 2D model grid - must be uniform grid
 
 double CLIGHT_PROP; // Speed of light for ray travel. Physically = CLIGHT but
                     // can be changed for testing.

@@ -513,7 +513,7 @@ static void zero_all_effionpot(const int modelgridindex)
 }
 
 
-void nt_init(const int my_rank)
+void init(const int my_rank)
 {
   assert(nonthermal_initialized == false);
   nonthermal_initialized = true;
@@ -779,7 +779,7 @@ static void nt_write_to_file(const int modelgridindex, const int timestep, const
 }
 
 
-void nt_close_file(void)
+void close_file(void)
 {
   nonthermal_initialized = false;
 
@@ -2775,7 +2775,7 @@ static void sfmatrix_solve(const gsl_matrix *sfmatrix, const gsl_vector *rhsvec,
 }
 
 
-void nt_solve_spencerfano(const int modelgridindex, const int timestep, const int iteration)
+void solve_spencerfano(const int modelgridindex, const int timestep, const int iteration)
 // solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
 // based on Equation (2) of Li et al. (2012)
 {
@@ -2963,7 +2963,7 @@ void nt_solve_spencerfano(const int modelgridindex, const int timestep, const in
 }
 
 
-void nt_write_restart_data(FILE *gridsave_file)
+void write_restart_data(FILE *gridsave_file)
 {
   printout("non-thermal solver, ");
 
@@ -3027,7 +3027,7 @@ void nt_write_restart_data(FILE *gridsave_file)
 }
 
 
-void nt_read_restart_data(FILE *gridsave_file)
+void read_restart_data(FILE *gridsave_file)
 {
   printout("Reading restart data for non-thermal solver\n");
 
