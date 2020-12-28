@@ -12,6 +12,8 @@
 
 #include <cstdio>
 #include <cstdbool>
+#include <filesystem>
+// #include <unistd.h>
 #include "exspec.h"
 #include "sn3d.h"
 #include "input.h"
@@ -40,7 +42,8 @@ static void get_final_packets(int rank, int nprocs, PKT pkt[])
 
   sprintf(filename, "packets%.2d_%.4d.out", 0, rank);
   printout("reading %s (file %d of %d)\n", filename, rank + 1, nprocs);
-  if (access(filename, F_OK) != -1)
+  // if (access(filename, F_OK) != -1)
+  if (std::filesystem::exists(filename))
   {
     read_packets(filename, pkt);
   }
