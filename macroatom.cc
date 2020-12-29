@@ -19,9 +19,18 @@
 static FILE *macroatom_file;
 
 
-static inline double get_individ_rad_deexc(int element, int ion, int level, int i)
+static inline double get_individ_rad_deexc(int modelgridindex, int element, int ion, int level, int i, double t_mid)
 {
-  return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[i];
+  const double epsilon_current = epsilon(element, ion, level);
+  const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+  const int lower = globals::linelist[lineindex].lowerlevelindex;
+  const double epsilon_target = epsilon(element, ion, lower);
+  const double epsilon_trans = epsilon_current - epsilon_target;
+
+  const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans, lineindex, t_mid);
+  const double individ_rad_deexc = R * epsilon_trans;
+
+  return individ_rad_deexc;
 }
 
 
@@ -37,10 +46,11 @@ static inline double get_individ_internal_up_same(int element, int ion, int leve
 }
 
 
-static void get_macroatom_transitionrates(
-  const int modelgridindex, const int element, const int ion, const int level, const double t_mid, double *processrates,
+static void calculate_macroatom_transitionrates(
+  const int modelgridindex, const int element, const int ion, const int level, const double t_mid,
   chlevels_struct *const chlevel)
 {
+  double *processrates = chlevel->processrates;
   const float T_e = get_Te(modelgridindex);
   const float nne = get_nne(modelgridindex);
   const double epsilon_current = epsilon(element, ion, level);
@@ -66,7 +76,6 @@ static void get_macroatom_transitionrates(
     const double individ_rad_deexc = R * epsilon_trans;
     const double individ_col_deexc = C * epsilon_trans;
 
-    chlevel->individ_rad_deexc[i] = individ_rad_deexc;
     chlevel->individ_internal_down_same[i] = individ_internal_down_same;
 
     processrates[MA_ACTION_RADDEEXC] += individ_rad_deexc;
@@ -160,10 +169,24 @@ static void get_macroatom_transitionrates(
   }
 }
 
+static double *get_transitionrates(int modelgridindex, int element, int ion, int level, double t_mid)
+{
+  chlevels_struct *chlevel = &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level];
+
+  /// If there are no precalculated rates available then calculate them
+  if (chlevel->processrates[MA_ACTION_COLDEEXC] < 0)
+  {
+    // printout("Calculating transition rates for element %d ion %d level %d\n", element, ion, level);
+    calculate_macroatom_transitionrates(modelgridindex, element, ion, level, t_mid, chlevel);
+  }
+
+  return chlevel->processrates;
+}
+
 
 static void do_macroatom_raddeexcitation(
   PKT *pkt_ptr, const int modelgridindex, const int element, const int ion, const int level, const double rad_deexc,
-  const double total_transitions, const int activatingline)
+  const double total_transitions, const int activatingline, const double t_mid)
 {
   ///radiative deexcitation of MA: emitt rpkt
   ///randomly select which line transitions occurs
@@ -173,7 +196,7 @@ static void do_macroatom_raddeexcitation(
   const int ndowntrans = get_ndowntrans(element, ion, level);
   for (int i = 0; i < ndowntrans; i++)
   {
-    rate += get_individ_rad_deexc(element, ion, level, i);
+    rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid);
     if (zrand * rad_deexc < rate)
     {
       linelistindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
@@ -469,13 +492,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
     }
     assert(globals::cellhistory[tid].cellnumber == modelgridindex);
 
-    double *processrates = globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates;
-
-    /// If there are no precalculated rates available then calculate them
-    if (processrates[MA_ACTION_COLDEEXC] < 0)
-      get_macroatom_transitionrates(
-        modelgridindex, element, ion, level, t_mid, processrates,
-        &globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level]);
+    double *processrates = get_transitionrates(modelgridindex, element, ion, level, t_mid);
 
     // for debugging the transition rates:
     // {
@@ -640,7 +657,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         // }
         #endif
 
-        do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, activatingline);
+        do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, activatingline, t_mid);
 
         #if (TRACK_ION_STATS)
         increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC, pkt_ptr->e_cmf);
