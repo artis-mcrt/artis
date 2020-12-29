@@ -197,7 +197,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
 
     for (int modelgridindex = root_nstart; modelgridindex < (root_nstart + root_ndo); modelgridindex++)
     {
-      radfield::MPI_Bcast(modelgridindex, root);
+      radfield::do_MPI_Bcast(modelgridindex, root);
 
       if (get_numassociatedcells(modelgridindex) > 0)
       {
