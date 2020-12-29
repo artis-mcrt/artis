@@ -418,7 +418,7 @@ void initialise_prev_titer_photoionestimators(void)
         ffheatingestimator_save[n] = -1.;
         colheatingestimator_save[n] = -1.;
       #endif
-      for (int element = 0; element < globals::nelements; element++)
+      for (int element = 0; element < get_nelements(); element++)
       {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions - 1; ion++)
@@ -430,18 +430,18 @@ void initialise_prev_titer_photoionestimators(void)
           //Gamma = Alpha_sp * sw_ratio / SAHACONST * pow(T_e,1.5) * exp(-ionpot/KB/T_e);
           ////gamma_lte = interpolate_photoioncoeff_below(element,ion,0,T_e) + interpolate_photoioncoeff_above(element,ion,0,T_e);
           ////zeta = interpolate_zeta(element,ion,T_e);
-          //gammaestimator[n*globals::nelements*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
-          ////corrphotoionrenorm[n*globals::nelements*maxion+element*maxion+ion] = 1.;
-          ////photoionestimator[n*globals::nelements*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
+          //gammaestimator[n*get_nelements()*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
+          ////corrphotoionrenorm[n*get_nelements()*maxion+element*maxion+ion] = 1.;
+          ////photoionestimator[n*get_nelements()*maxion+element*maxion+ion] = Gamma; //gamma_lte/zeta;
 
           #ifdef DO_TITER
-            gammaestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
+            gammaestimator_save[n*get_nelements()*maxion+element*maxion+ion] = -1.;
             if (!NO_LUT_BFHEATING)
-              bfheatingestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
+              bfheatingestimator_save[n*get_nelements()*maxion+element*maxion+ion] = -1.;
             /*
-            photoionestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
-            stimrecombestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
-            ionfluxestimator_save[n*globals::nelements*maxion+element*maxion+ion] = -1.;
+            photoionestimator_save[n*get_nelements()*maxion+element*maxion+ion] = -1.;
+            stimrecombestimator_save[n*get_nelements()*maxion+element*maxion+ion] = -1.;
+            ionfluxestimator_save[n*get_nelements()*maxion+element*maxion+ion] = -1.;
             */
           #endif
         }

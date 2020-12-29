@@ -194,15 +194,15 @@ void write_spectrum(
       fprintf(spec_file, "%g ", spectra[p].flux[m]);
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
           fprintf(emission_file, "%g ", spectra[p].stat[m].emission[i]);
         fprintf(emission_file, "\n");
 
-        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
           fprintf(trueemission_file, "%g ", spectra[p].stat[m].trueemission[i]);
         fprintf(trueemission_file, "\n");
 
-        for (int i = 0; i < globals::nelements * globals::maxion; i++)
+        for (int i = 0; i < get_nelements() * globals::maxion; i++)
           fprintf(absorption_file, "%g ", spectra[p].stat[m].absorption[i]);
         fprintf(absorption_file, "\n");
       }
@@ -259,13 +259,13 @@ void write_specpol(
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
         {
           fprintf(emissionpol_file, "%g ", stokes_i[p].stat[m].emission[i]);
         }
         fprintf(emissionpol_file, "\n");
 
-        for (int i = 0; i < globals::nelements * globals::maxion; i++)
+        for (int i = 0; i < get_nelements() * globals::maxion; i++)
         {
           fprintf(absorptionpol_file, "%g ", stokes_i[p].stat[m].absorption[i]);
         }
@@ -280,13 +280,13 @@ void write_specpol(
 
       if (do_emission_res)
       {
-          for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
+          for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
           {
             fprintf(emissionpol_file, "%g ", stokes_q[p].stat[m].emission[i]);
           }
           fprintf(emissionpol_file, "\n");
 
-          for (int i = 0; i < globals::nelements * globals::maxion; i++)
+          for (int i = 0; i < get_nelements() * globals::maxion; i++)
           {
             fprintf(absorptionpol_file, "%g ", stokes_q[p].stat[m].absorption[i]);
           }
@@ -301,13 +301,13 @@ void write_specpol(
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
         {
           fprintf(emissionpol_file, "%g ", stokes_u[p].stat[m].emission[i]);
         }
         fprintf(emissionpol_file, "\n");
 
-        for (int i = 0; i < globals::nelements * globals::maxion; i++)
+        for (int i = 0; i < get_nelements() * globals::maxion; i++)
         {
           fprintf(absorptionpol_file, "%g ", stokes_u[p].stat[m].absorption[i]);
         }
@@ -338,7 +338,7 @@ static int columnindex_from_emissiontype(const int et)
   else if (et == -9999999)
   {
     /// ff-emission
-    return 2 * globals::nelements * globals::maxion;
+    return 2 * get_nelements() * globals::maxion;
   }
   else
   {
@@ -352,7 +352,7 @@ static int columnindex_from_emissiontype(const int et)
 
     assert(get_continuumindex(element, ion, level, upperionlevel) == et);
 
-    return globals::nelements * globals::maxion + element * globals::maxion + ion;
+    return get_nelements() * globals::maxion + element * globals::maxion + ion;
   }
 }
 
@@ -529,13 +529,13 @@ void init_spectra(struct spec *spectra, const double nu_min, const double nu_max
 
       if (do_emission_res)
       {
-        for (int i = 0; i < 2 * globals::nelements * globals::maxion + 1; i++)
+        for (int i = 0; i < 2 * get_nelements() * globals::maxion + 1; i++)
         {
           spectra[n].stat[m].emission[i] = 0;
           spectra[n].stat[m].trueemission[i] = 0;
         }
 
-        for (int i = 0; i < globals::nelements * globals::maxion; i++)
+        for (int i = 0; i < get_nelements() * globals::maxion; i++)
         {
           spectra[n].stat[m].absorption[i] = 0;
         }
@@ -564,8 +564,8 @@ struct spec *alloc_spectra(const bool do_emission_res)
     {
       for (int m = 0; m < globals::nnubins; m++)
       {
-        const int emissioncount = 2 * globals::nelements * globals::maxion + 1;
-        spectra[n].stat[m].absorption = (double *) calloc(globals::nelements * globals::maxion, sizeof(double));
+        const int emissioncount = 2 * get_nelements() * globals::maxion + 1;
+        spectra[n].stat[m].absorption = (double *) calloc(get_nelements() * globals::maxion, sizeof(double));
         spectra[n].stat[m].emission = (double *) calloc(emissioncount, sizeof(double));
         spectra[n].stat[m].trueemission = (double *) calloc(emissioncount, sizeof(double));
 

@@ -232,7 +232,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
           MPI_Pack(&globals::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
           MPI_Pack(&globals::modelgrid[mgi].thick, 1, MPI_SHORT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
 
-          for (int element = 0; element < globals::nelements; element++)
+          for (int element = 0; element < get_nelements(); element++)
           {
             MPI_Pack(globals::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
             MPI_Pack(globals::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, mpi_grid_buffer, mpi_grid_buffer_size, &position, MPI_COMM_WORLD);
@@ -268,7 +268,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].totalcooling, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, &globals::modelgrid[mgi].thick, 1, MPI_SHORT, MPI_COMM_WORLD);
 
-        for (int element = 0; element < globals::nelements; element++)
+        for (int element = 0; element < get_nelements(); element++)
         {
           MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, globals::modelgrid[mgi].composition[element].groundlevelpop, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
           MPI_Unpack(mpi_grid_buffer, mpi_grid_buffer_size, &position, globals::modelgrid[mgi].composition[element].partfunct, get_nions(element), MPI_FLOAT, MPI_COMM_WORLD);
@@ -285,11 +285,11 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         MPI_Barrier(MPI_COMM_WORLD);
         /// Reduce the corrphotoionrenorm array.
         printout("nts %d, titer %d: bcast corr photoionrenorm\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * globals::nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &corrphotoionrenorm, MMODELGRID * get_nelements() * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         /// Reduce the gammaestimator array. Only needed to write restart data.
         printout("nts %d, titer %d: bcast gammaestimator\n", nts, titer);
-        MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * globals::nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * get_nelements() * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
     #endif
   #endif
@@ -306,11 +306,11 @@ static void mpi_reduce_estimators(int my_rank, int nts)
     MPI_Barrier(MPI_COMM_WORLD);
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * globals::nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &gammaestimator, MMODELGRID * get_nelements() * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     #if (!NO_LUT_BFHEATING)
       MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * globals::nelements * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &bfheatingestimator, MMODELGRID * get_nelements() * maxion, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
   #endif
 
@@ -571,7 +571,7 @@ static bool do_timestep(
       if ((!simulation_continued_from_saved) || (nts - itstep != 0) || (titer != 0))
       {
         printout("nts %d, titer %d: reset corr photoionrenorm\n",nts,titer);
-        for (int i = 0; i < MMODELGRID * globals::nelements * maxion; i++)
+        for (int i = 0; i < MMODELGRID * get_nelements() * maxion; i++)
         {
           corrphotoionrenorm[i] = 0.;
         }

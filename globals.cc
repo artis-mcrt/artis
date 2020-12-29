@@ -99,7 +99,6 @@ int maxion;
 short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
                                                    /// in a given cell. Be aware that this must not be used outside of the update_grid
                                                    /// routine and their daughters.
-int nelements;
 int nlines;
 int includedions;
 elementlist_entry *elements;
@@ -161,8 +160,6 @@ int ncoordgrid[3]; /// propagration grid dimensions
 int ngrid;
 int grid_type;
 char coordlabel[3];
-
-enum model_types model_type;
 
 int nprocs;      /// Global variable which holds the number of MPI processes
 int rank_global; /// Global variable which holds the rank of the active MPI process

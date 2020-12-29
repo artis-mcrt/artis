@@ -733,7 +733,7 @@ static void update_estimators(PKT *pkt_ptr, const double distance)
             /// the estimators
             if (get_abundance(modelgridindex, element) > 0)
             {
-              const int ionestimindex = modelgridindex * globals::nelements * maxion + element * maxion + ion;
+              const int ionestimindex = modelgridindex * get_nelements() * maxion + element * maxion + ion;
               #if (!NO_LUT_PHOTOION)
                 #ifdef _OPENMP
                   #pragma omp atomic
@@ -1268,7 +1268,7 @@ static double calculate_kappa_ff(const int modelgridindex, const double nu)
   double kappa_ff = 0.;
   //kappa_ffheating = 0.;
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)

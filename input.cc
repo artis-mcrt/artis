@@ -733,13 +733,15 @@ static void read_atomicdata_files(void)
   FILE *adata = fopen_required("adata.txt", "r");
 
   /// initialize atomic data structure to number of elements
-  fscanf(compositiondata,"%d",&globals::nelements);
-  if (globals::nelements > MELEMENTS)
+  int nelements_in;
+  fscanf(compositiondata,"%d", &nelements_in);
+  if (nelements_in > MELEMENTS)
   {
-    printout("ERROR: globals::nelements = %d > %d MELEMENTS", globals::nelements, MELEMENTS);
+    printout("ERROR: nelements_in = %d > %d MELEMENTS", get_nelements(), MELEMENTS);
     abort();
   }
-  if ((globals::elements = (elementlist_entry *) calloc(globals::nelements, sizeof(elementlist_entry))) == NULL)
+  set_nelements(nelements_in);
+  if ((globals::elements = (elementlist_entry *) calloc(get_nelements(), sizeof(elementlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize elementlist ... abort\n");
     abort();
@@ -772,7 +774,7 @@ static void read_atomicdata_files(void)
   int nbfcheck = 0;
   int heatingcheck = 0;
   int coolingcheck = 0;
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     /// read information about the next element which should be stored to memory
     int Z;
@@ -1107,7 +1109,7 @@ static void read_atomicdata_files(void)
     }
   }
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
@@ -1123,7 +1125,7 @@ static void read_atomicdata_files(void)
   read_phixs_data();
 
   int cont_index = -1;
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
@@ -1262,13 +1264,13 @@ static void setup_cellhistory(void)
         abort();
       }
 
-      mem_usage_cellhistory += globals::nelements * sizeof(chelements_struct);
-      if ((globals::cellhistory[tid].chelements = (chelements_struct *) malloc(globals::nelements * sizeof(chelements_struct))) == NULL)
+      mem_usage_cellhistory += get_nelements() * sizeof(chelements_struct);
+      if ((globals::cellhistory[tid].chelements = (chelements_struct *) malloc(get_nelements() * sizeof(chelements_struct))) == NULL)
       {
         printout("[fatal] input: not enough memory to initialize cellhistory's elementlist ... abort\n");
         abort();
       }
-      for (int element = 0; element < globals::nelements; element++)
+      for (int element = 0; element < get_nelements(); element++)
       {
         const int nions = get_nions(element);
         mem_usage_cellhistory += nions * sizeof(chions_struct);
@@ -1346,7 +1348,7 @@ static void write_bflist_file(int includedphotoiontransitions)
     fprintf(bflist_file,"%d\n", includedphotoiontransitions);
   }
   int i = 0;
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
@@ -1389,7 +1391,7 @@ static void setup_coolinglist(void)
   /// (as long as we only deal with ionisation to the ground level this means for both of these
   /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
   /*ncoolingterms = totaluptrans;
-  for (element = 0; element < globals::nelements; element++)
+  for (element = 0; element < get_nelements(); element++)
   {
     nions = get_nions(element);
     for (ion=0; ion < nions; ion++)
@@ -1401,7 +1403,7 @@ static void setup_coolinglist(void)
   printout("[info] read_atomicdata: number of coolingterms %d\n",ncoolingterms);*/
 
   globals::ncoolingterms = 0;
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
@@ -1511,7 +1513,7 @@ static void setup_phixs_list(void)
     }
 
     int i = 0;
-    for (int element = 0; element < globals::nelements; element++)
+    for (int element = 0; element < get_nelements(); element++)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions-1; ion++)
@@ -1550,7 +1552,7 @@ static void setup_phixs_list(void)
     }
 
     i = 0;
-    for (int element = 0; element < globals::nelements; element++)
+    for (int element = 0; element < get_nelements(); element++)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++)
@@ -1640,7 +1642,7 @@ static void read_atomicdata(void)
   int includedphotoiontransitions = 0;
   printout("[input.c] this simulation contains\n");
   printout("----------------------------------\n");
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     printout("[input.c]   element %d (Z=%2d)\n", element, get_element(element));
     const int nions = get_nions(element);
@@ -1674,7 +1676,7 @@ static void read_atomicdata(void)
 
   if (NLTE_POPS_ON)
   {
-    for (int element = 0; element < globals::nelements; element++)
+    for (int element = 0; element < get_nelements(); element++)
     {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++)
@@ -1730,13 +1732,13 @@ static void show_totmassradionuclides(void)
   for (int mgi = 0; mgi < globals::npts_model; mgi++)
   {
     double cellvolume = 0.;
-    if (globals::model_type == RHO_1D_READ)
+    if (get_model_type() == RHO_1D_READ)
     {
       const double v_inner = (mgi == 0) ? 0. : globals::vout_model[mgi - 1];
       // mass_in_shell = rho_model[mgi] * (pow(globals::vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(t_model, 3) / 3.;
       cellvolume = (pow(globals::vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
     }
-    else if (globals::model_type == RHO_2D_READ)
+    else if (get_model_type() == RHO_2D_READ)
     {
       cellvolume = pow(globals::tmin / globals::t_model, 3) * ((2 * n1) + 1) * PI * globals::dcoord2 * pow(globals::dcoord1, 2.);
       n1++;
@@ -1745,14 +1747,14 @@ static void show_totmassradionuclides(void)
         n1 = 0;
       }
     }
-    else if (globals::model_type == RHO_3D_READ)
+    else if (get_model_type() == RHO_3D_READ)
     {
       /// Assumes cells are cubes here - all same volume.
       cellvolume = pow((2 * globals::vmax * globals::tmin), 3.) / (globals::ncoordgrid[0] * globals::ncoordgrid[1] * globals::ncoordgrid[2]);
     }
     else
     {
-      printout("Unknown model type %d in function %s\n", globals::model_type, __func__);
+      printout("Unknown model type %d in function %s\n", get_model_type(), __func__);
       abort();
     }
 
@@ -2410,7 +2412,7 @@ void input(int rank)
 
   read_atomicdata();
 
-  read_ejecta_model(globals::model_type);
+  read_ejecta_model(get_model_type());
 
   printout("npts_model: %d\n", globals::npts_model);
   globals::rmax = globals::vmax * globals::tmin;
@@ -2564,15 +2566,15 @@ void read_parameterfile(int rank)
   std::stringstream(line) >> dum1; // model type
   if (dum1 == 1)
   {
-    globals::model_type = RHO_1D_READ;
+    set_model_type(RHO_1D_READ);
   }
   else if (dum1 == 2)
   {
-    globals::model_type = RHO_2D_READ;
+    set_model_type(RHO_2D_READ);
   }
   else if (dum1 == 3)
   {
-    globals::model_type = RHO_3D_READ;
+    set_model_type(RHO_3D_READ);
   }
 
   assert(get_noncommentline(file, line));

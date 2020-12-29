@@ -37,10 +37,22 @@ extern inline void set_TR(int modelgridindex, float x);
 extern inline void set_TJ(int modelgridindex, float x);
 extern inline void set_W(int modelgridindex, float x);
 
+enum model_types model_type = RHO_1D_READ;
 
 static long mem_usage_nltepops = 0;
 
 static int mg_associated_cells[MMODELGRID + 1];
+
+
+enum model_types get_model_type(void)
+{
+  return model_type;
+}
+
+void set_model_type(enum model_types model_type_value)
+{
+  model_type = model_type_value;
+}
 
 
 int get_numassociatedcells(const int modelgridindex)
@@ -273,7 +285,7 @@ static void calculate_kappagrey(void)
 static void allocate_compositiondata(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
-  if ((globals::modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(globals::nelements * sizeof(compositionlist_entry))) == NULL)
+  if ((globals::modelgrid[modelgridindex].composition = (compositionlist_entry *) malloc(get_nelements() * sizeof(compositionlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",modelgridindex);
     abort();
@@ -295,7 +307,7 @@ static void allocate_compositiondata(const int modelgridindex)
 
   //printout("Managed to allocate memory for %d nlte levels\n", total_nlte_levels);
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     /// Set initial abundances to zero
     globals::modelgrid[modelgridindex].composition[element].abundance = 0.;
@@ -326,13 +338,13 @@ static void allocate_compositiondata(const int modelgridindex)
 static void allocate_cooling(const int modelgridindex)
 /// Initialise composition dependent cell data for the given cell
 {
-  if ((globals::modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(globals::nelements * sizeof(mgicooling_t))) == NULL)
+  if ((globals::modelgrid[modelgridindex].cooling = (mgicooling_t *) malloc(get_nelements() * sizeof(mgicooling_t))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize coolinglist for cell %d... abort\n",modelgridindex);
     abort();
   }
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     /// and allocate memory to store the ground level populations for each ionisation stage
     if ((globals::modelgrid[modelgridindex].cooling[element].contrib = (double *) malloc(get_nions(element) * sizeof(double))) == NULL)
@@ -372,9 +384,9 @@ static void allocate_nonemptycells(void)
   for (int cellindex = 0; cellindex < globals::ngrid; cellindex++)
   {
     const int mgi = globals::cell[cellindex].modelgridindex;
-    assert(!(globals::model_type == RHO_3D_READ) || (get_rhoinit(mgi) > 0) || (mgi == MMODELGRID));
+    assert(!(get_model_type() == RHO_3D_READ) || (get_rhoinit(mgi) > 0) || (mgi == MMODELGRID));
     mg_associated_cells[mgi] += 1;
-    assert(!(globals::model_type == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == MMODELGRID));
+    assert(!(get_model_type() == RHO_3D_READ) || (mg_associated_cells[mgi] == 1) || (mgi == MMODELGRID));
   }
 
   int numnonemptycells = 0;
@@ -682,7 +694,7 @@ static void density_2d_read(void)
     {
       if (globals::cell[n].rho >= MINDENSITY)
       {
-        for (element = 0; element < globals::nelements; element++)
+        for (element = 0; element < get_nelements(); element++)
         {
           /// Now set the abundances (by mass) of included elements, i.e.
           /// read out the abundances specified in the atomic data file
@@ -752,7 +764,7 @@ static void density_2d_read(void)
 
 static void abundances_read(void)
 {
-  const bool threedimensional = (globals::model_type == RHO_3D_READ);
+  const bool threedimensional = (get_model_type() == RHO_3D_READ);
 
   /// Open the abundances file
   FILE *abundance_file = fopen_required("abundances.txt", "r");
@@ -794,7 +806,7 @@ static void abundances_read(void)
       if (threedimensional || normfactor <= 0.)
         normfactor = 1.;
 
-      for (int element = 0; element < globals::nelements; element++)
+      for (int element = 0; element < get_nelements(); element++)
       {
         ///now set the abundances (by mass) of included elements, i.e.
         ///read out the abundances specified in the atomic data file
@@ -865,12 +877,12 @@ static void read_grid_restart_data(const int timestep)
 
     #ifndef FORCE_LTE
       #if (!NO_LUT_PHOTOION)
-        for (int element = 0; element < globals::nelements; element++)
+        for (int element = 0; element < get_nelements(); element++)
         {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
           {
-            const int estimindex = mgi * globals::nelements * maxion + element * maxion + ion;
+            const int estimindex = mgi * get_nelements() * maxion + element * maxion + ion;
             fscanf(gridsave_file, " %lg %lg", &corrphotoionrenorm[estimindex], &gammaestimator[estimindex]);
           }
         }
@@ -1024,12 +1036,12 @@ static void uniform_grid_setup(void)
   /// Finally we must also create the composition dependent data structure for
   /// the samplingcell which is located at MGRID (i.e. the MGRID+1th cell)
   n = MGRID;
-  if ((globals::cell[n].composition = malloc(globals::nelements*sizeof(compositionlist_entry))) == NULL)
+  if ((globals::cell[n].composition = malloc(get_nelements()*sizeof(compositionlist_entry))) == NULL)
   {
     printout("[fatal] input: not enough memory to initialize compositionlist for cell %d... abort\n",n);
     abort();
   }
-  for (element = 0; element < globals::nelements; element++)
+  for (element = 0; element < get_nelements(); element++)
   {
     ///now set the abundances (by mass) of included elements, i.e.
     ///read out the abundances specified in the atomic data file
@@ -1055,7 +1067,7 @@ static void uniform_grid_setup(void)
 
 static void spherical1d_grid_setup(void)
 {
-  assert(globals::model_type == RHO_1D_READ);
+  assert(get_model_type() == RHO_1D_READ);
   globals::coordlabel[0] = 'r';
   globals::coordlabel[1] = '?';
   globals::coordlabel[2] = '?';
@@ -1114,7 +1126,7 @@ void grid_init(int my_rank)
   }
 
   /// Now set up the density in each cell.
-  if (globals::model_type == RHO_UNIFORM)
+  if (get_model_type() == RHO_UNIFORM)
   {
     //uniform_density_setup ();
     //abundances_setup();
@@ -1128,15 +1140,15 @@ void grid_init(int my_rank)
     globals::rho_crit = ME * CLIGHT * decay::nucmass(NUCLIDE_NI56) / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
     printout("grid_init: rho_crit = %g\n", globals::rho_crit);
 
-    if (globals::model_type == RHO_1D_READ)
+    if (get_model_type() == RHO_1D_READ)
     {
       density_1d_read();
     }
-    else if (globals::model_type == RHO_2D_READ)
+    else if (get_model_type() == RHO_2D_READ)
     {
       density_2d_read();
     }
-    else if (globals::model_type == RHO_3D_READ)
+    else if (get_model_type() == RHO_3D_READ)
     {
       for (int n = 0; n < globals::ngrid; n++)
       {

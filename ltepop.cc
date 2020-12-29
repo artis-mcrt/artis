@@ -21,8 +21,8 @@ double nne_solution_f(double x, void *paras)
   const double rho = get_rho(modelgridindex);
 
   double outersum = 0.;
-  //printout("debug globals::nelements %d =========================\n",globals::nelements);
-  for (int element = 0; element < globals::nelements; element++)
+  //printout("debug get_nelements() %d =========================\n",get_nelements());
+  for (int element = 0; element < get_nelements(); element++)
   {
     const double abundance = globals::modelgrid[modelgridindex].composition[element].abundance;
     if (abundance > 0)
@@ -165,15 +165,15 @@ double phi(const int element, const int ion, const int modelgridindex)
 //     }
 // else
   {
-    //Gamma = photoionestimator[cellnumber*globals::nelements*maxion+element*maxion+ion];
+    //Gamma = photoionestimator[cellnumber*get_nelements()*maxion+element*maxion+ion];
     #if NO_LUT_PHOTOION
       const double Gamma = calculate_iongamma_per_gspop(modelgridindex, element, ion);
     #else
-      const double Gamma = gammaestimator[modelgridindex * globals::nelements * maxion + element * maxion + ion];
+      const double Gamma = gammaestimator[modelgridindex * get_nelements() * maxion + element * maxion + ion];
     #endif
     // printout("phicompare element %d ion %d T_e = %g gammaestimator %g calculate_iongamma_per_gspop %g\n",
     //          element, ion, T_e,
-    //          gammaestimator[modelgridindex * globals::nelements * maxion + element * maxion + ion],
+    //          gammaestimator[modelgridindex * get_nelements() * maxion + element * maxion + ion],
     //          calculate_iongamma_per_gspop(modelgridindex, element, ion));
 
     // Gamma is the photoionization rate per ground level pop
@@ -185,7 +185,7 @@ double phi(const int element, const int ion, const int modelgridindex)
       abort();
     }
 
-    //Alpha_st = stimrecombestimator[cellnumber*globals::nelements*maxion+element*maxion+ion];
+    //Alpha_st = stimrecombestimator[cellnumber*get_nelements()*maxion+element*maxion+ion];
     double Alpha_st = 0.; ///approximate treatment neglects stimulated recombination
 
     double Alpha_sp = 0.;
@@ -687,7 +687,7 @@ double calculate_exclevelpop(int modelgridindex, int element, int ion, int level
 /// Calculates the full level populations for a given grid cell
 /// and stores them to the active entry of the cellhistory.
 {
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)

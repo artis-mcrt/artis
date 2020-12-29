@@ -181,7 +181,7 @@ static int compare_excitation_lineindicies(const void *p1, const void *p2)
 static double get_tot_nion(const int modelgridindex)
 {
   double result = 0.;
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     result += globals::modelgrid[modelgridindex].composition[element].abundance / globals::elements[element].mass * get_rho(modelgridindex);
 
@@ -245,7 +245,7 @@ static void check_auger_probabilities(int modelgridindex)
 {
   bool problem_found = false;
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     for (int ion = 0; ion < get_nions(element) - 1; ion++)
     {
@@ -1110,7 +1110,7 @@ static double N_e(const int modelgridindex, const double energy)
   const double tot_nion = get_tot_nion(modelgridindex);
   double N_e = 0.;
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int Z = get_element(element);
     const int nions = get_nions(element);
@@ -1468,7 +1468,7 @@ static double get_oneoverw(const int element, const int ion, const int modelgrid
   // denominator is extremely simplified. Need to get the mean Z value.
 
   double Zbar = 0.0;  // mass-weighted average atomic number
-  for (int ielement = 0; ielement < globals::nelements; ielement++)
+  for (int ielement = 0; ielement < get_nelements(); ielement++)
   {
     Zbar += globals::modelgrid[modelgridindex].composition[ielement].abundance * globals::elements[ielement].anumber;
   }
@@ -2055,7 +2055,7 @@ static double ion_ntion_energyrate(int modelgridindex, int element, int lowerion
 static double get_ntion_energyrate(int modelgridindex)
 {
   double ratetotal = 0.;
-  for (int ielement = 0; ielement < globals::nelements; ielement++)
+  for (int ielement = 0; ielement < get_nelements(); ielement++)
   {
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++)
@@ -2073,7 +2073,7 @@ static void select_nt_ionization2(int modelgridindex, int *element, int *lowerio
 
   const double zrand = gsl_rng_uniform(rng);
   double ratesum = 0.;
-  for (int ielement = 0; ielement < globals::nelements; ielement++)
+  for (int ielement = 0; ielement < get_nelements(); ielement++)
   {
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++)
@@ -2236,7 +2236,7 @@ static void analyse_sf_solution(const int modelgridindex, const int timestep)
   double frac_ionization_total = 0.;
 
   int excitationindex = 0; // unique index for every included excitation transition
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int Z = get_element(element);
     const int nions = get_nions(element);
@@ -2884,7 +2884,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
 
   if (enable_sfexcitation || enable_sfionization)
   {
-    for (int element = 0; element < globals::nelements; element++)
+    for (int element = 0; element < get_nelements(); element++)
     {
       const int Z = get_element(element);
       const int nions = get_nions(element);

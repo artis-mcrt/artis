@@ -10,6 +10,8 @@ float get_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_typ
 void set_modelinitradioabund(int modelgridindex, enum radionuclides nuclide_type, float abund);
 float get_stable_abund(int mgi, int anumber);
 int get_numassociatedcells(int modelgridindex);
+enum model_types get_model_type(void);
+void set_model_type(enum model_types model_type_value);
 
 
 inline double wid_init(const int cellindex)

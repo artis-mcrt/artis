@@ -84,7 +84,6 @@ namespace globals
 
   extern int maxion;
   extern short elements_uppermost_ion[MTHREADS][MELEMENTS];
-  extern int nelements;
   extern int nlines;
   extern int includedions;
   extern elementlist_entry *elements;
@@ -141,8 +140,6 @@ namespace globals
   extern int ngrid;
   extern int grid_type;
   extern char coordlabel[3];
-
-  extern enum model_types model_type;
 
   extern int nprocs;
   extern int rank_global;

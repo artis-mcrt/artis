@@ -102,7 +102,7 @@ int main(int argc, char** argv)
     //grid_init();
     time_init();
 
-    const int amax = ((globals::model_type == RHO_1D_READ)) ? 0 : MABINS;
+    const int amax = ((get_model_type() == RHO_1D_READ)) ? 0 : MABINS;
     // a is the escape direction angle bin
     for (int a = -1; a < amax; a++)
     {

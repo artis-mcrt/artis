@@ -99,7 +99,7 @@ static bool read_ratecoeff_dat(void)
         printout("(pass)\n");
         // this is redundant if the adata and composition data matches, but have
         // to read through to maintain consistency with older files
-        for (int element = 0; element < globals::nelements; element++)
+        for (int element = 0; element < get_nelements(); element++)
         {
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions; ion++)
@@ -131,7 +131,7 @@ static bool read_ratecoeff_dat(void)
     if (fileisamatch)
     {
       printout("Matching ratecoeff.dat file found. Readin this file ...\n");
-      for (int element = 0; element < globals::nelements; element++)
+      for (int element = 0; element < get_nelements(); element++)
       {
         int nions = get_nions(element) - 1;
         for (int ion = 0; ion < nions; ion++)
@@ -209,7 +209,7 @@ static void write_ratecoeff_dat(void)
   fprintf(ratecoeff_file, "%32s\n", compositionfile_hash);
   fprintf(ratecoeff_file, "%32s\n", phixsfile_hash);
   fprintf(ratecoeff_file, "%g %g %d %d\n", MINTEMP, MAXTEMP, TABLESIZE, globals::nlines);
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
@@ -218,7 +218,7 @@ static void write_ratecoeff_dat(void)
     }
   }
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element) - 1;
     for (int ion = 0; ion < nions; ion++)
@@ -423,7 +423,7 @@ static double gammacorr_integrand_gsl(double nu, void *voidparas)
 
   g_ff = 1;
   kappa_ff = 0.;
-  for (element = 0; element < globals::nelements; element++)
+  for (element = 0; element < get_nelements(); element++)
   {
     //Z = get_element(element); ///atomic number
     nions = get_nions(element);
@@ -532,7 +532,7 @@ static void precalculate_rate_coefficient_integrals(void)
   const double intaccuracy = 1e-3;        /// Fractional accuracy of the integrator //=1e-5 took 8 hours with Fe I to V!
 
   /// Calculate the rate coefficients for each level of each ion of each element
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element) - 1;
     #ifdef _OPENMP
@@ -1122,7 +1122,7 @@ static void precalculate_ion_alpha_sp(void)
   for (int iter = 0; iter < TABLESIZE; iter++)
   {
     const float T_e = MINTEMP * exp(iter * T_step_log);
-    for (int element = 0; element < globals::nelements; element++)
+    for (int element = 0; element < get_nelements(); element++)
     {
       const int nions = get_nions(element) - 1;
       for (int ion = 0; ion < nions; ion++)
@@ -1446,7 +1446,7 @@ double get_corrphotoioncoeff(int element, int ion, int level, int phixstargetind
       gammacorr = W * interpolate_corrphotoioncoeff(element, ion, level, phixstargetindex, T_R);
       const int index_in_groundlevelcontestimator = globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
       if (index_in_groundlevelcontestimator >= 0)
-        gammacorr *= corrphotoionrenorm[modelgridindex * globals::nelements * maxion + index_in_groundlevelcontestimator];
+        gammacorr *= corrphotoionrenorm[modelgridindex * get_nelements() * maxion + index_in_groundlevelcontestimator];
     #endif
     }
   #endif

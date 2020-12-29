@@ -77,7 +77,7 @@ void calculate_cooling_rates(const int modelgridindex, heatingcoolingrates_t *he
   double C_fb_all = 0.;   /// free-bound creation of rpkt
   double C_exc_all = 0.;  /// collisional excitation of macroatoms
   double C_ionization_all = 0.;  /// collisional ionisation of macroatoms
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
@@ -281,8 +281,8 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       //double interpolate_stimulated_recomb(int element, int ion, int level, double T);
       //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * W * interpolate_stimulated_bfcoolingcoeff(element,ion,level,T_R));
       //printout("nonE %g, E %g \n",interpolate_bfcoolingcoeff(element,ion,level,T_e), interpolate_stimulated_bfcoolingcoeff(element,ion,level,T_R));
-      //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * (stimrecombestimator_E_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion]) * E_threshold);
-      //printout("element %d, ion %d, modified %g, usual %g, diff %g, nonE %g\n",element,ion,stimrecombestimator_E_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion],stimrecombestimator_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion],(stimrecombestimator_E_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+ion])*E_threshold,interpolate_bfcoolingcoeff(element,ion,level,T_e));
+      //C = get_bfcooling(element,ion,level,modelgridindex) + (nnnextionlevel*nne * (stimrecombestimator_E_save[pkt_ptr->where*get_nelements()*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*get_nelements()*maxion+element*maxion+ion]) * E_threshold);
+      //printout("element %d, ion %d, modified %g, usual %g, diff %g, nonE %g\n",element,ion,stimrecombestimator_E_save[pkt_ptr->where*get_nelements()*maxion+element*maxion+ion],stimrecombestimator_save[pkt_ptr->where*get_nelements()*maxion+element*maxion+ion],(stimrecombestimator_E_save[pkt_ptr->where*get_nelements()*maxion+element*maxion+ion]-stimrecombestimator_save[pkt_ptr->where*get_nelements()*maxion+element*maxion+ion])*E_threshold,interpolate_bfcoolingcoeff(element,ion,level,T_e));
       //printout("alpha_sp %g , alpha_st %g\n",get_spontrecombcoeff(element,ion,level,T_e),interpolate_stimulated_recomb(element,ion,level,T_R));
       //epsilon_upper = epsilon(element,ion+1,0);
       //E_threshold = epsilon_upper - epsilon_current;
@@ -432,7 +432,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     double oldcoolingsum;
     int element;
     int ion;
-    for (element = 0; element < globals::nelements; element++)
+    for (element = 0; element < get_nelements(); element++)
     {
       const int nions = get_nions(element);
       for (ion = 0; ion < nions; ion++)
@@ -447,13 +447,13 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     // printout("kpkt selected Z=%d ionstage %d\n", get_element(element), get_ionstage(element, ion));
 
   //  #ifdef DEBUG_ON
-      if (element >= globals::nelements || ion >= get_nions(element))
+      if (element >= get_nelements() || ion >= get_nions(element))
       {
         printout("do_kpkt: problem selecting a cooling process ... abort\n");
         printout("do_kpkt: tried to select element %d, ion %d (Z=%d ionstage %d)\n",element, ion, get_element(element), get_ionstage(element, ion));
         printout("do_kpkt: totalcooling %g, coolingsum %g, rndcool %g\n",globals::modelgrid[modelgridindex].totalcooling,coolingsum,rndcool);
         printout("do_kpkt: modelgridindex %d, cellno %d, nne %g\n",modelgridindex,pkt_ptr->where,get_nne(modelgridindex));
-        for (element = 0; element < globals::nelements; element++)
+        for (element = 0; element < get_nelements(); element++)
         {
           const int nions = get_nions(element);
           for (ion = 0; ion < nions; ion++)

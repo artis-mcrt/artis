@@ -339,7 +339,7 @@ static void print_level_rates(
 {
   // very detailed output of the NLTE processes for a particular levels
 
-  if (element > globals::nelements - 1 || selected_ion > get_nions(element) - 1 || selected_level > (get_nlevels_nlte(element, selected_ion) + (ion_has_superlevel(element, selected_ion) ? 1 : 0)))
+  if (element > get_nelements() - 1 || selected_ion > get_nions(element) - 1 || selected_level > (get_nlevels_nlte(element, selected_ion) + (ion_has_superlevel(element, selected_ion) ? 1 : 0)))
   {
     printout("print_level_rates: invalid element/ion/level arguments\n");
     abort();
@@ -1636,7 +1636,7 @@ void nltepop_write_to_file(const int modelgridindex, const int timestep)
   // fprintf(nlte_file,"#timestep %d modelgridindex %d T_R %g T_e %g W %g T_J %g nne %g\n",
   //         timestep, n, get_TR(n), get_Te(n), get_W(n), get_TJ(n), get_nne(n));
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     const int atomic_number = get_element(element);
@@ -1713,7 +1713,7 @@ void nltepop_write_restart_data(FILE *restart_file)
     if (get_numassociatedcells(modelgridindex) > 0)
     {
       fprintf(restart_file, "%d\n", modelgridindex);
-      for (int element = 0; element < globals::nelements; element++)
+      for (int element = 0; element < get_nelements(); element++)
       {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++)
@@ -1769,7 +1769,7 @@ void nltepop_read_restart_data(FILE *restart_file)
         abort();
       }
 
-      for (int element = 0; element < globals::nelements; element++)
+      for (int element = 0; element < get_nelements(); element++)
       {
         const int nions = get_nions(element);
         for (int ion = 0; ion < nions; ion++)
