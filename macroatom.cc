@@ -126,11 +126,6 @@ static void get_macroatom_transitionrates(
     chlevel->individ_internal_up_same[i] = individ_internal_up_same;
 
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
-
-    #ifdef DEBUG_ON
-      if (globals::debuglevel == 2)
-        printout("checking uptrans %d to level %d: R %g, C %g, epsilon_trans %g\n",i,upper,R,C,epsilon_trans);
-    #endif
   }
   if (!isfinite(processrates[MA_ACTION_INTERNALUPSAME]))
     printout("fatal: internal_up_same has nan contribution\n");
