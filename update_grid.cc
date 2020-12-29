@@ -741,8 +741,6 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
 
   globals::cellhistory[tid].cellnumber = modelgridindex;
   //globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
-  int nlevels_with_processrates = 0;
-  int nlevels_with_photoioncoeffs = 0;
   for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
@@ -754,17 +752,12 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
       {
         for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
         {
-          if (phixstargetindex == 0 and globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff >= 0)
-            nlevels_with_photoioncoeffs++;
           globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].corrphotoioncoeff = -99.;
 #if (SEPARATE_STIMRECOMB)
           globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].chphixstargets[phixstargetindex].stimrecombcoeff = -99.;
 #endif
         }
         /// This is the only flag needed for all of the following MA stuff!
-        if (globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] >= 0)
-          nlevels_with_processrates++;
-
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].processrates[MA_ACTION_COLDEEXC] = -99.;
         /*
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].rad_deexc = -99.;
@@ -790,9 +783,6 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
       }
     }
   }
-  printout("nlevels_with_processrates %d\n", nlevels_with_processrates);
-  printout("nlevels_with_photoioncoeffs %d\n", nlevels_with_photoioncoeffs);
-
   //globals::cellhistory[tid].totalcooling = COOLING_UNDEFINED;
   //globals::cellhistory[tid].phixsflag = PHIXS_UNDEFINED;
 }
