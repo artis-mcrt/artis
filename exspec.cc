@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include "exspec.h"
 #include "sn3d.h"
+#include "grid_init.h"
 #include "input.h"
 #include "light_curve.h"
 #include "packet_init.h"
@@ -116,9 +117,9 @@ int main(int argc, char** argv)
       init_spectra(rpkt_spectra, globals::nu_min_r, globals::nu_max_r, do_emission_res);
 
       #ifdef POL_ON
-      init_spectra(stokes_i, nu_min_r, nu_max_r, do_emission_res);
-      init_spectra(stokes_q, nu_min_r, nu_max_r, do_emission_res);
-      init_spectra(stokes_u, nu_min_r, nu_max_r, do_emission_res);
+      init_spectra(stokes_i, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+      init_spectra(stokes_q, globals::nu_min_r, globals::nu_max_r, do_emission_res);
+      init_spectra(stokes_u, globals::nu_min_r, globals::nu_max_r, do_emission_res);
       #endif
 
       const double nu_min_gamma = 0.05 * MEV / H;
