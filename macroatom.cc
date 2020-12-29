@@ -34,12 +34,6 @@ static inline double get_individ_rad_deexc(int modelgridindex, int element, int 
 }
 
 
-static inline double get_individ_internal_down_same(int element, int ion, int level, int i)
-{
-  return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same[i];
-}
-
-
 static inline double get_individ_internal_up_same(int element, int ion, int level, int i)
 {
   return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
@@ -75,8 +69,6 @@ static void calculate_macroatom_transitionrates(
 
     const double individ_rad_deexc = R * epsilon_trans;
     const double individ_col_deexc = C * epsilon_trans;
-
-    chlevel->individ_internal_down_same[i] = individ_internal_down_same;
 
     processrates[MA_ACTION_RADDEEXC] += individ_rad_deexc;
     processrates[MA_ACTION_COLDEEXC] += individ_col_deexc;
@@ -175,6 +167,61 @@ static double *get_transitionrates(int modelgridindex, int element, int ion, int
   }
 
   return chlevel->processrates;
+}
+
+
+static int do_macroatom_internal_down_same(
+  int modelgridindex, int element, int ion, int level, double t_mid, double total_internal_down_same)
+{
+  const float T_e = get_Te(modelgridindex);
+  const float nne = get_nne(modelgridindex);
+  const double epsilon_current = epsilon(element, ion, level);
+  const int ndowntrans = get_ndowntrans(element, ion, level);
+
+  #ifdef DEBUG_ON
+    if (globals::debuglevel == 2)
+      printout("[debug] do_ma:   internal downward jump within current ionstage\n");
+  #endif
+
+  /// Randomly select the occuring transition
+  const double zrand = gsl_rng_uniform(rng);
+  int lower = -99;
+  double rate = 0.;
+  for (int i = 0; i < ndowntrans; i++)
+  {
+    const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+    const int tmp_lower = globals::linelist[lineindex].lowerlevelindex;
+    const double epsilon_target = epsilon(element, ion, tmp_lower);
+    const double epsilon_trans = epsilon_current - epsilon_target;
+
+    const double R = rad_deexcitation_ratecoeff(modelgridindex, element, ion, level, tmp_lower, epsilon_trans, lineindex, t_mid);
+    const double C = col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, lineindex);
+
+    const double individ_internal_down_same = (R + C) * epsilon_target;
+    rate += individ_internal_down_same;
+    if (zrand * total_internal_down_same < rate)
+    {
+      const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
+      lower = globals::linelist[lineindex].lowerlevelindex;
+      break;
+    }
+  }
+
+  return lower;
+
+  #ifdef DEBUG_ON
+    if (globals::debuglevel == 2)
+      printout("[debug] do_ma:   to level %d\n", lower);
+    if (get_ionstage(element,ion) == 0 && lower == 0)
+    {
+      printout("internal downward transition to ground level occured ... abort\n");
+      printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
+      printout("Z %d, ionstage %d, energy %g\n",
+               get_element(element), get_ionstage(element,ion), globals::elements[element].ions[ion].levels[lower].epsilon);
+      printout("[debug] do_ma:   internal downward jump within current ionstage\n");
+      abort();
+    }
+  #endif
 }
 
 
@@ -706,44 +753,11 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
 
       case MA_ACTION_INTERNALDOWNSAME:
       {
-        #ifdef DEBUG_ON
-          if (globals::debuglevel == 2)
-            printout("[debug] do_ma:   internal downward jump within current ionstage\n");
-          pkt_ptr->interactions += 1;
-          jumps++;
-          jump = 0;
-        #endif
+        pkt_ptr->interactions += 1;
+        jumps++;
+        jump = 0;
+        level = do_macroatom_internal_down_same(modelgridindex, element, ion, level, t_mid, processrates[MA_ACTION_INTERNALDOWNSAME]);
 
-        /// Randomly select the occuring transition
-        zrand = gsl_rng_uniform(rng);
-        int lower = -99;
-        double rate = 0.;
-        for (int i = 0; i < ndowntrans; i++)
-        {
-          rate += get_individ_internal_down_same(element, ion, level, i);
-          if (zrand * processrates[MA_ACTION_INTERNALDOWNSAME] < rate)
-          {
-            const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
-            lower = globals::linelist[lineindex].lowerlevelindex;
-            break;
-          }
-        }
-
-        level = lower;
-
-        #ifdef DEBUG_ON
-          if (globals::debuglevel == 2)
-            printout("[debug] do_ma:   to level %d\n", lower);
-          if (get_ionstage(element,ion) == 0 && lower == 0)
-          {
-            printout("internal downward transition to ground level occured ... abort\n");
-            printout("element %d, ion %d, level %d, lower %d\n", element, ion, level, lower);
-            printout("Z %d, ionstage %d, energy %g\n",
-                     get_element(element), get_ionstage(element,ion), globals::elements[element].ions[ion].levels[lower].epsilon);
-            printout("[debug] do_ma:   internal downward jump within current ionstage\n");
-            abort();
-          }
-        #endif
         break;
       }
 
