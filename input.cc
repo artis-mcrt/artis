@@ -1301,6 +1301,13 @@ static void setup_cellhistory(void)
             }
 
             const int ndowntrans = get_ndowntrans(element, ion, level);
+            mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
+            if ((globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc = (double *) malloc((ndowntrans + 1) * sizeof(double))) == NULL)
+            {
+              printout("[fatal] input: not enough memory to initialize cellhistory's individ_rad_deexc ... abort\n");
+              abort();
+            }
+            globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_rad_deexc[0] = ndowntrans;
 
             mem_usage_cellhistory += (ndowntrans + 1) * sizeof(double);
             if ((globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_down_same = (double *) malloc((ndowntrans + 1) * sizeof(double))) == NULL)
