@@ -104,7 +104,6 @@ static void calculate_macroatom_transitionrates(
       const double epsilon_trans = epsilon_current - epsilon_target;
 
       const double R = rad_recombination_ratecoeff(T_e, nne, element, ion, level, lower, modelgridindex);
-      //printout("rad recombination of element %d, ion %d, level %d, to lower level %d has rate %g\n",element,ion,level,lower,R);
       const double C = col_recombination_ratecoeff(modelgridindex, element, ion, level, lower, epsilon_trans);
 
       processrates[MA_ACTION_INTERNALDOWNLOWER] += (R + C) * epsilon_target;
