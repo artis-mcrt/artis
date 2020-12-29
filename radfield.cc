@@ -1655,18 +1655,18 @@ void titer_nuJ(const int modelgridindex)
 void reduce_estimators(void)
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 {
-  MPI_Allreduce(MPI_IN_PLACE, J, npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, J, globals::npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #ifndef FORCE_LTE
-  MPI_Allreduce(MPI_IN_PLACE, nuJ, npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, nuJ, globals::npts_model, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
   #if (DETAILED_BF_ESTIMATORS_ON)
   {
-    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
     {
       if (get_numassociatedcells(modelgridindex) > 0)
       {
-        MPI_Allreduce(MPI_IN_PLACE, bfrate_raw[modelgridindex], nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, bfrate_raw[modelgridindex], globals::nbfcontinua, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
     }
   }
@@ -1677,7 +1677,7 @@ void reduce_estimators(void)
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing binned radiation field estimators");
 
-    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
     {
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
       if (get_numassociatedcells(modelgridindex) > 0)
@@ -1702,7 +1702,7 @@ void reduce_estimators(void)
     const time_t sys_time_start_reduction = time(NULL);
     printout("Reducing detailed line estimators");
 
-    for (int modelgridindex = 0; modelgridindex < npts_model; modelgridindex++)
+    for (int modelgridindex = 0; modelgridindex < globals::npts_model; modelgridindex++)
     {
       // printout("DEBUGCELLS: cell %d associated_cells %d\n", modelgridindex, get_numassociatedcells(modelgridindex));
       if (get_numassociatedcells(modelgridindex) > 0)

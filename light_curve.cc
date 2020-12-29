@@ -133,8 +133,8 @@ void write_partial_lightcurve(int my_rank, int nts, PKT *pkts)
 
   for (int i = 0; i < globals::ntstep; i++)
   {
-    rpkt_light_curve_lum[i] /= nprocs;
-    rpkt_light_curve_lumcmf[i] /= nprocs;
+    rpkt_light_curve_lum[i] /= globals::nprocs;
+    rpkt_light_curve_lumcmf[i] /= globals::nprocs;
   }
   #endif
 
