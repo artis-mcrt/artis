@@ -3145,11 +3145,11 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
     MPI_Bcast(&nt_solution[modelgridindex].frac_ionization, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
     MPI_Bcast(&nt_solution[modelgridindex].frac_excitation, 1, MPI_FLOAT, root, MPI_COMM_WORLD);
 
-    MPI_Bcast(nt_solution[modelgridindex].fracdep_ionization_ion, includedions, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, includedions, MPI_FLOAT, root, MPI_COMM_WORLD);
+    MPI_Bcast(nt_solution[modelgridindex].fracdep_ionization_ion, globals::includedions, MPI_DOUBLE, root, MPI_COMM_WORLD);
+    MPI_Bcast(nt_solution[modelgridindex].eff_ionpot, globals::includedions, MPI_FLOAT, root, MPI_COMM_WORLD);
 
-    MPI_Bcast(nt_solution[modelgridindex].prob_num_auger, includedions * (NT_MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
-    MPI_Bcast(nt_solution[modelgridindex].ionenfrac_num_auger, includedions * (NT_MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
+    MPI_Bcast(nt_solution[modelgridindex].prob_num_auger, globals::includedions * (NT_MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
+    MPI_Bcast(nt_solution[modelgridindex].ionenfrac_num_auger, globals::includedions * (NT_MAX_AUGER_ELECTRONS + 1), MPI_FLOAT, root, MPI_COMM_WORLD);
 
     // communicate NT excitations
     const int frac_excitations_list_size_old = nt_solution[modelgridindex].frac_excitations_list_size;

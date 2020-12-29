@@ -204,7 +204,7 @@ static void mpi_communicate_grid_properties(const int my_rank, const int p, cons
         nonthermal::nt_MPI_Bcast(modelgridindex, root);
         if (NLTE_POPS_ON)
         {
-          MPI_Bcast(globals::modelgrid[modelgridindex].nlte_pops, total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
+          MPI_Bcast(globals::modelgrid[modelgridindex].nlte_pops, globals::total_nlte_levels, MPI_DOUBLE, root, MPI_COMM_WORLD);
         }
       }
     }
@@ -301,8 +301,8 @@ static void mpi_reduce_estimators(int my_rank, int nts)
 {
   radfield::reduce_estimators();
   #ifndef FORCE_LTE
-    MPI_Allreduce(MPI_IN_PLACE, &ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::ffheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::colheatingestimator, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
     #if (!NO_LUT_PHOTOION)
       MPI_Barrier(MPI_COMM_WORLD);
@@ -315,19 +315,19 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   #endif
 
   #ifdef RECORD_LINESTAT
-    MPI_Allreduce(MPI_IN_PLACE, ecounter, nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, acounter, nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::ecounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, globals::acounter, globals::nlines, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   #endif
 
   //double deltaV = pow(wid_init * globals::time_step[nts].mid/globals::tmin, 3.0);
   //double deltat = globals::time_step[nts].width;
-  if (do_rlc_est != 0)
+  if (globals::do_rlc_est != 0)
   {
-    MPI_Allreduce(MPI_IN_PLACE, &rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::rpkt_emiss, MMODELGRID, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
-  if (do_comp_est)
+  if (globals::do_comp_est)
   {
-    MPI_Allreduce(MPI_IN_PLACE, &compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &globals::compton_emiss, MMODELGRID * EMISS_MAX, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
   }
 
   /// Communicate gamma and positron deposition and write to file
@@ -335,9 +335,9 @@ static void mpi_reduce_estimators(int my_rank, int nts)
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].gamma_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &globals::time_step[nts].positron_dep, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  globals::time_step[nts].cmf_lum /= nprocs;
-  globals::time_step[nts].gamma_dep /= nprocs;
-  globals::time_step[nts].positron_dep /= nprocs;
+  globals::time_step[nts].cmf_lum /= globals::nprocs;
+  globals::time_step[nts].gamma_dep /= globals::nprocs;
+  globals::time_step[nts].positron_dep /= globals::nprocs;
 
   #if TRACK_ION_STATS
   MPI_Allreduce(MPI_IN_PLACE, ionstats, npts_model * includedions * ION_COUNTER_COUNT, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -604,7 +604,7 @@ static bool do_timestep(
 
   /// Each process has now updated its own set of cells. The results now need to be communicated between processes.
   #ifdef MPI_ON
-    mpi_communicate_grid_properties(my_rank, nprocs, nstart, ndo, nts, titer, mpi_grid_buffer, mpi_grid_buffer_size);
+    mpi_communicate_grid_properties(my_rank, globals::nprocs, nstart, ndo, nts, titer, mpi_grid_buffer, mpi_grid_buffer_size);
   #endif
 
   printout("timestep %d: time after grid properties have been communicated %ld (took %ld seconds)\n",
@@ -909,7 +909,7 @@ int main(int argc, char** argv)
   printout("Compiled at %s on %s\n", __TIME__, __DATE__);
 
   #ifdef MPI_ON
-    printout("MPI enabled with %d processes\n", nprocs);
+    printout("MPI enabled with %d processes\n", globals::nprocs);
   #else
     printout("MPI disabled\n");
   #endif
@@ -1047,7 +1047,7 @@ int main(int argc, char** argv)
       /// Initialise the exchange buffer
       /// The factor 4 comes from the fact that our buffer should contain elements of 4 byte
       /// instead of 1 byte chars. But the MPI routines don't care about the buffers datatype
-      mpi_grid_buffer_size = 4 * ((12 + 4 * includedions) * (maxndo) + 1);
+      mpi_grid_buffer_size = 4 * ((12 + 4 * globals::includedions) * (maxndo) + 1);
       printout("reserve mpi_grid_buffer_size %d space for MPI communication buffer\n", mpi_grid_buffer_size);
       //char buffer[mpi_grid_buffer_size];
       mpi_grid_buffer  = (char *) malloc(mpi_grid_buffer_size * sizeof(char));
