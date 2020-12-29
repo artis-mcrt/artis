@@ -1207,7 +1207,7 @@ static float calculate_frac_heating(const int modelgridindex)
   double frac_heating_Einit = 0.;
 
   const float nne = get_nne(modelgridindex);
-  const float nnetot = get_nnetot(modelgridindex);
+  // const float nnetot = get_nnetot(modelgridindex);
 
   const double E_0 = SF_EMIN;
 
