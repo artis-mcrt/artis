@@ -1720,7 +1720,7 @@ void reduce_estimators(void)
 }
 
 
-void MPI_Bcast(const int modelgridindex, const int root)
+void do_MPI_Bcast(const int modelgridindex, const int root)
 // broadcast computed radfield results including parameters
 // from the cells belonging to root process to all processes
 {
