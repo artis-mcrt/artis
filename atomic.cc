@@ -6,6 +6,7 @@
 #include "update_grid.h"
 
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
+int nelements;
 
 extern inline int get_element(int element);
 extern inline int get_elementindex(int Z);
@@ -89,7 +90,7 @@ double get_nntot(int modelgridindex)
 {
   const double rho = get_rho(modelgridindex);
   int nntot = 0.;
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     nntot += get_abundance(modelgridindex, element) / globals::elements[element].mass * rho;
   }
@@ -173,4 +174,14 @@ double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge
 #endif
 
   return sigma_bf;
+}
+
+void set_nelements(const int nelements_in)
+{
+  nelements = nelements_in;
+}
+
+int get_nelements(void)
+{
+  return nelements;
 }

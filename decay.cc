@@ -571,7 +571,7 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 
   // printout("model cell %d, has input radioactive ni56_init %g, co56_init %g, fe52_init %g\n",modelgridindex,ni56_init,co56_init,fe52_in);
 
-  for (int element = globals::nelements - 1; element >= 0; element--)
+  for (int element = get_nelements() - 1; element >= 0; element--)
   {
     const int atomic_number = get_element(element);
     if (atomic_number == 28)

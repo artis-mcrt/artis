@@ -145,7 +145,7 @@ static double get_bfheatingcoeff(int element, int ion, int level)
 void calculate_bfheatingcoeffs(int modelgridindex)
 {
   const double minelfrac = 0.01;
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     if (!(get_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING))
     {
@@ -183,7 +183,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
           #if !NO_LUT_BFHEATING
           const int index_in_groundlevelcontestimator = elements[element].ions[ion].levels[level].closestgroundlevelcont;
           if (index_in_groundlevelcontestimator >= 0)
-            bfheatingcoeff *= bfheatingestimator[modelgridindex*globals::nelements*maxion + index_in_groundlevelcontestimator];
+            bfheatingcoeff *= bfheatingestimator[modelgridindex*get_nelements()*maxion + index_in_groundlevelcontestimator];
           #endif
         }
         globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].bfheatingcoeff = bfheatingcoeff;
@@ -234,7 +234,7 @@ static void calculate_heating_rates(
 
   assert(globals::cellhistory[tid].bfheating_mgi == modelgridindex);
 
-  for (int element = 0; element < globals::nelements; element++)
+  for (int element = 0; element < get_nelements(); element++)
   {
     const int nions = get_nions(element);
     #ifdef DIRECT_COL_HEAT
@@ -302,7 +302,7 @@ static void calculate_heating_rates(
 
         /// Bound-free heating (from estimators)
         /// ------------------------------------
-        //if (ion < nions-1) bfheating += bfheatingestimator[cellnumber*globals::nelements*maxion+element*maxion+ion];
+        //if (ion < nions-1) bfheating += bfheatingestimator[cellnumber*get_nelements()*maxion+element*maxion+ion];
 
         /// Bound-free heating (renormalised analytical calculation)
         /// --------------------------------------------------------
@@ -588,7 +588,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
         while (status == GSL_CONTINUE && iter2 < maxit);
         if (status == GSL_CONTINUE) printout("[warning] call_T_e_finder: T_e did not converge within %d iterations\n",maxit);
         gsl_root_fsolver_free(T_e_solver);
-        //printout("%d %g %g %g %g %g %g %g %g %g %g %g %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*globals::nelements*maxion+0*maxion+0],bfheatingestimator[cellnumber*globals::nelements*maxion+0*maxion+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*globals::nelements*maxion+0*maxion+0]+bfheatingestimator[cellnumber*globals::nelements*maxion+0*maxion+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
+        //printout("%d %g %g %g %g %g %g %g %g %g %g %g %g\n",cellnumber,T_e,ffheatingestimator[cellnumber*get_nelements()*maxion+0*maxion+0],bfheatingestimator[cellnumber*get_nelements()*maxion+0*maxion+0],heatingrates[tid].collbb,heatingrates[tid].collbf,heatingrates[tid].gamma,coolingrates[tid].ff,coolingrates[tid].fb,coolingrates[tid].collbb,coolingrates[tid].collbf,coolingrates[tid].adiabatic,ffheatingestimator[cellnumber*get_nelements()*maxion+0*maxion+0]+bfheatingestimator[cellnumber*get_nelements()*maxion+0*maxion+0]+heatingrates[tid].collbb+heatingrates[tid].collbf+heatingrates[tid].gamma-coolingrates[tid].ff-coolingrates[tid].fb-coolingrates[tid].collbb-coolingrates[tid].collbf-coolingrates[tid].adiabatic);
       }
   }
   */
@@ -667,7 +667,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //   double ffheating = 0.;
 //
 //   nlevels_lowerion = 0;
-//   for (element = 0; element < globals::nelements; element++)
+//   for (element = 0; element < get_nelements(); element++)
 //   {
 //     pkt_ptr->mastate.element = element;
 //     nions = get_nions(element);
@@ -755,7 +755,7 @@ void call_T_e_finder(const int modelgridindex, const int timestep, const double 
 //
 //       /// Bound-free heating (from estimators)
 //       /// ------------------------------------
-//       if (ion < nions-1) bfheating += bfheatingestimator_save[cellnumber*globals::nelements*maxion+element*maxion+ion];
+//       if (ion < nions-1) bfheating += bfheatingestimator_save[cellnumber*get_nelements()*maxion+element*maxion+ion];
 //     }
 //   }
 //

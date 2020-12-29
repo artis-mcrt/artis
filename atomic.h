@@ -13,6 +13,8 @@ double get_nntot(int modelgridindex);
 bool is_nlte(int element, int ion, int level);
 bool level_isinsuperlevel(int element, int ion, int level);
 double photoionization_crosssection_fromtable(float *photoion_xs, double nu_edge, double nu);
+void set_nelements(const int nelements_in);
+int get_nelements(void);
 
 inline int get_element(int element)
 /// Returns the atomic number associated with a given elementindex.
@@ -26,7 +28,7 @@ inline int get_elementindex(int Z)
 /// If there is no element with the given atomic number in the atomic data
 /// a negative value is returned to flag this event.
 {
-  for (int i = 0; i < globals::nelements; i++)
+  for (int i = 0; i < get_nelements(); i++)
   {
     //printf("i %d, Z %d, elements[i].anumber %d\n",i,Z,elements[i].anumber);
     if (Z == globals::elements[i].anumber)
@@ -105,7 +107,7 @@ inline int get_uniqueionindex(const int element, const int ion)
 inline void get_ionfromuniqueionindex(const int allionsindex, int *element, int *ion)
 {
   int allionsindex_thiselementfirstion = 0;
-  for (int e = 0; e < globals::nelements; e++)
+  for (int e = 0; e < get_nelements(); e++)
   {
     if ((allionsindex - allionsindex_thiselementfirstion) >= get_nions(e))
     {

@@ -620,7 +620,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         #if (!NO_LUT_PHOTOION)
           const double gammacorr = W * interpolate_corrphotoioncoeff(element,ion,level,0,T_R);
           const int index_in_groundlevelcontestimor = globals::elements[element].ions[ion].levels[level].closestgroundlevelcont;
-          const double renorm  = corrphotoionrenorm[modelgridindex * globals::nelements * maxion + index_in_groundlevelcontestimor];
+          const double renorm  = corrphotoionrenorm[modelgridindex * get_nelements() * maxion + index_in_groundlevelcontestimor];
           printout("gammacorr %g, index %d, renorm %g, total %g\n",gammacorr,index_in_groundlevelcontestimor,renorm,gammacorr*renorm);
         #endif
 
@@ -1169,7 +1169,7 @@ double rad_recombination_ratecoeff(
   {
     if (get_phixsupperlevel(element,upperion-1,lower,phixstargetindex) == upper)
     {
-      R = nne * get_spontrecombcoeff(element, upperion - 1, lower, phixstargetindex, T_e);// + stimrecombestimator_save[pkt_ptr->where*globals::nelements*maxion+element*maxion+(ion-1)]);
+      R = nne * get_spontrecombcoeff(element, upperion - 1, lower, phixstargetindex, T_e);// + stimrecombestimator_save[pkt_ptr->where*get_nelements()*maxion+element*maxion+(ion-1)]);
       //printout("calculate rad_recombination: element %d, ion %d, upper %d, -> lower %d, nne %g, spontrecombcoeff %g\n",element,ion,upper,lower,nne,get_spontrecombcoeff(element, ion-1, lower, T_e));
 
       if (modelgridindex >= 0 && SEPARATE_STIMRECOMB)

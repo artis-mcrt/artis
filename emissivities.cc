@@ -169,7 +169,7 @@ void zero_estimators(void)
       // kbfabs[n] = 0.;
       // kgammadep[n] = 0.;
 
-      for (int element = 0; element < globals::nelements; element++)
+      for (int element = 0; element < get_nelements(); element++)
       {
         #if (TRACK_ION_STATS)
         for (int ion = 0; ion < get_nions(element); ion++)
@@ -183,16 +183,16 @@ void zero_estimators(void)
         for (int ion = 0; ion < globals::maxion; ion++)
         {
           #if (!NO_LUT_PHOTOION)
-            gammaestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
+            gammaestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
           #endif
           #if (!NO_LUT_BFHEATING)
-            bfheatingestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
+            bfheatingestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
           #endif
 
-          // photoionestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
-          // stimrecombestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
-          // ionfluxestimator[n*globals::nelements*maxion+element*maxion+ion] = 0.;
-          // twiddle[n*globals::nelements*maxion+element*maxion+ion] = 0.;
+          // photoionestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
+          // stimrecombestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
+          // ionfluxestimator[n*get_nelements()*maxion+element*maxion+ion] = 0.;
+          // twiddle[n*get_nelements()*maxion+element*maxion+ion] = 0.;
         }
       }
     #endif
