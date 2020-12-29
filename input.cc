@@ -1263,6 +1263,8 @@ static void setup_cellhistory(void)
         printout("[fatal] input: not enough memory to initialize cellhistory's coolinglist ... abort\n");
         abort();
       }
+      const long mem_usage_cellhistory_coolinglist = globals::ncoolingterms * sizeof(cellhistorycoolinglist_t);
+      printout("mem_usage: coolinglist (part of cellhistory) for thread %d occupies %.1f MB\n", tid, mem_usage_cellhistory_coolinglist / 1024. / 1024.);
 
       mem_usage_cellhistory += get_nelements() * sizeof(chelements_struct);
       if ((globals::cellhistory[tid].chelements = (chelements_struct *) malloc(get_nelements() * sizeof(chelements_struct))) == NULL)
@@ -1504,6 +1506,8 @@ static void setup_phixs_list(void)
       printout("[fatal] read_atomicdata: not enough memory to initialize globals::phixslist[%d].groundcont... abort\n", itid);
       abort();
     }
+    printout("mem_usage: phixslist[tid].groundcont for thread %d occupies %.1f MB\n",
+             itid, globals::nbfcontinua_ground * sizeof(groundphixslist_t) / 1024. / 1024.);
 
     int i = 0;
     for (int element = 0; element < get_nelements(); element++)
@@ -1543,6 +1547,8 @@ static void setup_phixs_list(void)
       printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
       abort();
     }
+    printout("mem_usage: phixslist[tid].allcont for thread %d occupies %.1f MB\n",
+             itid, globals::nbfcontinua * sizeof(fullphixslist_t) / 1024. / 1024.);
 
     i = 0;
     for (int element = 0; element < get_nelements(); element++)
