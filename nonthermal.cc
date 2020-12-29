@@ -1206,7 +1206,7 @@ static float calculate_frac_heating(const int modelgridindex)
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
 
-  // const float nne = get_nne(modelgridindex);
+  const float nne = get_nne(modelgridindex);
   const float nnetot = get_nnetot(modelgridindex);
 
   const double E_0 = SF_EMIN;
@@ -1226,11 +1226,11 @@ static float calculate_frac_heating(const int modelgridindex)
       deltaendash = endash + deltaendash - E_0;
     }
     // first term
-    frac_heating_Einit += get_y_sample(modelgridindex, i) * (electron_loss_rate(endash * EV, nnetot) / EV) * deltaendash;
+    frac_heating_Einit += get_y_sample(modelgridindex, i) * (electron_loss_rate(endash * EV, nne) / EV) * deltaendash;
   }
 
   // second term
-  frac_heating_Einit += E_0 * get_y(modelgridindex, E_0) * (electron_loss_rate(E_0 * EV, nnetot) / EV);
+  frac_heating_Einit += E_0 * get_y(modelgridindex, E_0) * (electron_loss_rate(E_0 * EV, nne) / EV);
 
   // third term (integral from zero to E_0)
   const int nsteps = 100;
@@ -2858,7 +2858,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   {
     const double en = gsl_vector_get(envec, i);
 
-    *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nnetot) / EV;
+    *gsl_matrix_ptr(sfmatrix, i, i) += electron_loss_rate(en * EV, nne) / EV;
 
     double source_integral_to_SF_EMAX;
     if (i < SFPTS - 1)

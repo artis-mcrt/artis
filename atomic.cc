@@ -8,6 +8,7 @@
 double last_phixs_nuovernuedge; // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 int nelements;
 
+
 static int get_continuumindex_phixstargetindex(int element, int ion, int level, int phixstargetindex)
 /// Returns the index of the continuum associated to the given level.
 {
@@ -79,7 +80,7 @@ bool is_nlte(int element, int ion, int level)
   }
   else
   {
-    LEVEL_IS_NLTE(element, ion, level);
+    LEVEL_IS_NLTE(element, ion, level);  // macro function defined in artisoptions.h
   }
 }
 
