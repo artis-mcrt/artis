@@ -85,7 +85,6 @@ typedef struct cellhistorycoolinglist_t
   int ion;
   int level;
   int upperlevel;
-  int lineindex;
 } cellhistorycoolinglist_t;
 
 /*enum heatingtype {
