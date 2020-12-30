@@ -797,7 +797,7 @@ void zero_estimators(int modelgridindex)
 #if (DETAILED_BF_ESTIMATORS_ON)
 static void increment_bfestimators(
   const int modelgridindex, const double distance_e_cmf, const double nu_cmf,
-  const PKT *const pkt_ptr, const double t_current, fullphixslist_t *allcont)
+  const PKT *const pkt_ptr, const double t_current)
 {
   assert(pkt_ptr->prop_time == t_current);
   if (distance_e_cmf == 0)
@@ -813,7 +813,7 @@ static void increment_bfestimators(
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf * dopplerfactor;
   for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
   {
-    const double nu_edge = allcont[allcontindex].nu_edge;
+    const double nu_edge = globals::allcont_nu_edge[allcontindex];
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
 
     if (nu_cmf >= nu_edge && nu_cmf <= nu_max_phixs)
@@ -821,7 +821,7 @@ static void increment_bfestimators(
       #ifdef _OPENMP
         #pragma omp atomic
       #endif
-      bfrate_raw[modelgridindex][allcontindex] += allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu;
+      bfrate_raw[modelgridindex][allcontindex] += globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu;
 
       #if (DETAILED_BF_ESTIMATORS_BYTYPE)
       const int element = allcont[allcontindex].element;
@@ -857,7 +857,7 @@ static void increment_bfestimators(
           bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib = 0;
         }
 
-        bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib += (allcont[allcontindex].gamma_contr * distance_e_cmf_over_nu);
+        bfrate_raw_bytype[modelgridindex][allcontindex][listindex].ratecontrib += (globals::phixslist[tid].gamma_contr[allcontindex] * distance_e_cmf_over_nu);
       }
       #endif
     }
@@ -900,7 +900,7 @@ void update_estimators(int modelgridindex, double distance_e_cmf, double nu_cmf,
   #endif
 
   #if (DETAILED_BF_ESTIMATORS_ON)
-  increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current, globals::phixslist[tid].allcont);
+  increment_bfestimators(modelgridindex, distance_e_cmf, nu_cmf, pkt_ptr, t_current);
   #endif
 
   if (MULTIBIN_RADFIELD_MODEL_ON)
@@ -1477,13 +1477,13 @@ static int get_bfcontindex(const int element, const int lowerion, const int lowe
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
-    if ((globals::phixslist[tid].allcont[i].element == element) && (globals::phixslist[tid].allcont[i].ion == lowerion) &&
-        (globals::phixslist[tid].allcont[i].level == lower) && (globals::phixslist[tid].allcont[i].phixstargetindex == phixstargetindex))
+    if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
+        (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex))
     {
       return i;
     }
 
-    if (nu_edge > globals::phixslist[tid].allcont[i].nu_edge)
+    if (nu_edge > globals::allcont[i].nu_edge)
       break;
   }
   return -1;
@@ -1581,13 +1581,13 @@ double get_bfrate_estimator(const int element, const int lowerion, const int low
   const double nu_edge = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
-    if ((globals::phixslist[tid].allcont[i].element == element) && (globals::phixslist[tid].allcont[i].ion == lowerion) &&
-        (globals::phixslist[tid].allcont[i].level == lower) && (globals::phixslist[tid].allcont[i].phixstargetindex == phixstargetindex))
+    if ((globals::allcont[i].element == element) && (globals::allcont[i].ion == lowerion) &&
+        (globals::allcont[i].level == lower) && (globals::allcont[i].phixstargetindex == phixstargetindex))
     {
       return prev_bfrate_normed[modelgridindex][i];
     }
 
-    if (nu_edge > globals::phixslist[tid].allcont[i].nu_edge)
+    if (nu_edge > globals::allcont[i].nu_edge)
       break;
   }
   printout("no bf rate for element Z=%d ion_stage %d lower %d phixstargetindex %d\n", get_element(element), get_ionstage(element, lowerion), lower, phixstargetindex);

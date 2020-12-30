@@ -114,6 +114,8 @@ int importantcoolingterms;
 /// PHIXSLIST
 ///============================================================================
 
+double *allcont_nu_edge;
+fullphixslist_t *allcont;
 phixslist_t *phixslist;
 int nbfcontinua;
 int nbfcontinua_ground; ///number of bf-continua

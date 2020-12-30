@@ -95,6 +95,8 @@ namespace globals
   extern int ncoolingterms;
   extern int importantcoolingterms;
 
+  extern double *allcont_nu_edge;
+  extern fullphixslist_t *allcont;
   extern phixslist_t *phixslist;
   extern int nbfcontinua;
   extern int nbfcontinua_ground;

@@ -398,15 +398,15 @@ static void rpkt_event_continuum(PKT *pkt_ptr, rpkt_cont_opacity_struct kappa_rp
     int i;
     for (i = 0; i < globals::nbfcontinua; i++)
     {
-      kappa_bf_sum += globals::phixslist[tid].allcont[i].kappa_bf_contr;
+      kappa_bf_sum += globals::phixslist[tid].kappa_bf_contr[i];
       if (kappa_bf_sum > zrand2 * kappa_bf_inrest)
       {
-        const double nu_edge = globals::phixslist[tid].allcont[i].nu_edge;
+        const double nu_edge = globals::allcont[i].nu_edge;
         //if (nu < nu_edge) printout("does this ever happen?\n");
-        const int element = globals::phixslist[tid].allcont[i].element;
-        const int ion = globals::phixslist[tid].allcont[i].ion;
-        const int level = globals::phixslist[tid].allcont[i].level;
-        const int phixstargetindex = globals::phixslist[tid].allcont[i].phixstargetindex;
+        const int element = globals::allcont[i].element;
+        const int ion = globals::allcont[i].ion;
+        const int level = globals::allcont[i].level;
+        const int phixstargetindex = globals::allcont[i].phixstargetindex;
 
 #ifdef DEBUG_ON
         if (globals::debuglevel == 2)
@@ -1324,15 +1324,15 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
   const double nnetot = get_nnetot(modelgridindex);
   for (int i = 0; i < globals::nbfcontinua; i++)
   {
-    const int element = globals::phixslist[tid].allcont[i].element;
-    const int ion = globals::phixslist[tid].allcont[i].ion;
-    const int level = globals::phixslist[tid].allcont[i].level;
+    const int element = globals::allcont[i].element;
+    const int ion = globals::allcont[i].ion;
+    const int level = globals::allcont[i].level;
     /// The bf process happens only if the current cell contains
     /// the involved atomic species
     if ((get_abundance(modelgridindex,element) > 0) && (DETAILED_BF_ESTIMATORS_ON || (level < 100) || (ionstagepop(modelgridindex, element, ion) / nnetot > 1.e-6)))
     {
-      const double nu_edge = globals::phixslist[tid].allcont[i].nu_edge;
-      const int phixstargetindex = globals::phixslist[tid].allcont[i].phixstargetindex;
+      const double nu_edge = globals::allcont[i].nu_edge;
+      const int phixstargetindex = globals::allcont[i].phixstargetindex;
       const double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
       //printout("i %d, nu_edge %g\n",i,nu_edge);
       const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge; //nu of the uppermost point in the phixs table
@@ -1361,12 +1361,12 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
 
         if (level == 0)
         {
-          const int gphixsindex = globals::phixslist[tid].allcont[i].index_in_groundphixslist;
+          const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
           globals::phixslist[tid].groundcont[gphixsindex].gamma_contr += sigma_bf * probability * corrfactor;
         }
 
         #if (DETAILED_BF_ESTIMATORS_ON)
-        globals::phixslist[tid].allcont[i].gamma_contr = sigma_bf * probability * corrfactor;
+        globals::phixslist[tid].gamma_contr[i] = sigma_bf * probability * corrfactor;
         #endif
 
         #ifdef DEBUG_ON
@@ -1382,13 +1382,13 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
           }
         #endif
 
-        globals::phixslist[tid].allcont[i].kappa_bf_contr = kappa_bf_contr;
+        globals::phixslist[tid].kappa_bf_contr[i] = kappa_bf_contr;
         *kappa_bf = *kappa_bf + kappa_bf_contr;
       }
       else if (nu < nu_edge) // nu < nu_edge
       {
         /// The phixslist is sorted by nu_edge in ascending order (longest to shortest wavelength)
-        /// If nu < phixslist[tid].allcont[i].nu_edge no absorption in any of the following continua
+        /// If nu < allcont[i].nu_edge no absorption in any of the following continua
         /// is possible, therefore leave the loop.
 
         // the rest of the list shouldn't be accessed
@@ -1397,9 +1397,9 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
         // a slight red-shifting is ignored
         for (int j = i; j < globals::nbfcontinua; j++)
         {
-          globals::phixslist[tid].allcont[j].kappa_bf_contr = 0.;
+          globals::phixslist[tid].kappa_bf_contr[j] = 0.;
           #if (DETAILED_BF_ESTIMATORS_ON)
-          globals::phixslist[tid].allcont[j].gamma_contr = 0.;
+          globals::phixslist[tid].gamma_contr[j] = 0.;
           #endif
         }
         break; // all further processes in the list will have larger nu_edge, so stop here
@@ -1407,21 +1407,21 @@ void calculate_kappa_bf_gammacontr(const int modelgridindex, const double nu, do
       else
       {
         // ignore this particular process but continue through the list
-        globals::phixslist[tid].allcont[i].kappa_bf_contr = 0.;
+        globals::phixslist[tid].kappa_bf_contr[i] = 0.;
         #if (DETAILED_BF_ESTIMATORS_ON)
-        globals::phixslist[tid].allcont[i].gamma_contr = 0.;
+        globals::phixslist[tid].gamma_contr[i] = 0.;
         #endif
       }
     }
     else // no element present or not an important level
     {
-      globals::phixslist[tid].allcont[i].kappa_bf_contr = 0.;
+      globals::phixslist[tid].kappa_bf_contr[i] = 0.;
       #if (DETAILED_BF_ESTIMATORS_ON)
-      globals::phixslist[tid].allcont[i].gamma_contr = 0.;
+      globals::phixslist[tid].gamma_contr[i] = 0.;
       #endif
-      if (globals::phixslist[tid].allcont[i].level == 0)
+      if (globals::allcont[i].level == 0)
       {
-        const int gphixsindex = globals::phixslist[tid].allcont[i].index_in_groundphixslist;
+        const int gphixsindex = globals::allcont[i].index_in_groundphixslist;
         globals::phixslist[tid].groundcont[gphixsindex].gamma_contr = 0.;
       }
     }
