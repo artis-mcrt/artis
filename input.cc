@@ -11,6 +11,7 @@
 #include "gamma.h"
 #include "grid_init.h"
 #include "input.h"
+#include "kpkt.h"
 #include "nltepop.h"
 #include "radfield.h"
 #include "rpkt.h"
@@ -1246,6 +1247,7 @@ static void setup_cellhistory(void)
     printout("[fatal] input: not enough memory to initialize cellhistory of size %d... abort\n", globals::nthreads);
     abort();
   }
+
   #ifdef _OPENMP
     #pragma omp parallel
     {
@@ -1256,15 +1258,11 @@ static void setup_cellhistory(void)
 
       globals::cellhistory[tid].cellnumber = -99;
 
-      mem_usage_cellhistory += globals::ncoolingterms * sizeof(cellhistorycoolinglist_t);
-      globals::cellhistory[tid].coolinglist = (cellhistorycoolinglist_t *) malloc(globals::ncoolingterms * sizeof(cellhistorycoolinglist_t));
-      if (globals::cellhistory[tid].coolinglist == NULL)
-      {
-        printout("[fatal] input: not enough memory to initialize cellhistory's coolinglist ... abort\n");
-        abort();
-      }
-      const long mem_usage_cellhistory_coolinglist = globals::ncoolingterms * sizeof(cellhistorycoolinglist_t);
-      printout("mem_usage: coolinglist (part of cellhistory) for thread %d occupies %.1f MB\n", tid, mem_usage_cellhistory_coolinglist / 1024. / 1024.);
+      mem_usage_cellhistory += globals::ncoolingterms * sizeof(sizeof(double));
+      globals::cellhistory[tid].cooling_contrib = (double *) calloc(globals::ncoolingterms, sizeof(double));
+
+      printout("mem_usage: coolinglist contribs (part of cellhistory) for thread %d occupies %.1f MB\n",
+               tid, globals::ncoolingterms * sizeof(double) / 1024. / 1024.);
 
       mem_usage_cellhistory += get_nelements() * sizeof(chelements_struct);
       if ((globals::cellhistory[tid].chelements = (chelements_struct *) malloc(get_nelements() * sizeof(chelements_struct))) == NULL)
@@ -1354,57 +1352,6 @@ static void write_bflist_file(int includedphotoiontransitions)
   assert(i == includedphotoiontransitions);
   if (globals::rank_global == 0)
     fclose(bflist_file);
-}
-
-
-static void setup_coolinglist(void)
-{
-  /// SET UP THE COOLING LIST
-  ///======================================================
-  /// Determine number of processes which allow kpkts to convert to something else.
-  /// This number is given by the collisional excitations (so far determined from the oscillator strengths
-  /// by the van Regemorter formula, therefore totaluptrans), the number of free-bound emissions and collisional ionisations
-  /// (as long as we only deal with ionisation to the ground level this means for both of these
-  /// \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
-  /*ncoolingterms = totaluptrans;
-  for (element = 0; element < get_nelements(); element++)
-  {
-    nions = get_nions(element);
-    for (ion=0; ion < nions; ion++)
-    {
-      if (get_ionstage(element,ion) > 1) ncoolingterms++;
-      if (ion < nions - 1) ncoolingterms += 2 * get_ionisinglevels(element,ion);
-    }
-  }
-  printout("[info] read_atomicdata: number of coolingterms %d\n",ncoolingterms);*/
-
-  globals::ncoolingterms = 0;
-  for (int element = 0; element < get_nelements(); element++)
-  {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++)
-    {
-      int ionterms = 0;
-      globals::elements[element].ions[ion].coolingoffset = globals::ncoolingterms;
-      /// Ionised ions add one ff-cooling term
-      if (get_ionstage(element,ion) > 1)
-        ionterms++;
-      /// Ionisinglevels below the closure ion add to bf and col ionisation
-      /// All the levels add number of col excitations
-      const int nlevels = get_nlevels(element,ion);
-      for (int level = 0; level < nlevels; level++)
-      {
-        //if (ion < nions - 1) and (level < get_ionisinglevels(element,ion))
-        if (ion < nions - 1)
-          ionterms += 2 * get_nphixstargets(element,ion,level);
-
-        ionterms += 1; // level's coll. excitation cooling (all upper levels combined)
-      }
-      globals::elements[element].ions[ion].ncoolingterms = ionterms;
-      globals::ncoolingterms += ionterms;
-    }
-  }
-  printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
 }
 
 
