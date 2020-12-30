@@ -516,7 +516,6 @@ typedef struct
 typedef struct chlevels_struct
 {
   double processrates[MA_ACTION_COUNT];
-  double *individ_internal_up_same;
   chphixstargets_struct *chphixstargets;
   double bfheatingcoeff;
 } chlevels_struct;
