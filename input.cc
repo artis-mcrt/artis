@@ -1507,60 +1507,65 @@ static void setup_phixs_list(void)
     }
     qsort(globals::phixslist[itid].groundcont, globals::nbfcontinua_ground, sizeof(groundphixslist_t), compare_groundphixslistentry_bynuedge);
 
-
     //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
     //else
-    globals::phixslist[itid].allcont = (fullphixslist_t *) malloc(globals::nbfcontinua * sizeof(fullphixslist_t));
-    if (globals::phixslist[itid].allcont == NULL)
-    {
-      printout("[fatal] read_atomicdata: not enough memory to initialize phixslist... abort\n");
-      abort();
-    }
-    printout("mem_usage: phixslist[tid].allcont for thread %d occupies %.1f MB\n",
-             itid, globals::nbfcontinua * sizeof(fullphixslist_t) / 1024. / 1024.);
+    globals::phixslist[itid].kappa_bf_contr = (double *) calloc(globals::nbfcontinua, sizeof(double));
+    assert(globals::phixslist[itid].kappa_bf_contr != NULL);
+    #if (DETAILED_BF_ESTIMATORS_ON)
+    globals::phixslist[itid].gamma_contr = (double *) calloc(globals::nbfcontinua, sizeof(double));
+    assert(globals::phixslist[itid].gamma_contr != NULL);
+    #endif
 
-    i = 0;
-    for (int element = 0; element < get_nelements(); element++)
+    printout("mem_usage: phixslist[tid].kappa_bf_contr for thread %d occupies %.1f MB\n",
+             itid, globals::nbfcontinua * sizeof(double) / 1024. / 1024.);
+   }
+
+  globals::allcont = (fullphixslist_t *) malloc(globals::nbfcontinua * sizeof(fullphixslist_t));
+  globals::allcont_nu_edge = (double *) calloc(globals::nbfcontinua, sizeof(double));
+
+  int i = 0;
+  for (int element = 0; element < get_nelements(); element++)
+  {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions - 1; ion++)
     {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions - 1; ion++)
+      const int nlevels = get_ionisinglevels(element, ion);
+      //nlevels = get_ionisinglevels(element,ion);
+      ///// The following line reduces the number of bf-continua per ion
+      //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
+      for (int level = 0; level < nlevels; level++)
       {
-        const int nlevels = get_ionisinglevels(element, ion);
-        //nlevels = get_ionisinglevels(element,ion);
-        ///// The following line reduces the number of bf-continua per ion
-        //if (nlevels > TAKE_N_BFCONTINUA) nlevels = TAKE_N_BFCONTINUA;
-        for (int level = 0; level < nlevels; level++)
+        const int nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
         {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++)
-          {
-            // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
-            // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-            const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
-            const double nu_edge = E_threshold / H;
+          // const int upperlevel = get_phixsupperlevel(element, ion,level, 0);
+          // const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+          const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
+          const double nu_edge = E_threshold / H;
 
-            int index_in_groundlevelcontestimator;
+          int index_in_groundlevelcontestimator;
 
-            globals::phixslist[itid].allcont[i].element = element;
-            globals::phixslist[itid].allcont[i].ion = ion;
-            globals::phixslist[itid].allcont[i].level = level;
-            globals::phixslist[itid].allcont[i].phixstargetindex = phixstargetindex;
-            globals::phixslist[itid].allcont[i].nu_edge = nu_edge;
-            globals::phixslist[itid].allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
-            #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
-              if (itid == 0)
-                globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
-            #endif
-            i++;
-          }
+          globals::allcont[i].nu_edge = nu_edge;
+          globals::allcont[i].element = element;
+          globals::allcont[i].ion = ion;
+          globals::allcont[i].level = level;
+          globals::allcont[i].phixstargetindex = phixstargetindex;
+          globals::allcont[i].index_in_groundphixslist = search_groundphixslist(nu_edge, &index_in_groundlevelcontestimator, element, ion, level);
+          #if (!NO_LUT_PHOTOION || !NO_LUT_BFHEATING)
+            globals::elements[element].ions[ion].levels[level].closestgroundlevelcont = index_in_groundlevelcontestimator;
+          #endif
+          i++;
         }
       }
     }
-
-    //nbfcontinua = i;
-    //printout("number of bf-continua reduced to %d\n",nbfcontinua);
-    qsort(globals::phixslist[itid].allcont, globals::nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
   }
+
+  qsort(globals::allcont, globals::nbfcontinua, sizeof(fullphixslist_t), compare_phixslistentry_bynuedge);
+  for (int i = 0; i < globals::nbfcontinua; i++)
+  {
+    globals::allcont_nu_edge[i] = globals::allcont[i].nu_edge;
+  }
+
   //#ifdef _OPENMP
   //  }
   //#endif

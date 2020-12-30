@@ -109,13 +109,6 @@ typedef struct heatingcoolingrates
 
 
 /// PHIXSLIST
-///============================================================================
-// typedef struct
-// {
-//   double tau_at_edge;
-//   short level;          ///limited to 32767 levels
-// } ionsphixslist_t;
-
 
 typedef struct fullphixslist_t
 {
@@ -125,10 +118,6 @@ typedef struct fullphixslist_t
   int level;
   int phixstargetindex;
   int index_in_groundphixslist;
-  double kappa_bf_contr;
-#if (DETAILED_BF_ESTIMATORS_ON)
-  double gamma_contr;
-#endif
 } fullphixslist_t;
 
 typedef struct groundphixslist_t
@@ -147,8 +136,11 @@ typedef struct groundphixslist_t
 
 typedef struct phixslist_t
 {
-  fullphixslist_t *allcont;
   groundphixslist_t *groundcont;
+  double *kappa_bf_contr;
+#if (DETAILED_BF_ESTIMATORS_ON)
+  double *gamma_contr;
+#endif
 } phixslist_t;
 
 enum packet_type {
