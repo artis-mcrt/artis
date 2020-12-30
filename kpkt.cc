@@ -213,17 +213,18 @@ static void calculate_kpkt_rates_ion(int modelgridindex, int element, int ion, i
       const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
       const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
       contrib += C;
-      globals::cellhistory[tid].coolinglist[i].contribution = contrib;
-      globals::cellhistory[tid].coolinglist[i].type = COOLINGTYPE_COLLEXC;
-      globals::cellhistory[tid].coolinglist[i].element = element;
-      globals::cellhistory[tid].coolinglist[i].ion = ion;
-      globals::cellhistory[tid].coolinglist[i].level = level;
-      globals::cellhistory[tid].coolinglist[i].upperlevel = upper;
-      globals::cellhistory[tid].coolinglist[i].lineindex = lineindex;
-      //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,globals::cellhistory[tid].coolinglist[i].type,i,low);
-      i++;
-      //linecounter++;
     }
+    globals::cellhistory[tid].coolinglist[i].contribution = contrib;
+    globals::cellhistory[tid].coolinglist[i].type = COOLINGTYPE_COLLEXC;
+    globals::cellhistory[tid].coolinglist[i].element = element;
+    globals::cellhistory[tid].coolinglist[i].ion = ion;
+    globals::cellhistory[tid].coolinglist[i].level = level;
+    // upper level and lineindex are not valid because this is the contribution of all upper levels combined - have to calculate
+    // individually when selecting a random process
+    globals::cellhistory[tid].coolinglist[i].upperlevel = -1;
+    //if (contrib < oldcoolingsum) printout("contrib %g < oldcoolingsum %g: C%g, element %d, ion %d, level %d, coolingtype %d, i %d, low %d\n",contrib,oldcoolingsum,C,element,ion,level,globals::cellhistory[tid].coolinglist[i].type,i,low);
+    i++;
+    //linecounter++;
 
     if (ion < (nions - 1) && level < ionisinglevels) ///check whether further ionisation stage available
     {
@@ -491,7 +492,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       i = (low + high) / 2;
       if (globals::cellhistory[tid].coolinglist[i].contribution > rndcool)
       {
-        if (i == ilow || globals::cellhistory[tid].coolinglist[i-1].contribution < rndcool)
+        if ((i == ilow) || ((i > 0 ? globals::cellhistory[tid].coolinglist[i-1].contribution : 0.) < rndcool))
           break; /// found (1)
         else
           high = i - 1;
@@ -503,6 +504,7 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
       //else
       //  break; /// found (2)
     }
+    // random value minus
     if (low > high)
     {
       printout("do_kpkt: error occured while selecting a cooling channel: low %d, high %d, i %d, rndcool %g\n",low,high,i,rndcool);
@@ -637,10 +639,37 @@ double do_kpkt(PKT *pkt_ptr, double t2, int nts)
     else if (globals::cellhistory[tid].coolinglist[i].type == COOLINGTYPE_COLLEXC)
     {
       /// the k-packet activates a macro-atom due to collisional excitation
-      if (globals::debuglevel == 2) printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
+      // printout("[debug] do_kpkt: k-pkt -> collisional excitation of MA\n");
+      const float nne = get_nne(modelgridindex);
+
+      double contrib = i > 0 ? globals::cellhistory[tid].coolinglist[i-1].contribution : 0.;
+      const int level = globals::cellhistory[tid].coolinglist[i].level;
+      const double epsilon_current = epsilon(element,ion,level);
+      double nnlevel = calculate_exclevelpop(modelgridindex, element, ion, level);
+      int upper = -1;
+      /// excitation to same ionization stage
+      /// -----------------------------------
+      int nuptrans = get_nuptrans(element, ion, level);
+      for (int ii = 0; ii < nuptrans; ii++)
+      {
+        const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[ii];
+        const int tmpupper = globals::linelist[lineindex].upperlevelindex;
+        //printout("    excitation to level %d possible\n",upper);
+        const double epsilon_trans = epsilon(element, ion, tmpupper) - epsilon_current;
+        const double C = nnlevel * col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans) * epsilon_trans;
+        contrib += C;
+        if (contrib > rndcool)
+        {
+          upper = tmpupper;
+          break;
+        }
+      }
+
+      assert(upper >= 0);
+
       const int element = globals::cellhistory[tid].coolinglist[i].element;
       const int ion = globals::cellhistory[tid].coolinglist[i].ion;
-      const int upper = globals::cellhistory[tid].coolinglist[i].upperlevel;
+      // const int upper = globals::cellhistory[tid].coolinglist[i].upperlevel;
       pkt_ptr->mastate.element = element;
       pkt_ptr->mastate.ion = ion;
       pkt_ptr->mastate.level = upper;

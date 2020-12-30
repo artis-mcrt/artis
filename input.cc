@@ -1384,39 +1384,27 @@ static void setup_coolinglist(void)
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++)
     {
-      int add = 0; /// Helper variable to count coolingterms per ion
+      int ionterms = 0;
       globals::elements[element].ions[ion].coolingoffset = globals::ncoolingterms;
       /// Ionised ions add one ff-cooling term
       if (get_ionstage(element,ion) > 1)
-        add++;
+        ionterms++;
       /// Ionisinglevels below the closure ion add to bf and col ionisation
-      // if (ion < nions - 1)
-      //   add += 2 * get_ionisinglevels(element,ion);
       /// All the levels add number of col excitations
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
-        if (ion < nions - 1)
-          add += 2 * get_nphixstargets(element,ion,level);
-        add += get_nuptrans(element, ion, level);
         //if (ion < nions - 1) and (level < get_ionisinglevels(element,ion))
-        //  add += get_nphixstargets(element,ion,level)
+        if (ion < nions - 1)
+          ionterms += 2 * get_nphixstargets(element,ion,level);
+
+        ionterms += 1; // level's coll. excitation cooling (all upper levels combined)
       }
-      globals::elements[element].ions[ion].ncoolingterms = add;
-      globals::ncoolingterms += add;
+      globals::elements[element].ions[ion].ncoolingterms = ionterms;
+      globals::ncoolingterms += ionterms;
     }
   }
   printout("[info] read_atomicdata: number of coolingterms %d\n", globals::ncoolingterms);
-
-  /// And setup the global coolinglist. A shorter coolinglist with only the important contributors
-  /// is part of the cellhistory.
-  /*
-  if ((globalcoolinglist = malloc(ncoolingterms*sizeof(coolinglist_entry))) == NULL)
-  {
-    printout("[fatal] read_atomicdata: not enough memory to initialize globalcoolinglist ... abort\n");
-    abort();
-  }
-  */
 }
 
 
