@@ -79,7 +79,6 @@ enum coolingtype {
 
 typedef struct cellhistorycoolinglist_t
 {
-  double contribution;
   enum coolingtype type;
   int element;
   int ion;
@@ -523,7 +522,7 @@ typedef struct chelements_struct
 
 typedef struct cellhistory_struct
 {
-  cellhistorycoolinglist_t *coolinglist;    /// Cooling contributions by the different processes.
+  double *cooling_contrib;    /// Cooling contributions by the different processes.
   chelements_struct *chelements;            /// Pointer to a nested list which helds compositional
                                             /// information for all the elements=0,1,...,nelements-1
   int cellnumber;                           /// Identifies the cell the data is valid for.

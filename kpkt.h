@@ -4,6 +4,7 @@
 #include "sn3d.h"
 #include "types.h"
 
+void setup_coolinglist(void);
 void calculate_cooling_rates(int modelgridindex, heatingcoolingrates_t *heatingcoolingrates);
 double do_kpkt_bb(PKT *pkt_ptr);
 double do_kpkt(PKT *pkt_ptr, double t2, int nts);

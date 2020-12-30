@@ -749,7 +749,7 @@ void cellhistory_reset(const int modelgridindex, const bool new_timestep)
     for (int ion = 0; ion < nions; ion++)
     {
       bool ionhasvalue = false;
-      globals::cellhistory[tid].coolinglist[get_coolinglistoffset(element,ion)].contribution = COOLING_UNDEFINED;
+      globals::cellhistory[tid].cooling_contrib[get_coolinglistoffset(element,ion)] = COOLING_UNDEFINED;
       const int nlevels = get_nlevels(element,ion);
       for (int level = 0; level < nlevels; level++)
       {
