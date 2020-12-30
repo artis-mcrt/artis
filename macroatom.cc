@@ -19,9 +19,9 @@
 static FILE *macroatom_file;
 
 
-static inline double get_individ_rad_deexc(int modelgridindex, int element, int ion, int level, int i, double t_mid)
+static inline double get_individ_rad_deexc(
+  int modelgridindex, int element, int ion, int level, int i, double t_mid, const double epsilon_current)
 {
-  const double epsilon_current = epsilon(element, ion, level);
   const int lineindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
   const int lower = globals::linelist[lineindex].lowerlevelindex;
   const double epsilon_target = epsilon(element, ion, lower);
@@ -34,9 +34,20 @@ static inline double get_individ_rad_deexc(int modelgridindex, int element, int 
 }
 
 
-static inline double get_individ_internal_up_same(int element, int ion, int level, int i)
+static inline double get_individ_internal_up_same(
+  int modelgridindex, int element, int ion, int level, int i,
+  const double epsilon_current, const double t_mid, const float T_e, const float nne)
 {
-  return globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[i];
+  const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
+  const int upper = globals::linelist[lineindex].upperlevelindex;
+  const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
+
+  const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
+  const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
+  // const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
+  const double NT = 0.;
+
+  return (R + C + NT) * epsilon_current;
 }
 
 
@@ -111,19 +122,8 @@ static void calculate_macroatom_transitionrates(
   const int nuptrans = get_nuptrans(element, ion, level);
   for (int i = 0; i < nuptrans; i++)
   {
-    const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];
-    const int upper = globals::linelist[lineindex].upperlevelindex;
-    const double epsilon_trans = epsilon(element, ion, upper) - epsilon_current;
-
-    double individ_internal_up_same = 0.;
-    const double R = rad_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex, t_mid);
-    const double C = col_excitation_ratecoeff(T_e, nne, lineindex, epsilon_trans);
-    // const double NT = nonthermal::nt_excitation_ratecoeff(modelgridindex, element, ion, level, upper, epsilon_trans, lineindex);
-    const double NT = 0.;
-
-    individ_internal_up_same = (R + C + NT) * epsilon_current;
-
-    chlevel->individ_internal_up_same[i] = individ_internal_up_same;
+    const double individ_internal_up_same = get_individ_internal_up_same(
+      modelgridindex, element, ion, level, i, epsilon_current, t_mid, T_e, nne);
 
     processrates[MA_ACTION_INTERNALUPSAME] += individ_internal_up_same;
   }
@@ -235,9 +235,10 @@ static void do_macroatom_raddeexcitation(
   double rate = 0.;
   int linelistindex = -99;
   const int ndowntrans = get_ndowntrans(element, ion, level);
+  const double epsilon_current = epsilon(element, ion, level);
   for (int i = 0; i < ndowntrans; i++)
   {
-    rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid);
+    rate += get_individ_rad_deexc(modelgridindex, element, ion, level, i, t_mid, epsilon_current);
     if (zrand * rad_deexc < rate)
     {
       linelistindex = globals::elements[element].ions[ion].levels[level].downtrans_lineindicies[i];
@@ -894,7 +895,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         rate = 0.;
         for (int i = 0; i < nuptrans; i++)
         {
-          rate += get_individ_internal_up_same(element, ion, level, i);
+          rate += get_individ_internal_up_same(modelgridindex, element, ion, level, i, epsilon_current, t_mid, T_e, nne);
           if (zrand * processrates[MA_ACTION_INTERNALUPSAME] < rate)
           {
             const int lineindex = globals::elements[element].ions[ion].levels[level].uptrans_lineindicies[i];

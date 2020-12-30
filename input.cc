@@ -1299,15 +1299,6 @@ static void setup_cellhistory(void)
               printout("[fatal] input: not enough memory to initialize cellhistory's chphixstargets ... abort\n");
               abort();
             }
-
-            const int nuptrans = get_nuptrans(element, ion, level);
-            mem_usage_cellhistory += (nuptrans + 1) * sizeof(double);
-            if ((globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same = (double *) malloc((nuptrans + 1) * sizeof(double))) == NULL)
-            {
-              printout("[fatal] input: not enough memory to initialize cellhistory's individ_internal_up_same ... abort\n");
-              abort();
-            }
-            globals::cellhistory[tid].chelements[element].chions[ion].chlevels[level].individ_internal_up_same[0] = nuptrans;
           }
         }
       }

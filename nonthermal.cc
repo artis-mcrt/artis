@@ -2805,7 +2805,7 @@ void solve_spencerfano(const int modelgridindex, const int timestep, const int i
   }
 
   const float nne = get_nne(modelgridindex); // electrons per cm^3
-  const double nnetot = get_nnetot(modelgridindex);
+  // const double nnetot = get_nnetot(modelgridindex);
   const double nne_per_ion = nne / get_tot_nion(modelgridindex);
   const double nne_per_ion_last = nt_solution[modelgridindex].nneperion_when_solved;
   const double nne_per_ion_fracdiff = fabs((nne_per_ion_last / nne_per_ion) - 1.);
