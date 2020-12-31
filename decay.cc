@@ -612,9 +612,9 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
   }
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
   //          modelgridindex, t_current,
-  //          globals::modelgrid[modelgridindex].composition[get_elementindex(28)].abundance,
-  //          globals::modelgrid[modelgridindex].composition[get_elementindex(27)].abundance,
-  //          globals::modelgrid[modelgridindex].composition[get_elementindex(26)].abundance,
+  //          get_elem_abundance(modelgridinex, get_elementindex(28)),
+  //          get_elem_abundance(modelgridinex, get_elementindex(27)),
+  //          get_elem_abundance(modelgridinex, get_elementindex(26)),
   //          get_fnistabel(modelgridindex), get_fcostable(modelgridindex), get_ffestable(modelgridindex));
 }
 
