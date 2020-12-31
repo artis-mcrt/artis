@@ -32,41 +32,6 @@ enum model_types {
   RHO_3D_READ = 3,  // Read model.
 };
 
-enum ionstatscounters {
-  ION_COUNTER_RADRECOMB_MACROATOM = 0,
-  ION_COUNTER_RADRECOMB_KPKT = 1,
-  ION_COUNTER_RADRECOMB_ABSORBED = 2,
-  ION_COUNTER_RADRECOMB_ESCAPED = 3,
-  ION_COUNTER_BOUNDBOUND_MACROATOM = 4,
-  ION_COUNTER_BOUNDBOUND_ABSORBED = 5,
-  ION_COUNTER_NTION = 6,
-  ION_COUNTER_PHOTOION = 7,
-  ION_COUNTER_PHOTOION_FROMBOUNDFREE = 8,
-  ION_COUNTER_PHOTOION_FROMBFSAMEELEMENT = 9,
-  ION_COUNTER_PHOTOION_FROMBFIONPLUSONE = 10,
-  ION_COUNTER_PHOTOION_FROMBFIONPLUSTWO = 11,
-  ION_COUNTER_PHOTOION_FROMBFIONPLUSTHREE = 12,
-  ION_COUNTER_PHOTOION_FROMBFLOWERSUPERLEVEL = 13,
-  ION_COUNTER_PHOTOION_FROMBOUNDBOUND = 14,
-  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSONE = 15,
-  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTWO = 16,
-  ION_COUNTER_PHOTOION_FROMBOUNDBOUNDIONPLUSTHREE = 17,
-  ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC = 18,
-  ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB = 19,
-  ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC = 20,
-  ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB = 21,
-  ION_COUNTER_MACROATOM_ENERGYIN_RADEXC = 22,
-  ION_COUNTER_MACROATOM_ENERGYIN_PHOTOION = 23,
-  ION_COUNTER_MACROATOM_ENERGYIN_COLLEXC = 24,
-  ION_COUNTER_MACROATOM_ENERGYIN_COLLION = 25,
-  ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION = 27,
-  ION_COUNTER_MACROATOM_ENERGYIN_TOTAL = 28,
-  ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL = 29,
-  ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL = 30,
-  ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL = 31,
-  ION_COUNTER_COUNT = 32,
-};
-
 
 /// Coolinglist
 ///============================================================================
@@ -300,7 +265,8 @@ typedef struct modelgrid_t
   float grey_depth;                      /// Grey optical depth to surface of the modelgridcell
                                          /// This is only stored to print it outside the OpenMP loop in update_grid to the estimatorsfile
                                          /// so there is no need to communicate it via MPI so far!
-
+  short *elements_uppermost_ion; /// Highest ionisation stage which has a decent population for a particular element
+                                                    /// in a given cell.
   compositionlist_entry *composition;    /// Pointer to an array which contains the time dependent abundances
                                         /// of all included elements and all the groundlevel
                                          /// populations and partition functions for their ions

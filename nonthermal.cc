@@ -7,12 +7,13 @@
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_linalg.h>
 #include "atomic.h"
-#include "grid_init.h"
+#include "decay.h"
+#include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
-#include "decay.h"
+#include "stats.h"
 #include "update_grid.h"
 #include "sn3d.h"
 
@@ -105,10 +106,8 @@ static double E_init_ev = 0;         // the energy injection rate density (and m
   static const double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 #endif
 
-// statistics
-int nt_stat_to_ionization;
-int nt_stat_to_excitation;
-int nt_stat_to_kpkt;
+
+// Monte Carlo result - compare to analytical expectation
 double nt_energy_deposited;
 
 struct nt_excitation_struct
@@ -2132,20 +2131,20 @@ void do_ntlepton(PKT *pkt_ptr)
       pkt_ptr->mastate.level = 0;
       pkt_ptr->mastate.activatingline = -99;
       pkt_ptr->type = TYPE_MA;
-      globals::ma_stat_activation_ntcollion++;
+      stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLION);
       pkt_ptr->interactions += 1;
       pkt_ptr->last_event = 20;
       pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
       pkt_ptr->trueemissionvelocity = -1;
 
-      nt_stat_to_ionization++;
+      stats::increment(stats::COUNTER_NT_STAT_TO_IONIZATION);
 
       #if (TRACK_ION_STATS)
       assert(upperion < get_nions(element));
       assert(lowerion >= 0);
       const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
-      increment_ion_stats(modelgridindex, element, lowerion, ION_COUNTER_NTION, pkt_ptr->e_cmf / epsilon_trans);
-      increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_MACROATOM_ENERGYIN_NTCOLLION, pkt_ptr->e_cmf);
+      stats::increment_ion_stats(modelgridindex, element, lowerion, stats::ION_NTION, pkt_ptr->e_cmf / epsilon_trans);
+      stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_MACROATOM_ENERGYIN_NTCOLLION, pkt_ptr->e_cmf);
       #endif
 
       // printout("NTLEPTON packet in cell %d selected ionization of Z=%d ionstage %d to %d\n",
@@ -2175,13 +2174,13 @@ void do_ntlepton(PKT *pkt_ptr)
           pkt_ptr->mastate.level = upper;
           pkt_ptr->mastate.activatingline = -99;
           pkt_ptr->type = TYPE_MA;
-          globals::ma_stat_activation_ntcollexc++;
+          stats::increment(stats::COUNTER_MA_STAT_ACTIVATION_NTCOLLEXC);
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 21;
           pkt_ptr->trueemissiontype = -1; // since this is below zero, macroatom will set it
           pkt_ptr->trueemissionvelocity = -1;
 
-          nt_stat_to_excitation++;
+          stats::increment(stats::COUNTER_NT_STAT_TO_EXCITATION);
 
           // printout("NTLEPTON packet selected in cell %d excitation of Z=%d ionstage %d level %d upperlevel %d\n",
           //          modelgridindex, get_element(element), get_ionstage(element, ion), lower, upper);
@@ -2197,7 +2196,7 @@ void do_ntlepton(PKT *pkt_ptr)
 
   pkt_ptr->last_event = 22;
   pkt_ptr->type = TYPE_KPKT;
-  nt_stat_to_kpkt++;
+  stats::increment(stats::COUNTER_NT_STAT_TO_KPKT);
 }
 
 
@@ -3184,20 +3183,12 @@ void nt_MPI_Bcast(const int modelgridindex, const int root)
 
 void nt_reset_stats(void)
 {
-  globals::nt_stat_from_gamma = 0;
-  nt_stat_to_ionization = 0;
-  nt_stat_to_excitation = 0;
-  nt_stat_to_kpkt = 0;
   nt_energy_deposited = 0.;
 }
 
 
 void nt_print_stats(const int timestep, const double modelvolume, const double deltat)
 {
-  printout("nt_stat_from_gamma = %d\n", globals::nt_stat_from_gamma);
-  printout("nt_stat_to_ionization = %d\n", nt_stat_to_ionization);
-  printout("nt_stat_to_excitation = %d\n", nt_stat_to_excitation);
-  printout("nt_stat_to_kpkt = %d\n", nt_stat_to_kpkt);
   const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;
 
   // deposition rate density for all cells has not been communicated yet - could change this

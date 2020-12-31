@@ -1,6 +1,7 @@
 #include "sn3d.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "photo_electric.h"
+#include "stats.h"
 #include "vectors.h"
 
 /* Stuff for photo electric effect scattering. */
@@ -153,7 +154,7 @@ void pair_prod(PKT *pkt_ptr)
     // for consistency with compton_scatter.
     pkt_ptr->type = TYPE_NTLEPTON;
     pkt_ptr->absorptiontype = -5;
-    globals::nt_stat_from_gamma++;
+    stats::increment(stats::COUNTER_NT_STAT_FROM_GAMMA);
   }
   else
   {

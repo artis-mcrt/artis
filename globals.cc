@@ -96,9 +96,6 @@ namespace globals
   ///============================================================================
   int maxion;
 
-  short elements_uppermost_ion[MTHREADS][MELEMENTS]; /// Highest ionisation stage which has a decent population for a particular element
-                                                     /// in a given cell. Be aware that this must not be used outside of the update_grid
-                                                     /// routine and their daughters.
   int nlines;
   int includedions;
   elementlist_entry *elements;
@@ -123,38 +120,6 @@ namespace globals
   double NPHIXSNUINCREMENT;
 
   cellhistory_struct *cellhistory;
-
-  /// Debug/Analysis Counters
-  int ma_stat_activation_collexc;
-  int ma_stat_activation_collion;
-  int ma_stat_activation_ntcollexc;
-  int ma_stat_activation_ntcollion;
-  int ma_stat_activation_bb;
-  int ma_stat_activation_bf;
-  int ma_stat_activation_fb;
-  int ma_stat_deactivation_colldeexc;
-  int ma_stat_deactivation_collrecomb;
-  int ma_stat_deactivation_bb;
-  int ma_stat_deactivation_fb;
-  int ma_stat_internaluphigher;
-  int ma_stat_internaluphighernt;
-  int ma_stat_internaldownlower;
-  int k_stat_to_ma_collexc;
-  int k_stat_to_ma_collion;
-  int k_stat_to_r_ff;
-  int k_stat_to_r_fb;
-  int k_stat_to_r_bb;
-  int k_stat_from_ff;
-  int k_stat_from_bf;
-  int nt_stat_from_gamma;
-  int k_stat_from_earlierdecay;
-  int escounter;
-  int resonancescatterings;
-  int cellcrossings;
-  int upscatter;
-  int downscatter;
-  int updatecellcounter;
-  int coolingratecalccounter;
 
   int debuglevel;
 

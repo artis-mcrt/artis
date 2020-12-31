@@ -6,7 +6,7 @@
 #include <gsl/gsl_vector_double.h>
 #include "sn3d.h"
 #include "atomic.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"

@@ -83,7 +83,6 @@ namespace globals
   extern int opacity_case;
 
   extern int maxion;
-  extern short elements_uppermost_ion[MTHREADS][MELEMENTS];
   extern int nlines;
   extern int includedions;
   extern elementlist_entry *elements;
@@ -104,37 +103,6 @@ namespace globals
   extern double NPHIXSNUINCREMENT;
 
   extern cellhistory_struct *cellhistory;
-
-  extern int ma_stat_activation_collexc;
-  extern int ma_stat_activation_collion;
-  extern int ma_stat_activation_ntcollexc;
-  extern int ma_stat_activation_ntcollion;
-  extern int ma_stat_activation_bb;
-  extern int ma_stat_activation_bf;
-  extern int ma_stat_activation_fb;
-  extern int ma_stat_deactivation_colldeexc;
-  extern int ma_stat_deactivation_collrecomb;
-  extern int ma_stat_deactivation_bb;
-  extern int ma_stat_deactivation_fb;
-  extern int ma_stat_internaluphigher;
-  extern int ma_stat_internaluphighernt;
-  extern int ma_stat_internaldownlower;
-  extern int k_stat_to_ma_collexc;
-  extern int k_stat_to_ma_collion;
-  extern int k_stat_to_r_ff;
-  extern int k_stat_to_r_fb;
-  extern int k_stat_to_r_bb;
-  extern int k_stat_from_ff;
-  extern int k_stat_from_bf;
-  extern int nt_stat_from_gamma;
-  extern int k_stat_from_earlierdecay;
-  extern int escounter;
-  extern int resonancescatterings;
-  extern int cellcrossings;
-  extern int upscatter;
-  extern int downscatter;
-  extern int updatecellcounter;
-  extern int coolingratecalccounter;
 
   extern int debuglevel;
 
@@ -180,7 +148,6 @@ namespace globals
   extern int n_super_levels;
 
   extern CELL cell[MGRID+1];
-
 
   extern bool homogeneous_abundances;
 

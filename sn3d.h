@@ -45,17 +45,6 @@
 #define MAX_RSCAT 50000
 #define MIN_XS 1e-40
 
-
-
-// number of ion stats counters that should be divided by the ion populations
-#define nstatcounters_ratecoeff 18
-
-void increment_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double increment);
-
-double get_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type);
-
-void set_ion_stats(const int modelgridindex, const int element, const int ion, enum ionstatscounters ion_counter_type, const double newvalue);
-
 extern int tid;
 extern bool use_cellhist;
 extern bool neutral_flag;

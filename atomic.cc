@@ -1,7 +1,7 @@
 #include "artisoptions.h"
 #include "sn3d.h"
 #include "atomic.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "ltepop.h"
 #include "update_grid.h"
 

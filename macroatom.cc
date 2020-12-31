@@ -1,13 +1,14 @@
 #include <gsl/gsl_integration.h>
 #include "sn3d.h"
 #include "atomic.h"
-#include "grid_init.h"
+#include "grid.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
+#include "stats.h"
 #include "vectors.h"
 
 // constant for van-Regemorter approximation.
@@ -267,9 +268,9 @@ static void do_macroatom_raddeexcitation(
   if (pkt_ptr->last_event == 1)
   {
     if (oldnucmf < pkt_ptr->nu_cmf)
-      globals::upscatter++;
+      stats::increment(stats::COUNTER_UPSCATTER);
     else
-      globals::downscatter++;
+      stats::increment(stats::COUNTER_DOWNSCATTER);
   }
   //}
 
@@ -283,7 +284,7 @@ static void do_macroatom_raddeexcitation(
       abort();
     }
 
-    globals::ma_stat_deactivation_bb++;
+    stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_BB);
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 0;
   #endif
@@ -293,7 +294,7 @@ static void do_macroatom_raddeexcitation(
 
   if (linelistindex == activatingline)
   {
-    globals::resonancescatterings++;
+    stats::increment(stats::COUNTER_RESONANCESCATTERINGS);
   }
 
   /// NB: the r-pkt can only interact with lines redder than the current one
@@ -381,8 +382,7 @@ static void do_macroatom_radrecomb(
       printout("[fatal] rad recombination of MA: selected frequency not finite ... abort\n");
       abort();
     }
-    //if (tid == 0) ma_stat_deactivation_fb++;
-    globals::ma_stat_deactivation_fb++;
+    stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_FB);
     pkt_ptr->interactions += 1;
     pkt_ptr->last_event = 2;
   #endif
@@ -391,11 +391,11 @@ static void do_macroatom_radrecomb(
   emitt_rpkt(pkt_ptr);
 
   #if (TRACK_ION_STATS)
-  increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+  stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_RADRECOMB_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
 
   const double escape_prob = get_rpkt_escape_prob(pkt_ptr, pkt_ptr->prop_time);
 
-  increment_ion_stats(modelgridindex, element, upperion, ION_COUNTER_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
+  stats::increment_ion_stats(modelgridindex, element, upperion, stats::ION_RADRECOMB_ESCAPED, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf * escape_prob);
   #endif
 
   pkt_ptr->next_trans = 0;       /// continuum transition, no restrictions for further line interactions
@@ -483,7 +483,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
   const double nu_rf_in = pkt_ptr->nu_rf;
 
   #if (TRACK_ION_STATS)
-  increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_TOTAL, pkt_ptr->e_cmf);
+  stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_TOTAL, pkt_ptr->e_cmf);
   #endif
 
   /// dummy-initialize these to nonsense values, if something goes wrong with the real
@@ -702,11 +702,11 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         do_macroatom_raddeexcitation(pkt_ptr, modelgridindex, element, ion, level, processrates[MA_ACTION_RADDEEXC], total_transitions, activatingline, t_mid);
 
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADDEEXC, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADDEEXC, pkt_ptr->e_cmf);
 
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_BOUNDBOUND_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_BOUNDBOUND_MACROATOM, pkt_ptr->e_cmf / H / pkt_ptr->nu_cmf);
 
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
         if (LOG_MACROATOM)
@@ -729,15 +729,14 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
             printout("[debug] do_ma:   collisonal deexcitation\n");
             printout("[debug] do_ma: jumps = %d\n", jumps);
           }
-          //if (tid == 0) ma_stat_deactivation_colldeexc++;
-          globals::ma_stat_deactivation_colldeexc++;
+          stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLDEEXC);
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 10;
         #endif
 
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_COLLDEEXC, pkt_ptr->e_cmf);
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLDEEXC, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
         pkt_ptr->type = TYPE_KPKT;
@@ -775,8 +774,8 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         #endif
 
         #if (TRACK_ION_STATS)
-        // increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_RADRECOMB, pkt_ptr->e_cmf);
-        // increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
+        // stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_RADRECOMB, pkt_ptr->e_cmf);
+        // stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
         do_macroatom_radrecomb(pkt_ptr, modelgridindex, element, &ion, &level, processrates[MA_ACTION_RADRECOMB]);
@@ -793,15 +792,14 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
             printout("[debug] do_ma:   collisonal recombination\n");
             printout("[debug] do_ma: jumps = %d\n",jumps);
           }
-          //if (tid == 0) ma_stat_deactivation_collrecomb++;
-          globals::ma_stat_deactivation_collrecomb++;
+          stats::increment(stats::COUNTER_MA_STAT_DEACTIVATION_COLLRECOMB);
           pkt_ptr->interactions += 1;
           pkt_ptr->last_event = 11;
         #endif
 
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_COLLRECOMB, pkt_ptr->e_cmf);
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_COLLRECOMB, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_TOTAL, pkt_ptr->e_cmf);
         #endif
 
         pkt_ptr->type = TYPE_KPKT;
@@ -826,7 +824,7 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
           jump = 1;
         #endif
 
-        globals::ma_stat_internaldownlower++;
+        stats::increment(stats::COUNTER_MA_STAT_INTERNALDOWNLOWER);
 
         /// Randomly select the occuring transition
         zrand = gsl_rng_uniform(rng);
@@ -850,14 +848,14 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         /// and set the macroatom's new state
 
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         ion -= 1;
         level = lower;
 
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         #ifdef DEBUG_ON
@@ -917,16 +915,16 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
           jump = 3;
         #endif
 
-        globals::ma_stat_internaluphigher++;
+        stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHER);
 
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         do_macroatom_ionisation(modelgridindex, element, &ion, &level, epsilon_current, processrates[MA_ACTION_INTERNALUPHIGHER]);
 
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         break;
@@ -937,15 +935,15 @@ void do_macroatom(PKT *pkt_ptr, const int timestep)
         pkt_ptr->interactions += 1;
         // ion += 1;
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYOUT_INTERNAL, pkt_ptr->e_cmf);
         #endif
 
         ion = nonthermal::nt_random_upperion(modelgridindex, element, ion, false);
         level = 0;
-        globals::ma_stat_internaluphighernt++;
+        stats::increment(stats::COUNTER_MA_STAT_INTERNALUPHIGHERNT);
 
         #if (TRACK_ION_STATS)
-        increment_ion_stats(modelgridindex, element, ion, ION_COUNTER_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
+        stats::increment_ion_stats(modelgridindex, element, ion, stats::ION_MACROATOM_ENERGYIN_INTERNAL, pkt_ptr->e_cmf);
         #endif
         // printout("Macroatom non-thermal ionisation to Z=%d ionstage %d level %d\n", get_element(element), ion, level);
         break;
