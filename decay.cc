@@ -384,7 +384,8 @@ static void calculate_doubledecay_modelabund(
   const double initabund2 = get_modelinitradioabund(modelgridindex, nuclide2);
   const double meanlife2 = meanlife(nuclide2);
 
-  calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, t_current, abund1, abund2, abund3);
+  const double tdiff = t_current - globals::t_model;
+  calculate_double_decay_chain(initabund1, meanlife1, initabund2, meanlife2, tdiff, abund1, abund2, abund3);
 }
 
 
@@ -393,7 +394,8 @@ static double get_modelinitradioabund_decayed(
 // only allow decays to decrease the nuclide abundance (i.e. don't count increases due to decay of parent)
 {
   assert(time >= 0.);
-  return get_modelinitradioabund(modelgridindex, nuclide_type) * exp(- time / meanlife(nuclide_type));
+  const double tdiff = time - globals::t_model;
+  return get_modelinitradioabund(modelgridindex, nuclide_type) * exp(- tdiff / meanlife(nuclide_type));
 }
 
 
@@ -542,32 +544,30 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
 {
   assert(!globals::homogeneous_abundances); // no longer supported
 
-  const double timediff = t_current; // subtract t_model?
-
   // Ni56 -> Co56 -> Fe56
   // abundances from the input model
   double ni56frac = 0.;
   double co56frac = 0.;
   double fe56frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_NI56, NUCLIDE_CO56, timediff, &ni56frac, &co56frac, &fe56frac_fromdecay);
+  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_NI56, NUCLIDE_CO56, t_current, &ni56frac, &co56frac, &fe56frac_fromdecay);
 
   // Ni57 -> Co57 -> Fe57
   double ni57frac = 0.;
   double co57frac = 0.;
   double fe57frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_NI57, NUCLIDE_CO57, timediff, &ni57frac, &co57frac, &fe57frac_fromdecay);
+  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_NI57, NUCLIDE_CO57, t_current, &ni57frac, &co57frac, &fe57frac_fromdecay);
 
   // Fe52 -> Mn52 -> Cr52
   double fe52frac = 0.;
   double mn52frac = 0.;
   double cr52frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_FE52, NUCLIDE_MN52, timediff, &fe52frac, &mn52frac, &cr52frac_fromdecay);
+  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_FE52, NUCLIDE_MN52, t_current, &fe52frac, &mn52frac, &cr52frac_fromdecay);
 
   // Cr48 -> V48 -> Ti48
   double cr48frac = 0.;
   double v48frac = 0.;
   double ti48frac_fromdecay = 0.;
-  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_CR48, NUCLIDE_V48, timediff, &cr48frac, &v48frac, &ti48frac_fromdecay);
+  calculate_doubledecay_modelabund(modelgridindex, NUCLIDE_CR48, NUCLIDE_V48, t_current, &cr48frac, &v48frac, &ti48frac_fromdecay);
 
   // printout("model cell %d, has input radioactive ni56_init %g, co56_init %g, fe52_init %g\n",modelgridindex,ni56_init,co56_init,fe52_in);
 
