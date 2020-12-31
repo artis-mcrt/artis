@@ -17,9 +17,6 @@
 #include "vpkt.h"
 
 
-extern inline double get_abundance(int modelgridindex, int element);
-
-
 void precalculate_partfuncts(int modelgridindex)
 /// The partition functions depend only on T_R and W. This means they don't
 /// change during any iteration on T_e. Therefore their precalculation was
@@ -60,7 +57,7 @@ static void write_to_estimators_file(FILE *estimators_file, const int mgi, const
 
     for (int element = 0; element < get_nelements(); element++)
     {
-      if (get_abundance(mgi, element) <= 0.) // skip elements with no abundance
+      if (get_elem_abundance(mgi, element) <= 0.) // skip elements with no abundance
         continue;
 
       fprintf(estimators_file, "populations        Z=%2d", get_element(element));
@@ -1466,7 +1463,7 @@ double calculate_populations(const int modelgridindex)
     const int nions = get_nions(element);
     //elements[element].uppermost_ion = nions-1;
     set_elements_uppermost_ion(modelgridindex, element, nions - 1);
-    const double abundance = get_abundance(modelgridindex,element);
+    const double abundance = get_elem_abundance(modelgridindex,element);
     if (abundance > 0)
     {
       int uppermost_ion;
@@ -1539,7 +1536,7 @@ double calculate_populations(const int modelgridindex)
     /// Now calculate the ground level populations in nebular approximation and store them to the grid
     for (int element = 0; element < get_nelements(); element++)
     {
-      const double abundance = get_abundance(modelgridindex,element);
+      const double abundance = get_elem_abundance(modelgridindex,element);
       /// calculate number density of the current element (abundances are given by mass)
       const double nnelement = abundance / globals::elements[element].mass * get_rho(modelgridindex);
       nne_tot += nnelement * get_element(element);
@@ -1635,7 +1632,7 @@ double calculate_populations(const int modelgridindex)
     nntot = nne;
     for (int element = 0; element < get_nelements(); element++)
     {
-      const double abundance = get_abundance(modelgridindex, element);
+      const double abundance = get_elem_abundance(modelgridindex, element);
       const int nions = get_nions(element);
       /// calculate number density of the current element (abundances are given by mass)
       const double nnelement = abundance / globals::elements[element].mass * get_rho(modelgridindex);
@@ -1705,7 +1702,7 @@ double calculate_electron_densities(const int modelgridindex)
 
   for (int element = 0; element < get_nelements(); element++)
   {
-    const double elem_abundance = get_abundance(modelgridindex,element);
+    const double elem_abundance = get_elem_abundance(modelgridindex,element);
     // calculate number density of the current element (abundances are given by mass)
     const double nnelement = elem_abundance / globals::elements[element].mass * get_rho(modelgridindex);
     nne_tot += nnelement * get_element(element);

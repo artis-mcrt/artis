@@ -147,9 +147,9 @@ void calculate_bfheatingcoeffs(int modelgridindex)
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++)
   {
-    if (!(get_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING))
+    if (!(get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING))
     {
-      printout("skipping Z=%d X=%g, ", get_element(element), get_abundance(modelgridindex, element));
+      printout("skipping Z=%d X=%g, ", get_element(element), get_elem_abundance(modelgridindex, element));
     }
 
     const int nions = get_nions(element);
@@ -159,7 +159,7 @@ void calculate_bfheatingcoeffs(int modelgridindex)
       for (int level = 0; level < nlevels; level++)
       {
         double bfheatingcoeff = 0.;
-        if (get_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING)
+        if (get_elem_abundance(modelgridindex, element) > minelfrac || !NO_LUT_BFHEATING)
         {
           for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element,ion,level); phixstargetindex++)
           {

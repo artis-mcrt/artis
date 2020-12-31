@@ -577,37 +577,37 @@ void update_abundances(const int modelgridindex, const int timestep, const doubl
     if (atomic_number == 28)
     {
       const double nifrac = get_stable_abund(modelgridindex, atomic_number) + ni56frac + ni57frac;
-      globals::modelgrid[modelgridindex].composition[element].abundance = nifrac;
+      set_elem_abundance(modelgridindex, element, nifrac);
     }
     else if (atomic_number == 27)
     {
       const double cofrac = get_stable_abund(modelgridindex, atomic_number) + co56frac + co57frac;
-      globals::modelgrid[modelgridindex].composition[element].abundance = cofrac;
+      set_elem_abundance(modelgridindex, element, cofrac);
     }
     else if (atomic_number == 26)
     {
       const double fefrac = get_stable_abund(modelgridindex, atomic_number) + fe52frac + fe56frac_fromdecay + fe57frac_fromdecay;
-      globals::modelgrid[modelgridindex].composition[element].abundance = fefrac;
+      set_elem_abundance(modelgridindex, element, fefrac);
     }
     else if (atomic_number == 25)
     {
       const double mnfrac = get_stable_abund(modelgridindex, atomic_number) + mn52frac;
-      globals::modelgrid[modelgridindex].composition[element].abundance = mnfrac;
+      set_elem_abundance(modelgridindex, element, mnfrac);
     }
     else if (atomic_number == 24)
     {
       const double crfrac = get_stable_abund(modelgridindex, atomic_number) + cr48frac + cr52frac_fromdecay;
-      globals::modelgrid[modelgridindex].composition[element].abundance = crfrac;
+      set_elem_abundance(modelgridindex, element, crfrac);
     }
     else if (atomic_number == 23)
     {
       const double vfrac = get_stable_abund(modelgridindex, atomic_number) + v48frac;
-      globals::modelgrid[modelgridindex].composition[element].abundance = vfrac;
+      set_elem_abundance(modelgridindex, element, vfrac);
     }
     else if (atomic_number == 22)
     {
       const double tifrac = get_stable_abund(modelgridindex, atomic_number) + ti48frac_fromdecay;
-      globals::modelgrid[modelgridindex].composition[element].abundance = tifrac;
+      set_elem_abundance(modelgridindex, element, tifrac);
     }
   }
   // printout("model cell %d at t_current %g has frac: Ni %g Co %g Fe %g, stable: Ni %g Co %g Fe %g\n",
