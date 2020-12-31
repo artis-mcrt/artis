@@ -366,12 +366,12 @@ void init(int my_rank)
     {
       #if (DETAILED_BF_ESTIMATORS_ON)
       {
-        bfrate_raw[modelgridindex] = (double *) calloc(globals::nbfcontinua, sizeof(double));
-        prev_bfrate_normed[modelgridindex] = (float *) calloc(globals::nbfcontinua, sizeof(float));
+        bfrate_raw[modelgridindex] = (double *) malloc(globals::nbfcontinua * sizeof(double));
+        prev_bfrate_normed[modelgridindex] = (float *) malloc(globals::nbfcontinua * sizeof(float));
 
         #if (DETAILED_BF_ESTIMATORS_BYTYPE)
-        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) calloc(globals::nbfcontinua, sizeof(struct bfratecontrib *));
-        bfrate_raw_bytype_size[modelgridindex] = (int *) calloc(globals::nbfcontinua, sizeof(int));
+        bfrate_raw_bytype[modelgridindex] = (struct bfratecontrib **) malloc(globals::nbfcontinua * sizeof(struct bfratecontrib *));
+        bfrate_raw_bytype_size[modelgridindex] = (int *) malloc(globals::nbfcontinua * sizeof(int));
         for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++)
         {
           bfrate_raw_bytype[modelgridindex][allcontindex] = NULL;

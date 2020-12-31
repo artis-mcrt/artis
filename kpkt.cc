@@ -328,7 +328,7 @@ void setup_coolinglist(void)
 
   set_ncoolingterms();
   const long mem_usage_coolinglist = globals::ncoolingterms * sizeof(cellhistorycoolinglist_t);
-  coolinglist = (cellhistorycoolinglist_t *) calloc(globals::ncoolingterms, sizeof(cellhistorycoolinglist_t));
+  coolinglist = (cellhistorycoolinglist_t *) malloc(globals::ncoolingterms * sizeof(cellhistorycoolinglist_t));
   printout("mem_usage: coolinglist occupies %.1f MB\n", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0; // cooling list index

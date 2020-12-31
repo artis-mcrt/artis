@@ -1456,10 +1456,10 @@ static void setup_phixs_list(void)
 
     //if (TAKE_N_BFCONTINUA >= 0) phixslist = malloc(includedions*TAKE_N_BFCONTINUA*sizeof(phixslist_t));
     //else
-    globals::phixslist[itid].kappa_bf_contr = (double *) calloc(globals::nbfcontinua, sizeof(double));
+    globals::phixslist[itid].kappa_bf_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
     assert(globals::phixslist[itid].kappa_bf_contr != NULL);
     #if (DETAILED_BF_ESTIMATORS_ON)
-    globals::phixslist[itid].gamma_contr = (double *) calloc(globals::nbfcontinua, sizeof(double));
+    globals::phixslist[itid].gamma_contr = (double *) malloc(globals::nbfcontinua * sizeof(double));
     assert(globals::phixslist[itid].gamma_contr != NULL);
     #endif
 
@@ -1468,7 +1468,7 @@ static void setup_phixs_list(void)
    }
 
   globals::allcont = (fullphixslist_t *) malloc(globals::nbfcontinua * sizeof(fullphixslist_t));
-  globals::allcont_nu_edge = (double *) calloc(globals::nbfcontinua, sizeof(double));
+  globals::allcont_nu_edge = (double *) malloc(globals::nbfcontinua * sizeof(double));
 
   int i = 0;
   for (int element = 0; element < get_nelements(); element++)
@@ -2764,7 +2764,7 @@ void time_init(void)
   /// are logarithmically spaced, but the code should be written such that
   /// they don't have to be.
 
-  globals::time_step = (struct time *) calloc(globals::ntstep + 1, sizeof(struct time));
+  globals::time_step = (struct time *) malloc((globals::ntstep + 1) * sizeof(struct time));
 
   /// Now set the individual time steps
   for (int n = 0; n < globals::ntstep; n++)
